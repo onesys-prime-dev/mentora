@@ -1,69 +1,340 @@
-# CodeIgniter 4 Application Starter
+# Mentora LMS
 
-## What is CodeIgniter?
+Mentora LMS is a modern Learning Management System (LMS) built with CodeIgniter 4, Tailwind CSS, and Vite.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+---
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+# Tech Stack
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+| Layer | Technology |
+|--------|------------|
+| Backend | PHP 8+, CodeIgniter 4, CodeIgniter Shield |
+| Database | MySQL / MariaDB |
+| Frontend | Tailwind CSS v4, Vite, Vanilla JavaScript (ES Modules) |
+| Tools | Composer, Node.js, npm, Git, GitHub Actions |
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+---
 
-## Installation & updates
+# Project Setup
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+## Clone Repository
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+```bash
+git clone <repository-url>
+cd mentora
+```
 
-## Setup
+## Install Dependencies
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+```bash
+composer install
+npm install
+```
 
-## Important Change with index.php
+## Configure Environment
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+```bash
+cp env .env
+```
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+Update:
 
-**Please** read the user guide for a better explanation of how CI4 works!
+- `CI_ENVIRONMENT`
+- `app.baseURL`
+- Database credentials
 
-## Repository Management
+## Run Migrations
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+```bash
+php spark migrate
+```
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+## Start Development
 
-## Server Requirements
+Terminal 1
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+```bash
+php spark serve
+```
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+Terminal 2
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+```bash
+npm run dev
+```
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+Application
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+```
+http://localhost:8080
+```
+
+---
+
+# Production Build
+
+```bash
+npm run build
+```
+
+---
+
+# Project Structure
+
+```text
+app/
+├── Controllers/
+├── Models/
+├── Services/
+├── Helpers/
+└── Views/
+    ├── layouts/
+    ├── pages/
+    └── components/
+
+resources/
+├── css/
+└── js/
+
+public/
+├── assets/
+├── images/
+└── build/
+
+writable/
+```
+
+---
+
+# Git Workflow
+
+## Branch Strategy
+
+```text
+main
+│
+├── staging
+│
+├── feature/<feature-name>
+├── bugfix/<issue-name>
+└── hotfix/<issue-name>
+```
+
+### Branch Purpose
+
+| Branch | Purpose |
+|---------|---------|
+| `main` | Production |
+| `staging` | Integration, QA, Demo Deployment |
+| `feature/*` | New features |
+| `bugfix/*` | Bug fixes |
+| `hotfix/*` | Urgent production fixes |
+
+---
+
+## Development Flow
+
+### 1. Update staging
+
+```bash
+git checkout staging
+git pull origin staging
+```
+
+### 2. Create a feature branch
+
+```bash
+git checkout -b feature/course-management
+```
+
+### 3. Develop
+
+Commit your work regularly.
+
+### 4. Push
+
+```bash
+git push origin feature/course-management
+```
+
+### 5. Create Pull Request
+
+```
+feature/*
+        │
+        ▼
+     staging
+```
+
+After approval:
+
+- GitHub Actions builds the project
+- Deploys automatically to the Demo/Staging VPS
+- Team performs QA and validation
+
+### 6. Production Release
+
+```
+staging
+        │
+        ▼
+      main
+```
+
+GitHub Actions deploys automatically to Production.
+
+---
+
+# Git Commit Convention
+
+Follow the **50/72 Rule**.
+
+## Format
+
+```text
+<type>(<scope>): <description>
+
+- Body message 1
+- Body message 2
+
+[Optional footer]
+```
+
+### Types
+
+| Type | Description |
+|------|-------------|
+| feat | New feature |
+| fix | Bug fix |
+| refactor | Code improvement |
+| style | Formatting or styling |
+| docs | Documentation |
+| test | Tests |
+| chore | Maintenance |
+| build | Build configuration |
+| ci | CI/CD updates |
+| perf | Performance improvements |
+| revert | Revert previous commit |
+
+### Common Scopes
+
+```text
+auth
+user
+course
+module
+assessment
+submission
+gradebook
+attendance
+discussion
+announcement
+notification
+message
+dashboard
+file
+admin
+institution
+integration
+analytics
+ui
+ux
+api
+database
+deployment
+project
+```
+
+### Example
+
+```text
+feat(auth): implement login validation
+
+- Added login service
+- Added request validation
+- Added session handling
+```
+
+```text
+fix(course): resolve enrollment validation
+
+- Prevent duplicate enrollments
+```
+
+```text
+docs(project): update README
+```
+
+---
+
+# Branch Naming
+
+```
+feature/course-management
+
+feature/student-dashboard
+
+feature/instructor-dashboard
+
+feature/attendance
+
+feature/authentication
+
+bugfix/login-session
+
+bugfix/gradebook
+
+hotfix/login
+```
+
+Keep branches **small**, **focused**, and **short-lived**.
+
+---
+
+# CI/CD Pipeline
+
+```text
+feature/*
+        │
+        ▼
+Pull Request
+        │
+        ▼
+staging
+        │
+        ▼
+GitHub Actions
+        │
+        ▼
+Build → Test → Deploy
+        │
+        ▼
+Demo / QA VPS
+        │
+        ▼
+Approval
+        │
+        ▼
+main
+        │
+        ▼
+GitHub Actions
+        │
+        ▼
+Production Deployment
+```
+
+---
+
+# Notes
+
+Never commit:
+
+```text
+node_modules/
+vendor/
+public/build/
+.env
+```
+
+Commit only source code and project files.
