@@ -1,3 +1,7 @@
+<?php 
+$userRole = esc($user->getGroups()[0]);
+?>
+
 <header
     class="
         flex
@@ -10,9 +14,11 @@
     ">
 
     <h1 class="text-xl font-semibold">
-
         <?= esc($title ?? '') ?>
-
     </h1>
+    
+    <span>
+        <?= esc($userRole) ?>
+    </span>
 
 </header>

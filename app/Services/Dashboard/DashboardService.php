@@ -1,42 +1,34 @@
 <?php
 
 namespace App\Services\Dashboard;
+
 use CodeIgniter\Shield\Entities\User;
 
-class DashboardService {
-
+class DashboardService
+{
     public function getDashboardData(User $user): array
     {
         $widgets = [];
 
         if ($user->inGroup('student')) {
-
-            $widgets[] = 'attendance';
-            $widgets[] = 'grades';
-            $widgets[] = 'courses';
-
+            $widgets = array_merge($widgets, [
+                'attendance',
+                'grades',
+                'courses',
+            ]);
         }
 
         if ($user->inGroup('instructor')) {
-
-            $widgets[] = 'teaching-load';
-            $widgets[] = 'grading-queue';
-
-        }
-
-        if ($user->inGroup('registrar')) {
-
-            $widgets[] = 'enrollment-queue';
-
+            $widgets = array_merge($widgets, [
+                'teaching-load',
+                'grading-queue',
+            ]);
         }
 
         return [
 
-            'user' => $user,
-
-            'widgets' => $widgets
+            'widgets' => $widgets,
 
         ];
     }
-
 }

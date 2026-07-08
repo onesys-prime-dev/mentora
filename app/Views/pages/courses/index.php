@@ -1,14 +1,24 @@
+<?php 
+$userRole = esc($user->getGroups()[0]);
+?>
+
 <?= $this->extend('layouts/app') ?>
 
 
 
 <?= $this->section('content') ?>
 
-<h2 class="text-3xl font-bold">
+<h1 class="text-3xl font-bold">My Courses</h1>
 
-    Courses
+<div class="flex gap-3 px-1 py-3">
 
-</h2>
+    <?php foreach ($courses as $course): ?>
+
+        <a href="<?= site_url($userRole . '/courses/it101') ?>">IT101</a>
+
+    <?php endforeach; ?>
+
+</div>
 
 <?= $this->endSection() ?>
 

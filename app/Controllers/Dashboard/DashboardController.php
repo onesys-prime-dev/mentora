@@ -15,9 +15,12 @@ class DashboardController extends BaseController
 
     public function index(): string
     {
-        return view(
-            'pages/dashboard/index',
-            $this->dashboardService->getDashboardData(auth()->user())
-        );
+        $user = auth()->user();
+
+        return view('pages/dashboard/index', [
+            'title' => 'Dashboard',
+            'user' => $user,
+            'dashboard' => $this->dashboardService->getDashboardData($user),
+        ]);
     }
 }

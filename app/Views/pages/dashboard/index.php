@@ -4,10 +4,6 @@
 
 <?= $this->section('content') ?>
 
-<h2 class="text-3xl font-bold">
-
-    Dashboard
-
-</h2>
+<h1 class="text-3xl font-bold">Dashboard Content</h1>
 
 <?= $this->endSection() ?>

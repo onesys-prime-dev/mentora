@@ -12,21 +12,19 @@
     data-page="<?= esc($page ?? '') ?>"
 >
 
-    <div class="flex min-h-screen">
+    <div class="flex flex-col min-h-screen">
 
-        <?= $this->include('layouts/partials/sidebar') ?>
+        <?= $this->include('layouts/partials/header') ?>
 
-        <div class="flex flex-1 flex-col">
+        <div class="flex flex-1">
 
-            <?= $this->include('layouts/partials/header') ?>
+            <?= $this->include('layouts/partials/sidebar') ?>
 
             <main class="flex-1 p-6">
 
                 <?= $this->renderSection('content') ?>
 
             </main>
-
-            <?= $this->include('layouts/partials/footer') ?>
 
         </div>
 
