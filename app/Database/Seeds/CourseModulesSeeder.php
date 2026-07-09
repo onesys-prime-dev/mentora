@@ -21,7 +21,6 @@ class CourseModulesSeeder extends Seeder
                 'status' => 'published',
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
             [
                 'offering_id' => 1,
@@ -31,7 +30,6 @@ class CourseModulesSeeder extends Seeder
                 'status' => 'published',
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
             [
                 'offering_id' => 2,
@@ -41,7 +39,6 @@ class CourseModulesSeeder extends Seeder
                 'status' => 'published',
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
             [
                 'offering_id' => 3,
@@ -51,7 +48,6 @@ class CourseModulesSeeder extends Seeder
                 'status' => 'published',
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
         ]);
     }

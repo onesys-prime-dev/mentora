@@ -16,6 +16,12 @@ class FileModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'uploaded_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
         'owner_user_id',
         'original_filename',

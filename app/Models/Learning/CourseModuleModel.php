@@ -16,6 +16,12 @@ class CourseModuleModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
         'offering_id',
         'title',

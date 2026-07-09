@@ -31,29 +31,24 @@ class InstructorAssignmentsSeeder extends Seeder
                 'offering_id' => 1,
                 'instructor_user_id' => $instructor1->id,
                 'assigned_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
-
             ],
             [
                 'offering_id' => 2,
                 'instructor_user_id' => $instructor1->id,
                 'assigned_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
             ],
             [
                 'offering_id' => 3,
                 'instructor_user_id' => $instructor2->id,
                 'assigned_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
             ],
             [
                 'offering_id' => 4,
                 'instructor_user_id' => $instructor2->id,
                 'assigned_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
             ],
         ];

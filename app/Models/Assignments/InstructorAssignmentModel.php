@@ -14,6 +14,12 @@ class InstructorAssignmentModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'assigned_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
         'offering_id',
         'instructor_user_id',

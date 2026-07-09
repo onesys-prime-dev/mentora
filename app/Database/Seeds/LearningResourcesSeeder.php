@@ -20,7 +20,6 @@ class LearningResourcesSeeder extends Seeder
                 'resource_url' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
 
             [
@@ -31,7 +30,6 @@ class LearningResourcesSeeder extends Seeder
                 'resource_url' => 'https://youtu.be/dQw4w9WgXcQ',
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
 
             [
@@ -42,7 +40,6 @@ class LearningResourcesSeeder extends Seeder
                 'resource_url' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
 
             [
@@ -53,7 +50,6 @@ class LearningResourcesSeeder extends Seeder
                 'resource_url' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
 
             [
@@ -64,7 +60,6 @@ class LearningResourcesSeeder extends Seeder
                 'resource_url' => 'https://www.php.net/manual/en/',
                 'created_at' => $now,
                 'updated_at' => $now,
-                'deleted_at' => $now,
             ],
 
         ];

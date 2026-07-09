@@ -20,18 +20,22 @@ class ChairpersonAssignmentsSeeder extends Seeder
             return;
         }
 
+        $now = date('Y-m-d H:i:s');
+
         $data = [
             [
                 'program_id' => 1,
                 'chairperson_user_id' => $chairperson->id,
                 'status' => 'active',
-                'assigned_at' => date('Y-m-d H:i:s'),
+                'assigned_at' => $now,
+                'updated_at' => $now,
             ],
             [
                 'program_id' => 2,
                 'chairperson_user_id' => $chairperson->id,
                 'status' => 'active',
-                'assigned_at' => date('Y-m-d H:i:s'),
+                'assigned_at' => $now,
+                'updated_at' => $now,
             ],
         ];
 

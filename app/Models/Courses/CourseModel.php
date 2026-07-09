@@ -18,6 +18,12 @@ class CourseModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
 
         'program_id',
@@ -39,7 +45,7 @@ class CourseModel extends Model
 
         'units' => 'required|decimal',
 
-        'status' => 'required|in_list[active,inactive]',
+        'status' => 'required|in_list[active,inactive,archived]',
 
     ];
 }

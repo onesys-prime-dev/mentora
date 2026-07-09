@@ -18,6 +18,12 @@ class ProgramModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
 
         'institution_id',
@@ -42,7 +48,7 @@ class ProgramModel extends Model
         ],
 
         'status' => [
-            'rules' => 'required|in_list[active,inactive]',
+            'rules' => 'required|in_list[active,inactive,archived]',
         ],
 
     ];

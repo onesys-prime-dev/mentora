@@ -17,7 +17,6 @@ class EnrollmentsSeeder extends Seeder
                 'student_user_id' => 2,
                 'status' => 'enrolled',
                 'enrolled_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
             ],
 
@@ -26,7 +25,6 @@ class EnrollmentsSeeder extends Seeder
                 'student_user_id' => 3,
                 'status' => 'enrolled',
                 'enrolled_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
             ],
 
@@ -35,7 +33,6 @@ class EnrollmentsSeeder extends Seeder
                 'student_user_id' => 2,
                 'status' => 'enrolled',
                 'enrolled_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
             ],
 
@@ -44,7 +41,6 @@ class EnrollmentsSeeder extends Seeder
                 'student_user_id' => 4,
                 'status' => 'enrolled',
                 'enrolled_at' => $now,
-                'created_at' => $now,
                 'updated_at' => $now,
             ],
 

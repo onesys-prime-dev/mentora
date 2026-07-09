@@ -38,14 +38,24 @@ class CreateCourseModulesTable extends Migration
             ],
 
             'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
+                'type'       => 'ENUM',
+                'constraint' => [
+                    'draft',
+                    'published',
+                    'inactive',
+                ],
                 'default'    => 'draft',
             ],
 
-            'created_at DATETIME NULL',
-            'updated_at DATETIME NULL',
-            'deleted_at DATETIME NULL',
+            'created_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+
+            'updated_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
         ]);
 
         $this->forge->addKey('id', true);

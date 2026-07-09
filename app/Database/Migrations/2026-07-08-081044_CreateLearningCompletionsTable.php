@@ -28,20 +28,30 @@ class CreateLearningCompletionsTable extends Migration
                 'unsigned'   => true,
             ],
 
+            'status' => [
+                'type'       => 'ENUM',
+                'constraint' => [
+                    'not_started',
+                    'in_progress',
+                    'completed',
+                ],
+                'default'    => 'not_started',
+            ],
+
             'completed_at' => [
                 'type' => 'DATETIME',
                 'null' => true,
             ],
 
-            'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
-                'default'    => 'not_started',
+            'created_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
             ],
 
-            'created_at DATETIME NULL',
-            'updated_at DATETIME NULL',
-            'deleted_at DATETIME NULL',
+            'updated_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
         ]);
 
         $this->forge->addKey('id', true);

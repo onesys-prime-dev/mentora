@@ -45,14 +45,24 @@ class CreateFilesTable extends Migration
             ],
 
             'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
-                'default'    => 'active',
+                'type'       => 'ENUM',
+                'constraint' => [
+                    'uploading',
+                    'active',
+                    'archived',
+                ],
+                'default'    => 'uploading',
             ],
 
-            'created_at DATETIME NULL',
-            'updated_at DATETIME NULL',
-            'deleted_at DATETIME NULL',
+            'uploaded_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+
+            'updated_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
         ]);
 
         $this->forge->addKey('id', true);

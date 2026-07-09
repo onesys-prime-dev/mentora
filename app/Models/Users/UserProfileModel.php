@@ -21,7 +21,13 @@ class UserProfileModel extends Model
     ];
 
     protected $useSoftDeletes = true;
-    protected $useTimestamps  = true;
+    protected $useTimestamps = true;
+
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
 
     protected $validationRules = [
         'user_id' => [

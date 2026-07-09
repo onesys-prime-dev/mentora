@@ -28,9 +28,13 @@ class CreateInstitutionsTable extends Migration
             ],
 
             'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
-                'default'    => 'active',
+                'type' => 'ENUM',
+                'constraint' => [
+                    'active',
+                    'inactive',
+                    'archived',
+                ],
+                'default' => 'active',
             ],
 
             'created_at' => [

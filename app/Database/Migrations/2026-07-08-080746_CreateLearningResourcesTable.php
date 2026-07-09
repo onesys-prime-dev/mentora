@@ -44,9 +44,15 @@ class CreateLearningResourcesTable extends Migration
                 'null' => true,
             ],
 
-            'created_at DATETIME NULL',
-            'updated_at DATETIME NULL',
-            'deleted_at DATETIME NULL',
+            'created_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+
+            'updated_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
         ]);
 
         $this->forge->addKey('id', true);

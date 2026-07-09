@@ -44,8 +44,12 @@ class CreateCoursesTable extends Migration
             ],
 
             'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
+                'type'       => 'ENUM',
+                'constraint' => [
+                    'active',
+                    'inactive',
+                    'archived',
+                ],
                 'default'    => 'active',
             ],
 

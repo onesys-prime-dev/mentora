@@ -26,9 +26,13 @@ class CreateChairpersonAssignmentsTable extends Migration
             ],
 
             'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
-                'default'    => 'active',
+                'type'       => 'ENUM',
+                'constraint' => [
+                    'active',
+                    'revoked',
+                    'expired',
+                ],
+                'default' => 'active',
             ],
 
             'assigned_at' => [
@@ -36,8 +40,10 @@ class CreateChairpersonAssignmentsTable extends Migration
                 'null' => false,
             ],
 
-            'created_at DATETIME NULL',
-            'updated_at DATETIME NULL',
+            'updated_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
         ]);
 
         $this->forge->addKey('id', true);

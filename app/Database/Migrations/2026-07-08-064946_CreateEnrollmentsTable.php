@@ -30,18 +30,18 @@ class CreateEnrollmentsTable extends Migration
             ],
 
             'status' => [
-                'type' => 'VARCHAR',
-                'constraint' => 20,
+                'type' => 'ENUM',
+                'constraint' => [
+                    'enrolled',
+                    'dropped',
+                    'completed',
+                    'withdrawn',
+                ],
                 'default' => 'enrolled',
             ],
 
             'enrolled_at' => [
                 'type' => 'DATETIME',
-            ],
-
-            'created_at' => [
-                'type' => 'DATETIME',
-                'null' => true,
             ],
 
             'updated_at' => [

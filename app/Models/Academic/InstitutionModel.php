@@ -18,6 +18,12 @@ class InstitutionModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
 
         'name',
@@ -37,7 +43,7 @@ class InstitutionModel extends Model
         ],
 
         'status' => [
-            'rules' => 'required|in_list[active,inactive]',
+            'rules' => 'required|in_list[active,inactive,archived]',
         ],
 
     ];

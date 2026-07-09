@@ -16,6 +16,12 @@ class LearningResourceModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
         'learning_item_id',
         'file_id',

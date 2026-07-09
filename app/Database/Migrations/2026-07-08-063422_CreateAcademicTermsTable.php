@@ -42,9 +42,14 @@ class CreateAcademicTermsTable extends Migration
             ],
 
             'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 20,
-                'default'    => 'upcoming',
+                'type' => 'ENUM',
+                'constraint' => [
+                    'upcoming',
+                    'active',
+                    'completed',
+                    'archived',
+                ],
+                'default' => 'upcoming',
             ],
 
             'created_at' => [

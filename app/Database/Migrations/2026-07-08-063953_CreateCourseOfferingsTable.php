@@ -29,11 +29,6 @@ class CreateCourseOfferingsTable extends Migration
                 'unsigned' => true,
             ],
 
-            'display_name' => [
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ],
-
             'section_code' => [
                 'type' => 'VARCHAR',
                 'constraint' => 50,
@@ -46,9 +41,13 @@ class CreateCourseOfferingsTable extends Migration
             ],
 
             'status' => [
-                'type' => 'VARCHAR',
-                'constraint' => 20,
-                'default' => 'draft',
+                'type' => 'ENUM',
+                'constraint' => [
+                    'active',
+                    'completed',
+                    'archived',
+                ],
+                'default' => 'active',
             ],
 
             'created_at' => [

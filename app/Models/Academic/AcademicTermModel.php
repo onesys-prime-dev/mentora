@@ -18,6 +18,12 @@ class AcademicTermModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
 
         'institution_id',
@@ -41,7 +47,7 @@ class AcademicTermModel extends Model
 
         'end_date' => 'required|valid_date',
 
-        'status' => 'required|in_list[upcoming,active,completed]',
+        'status' => 'required|in_list[upcoming,active,completed,archived]',
 
     ];
 }

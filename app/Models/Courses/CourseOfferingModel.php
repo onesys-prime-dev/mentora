@@ -18,11 +18,16 @@ class CourseOfferingModel extends Model
 
     protected $useTimestamps = true;
 
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
     protected $allowedFields = [
 
         'course_id',
         'term_id',
-        'display_name',
         'section_code',
         'capacity',
         'status',
@@ -35,13 +40,11 @@ class CourseOfferingModel extends Model
 
         'term_id' => 'required|is_natural_no_zero',
 
-        'display_name' => 'required|max_length[255]',
-
         'section_code' => 'required|max_length[50]',
 
         'capacity' => 'required|integer',
 
-        'status' => 'required|in_list[draft,open,closed,archived]',
+        'status' => 'required|in_list[active,completed,archived]',
 
     ];
 }

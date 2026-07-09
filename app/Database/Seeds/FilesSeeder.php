@@ -31,9 +31,8 @@ class FilesSeeder extends Seeder
                 'file_size'          => 254321,
                 'storage_path'       => 'uploads/course-syllabus.pdf',
                 'status'             => 'active',
-                'created_at'         => $now,
+                'uploaded_at'         => $now,
                 'updated_at'         => $now,
-                'deleted_at'         => $now,
             ],
             [
                 'owner_user_id'      => $instructor->id,
@@ -43,9 +42,8 @@ class FilesSeeder extends Seeder
                 'file_size'          => 1823312,
                 'storage_path'       => 'uploads/introduction.pptx',
                 'status'             => 'active',
-                'created_at'         => $now,
+                'uploaded_at'         => $now,
                 'updated_at'         => $now,
-                'deleted_at'         => $now,
             ],
             [
                 'owner_user_id'      => $instructor->id,
@@ -55,9 +53,8 @@ class FilesSeeder extends Seeder
                 'file_size'          => 983421,
                 'storage_path'       => 'uploads/week1-handout.pdf',
                 'status'             => 'active',
-                'created_at'         => $now,
+                'uploaded_at'         => $now,
                 'updated_at'         => $now,
-                'deleted_at'         => $now,
             ],
         ];
 
