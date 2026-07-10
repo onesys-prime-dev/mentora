@@ -5,7 +5,7 @@ import "./shared/sidebar";
 const page = document.body.dataset.page;
 
 if (page) {
-    import(`./pages/${page}.js`)
+    import(`./pages/${page}/${page}.js`)
         .catch(() => {
             // No page module exists — that's okay.
         });

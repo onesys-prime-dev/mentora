@@ -17,8 +17,10 @@ $userRole = esc($user->getGroups()[0]);
         <?= esc($title ?? '') ?>
     </h1>
     
-    <span>
+    <span class="flex gap-10">
         <?= esc($userRole) ?>
+        
+        <a href="<?= site_url('/logout') ?>">Logout</a>
     </span>
 
 </header>
