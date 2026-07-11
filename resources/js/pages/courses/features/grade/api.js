@@ -1,22 +1,27 @@
-import state from "../../core/state.js";
-
 export async function fetchGrade()
 {
     const response = await fetch(
 
-        `${state.apiBaseUrl}/tabs/grade`,
+        `${window.coursesConfig.apiBaseUrl}/grade`,
 
         {
+
             headers: {
-                "Accept": "application/json",
+
                 "X-Requested-With": "XMLHttpRequest",
+
+                "Accept": "application/json",
+
             },
+
         }
 
     );
 
     if (!response.ok) {
-        throw new Error("Unable to load course grade.");
+
+        throw new Error("Unable to load Grade.");
+
     }
 
     return response.json();

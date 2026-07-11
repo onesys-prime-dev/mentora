@@ -1,23 +1,36 @@
 import { fetchGrade } from "./api.js";
+import { state } from "./state.js";
 
-export default {
+export async function initialize()
+{
+    state.loading = true;
 
-    async render()
-    {
-        const response = await fetchGrade();
+    const container =
+        document.querySelector("#course-content");
 
-        document.querySelector("#course-content").innerHTML =
-            response.html;
-    },
+    container.innerHTML = "Loading...";
 
-    initialize()
-    {
+    try {
 
-    },
+        state.data = await fetchGrade();
 
-    destroy()
-    {
+        container.innerHTML =
+            state.data.html;
 
     }
 
-};
+    catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            "<p>Unable to load Grade.</p>";
+
+    }
+
+    finally {
+
+        state.loading = false;
+
+    }
+}

@@ -1,22 +1,27 @@
-import state from "../../core/state.js";
-
 export async function fetchModules()
 {
     const response = await fetch(
 
-        `${state.apiBaseUrl}/tabs/modules`,
+        `${window.coursesConfig.apiBaseUrl}/modules`,
 
         {
+
             headers: {
-                "Accept": "application/json",
+
                 "X-Requested-With": "XMLHttpRequest",
+
+                "Accept": "application/json",
+
             },
+
         }
 
     );
 
     if (!response.ok) {
-        throw new Error("Unable to load course modules.");
+
+        throw new Error("Unable to load Modules.");
+
     }
 
     return response.json();

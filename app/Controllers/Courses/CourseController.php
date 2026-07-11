@@ -39,15 +39,35 @@ class CourseController extends BaseController
         ]);
     }
 
-    public function view(int $offeringId, string $slug, string $feature = 'home'): string
-    {
+    public function redirect(
+        int $offeringId,
+        string $slug
+    ) {
+        return redirect()->to(
+            site_url(
+                "student/courses/{$offeringId}/{$slug}/home"
+            )
+        );
+    }
+
+    public function view(
+        int $offeringId,
+        string $slug,
+        string $activeFeature
+    ): string {
+
         $user = auth()->user();
 
         $course = $this->courseService
-            ->getCourseOffering($user, $offeringId);
+            ->getCourseOffering(
+                $user,
+                $offeringId
+            );
 
-        if (! $course) {
+        if (!$course) {
+
             throw PageNotFoundException::forPageNotFound();
+
         }
 
         $course['slug'] = url_title(
@@ -56,26 +76,22 @@ class CourseController extends BaseController
             true
         );
 
-        return view('pages/courses/view', [
-            'title'      => $course['course_code'],
-            'page'       => 'courses',
-            'user'       => $user,
-            'course'     => $course,
-            'activeTab'  => $feature,
-        ]);
-    }
+        return view(
+            'pages/courses/view',
+            [
 
-    public function tab(int $offeringId, string $tab)
-    {
-        $user = auth()->user();
+                'title' => $course['course_code'],
 
-        $response = $this->courseService
-            ->renderCourseTab(
-                $user,
-                $offeringId,
-                $tab
-            );
+                'page' => 'courses',
 
-        return $this->response->setJSON($response);
+                'user' => $user,
+
+                'course' => $course,
+
+                'activeFeature' => $activeFeature,
+
+            ]
+        );
+
     }
 }

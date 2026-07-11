@@ -1,7 +1,5 @@
-import { initializeNavigation } from "./ui/navigation.js";
+import { initializeNavigation } from "./core/navigation.js";
+import { initializeFeatureLoader } from "./core/featureLoader.js";
 
-import { initializeRenderer } from "./ui/renderer.js";
-
+initializeFeatureLoader();
 initializeNavigation();
-
-initializeRenderer();

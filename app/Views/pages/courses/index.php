@@ -14,7 +14,7 @@ $userRole = esc($user->getGroups()[0]);
 
     <?php foreach ($courses as $course): ?>
 
-        <a href="<?= site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']) ?>">
+        <a href="<?= site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug'] . '/home') ?>">
             <?= esc($course['course_code']) ?>
         </a>
 

@@ -1,22 +1,27 @@
-import state from "../../core/state.js";
-
 export async function fetchHome()
 {
     const response = await fetch(
 
-        `${state.apiBaseUrl}/tabs/home`,
+        `${window.coursesConfig.apiBaseUrl}/home`,
 
         {
+
             headers: {
-                "Accept": "application/json",
+
                 "X-Requested-With": "XMLHttpRequest",
+
+                "Accept": "application/json",
+
             },
+
         }
 
     );
 
     if (!response.ok) {
-        throw new Error("Unable to load course home.");
+
+        throw new Error("Unable to load Home.");
+
     }
 
     return response.json();

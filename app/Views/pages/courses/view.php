@@ -3,7 +3,14 @@ $userRole = esc($user->getGroups()[0]);
 
 $courseTitle = esc($course['course_code']) . ' - ' . esc($course['course_title']);
 
-$courseUrl = $userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug'];
+$features = [
+    'home' => 'Home',
+    'modules' => 'Modules',
+    'resources' => 'Resources',
+    'discussions' => 'Discussions',
+    'assessments' => 'Assessments',
+    'grade' => 'Grade',
+];
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -18,41 +25,16 @@ $courseUrl = $userRole . '/courses/' . $course['offering_id'] . '/' . $course['s
 
 <div class="flex py-3">
 
-    <button 
-        class="px-6 py-1 cursor-pointer hover:border-b"
-        data-course-feature="home">
-        Home
-    </button>
+    <?php foreach ($features as $feature => $label): ?>
 
-    <button 
-        class="px-6 py-1 cursor-pointer hover:border-b"
-        data-course-feature="modules">
-        Modules
-    </button>
+        <button
+            class="course-feature px-6 py-1 cursor-pointer hover:border-b"
+            data-course-feature="<?= esc($feature) ?>"
+        >
+            <?= esc($label) ?>
+        </button>
 
-    <button 
-        class="px-6 py-1 cursor-pointer hover:border-b"
-        data-course-feature="resources">
-        Resources
-    </button>
-
-    <button 
-        class="px-6 py-1 cursor-pointer hover:border-b"
-        data-course-feature="discussions">
-        Discussions
-    </button>
-
-    <button 
-        class="px-6 py-1 cursor-pointer hover:border-b"
-        data-course-feature="assessments">
-        Assessments
-    </button>
-
-    <button 
-        class="px-6 py-1 cursor-pointer hover:border-b"
-        data-course-feature="grade">
-        Grade
-    </button>
+    <?php endforeach; ?>
 
 </div>
 
@@ -73,15 +55,15 @@ window.coursesConfig = <?= json_encode([
 
     'offeringId' => $course['offering_id'],
 
+    'slug' => $course['slug'],
+
     'role' => $userRole,
 
-    'baseUrl'       => site_url(),
+    'browserBaseUrl' => site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']),
 
-    'courseBaseUrl' => site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']),
+    'apiBaseUrl' => site_url($userRole . '/api/courses/' . $course['offering_id']),
 
-    'apiBaseUrl'    => site_url($userRole . '/api/courses/' . $course['offering_id']),
-
-    'activeFeature' => $activeTab,
+    'activeFeature' => $activeFeature,
 
 ]) ?>;
 </script>

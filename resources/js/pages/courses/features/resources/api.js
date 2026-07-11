@@ -1,22 +1,27 @@
-import state from "../../core/state.js";
-
 export async function fetchResources()
 {
     const response = await fetch(
 
-        `${state.apiBaseUrl}/tabs/resources`,
+        `${window.coursesConfig.apiBaseUrl}/resources`,
 
         {
+
             headers: {
-                "Accept": "application/json",
+
                 "X-Requested-With": "XMLHttpRequest",
+
+                "Accept": "application/json",
+
             },
+
         }
 
     );
 
     if (!response.ok) {
-        throw new Error("Unable to load course resources.");
+
+        throw new Error("Unable to load Resources.");
+
     }
 
     return response.json();

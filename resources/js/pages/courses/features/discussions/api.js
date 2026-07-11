@@ -1,22 +1,27 @@
-import state from "../../core/state.js";
-
 export async function fetchDiscussions()
 {
     const response = await fetch(
 
-        `${state.apiBaseUrl}/tabs/discussions`,
+        `${window.coursesConfig.apiBaseUrl}/discussions`,
 
         {
+
             headers: {
-                "Accept": "application/json",
+
                 "X-Requested-With": "XMLHttpRequest",
+
+                "Accept": "application/json",
+
             },
+
         }
 
     );
 
     if (!response.ok) {
-        throw new Error("Unable to load course discussions.");
+
+        throw new Error("Unable to load Discussions.");
+
     }
 
     return response.json();
