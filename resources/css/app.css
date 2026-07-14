@@ -1,6 +1,7 @@
 @import "@fontsource/poppins";
 @import "@fontsource/parkinsans";
 @import "@fontsource/phetsarath";
+@import "@fontsource/montserrat";
 
 @import "tailwindcss";
 
@@ -17,6 +18,11 @@
 
     --font-lao:
         "Phetsarath",
+        system-ui,
+        sans-serif;
+
+    --font-heading:
+        "Montserrat",
         system-ui,
         sans-serif;
 }

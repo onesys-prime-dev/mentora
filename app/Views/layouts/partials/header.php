@@ -24,8 +24,11 @@ $userRole = esc($user->getGroups()[0]);
                 Mentora
             </span>
         </a>
+
         <span class="text-2xl font-bold text-[#0040A6] capitalize">
-            <?= esc($page ?? '') ?>
+            <?php if ($page !== null && $page !== 'dashboard'): ?>
+                <?= esc($page ?? '') ?>
+            <?php endif; ?>
         </span>
     </div>
 

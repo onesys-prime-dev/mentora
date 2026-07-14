@@ -17,13 +17,7 @@
 
         <?= $this->include('layouts/partials/header') ?>
 
-        <main class="flex-1 p-6">
-            
-            <?php if ($page !== 'dashboard'): ?>
-            
-                <?= $this->include('layouts/partials/back') ?>
-
-            <?php endif; ?>
+        <main class="flex-1 px-40 py-10">
 
             <?= $this->renderSection('content') ?>
 

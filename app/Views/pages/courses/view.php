@@ -19,6 +19,10 @@ $features = [
 
 <?= $this->section('content') ?>
 
+<div class="flex justify-between items-center">
+    <?= $this->include('components/back') ?>
+</div>
+
 <h1 class="text-3xl font-bold">
     <?= $courseTitle ?>
 </h1>
