@@ -46,7 +46,8 @@ Update:
 ## Run Migrations
 
 ```bash
-php spark migrate
+php spark migrate --all
+php spark db:seed DatabaseSeeder # run only if you want to start with demo data
 ```
 
 ## Start Development
