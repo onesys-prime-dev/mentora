@@ -1,1 +1,28 @@
+@import "@fontsource/poppins";
+@import "@fontsource/parkinsans";
+@import "@fontsource/phetsarath";
+
 @import "tailwindcss";
+
+@theme {
+    --font-sans:
+        "Poppins",
+        system-ui,
+        sans-serif;
+
+    --font-display:
+        "Parkinsans",
+        system-ui,
+        sans-serif;
+
+    --font-lao:
+        "Phetsarath",
+        system-ui,
+        sans-serif;
+}
+
+@layer base {
+    html {
+        @apply font-sans;
+    }
+}

@@ -8,7 +8,8 @@
 </head>
 
 <body 
-    class="min-h-screen bg-gray-100"
+    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat"
+    style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
     data-page="<?= esc($page ?? '') ?>"
 >
 
@@ -16,17 +17,17 @@
 
         <?= $this->include('layouts/partials/header') ?>
 
-        <div class="flex flex-1">
+        <main class="flex-1 p-6">
+            
+            <?php if ($page !== 'dashboard'): ?>
+            
+                <?= $this->include('layouts/partials/back') ?>
 
-            <?= $this->include('layouts/partials/sidebar') ?>
+            <?php endif; ?>
 
-            <main class="flex-1 p-6">
+            <?= $this->renderSection('content') ?>
 
-                <?= $this->renderSection('content') ?>
-
-            </main>
-
-        </div>
+        </main>
 
     </div>
 

@@ -2,7 +2,9 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+    base: command === "build" ? "/mentora/public/build/" : "/",
+
     plugins: [
         tailwindcss(),
     ],
@@ -25,5 +27,6 @@ export default defineConfig({
         host: "localhost",
         port: 5173,
         strictPort: true,
+        origin: "http://localhost:5173",
     },
-});
+}));

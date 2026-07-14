@@ -1,6 +1,7 @@
 import "../css/app.css";
 
-import "./shared/sidebar";
+import "./shared/profile-menu";
+import "./shared/app-menu";
 
 const page = document.body.dataset.page;
 

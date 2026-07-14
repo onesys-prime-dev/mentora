@@ -36,6 +36,7 @@ class CourseController extends BaseController
             'page'    => 'courses',
             'user'    => $user,
             'courses' => $courses,
+            'previousPage' => 'dashboard'
         ]);
     }
 
@@ -89,6 +90,8 @@ class CourseController extends BaseController
                 'course' => $course,
 
                 'activeFeature' => $activeFeature,
+
+                'previousPage' => 'courses'
 
             ]
         );
