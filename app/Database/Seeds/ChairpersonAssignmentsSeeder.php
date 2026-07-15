@@ -30,13 +30,6 @@ class ChairpersonAssignmentsSeeder extends Seeder
                 'assigned_at' => $now,
                 'updated_at' => $now,
             ],
-            [
-                'program_id' => 2,
-                'chairperson_user_id' => $chairperson->id,
-                'status' => 'active',
-                'assigned_at' => $now,
-                'updated_at' => $now,
-            ],
         ];
 
         $this->db

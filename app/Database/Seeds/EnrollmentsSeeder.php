@@ -29,7 +29,7 @@ class EnrollmentsSeeder extends Seeder
             ],
 
             [
-                'offering_id' => 2,
+                'offering_id' => 3,
                 'student_user_id' => 2,
                 'status' => 'enrolled',
                 'enrolled_at' => $now,

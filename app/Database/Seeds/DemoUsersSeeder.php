@@ -31,6 +31,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Santos',
                 'last_name'   => 'Dela Cruz',
                 'suffix'      => null,
+                'student_number' => '2026-02000',
+                'program_id'  => 1,
             ],
 
             [
@@ -42,6 +44,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Garcia',
                 'last_name'   => 'Reyes',
                 'suffix'      => null,
+                'student_number' => '2026-03001',
+                'program_id'  => 1,
             ],
 
             [
@@ -53,6 +57,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Lopez',
                 'last_name'   => 'Santos',
                 'suffix'      => null,
+                'student_number' => '2026-04002',
+                'program_id'  => 1,
             ],
 
             [
@@ -64,6 +70,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Ramos',
                 'last_name'   => 'Cruz',
                 'suffix'      => null,
+                'student_number' => '2026-05003',
+                'program_id'  => 1,
             ],
 
             [
@@ -75,6 +83,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Torres',
                 'last_name'   => 'Villanueva',
                 'suffix'      => null,
+                'student_number' => '2026-06004',
+                'program_id'  => 1,
             ],
 
             // =====================================================
@@ -90,6 +100,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Reyes',
                 'last_name'   => 'Santos',
                 'suffix'      => null,
+                'student_number' => null,
+                'program_id'  => 1,
             ],
 
             [
@@ -101,6 +113,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Lim',
                 'last_name'   => 'Garcia',
                 'suffix'      => null,
+                'student_number' => null,
+                'program_id'  => 1,
             ],
 
             // =====================================================
@@ -116,6 +130,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Rivera',
                 'last_name'   => 'Fernandez',
                 'suffix'      => null,
+                'student_number' => null,
+                'program_id'  => 1,
             ],
 
             // =====================================================
@@ -131,6 +147,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => 'Diaz',
                 'last_name'   => 'Cruz',
                 'suffix'      => null,
+                'student_number' => null,
+                'program_id'  => null,
             ],
 
         ];
@@ -166,6 +184,8 @@ class DemoUsersSeeder extends Seeder
                 'middle_name' => $account['middle_name'],
                 'last_name'   => $account['last_name'],
                 'suffix'      => $account['suffix'],
+                'student_number' => $account['student_number'],
+                'program_id'  => $account['program_id'],
             ]);
 
             echo "[CREATED] {$account['group']} ({$account['email']})" . PHP_EOL;
