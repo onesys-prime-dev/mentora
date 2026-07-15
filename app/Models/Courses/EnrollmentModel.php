@@ -44,7 +44,7 @@ class EnrollmentModel extends Model
 
     ];
 
-    public function retrieveStudentCourseOfferings(User $user): array
+    public function retrieveStudentCourseOfferings(int $userId): array
     {
         $builder = $this->builder();
 
@@ -92,7 +92,7 @@ class EnrollmentModel extends Model
                 'institutions.id = academic_terms.institution_id
                 AND institutions.id = programs.institution_id'
             )
-            ->where('enrollments.student_user_id', $user->id)
+            ->where('enrollments.student_user_id', $userId)
             ->where('enrollments.status', 'enrolled')
             ->where('course_offerings.status', 'active')
             ->orderBy('courses.course_code', 'ASC')
@@ -100,7 +100,7 @@ class EnrollmentModel extends Model
             ->getResultArray();
     }
 
-    public function retrieveStudentCourseOffering(User $user, int $offeringId): array
+    public function retrieveStudentCourseOffering(int $userId, int $offeringId): array
     {
         $builder = $this->builder();
 
@@ -148,7 +148,7 @@ class EnrollmentModel extends Model
                 'institutions.id = academic_terms.institution_id
                 AND institutions.id = programs.institution_id'
             )
-            ->where('enrollments.student_user_id', $user->id)
+            ->where('enrollments.student_user_id', $userId)
             ->where('course_offerings.id', $offeringId)
             ->where('enrollments.status', 'enrolled')
             ->where('course_offerings.status', 'active')
@@ -157,14 +157,14 @@ class EnrollmentModel extends Model
             ->getRowArray();
     }
 
-    public function retrieveTotalCoursesEnrolled(User $user): int
+    public function retrieveTotalCoursesEnrolled(int $userId): int
     {
         return $this->builder()
             ->join(
                 'course_offerings',
                 'course_offerings.id = enrollments.offering_id'
             )
-            ->where('enrollments.student_user_id', $user->id)
+            ->where('enrollments.student_user_id', $userId)
             ->where('enrollments.status', 'enrolled')
             ->where('course_offerings.status', 'active')
             ->countAllResults();

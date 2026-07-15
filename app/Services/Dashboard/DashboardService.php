@@ -89,7 +89,7 @@ class DashboardService
     protected function getKeyMetricsData(User $user): array
     {
         return [
-            'courses_enrolled' => $this->enrollmentModel->retrieveTotalCoursesEnrolled($user),
+            'courses_enrolled' => $this->enrollmentModel->retrieveTotalCoursesEnrolled($user->id),
             //'pending_tasks' => $this->assessmentModel->retrieveTotalPendingTasks($user),
             //'current_gpa'   => $this->gradebookModel->retrieveCurrentGpa($user),
         ];
