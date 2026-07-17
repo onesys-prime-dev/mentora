@@ -8,6 +8,7 @@ $routes->get('/', 'Auth\RedirectController::index');
 service('auth')->routes($routes);
 
 $routes->group('student', ['filter' => 'group:student'], function ($routes) {
+    $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
     $routes->get('courses', 'Courses\CourseController::index');

@@ -61,19 +61,58 @@ $userRole = esc($user->getGroups()[0]);
 
             <div
                 id="app-menu-panel"
-                class="hidden absolute right-0 top-full mt-2 min-w-[10rem] rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
+                class="hidden z-50 absolute right-0 top-full mt-2 w-fit flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
 
-                <nav class="flex flex-col gap-2 text-center">
+                <span class="text-md font-display">Menu</span>
+
+                <nav class="flex gap-3 text-center">
+                    
+                    <a 
+                        class="w-16 h-16 flex justify-center items-center bg-white/30 border border-black/5 shadow-md rounded-3xl"
+                        href="<?= site_url($userRole . '/dashboard') ?>">
+
+                        <img
+                            class="h-6 w-auto" 
+                            src="<?= base_url() ?>" alt="">
+
+                    </a>
+                
                     <?php if ($userRole == 'student'): ?>
 
-                        <a href="<?= site_url($userRole . '/dashboard') ?>">Dashboard</a>
-                        <a href="<?= site_url($userRole . '/courses') ?>">My Courses</a>
+                        <a 
+                            class="w-16 h-16 flex justify-center items-center bg-white/30 border border-black/5 shadow-md rounded-3xl"
+                            href="<?= site_url($userRole . '/courses') ?>">
+
+                            <img
+                                class="h-6 w-auto" 
+                                src="<?= base_url('assets/images/icons/hat.png') ?>" alt="">
+
+                        </a>
+
+                        <a 
+                            class="w-16 h-16 flex justify-center items-center bg-white/30 border border-black/5 shadow-md rounded-3xl"
+                            href="<?= site_url($userRole . '/') ?>">
+
+                            <img
+                                class="h-6 w-auto" 
+                                src="<?= base_url('assets/images/icons/message.png') ?>" alt="">
+
+                        </a>
+
+                        <a 
+                            class="w-16 h-16 flex justify-center items-center bg-white/30 border border-black/5 shadow-md rounded-3xl"
+                            href="<?= site_url($userRole . '/') ?>">
+
+                            <img
+                                class="h-6 w-auto" 
+                                src="<?= base_url('assets/images/icons/calendar.png') ?>" alt="">
+
+                        </a>
 
                     <?php elseif ($userRole == 'instructor'): ?>
 
                     <?php endif; ?>
                 </nav>
-
 
             </div>
         </div>

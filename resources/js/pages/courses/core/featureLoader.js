@@ -33,12 +33,12 @@ export async function loadFeature(feature)
     document
         .querySelectorAll("[data-course-feature]")
         .forEach(button => {
+            const isActive = button.dataset.courseFeature === feature;
 
-            button.classList.toggle(
-                "border-b-2",
-                button.dataset.courseFeature === feature
-            );
-
+            button.classList.toggle("bg-white", isActive);
+            button.classList.toggle("border-t", isActive);
+            button.classList.toggle("border-black/15", isActive);
+            button.classList.toggle("!text-black", isActive);
         });
 }
 
