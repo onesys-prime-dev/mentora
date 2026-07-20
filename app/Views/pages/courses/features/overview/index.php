@@ -17,7 +17,7 @@
             </div>
 
             <p class="text-sm leading-relaxed">
-                This course introduces students to Python, one of the world's most popular and versatile programming languages. We will cover foundational concepts including data types, control flow, functions, and object-oriented programming. By the end of the semester, students will be able to write robust scripts, analyze data using core libraries, and build simple web applications.
+                <?= esc($overview['description']) ?>
             </p>
 
         </div>
@@ -38,11 +38,11 @@
                     </span>
 
                     <span class="text-md text-black">
-                        Prof. Jalen Brunson
+                        <?= esc($overview['instructor_name']) ?>
                     </span>
 
                     <span class="text-md text-black">
-                        jalenb@sanbeda.edu.ph
+                        <?= esc($overview['instructor_email']) ?>
                     </span>
                 </div>
 

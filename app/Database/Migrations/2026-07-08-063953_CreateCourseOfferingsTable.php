@@ -39,6 +39,11 @@ class CreateCourseOfferingsTable extends Migration
                 'constraint' => 5,
                 'default' => 40,
             ],
+            
+            'description' => [
+                'type' => 'TEXT',
+                'null' => true,
+            ],
 
             'status' => [
                 'type' => 'ENUM',

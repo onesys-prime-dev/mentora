@@ -61,7 +61,7 @@ $userRole = esc($user->getGroups()[0]);
                         alt="">
 
                     <span class="text-xs opacity-70">
-                        Prof. Jalen Brunson - Room 33A
+                        Instr. <?= esc($course['instructor_name']) ?> - Room 33A
                     </span>
                 </div>
 
