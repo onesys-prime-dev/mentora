@@ -1,4 +1,4 @@
-import { fetchGrade } from "./api.js";
+import { fetchAnnouncements } from "./api.js";
 import { state } from "./state.js";
 
 export async function initialize()
@@ -12,7 +12,7 @@ export async function initialize()
 
     try {
 
-        state.data = await fetchGrade();
+        state.data = await fetchAnnouncements();
 
         container.innerHTML =
             state.data.html;
@@ -24,7 +24,7 @@ export async function initialize()
         console.error(error);
 
         container.innerHTML =
-            "<p>Unable to load Grade.</p>";
+            "<p>Unable to load Announcements.</p>";
 
     }
 

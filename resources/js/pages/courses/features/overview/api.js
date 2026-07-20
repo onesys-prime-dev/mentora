@@ -1,8 +1,8 @@
-export async function fetchGrade()
+export async function fetchOverview()
 {
     const response = await fetch(
 
-        `${window.coursesConfig.apiBaseUrl}/grade`,
+        `${window.coursesConfig.apiBaseUrl}/overview`,
 
         {
 
@@ -20,7 +20,7 @@ export async function fetchGrade()
 
     if (!response.ok) {
 
-        throw new Error("Unable to load Grade.");
+        throw new Error("Unable to load Overview.");
 
     }
 

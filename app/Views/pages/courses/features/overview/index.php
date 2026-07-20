@@ -130,11 +130,11 @@
 
     <div class="w-350 flex flex-col gap-6">
 
-        <?= $this->include('pages/courses/features/home/partials/progress') ?>
+        <?= $this->include('pages/courses/features/overview/partials/progress') ?>
 
-        <?= $this->include('pages/courses/features/home/partials/upcoming-deadlines') ?>
+        <?= $this->include('pages/courses/features/overview/partials/upcoming-deadlines') ?>
 
-        <?= $this->include('pages/courses/features/home/partials/recent-activity') ?>
+        <?= $this->include('pages/courses/features/overview/partials/recent-activity') ?>
         
     </div>
 

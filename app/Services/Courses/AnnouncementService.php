@@ -6,7 +6,7 @@ use CodeIgniter\Shield\Entities\User;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 
-class HomeService
+class AnnouncementService
 {
     public function show(
         User $user,
@@ -16,7 +16,7 @@ class HomeService
         return [
 
             'html' => view(
-                'pages/courses/features/home/index'
+                'pages/courses/features/announcements/index'
             ),
 
         ];

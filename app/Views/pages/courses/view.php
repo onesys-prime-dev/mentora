@@ -2,12 +2,13 @@
 $userRole = esc($user->getGroups()[0]);
 
 $features = [
-    'home' => 'Home',
+    'overview' => 'Overview',
+    'announcements' => 'Announcements',
     'modules' => 'Modules',
     'resources' => 'Resources',
     'discussions' => 'Discussions',
     'assessments' => 'Assessments',
-    'grade' => 'Grade',
+    'grades' => 'Grades',
 ];
 ?>
 

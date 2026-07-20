@@ -1,6 +1,8 @@
 const loaders = {
 
-    home: () => import("../features/home/index.js"),
+    overview: () => import("../features/overview/index.js"),
+
+    announcements: () => import("../features/announcements/index.js"),
 
     modules: () => import("../features/modules/index.js"),
 
@@ -10,7 +12,7 @@ const loaders = {
 
     assessments: () => import("../features/assessments/index.js"),
 
-    grade: () => import("../features/grade/index.js"),
+    grades: () => import("../features/grades/index.js"),
 
 };
 

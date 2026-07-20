@@ -3,16 +3,16 @@
 namespace App\Controllers\Courses;
 
 use App\Controllers\BaseController;
-use App\Services\Courses\HomeService;
+use App\Services\Courses\AnnouncementService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
-class HomeController extends BaseController
+class AnnouncementController extends BaseController
 {
-    protected HomeService $homeService;
+    protected AnnouncementService $announcementService;
 
     public function __construct()
     {
-        $this->homeService = new HomeService();
+        $this->announcementService = new AnnouncementService();
     }
 
     public function show(int $offeringId)
@@ -20,7 +20,7 @@ class HomeController extends BaseController
         $user = auth()->user();
 
         return $this->response->setJSON(
-            $this->homeService->show(
+            $this->announcementService->show(
                 $user,
                 $offeringId
             )
