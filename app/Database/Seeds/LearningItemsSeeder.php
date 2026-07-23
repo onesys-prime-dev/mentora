@@ -16,7 +16,7 @@ class LearningItemsSeeder extends Seeder
             [
                 'learning_unit_id' => 1,
                 'title' => 'Welcome to the Course',
-                'item_type' => 'page',
+                'item_type' => 'reading',
                 'content' => 'Welcome to Mentora LMS.',
                 'order_index' => 1,
                 'status' => 'published',
@@ -40,7 +40,7 @@ class LearningItemsSeeder extends Seeder
             [
                 'learning_unit_id' => 2,
                 'title' => 'Install XAMPP',
-                'item_type' => 'page',
+                'item_type' => 'reading',
                 'content' => 'Install the latest version of XAMPP.',
                 'order_index' => 1,
                 'status' => 'published',
@@ -64,7 +64,7 @@ class LearningItemsSeeder extends Seeder
             [
                 'learning_unit_id' => 3,
                 'title' => 'PHP Variables',
-                'item_type' => 'page',
+                'item_type' => 'reading',
                 'content' => 'Introduction to PHP variables.',
                 'order_index' => 1,
                 'status' => 'published',

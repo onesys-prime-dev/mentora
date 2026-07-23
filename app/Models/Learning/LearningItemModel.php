@@ -30,4 +30,23 @@ class LearningItemModel extends Model
         'order_index',
         'status',
     ];
+
+    public function retrieveLearningItems(int $learningUnitId): array
+    {
+        $builder = $this->builder();
+
+        return $builder
+            ->select([
+                'id',
+                'title',
+                'item_type',
+                'content',
+                'order_index',
+            ])
+            ->where('learning_unit_id', $learningUnitId)
+            ->where('status', 'published')
+            ->orderBy('order_index')
+            ->get()
+            ->getResultArray();
+    }
 }

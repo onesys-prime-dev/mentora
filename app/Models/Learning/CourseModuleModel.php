@@ -29,4 +29,22 @@ class CourseModuleModel extends Model
         'order_index',
         'status',
     ];
+
+    public function retrieveCourseModules(int $offeringId): array
+    {
+        $builder = $this->builder();
+
+        return $builder
+            ->select([
+                'id',
+                'title',
+                'description',
+                'order_index'
+            ])
+            ->where('offering_id', $offeringId)
+            ->where('status', 'published')
+            ->orderBy('order_index')
+            ->get()
+            ->getResultArray();
+    }
 }

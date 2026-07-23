@@ -61,30 +61,24 @@ class CourseOfferingModel extends Model
                 "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS instructor_name",
                 'auth_identities.secret AS instructor_email',
             ])
-
             ->join(
                 'instructor_assignments',
                 'instructor_assignments.offering_id = course_offerings.id'
             )
-
             ->join(
                 'users',
                 'users.id = instructor_assignments.instructor_user_id'
             )
-
             ->join(
                 'user_profiles',
                 'user_profiles.user_id = users.id'
             )
-
             ->join(
                 'auth_identities',
                 "auth_identities.user_id = users.id
                 AND auth_identities.type = 'email_password'"
             )
-
             ->where('course_offerings.id', $offeringId)
-
             ->get()
             ->getRowArray();
     }

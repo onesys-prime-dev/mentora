@@ -23,6 +23,7 @@ class DashboardController extends BaseController
             'page'    => 'dashboard',
             'user'    => $user,
             'widgets' => $this->dashboardService->getDashboardWidgets($user),
+            'academic_term' => $this->dashboardService->getAcademicTerm($user),
         ]);
     }
 }

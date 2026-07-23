@@ -27,9 +27,13 @@ $renderWidget = function (string $slug, string $partial) use ($widgets) {
     <div class="flex justify-between items-center">
 
         <div class="flex items-center gap-3 text-3xl font-display">
-            <span class="font-bold">A.Y 2026-2027</span>
+            <span class="font-bold">
+                A.Y <?= $academic_term['academic_year'] ?>
+            </span>
             <span class="">-</span>
-            <span class="">1st Semester</span>
+            <span class="">
+                <?= $academic_term['name'] ?>
+            </span>
         </div>
 
         <?= $this->include('components/search') ?>

@@ -13,12 +13,16 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
 
     $routes->get('courses', 'Courses\CourseController::index');
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2');
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
 
     $routes->group('api/courses', function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
+        
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
+        $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
+
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
         $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
         $routes->get('(:num)/assessments', 'Courses\AssessmentController::show/$1');

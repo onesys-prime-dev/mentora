@@ -4,12 +4,17 @@ namespace App\Services\Dashboard;
 
 use App\Models\Users\UserProfileModel;
 use App\Models\Courses\EnrollmentModel;
+use App\Models\Academic\InstitutionUserModel;
+use App\Models\Academic\AcademicTermModel;
 use CodeIgniter\Shield\Entities\User;
 
 class DashboardService
 {
     protected UserProfileModel $userProfileModel;
     protected EnrollmentModel $enrollmentModel;
+
+    protected InstitutionUserModel $institutionUserModel;
+    protected AcademicTermModel $academicTermModel;
 
     /**
      * Which widget slugs are visible to each role.
@@ -35,6 +40,8 @@ class DashboardService
     {
         $this->userProfileModel = new UserProfileModel();
         $this->enrollmentModel = new EnrollmentModel();
+        $this->institutionUserModel = new InstitutionUserModel();  
+        $this->academicTermModel = new AcademicTermModel();  
     }
 
     /**
@@ -123,5 +130,17 @@ class DashboardService
     protected function getGradingQueueData(User $user): array
     {
         return [];
+    }
+
+    public function getAcademicTerm(User $user): array
+    {
+        $institutionId = $this->institutionUserModel
+            ->retrieveInstitutionId($user->id);
+
+        if ($institutionId === null) {
+            return [];
+        }
+
+        return $this->academicTermModel->retrieveActiveAcademicTerm($institutionId);
     }
 }

@@ -50,4 +50,18 @@ class AcademicTermModel extends Model
         'status' => 'required|in_list[upcoming,active,completed,archived]',
 
     ];
+
+    public function retrieveActiveAcademicTerm(int $institutionId): array
+    {
+        return $this->builder()
+            ->select([
+                'id',
+                'name',
+                'academic_year',
+            ])
+            ->where('institution_id', $institutionId)
+            ->where('status', 'active')
+            ->get()
+            ->getRowArray();
+    }
 }
