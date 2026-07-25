@@ -38,6 +38,7 @@ class LearningItemModel extends Model
         return $builder
             ->select([
                 'id',
+                'learning_unit_id',
                 'title',
                 'item_type',
                 'content',
@@ -48,5 +49,22 @@ class LearningItemModel extends Model
             ->orderBy('order_index')
             ->get()
             ->getResultArray();
+    }
+
+    public function retrieveLearningItem(int $learningItemId): ?array
+    {
+        return $this->builder()
+            ->select([
+                'id',
+                'learning_unit_id',
+                'title',
+                'item_type',
+                'content',
+                'order_index',
+            ])
+            ->where('id', $learningItemId)
+            ->where('status', 'published')
+            ->get()
+            ->getRowArray();
     }
 }

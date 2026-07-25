@@ -47,4 +47,20 @@ class CourseModuleModel extends Model
             ->get()
             ->getResultArray();
     }
+
+    public function retrieveCourseModule(int $moduleId): ?array
+    {
+        return $this->builder()
+            ->select([
+                'id',
+                'offering_id',
+                'title',
+                'description',
+                'order_index',
+            ])
+            ->where('id', $moduleId)
+            ->where('status', 'published')
+            ->get()
+            ->getRowArray();
+    }
 }

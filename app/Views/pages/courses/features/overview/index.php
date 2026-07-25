@@ -1,4 +1,4 @@
-<div class="flex gap-8">
+<div class="p-10 flex gap-8">
 
     <div class="flex flex-col gap-6">
 

@@ -1,4 +1,4 @@
-<div class="flex flex-col gap-10">
+<div class="p-10 flex flex-col gap-10">
 
     <div class="flex justify-between items-center">
 
@@ -177,7 +177,7 @@
 
                                             <div class="flex justify-center items-center px-2">
 
-                                                <?php if ($learning_item['learning_completion']['status'] == 'completed'): ?>
+                                                <?php if ($learning_item['is_completed']): ?>
 
                                                     <div class="w-6 h-6 flex justify-center items-center border-2 border-[#7DB080] rounded-[999px]">
                                                         <img
@@ -205,7 +205,7 @@
                                                         <div class="flex justify-center items-center">
                                                             <img
                                                                 class="h-4 w-auto" 
-                                                                src="<?= base_url('assets/images/icons/lesson.png') ?>" alt="">
+                                                                src="<?= base_url('assets/images/icons/reading.png') ?>" alt="">
                                                         </div>
 
                                                         <span class="capitalize text-sm text-[#565656]">

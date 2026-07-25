@@ -37,6 +37,7 @@ class LearningUnitModel extends Model
         return $builder
             ->select([
                 'id',
+                'module_id',
                 'title',
                 'description',
                 'order_index',
@@ -46,5 +47,21 @@ class LearningUnitModel extends Model
             ->orderBy('order_index')
             ->get()
             ->getResultArray();
+    }
+
+    public function retrieveLearningUnit(int $learningUnitId): ?array
+    {
+        return $this->builder()
+            ->select([
+                'id',
+                'module_id',
+                'title',
+                'description',
+                'order_index',
+            ])
+            ->where('id', $learningUnitId)
+            ->where('status', 'published')
+            ->get()
+            ->getRowArray();
     }
 }

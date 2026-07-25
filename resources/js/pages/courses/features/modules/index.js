@@ -1,7 +1,19 @@
 import { fetchModules, fetchLearningItem } from "./api.js";
 import { state } from "./state.js";
+import { initializePdfViewer } from "../../../../shared/pdf/viewer.js";
 
 export async function initialize() {
+
+    const params = new URLSearchParams(window.location.search);
+
+    const learningItemId = params.get("item");
+
+    if (learningItemId) {
+
+        await loadLearningItem(Number(learningItemId));
+        return;
+
+    }
 
     state.loading = true;
 
@@ -18,6 +30,8 @@ export async function initialize() {
 
         bindModuleEvents();
         bindLearningItemEvents();
+        bindBreadcrumbEvents();
+        initializePdfViewer();
 
     }
 
@@ -111,24 +125,6 @@ function bindModuleEvents() {
 
 }
 
-function bindLearningItemEvents() {
-
-    document
-        .querySelectorAll("[data-learning-item]")
-        .forEach((item) => {
-
-            item.addEventListener("click", () => {
-
-                loadLearningItem(
-                    Number(item.dataset.learningItem)
-                );
-
-            });
-
-        });
-
-}
-
 async function loadLearningItem(learningItemId) {
 
     try {
@@ -143,14 +139,102 @@ async function loadLearningItem(learningItemId) {
 
         container.innerHTML = response.html;
 
-    } catch (error) {
+        history.pushState(
+            { learningItemId },
+            "",
+            `${window.location.pathname}?item=${learningItemId}`
+        );
 
-        console.error(error);
+        bindLearningItemEvents();
+        bindLearningUnitEvents();
+        bindBreadcrumbEvents();
+        initializePdfViewer();
 
     } finally {
 
         state.loading = false;
 
     }
+
+}
+
+function bindLearningItemEvents() {
+
+    document
+        .querySelectorAll("[data-learning-item]")
+        .forEach((element) => {
+
+            element.addEventListener("click", () => {
+
+                const id =
+                    Number(element.dataset.learningItem);
+
+                if (!id) {
+                    return;
+                }
+
+                loadLearningItem(id);
+
+            });
+
+        });
+
+}
+
+function bindLearningUnitEvents() {
+
+    document
+        .querySelectorAll("[data-learning-unit]")
+        .forEach((header) => {
+
+            header.addEventListener("click", () => {
+
+                const container =
+                    header.nextElementSibling;
+
+                const arrow =
+                    header.querySelector("svg");
+
+                const isHidden =
+                    container.classList.contains("hidden");
+
+                if (isHidden) {
+
+                    container.classList.remove("hidden");
+                    arrow.classList.add("rotate-180");
+
+                } else {
+
+                    container.classList.add("hidden");
+                    arrow.classList.remove("rotate-180");
+
+                }
+
+            });
+
+        });
+
+}
+
+function bindBreadcrumbEvents() {
+
+    const breadcrumb =
+        document.querySelector("[data-modules-breadcrumb]");
+
+    if (!breadcrumb) {
+        return;
+    }
+
+    breadcrumb.addEventListener("click", () => {
+
+        history.pushState(
+            {},
+            "",
+            window.location.pathname
+        );
+
+        initialize();
+
+    });
 
 }

@@ -33,6 +33,7 @@
     "@fontsource/pacifico": "^5.2.7",
     "@fontsource/parkinsans": "^5.2.7",
     "@fontsource/phetsarath": "^5.2.8",
-    "@fontsource/poppins": "^5.2.7"
+    "@fontsource/poppins": "^5.2.7",
+    "pdfjs-dist": "^6.1.200"
   }
 }
