@@ -22,6 +22,12 @@
 
                 </div>
 
+                <?php if ($currentItem['item_type'] == 'assignment'): ?>
+
+                    <?= $this->include('pages/courses/features/modules/partials/detail-panel') ?>
+
+                <?php endif; ?>
+
             </section>
 
         </div>
