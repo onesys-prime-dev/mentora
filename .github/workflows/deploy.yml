@@ -35,11 +35,28 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
 
       - name: Install Node dependencies
-        run: npm ci
+        run: |
+          rm -rf node_modules
+          npm install
+
+      - name: Debug Node environment
+        run: |
+          node -v
+          npm -v
+          npm ls rolldown || true
+          npm ls @rolldown/binding-linux-x64-gnu || true
+
+      - name: List Rolldown packages
+        run: |
+          ls -la node_modules/@rolldown || true
+
+      - name: Verify Rolldown native binding
+        run: |
+          ls -la node_modules/@rolldown || true
+          node -e "require('@rolldown/binding-linux-x64-gnu'); console.log('Rolldown binding loaded successfully.')"
 
       - name: Build Vite assets
         run: npm run build
