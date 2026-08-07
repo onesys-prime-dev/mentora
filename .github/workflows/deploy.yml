@@ -1,0 +1,88 @@
+name: 🚀 Deploy Mentora
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      ########################################################
+      # PHP
+      ########################################################
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, mysqli, zip
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      ########################################################
+      # NODE
+      ########################################################
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build Vite assets
+        run: npm run build
+
+      ########################################################
+      # SSH
+      ########################################################
+
+      - name: Install SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_PRIVATE_KEY }}
+
+      ########################################################
+      # RSYNC
+      ########################################################
+
+      - name: Deploy
+        run: |
+          rsync -az --delete \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude=".env" \
+            --exclude="node_modules" \
+            --exclude="tests" \
+            --exclude="writable" \
+            -e "ssh -p ${{ secrets.VPS_PORT }} -o StrictHostKeyChecking=no" \
+            ./ \
+            ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}
+
+      ########################################################
+      # FIX PERMISSIONS
+      ########################################################
+
+      - name: Set permissions
+        run: |
+          ssh -p ${{ secrets.VPS_PORT }} \
+          -o StrictHostKeyChecking=no \
+          ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
+
+          cd ${{ secrets.VPS_DEPLOY_PATH }}
+
+          find writable -type d -exec chmod 775 {} \;
+          find writable -type f -exec chmod 664 {} \;
+
+          EOF
