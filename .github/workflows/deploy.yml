@@ -9,7 +9,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      SSH_PORT: 22
+      DEPLOY_PATH: /home/mentora/htdocs/mentora.srv1404227.hstgr.cloud
+
     steps:
+      ########################################################
+      # Checkout
+      ########################################################
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,24 +49,33 @@ jobs:
           rm -rf node_modules
           npm install
 
+      ########################################################
+      # Debug
+      ########################################################
+
       - name: Debug Node environment
         run: |
           node -v
           npm -v
-          npm ls rolldown || true
-          npm ls @rolldown/binding-linux-x64-gnu || true
-
-      - name: List Rolldown packages
-        run: |
-          ls -la node_modules/@rolldown || true
+          npm ls rolldown
+          npm ls @rolldown/binding-linux-x64-gnu
 
       - name: Verify Rolldown native binding
         run: |
-          ls -la node_modules/@rolldown || true
+          ls -la node_modules/@rolldown
           node -e "require('@rolldown/binding-linux-x64-gnu'); console.log('Rolldown binding loaded successfully.')"
+
+      ########################################################
+      # Build
+      ########################################################
 
       - name: Build Vite assets
         run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f public/build/.vite/manifest.json
+          ls -R public/build
 
       ########################################################
       # SSH
@@ -71,10 +87,10 @@ jobs:
           ssh-private-key: ${{ secrets.VPS_PRIVATE_KEY }}
 
       ########################################################
-      # RSYNC
+      # Deploy
       ########################################################
 
-      - name: Deploy
+      - name: Deploy application
         run: |
           rsync -az --delete \
             --exclude=".git" \
@@ -83,21 +99,21 @@ jobs:
             --exclude="node_modules" \
             --exclude="tests" \
             --exclude="writable" \
-            -e "ssh -p ${{ secrets.VPS_PORT }} -o StrictHostKeyChecking=no" \
+            -e "ssh -p ${SSH_PORT} -o StrictHostKeyChecking=no" \
             ./ \
-            ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}
+            ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${DEPLOY_PATH}
 
       ########################################################
-      # FIX PERMISSIONS
+      # Permissions
       ########################################################
 
-      - name: Set permissions
+      - name: Set writable permissions
         run: |
-          ssh -p ${{ secrets.VPS_PORT }} \
-          -o StrictHostKeyChecking=no \
-          ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
+          ssh -p ${SSH_PORT} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << EOF
 
-          cd ${{ secrets.VPS_DEPLOY_PATH }}
+          cd ${DEPLOY_PATH}
 
           find writable -type d -exec chmod 775 {} \;
           find writable -type f -exec chmod 664 {} \;
