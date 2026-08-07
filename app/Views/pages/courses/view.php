@@ -64,7 +64,7 @@ $features = [
         </div>
 
         <div 
-            class="w-full bg-white rounded-3xl overflow-clip"
+            class="w-full bg-white rounded-3xl"
             id="course-content"
         >
 

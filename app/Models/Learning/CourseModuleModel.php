@@ -2,6 +2,8 @@
 
 namespace App\Models\Learning;
 
+use CodeIgniter\Shield\Entities\User;
+
 use CodeIgniter\Model;
 
 class CourseModuleModel extends Model
@@ -12,7 +14,7 @@ class CourseModuleModel extends Model
 
     protected $returnType = 'array';
 
-    protected $useSoftDeletes = true;
+    protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
 
@@ -30,37 +32,65 @@ class CourseModuleModel extends Model
         'status',
     ];
 
-    public function retrieveCourseModules(int $offeringId): array
+    public function retrieveCourseModules(int $offeringId, User $user): array
     {
         $builder = $this->builder();
 
-        return $builder
+        $builder
             ->select([
                 'id',
                 'title',
                 'description',
-                'order_index'
+                'order_index',
+                'status',
             ])
-            ->where('offering_id', $offeringId)
-            ->where('status', 'published')
+            ->where('offering_id', $offeringId);
+
+        if (! $user->inGroup('instructor')) {
+
+            $builder->where(
+                'status',
+                'published'
+            );
+
+        }
+
+        return $builder
             ->orderBy('order_index')
             ->get()
             ->getResultArray();
     }
 
-    public function retrieveCourseModule(int $moduleId): ?array
-    {
-        return $this->builder()
+    public function retrieveCourseModule(
+        int $moduleId,
+        User $user
+    ): ?array {
+
+        $builder = $this->builder();
+
+        $builder
             ->select([
                 'id',
                 'offering_id',
                 'title',
                 'description',
                 'order_index',
+                'status',
             ])
-            ->where('id', $moduleId)
-            ->where('status', 'published')
+            ->where('id', $moduleId);
+
+        if (! $user->inGroup('instructor')) {
+
+            $builder->where(
+                'status',
+                'published'
+            );
+
+        }
+
+        return $builder
             ->get()
             ->getRowArray();
+
     }
 }

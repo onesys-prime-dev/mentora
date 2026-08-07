@@ -4,4 +4,14 @@ export const state = {
 
     data: null,
 
+    activeLearningItemId: null,
+
+    activeModuleId: null,
+
+    activeLearningUnitId: null,
+
+    activeLearningUnitId: null,
+
+    editingModuleId: null,
+
 };

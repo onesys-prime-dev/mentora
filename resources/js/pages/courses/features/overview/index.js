@@ -1,3 +1,5 @@
+import { renderOverviewSkeleton } from "./skeleton.js";
+
 import { fetchOverview } from "./api.js";
 import { state } from "./state.js";
 
@@ -8,7 +10,7 @@ export async function initialize()
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    container.innerHTML = renderOverviewSkeleton();
 
     try {
 

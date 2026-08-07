@@ -1,3 +1,7 @@
+<?php 
+$userRole = esc($user->getGroups()[0]);
+?>
+
 <!-- header -->
 <header class="flex flex-col gap-2 py-2">
     
@@ -20,28 +24,43 @@
             <?= esc($currentUnit['title']) ?>
         </span>
 
-        <?php
+        <?php if ($userRole === 'student'): ?>
+    
+            <?php
 
-            $isCompleted =
-                $currentItem['learning_completion']
-                &&
-                $currentItem['learning_completion']['status'] === 'completed';
+                $isCompleted =
+                    $currentItem['learning_completion']
+                    &&
+                    $currentItem['learning_completion']['status'] === 'completed';
 
-        ?>
+            ?>
 
-        <?php if ($isCompleted): ?>
+            <?php if ($isCompleted): ?>
 
-            <span class="px-3 py-1 rounded-full bg-[#E6F4EA] text-[#5C9F72] text-xs font-black">
-                Completed
-            </span>
+                <span class="px-3 py-1 rounded-full bg-[#E6F4EA] text-[#5C9F72] text-xs font-black">
+                    Completed
+                </span>
 
-        <?php else: ?>
+            <?php else: ?>
 
-            <span class="px-3 py-1 rounded-full bg-[#E0E5F2] text-[#002068] text-xs font-black">
-                Not Yet Completed
+                <span class="px-3 py-1 rounded-full bg-[#E0E5F2] text-[#002068] text-xs font-black">
+                    Not Yet Completed
+                </span>
+
+            <?php endif; ?>
+        
+        <?php elseif ($userRole === 'instructor'): ?>
+
+            <span
+                class="capitalize rounded-full px-3 py-1 text-xs font-black
+                    <?= $currentItem['status'] === 'published'
+                        ? 'bg-[#E0E5F2] text-[#002068]'
+                        : 'bg-gray-100 text-gray-600' ?>">
+                <?= esc($currentItem['status']) ?>
             </span>
 
         <?php endif; ?>
+
     </div>
 
     <div class="flex items-center gap-2">

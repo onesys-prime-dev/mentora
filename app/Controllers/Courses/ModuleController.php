@@ -41,4 +41,351 @@ class ModuleController extends BaseController
             )
         );
     }
+
+    public function viewLearningItemEditor(
+        int $offeringId,
+        int $learningItemId
+    ) {
+        $user = auth()->user();
+
+        return $this->response->setJSON(
+            $this->moduleService->viewLearningItemEditor(
+                $user,
+                $offeringId,
+                $learningItemId
+            )
+        );
+    }
+
+    public function storeModule(int $offeringId)
+    {
+        return $this->response->setJSON(
+
+            $this->moduleService->storeModule(
+                auth()->user(),
+                $offeringId,
+                $this->request
+            )
+
+        );
+    }
+
+    public function updateModule(
+        int $offeringId,
+        int $moduleId
+    ) {
+        return $this->response->setJSON(
+
+            $this->moduleService->updateModule(
+                auth()->user(),
+                $offeringId,
+                $moduleId,
+                $this->request
+            )
+
+        );
+    }
+
+    public function updateModuleStatus(
+        int $offeringId,
+        int $moduleId
+    ) {
+
+        $payload =
+            $this->request->getJSON(true);
+
+        return $this->response->setJSON(
+
+            $this->moduleService
+                ->updateModuleStatus(
+
+                    auth()->user(),
+
+                    $offeringId,
+
+                    $moduleId,
+
+                    $payload['status'] ?? 'draft'
+
+                )
+
+        );
+
+    }
+
+    public function deleteModule(
+        int $offeringId,
+        int $moduleId
+    ) {
+
+        return $this->response->setJSON(
+
+            $this->moduleService->deleteModule(
+
+                auth()->user(),
+
+                $offeringId,
+
+                $moduleId
+
+            )
+
+        );
+
+    }
+
+    public function reorderModules(
+        int $offeringId
+    ) {
+
+        $user =
+            auth()->user();
+
+        $payload =
+            $this->request->getJSON(true);
+
+        return $this->response->setJSON(
+
+            $this->moduleService
+                ->reorderModules(
+
+                    $user,
+
+                    $offeringId,
+
+                    $payload['order'] ?? []
+
+                )
+
+        );
+
+    }
+
+    public function storeLearningUnit(
+        int $offeringId,
+        int $moduleId
+    )
+    {
+        return $this->response->setJSON(
+
+            $this->moduleService->storeLearningUnit(
+
+                auth()->user(),
+
+                $offeringId,
+
+                $moduleId,
+
+                $this->request
+
+            )
+
+        );
+    }
+
+    public function updateLearningUnit(
+        int $offeringId,
+        int $moduleId,
+        int $learningUnitId
+    ) {
+        return $this->response->setJSON(
+
+            $this->moduleService->updateLearningUnit(
+                auth()->user(),
+                $offeringId,
+                $moduleId,
+                $learningUnitId,
+                $this->request
+            )
+
+        );
+    }
+
+    public function updateLearningUnitStatus(
+        int $offeringId,
+        int $learningUnitId
+    ) {
+
+        $user =
+            auth()->user();
+
+        $payload =
+            $this->request->getJSON(true);
+
+        return $this->response->setJSON(
+
+            $this->moduleService
+                ->updateLearningUnitStatus(
+
+                    $user,
+
+                    $offeringId,
+
+                    $learningUnitId,
+
+                    $payload
+
+                )
+
+        );
+
+    }
+
+    public function deleteLearningUnit(
+        int $offeringId,
+        int $moduleId,
+        int $learningUnitId
+    ) {
+
+        return $this->response->setJSON(
+
+            $this->moduleService->deleteLearningUnit(
+
+                auth()->user(),
+
+                $offeringId,
+
+                $moduleId,
+
+                $learningUnitId
+
+            )
+
+        );
+
+    }
+
+    public function reorderLearningUnits(
+        int $offeringId
+    ) {
+
+        $user =
+            auth()->user();
+
+        $payload =
+            $this->request->getJSON(true);
+
+        return $this->response->setJSON(
+
+            $this->moduleService
+                ->reorderLearningUnits(
+
+                    $user,
+
+                    $offeringId,
+
+                    $payload['learning_units'] ?? []
+
+                )
+
+        );
+
+    }
+
+    public function storeLearningItem(
+        int $offeringId,
+        int $moduleId,
+        int $learningUnitId
+    ) {
+        return $this->response->setJSON(
+
+            $this->moduleService->storeLearningItem(
+
+                auth()->user(),
+
+                $offeringId,
+
+                $moduleId,
+
+                $learningUnitId,
+
+                $this->request
+
+            )
+
+        );
+    }
+
+    public function updateLearningItem(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        $user =
+            auth()->user();
+
+        $payload =
+            $this->request->getJSON(true);
+
+        return $this->response->setJSON(
+
+            $this->moduleService
+                ->updateLearningItem(
+
+                    $user,
+
+                    $offeringId,
+
+                    $learningItemId,
+
+                    $payload
+
+                )
+
+        );
+
+    }
+
+    public function updateVideoItem(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        $user = auth()->user();
+
+        return $this->response->setJSON(
+
+            $this->moduleService->updateVideoItem(
+
+                $user,
+
+                $offeringId,
+
+                $learningItemId,
+
+                $this->request
+
+            )
+
+        );
+
+    }
+
+    public function reorderLearningItems(
+        int $offeringId
+    ) {
+
+        $user =
+            auth()->user();
+
+        $payload =
+            $this->request->getJSON(true);
+
+        return $this->response->setJSON(
+
+            $this->moduleService
+                ->reorderLearningItems(
+
+                    $user,
+
+                    $offeringId,
+
+                    $payload['items'] ?? []
+
+                )
+
+        );
+
+    }
 }
+

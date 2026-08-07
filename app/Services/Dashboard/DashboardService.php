@@ -31,8 +31,12 @@ class DashboardService
             'quick-access',
         ],
         'instructor' => [
-            'teaching-load',
-            'grading-queue',
+            'profile-card',
+            'key-metrics',
+            'upcoming-tasks',
+            'announcements',
+            'reminders',
+            'quick-access',
         ],
     ];
 

@@ -18,7 +18,7 @@
                     <?= $this->include('pages/courses/features/modules/partials/learning-item-header') ?>
 
                     <!-- contents -->
-                    <?= $this->include('pages/courses/features/modules/learning-items/' . $currentItem['item_type']) ?>
+                    <?= $this->include('pages/courses/features/modules/learning-items/views/' . $currentItem['item_type']) ?>
 
                 </div>
 

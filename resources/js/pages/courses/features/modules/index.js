@@ -1,37 +1,137 @@
-import { fetchModules, fetchLearningItem } from "./api.js";
+/*
+|--------------------------------------------------------------------------
+| Modules Feature
+|--------------------------------------------------------------------------
+*/
+
+import {
+    renderModulesSkeleton,
+} from "./skeleton.js";
+
+import { fetchModules } from "./api.js";
 import { state } from "./state.js";
+
 import { initializePdfViewer } from "../../../../shared/pdf/viewer.js";
+
+import { bindModuleEvents } from "./module-events.js";
+
+import {
+    bindLearningItemEvents,
+    bindLearningItemEditorEvents,
+    loadLearningItem,
+    loadLearningItemEditor,
+} from "./learning-item.js";
+
+import { bindBreadcrumbEvents } from "./breadcrumb.js";
+
+import { bindModuleActionMenus } from "./module-actions.js";
+import { bindLearningUnitActionMenus } from "./learning-unit-actions.js";
+
+import { bindModal } from "./modals/index.js";
+
+import { bindModuleModals } from "./modals/modules.js";
+import { bindLearningUnitModals } from "./modals/learning-units.js";
+import { bindLearningItemCreateModal }from "./modals/learning-items.js";
+
+import {
+    initializeModuleSorting,
+} from "./module-sort.js";
+
+import {
+    bindLearningNavigation,
+} from "./navigation.js";
+
+import {
+    bindLearningUnitEvents,
+} from "./learning-unit-events.js";
+
+import {
+    initializeLearningUnitSorting,
+} from "./learning-unit-sort.js";
+
+import {
+    initializeLearningItemSorting,
+} from "./learning-item-sort.js";
+
+import {
+    bindModuleStatusToggles,
+} from "./module-status.js";
+
+import {
+    bindLearningUnitStatusToggles,
+} from "./learning-unit-status.js";
+
+/*
+|--------------------------------------------------------------------------
+| Initialize
+|--------------------------------------------------------------------------
+*/
 
 export async function initialize() {
 
-    const params = new URLSearchParams(window.location.search);
+    const params =
+        new URLSearchParams(window.location.search);
 
-    const learningItemId = params.get("item");
+    const learningItemId =
+        Number(
+            params.get("item")
+        );
+
+    const isEditor =
+        params.has("editor");
 
     if (learningItemId) {
 
-        await loadLearningItem(Number(learningItemId));
+        if (isEditor) {
+
+            await loadLearningItemEditor(
+                learningItemId,
+                initialize
+            );
+
+        }
+
+        else {
+
+            await loadLearningItem(
+                learningItemId,
+                initialize
+            );
+
+        }
+
         return;
 
     }
+
+    await loadModules();
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Load Modules
+|--------------------------------------------------------------------------
+*/
+
+async function loadModules() {
 
     state.loading = true;
 
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    container.innerHTML = renderModulesSkeleton();
 
     try {
 
-        state.data = await fetchModules();
+        state.data =
+            await fetchModules();
 
-        container.innerHTML = state.data.html;
+        container.innerHTML =
+            state.data.html;
 
-        bindModuleEvents();
-        bindLearningItemEvents();
-        bindBreadcrumbEvents();
-        initializePdfViewer();
+        initializeFeatureBindings();
 
     }
 
@@ -40,7 +140,7 @@ export async function initialize() {
         console.error(error);
 
         container.innerHTML =
-            "<p>Unable to load Modules.</p>";
+            "<p>Unable to load modules.</p>";
 
     }
 
@@ -52,188 +152,174 @@ export async function initialize() {
 
 }
 
-function bindModuleEvents() {
+/*
+|--------------------------------------------------------------------------
+| Bind Everything
+|--------------------------------------------------------------------------
+*/
 
-    const modules =
-        document.querySelectorAll("[data-module]");
+function initializeFeatureBindings() {
 
-    modules.forEach((module) => {
+    /*
+    |--------------------------------------------------------------------------
+    | Core UI
+    |--------------------------------------------------------------------------
+    */
 
-        module.addEventListener("click", () => {
+    bindModuleEvents();
 
-            const id = module.dataset.module;
+    if (state.activeModuleId) {
 
-            const content =
-                document.querySelector(
-                    `[data-module-content="${id}"]`
-                );
+        const activeModule =
 
-            const arrow =
-                document.querySelector(
-                    `[data-module-arrow="${id}"]`
-                );
-
-            const isOpen =
-                content.classList.contains("max-h-[2000px]");
-
-            // Close every module first
-            document
-                .querySelectorAll("[data-module-content]")
-                .forEach((element) => {
-
-                    element.classList.remove(
-                        "max-h-[2000px]",
-                        "opacity-100",
-                        "pb-6"
-                    );
-
-                    element.classList.add(
-                        "max-h-0",
-                        "opacity-0"
-                    );
-
-                });
-
-            document
-                .querySelectorAll("[data-module-arrow]")
-                .forEach((element) => {
-
-                    element.classList.remove("rotate-180");
-
-                });
-
-            if (isOpen) {
-                return;
-            }
-
-            content.classList.remove(
-                "max-h-0",
-                "opacity-0"
+            document.querySelector(
+                `[data-module="${state.activeModuleId}"]`
             );
 
-            content.classList.add(
-                "max-h-[2000px]",
-                "opacity-100",
-                "pb-6"
-            );
+        activeModule?.click();
 
-            arrow.classList.add("rotate-180");
+    }
+
+    bindModuleActionMenus();
+
+    initializeModuleSorting();
+
+    bindModuleStatusToggles();
+
+    bindLearningUnitEvents();
+
+    initializeLearningUnitSorting();
+
+    bindLearningUnitStatusToggles();
+
+    bindLearningUnitActionMenus();
+
+    bindLearningItemEvents(
+        initialize
+    );
+
+    initializeLearningItemSorting();
+
+    bindLearningNavigation(
+        initialize
+    );
+
+    bindLearningItemEditorEvents(
+        initialize
+    );
+
+    bindBreadcrumbEvents(
+        initialize
+    );
+
+    initializePdfViewer();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Module Modals
+    |--------------------------------------------------------------------------
+    */
+
+    const moduleEditorModal =
+        bindModal({
+
+            modal:
+                "#module-editor-modal",
+
+            closeButtons:
+                "[data-close-module-modal]",
 
         });
+
+    const moduleDeleteModal =
+        bindModal({
+
+            modal:
+                "#module-delete-modal",
+
+            closeButtons:
+                "[data-close-module-delete-modal]",
+
+        });
+
+    bindModuleModals({
+
+        editor:
+            moduleEditorModal,
+
+        delete:
+            moduleDeleteModal,
+
+        refresh:
+            initialize,
 
     });
 
-}
+    /*
+    |--------------------------------------------------------------------------
+    | Learning Unit Modals
+    |--------------------------------------------------------------------------
+    */
 
-async function loadLearningItem(learningItemId) {
+    const learningUnitEditorModal =
+        bindModal({
 
-    try {
+            modal:
+                "#learning-unit-editor-modal",
 
-        state.loading = true;
-
-        const response =
-            await fetchLearningItem(learningItemId);
-
-        const container =
-            document.querySelector("#course-content");
-
-        container.innerHTML = response.html;
-
-        history.pushState(
-            { learningItemId },
-            "",
-            `${window.location.pathname}?item=${learningItemId}`
-        );
-
-        bindLearningItemEvents();
-        bindLearningUnitEvents();
-        bindBreadcrumbEvents();
-        initializePdfViewer();
-
-    } finally {
-
-        state.loading = false;
-
-    }
-
-}
-
-function bindLearningItemEvents() {
-
-    document
-        .querySelectorAll("[data-learning-item]")
-        .forEach((element) => {
-
-            element.addEventListener("click", () => {
-
-                const id =
-                    Number(element.dataset.learningItem);
-
-                if (!id) {
-                    return;
-                }
-
-                loadLearningItem(id);
-
-            });
+            closeButtons:
+                "[data-close-learning-unit-modal]",
 
         });
 
-}
+    const learningUnitDeleteModal =
+        bindModal({
 
-function bindLearningUnitEvents() {
+            modal:
+                "#learning-unit-delete-modal",
 
-    document
-        .querySelectorAll("[data-learning-unit]")
-        .forEach((header) => {
-
-            header.addEventListener("click", () => {
-
-                const container =
-                    header.nextElementSibling;
-
-                const arrow =
-                    header.querySelector("svg");
-
-                const isHidden =
-                    container.classList.contains("hidden");
-
-                if (isHidden) {
-
-                    container.classList.remove("hidden");
-                    arrow.classList.add("rotate-180");
-
-                } else {
-
-                    container.classList.add("hidden");
-                    arrow.classList.remove("rotate-180");
-
-                }
-
-            });
+            closeButtons:
+                "[data-close-learning-unit-delete-modal]",
 
         });
 
-}
+    bindLearningUnitModals({
 
-function bindBreadcrumbEvents() {
+        editor:
+            learningUnitEditorModal,
 
-    const breadcrumb =
-        document.querySelector("[data-modules-breadcrumb]");
+        delete:
+            learningUnitDeleteModal,
 
-    if (!breadcrumb) {
-        return;
-    }
+        refresh:
+            initialize,
 
-    breadcrumb.addEventListener("click", () => {
+    });
 
-        history.pushState(
-            {},
-            "",
-            window.location.pathname
-        );
+    /*
+    |--------------------------------------------------------------------------
+    | Learning Item Modals
+    |--------------------------------------------------------------------------
+    */
 
-        initialize();
+    const learningItemCreateModal =
+        bindModal({
+
+            modal:
+                "#learning-item-create-modal",
+
+            closeButtons:
+                "[data-close-learning-item-modal]",
+
+        });
+
+    bindLearningItemCreateModal({
+
+        create:
+            learningItemCreateModal,
+
+        refresh:
+            initialize,
 
     });
 

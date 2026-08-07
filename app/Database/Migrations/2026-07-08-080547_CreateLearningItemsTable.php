@@ -69,7 +69,7 @@ class CreateLearningItemsTable extends Migration
         $this->forge->addKey('item_type');
         $this->forge->addKey('status');
 
-        $this->forge->addUniqueKey([
+        $this->forge->addKey([
             'learning_unit_id',
             'order_index',
         ]);

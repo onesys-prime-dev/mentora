@@ -1,0 +1,94 @@
+@layer components {
+
+    .reading-content {
+
+        @apply text-base leading-8 text-[#565656];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Headings
+    |--------------------------------------------------------------------------
+    */
+
+    .reading-content h1 {
+
+        @apply mt-8 text-3xl text-[#1A1C1E];
+
+    }
+
+    .reading-content h2 {
+
+        @apply mt-4 text-2xl text-[#1A1C1E];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Paragraphs
+    |--------------------------------------------------------------------------
+    */
+
+    .reading-content p {
+
+        @apply mt-2 mb-1 leading-8 text-[#565656];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lists
+    |--------------------------------------------------------------------------
+    */
+
+    .reading-content ul {
+
+        @apply mt-2 mb-1 list-disc pl-8 text-[#565656];
+
+    }
+
+    .reading-content ol {
+
+        @apply mt-2 mb-1 list-decimal pl-8 text-[#565656];
+
+    }
+
+    .reading-content li {
+
+        @apply leading-8;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inline Formatting
+    |--------------------------------------------------------------------------
+    */
+
+    .reading-content strong {
+
+        @apply font-bold text-[#1A1C1E];
+
+    }
+
+    .reading-content em {
+
+        @apply italic;
+
+    }
+
+    .reading-content u {
+
+        @apply underline;
+
+    }
+
+
+    .ProseMirror.reading-content {
+
+        @apply text-base leading-8 text-[#565656];
+
+    }
+
+}

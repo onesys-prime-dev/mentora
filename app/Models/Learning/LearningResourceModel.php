@@ -12,7 +12,7 @@ class LearningResourceModel extends Model
 
     protected $returnType = 'array';
 
-    protected $useSoftDeletes = true;
+    protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
 
