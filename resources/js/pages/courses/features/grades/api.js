@@ -1,8 +1,8 @@
-export async function fetchHome()
+export async function fetchGrades()
 {
     const response = await fetch(
 
-        `${window.coursesConfig.apiBaseUrl}/home`,
+        `${window.coursesConfig.apiBaseUrl}/grades`,
 
         {
 
@@ -20,7 +20,7 @@ export async function fetchHome()
 
     if (!response.ok) {
 
-        throw new Error("Unable to load Home.");
+        throw new Error("Unable to load Grades.");
 
     }
 

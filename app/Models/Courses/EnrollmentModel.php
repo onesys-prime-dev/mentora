@@ -3,6 +3,7 @@
 namespace App\Models\Courses;
 
 use CodeIgniter\Model;
+use CodeIgniter\Shield\Entities\User;
 
 class EnrollmentModel extends Model
 {
@@ -69,6 +70,9 @@ class EnrollmentModel extends Model
 
                 'institutions.id AS institution_id',
                 'institutions.name AS institution_name',
+
+                "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS instructor_name",
+                'auth_identities.secret AS instructor_email',
             ])
             ->join(
                 'course_offerings',
@@ -90,6 +94,26 @@ class EnrollmentModel extends Model
                 'institutions',
                 'institutions.id = academic_terms.institution_id
                 AND institutions.id = programs.institution_id'
+            )
+            ->join(
+                'instructor_assignments',
+                'instructor_assignments.offering_id = course_offerings.id'
+            )
+
+            ->join(
+                'users',
+                'users.id = instructor_assignments.instructor_user_id'
+            )
+
+            ->join(
+                'user_profiles',
+                'user_profiles.user_id = users.id'
+            )
+
+            ->join(
+                'auth_identities',
+                "auth_identities.user_id = users.id
+                AND auth_identities.type = 'email_password'"
             )
             ->where('enrollments.student_user_id', $userId)
             ->where('enrollments.status', 'enrolled')
@@ -154,5 +178,18 @@ class EnrollmentModel extends Model
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getRowArray();
+    }
+
+    public function retrieveTotalCoursesEnrolled(int $userId): int
+    {
+        return $this->builder()
+            ->join(
+                'course_offerings',
+                'course_offerings.id = enrollments.offering_id'
+            )
+            ->where('enrollments.student_user_id', $userId)
+            ->where('enrollments.status', 'enrolled')
+            ->where('course_offerings.status', 'active')
+            ->countAllResults();
     }
 }

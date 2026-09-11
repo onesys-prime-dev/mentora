@@ -28,4 +28,19 @@ class LearningCompletionModel extends Model
         'completed_at',
         'status',
     ];
+
+    public function retrieveLearningCompletion(int $learningItemId, int $userId)
+    {
+        $builder = $this->builder();
+
+        return $builder
+            ->select([
+                'id',
+                'status',
+            ])
+            ->where('learning_item_id', $learningItemId)
+            ->where('student_user_id', $userId)
+            ->get()
+            ->getRowArray();
+    }
 }

@@ -9,7 +9,8 @@ class DashboardController extends BaseController
 {
     protected DashboardService $dashboardService;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->dashboardService = new DashboardService();
     }
 
@@ -18,10 +19,11 @@ class DashboardController extends BaseController
         $user = auth()->user();
 
         return view('pages/dashboard/index', [
-            'title' => 'Dashboard',
+            'title'   => 'Dashboard',
             'page'    => 'dashboard',
-            'user' => $user,
-            'dashboard' => $this->dashboardService->getDashboardData($user),
+            'user'    => $user,
+            'widgets' => $this->dashboardService->getDashboardWidgets($user),
+            'academic_term' => $this->dashboardService->getAcademicTerm($user),
         ]);
     }
 }

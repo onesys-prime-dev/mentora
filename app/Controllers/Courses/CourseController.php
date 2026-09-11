@@ -46,7 +46,7 @@ class CourseController extends BaseController
     ) {
         return redirect()->to(
             site_url(
-                "student/courses/{$offeringId}/{$slug}/home"
+                "student/courses/{$offeringId}/{$slug}/overview"
             )
         );
     }

@@ -16,7 +16,7 @@ class GradeService
         return [
 
             'html' => view(
-                'pages/courses/features/grade/index'
+                'pages/courses/features/grades/index'
             ),
 
         ];

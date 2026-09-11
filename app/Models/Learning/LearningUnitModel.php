@@ -29,4 +29,22 @@ class LearningUnitModel extends Model
         'order_index',
         'status',
     ];
+
+    public function retrieveLearningUnits(int $moduleId): array
+    {
+        $builder = $this->builder();
+
+        return $builder
+            ->select([
+                'id',
+                'title',
+                'description',
+                'order_index',
+            ])
+            ->where('module_id', $moduleId)
+            ->where('status', 'published')
+            ->orderBy('order_index')
+            ->get()
+            ->getResultArray();
+    }
 }

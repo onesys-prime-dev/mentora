@@ -37,6 +37,19 @@ class CreateUserProfilesTable extends Migration
                 'null'       => true,
             ],
 
+            'student_number' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'null'       => true,
+            ],
+
+            'program_id' => [
+                'type'       => 'INT',
+                'constraint' => 11,
+                'unsigned'   => true,
+                'null'       => true,
+            ],
+
             'created_at' => [
                 'type' => 'DATETIME',
                 'null' => true,
@@ -63,6 +76,15 @@ class CreateUserProfilesTable extends Migration
             'id',
             'CASCADE',
             'CASCADE'
+        );
+
+        // Foreign Key (onUpdate, onDelete)
+        $this->forge->addForeignKey(
+            'program_id',
+            'programs',
+            'id',
+            'CASCADE',
+            'SET NULL'
         );
 
         $this->forge->createTable('user_profiles');

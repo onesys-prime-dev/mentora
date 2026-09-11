@@ -26,4 +26,19 @@ class ModuleController extends BaseController
             )
         );
     }
+
+    public function viewLearningItem(
+        int $offeringId,
+        int $learningItemId
+    ) {
+        $user = auth()->user();
+
+        return $this->response->setJSON(
+            $this->moduleService->viewLearningItem(
+                $user,
+                $offeringId,
+                $learningItemId
+            )
+        );
+    }
 }
