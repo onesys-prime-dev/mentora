@@ -5,6 +5,28 @@
 
         <button
             type="button"
+            data-delete-learning-item
+            data-learning-item-id="<?= esc($currentItem['id']) ?>"
+            title="Delete learning item"
+            class="h-fit rounded-lg p-2 transition hover:bg-red-50">
+
+            <svg xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-gray-400 transition hover:text-red-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2">
+
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m3 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12zM10 11v6M14 11v6" />
+            </svg>
+
+        </button>
+
+        <button
+            type="button"
             data-save-draft
             class="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition cursor-pointer hover:border-gray-400 hover:bg-gray-50">
 

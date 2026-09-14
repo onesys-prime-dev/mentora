@@ -10,8 +10,10 @@ use App\Models\Learning\LearningItemModel;
 use App\Models\Learning\LearningCompletionModel;
 use App\Models\Learning\LearningResourceModel;
 use App\Models\Files\FileModel;
+use App\Models\Assessments\AssessmentTypeModel;
 
 use App\Services\Storage\StorageService;
+use App\Services\Courses\Assessments\AssessmentService;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -24,8 +26,10 @@ class ModuleService
     protected LearningCompletionModel $learningCompletionModel;
     protected LearningResourceModel $learningResourceModel;
     protected FileModel $fileModel;
+    protected AssessmentTypeModel $assessmentTypeModel;
 
     protected StorageService $storageService;
+    protected AssessmentService $assessmentService;
 
     public function __construct()
     {
@@ -35,6 +39,9 @@ class ModuleService
         $this->learningCompletionModel = new LearningCompletionModel();
         $this->learningResourceModel = new LearningResourceModel();
         $this->fileModel = new FileModel();
+        $this->assessmentTypeModel = new AssessmentTypeModel();
+
+        $this->assessmentService = new AssessmentService();
 
         $this->storageService = new StorageService();
     }
@@ -1085,6 +1092,37 @@ class ModuleService
 
         ]);
 
+        $learningItemId =
+            $this->learningItemModel->getInsertID();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create matching Assessment (Quiz / Assignment items only)
+        |--------------------------------------------------------------------------
+        */
+
+        if (in_array($itemType, ['quiz', 'assignment'], true)) {
+
+            $assessmentType =
+                $this->assessmentTypeModel
+                    ->where('name', ucfirst($itemType))
+                    ->first();
+
+            if ($assessmentType) {
+
+                $this->assessmentService
+                    ->createAssessmentForLearningItem(
+                        $user,
+                        $moduleId,
+                        $learningItemId,
+                        $assessmentType['id'],
+                        $title
+                    );
+
+            }
+
+        }
+
         return [
 
             'success' => true,
@@ -1173,6 +1211,42 @@ class ModuleService
 
             'message' =>
                 'Learning item updated.',
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Delete Learning Item
+    |--------------------------------------------------------------------------
+    */
+
+    public function deleteLearningItem(
+        User $user,
+        int $offeringId,
+        int $learningItemId
+    ): array {
+
+        $learningItem =
+            $this->learningItemModel
+                ->find($learningItemId);
+
+        if (!$learningItem) {
+
+            throw new PageNotFoundException();
+
+        }
+
+        $this->learningItemModel
+            ->delete($learningItemId);
+
+        return [
+
+            'success' => true,
+
+            'message' =>
+                'Learning item deleted.',
 
         ];
 

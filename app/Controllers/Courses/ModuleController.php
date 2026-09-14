@@ -336,6 +336,31 @@ class ModuleController extends BaseController
 
     }
 
+    public function deleteLearningItem(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        $user =
+            auth()->user();
+
+        return $this->response->setJSON(
+
+            $this->moduleService
+                ->deleteLearningItem(
+
+                    $user,
+
+                    $offeringId,
+
+                    $learningItemId
+
+                )
+
+        );
+
+    }
+
     public function updateVideoItem(
         int $offeringId,
         int $learningItemId

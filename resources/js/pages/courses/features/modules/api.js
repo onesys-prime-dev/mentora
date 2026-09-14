@@ -545,6 +545,36 @@ export async function updateLearningItem(
 
 }
 
+export async function deleteLearningItem(
+    learningItemId
+) {
+
+    const response = await fetch(
+
+        `${window.coursesConfig.apiBaseUrl}/modules/items/${learningItemId}`,
+
+        {
+
+            method: "DELETE",
+
+            headers: defaultHeaders(),
+
+        }
+
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to delete learning item."
+        );
+
+    }
+
+    return response.json();
+
+}
+
 /*
 |--------------------------------------------------------------------------
 | Update Video Learning Item

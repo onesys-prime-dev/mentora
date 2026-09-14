@@ -11,7 +11,15 @@ import {
 
     updateLearningItem,
 
+    deleteLearningItem,
+
 } from "./api.js";
+
+import {
+
+    bindModal,
+
+} from "./modals/index.js";
 
 import {
 
@@ -48,6 +56,87 @@ export function initializeLearningItemActions(
         refresh
 
     );
+
+    bindDeleteLearningItem(
+
+        learningItemId,
+
+        refresh
+
+    );
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Delete
+|--------------------------------------------------------------------------
+*/
+
+function bindDeleteLearningItem(
+
+    learningItemId,
+
+    refresh
+
+) {
+
+    const modal =
+        bindModal({
+
+            modal:
+                "#learning-item-delete-modal",
+
+            closeButtons:
+                "[data-close-learning-item-delete-modal]",
+
+        });
+
+    if (!modal) {
+        return;
+    }
+
+    document
+        .querySelector("[data-delete-learning-item]")
+        ?.addEventListener(
+            "click",
+            () => {
+                modal.open();
+            }
+        );
+
+    document
+        .querySelector("[data-confirm-delete-learning-item]")
+        ?.addEventListener(
+            "click",
+            async () => {
+
+                try {
+
+                    await deleteLearningItem(
+                        learningItemId
+                    );
+
+                    modal.close();
+
+                    history.pushState(
+                        {},
+                        "",
+                        window.location.pathname
+                    );
+
+                    await refresh();
+
+                }
+
+                catch (error) {
+
+                    console.error(error);
+
+                }
+
+            }
+        );
 
 }
 
