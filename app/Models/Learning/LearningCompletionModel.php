@@ -12,7 +12,8 @@ class LearningCompletionModel extends Model
 
     protected $returnType = 'array';
 
-    protected $useSoftDeletes = true;
+    // No deleted_at column on this table — see CreateLearning*/CourseModules migrations.
+    protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
 

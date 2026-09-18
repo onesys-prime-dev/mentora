@@ -34,3 +34,89 @@
 }
 
 @import "./components/reading.css";
+
+@layer components {
+    /*
+     * Monochrome icon.
+     *
+     * The PNG contributes only its alpha channel (the glyph shape); the fill
+     * comes from `currentColor`, so a single asset works on any background.
+     * Pair with the icon() helper — see app/Helpers/icon_helper.php.
+     */
+    .icon {
+        display: inline-block;
+        flex-shrink: 0;
+        background-color: currentColor;
+
+        -webkit-mask-image: var(--icon-url);
+        mask-image: var(--icon-url);
+
+        -webkit-mask-size: contain;
+        mask-size: contain;
+
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+
+        -webkit-mask-position: center;
+        mask-position: center;
+    }
+}
+
+@layer components {
+    /*
+     * Floating pill scrollbar.
+     *
+     * The track is fully transparent and the thumb is inset from the gutter
+     * with a transparent border + background-clip, so what shows is a small
+     * rounded pill hovering over the content rather than a grey bar welded
+     * to the card edge. The track margin keeps it clear of the card's
+     * rounded corners.
+     *
+     * The two engines are kept strictly apart on purpose: since Chromium 121
+     * an element that sets `scrollbar-width` or `scrollbar-color` switches to
+     * the standard scrollbar and every ::-webkit-scrollbar rule on it is
+     * ignored. Declaring both together silently loses the custom look, so the
+     * standard properties are served only to engines without the WebKit
+     * pseudo-elements (Firefox).
+     */
+    @supports not selector(::-webkit-scrollbar) {
+        .scroll-area {
+            scrollbar-width: thin;
+            scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+        }
+    }
+
+    @supports selector(::-webkit-scrollbar) {
+        .scroll-area::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        /* Stepper arrows at both ends of the track. */
+        .scroll-area::-webkit-scrollbar-button {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        .scroll-area::-webkit-scrollbar-track {
+            background: transparent;
+            margin-block: 8px;
+        }
+
+        /*
+         * The transparent border plus content-box clipping is what insets the
+         * pill: the hit target stays 10px wide, the paint is only 4px.
+         */
+        .scroll-area::-webkit-scrollbar-thumb {
+            background-color: rgb(0 0 0 / 0.2);
+            border: 3px solid transparent;
+            background-clip: content-box;
+            border-radius: 9999px;
+        }
+
+        .scroll-area::-webkit-scrollbar-thumb:hover {
+            background-color: rgb(0 0 0 / 0.35);
+        }
+    }
+}

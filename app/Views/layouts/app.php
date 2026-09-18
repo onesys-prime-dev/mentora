@@ -1,3 +1,20 @@
+<?php
+/**
+ * Pages opt into a viewport-locked shell by passing 'fullHeight' => true.
+ * There the page itself never scrolls — the shell is pinned to the viewport
+ * and any overflow is handled inside the individual cards.
+ *
+ * The lock only engages from `lg` up. Below that there isn't the vertical
+ * room to fit a dashboard's worth of cards on one screen, so the page falls
+ * back to normal scrolling rather than crushing them. Every other page keeps
+ * the grow-and-scroll behaviour at all widths.
+ */
+$fullHeight = $fullHeight ?? false;
+
+$bodyHeight  = $fullHeight ? 'min-h-screen lg:h-screen lg:overflow-hidden' : 'min-h-screen';
+$shellHeight = $fullHeight ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen';
+$mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -8,16 +25,16 @@
 </head>
 
 <body 
-    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat"
+    class="<?= $bodyHeight ?> bg-gray-100 bg-cover bg-center bg-no-repeat"
     style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
     data-page="<?= esc($page ?? '') ?>"
 >
 
-    <div class="flex flex-col min-h-screen">
+    <div class="flex flex-col <?= $shellHeight ?>">
 
         <?= $this->include('layouts/partials/header') ?>
 
-        <main class="flex-1 px-40 py-10">
+        <main class="flex-1 px-40 <?= $mainSpacing ?>">
 
             <?= $this->renderSection('content') ?>
 

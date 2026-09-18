@@ -192,4 +192,63 @@ class EnrollmentModel extends Model
             ->where('course_offerings.status', 'active')
             ->countAllResults();
     }
+
+    /**
+     * Per-student progress across a set of offerings: how many published items
+     * each enrolled student has completed, and when they last completed one.
+     *
+     * Returns raw counts and a timestamp; deciding who counts as "at risk"
+     * needs the per-offering item total, which lives in the module query, so
+     * that judgement is made by the caller rather than baked into SQL.
+     */
+    public function retrieveRosterProgress(array $offeringIds): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        return $this->builder()
+            ->select([
+                'enrollments.offering_id',
+                'enrollments.student_user_id',
+
+                'user_profiles.first_name',
+                'user_profiles.last_name',
+            ])
+            ->select(
+                "(SELECT COUNT(*)
+                    FROM learning_completions
+                    JOIN learning_items
+                      ON learning_items.id = learning_completions.learning_item_id
+                    JOIN learning_units
+                      ON learning_units.id = learning_items.learning_unit_id
+                    JOIN course_modules
+                      ON course_modules.id = learning_units.module_id
+                   WHERE course_modules.offering_id = enrollments.offering_id
+                     AND learning_completions.student_user_id = enrollments.student_user_id
+                     AND learning_completions.status = 'completed') AS completed_count",
+                false
+            )
+            ->select(
+                "(SELECT MAX(learning_completions.completed_at)
+                    FROM learning_completions
+                    JOIN learning_items
+                      ON learning_items.id = learning_completions.learning_item_id
+                    JOIN learning_units
+                      ON learning_units.id = learning_items.learning_unit_id
+                    JOIN course_modules
+                      ON course_modules.id = learning_units.module_id
+                   WHERE course_modules.offering_id = enrollments.offering_id
+                     AND learning_completions.student_user_id = enrollments.student_user_id) AS last_active",
+                false
+            )
+            ->join(
+                'user_profiles',
+                'user_profiles.user_id = enrollments.student_user_id'
+            )
+            ->whereIn('enrollments.offering_id', $offeringIds)
+            ->where('enrollments.status', 'enrolled')
+            ->get()
+            ->getResultArray();
+    }
 }
