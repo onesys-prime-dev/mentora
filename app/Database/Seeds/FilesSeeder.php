@@ -22,45 +22,61 @@ class FilesSeeder extends Seeder
 
         $now = date('Y-m-d H:i:s');
 
-        $files = [
+        $rows = [
+
+            /*
+            |--------------------------------------------------------------------------
+            | Course Videos
+            |--------------------------------------------------------------------------
+            */
+
             [
-                'owner_user_id'      => $instructor->id,
-                'original_filename'  => 'Course Syllabus.pdf',
-                'stored_filename'    => 'course-syllabus.pdf',
-                'mime_type'          => 'application/pdf',
-                'file_size'          => 254321,
-                'storage_path'       => 'uploads/course-syllabus.pdf',
-                'status'             => 'active',
-                'uploaded_at'         => $now,
-                'updated_at'         => $now,
+                'owner_user_id'     => $instructor->id,
+                'original_filename' => 'Course Orientation.mp4',
+                'stored_filename'   => 'course-orientation.mp4',
+                'mime_type'         => 'video/mp4',
+                'file_size'         => 48765432,
+                'storage_key'      => 'videos/course-orientation.mp4',
+                'status'            => 'active',
+                'uploaded_at'       => $now,
+                'updated_at'        => $now,
             ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Course Documents
+            |--------------------------------------------------------------------------
+            */
+
             [
-                'owner_user_id'      => $instructor->id,
-                'original_filename'  => 'Introduction.pptx',
-                'stored_filename'    => 'introduction.pptx',
-                'mime_type'          => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                'file_size'          => 1823312,
-                'storage_path'       => 'uploads/introduction.pptx',
-                'status'             => 'active',
-                'uploaded_at'         => $now,
-                'updated_at'         => $now,
+                'owner_user_id'     => $instructor->id,
+                'original_filename' => 'XAMPP Installation Guide.pdf',
+                'stored_filename'   => 'xampp-installation-guide.pdf',
+                'mime_type'         => 'application/pdf',
+                'file_size'         => 1254876,
+                'storage_key'      => 'documents/xampp-installation-guide.pdf',
+                'status'            => 'active',
+                'uploaded_at'       => $now,
+                'updated_at'        => $now,
             ],
+
             [
-                'owner_user_id'      => $instructor->id,
-                'original_filename'  => 'Week1-Handout.pdf',
-                'stored_filename'    => 'week1-handout.pdf',
-                'mime_type'          => 'application/pdf',
-                'file_size'          => 983421,
-                'storage_path'       => 'uploads/week1-handout.pdf',
-                'status'             => 'active',
-                'uploaded_at'         => $now,
-                'updated_at'         => $now,
+                'owner_user_id'     => $instructor->id,
+                'original_filename' => 'PHP Variables Reference.pdf',
+                'stored_filename'   => 'php-variables-reference.pdf',
+                'mime_type'         => 'application/pdf',
+                'file_size'         => 987245,
+                'storage_key'      => 'documents/php-variables-reference.pdf',
+                'status'            => 'active',
+                'uploaded_at'       => $now,
+                'updated_at'        => $now,
             ],
+
         ];
 
         $this->db
             ->table('files')
-            ->insertBatch($files);
+            ->insertBatch($rows);
 
         echo "Files seeded.\n";
     }

@@ -12,7 +12,7 @@ class LearningResourceModel extends Model
 
     protected $returnType = 'array';
 
-    protected $useSoftDeletes = true;
+    protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
 
@@ -29,4 +29,51 @@ class LearningResourceModel extends Model
         'resource_type',
         'resource_url',
     ];
+
+    /**
+     * Retrieve the resource attached to a learning item.
+     */
+    public function retrieveLearningResource(
+        int $learningItemId
+    ): ?array
+    {
+        return $this->builder()
+            ->select([
+                'id',
+                'learning_item_id',
+                'file_id',
+                'title',
+                'resource_type',
+                'resource_url',
+            ])
+            ->where('learning_item_id', $learningItemId)
+            ->get()
+            ->getRowArray();
+    }
+
+    /**
+     * Retrieve all resources for a collection of learning items.
+     * This will be used later when we optimize away N+1 queries.
+     */
+    public function retrieveLearningResources(
+        array $learningItemIds
+    ): array
+    {
+        if ($learningItemIds === []) {
+            return [];
+        }
+
+        return $this->builder()
+            ->select([
+                'id',
+                'learning_item_id',
+                'file_id',
+                'title',
+                'resource_type',
+                'resource_url',
+            ])
+            ->whereIn('learning_item_id', $learningItemIds)
+            ->get()
+            ->getResultArray();
+    }
 }

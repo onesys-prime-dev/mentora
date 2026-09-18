@@ -33,6 +33,13 @@
     "@fontsource/pacifico": "^5.2.7",
     "@fontsource/parkinsans": "^5.2.7",
     "@fontsource/phetsarath": "^5.2.8",
-    "@fontsource/poppins": "^5.2.7"
+    "@fontsource/poppins": "^5.2.7",
+    "@tiptap/core": "^3.29.2",
+    "@tiptap/extension-placeholder": "^3.29.2",
+    "@tiptap/extension-text-align": "^3.29.2",
+    "@tiptap/extension-underline": "^3.29.2",
+    "@tiptap/starter-kit": "^3.29.2",
+    "pdfjs-dist": "^6.1.200",
+    "sortablejs": "^1.15.7"
   }
 }

@@ -40,7 +40,7 @@ class CreateFilesTable extends Migration
                 'unsigned' => true,
             ],
 
-            'storage_path' => [
+            'storage_key' => [
                 'type' => 'TEXT',
             ],
 

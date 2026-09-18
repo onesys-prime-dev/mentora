@@ -12,54 +12,62 @@ class LearningResourcesSeeder extends Seeder
 
         $rows = [
 
-            [
-                'learning_item_id' => 1,
-                'file_id' => null,
-                'title' => 'Welcome Page',
-                'resource_type' => 'page',
-                'resource_url' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
+            /*
+            |--------------------------------------------------------------------------
+            | Unit 1
+            |--------------------------------------------------------------------------
+            */
 
             [
                 'learning_item_id' => 2,
-                'file_id' => null,
-                'title' => 'Orientation Video',
-                'resource_type' => 'youtube',
-                'resource_url' => 'https://youtu.be/dQw4w9WgXcQ',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'file_id'          => 1,
+                'title'            => 'Course Orientation Video',
+                'resource_type'    => 'video',
+                'resource_url'     => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Unit 2
+            |--------------------------------------------------------------------------
+            */
 
             [
                 'learning_item_id' => 4,
-                'file_id' => 1,
-                'title' => 'Development Checklist',
-                'resource_type' => 'file',
-                'resource_url' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
+                'file_id'          => 2,
+                'title'            => 'XAMPP Installation Guide',
+                'resource_type'    => 'pdf',
+                'resource_url'     => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
 
-            [
-                'learning_item_id' => 5,
-                'file_id' => 2,
-                'title' => 'PHP Variables Handout',
-                'resource_type' => 'file',
-                'resource_url' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
+            /*
+            |--------------------------------------------------------------------------
+            | Unit 3
+            |--------------------------------------------------------------------------
+            */
 
             [
                 'learning_item_id' => 6,
-                'file_id' => null,
-                'title' => 'PHP Official Documentation',
-                'resource_type' => 'link',
-                'resource_url' => 'https://www.php.net/manual/en/',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'file_id'          => 3,
+                'title'            => 'PHP Variables Reference',
+                'resource_type'    => 'pdf',
+                'resource_url'     => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ],
+
+            [
+                'learning_item_id' => 7,
+                'file_id'          => null,
+                'title'            => 'PHP Variables Explained (YouTube)',
+                'resource_type'    => 'video',
+                'resource_url'     => 'https://www.youtube.com/watch?v=OK_JCtrrv-c',
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
 
         ];
@@ -67,5 +75,7 @@ class LearningResourcesSeeder extends Seeder
         $this->db
             ->table('learning_resources')
             ->insertBatch($rows);
+
+        echo "Learning resources seeded.\n";
     }
 }

@@ -32,3 +32,5 @@
         @apply font-sans;
     }
 }
+
+@import "./components/reading.css";

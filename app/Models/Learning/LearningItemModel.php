@@ -2,6 +2,8 @@
 
 namespace App\Models\Learning;
 
+use CodeIgniter\Shield\Entities\User;
+
 use CodeIgniter\Model;
 
 class LearningItemModel extends Model
@@ -12,7 +14,7 @@ class LearningItemModel extends Model
 
     protected $returnType = 'array';
 
-    protected $useSoftDeletes = true;
+    protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
 
@@ -31,22 +33,54 @@ class LearningItemModel extends Model
         'status',
     ];
 
-    public function retrieveLearningItems(int $learningUnitId): array
+    public function retrieveLearningItems(int $learningUnitId, User $user): array
     {
         $builder = $this->builder();
 
-        return $builder
+        $builder
             ->select([
                 'id',
+                'learning_unit_id',
                 'title',
                 'item_type',
                 'content',
                 'order_index',
+                'status',
             ])
-            ->where('learning_unit_id', $learningUnitId)
-            ->where('status', 'published')
+            ->where('learning_unit_id', $learningUnitId);
+        
+        if (! $user->inGroup('instructor')) {
+            $builder->where('status', 'published');
+        }
+
+        return $builder
             ->orderBy('order_index')
             ->get()
             ->getResultArray();
+    }
+
+    public function retrieveLearningItem(int $learningItemId, User $user): ?array
+    {
+        $builder = $this->builder();
+
+        $builder
+            ->select([
+                'id',
+                'learning_unit_id',
+                'title',
+                'item_type',
+                'content',
+                'order_index',
+                'status',
+            ])
+            ->where('id', $learningItemId);
+
+        if (! $user->inGroup('instructor')) {
+            $builder->where('status', 'published');
+        }
+
+        return $builder
+            ->get()
+            ->getRowArray();
     }
 }

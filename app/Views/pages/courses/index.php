@@ -54,18 +54,20 @@ $userRole = esc($user->getGroups()[0]);
                     </span>
                 </div>
 
-                <div class="flex gap-2 items-center py-3">
-                    <img 
-                        src="<?= base_url('assets/images/placeholder/profile.png') ?>"
-                        class="w-6 h-6"
-                        alt="">
+                <?php if (isset($course['instructor_name'])): ?>
+                    <div class="flex gap-2 items-center py-3">
+                        <img 
+                            src="<?= base_url('assets/images/placeholder/profile.png') ?>"
+                            class="w-6 h-6"
+                            alt="">
+    
+                            <span class="text-xs opacity-70">
+                                Instr. <?= esc($course['instructor_name']) ?> - Room 33A
+                            </span>
+                    </div>
+                <?php endif; ?>
 
-                    <span class="text-xs opacity-70">
-                        Instr. <?= esc($course['instructor_name']) ?> - Room 33A
-                    </span>
-                </div>
-
-                <div class="flex flex-col">
+                <div class="flex flex-col mt-3">
                     <div class="flex justify-between">
                         <span class="text-xs opacity-60">PROGRESS</span>
 

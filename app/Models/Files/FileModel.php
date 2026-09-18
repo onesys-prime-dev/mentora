@@ -12,7 +12,7 @@ class FileModel extends Model
 
     protected $returnType = 'array';
 
-    protected $useSoftDeletes = true;
+    protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
 
@@ -28,7 +28,58 @@ class FileModel extends Model
         'stored_filename',
         'mime_type',
         'file_size',
-        'storage_path',
+        'storage_key',
         'status',
     ];
+
+    /**
+     * Retrieve a single uploaded file.
+     */
+    public function retrieveFile(
+        int $fileId
+    ): ?array
+    {
+        return $this->builder()
+            ->select([
+                'id',
+                'owner_user_id',
+                'original_filename',
+                'stored_filename',
+                'mime_type',
+                'file_size',
+                'storage_key',
+            ])
+            ->where('id', $fileId)
+            ->where('status', 'active')
+            ->get()
+            ->getRowArray();
+    }
+
+    /**
+     * Retrieve multiple uploaded files.
+     * Used later when optimizing away N+1 queries.
+     */
+    public function retrieveFiles(
+        array $fileIds
+    ): array
+    {
+        if ($fileIds === []) {
+            return [];
+        }
+
+        return $this->builder()
+            ->select([
+                'id',
+                'owner_user_id',
+                'original_filename',
+                'stored_filename',
+                'mime_type',
+                'file_size',
+                'storage_key',
+            ])
+            ->whereIn('id', $fileIds)
+            ->where('status', 'active')
+            ->get()
+            ->getResultArray();
+    }
 }

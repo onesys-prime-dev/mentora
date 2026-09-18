@@ -77,7 +77,7 @@ $userRole = esc($user->getGroups()[0]);
 
                     </a>
                 
-                    <?php if ($userRole == 'student'): ?>
+                    <?php if ($userRole == 'student' || $userRole == 'instructor'): ?>
 
                         <a 
                             class="w-16 h-16 flex justify-center items-center bg-white/30 border border-black/5 shadow-md rounded-3xl"

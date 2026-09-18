@@ -44,9 +44,15 @@ class CourseController extends BaseController
         int $offeringId,
         string $slug
     ) {
+        $user = auth()->user();
+
+        $prefix = $user->inGroup('instructor')
+            ? 'instructor'
+            : 'student';
+
         return redirect()->to(
             site_url(
-                "student/courses/{$offeringId}/{$slug}/overview"
+                "{$prefix}/courses/{$offeringId}/{$slug}/overview"
             )
         );
     }

@@ -5,7 +5,7 @@ namespace App\Services\Courses;
 use CodeIgniter\Shield\Entities\User;
 
 use App\Models\Courses\EnrollmentModel;
-use App\Models\Courses\InstructorAssignmentModel;
+use App\Models\Assignments\InstructorAssignmentModel;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -13,13 +13,13 @@ class CourseService
 {
     protected EnrollmentModel $enrollmentModel;
 
-    //protected InstructorAssignmentModel $instructorAssignmentModel;
+    protected InstructorAssignmentModel $instructorAssignmentModel;
 
     public function __construct()
     {
         $this->enrollmentModel = new EnrollmentModel();
 
-        //$this->instructorAssignmentModel = new InstructorAssignmentModel();
+        $this->instructorAssignmentModel = new InstructorAssignmentModel();
     }
 
     /*
@@ -39,9 +39,8 @@ class CourseService
 
         if ($user->inGroup('instructor')) {
 
-            /*return $this->instructorAssignmentModel
+            return $this->instructorAssignmentModel
                 ->retrieveInstructorCourseOfferings($user->id);
-            */
         }
 
         return [];
@@ -69,13 +68,11 @@ class CourseService
         }
 
         if ($user->inGroup('instructor')) {
-/*
             return $this->instructorAssignmentModel
                 ->retrieveInstructorCourseOffering(
                     $user->id,
                     $offeringId
                 );
-*/
         }
 
         return null;

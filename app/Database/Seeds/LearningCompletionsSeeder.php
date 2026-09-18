@@ -12,59 +12,85 @@ class LearningCompletionsSeeder extends Seeder
 
         $rows = [
 
-            // Student 2
+            /*
+            |--------------------------------------------------------------------------
+            | Unit 1
+            |--------------------------------------------------------------------------
+            */
+
             [
                 'learning_item_id' => 1,
-                'student_user_id' => 2,
-                'status' => 'completed',
-                'completed_at' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
+                'student_user_id'  => 2,
+                'status'           => 'completed',
+                'completed_at'     => $now,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
 
             [
                 'learning_item_id' => 2,
-                'student_user_id' => 2,
-                'status' => 'completed',
-                'completed_at' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
+                'student_user_id'  => 2,
+                'status'           => 'completed',
+                'completed_at'     => $now,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Unit 2
+            |--------------------------------------------------------------------------
+            */
 
             [
                 'learning_item_id' => 3,
-                'student_user_id' => 2, 
-                'status' => 'in_progress',
-                'completed_at' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
+                'student_user_id'  => 2,
+                'status'           => 'completed',
+                'completed_at'     => $now,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
 
             [
                 'learning_item_id' => 4,
-                'student_user_id' => 2,
-                'status' => 'in_progress',
-                'completed_at' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
+                'student_user_id'  => 2,
+                'status'           => 'in_progress',
+                'completed_at'     => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
-            
+
+            /*
+            |--------------------------------------------------------------------------
+            | Unit 3
+            |--------------------------------------------------------------------------
+            */
+
             [
                 'learning_item_id' => 5,
-                'student_user_id' => 2,
-                'status' => 'not_started',
-                'completed_at' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
+                'student_user_id'  => 2,
+                'status'           => 'not_started',
+                'completed_at'     => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
 
             [
                 'learning_item_id' => 6,
-                'student_user_id' => 2,
-                'status' => 'completed',
-                'completed_at' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
+                'student_user_id'  => 2,
+                'status'           => 'not_started',
+                'completed_at'     => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ],
+
+            [
+                'learning_item_id' => 7,
+                'student_user_id'  => 2,
+                'status'           => 'not_started',
+                'completed_at'     => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ],
 
         ];
@@ -72,5 +98,7 @@ class LearningCompletionsSeeder extends Seeder
         $this->db
             ->table('learning_completions')
             ->insertBatch($rows);
+
+        echo "Learning completions seeded.\n";
     }
 }

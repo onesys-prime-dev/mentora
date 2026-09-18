@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
 
 export default defineConfig(({ command }) => ({
-    base: command === "build" ? "/mentora/public/build/" : "/",
+    base: command === "build" ? "./" : "/",
 
     plugins: [
         tailwindcss(),

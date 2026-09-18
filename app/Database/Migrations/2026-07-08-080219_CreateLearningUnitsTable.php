@@ -63,7 +63,7 @@ class CreateLearningUnitsTable extends Migration
         $this->forge->addKey('module_id');
         $this->forge->addKey('status');
 
-        $this->forge->addUniqueKey(['module_id', 'order_index']);
+        $this->forge->addKey(['module_id', 'order_index']);
 
         $this->forge->addForeignKey(
             'module_id',
