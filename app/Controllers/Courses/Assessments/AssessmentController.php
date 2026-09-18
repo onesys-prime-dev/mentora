@@ -51,6 +51,18 @@ class AssessmentController extends BaseController
         );
     }
 
+    public function quizBuilder(int $assessmentId)
+    {
+        $user = auth()->user();
+
+        return $this->response->setJSON(
+            $this->assessmentService->quizBuilder(
+                $user,
+                $assessmentId
+            )
+        );
+    }
+
     public function updateInstructions(int $assessmentId)
     {
         $user = auth()->user();

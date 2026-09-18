@@ -65,6 +65,36 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
 
         </div>
 
+        <!-- Duration (Timer) -->
+        <div class="flex flex-col gap-1.5">
+
+            <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Duration
+            </label>
+
+            <div class="relative">
+
+                <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    data-inspector-field="duration"
+                    value="<?= esc($currentAssessment['duration'] ?? '') ?>"
+                    placeholder="No limit"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-14 text-sm outline-none transition focus:border-[#0040A6]">
+
+                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                    min
+                </span>
+
+            </div>
+
+            <span class="text-xs text-gray-400">
+                Leave empty for no time limit. Starts the countdown timer once a student begins the quiz.
+            </span>
+
+        </div>
+
         <!-- Passing Percentage -->
         <div class="flex flex-col gap-1.5">
 

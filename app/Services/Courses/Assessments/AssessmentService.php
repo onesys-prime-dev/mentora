@@ -9,6 +9,8 @@ use App\Models\Assessments\AssessmentModel;
 use App\Models\Assessments\AssessmentSettingsModel;
 use App\Models\Assessments\AssessmentTypeModel;
 use App\Models\Assessments\AssessmentRubricModel;
+use App\Models\Assessments\AssessmentQuestionModel;
+use App\Models\Assessments\AssessmentSubmissionModel;
 
 use App\Models\Learning\LearningItemModel;
 use App\Models\Learning\LearningUnitModel;
@@ -22,6 +24,8 @@ class AssessmentService
     protected AssessmentSettingsModel $assessmentSettingsModel;
     protected AssessmentTypeModel $assessmentTypeModel;
     protected AssessmentRubricModel $rubricModel;
+    protected AssessmentQuestionModel $questionModel;
+    protected AssessmentSubmissionModel $submissionModel;
 
     protected LearningItemModel $learningItemModel;
     protected LearningUnitModel $learningUnitModel;
@@ -34,6 +38,8 @@ class AssessmentService
         $this->assessmentSettingsModel = new AssessmentSettingsModel();
         $this->assessmentTypeModel = new AssessmentTypeModel();
         $this->rubricModel = new AssessmentRubricModel();
+        $this->questionModel = new AssessmentQuestionModel();
+        $this->submissionModel = new AssessmentSubmissionModel();
 
         $this->learningItemModel = new LearningItemModel();
         $this->learningUnitModel = new LearningUnitModel();
@@ -95,6 +101,12 @@ class AssessmentService
 
         $data = $this->buildAssessmentContext($assessmentId);
 
+        $submission = $this->submissionModel
+            ->where('assessment_id', $assessmentId)
+            ->where('student_id', $user->id)
+            ->orderBy('attempt_number', 'DESC')
+            ->first();
+
         return [
             'html' => view(
                 'pages/courses/features/assessments/view',
@@ -105,6 +117,7 @@ class AssessmentService
                     'currentUnit' => $data['currentUnit'],
                     'previousAssessment' => $data['previousAssessment'],
                     'nextAssessment' => $data['nextAssessment'],
+                    'submission' => $submission,
                 ]
             ),
         ];
@@ -123,6 +136,9 @@ class AssessmentService
             ? $this->rubricModel->getWithCriteria($rubric['id'])
             : null;
 
+        $currentQuestions = $this->questionModel
+            ->listForAssessment($assessmentId);
+
         return [
             'html' => view(
                 'pages/courses/features/assessments/editor',
@@ -134,6 +150,36 @@ class AssessmentService
                     'previousAssessment' => $data['previousAssessment'],
                     'nextAssessment' => $data['nextAssessment'],
                     'currentRubric' => $currentRubric,
+                    'currentQuestions' => $currentQuestions,
+                ]
+            ),
+        ];
+    }
+
+    public function quizBuilder(
+        User $user,
+        int $assessmentId
+    ): array {
+
+        $assessment = $this->assessmentModel
+            ->find($assessmentId);
+
+        if (!$assessment) {
+            throw PageNotFoundException::forPageNotFound(
+                'Assessment not found.'
+            );
+        }
+
+        $currentQuestions = $this->questionModel
+            ->listForAssessment($assessmentId);
+
+        return [
+            'html' => view(
+                'pages/courses/features/assessments/quiz-builder',
+                [
+                    'user' => $user,
+                    'currentAssessment' => $assessment,
+                    'currentQuestions' => $currentQuestions,
                 ]
             ),
         ];

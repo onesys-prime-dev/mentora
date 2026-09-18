@@ -27,6 +27,8 @@ class AssessmentSubmissionModel extends Model
         'graded_by',
         'graded_at',
         'feedback',
-        'status'
+        'status',
+        'grading_mode',
+        'rubric_scores',
     ];
 }

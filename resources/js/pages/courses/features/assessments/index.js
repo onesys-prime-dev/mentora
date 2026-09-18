@@ -2,6 +2,9 @@ import {
     fetchAssessments,
     fetchAssessmentView,
     fetchAssessmentEditor,
+    fetchQuizBuilder,
+    fetchGradeWork,
+    fetchQuizAttempt,
     updateAssessmentInstructions,
     updateSubmissionSettings,
     deleteAssessment,
@@ -34,6 +37,18 @@ import {
     initializeInspectorPanel,
 } from "./inspector/inspector.js";
 
+import {
+    initializeQuestions,
+} from "./questions/questions.js";
+
+import {
+    initializeGradeWork,
+} from "./grading/grading.js";
+
+import {
+    initializeQuizTaking,
+} from "./quiz-taking/quiz-taking.js";
+
 export async function initialize() {
 
     const params =
@@ -47,16 +62,88 @@ export async function initialize() {
     const isEditor =
         params.has("editor");
 
+    const isBuilder =
+        params.has("builder");
+
+    const isGrading =
+        params.has("grade");
+
+    const isView =
+        params.has("view");
+
+    const isTaking =
+        params.has("take");
+
+    const studentId =
+        params.get("student");
+
     if (assessmentId) {
 
         const offeringId =
             window.coursesConfig.offeringId;
 
-        if (isEditor) {
+        if (isBuilder) {
+
+            await loadQuizBuilder(
+                offeringId,
+                assessmentId,
+                initialize,
+                { pushState: false }
+            );
+
+        }
+
+        else if (isTaking) {
+
+            await loadQuizAttempt(
+                offeringId,
+                assessmentId,
+                initialize,
+                { pushState: false }
+            );
+
+        }
+
+        else if (isEditor) {
 
             await loadAssessmentEditor(
                 offeringId,
                 assessmentId,
+                initialize,
+                { pushState: false }
+            );
+
+        }
+
+        else if (isGrading) {
+
+            await loadGradeWork(
+                offeringId,
+                assessmentId,
+                studentId,
+                initialize,
+                { pushState: false }
+            );
+
+        }
+
+        else if (isView) {
+
+            await loadAssessmentView(
+                offeringId,
+                assessmentId,
+                initialize,
+                { pushState: false }
+            );
+
+        }
+
+        else if (window.coursesConfig.role === "instructor") {
+
+            await loadGradeWork(
+                offeringId,
+                assessmentId,
+                null,
                 initialize,
                 { pushState: false }
             );
@@ -188,8 +275,60 @@ function bindAssessmentLinks(refresh) {
 
     document
         .querySelectorAll(
-            "[data-assessment]:not([data-edit-assessment-button])"
+            "[data-assessment]:not([data-edit-assessment-button]):not([data-view-assessment-button]):not(.assessment-nav-link)"
         )
+        .forEach((element) => {
+
+            element.addEventListener(
+                "click",
+                () => {
+
+                    const assessmentId =
+                        element.dataset.assessment;
+
+                    if (!assessmentId) {
+                        return;
+                    }
+
+                    if (window.coursesConfig.role === "instructor") {
+
+                        loadGradeWork(
+                            offeringId,
+                            assessmentId,
+                            null,
+                            refresh
+                        );
+
+                        return;
+
+                    }
+
+                    loadAssessmentView(
+                        offeringId,
+                        assessmentId,
+                        refresh
+                    );
+
+                }
+            );
+
+        });
+
+    bindEditAssessmentButtons(refresh);
+
+    bindViewAssessmentButtons(refresh);
+
+    bindAssessmentNavLinks(refresh);
+
+}
+
+function bindAssessmentNavLinks(refresh) {
+
+    const offeringId =
+        window.coursesConfig.offeringId;
+
+    document
+        .querySelectorAll(".assessment-nav-link[data-assessment]")
         .forEach((element) => {
 
             element.addEventListener(
@@ -214,7 +353,40 @@ function bindAssessmentLinks(refresh) {
 
         });
 
-    bindEditAssessmentButtons(refresh);
+}
+
+function bindViewAssessmentButtons(refresh) {
+
+    const offeringId =
+        window.coursesConfig.offeringId;
+
+    document
+        .querySelectorAll("[data-view-assessment-button]")
+        .forEach((element) => {
+
+            element.addEventListener(
+                "click",
+                (event) => {
+
+                    event.stopPropagation();
+
+                    const assessmentId =
+                        element.dataset.assessment;
+
+                    if (!assessmentId) {
+                        return;
+                    }
+
+                    loadAssessmentView(
+                        offeringId,
+                        assessmentId,
+                        refresh
+                    );
+
+                }
+            );
+
+        });
 
 }
 
@@ -305,12 +477,93 @@ export async function loadAssessmentView(
 
         bindAssessmentLinks(refresh);
 
+        document
+            .querySelector("[data-take-quiz]")
+            ?.addEventListener(
+                "click",
+                () => {
+
+                    loadQuizAttempt(
+                        offeringId,
+                        assessmentId,
+                        refresh,
+                        { pushState: true }
+                    );
+
+                }
+            );
+
     } catch (error) {
 
         console.error(error);
 
         container.innerHTML =
             "<p>Unable to load assessment.</p>";
+
+    }
+
+}
+
+export async function loadQuizAttempt(
+    offeringId,
+    assessmentId,
+    refresh,
+    { pushState = true } = {}
+) {
+
+    const container =
+        document.querySelector("#course-content");
+
+    container.innerHTML = "Loading...";
+
+    try {
+
+        const data =
+            await fetchQuizAttempt(
+                offeringId,
+                assessmentId
+            );
+
+        container.innerHTML =
+            data.html;
+
+        if (pushState) {
+
+            history.pushState(
+                { assessmentId, take: true },
+                "",
+                `${window.location.pathname}?assessment=${assessmentId}&take=1`
+            );
+
+        }
+
+        const backToView =
+            () => loadAssessmentView(
+                offeringId,
+                assessmentId,
+                refresh,
+                { pushState: true }
+            );
+
+        document
+            .querySelector("[data-back-to-assessment-view]")
+            ?.addEventListener(
+                "click",
+                backToView
+            );
+
+        initializeQuizTaking(
+            offeringId,
+            assessmentId,
+            backToView
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            "<p>Unable to load the quiz.</p>";
 
     }
 
@@ -410,6 +663,22 @@ export async function loadAssessmentEditor(
 
         }
 
+        document
+            .querySelector("[data-enter-quiz-builder]")
+            ?.addEventListener(
+                "click",
+                () => {
+
+                    loadQuizBuilder(
+                        offeringId,
+                        assessmentId,
+                        refresh,
+                        { pushState: true }
+                    );
+
+                }
+            );
+
         if (
             document.querySelector(
                 "#submission-type-modal"
@@ -460,6 +729,158 @@ export async function loadAssessmentEditor(
 
         container.innerHTML =
             "<p>Unable to load assessment editor.</p>";
+
+    }
+
+}
+
+export async function loadQuizBuilder(
+    offeringId,
+    assessmentId,
+    refresh,
+    { pushState = true } = {}
+) {
+
+    const container =
+        document.querySelector("#course-content");
+
+    container.innerHTML = "Loading...";
+
+    try {
+
+        const data =
+            await fetchQuizBuilder(
+                offeringId,
+                assessmentId
+            );
+
+        container.innerHTML =
+            data.html;
+
+        if (pushState) {
+
+            history.pushState(
+                { assessmentId, builder: true },
+                "",
+                `${window.location.pathname}?assessment=${assessmentId}&builder=1`
+            );
+
+        }
+
+        document
+            .querySelector("[data-back-to-assessment-editor]")
+            ?.addEventListener(
+                "click",
+                () => {
+
+                    loadAssessmentEditor(
+                        offeringId,
+                        assessmentId,
+                        refresh,
+                        { pushState: true }
+                    );
+
+                }
+            );
+
+        initializeQuestions(
+            offeringId,
+            assessmentId,
+            () => loadQuizBuilder(
+                offeringId,
+                assessmentId,
+                refresh,
+                { pushState: false }
+            )
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            "<p>Unable to load quiz builder.</p>";
+
+    }
+
+}
+
+export async function loadGradeWork(
+    offeringId,
+    assessmentId,
+    studentId,
+    refresh,
+    { pushState = true } = {}
+) {
+
+    const container =
+        document.querySelector("#course-content");
+
+    container.innerHTML = "Loading...";
+
+    try {
+
+        const data =
+            await fetchGradeWork(
+                offeringId,
+                assessmentId,
+                studentId
+            );
+
+        container.innerHTML =
+            data.html;
+
+        if (pushState) {
+
+            const query =
+                studentId
+                    ? `?assessment=${assessmentId}&grade=1&student=${studentId}`
+                    : `?assessment=${assessmentId}&grade=1`;
+
+            history.pushState(
+                { assessmentId, grade: true, studentId },
+                "",
+                `${window.location.pathname}${query}`
+            );
+
+        }
+
+        document
+            .querySelector("[data-back-to-assessments]")
+            ?.addEventListener(
+                "click",
+                () => {
+
+                    history.pushState(
+                        {},
+                        "",
+                        window.location.pathname
+                    );
+
+                    refresh();
+
+                }
+            );
+
+        initializeGradeWork(
+            offeringId,
+            assessmentId,
+            refresh,
+            (nextStudentId) => loadGradeWork(
+                offeringId,
+                assessmentId,
+                nextStudentId,
+                refresh,
+                { pushState: true }
+            )
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            "<p>Unable to load grade work.</p>";
 
     }
 
