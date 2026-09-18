@@ -62,6 +62,6 @@ class AcademicTermModel extends Model
             ->where('institution_id', $institutionId)
             ->where('status', 'active')
             ->get()
-            ->getRowArray();
+            ->getRowArray() ?? [];
     }
 }
