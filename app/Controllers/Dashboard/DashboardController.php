@@ -19,10 +19,13 @@ class DashboardController extends BaseController
         $user = auth()->user();
 
         return view('pages/dashboard/index', [
-            'title'   => 'Dashboard',
-            'page'    => 'dashboard',
-            'user'    => $user,
-            'widgets' => $this->dashboardService->getDashboardWidgets($user),
+            'title'      => 'Dashboard',
+            'page'       => 'dashboard',
+            'user'       => $user,
+            'widgets'    => $this->dashboardService->getDashboardWidgets($user),
+
+            // Pin the dashboard to the viewport; cards scroll internally.
+            'fullHeight' => true,
         ]);
     }
 }
