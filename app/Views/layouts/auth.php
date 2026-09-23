@@ -8,7 +8,7 @@
 </head>
 
 <body
-    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat"
+    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
     style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
     data-page="<?= esc($this->renderSection('page') ?: ($page ?? '')) ?>"
 >

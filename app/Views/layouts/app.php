@@ -8,6 +8,13 @@
  * room to fit a dashboard's worth of cards on one screen, so the page falls
  * back to normal scrolling rather than crushing them. Every other page keeps
  * the grow-and-scroll behaviour at all widths.
+ *
+ * The background is `bg-fixed`: with `bg-cover` alone, the image scales to
+ * cover `body`'s own box, and body's height varies by page — min-h-screen
+ * here, h-screen there, taller still wherever content overflows — so the
+ * same image visibly zoomed in and out between pages. Fixed attachment
+ * anchors it to the viewport instead, which never changes size, so the
+ * scale (and the image) stays constant everywhere.
  */
 $fullHeight = $fullHeight ?? false;
 
@@ -25,7 +32,7 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 </head>
 
 <body 
-    class="<?= $bodyHeight ?> bg-gray-100 bg-cover bg-center bg-no-repeat"
+    class="<?= $bodyHeight ?> bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
     style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
     data-page="<?= esc($page ?? '') ?>"
 >
