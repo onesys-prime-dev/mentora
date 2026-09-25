@@ -9,7 +9,7 @@ import { state } from "./state.js";
  * callback), so importing it here doesn't couple this module to anything
  * assessments-specific beyond that one function.
  */
-import { loadGradeWork } from "../assessments/index.js";
+import { loadGradeWork, loadAssessmentView } from "../assessments/index.js";
 
 export async function initialize()
 {
@@ -49,12 +49,32 @@ export async function initialize()
 
 function bindAssessmentLinks()
 {
-    if (window.coursesConfig.role !== "instructor") {
-        return;
-    }
-
     const offeringId =
         window.coursesConfig.offeringId;
+
+    // Students: a row opens that assessment (score, attempts, feedback) —
+    // the same view its card opens on the Assessments tab.
+    if (window.coursesConfig.role !== "instructor") {
+
+        document
+            .querySelectorAll("[data-assessment]")
+            .forEach((element) => {
+
+                element.addEventListener("click", () => {
+
+                    const assessmentId =
+                        element.dataset.assessment;
+
+                    if (assessmentId) {
+                        loadAssessmentView(offeringId, assessmentId, initialize);
+                    }
+
+                });
+
+            });
+
+        return;
+    }
 
     document
         .querySelectorAll("[data-assessment]")

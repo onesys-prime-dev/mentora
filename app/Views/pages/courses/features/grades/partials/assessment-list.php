@@ -10,9 +10,9 @@
  * index.js, which reuses the assessments feature's own loadGradeWork() —
  * the same Grade Work screen already reachable from the Assessments tab.
  */
-$typeIcons = [
-    'Quiz'       => 'quiz.png',
-    'Assignment' => 'assessment.png',
+$typeHeadings = [
+    'Quiz'       => 'Quizzes',
+    'Assignment' => 'Assignments',
 ];
 ?>
 
@@ -20,7 +20,7 @@ $typeIcons = [
 
     <div class="flex items-center gap-4">
 
-        <img src="<?= base_url('assets/images/icons/assessments.png') ?>" alt="">
+        <?= icon('assessments', 'h-7 w-7') ?>
 
         <span class="font-bold text-2xl text-[#0040A6]">
             Grades
@@ -32,7 +32,7 @@ $typeIcons = [
 
         <div class="px-8 py-10 flex flex-col items-center justify-center gap-2 text-center rounded-2xl border-[1px] border-[#A9A9A9]/50">
 
-            <img class="h-8 w-8 opacity-60" src="<?= base_url('assets/images/icons/no-score.png') ?>" alt="">
+            <?= icon('no-score', 'h-8 w-8 opacity-60') ?>
 
             <span class="font-bold text-[#646464]">No assessments yet</span>
             <span class="text-sm text-[#878787]">Once you publish an assessment, it'll show up here to grade.</span>
@@ -48,7 +48,7 @@ $typeIcons = [
                 <div class="flex flex-col gap-3">
 
                     <span class="uppercase font-bold text-xs tracking-wide text-[#878787]">
-                        <?= esc($type) ?>
+                        <?= esc($typeHeadings[$type] ?? $type) ?>
                     </span>
 
                     <div class="flex flex-col gap-3">
@@ -87,10 +87,7 @@ $typeIcons = [
                                 <div class="flex items-center gap-5">
 
                                     <div class="h-10 w-10 flex items-center justify-center border-3 border-[#0040A6] rounded-[100%] transition-transform duration-200 group-hover:scale-105">
-                                        <img
-                                            class="h-5 w-5"
-                                            src="<?= base_url('assets/images/icons/' . ($typeIcons[$type] ?? 'assessments.png')) ?>"
-                                            alt="">
+                                        <?= learning_item_icon($type, 'h-5 w-5 text-[#0040A6]') ?>
                                     </div>
 
                                     <div class="flex flex-col">

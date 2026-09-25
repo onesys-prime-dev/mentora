@@ -443,10 +443,17 @@ class AssessmentService
         |--------------------------------------------------------------------------
         */
 
+        // Same section only — sections of one course share course_id, so
+        // siblings are found through their module's offering.
+        $sectionOfferingId = (int) ($this->courseModuleModel->find((int) $assessment['module_id'])['offering_id'] ?? 0);
+
         $siblings = $this->assessmentModel
-            ->where('course_id', $assessment['course_id'])
-            ->orderBy('due_date', 'ASC')
-            ->orderBy('id', 'ASC')
+            ->select('assessments.*')
+            ->join('course_modules', 'course_modules.id = assessments.module_id')
+            ->where('assessments.course_id', $assessment['course_id'])
+            ->where('course_modules.offering_id', $sectionOfferingId)
+            ->orderBy('assessments.due_date', 'ASC')
+            ->orderBy('assessments.id', 'ASC')
             ->findAll();
 
         // Students step only through assessments they're allowed to see.

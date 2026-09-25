@@ -51,8 +51,12 @@ class AssessmentModel extends Model
      * graded_count / needs_review_count are correlated subqueries rather
      * than a join, so an assessment with zero submissions still gets one
      * row (0/0) instead of disappearing from the list entirely.
+     *
+     * Scoped to one section: its own assessments (through the module's
+     * offering — sections share course_id) and only its enrolled students'
+     * submissions.
      */
-    public function getAssessmentSummaryForCourse(int $courseId): array
+    public function getAssessmentSummaryForCourse(int $courseId, int $offeringId): array
     {
         $builder = $this->db->table('assessments a');
 
@@ -66,20 +70,27 @@ class AssessmentModel extends Model
 
         $builder->select(
             "(SELECT COUNT(*) FROM assessment_submissions s
-                WHERE s.assessment_id = a.id AND s.is_graded = 1) AS graded_count",
+                WHERE s.assessment_id = a.id AND s.is_graded = 1
+                  AND s.student_id IN (SELECT e.student_user_id FROM enrollments e
+                      WHERE e.offering_id = {$offeringId} AND e.status = 'enrolled')) AS graded_count",
             false
         );
 
         $builder->select(
             "(SELECT COUNT(*) FROM assessment_submissions s
                 WHERE s.assessment_id = a.id AND s.is_graded = 0
-                  AND s.status IN ('Submitted', 'Grading')) AS needs_review_count",
+                  AND s.status IN ('Submitted', 'Partially Graded', 'Grading')
+                  AND s.student_id IN (SELECT e.student_user_id FROM enrollments e
+                      WHERE e.offering_id = {$offeringId} AND e.status = 'enrolled')) AS needs_review_count",
             false
         );
 
         $builder->join('assessment_types at', 'at.id = a.assessment_type_id', 'left');
 
+        $builder->join('course_modules cm', 'cm.id = a.module_id');
+
         $builder->where('a.course_id', $courseId);
+        $builder->where('cm.offering_id', $offeringId);
         $builder->orderBy('a.due_date', 'ASC');
 
         return $builder->get()->getResultArray();

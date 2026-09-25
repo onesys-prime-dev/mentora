@@ -6,6 +6,7 @@ use App\Models\Courses\CourseOfferingModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Assessments\AssessmentModel;
 use App\Models\Assessments\GradebookRecordModel;
+use App\Services\Courses\Assessments\AssessmentOverviewService;
 
 use CodeIgniter\Shield\Entities\User;
 
@@ -45,32 +46,7 @@ class GradeService
 
         } else {
 
-            $assessments = $this->assessmentModel
-                ->getAssessmentsWithSubmissions($offering['course_id'], $user->id);
-
-            $graded = array_filter(
-                $assessments,
-                static fn (array $a) => ($a['submission_status'] ?? null) === 'Graded'
-            );
-
-            $pointsEarned = array_sum(array_column($graded, 'submission_score'));
-            $pointsPossible = array_sum(array_column($graded, 'total_points'));
-
-            $record = $this->gradebookRecordModel
-                ->where('course_id', $offering['course_id'])
-                ->where('student_id', $user->id)
-                ->first();
-
-            $viewData['assessments'] = $assessments;
-
-            $viewData['summary'] = [
-                'overall_percentage' => $record['is_override_final_grade'] ?? false
-                    ? $record['overridden_final_grade']
-                    : ($record['calculated_final_grade'] ?? null),
-                'points_earned'   => $pointsEarned,
-                'points_possible' => $pointsPossible,
-                'remarks'         => $record['remarks'] ?? null,
-            ];
+            $viewData += $this->buildStudentGrades($user, $offering);
 
         }
 
@@ -100,12 +76,14 @@ class GradeService
         $courseId = $offering['course_id'];
 
         $assessments = $this->assessmentModel
-            ->getAssessmentSummaryForCourse($courseId);
+            ->getAssessmentSummaryForCourse($courseId, (int) $offering['id']);
 
-        $totalStudents = $this->enrollmentModel
-            ->retrieveGradebookRoster($offering['id']);
+        $rosterIds = array_map('intval', array_column(
+            $this->enrollmentModel->retrieveGradebookRoster($offering['id']),
+            'student_id'
+        ));
 
-        $totalStudents = count($totalStudents);
+        $totalStudents = count($rosterIds);
 
         $groups = [];
         $needsReview = 0;
@@ -120,9 +98,11 @@ class GradeService
 
         }
 
+        // gradebook_records is per course; only this section's students count.
         $records = $totalStudents > 0
             ? $this->gradebookRecordModel
                 ->where('course_id', $courseId)
+                ->whereIn('student_id', $rosterIds)
                 ->findAll()
             : [];
 
@@ -156,6 +136,75 @@ class GradeService
                 'passing_count'  => $passingCount,
                 'total_students' => $totalStudents,
                 'needs_review'   => $needsReview,
+            ],
+        ];
+    }
+
+    /**
+     * A student's Grades page: every assessment of this section they can
+     * see, in the same state and counted score the Assessments tab shows
+     * (AssessmentOverviewService — best graded quiz attempt, latest graded
+     * assignment), plus a live summary over their graded work.
+     *
+     * gradebook_records isn't recalculated when work is graded, so the
+     * headline is computed here; an instructor's override on that record
+     * still wins.
+     */
+    protected function buildStudentGrades(User $user, array $offering): array
+    {
+        $overviewService = new AssessmentOverviewService();
+
+        $overview = $overviewService->build($user, (int) $offering['id'], (int) $offering['course_id']);
+
+        $now = time();
+
+        $assessments = array_map(fn (array $row) => [
+            'id' => (int) $row['id'],
+            'title' => $row['title'],
+            'assessment_type' => $row['assessment_type'] ?: 'Other',
+            'due_label' => $row['due_ts'] !== null ? 'Due ' . $overviewService->dueLabel($row['due_ts'], $now) : 'No due date',
+            'total_points' => (float) $row['total_points'],
+            'state' => $row['student']['key'],
+            'label' => $row['student']['label'],
+            'tone' => $row['student']['tone'],
+            'score' => $row['student']['score'],
+            // A grade that counts — also true while a resubmission waits.
+            'has_grade' => ($row['student']['result']['counted'] ?? null) !== null,
+        ], $overview['assessments']);
+
+        $graded = array_values(array_filter($assessments, static fn (array $a) => $a['has_grade']));
+
+        $pointsEarned = array_sum(array_column($graded, 'score'));
+        $pointsPossible = array_sum(array_column($graded, 'total_points'));
+
+        $percentage = $pointsPossible > 0 ? round($pointsEarned / $pointsPossible * 100, 2) : null;
+
+        $remarks = match (true) {
+            $percentage === null => 'Incomplete',
+            $percentage >= 75 => 'Passed',
+            default => 'Failed',
+        };
+
+        $record = $this->gradebookRecordModel
+            ->where('course_id', $offering['course_id'])
+            ->where('student_id', $user->id)
+            ->first();
+
+        if (!empty($record['is_override_final_grade'])) {
+            $percentage = (float) $record['overridden_final_grade'];
+            $remarks = $record['remarks'];
+        }
+
+        return [
+            'assessments' => $assessments,
+            'summary' => [
+                'overall_percentage' => $percentage,
+                'points_earned' => $pointsEarned,
+                'points_possible' => $pointsPossible,
+                'remarks' => $remarks,
+                'graded_count' => count($graded),
+                'total_count' => count($assessments),
+                'is_override' => !empty($record['is_override_final_grade']),
             ],
         ];
     }

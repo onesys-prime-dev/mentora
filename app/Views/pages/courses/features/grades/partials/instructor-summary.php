@@ -15,7 +15,7 @@ $needsReview = (int) ($classSummary['needs_review'] ?? 0);
     <div class="p-6 flex w-full items-center gap-5 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
 
         <div class="h-12 w-12 rounded-[100%] bg-[#EEEEEE] flex justify-center items-center">
-            <img class="h-6 w-6" src="<?= base_url('assets/images/icons/points.png') ?>" alt="">
+            <?= icon('points', 'h-6 w-6') ?>
         </div>
 
         <div class="flex flex-col gap-1">
@@ -35,7 +35,7 @@ $needsReview = (int) ($classSummary['needs_review'] ?? 0);
     <div class="p-6 flex w-full items-center gap-4 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
 
         <div class="h-12 w-12 rounded-[100%] bg-[#EEEEEE] flex justify-center items-center">
-            <img class="h-6 w-6" src="<?= base_url('assets/images/icons/check-green.png') ?>" alt="">
+            <?= icon('check', 'h-6 w-6') ?>
         </div>
 
         <div class="flex flex-col gap-1">
@@ -55,7 +55,7 @@ $needsReview = (int) ($classSummary['needs_review'] ?? 0);
     <div class="p-6 flex w-full items-center gap-4 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
 
         <div class="h-12 w-12 rounded-[100%] <?= $needsReview > 0 ? 'bg-[#FFDAD6]' : 'bg-[#EEEEEE]' ?> flex justify-center items-center">
-            <img class="h-6 w-6" src="<?= base_url('assets/images/icons/attention.png') ?>" alt="">
+            <?= icon('attention', 'h-6 w-6') ?>
         </div>
 
         <div class="flex flex-col gap-1">

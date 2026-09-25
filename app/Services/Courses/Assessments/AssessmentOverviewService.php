@@ -45,7 +45,7 @@ class AssessmentOverviewService
 
     public function build(User $user, int $offeringId, int $courseId): array
     {
-        $assessments = $this->courseAssessments($courseId);
+        $assessments = $this->courseAssessments($courseId, $offeringId);
 
         return $user->inGroup('instructor')
             ? $this->forInstructor($offeringId, $assessments)
@@ -611,10 +611,13 @@ class AssessmentOverviewService
     }
 
     /**
-     * The course's assessments with type name, late-submission setting and
+     * This section's assessments with type name, late-submission setting and
      * active question count; due_ts is the due date as a timestamp (or null).
+     *
+     * Sections of one course share course_id, so the section is found through
+     * the assessment's module — otherwise each section would list the other's.
      */
-    private function courseAssessments(int $courseId): array
+    private function courseAssessments(int $courseId, int $offeringId): array
     {
         $rows = db_connect()->table('assessments a')
             ->select([
@@ -625,7 +628,9 @@ class AssessmentOverviewService
             ])
             ->join('assessment_types at', 'at.id = a.assessment_type_id', 'left')
             ->join('assessment_settings st', 'st.assessment_id = a.id', 'left')
+            ->join('course_modules cm', 'cm.id = a.module_id')
             ->where('a.course_id', $courseId)
+            ->where('cm.offering_id', $offeringId)
             ->orderBy('a.due_date IS NULL', 'ASC', false)
             ->orderBy('a.due_date', 'ASC')
             ->orderBy('a.id', 'ASC')

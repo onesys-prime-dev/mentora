@@ -1,23 +1,42 @@
 <?php
 /**
- * Grouped by assessment type (Quizzes, Assignments, Exams...) rather than
- * one flat list — a student scanning their grades thinks in those buckets,
- * and it's the same grouping the gradebook table uses for its columns, so
- * the two views describe the same structure two ways.
+ * Grouped by assessment type (Quizzes, Assignments) rather than one flat
+ * list — a student scanning their grades thinks in those buckets, and it's
+ * the same grouping the instructor's list uses, so the two views describe
+ * the same structure two ways.
+ *
+ * Rows come from GradeService::buildStudentGrades(): the same state and
+ * counted score the Assessments tab shows. Clicking a row opens that
+ * assessment (resources/js/pages/courses/features/grades/index.js).
  */
+$typeHeadings = [
+    'Quiz'       => 'Quizzes',
+    'Assignment' => 'Assignments',
+];
+
 $groups = [];
 
 foreach (($assessments ?? []) as $assessment) {
-    $type = $assessment['assessment_type'] ?? 'Other';
-    $groups[$type][] = $assessment;
+    $groups[$assessment['assessment_type']][] = $assessment;
 }
+
+$formatPoints = static fn (float $points) => (float) (int) $points === $points ? (string) (int) $points : (string) round($points, 2);
+
+$chipClasses = [
+    'success' => 'bg-emerald-100 text-emerald-700',
+    'warning' => 'bg-[#FFF1D6] text-[#946200]',
+    'info'    => 'bg-[#0040A6]/10 text-[#0040A6]',
+    'danger'  => 'bg-[#FFDAD6] text-[#B3261E]',
+    'muted'   => 'bg-gray-100 text-gray-500',
+    'neutral' => 'bg-gray-100 text-gray-500',
+];
 ?>
 
 <div class="flex flex-col gap-3 w-full">
 
     <div class="flex items-center gap-4">
 
-        <img src="<?= base_url('assets/images/icons/assessments.png') ?>" alt="">
+        <?= icon('assessments', 'h-7 w-7') ?>
 
         <span class="font-bold text-2xl text-[#0040A6]">
             Grades
@@ -29,10 +48,10 @@ foreach (($assessments ?? []) as $assessment) {
 
         <div class="px-8 py-10 flex flex-col items-center justify-center gap-2 text-center rounded-2xl border-[1px] border-[#A9A9A9]/50">
 
-            <img class="h-8 w-8 opacity-60" src="<?= base_url('assets/images/icons/no-score.png') ?>" alt="">
+            <?= icon('no-score', 'h-8 w-8 opacity-60') ?>
 
-            <span class="font-bold text-[#646464]">Nothing graded yet</span>
-            <span class="text-sm text-[#878787]">Scores for this course will show up here as they're released.</span>
+            <span class="font-bold text-[#646464]">No assessments yet</span>
+            <span class="text-sm text-[#878787]">Quizzes and assignments for this course will show up here with your scores.</span>
 
         </div>
 
@@ -45,7 +64,7 @@ foreach (($assessments ?? []) as $assessment) {
                 <div class="flex flex-col gap-3">
 
                     <span class="uppercase font-bold text-xs tracking-wide text-[#878787]">
-                        <?= esc($type) ?>
+                        <?= esc($typeHeadings[$type] ?? $type) ?>
                     </span>
 
                     <div class="flex flex-col gap-3">
@@ -53,58 +72,93 @@ foreach (($assessments ?? []) as $assessment) {
                         <?php foreach ($items as $assessment): ?>
 
                             <?php
-                            $isGraded = ($assessment['submission_status'] ?? null) === 'Graded';
-                            $score = $assessment['submission_score'] ?? null;
-                            $totalPoints = (int) ($assessment['total_points'] ?? 0);
+                            $state = $assessment['state'];
+                            $score = $assessment['score'];
+                            $totalPoints = $assessment['total_points'];
+                            $scoreText = $score !== null ? $formatPoints((float) $score) . '/' . $formatPoints($totalPoints) : null;
                             ?>
 
                             <div
-                                class="px-8 py-6 flex justify-between items-center rounded-2xl border-[1px] border-[#A9A9A9]/50
+                                class="group px-8 py-6 flex justify-between items-center gap-6 rounded-2xl border-[1px] border-[#A9A9A9]/50
                                         transition-all duration-200
                                         hover:border-[#0040A6]/50
                                         hover:bg-[#0040A6]/5
                                         hover:shadow-sm
                                         cursor-pointer"
-                                data-assessment="<?= esc($assessment['id']) ?>">
+                                data-assessment="<?= esc($assessment['id']) ?>"
+                                data-grade-state="<?= esc($state) ?>">
 
-                                <div class="flex items-center gap-5">
+                                <div class="flex min-w-0 items-center gap-5">
 
-                                    <div class="h-10 w-10 flex items-center justify-center border-3 border-[#0040A6] rounded-[100%]">
-                                        <img class="h-5 w-5" src="<?= base_url('assets/images/icons/quiz.png') ?>" alt="">
+                                    <div class="h-10 w-10 shrink-0 flex items-center justify-center border-3 border-[#0040A6] rounded-[100%] transition-transform duration-200 group-hover:scale-105">
+                                        <?= learning_item_icon($type, 'h-5 w-5 text-[#0040A6]') ?>
                                     </div>
 
-                                    <div class="flex flex-col">
+                                    <div class="flex min-w-0 flex-col">
 
-                                        <span class="font-bold text-lg text-[#646464]">
+                                        <span class="truncate font-bold text-lg text-[#646464]">
                                             <?= esc($assessment['title']) ?>
                                         </span>
 
                                         <span class="text-sm text-[#878787]">
-                                            Due: <?= esc(date('F j, Y', strtotime($assessment['due_date']))) ?> | <?= esc($totalPoints) ?> Points
+                                            <?= esc($assessment['due_label']) ?> · <?= esc($formatPoints($totalPoints)) ?> points
                                         </span>
 
                                     </div>
 
                                 </div>
 
-                                <?php if ($isGraded): ?>
+                                <?php if ($state === 'graded' && $scoreText !== null): ?>
 
-                                    <div class="flex flex-col justify-center items-end gap-1">
+                                    <div class="flex shrink-0 flex-col justify-center items-end gap-1">
 
                                         <span class="font-bold text-lg text-[#0040A6]">
-                                            <?= esc((int) $score) ?>/<?= esc($totalPoints) ?>
+                                            <?= esc($scoreText) ?>
                                         </span>
 
                                         <span class="text-xs text-[#878787]">
-                                            <?= $totalPoints > 0 ? esc(round(($score / $totalPoints) * 100)) . '%' : '' ?>
+                                            <?= $totalPoints > 0 ? esc(round($score / $totalPoints * 100)) . '%' : '' ?>
+                                        </span>
+
+                                    </div>
+
+                                <?php elseif ($state === 'partially_graded' && $scoreText !== null): ?>
+
+                                    <!-- Auto-graded part; essays / uploads still being graded -->
+                                    <div class="flex shrink-0 flex-col justify-center items-end gap-1">
+
+                                        <span class="rounded-full px-3 py-1 text-sm font-bold bg-[#FFF1D6] text-[#946200]">
+                                            <?= esc($scoreText) ?> so far
+                                        </span>
+
+                                        <span class="text-xs text-[#878787]">The rest is being graded</span>
+
+                                    </div>
+
+                                <?php elseif ($state === 'resubmitted' && $scoreText !== null): ?>
+
+                                    <!-- The previous grade stands until the resubmission is graded. -->
+                                    <div class="flex shrink-0 flex-col justify-center items-end gap-1">
+
+                                        <span class="font-bold text-lg text-[#0040A6]">
+                                            <?= esc($scoreText) ?>
+                                        </span>
+
+                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-[#0040A6]/10 text-[#0040A6]">
+                                            Resubmitted · being reviewed
                                         </span>
 
                                     </div>
 
                                 <?php else: ?>
 
-                                    <span class="rounded-full px-3 py-1 text-xs font-black bg-gray-100 text-gray-500">
-                                        <?= esc($assessment['submission_status'] ?? 'Not Submitted') ?>
+                                    <span class="shrink-0 rounded-full px-3 py-1 text-xs font-black <?= $chipClasses[$assessment['tone']] ?? $chipClasses['neutral'] ?>">
+                                        <?= esc(match ($state) {
+                                            'grading', 'submitted' => 'Waiting for grade',
+                                            'missed' => 'Missing',
+                                            'overdue' => 'Overdue · still accepted',
+                                            default => $assessment['label'],
+                                        }) ?>
                                     </span>
 
                                 <?php endif; ?>
