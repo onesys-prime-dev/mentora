@@ -251,4 +251,29 @@ class EnrollmentModel extends Model
             ->get()
             ->getResultArray();
     }
+
+    /**
+     * The enrolled roster for one offering — just who's in the class, no
+     * scores. The gradebook table joins this against per-assessment
+     * submissions separately, since a roster x assessment grid is a lot
+     * cheaper built as two flat queries than one join that repeats every
+     * student row once per assessment.
+     */
+    public function retrieveGradebookRoster(int $offeringId): array
+    {
+        return $this->builder()
+            ->select([
+                'enrollments.student_user_id AS student_id',
+                "CONCAT(user_profiles.last_name, ', ', user_profiles.first_name) AS student_name",
+            ])
+            ->join(
+                'user_profiles',
+                'user_profiles.user_id = enrollments.student_user_id'
+            )
+            ->where('enrollments.offering_id', $offeringId)
+            ->where('enrollments.status', 'enrolled')
+            ->orderBy('student_name', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
 }

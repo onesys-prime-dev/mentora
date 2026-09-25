@@ -60,5 +60,7 @@ class DatabaseSeeder extends Seeder
         $this->call(AssessmentQuestionResponsesSeeder::class);
         
         $this->call(GradebookRecordsSeeder::class);
+
+        $this->call(InstructorGradeDemoSeeder::class);
     }
 }
