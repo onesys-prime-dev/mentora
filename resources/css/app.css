@@ -37,33 +37,6 @@
 
 @layer components {
     /*
-     * Monochrome icon.
-     *
-     * The PNG contributes only its alpha channel (the glyph shape); the fill
-     * comes from `currentColor`, so a single asset works on any background.
-     * Pair with the icon() helper — see app/Helpers/icon_helper.php.
-     */
-    .icon {
-        display: inline-block;
-        flex-shrink: 0;
-        background-color: currentColor;
-
-        -webkit-mask-image: var(--icon-url);
-        mask-image: var(--icon-url);
-
-        -webkit-mask-size: contain;
-        mask-size: contain;
-
-        -webkit-mask-repeat: no-repeat;
-        mask-repeat: no-repeat;
-
-        -webkit-mask-position: center;
-        mask-position: center;
-    }
-}
-
-@layer components {
-    /*
      * Floating pill scrollbar.
      *
      * The track is fully transparent and the thumb is inset from the gutter
@@ -118,5 +91,116 @@
         .scroll-area::-webkit-scrollbar-thumb:hover {
             background-color: rgb(0 0 0 / 0.35);
         }
+    }
+}
+
+/*
+ * Course SPA content swaps — see resources/js/shared/spa/swap.js.
+ *
+ * Only the content card crossfades (the header and feature tabs stay put).
+ * The transition name is applied just for the swap (.spa-transitioning):
+ * left on permanently it would make #course-content a stacking context and
+ * trap the modals inside it below the header. For the same reason the
+ * fade-in leaves no transform behind once it ends.
+ */
+.spa-transitioning {
+    view-transition-name: course-content;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+}
+
+::view-transition-old(course-content) {
+    animation: spa-fade-out 120ms ease-in both;
+}
+
+::view-transition-new(course-content) {
+    animation: spa-fade-in 220ms ease-out both;
+}
+
+@keyframes spa-fade-out {
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes spa-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+@keyframes spa-progress {
+    from {
+        width: 0;
+    }
+
+    to {
+        width: 85%;
+    }
+}
+
+@layer components {
+    .spa-loading {
+        opacity: 0.6;
+        pointer-events: none;
+        transition: opacity 150ms ease;
+    }
+
+    .spa-enter {
+        animation: spa-fade-in 220ms ease-out;
+    }
+
+    .spa-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 60;
+        height: 3px;
+        width: 0;
+        border-radius: 0 9999px 9999px 0;
+        background-color: #0040A6;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 200ms ease;
+    }
+
+    .spa-progress.is-active {
+        opacity: 1;
+        animation: spa-progress 2.5s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+    }
+
+    .spa-notice {
+        position: fixed;
+        right: 1.5rem;
+        bottom: 1.5rem;
+        z-index: 60;
+        max-width: 22rem;
+        border-radius: 0.75rem;
+        background-color: #1F2937;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        color: white;
+        box-shadow: 0 10px 25px rgb(0 0 0 / 0.2);
+        opacity: 0;
+        transform: translateY(8px);
+        pointer-events: none;
+        transition: opacity 200ms ease, transform 200ms ease;
+    }
+
+    .spa-notice.is-visible {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spa-enter,
+    ::view-transition-old(course-content),
+    ::view-transition-new(course-content) {
+        animation: none;
     }
 }

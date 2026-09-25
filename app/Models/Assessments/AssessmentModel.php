@@ -37,39 +37,9 @@ class AssessmentModel extends Model
         'status'
     ];
 
-    public function getAssessmentsWithSubmissions(int $courseId, int $studentId): array
+    public function findByLearningItem(int $learningItemId): ?array
     {
-        $builder = $this->db->table('assessments a');
-
-        $builder->select([
-            'a.id',
-            'a.title',
-            'a.assessment_type_id',
-            'at.name as assessment_type',
-            'a.due_date',
-            'a.total_points',
-            'a.status',
-            's.status as submission_status',
-            's.score as submission_score',
-            '(SELECT COUNT(*) FROM assessment_questions q WHERE q.assessment_id = a.id) as question_count',
-        ]);
-
-        $builder->join(
-            'assessment_types at',
-            'at.id = a.assessment_type_id',
-            'left'
-        );
-
-        $builder->join(
-            'assessment_submissions s',
-            "s.assessment_id = a.id AND s.student_id = " . $studentId,
-            'left'
-        );
-
-        $builder->where('a.course_id', $courseId);
-        $builder->orderBy('a.due_date', 'ASC');
-
-        return $builder->get()->getResultArray();
+        return $this->where('learning_item_id', $learningItemId)->first();
     }
 
     /**

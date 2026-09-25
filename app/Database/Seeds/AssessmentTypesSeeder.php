@@ -8,11 +8,6 @@ class AssessmentTypesSeeder extends Seeder
 {
     public function run()
     {
-        // Prevent duplicate records
-        if ($this->db->table('assessment_types')->countAllResults() > 0) {
-            return;
-        }
-
         $now = date('Y-m-d H:i:s');
 
         // Use the first available user for audit fields

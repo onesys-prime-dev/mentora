@@ -669,3 +669,201 @@ export async function reorderLearningItems(
     return response.json();
 
 }
+/*
+|--------------------------------------------------------------------------
+| Update PDF Learning Item
+|--------------------------------------------------------------------------
+|
+| Multipart: optional `pdf` (upload/replace) and `allow_download`.
+|
+*/
+
+export async function updatePdfItem(
+    learningItemId,
+    formData
+) {
+
+    const response = await fetch(
+
+        `${window.coursesConfig.apiBaseUrl}/modules/items/${learningItemId}/pdf`,
+
+        {
+
+            method: "POST",
+
+            headers: defaultHeaders(),
+
+            body: formData,
+
+        }
+
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to update PDF learning item."
+        );
+
+    }
+
+    return response.json();
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Completion (student)
+|--------------------------------------------------------------------------
+*/
+
+export async function markLearningItemComplete(
+    learningItemId
+) {
+
+    const response = await fetch(
+
+        `${window.coursesConfig.apiBaseUrl}/modules/items/${learningItemId}/complete`,
+
+        {
+
+            method: "POST",
+
+            headers: defaultHeaders(),
+
+        }
+
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to mark learning item as completed."
+        );
+
+    }
+
+    return response.json();
+
+}
+
+export async function saveLearningItemProgress(
+    learningItemId,
+    percent
+) {
+
+    const response = await fetch(
+
+        `${window.coursesConfig.apiBaseUrl}/modules/items/${learningItemId}/progress`,
+
+        {
+
+            method: "POST",
+
+            headers: {
+
+                ...defaultHeaders(),
+
+                "Content-Type":
+                    "application/json",
+
+            },
+
+            body: JSON.stringify({
+
+                percent,
+
+            }),
+
+            // Lets the last save go through when the student leaves the page.
+            keepalive: true,
+
+        }
+
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to save video progress."
+        );
+
+    }
+
+    return response.json();
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Dependencies (instructor)
+|--------------------------------------------------------------------------
+*/
+
+export async function fetchLearningItemDependencies(
+    learningItemId
+) {
+
+    const response = await fetch(
+
+        `${window.coursesConfig.apiBaseUrl}/modules/items/${learningItemId}/dependencies`,
+
+        {
+
+            headers: defaultHeaders(),
+
+        }
+
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to load dependencies."
+        );
+
+    }
+
+    return response.json();
+
+}
+
+export async function saveLearningItemDependencies(
+    learningItemId,
+    payload
+) {
+
+    const response = await fetch(
+
+        `${window.coursesConfig.apiBaseUrl}/modules/items/${learningItemId}/dependencies`,
+
+        {
+
+            method: "PATCH",
+
+            headers: {
+
+                ...defaultHeaders(),
+
+                "Content-Type":
+                    "application/json",
+
+            },
+
+            body: JSON.stringify(payload),
+
+        }
+
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to save dependencies."
+        );
+
+    }
+
+    return response.json();
+
+}

@@ -7,6 +7,10 @@ $routes->get('/', 'Auth\RedirectController::index');
 
 service('auth')->routes($routes);
 
+// Every uploaded file (videos, PDFs, submitted work, AI sources) is served
+// here; access is decided per file by FileAccessService.
+$routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
+
 $routes->group('student', ['filter' => 'group:student'], function ($routes) {
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
@@ -22,6 +26,8 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
         
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
         $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
+        $routes->post('(:num)/modules/items/(:num)/complete', 'Courses\ModuleController::completeLearningItem/$1/$2');
+        $routes->post('(:num)/modules/items/(:num)/progress', 'Courses\ModuleController::saveLearningItemProgress/$1/$2');
 
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
         $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
@@ -32,6 +38,8 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
         $routes->get('(:num)/assessments/(:num)/take', 'Courses\Assessments\QuizAttemptController::start/$2');
         $routes->post('(:num)/submissions/(:num)/questions/(:num)/answer', 'Courses\Assessments\QuizAttemptController::saveAnswer/$2/$3');
         $routes->post('(:num)/submissions/(:num)/submit', 'Courses\Assessments\QuizAttemptController::submit/$2');
+
+        $routes->post('(:num)/assessments/(:num)/assignment-submissions', 'Courses\Assessments\AssignmentSubmissionController::submit/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
     });
@@ -71,6 +79,9 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->patch('(:num)/modules/items/(:num)', 'Courses\ModuleController::updateLearningItem/$1/$2');
         $routes->delete('(:num)/modules/items/(:num)', 'Courses\ModuleController::deleteLearningItem/$1/$2');
         $routes->post('(:num)/modules/items/(:num)/video', 'Courses\ModuleController::updateVideoItem/$1/$2');
+        $routes->post('(:num)/modules/items/(:num)/pdf', 'Courses\ModuleController::updatePdfItem/$1/$2');
+        $routes->get('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::learningItemDependencies/$1/$2');
+        $routes->patch('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::saveLearningItemDependencies/$1/$2');
         $routes->patch('(:num)/modules/items/reorder', 'Courses\ModuleController::reorderLearningItems/$1');
 
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
@@ -98,15 +109,29 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->get('(:num)/assessments/(:num)/questions', 'Courses\Assessments\QuestionController::index/$2');
         $routes->post('(:num)/assessments/(:num)/questions', 'Courses\Assessments\QuestionController::store/$2');
         $routes->patch('(:num)/assessments/(:num)/questions/reorder', 'Courses\Assessments\QuestionController::reorder/$2');
+        $routes->delete('(:num)/assessments/(:num)/questions', 'Courses\Assessments\QuestionController::clearAll/$2');
         $routes->get('(:num)/questions/(:num)', 'Courses\Assessments\QuestionController::show/$2');
         $routes->patch('(:num)/questions/(:num)', 'Courses\Assessments\QuestionController::update/$2');
         $routes->delete('(:num)/questions/(:num)', 'Courses\Assessments\QuestionController::destroy/$2');
         $routes->post('(:num)/questions/(:num)/duplicate', 'Courses\Assessments\QuestionController::duplicate/$2');
 
-        $routes->get('(:num)/assessments/(:num)/grade-work', 'Courses\Assessments\GradeWorkController::show/$2');
-        $routes->get('(:num)/assessments/(:num)/grade-work/(:num)', 'Courses\Assessments\GradeWorkController::show/$2/$3');
+        $routes->get('(:num)/assessments/(:num)/grade-work', 'Courses\Assessments\GradeWorkController::show/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/grade-work/(:num)', 'Courses\Assessments\GradeWorkController::show/$1/$2/$3');
         $routes->patch('(:num)/submissions/(:num)/start-grading', 'Courses\Assessments\GradeWorkController::startGrading/$2');
+        $routes->patch('(:num)/submissions/(:num)/reopen-grading', 'Courses\Assessments\GradeWorkController::reopenGrading/$2');
         $routes->patch('(:num)/submissions/(:num)/grade', 'Courses\Assessments\GradeWorkController::submitGrade/$2');
+
+        $routes->post('(:num)/generate-questions', 'Courses\Assessments\QuestionGenerationController::start/$1');
+        $routes->post('(:num)/generation-batches/(:num)/next-chunk', 'Courses\Assessments\QuestionGenerationController::nextChunk/$2');
+        $routes->get('(:num)/generation-batches/(:num)', 'Courses\Assessments\QuestionGenerationController::show/$2');
+        $routes->patch('(:num)/generated-questions/(:num)', 'Courses\Assessments\QuestionGenerationController::updateQuestion/$2');
+        $routes->post('(:num)/generated-questions/(:num)/accept', 'Courses\Assessments\QuestionGenerationController::acceptQuestion/$2');
+        $routes->post('(:num)/generated-questions/(:num)/discard', 'Courses\Assessments\QuestionGenerationController::discardQuestion/$2');
+        $routes->post('(:num)/generation-batches/(:num)/accept-all', 'Courses\Assessments\QuestionGenerationController::acceptAll/$2');
+
+        $routes->get('(:num)/assessments/(:num)/export', 'Courses\Assessments\QuestionImportExportController::export/$2');
+        $routes->post('(:num)/assessments/(:num)/import/preview', 'Courses\Assessments\QuestionImportExportController::preview/$2');
+        $routes->post('(:num)/assessments/(:num)/import/apply', 'Courses\Assessments\QuestionImportExportController::apply/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
     });

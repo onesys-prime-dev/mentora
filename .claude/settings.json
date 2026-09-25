@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(php -l app/Services/Courses/Assessments/QuestionExportService.php)",
+      "Bash(php -l app/Services/Courses/Assessments/QuestionService.php)",
+      "Bash(php -l app/Controllers/Courses/Assessments/QuestionImportExportController.php)",
+      "Bash(php -l app/Controllers/Courses/Assessments/QuestionController.php)",
+      "Bash(php -l app/Config/Routes.php)"
+    ]
+  }
+}

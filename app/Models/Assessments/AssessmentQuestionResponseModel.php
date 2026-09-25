@@ -17,6 +17,7 @@ class AssessmentQuestionResponseModel extends Model
         'submission_id',
         'question_id',
         'selected_choice_id',
+        'selected_choice_ids',
         'response_text',
         'uploaded_file_id',
         'score',

@@ -6,9 +6,7 @@
     <div class="flex flex-col gap-3">
 
         <div class="flex items-center gap-3">
-            <img
-                class="w-5 h-5"
-                src="<?= base_url('assets/images/icons/work.png') ?>" alt="Instructions Icon">
+            <?= icon('work', 'h-5 w-5') ?>
 
             <span class="font-bold text-lg text-[#0040A6]">
                 Your Work
@@ -18,9 +16,7 @@
         <div class="flex w-full min-h-100 flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-10 py-12 text-center">
 
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#0040A6]/10">
-                <img
-                    class="h-8 w-8"
-                    src="<?= base_url('assets/images/icons/quiz.png') ?>" alt="">
+                <?= icon('quiz', 'h-8 w-8') ?>
             </div>
 
             <div class="flex flex-col gap-1.5">
@@ -41,24 +37,24 @@
 
                 <?php if (!empty($currentAssessment['duration'])): ?>
                     <div class="flex items-center gap-1.5">
-                        <img class="h-4 w-4 opacity-60" src="<?= base_url('assets/images/icons/time.png') ?>" alt="">
+                        <?= icon('time', 'h-4 w-4 opacity-60') ?>
                         <span><?= esc($currentAssessment['duration']) ?> min</span>
                     </div>
                 <?php endif; ?>
 
                 <div class="flex items-center gap-1.5">
-                    <img class="h-4 w-4 opacity-60" src="<?= base_url('assets/images/icons/work.png') ?>" alt="">
+                    <?= icon('work', 'h-4 w-4 opacity-60') ?>
                     <span><?= esc((int) ($currentAssessment['total_points'] ?? 0)) ?> points</span>
                 </div>
 
                 <div class="flex items-center gap-1.5">
-                    <img class="h-4 w-4 opacity-60" src="<?= base_url('assets/images/icons/start.png') ?>" alt="">
+                    <?= icon('start', 'h-4 w-4 opacity-60') ?>
                     <span><?= esc((int) ($currentAssessment['attempt_limit'] ?? 1)) ?> attempt<?= (int) ($currentAssessment['attempt_limit'] ?? 1) === 1 ? '' : 's' ?></span>
                 </div>
 
             </div>
 
-            <?php if ($userRole !== 'instructor'): ?>
+            <?php if ($userRole !== 'instructor' && ($quizState['canTake'] ?? true)): ?>
 
                 <button
                     type="button"
@@ -69,9 +65,15 @@
                         <path d="M8 5v14l11-7z" />
                     </svg>
 
-                    Take Quiz
+                    <?= !empty($quizState['inProgress']) ? 'Resume Quiz' : (!empty($quizState['latest']) ? 'Retake Quiz' : 'Take Quiz') ?>
 
                 </button>
+
+            <?php elseif ($userRole !== 'instructor'): ?>
+
+                <span class="mt-2 rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-500">
+                    <?= esc($quizState['reason'] ?? "This quiz isn't available.") ?>
+                </span>
 
             <?php endif; ?>
 
@@ -79,23 +81,17 @@
 
     </div>
 
-    <!-- Submission History -->
-    <div class="flex flex-col gap-3">
+    <?php if ($userRole !== 'instructor'): ?>
 
-        <div class="flex items-center gap-3">
-            <span class="font-bold text-md text-[#0040A6]">
-                Submission History
-            </span>
-        </div>
+        <!-- Attempt History -->
+        <?= view('pages/courses/features/assessments/partials/attempt-history', [
+            'historyAttempts' => $quizState['attempts'] ?? [],
+            'historyType' => 'quiz',
+            'totalPoints' => (int) ($currentAssessment['total_points'] ?? 0),
+            'countedAttemptId' => $quizState['counted']['id'] ?? null,
+        ]) ?>
 
-        <div class="flex gap-2">
-  
-            <span class="text-sm italic text-[#5B5B5B]">
-                No previous drafts uploaded for this assignment.
-            </span>
+    <?php endif; ?>
 
-        </div>
-        
-    </div>
 
 </div>

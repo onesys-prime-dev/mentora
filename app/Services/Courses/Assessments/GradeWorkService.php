@@ -13,6 +13,7 @@ use App\Models\Assessments\AssessmentQuestionResponseModel;
 use App\Models\Assessments\AssessmentTypeModel;
 
 use App\Models\Courses\EnrollmentModel;
+use App\Models\Files\FileModel;
 
 class GradeWorkService
 {
@@ -24,6 +25,7 @@ class GradeWorkService
     protected AssessmentTypeModel $assessmentTypeModel;
 
     protected EnrollmentModel $enrollmentModel;
+    protected FileModel $fileModel;
 
     public function __construct()
     {
@@ -35,9 +37,10 @@ class GradeWorkService
         $this->assessmentTypeModel = new AssessmentTypeModel();
 
         $this->enrollmentModel = new EnrollmentModel();
+        $this->fileModel = new FileModel();
     }
 
-    public function gradeWork(User $user, int $assessmentId, ?int $studentId = null): array
+    public function gradeWork(User $user, int $offeringId, int $assessmentId, ?int $studentId = null, ?int $attemptId = null): array
     {
         $assessment = $this->assessmentModel->find($assessmentId);
 
@@ -45,13 +48,56 @@ class GradeWorkService
             throw PageNotFoundException::forPageNotFound('Assessment not found.');
         }
 
+        $isQuiz = $this->isQuizAssessment($assessment);
+
         $rubric = $this->rubricModel->findByAssessment($assessmentId);
 
         $currentRubric = $rubric
             ? $this->rubricModel->getWithCriteria($rubric['id'])
             : null;
 
-        $students = $this->listStudentsForAssessment($assessment);
+        $students = $this->listStudentsForAssessment($assessment, $offeringId);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Each student's recorded result (AssessmentResultService): the best
+        | quiz attempt / latest graded submission, plus what still needs
+        | grading. The list shows that result; opening a student lands on the
+        | attempt that needs grading, otherwise the one that counts.
+        |--------------------------------------------------------------------------
+        */
+
+        $results = new AssessmentResultService();
+
+        $attemptsByStudent = (new AssessmentOverviewService())->latestAttempts(
+            [$assessmentId],
+            array_map(static fn (array $row) => (int) $row['student_id'], $students)
+        )[$assessmentId] ?? [];
+
+        foreach ($students as &$student) {
+
+            $all = $attemptsByStudent[(int) $student['student_id']]['attempts'] ?? [];
+
+            $result = $results->resultFor($isQuiz, $all);
+
+            $focus = $result['pending'][0] ?? $result['counted'] ?? $result['latest'];
+
+            $student['result'] = $result;
+
+            $student['all_attempts'] = $all;
+
+            $student['submission_score'] = $result['score'];
+
+            $student['is_graded'] = $result['counted'] !== null ? 1 : 0;
+
+            // Waiting work sets the row's status; otherwise the counted grade.
+            if ($focus !== null) {
+                $student['submission_status'] = $focus['status'];
+                $student['submission_id'] = $focus['id'];
+            }
+
+        }
+        unset($student);
 
         $selectedStudentId = $studentId ?? ($students[0]['student_id'] ?? null);
 
@@ -70,9 +116,33 @@ class GradeWorkService
 
         $questions = [];
 
-        if ($selectedStudent && $selectedStudent['submission_id']) {
+        $attemptTabs = [];
 
-            $submission = $this->submissionModel->find($selectedStudent['submission_id']);
+        if ($selectedStudent) {
+
+            // ?attempt= only counts when it's one of this student's attempts here.
+            $ownAttemptIds = array_map(static fn (array $a) => (int) $a['id'], $selectedStudent['all_attempts']);
+
+            $submissionId = $attemptId !== null && in_array($attemptId, $ownAttemptIds, true)
+                ? $attemptId
+                : ($selectedStudent['submission_id'] ?? null);
+
+            $countedId = (int) ($selectedStudent['result']['counted']['id'] ?? 0);
+
+            $pendingIds = array_map(static fn (array $a) => (int) $a['id'], $selectedStudent['result']['pending']);
+
+            foreach ($selectedStudent['result']['finished'] as $attempt) {
+                $attemptTabs[] = [
+                    'id' => (int) $attempt['id'],
+                    'number' => (int) $attempt['attempt_number'],
+                    'score' => !empty($attempt['is_graded']) ? (float) $attempt['score'] : null,
+                    'counts' => (int) $attempt['id'] === $countedId,
+                    'needsGrading' => in_array((int) $attempt['id'], $pendingIds, true),
+                    'active' => (int) $attempt['id'] === (int) $submissionId,
+                ];
+            }
+
+            $submission = $submissionId ? $this->submissionModel->find($submissionId) : null;
 
             if ($submission) {
 
@@ -80,7 +150,7 @@ class GradeWorkService
                     ? (json_decode($submission['rubric_scores'], true) ?? [])
                     : [];
 
-                if ($this->isQuizAssessment($assessment)) {
+                if ($isQuiz) {
 
                     $questions = $this->buildQuestionResponses(
                         $assessmentId,
@@ -89,7 +159,38 @@ class GradeWorkService
 
                 }
 
+                $submission['file'] = !empty($submission['submission_file_id'])
+                    ? $this->fileModel->retrieveFile((int) $submission['submission_file_id'])
+                    : null;
+
             }
+
+        }
+
+        // What auto-grading already scored on this attempt, and what's left
+        // for the instructor (Essay, File Upload, Short Answer with no key).
+        $autoSummary = null;
+
+        if ($isQuiz && $questions !== []) {
+
+            $shortAnswers = new ShortAnswerGrader();
+
+            $autoSummary = ['earned' => 0.0, 'possible' => 0.0, 'manual' => 0];
+
+            foreach ($questions as &$question) {
+
+                $question['auto_gradable'] = $question['question_type'] === 'Multiple Choice'
+                    || $shortAnswers->isAutoGradable($question);
+
+                if ($question['auto_gradable']) {
+                    $autoSummary['possible'] += (float) $question['points'];
+                    $autoSummary['earned'] += (float) ($question['response']['score'] ?? 0);
+                } else {
+                    $autoSummary['manual']++;
+                }
+
+            }
+            unset($question);
 
         }
 
@@ -98,15 +199,49 @@ class GradeWorkService
                 'pages/courses/features/assessments/grade-work',
                 [
                     'user' => $user,
+                    'isAssignment' => !$isQuiz,
+                    'autoSummary' => $autoSummary,
                     'currentAssessment' => $assessment,
                     'currentRubric' => $currentRubric,
                     'students' => $students,
                     'selectedStudentId' => $selectedStudentId,
                     'selectedStudent' => $selectedStudent,
                     'submission' => $submission,
+                    'attemptTabs' => count($attemptTabs) > 1 ? $attemptTabs : [],
+                    'scoreResult' => $selectedStudent['result'] ?? null,
                     'questionResponses' => $questions,
                 ]
             ),
+        ];
+    }
+
+    /**
+     * Reopens a graded submission so its grade can be changed. It goes back
+     * to Grading and stops counting as graded (the student sees "Being
+     * graded" with no score); the score, feedback and rubric values are kept
+     * so the grading form opens pre-filled.
+     */
+    public function reopenGrading(User $user, int $submissionId): array
+    {
+        $submission = $this->submissionModel->find($submissionId);
+
+        if (!$submission) {
+            return ['success' => false, 'message' => 'Submission not found.'];
+        }
+
+        if ($submission['status'] !== 'Graded') {
+            return ['success' => false, 'message' => 'Only graded work can be reopened.'];
+        }
+
+        $this->submissionModel->update($submissionId, [
+            'status' => 'Grading',
+            'is_graded' => 0,
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Grading reopened.',
+            'submission' => $this->submissionModel->find($submissionId),
         ];
     }
 
@@ -121,7 +256,9 @@ class GradeWorkService
             ];
         }
 
-        if ($submission['status'] === 'Submitted') {
+        // Opening work to grade — including a quiz whose auto-gradable part
+        // is already scored — moves it to Grading.
+        if (in_array($submission['status'], ['Submitted', 'Partially Graded'], true)) {
 
             $this->submissionModel->update(
                 $submissionId,
@@ -247,7 +384,13 @@ class GradeWorkService
         $responsesByQuestion = [];
 
         foreach ($responses as $response) {
+
+            $response['selected_choice_ids'] = $response['selected_choice_ids']
+                ? (json_decode($response['selected_choice_ids'], true) ?? [])
+                : [];
+
             $responsesByQuestion[$response['question_id']] = $response;
+
         }
 
         foreach ($questions as &$question) {
@@ -257,12 +400,14 @@ class GradeWorkService
         return $questions;
     }
 
-    private function listStudentsForAssessment(array $assessment): array
+    private function listStudentsForAssessment(array $assessment, int $offeringId): array
     {
         /*
         |--------------------------------------------------------------------------
-        | Scope by course_id (always present) rather than module_id, which is
-        | nullable and can be cleared if its module is later deleted.
+        | Students of this section (offering) only. An assessment belongs to
+        | the course, which can have several sections; the instructor grades
+        | the one they're viewing — the same scope as the Assessments tab's
+        | To Grade / Ready for Grading numbers.
         |--------------------------------------------------------------------------
         */
 
@@ -288,14 +433,30 @@ class GradeWorkService
             'user_profiles.user_id = enrollments.student_user_id'
         );
 
+        // One row per student: their latest submitted attempt, or (if they
+        // have nothing submitted yet) their latest attempt of any status.
+        // Joining every attempt and relying on GROUP BY picked an arbitrary
+        // one, which breaks once students can resubmit.
+        $assessmentId = (int) $assessment['id'];
+
         $builder->join(
             'assessment_submissions',
-            'assessment_submissions.student_id = enrollments.student_user_id'
-                . ' AND assessment_submissions.assessment_id = ' . (int) $assessment['id'],
-            'left'
+            "assessment_submissions.id = COALESCE(
+                (SELECT MAX(finished.id) FROM assessment_submissions finished
+                  WHERE finished.student_id = enrollments.student_user_id
+                    AND finished.assessment_id = {$assessmentId}
+                    AND finished.status <> 'In Progress'),
+                (SELECT MAX(anyattempt.id) FROM assessment_submissions anyattempt
+                  WHERE anyattempt.student_id = enrollments.student_user_id
+                    AND anyattempt.assessment_id = {$assessmentId})
+            )",
+            'left',
+            false
         );
 
         $builder->where('course_offerings.course_id', $assessment['course_id']);
+
+        $builder->where('enrollments.offering_id', $offeringId);
 
         $builder->where('enrollments.status', 'enrolled');
 

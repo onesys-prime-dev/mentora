@@ -8,9 +8,7 @@ $userRole = esc($user->getGroups()[0]);
 
         <div class="flex items-center gap-4">
             <div class="flex justify-center items-center">
-                <img
-                    class="h-5 w-auto" 
-                    src="<?= base_url('assets/images/icons/modules.png') ?>" alt="">
+                <?= icon('modules', 'h-6 w-6') ?>
             </div>
         
             <span class="text-2xl font-bold text-[#0040A6]">
@@ -118,25 +116,19 @@ $userRole = esc($user->getGroups()[0]);
                             <?php if ($module['progress'] == 100): ?>
 
                                 <div class="w-15 h-15 flex justify-center items-center bg-[#E8F5E9] rounded-[999px]">
-                                    <img
-                                        class="h-5 w-auto" 
-                                        src="<?= base_url('assets/images/icons/check-green.png') ?>" alt="">
+                                    <?= icon('check', 'h-7 w-7') ?>
                                 </div>
 
                             <?php elseif ($module['progress'] < 100 && $module['progress'] > 0): ?>
-                                
+
                                 <div class="w-15 h-15 flex justify-center items-center bg-[#E0E5F2] rounded-[999px]">
-                                    <img
-                                        class="h-8 w-auto" 
-                                        src="<?= base_url('assets/images/icons/in-progress.png') ?>" alt="">
+                                    <?= icon('in-progress', 'h-8 w-8') ?>
                                 </div>
 
                             <?php elseif ($module['progress'] == 0): ?>
 
                                 <div class="w-15 h-15 flex justify-center items-center bg-[#E0E5F2] rounded-[999px]">
-                                    <img
-                                        class="h-8 w-auto" 
-                                        src="<?= base_url('assets/images/icons/in-progress.png') ?>" alt="">
+                                    <?= icon('in-progress', 'h-8 w-8') ?>
                                 </div>
 
                             <?php endif; ?>
@@ -315,9 +307,7 @@ $userRole = esc($user->getGroups()[0]);
                                         <div class="flex items-center gap-4">
 
                                             <div class="w-10 flex justify-center items-center">
-                                                <img
-                                                    class="" 
-                                                    src="<?= base_url('assets/images/icons/learning-unit.png') ?>" alt="">
+                                                <?= icon('learning-unit', 'h-6 w-6') ?>
                                             </div>
 
                                             <span
@@ -389,6 +379,7 @@ $userRole = esc($user->getGroups()[0]);
                                                 <?= view(
                                                     'pages/courses/features/modules/partials/learning-unit-actions',
                                                     [
+                                                        'module' => $module,
                                                         'learning_unit' => $learning_unit,
                                                     ]
                                                 ) ?>
@@ -457,19 +448,23 @@ $userRole = esc($user->getGroups()[0]);
 
                                                                 <?php if ($learning_item['is_completed']): ?>
 
-                                                                    <div class="w-6 h-6 flex justify-center items-center border-2 border-[#7DB080] rounded-[999px]">
-                                                                        <img
-                                                                            class="h-2 w-auto" 
-                                                                            src="<?= base_url('assets/images/icons/check-green.png') ?>" alt="">
+                                                                    <div class="w-6 h-6 flex justify-center items-center border-2 border-[#7DB080] bg-[#E6F4EA] rounded-[999px]">
+                                                                        <?= icon('check', 'h-3.5 w-3.5') ?>
+                                                                    </div>
+
+                                                                <?php elseif (!empty($learning_item['is_locked'])): ?>
+
+                                                                    <div class="w-6 h-6 flex justify-center items-center border-2 border-[#999696] rounded-[999px]">
+                                                                        <?= icon('lock', 'h-3 w-3') ?>
                                                                     </div>
 
                                                                 <?php else: ?>
 
                                                                     <div class="w-6 h-6 flex justify-center items-center border-2 border-[#999696] rounded-[999px]">
-                                                                
+
                                                                     </div>
 
-                                                                <?php endif; ?>   
+                                                                <?php endif; ?>
 
                                                             </div>
 
@@ -479,11 +474,30 @@ $userRole = esc($user->getGroups()[0]);
                                                             <div class="flex flex-col gap-1">
 
                                                                 <div class="flex items-center gap-4">
-                                                                    <span class="text-md">
+                                                                    <span class="text-md <?= !empty($learning_item['is_locked']) ? 'text-gray-400' : '' ?>">
                                                                         <?= esc($learning_item['title']) ?>
                                                                     </span>
 
+                                                                    <?php if (!empty($learning_item['is_locked'])): ?>
+
+                                                                        <span class="text-xs text-gray-400">
+                                                                            Complete <?= esc(implode(', ', array_map(static fn ($p) => '“' . $p['title'] . '”', $learning_item['locked_by']))) ?> first
+                                                                        </span>
+
+                                                                    <?php endif; ?>
+
                                                                     <?php if ($userRole === 'instructor'): ?>
+
+                                                                        <?php if (!empty($learning_item['dependency_labels'])): ?>
+
+                                                                            <span
+                                                                                title="Students must complete: <?= esc(implode(', ', $learning_item['dependency_labels'])) ?>"
+                                                                                class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                                                                                <?= icon('lock', 'h-3 w-3 text-current') ?>
+                                                                                After <?= esc(implode(', ', $learning_item['dependency_labels'])) ?>
+                                                                            </span>
+
+                                                                        <?php endif; ?>
 
                                                                         <?php if ($learning_item['status'] === 'published'): ?>
 
@@ -506,9 +520,7 @@ $userRole = esc($user->getGroups()[0]);
 
                                                                 <div class="flex items-center gap-2">
                                                                     <div class="flex justify-center items-center">
-                                                                        <img
-                                                                            class="h-4 w-auto" 
-                                                                            src="<?= base_url('assets/images/icons/reading.png') ?>" alt="">
+                                                                        <?= learning_item_icon($learning_item['item_type'], 'h-4 w-4') ?>
                                                                     </div>
 
                                                                     <span class="text-sm text-[#565656]">
@@ -526,32 +538,12 @@ $userRole = esc($user->getGroups()[0]);
 
                                                         <?php if ($userRole === 'instructor'): ?>
 
-                                                            <div class="flex items-center">
-
-                                                                <button
-                                                                    type="button"
-                                                                    data-learning-item-edit-button
-                                                                    data-learning-item="<?= esc($learning_item['id']) ?>"
-                                                                    class="inline-flex items-center justify-center p-1 text-gray-400 opacity-0 transition-all duration-200 group-hover:opacity-100 hover:text-[#0040A6] focus:outline-none cursor-pointer">
-
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        class="h-6 w-6 transition-transform duration-200 hover:scale-110"
-                                                                        fill="none"
-                                                                        viewBox="0 0 24 24"
-                                                                        stroke="currentColor"
-                                                                        stroke-width="2">
-
-                                                                        <path
-                                                                            stroke-linecap="round"
-                                                                            stroke-linejoin="round"
-                                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z"/>
-
-                                                                    </svg>
-
-                                                                </button>
-
-                                                            </div>
+                                                            <?= view(
+                                                                'pages/courses/features/modules/partials/learning-item-actions',
+                                                                [
+                                                                    'learning_item' => $learning_item,
+                                                                ]
+                                                            ) ?>
 
                                                         <?php endif; ?>
 
@@ -682,3 +674,6 @@ $userRole = esc($user->getGroups()[0]);
 <?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-editor') ?>
 <?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-delete') ?>
 <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
+<?php if ($userRole === 'instructor'): ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-dependencies') ?>
+<?php endif; ?>

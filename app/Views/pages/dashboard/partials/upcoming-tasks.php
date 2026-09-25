@@ -57,7 +57,7 @@ $urgencyStyles = [
                     <div class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white/45">
 
                         <div class="w-11 h-11 shrink-0 flex justify-center items-center <?= $style['bubble'] ?> rounded-full transition-transform duration-150 group-hover:scale-110">
-                            <?= icon('code.png', 'w-5 h-5 text-white') ?>
+                            <?= icon('code', 'w-5 h-5 text-white') ?>
                         </div>
 
                         <div class="flex flex-col min-w-0 flex-1">

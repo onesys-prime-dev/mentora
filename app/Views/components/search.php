@@ -2,10 +2,7 @@
     method="get"
     class="flex items-center gap-2 h-10 w-72 rounded-4xl border border-gray-300 bg-white px-4 shadow">
 
-    <img
-        class="h-4 w-auto opacity-60"
-        src="<?= base_url('assets/images/icons/search.png') ?>"
-        alt="">
+    <?= icon('search', 'h-4 w-4 opacity-60') ?>
 
     <input
         type="text"

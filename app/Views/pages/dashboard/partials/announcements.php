@@ -51,7 +51,7 @@ $announcements = $data['announcements'] ?? [
 
                         <div class="relative shrink-0">
                             <div class="w-9 h-9 flex justify-center items-center bg-blue-800 rounded-full transition-transform duration-150 group-hover:scale-110">
-                                <?= icon('message.png', 'w-5 h-5 text-white') ?>
+                                <?= icon('message', 'w-5 h-5 text-white') ?>
                             </div>
 
                             <?php if ($announcement['unread'] ?? false): ?>

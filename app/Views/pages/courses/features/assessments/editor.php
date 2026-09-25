@@ -67,7 +67,7 @@
                 <?= $this->include('pages/courses/features/assessments/partials/view-header') ?>
 
                 <!-- contents -->
-                <?= $this->include('pages/courses/features/assessments/assessment-types/editor/' . $currentAssessment['assessment_type']) ?>
+                <?= $this->include('pages/courses/features/assessments/assessment-types/editor/' . strtolower($currentAssessment['assessment_type'])) ?>
 
             </div>
 

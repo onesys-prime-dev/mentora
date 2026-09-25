@@ -15,6 +15,24 @@
                 This action cannot be undone.
             </p>
 
+            <?php if (!empty($currentAssessment)): ?>
+
+                <?php
+                    $deleteIsQuiz = strtolower($currentAssessment['assessment_type'] ?? '') === 'quiz';
+                    $deleteSubmittedCount = (int) ($assessmentContext['counts']['submitted'] ?? 0);
+                ?>
+
+                <p class="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                    This also deletes the <?= $deleteIsQuiz ? 'quiz and its questions' : 'assignment and its rubric' ?>
+                    <?php if ($deleteSubmittedCount > 0): ?>
+                        along with the work of <strong><?= $deleteSubmittedCount ?> student<?= $deleteSubmittedCount === 1 ? '' : 's' ?></strong> who submitted it.
+                    <?php else: ?>
+                        — no students have submitted it yet.
+                    <?php endif; ?>
+                </p>
+
+            <?php endif; ?>
+
         </div>
 
         <div class="flex justify-end gap-3 border-t border-gray-200 px-8 py-6">

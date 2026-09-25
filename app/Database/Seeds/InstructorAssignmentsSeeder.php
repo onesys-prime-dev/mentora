@@ -2,60 +2,27 @@
 
 namespace App\Database\Seeds;
 
-use CodeIgniter\Database\Seeder;
-use CodeIgniter\Shield\Models\UserModel;
-
-class InstructorAssignmentsSeeder extends Seeder
+class InstructorAssignmentsSeeder extends DemoSeeder
 {
     public function run()
     {
-        $userModel = model(UserModel::class);
-
-        $instructor1 = $userModel->findByCredentials([
-            'email' => 'instructor1@mentora.test',
-        ]);
-
-        $instructor2 = $userModel->findByCredentials([
-            'email' => 'instructor2@mentora.test',
-        ]);
-
-        if (! $instructor1 || ! $instructor2) {
-            echo "Instructor demo users not found.\n";
-            return;
-        }
-
         $now = date('Y-m-d H:i:s');
 
-        $data = [
-            [
-                'offering_id' => 1,
-                'instructor_user_id' => $instructor1->id,
-                'assigned_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'offering_id' => 2,
-                'instructor_user_id' => $instructor1->id,
-                'assigned_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'offering_id' => 3,
-                'instructor_user_id' => $instructor2->id,
-                'assigned_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'offering_id' => 4,
-                'instructor_user_id' => $instructor2->id,
-                'assigned_at' => $now,
-                'updated_at' => $now,
-            ],
+        $assignments = [
+            ['IT101', 'A', 'instructor1@mentora.test'],
+            ['IT101', 'B', 'instructor1@mentora.test'],
+            ['IT102', 'A', 'instructor2@mentora.test'],
+            ['IT201', 'A', 'instructor2@mentora.test'],
         ];
 
-        $this->db
-            ->table('instructor_assignments')
-            ->insertBatch($data);
+        foreach ($assignments as [$code, $section, $email]) {
+            $this->db->table('instructor_assignments')->insert([
+                'offering_id' => $this->offeringId($code, $section),
+                'instructor_user_id' => $this->userId($email),
+                'assigned_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
 
         echo "Instructor assignments seeded.\n";
     }

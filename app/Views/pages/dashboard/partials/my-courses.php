@@ -48,7 +48,7 @@ $courses = $data['courses'] ?? [
                         <div class="flex items-center gap-3">
 
                             <div class="w-10 h-10 shrink-0 flex justify-center items-center bg-blue-800 rounded-full">
-                                <?= icon('code.png', 'w-5 h-5 text-white') ?>
+                                <?= icon('code', 'w-5 h-5 text-white') ?>
                             </div>
 
                             <div class="flex flex-col min-w-0">

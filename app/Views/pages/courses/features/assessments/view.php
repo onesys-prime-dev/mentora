@@ -12,11 +12,21 @@
                 <?= $this->include('pages/courses/features/assessments/partials/view-header') ?>
 
                 <!-- contents -->
-                <?= $this->include('pages/courses/features/assessments/assessment-types/views/' . $currentAssessment['assessment_type']) ?>
+                <?php if (!empty($assessmentLock)): ?>
+
+                    <?= view('pages/courses/features/modules/learning-items/views/locked', ['lock' => $assessmentLock, 'lockLinks' => false]) ?>
+
+                <?php else: ?>
+
+                    <?= $this->include('pages/courses/features/assessments/assessment-types/views/' . strtolower($currentAssessment['assessment_type'])) ?>
+
+                <?php endif; ?>
 
             </div>
 
-            <?= $this->include('pages/courses/features/assessments/partials/score-panel') ?>
+            <?php if (empty($assessmentLock)): ?>
+                <?= $this->include('pages/courses/features/assessments/partials/score-panel') ?>
+            <?php endif; ?>
 
         </section>
 

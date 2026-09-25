@@ -46,7 +46,7 @@ if (!function_exists('renderInstructionsInline')) {
 <?php if (empty($blocks)): ?>
 
     <p class="text-sm italic text-gray-400">
-        No instructions added yet. Click Edit to write some.
+        <?= esc($instructionsEmptyText ?? 'No instructions added yet. Click Edit to write some.') ?>
     </p>
 
 <?php else: ?>

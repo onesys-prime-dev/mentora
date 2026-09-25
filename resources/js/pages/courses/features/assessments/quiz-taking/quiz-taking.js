@@ -34,6 +34,12 @@ export function initializeQuizTaking(offeringId, assessmentId, submitQuiz) {
     bindSubmit(form);
     bindTimer();
 
+    // Resuming an in-progress attempt — apply the selection cap to
+    // whatever's already checked, same as a fresh change event would.
+    form
+        .querySelectorAll('[data-quiz-question][data-multiple-answer="1"]')
+        .forEach((question) => enforceAnswersLimit(question));
+
     updateProgress();
 
 }
@@ -56,13 +62,32 @@ function bindAnswerInputs(form) {
             const question =
                 choiceInput.closest("[data-quiz-question]");
 
-            highlightSelectedChoice(question, choiceInput);
+            if (question.dataset.multipleAnswer === "1") {
 
-            markAnswered(question, true);
+                enforceAnswersLimit(question);
 
-            queueAnswerSave(question.dataset.questionId, {
-                selected_choice_id: Number(choiceInput.value),
-            });
+                highlightSelectedChoices(question);
+
+                const selectedIds =
+                    getSelectedChoiceIds(question);
+
+                markAnswered(question, selectedIds.length > 0);
+
+                queueAnswerSave(question.dataset.questionId, {
+                    selected_choice_ids: selectedIds,
+                });
+
+            } else {
+
+                highlightSelectedChoice(question, choiceInput);
+
+                markAnswered(question, true);
+
+                queueAnswerSave(question.dataset.questionId, {
+                    selected_choice_id: Number(choiceInput.value),
+                });
+
+            }
 
         }
 
@@ -106,6 +131,57 @@ function highlightSelectedChoice(question, selectedInput) {
             row.classList.toggle("border-gray-200", !isSelected);
             row.classList.toggle("text-gray-700", !isSelected);
 
+        });
+
+}
+
+function highlightSelectedChoices(question) {
+
+    question
+        .querySelectorAll("[data-quiz-choice-row]")
+        .forEach((row) => {
+
+            const isSelected =
+                row.querySelector("[data-quiz-choice-input]")?.checked ?? false;
+
+            row.classList.toggle("border-[#0040A6]", isSelected);
+            row.classList.toggle("bg-[#0040A6]/5", isSelected);
+            row.classList.toggle("text-[#0040A6]", isSelected);
+
+            row.classList.toggle("border-gray-200", !isSelected);
+            row.classList.toggle("text-gray-700", !isSelected);
+
+        });
+
+}
+
+function getSelectedChoiceIds(question) {
+
+    return Array.from(
+        question.querySelectorAll("[data-quiz-choice-input]:checked")
+    ).map((input) => Number(input.value));
+
+}
+
+function enforceAnswersLimit(question) {
+
+    const limit =
+        Number(question.dataset.answersCount || 0);
+
+    if (!limit) {
+        return;
+    }
+
+    const checkedCount =
+        question.querySelectorAll("[data-quiz-choice-input]:checked").length;
+
+    // Once the student has checked as many as this question allows, grey
+    // out the rest rather than letting them keep piling on selections —
+    // matches the "Select N answers" hint above the choices.
+    question
+        .querySelectorAll("[data-quiz-choice-input]")
+        .forEach((input) => {
+            input.disabled = !input.checked && checkedCount >= limit;
         });
 
 }

@@ -9,6 +9,7 @@ import { createAssessment } from "../api.js";
 export function bindAssessmentCreateModal({
     create,
     refresh,
+    onCreated = null,
 }) {
 
     if (!create) {
@@ -142,6 +143,15 @@ export function bindAssessmentCreateModal({
                 create.close();
 
                 form.reset();
+
+                // Go straight to the new assessment's editor.
+                if (onCreated && result.assessment_id) {
+
+                    await onCreated(result.assessment_id);
+
+                    return;
+
+                }
 
                 refresh();
 

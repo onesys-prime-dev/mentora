@@ -4,10 +4,12 @@ const panel = document.getElementById("app-menu-panel");
 if (button && panel) {
     const openMenu = () => {
         panel.classList.remove("hidden");
+        button.setAttribute("aria-expanded", "true");
     };
 
     const closeMenu = () => {
         panel.classList.add("hidden");
+        button.setAttribute("aria-expanded", "false");
     };
 
     const isOpen = () => !panel.classList.contains("hidden");

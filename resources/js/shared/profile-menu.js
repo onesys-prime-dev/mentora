@@ -5,11 +5,13 @@ const arrow = document.getElementById("profile-menu-arrow");
 if (button && panel && arrow) {
     const openMenu = () => {
         panel.classList.remove("hidden");
+        button.setAttribute("aria-expanded", "true");
         arrow.classList.add("rotate-180");
     };
 
     const closeMenu = () => {
         panel.classList.add("hidden");
+        button.setAttribute("aria-expanded", "false");
         arrow.classList.remove("rotate-180");
     };
 

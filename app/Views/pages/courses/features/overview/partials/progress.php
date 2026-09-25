@@ -21,9 +21,7 @@
     <div class="flex justify-between items-center">
 
         <div class="flex gap-3 items-center">
-            <img
-                class="h-6 w-auto" 
-                src="<?= base_url('assets/images/icons/lessons.png') ?>" alt="">
+            <?= icon('lessons', 'h-6 w-6') ?>
 
             <span class="text-md">
                 9/11 Lessons
@@ -31,9 +29,7 @@
         </div>
 
         <div class="flex gap-3 items-center">
-            <img
-                class="h-6 w-auto" 
-                src="<?= base_url('assets/images/icons/tasks.png') ?>" alt="">
+            <?= icon('tasks', 'h-6 w-6') ?>
 
             <span class="text-md">
                 6/7 Tasks

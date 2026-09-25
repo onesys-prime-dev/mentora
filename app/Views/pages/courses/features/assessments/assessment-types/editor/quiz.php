@@ -4,9 +4,7 @@
     <div class="flex flex-col gap-3">
 
         <div class="flex items-center gap-3">
-            <img
-                class="w-5 h-5"
-                src="<?= base_url('assets/images/icons/quiz.png') ?>" alt="Quiz Icon">
+            <?= icon('quiz', 'h-5 w-5') ?>
 
             <span class="font-bold text-lg text-[#0040A6]">
                 Quiz Builder
@@ -16,9 +14,7 @@
         <div class="flex w-full min-h-100 flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-10 py-12 text-center">
 
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#0040A6]/10">
-                <img
-                    class="h-8 w-8"
-                    src="<?= base_url('assets/images/icons/quiz.png') ?>" alt="">
+                <?= icon('quiz', 'h-8 w-8') ?>
             </div>
 
             <div class="flex flex-col gap-1.5">
@@ -36,12 +32,12 @@
             <div class="flex items-center gap-6 text-sm text-[#5B5B5B]">
 
                 <div class="flex items-center gap-1.5">
-                    <img class="h-4 w-4 opacity-60" src="<?= base_url('assets/images/icons/quiz.png') ?>" alt="">
+                    <?= icon('quiz', 'h-4 w-4 opacity-60') ?>
                     <span><?= esc(count($currentQuestions ?? [])) ?> question<?= count($currentQuestions ?? []) === 1 ? '' : 's' ?></span>
                 </div>
 
                 <div class="flex items-center gap-1.5">
-                    <img class="h-4 w-4 opacity-60" src="<?= base_url('assets/images/icons/work.png') ?>" alt="">
+                    <?= icon('work', 'h-4 w-4 opacity-60') ?>
                     <span><?= esc((int) ($currentAssessment['total_points'] ?? 0)) ?> points</span>
                 </div>
 

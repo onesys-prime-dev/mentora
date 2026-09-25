@@ -65,6 +65,13 @@ class QuestionController extends BaseController
         );
     }
 
+    public function clearAll(int $assessmentId)
+    {
+        return $this->response->setJSON(
+            $this->questionService->clearAllQuestions($assessmentId)
+        );
+    }
+
     public function duplicate(int $questionId)
     {
         $user = auth()->user();

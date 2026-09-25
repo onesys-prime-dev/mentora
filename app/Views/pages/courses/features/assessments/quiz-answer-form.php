@@ -81,7 +81,31 @@ $previewLabels = [
 
     </div>
 
-    <?php if ($blocked): ?>
+    <?php if (!empty($lock)): ?>
+
+        <div class="flex flex-1 flex-col items-center justify-center gap-3 py-24 text-center">
+
+            <?= icon('lock', 'h-10 w-10') ?>
+
+            <span class="text-lg font-bold text-[#5B5B5B]">This quiz is locked</span>
+
+            <span class="text-sm text-[#939393]">
+                <?= esc($lock['message']) ?> You'll find them in the Modules tab.
+            </span>
+
+        </div>
+
+    <?php elseif (!empty($unavailableReason)): ?>
+
+        <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
+
+            <span class="text-lg font-bold text-[#5B5B5B]">This quiz isn't available</span>
+
+            <span class="text-sm text-[#939393]"><?= esc($unavailableReason) ?></span>
+
+        </div>
+
+    <?php elseif ($blocked): ?>
 
         <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
 
@@ -140,14 +164,22 @@ $previewLabels = [
 
                             <?php
                                 $response = $responsesByQuestion[$question['id']] ?? null;
-                                $isAnswered = $response
-                                    && ($response['selected_choice_id'] !== null || !empty($response['response_text']));
+                                $isMultipleAnswer = $question['question_type'] === 'Multiple Choice'
+                                    && !empty($question['allow_multiple_answers']);
+                                $answersCount = (int) ($question['answers_count'] ?? 2);
+                                $isAnswered = $response && (
+                                    $response['selected_choice_id'] !== null
+                                    || !empty($response['selected_choice_ids'])
+                                    || !empty($response['response_text'])
+                                );
                             ?>
 
                             <div
                                 data-quiz-question
                                 data-question-id="<?= esc($question['id']) ?>"
                                 data-answered="<?= $isAnswered ? '1' : '0' ?>"
+                                data-multiple-answer="<?= $isMultipleAnswer ? '1' : '0' ?>"
+                                data-answers-count="<?= esc($answersCount) ?>"
                                 class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
                                 <div class="flex items-start justify-between gap-4">
@@ -175,11 +207,23 @@ $previewLabels = [
 
                                 <?php if ($question['question_type'] === 'Multiple Choice'): ?>
 
+                                    <?php if ($isMultipleAnswer): ?>
+
+                                        <span class="pl-9 text-xs font-semibold text-[#0040A6]">
+                                            Select <?= esc($answersCount) ?> answer<?= $answersCount === 1 ? '' : 's' ?>
+                                        </span>
+
+                                    <?php endif; ?>
+
                                     <div class="flex flex-col gap-2.5 pl-9" data-quiz-choices>
 
                                         <?php foreach ($question['choices'] as $choice): ?>
 
-                                            <?php $isSelected = $response && (int) $response['selected_choice_id'] === (int) $choice['id']; ?>
+                                            <?php
+                                                $isSelected = $isMultipleAnswer
+                                                    ? ($response && in_array((int) $choice['id'], array_map('intval', $response['selected_choice_ids'] ?? []), true))
+                                                    : ($response && (int) $response['selected_choice_id'] === (int) $choice['id']);
+                                            ?>
 
                                             <label
                                                 data-quiz-choice-row
@@ -187,8 +231,8 @@ $previewLabels = [
                                                     <?= $isSelected ? 'border-[#0040A6] bg-[#0040A6]/5 text-[#0040A6]' : 'border-gray-200 text-gray-700 hover:border-[#0040A6]/40 hover:bg-gray-50' ?>">
 
                                                 <input
-                                                    type="radio"
-                                                    name="question-<?= esc($question['id']) ?>"
+                                                    type="<?= $isMultipleAnswer ? 'checkbox' : 'radio' ?>"
+                                                    <?= $isMultipleAnswer ? '' : 'name="question-' . esc($question['id']) . '"' ?>
                                                     value="<?= esc($choice['id']) ?>"
                                                     data-quiz-choice-input
                                                     class="h-4 w-4 shrink-0 accent-[#0040A6]"

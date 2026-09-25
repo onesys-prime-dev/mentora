@@ -3,16 +3,19 @@
 namespace App\Controllers\Courses;
 
 use App\Controllers\BaseController;
+use App\Services\Courses\LearningProgressService;
 use App\Services\Courses\ModuleService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
 class ModuleController extends BaseController
 {
     protected ModuleService $moduleService;
+    protected LearningProgressService $progressService;
 
     public function __construct()
     {
         $this->moduleService = new ModuleService();
+        $this->progressService = new LearningProgressService();
     }
 
     public function show(int $offeringId)
@@ -382,6 +385,98 @@ class ModuleController extends BaseController
 
             )
 
+        );
+
+    }
+
+    public function updatePdfItem(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        return $this->response->setJSON(
+
+            $this->moduleService->updatePdfItem(
+                auth()->user(),
+                $offeringId,
+                $learningItemId,
+                $this->request
+            )
+
+        );
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Completion (student)
+    |--------------------------------------------------------------------------
+    */
+
+    public function completeLearningItem(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        return $this->response->setJSON(
+            $this->progressService->markComplete(auth()->user(), $offeringId, $learningItemId)
+        );
+
+    }
+
+    public function saveLearningItemProgress(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        $payload = $this->request->getJSON(true) ?? [];
+
+        return $this->response->setJSON(
+            $this->progressService->saveVideoProgress(
+                auth()->user(),
+                $offeringId,
+                $learningItemId,
+                (int) ($payload['percent'] ?? 0)
+            )
+        );
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dependencies (instructor)
+    |--------------------------------------------------------------------------
+    */
+
+    public function learningItemDependencies(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        $options = $this->progressService->dependencyOptions($offeringId, $learningItemId);
+
+        if (! $options) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        return $this->response->setJSON($options);
+
+    }
+
+    public function saveLearningItemDependencies(
+        int $offeringId,
+        int $learningItemId
+    ) {
+
+        $payload = $this->request->getJSON(true) ?? [];
+
+        return $this->response->setJSON(
+            $this->progressService->saveDependencies(
+                $offeringId,
+                $learningItemId,
+                (string) ($payload['mode'] ?? 'none'),
+                (array) ($payload['prerequisite_ids'] ?? [])
+            )
         );
 
     }

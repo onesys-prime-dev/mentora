@@ -541,6 +541,24 @@ export async function deleteQuestion(offeringId, questionId) {
 
 }
 
+export async function clearAllQuestions(offeringId, assessmentId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/questions`,
+        {
+            method: "DELETE",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to clear questions.");
+    }
+
+    return response.json();
+
+}
+
 export async function duplicateQuestion(offeringId, questionId) {
 
     const response = await fetch(
@@ -626,11 +644,13 @@ export async function submitQuizAttempt(offeringId, submissionId) {
 |--------------------------------------------------------------------------
 */
 
-export async function fetchGradeWork(offeringId, assessmentId, studentId) {
+export async function fetchGradeWork(offeringId, assessmentId, studentId, attemptId = null) {
 
-    const url = studentId
+    const base = studentId
         ? `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/grade-work/${studentId}`
         : `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/grade-work`;
+
+    const url = attemptId ? `${base}?attempt=${attemptId}` : base;
 
     const response = await fetch(url, { headers: defaultHeaders() });
 
@@ -654,6 +674,27 @@ export async function startGrading(offeringId, submissionId) {
 
     if (!response.ok) {
         throw new Error("Unable to start grading.");
+    }
+
+    return response.json();
+
+}
+
+/**
+ * Puts graded work back into Grading so its grade can be changed.
+ */
+export async function reopenGrading(offeringId, submissionId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/submissions/${submissionId}/reopen-grading`,
+        {
+            method: "PATCH",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to reopen grading.");
     }
 
     return response.json();
@@ -698,6 +739,193 @@ export async function reorderQuestions(offeringId, assessmentId, questionIds) {
 
     if (!response.ok) {
         throw new Error("Unable to reorder questions.");
+    }
+
+    return response.json();
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| AI Question Generation
+|--------------------------------------------------------------------------
+*/
+
+export async function startGeneration(offeringId, formData) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generate-questions`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+            body: formData,
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to start question generation.");
+    }
+
+    return response.json();
+
+}
+
+export async function fetchNextChunk(offeringId, batchId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/next-chunk`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to generate the next chunk.");
+    }
+
+    return response.json();
+
+}
+
+export async function fetchGenerationBatch(offeringId, batchId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}`,
+        { headers: defaultHeaders() }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to load generation batch.");
+    }
+
+    return response.json();
+
+}
+
+export async function updateGeneratedQuestion(offeringId, generatedQuestionId, payload) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generated-questions/${generatedQuestionId}`,
+        {
+            method: "PATCH",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to update the generated question.");
+    }
+
+    return response.json();
+
+}
+
+export async function acceptGeneratedQuestion(offeringId, generatedQuestionId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generated-questions/${generatedQuestionId}/accept`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to accept the generated question.");
+    }
+
+    return response.json();
+
+}
+
+export async function discardGeneratedQuestion(offeringId, generatedQuestionId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generated-questions/${generatedQuestionId}/discard`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to discard the generated question.");
+    }
+
+    return response.json();
+
+}
+
+export async function acceptAllGeneratedQuestions(offeringId, batchId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/accept-all`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to accept all generated questions.");
+    }
+
+    return response.json();
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Import / Export
+|--------------------------------------------------------------------------
+*/
+
+export function exportQuestionsUrl(offeringId, assessmentId, format = "docx") {
+
+    return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/export?format=${format}`;
+
+}
+
+export async function previewImport(offeringId, assessmentId, formData) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/preview`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+            body: formData,
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to preview this import.");
+    }
+
+    return response.json();
+
+}
+
+export async function applyImport(offeringId, assessmentId, changes) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/apply`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(changes),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to apply this import.");
     }
 
     return response.json();

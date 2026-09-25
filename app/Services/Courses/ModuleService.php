@@ -10,10 +10,12 @@ use App\Models\Learning\LearningItemModel;
 use App\Models\Learning\LearningCompletionModel;
 use App\Models\Learning\LearningResourceModel;
 use App\Models\Files\FileModel;
+use App\Models\Assessments\AssessmentModel;
 use App\Models\Assessments\AssessmentTypeModel;
 
 use App\Services\Storage\StorageService;
 use App\Services\Courses\Assessments\AssessmentService;
+use App\Services\Courses\LearningProgressService;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -26,10 +28,12 @@ class ModuleService
     protected LearningCompletionModel $learningCompletionModel;
     protected LearningResourceModel $learningResourceModel;
     protected FileModel $fileModel;
+    protected AssessmentModel $assessmentModel;
     protected AssessmentTypeModel $assessmentTypeModel;
 
     protected StorageService $storageService;
     protected AssessmentService $assessmentService;
+    protected LearningProgressService $progressService;
 
     public function __construct()
     {
@@ -39,11 +43,14 @@ class ModuleService
         $this->learningCompletionModel = new LearningCompletionModel();
         $this->learningResourceModel = new LearningResourceModel();
         $this->fileModel = new FileModel();
+        $this->assessmentModel = new AssessmentModel();
         $this->assessmentTypeModel = new AssessmentTypeModel();
 
         $this->assessmentService = new AssessmentService();
 
         $this->storageService = new StorageService();
+
+        $this->progressService = new LearningProgressService();
     }
 
     public function show(
@@ -101,6 +108,9 @@ class ModuleService
 
         $module['completed_items'] = $completedItems;
         $module['total_items'] = $totalItems;
+
+        // Locks, "can complete" and the student's real progress.
+        $this->progressService->annotateTree($user, $module);
     }
 
         return [
@@ -229,6 +239,9 @@ class ModuleService
             ? round(($completedItems / $totalItems) * 100)
             : 0;
 
+        // Locks, "can complete" and the student's real progress.
+        $this->progressService->annotateTree($user, $module);
+
         return $module;
     }
 
@@ -338,6 +351,11 @@ class ModuleService
                 $learningItemId
             );
 
+        $assessmentContext =
+            in_array($currentItem['item_type'], ['quiz', 'assignment'], true)
+                ? $this->assessmentService->buildLearningItemContext($user, $learningItemId)
+                : null;
+
         return [
 
             'user' => $user,
@@ -351,6 +369,35 @@ class ModuleService
             'previousItem' => $navigation['previous'],
 
             'nextItem' => $navigation['next'],
+
+            'currentAssessment' => $assessmentContext['assessment'] ?? null,
+
+            'currentSettings' => $assessmentContext['settings'] ?? null,
+
+            'currentRubric' => $assessmentContext['rubric'] ?? null,
+
+            'assessmentContext' => $assessmentContext,
+
+            // Same names the Assessments tab uses, so the shared partials
+            // (assignment-work, score-panel) render identically in both.
+            'assignmentState' => $currentItem['item_type'] === 'assignment'
+                ? ($assessmentContext['state'] ?? null)
+                : null,
+
+            // The attempt that counts (best quiz attempt / latest graded
+            // submission), falling back to the latest for "no score yet".
+            'submission' => $assessmentContext['state']['counted'] ?? $assessmentContext['state']['latest'] ?? null,
+
+            'scoreResult' => $assessmentContext['state']['result'] ?? null,
+
+            // Set for a student whose item is behind incomplete prerequisites;
+            // the view then shows the locked notice instead of the content.
+            'currentLock' => !empty($currentItem['is_locked'])
+                ? [
+                    'message' => $this->progressService->lockMessage($currentItem['locked_by']),
+                    'prerequisites' => $currentItem['locked_by'],
+                ]
+                : null,
 
         ];
     }
@@ -394,7 +441,7 @@ class ModuleService
 
                     $resource['file']['url'] =
                         $this->storageService
-                            ->getUrl($resource['file']);
+                            ->url((int) $resource['file']['id']);
 
                 }
 
@@ -414,9 +461,15 @@ class ModuleService
                 $resource['resource_type'] === 'video' &&
                 ! empty($resource['resource_url'])
             ) {
-                $resource['embed_url'] = $this->buildVideoEmbedUrl(
+                $resource['youtube_id'] = $this->progressService->youtubeId(
                     $resource['resource_url']
                 );
+
+                // YouTube embeds get the IFrame API enabled so watch
+                // progress can be tracked for completion.
+                $resource['embed_url'] = $resource['youtube_id']
+                    ? "https://www.youtube.com/embed/{$resource['youtube_id']}?enablejsapi=1&rel=0"
+                    : $this->buildVideoEmbedUrl($resource['resource_url']);
             }
 
         }
@@ -1129,6 +1182,9 @@ class ModuleService
 
             'message' => 'Learning item created successfully.',
 
+            // The modal opens this item's editor next.
+            'learning_item_id' => (int) $learningItemId,
+
         ];
 
     }
@@ -1154,6 +1210,37 @@ class ModuleService
         if (!$learningItem) {
 
             throw new PageNotFoundException();
+
+        }
+
+        // Link items store {url, description}; only http(s) links are
+        // accepted so the "Open link" button can't run a javascript: URL.
+        if (
+            $learningItem['item_type'] === 'link'
+            && array_key_exists('content', $payload)
+        ) {
+
+            $url = trim((string) ($payload['content']['url'] ?? ''));
+
+            if (
+                $url !== ''
+                && (
+                    filter_var($url, FILTER_VALIDATE_URL) === false
+                    || !in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true)
+                )
+            ) {
+
+                return [
+                    'success' => false,
+                    'message' => 'Enter a full link starting with http:// or https://.',
+                ];
+
+            }
+
+            $payload['content'] = [
+                'url' => $url,
+                'description' => trim((string) ($payload['content']['description'] ?? '')),
+            ];
 
         }
 
@@ -1205,6 +1292,8 @@ class ModuleService
 
             );
 
+        $this->syncLinkedAssessment($learningItemId, $update);
+
         return [
 
             'success' => true,
@@ -1214,6 +1303,38 @@ class ModuleService
 
         ];
 
+    }
+
+    /**
+     * A quiz/assignment item and its assessment are one thing to the
+     * instructor, so publishing, drafting or renaming the item applies to the
+     * assessment too. Written directly to the assessments table (not through
+     * AssessmentService::updateAssessment()) so the two sides' syncs can't
+     * call back into each other.
+     */
+    private function syncLinkedAssessment(int $learningItemId, array $itemUpdate): void
+    {
+        $assessment = $this->assessmentModel->findByLearningItem($learningItemId);
+
+        if (!$assessment) {
+            return;
+        }
+
+        $assessmentUpdate = [];
+
+        if (array_key_exists('status', $itemUpdate)) {
+            $assessmentUpdate['status'] = $itemUpdate['status'] === 'published' ? 'Published' : 'Draft';
+        }
+
+        if (array_key_exists('title', $itemUpdate) && $itemUpdate['title'] !== '') {
+            $assessmentUpdate['title'] = $itemUpdate['title'];
+        }
+
+        if ($assessmentUpdate !== []) {
+            $assessmentUpdate['updated_at'] = date('Y-m-d H:i:s');
+
+            $this->assessmentModel->update($assessment['id'], $assessmentUpdate);
+        }
     }
 
     /*
@@ -1232,14 +1353,25 @@ class ModuleService
             $this->learningItemModel
                 ->find($learningItemId);
 
-        if (!$learningItem) {
+        if (!$learningItem || !$this->itemBelongsToOffering($learningItem, $offeringId)) {
 
             throw new PageNotFoundException();
 
         }
 
-        $this->learningItemModel
-            ->delete($learningItemId);
+        // Also removes the linked quiz/assignment (its FK would only be
+        // SET NULL, orphaning it) and the files nothing else uses.
+        if (!(new ContentDeletionService())->deleteLearningItem($learningItemId)) {
+
+            return [
+
+                'success' => false,
+
+                'message' => 'Unable to delete learning item.',
+
+            ];
+
+        }
 
         return [
 
@@ -1250,6 +1382,94 @@ class ModuleService
 
         ];
 
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Delete Module / Learning Unit
+    |--------------------------------------------------------------------------
+    */
+
+    public function deleteModule(
+        User $user,
+        int $offeringId,
+        int $moduleId
+    ): array {
+
+        $module = $this->courseModuleModel->find($moduleId);
+
+        if (!$module || (int) $module['offering_id'] !== $offeringId) {
+
+            return [
+                'success' => false,
+                'message' => 'Module not found.',
+            ];
+
+        }
+
+        if (!(new ContentDeletionService())->deleteModule($moduleId)) {
+
+            return [
+                'success' => false,
+                'message' => 'Unable to delete module.',
+            ];
+
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Module deleted.',
+        ];
+
+    }
+
+    public function deleteLearningUnit(
+        User $user,
+        int $offeringId,
+        int $moduleId,
+        int $learningUnitId
+    ): array {
+
+        $module = $this->courseModuleModel->find($moduleId);
+
+        $unit = $this->learningUnitModel->find($learningUnitId);
+
+        if (
+            !$module || !$unit
+            || (int) $module['offering_id'] !== $offeringId
+            || (int) $unit['module_id'] !== $moduleId
+        ) {
+
+            return [
+                'success' => false,
+                'message' => 'Learning unit not found.',
+            ];
+
+        }
+
+        if (!(new ContentDeletionService())->deleteLearningUnit($learningUnitId)) {
+
+            return [
+                'success' => false,
+                'message' => 'Unable to delete learning unit.',
+            ];
+
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Learning unit deleted.',
+        ];
+
+    }
+
+    private function itemBelongsToOffering(array $learningItem, int $offeringId): bool
+    {
+        return $this->learningUnitModel
+            ->join('course_modules', 'course_modules.id = learning_units.module_id')
+            ->where('learning_units.id', $learningItem['learning_unit_id'])
+            ->where('course_modules.offering_id', $offeringId)
+            ->countAllResults() > 0;
     }
 
     /*
@@ -1377,6 +1597,8 @@ class ModuleService
                 $resource['id'];
 
         }
+
+        $previousFileId = $resource['file_id'] ?? null;
 
         /*
         |--------------------------------------------------------------------------
@@ -1523,12 +1745,161 @@ class ModuleService
 
         }
 
+        // A new upload or a switch to a link leaves the old video unused.
+        $this->storageService->purgeFiles([$previousFileId]);
+
         return [
 
             'success' => true,
 
             'message' => 'Video updated.',
 
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Update PDF Learning Item
+    |--------------------------------------------------------------------------
+    |
+    | Multipart: optional `pdf` (upload/replace) and optional `allow_download`.
+    | The replaced file is purged once nothing points at it.
+    |
+    */
+
+    private const MAX_PDF_BYTES = 25 * 1024 * 1024;
+
+    public function updatePdfItem(
+        User $user,
+        int $offeringId,
+        int $learningItemId,
+        IncomingRequest $request
+    ): array {
+
+        $learningItem = $this->learningItemModel->find($learningItemId);
+
+        if (
+            !$learningItem
+            || $learningItem['item_type'] !== 'pdf'
+            || !$this->itemBelongsToOffering($learningItem, $offeringId)
+        ) {
+
+            return [
+                'success' => false,
+                'message' => 'PDF item not found.',
+            ];
+
+        }
+
+        $content = json_decode($learningItem['content'] ?? '', true);
+
+        $content = is_array($content) ? $content : [];
+
+        $content['display_mode'] ??= 'embed';
+
+        if ($request->getPost('allow_download') !== null) {
+
+            $content['allow_download'] = filter_var(
+                $request->getPost('allow_download'),
+                FILTER_VALIDATE_BOOLEAN
+            );
+
+        }
+
+        $pdf = $request->getFile('pdf');
+
+        $previousFileId = null;
+
+        if ($pdf && $pdf->getError() !== UPLOAD_ERR_NO_FILE) {
+
+            if (!$pdf->isValid()) {
+
+                return [
+                    'success' => false,
+                    'message' => 'The PDF could not be uploaded: ' . $pdf->getErrorString(),
+                ];
+
+            }
+
+            if ($pdf->getSize() > self::MAX_PDF_BYTES) {
+
+                return [
+                    'success' => false,
+                    'message' => 'The PDF is larger than the 25 MB limit.',
+                ];
+
+            }
+
+            if ($pdf->getMimeType() !== 'application/pdf') {
+
+                return [
+                    'success' => false,
+                    'message' => 'Only PDF files can be uploaded here.',
+                ];
+
+            }
+
+            $stored = $this->storageService->upload($pdf, 'learning/documents');
+
+            $fileId = $this->fileModel->insert([
+                'owner_user_id' => $user->id,
+                'original_filename' => $stored['original_name'],
+                'stored_filename' => $stored['filename'],
+                'mime_type' => $stored['mime_type'],
+                'file_size' => $stored['size'],
+                'storage_key' => $stored['storage_key'],
+                'status' => 'active',
+            ], true);
+
+            $resource = $this->learningResourceModel->retrieveLearningResource($learningItemId);
+
+            if ($resource) {
+
+                $previousFileId = $resource['file_id'];
+
+                $this->learningResourceModel->update($resource['id'], [
+                    'resource_type' => 'pdf',
+                    'resource_url' => null,
+                    'file_id' => $fileId,
+                ]);
+
+            } else {
+
+                $this->learningResourceModel->insert([
+                    'learning_item_id' => $learningItemId,
+                    'resource_type' => 'pdf',
+                    'resource_url' => null,
+                    'file_id' => $fileId,
+                    'title' => $learningItem['title'],
+                ]);
+
+            }
+
+        }
+
+        $this->learningItemModel->update($learningItemId, [
+            'content' => json_encode($content, JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $this->storageService->purgeFiles([$previousFileId]);
+
+        $resource = $this->learningResourceModel->retrieveLearningResource($learningItemId);
+
+        $file = !empty($resource['file_id'])
+            ? $this->fileModel->retrieveFile((int) $resource['file_id'])
+            : null;
+
+        return [
+            'success' => true,
+            'message' => 'PDF saved.',
+            'allowDownload' => (bool) ($content['allow_download'] ?? false),
+            'file' => $file ? [
+                'id' => (int) $file['id'],
+                'name' => $file['original_filename'],
+                'size' => (int) $file['file_size'],
+                'url' => $this->storageService->url((int) $file['id']),
+            ] : null,
         ];
 
     }
@@ -1542,6 +1913,8 @@ class ModuleService
         array $items
 
     ) {
+
+        $unitIds = [];
 
         foreach ($items as $item) {
 
@@ -1559,6 +1932,14 @@ class ModuleService
 
             );
 
+            $unitIds[] = $this->learningItemModel->find($item['id'])['learning_unit_id'] ?? null;
+
+        }
+
+        // A custom prerequisite that now comes after its item no longer
+        // counts; drop it so the dependency settings stay truthful.
+        foreach (array_unique(array_filter($unitIds)) as $unitId) {
+            $this->progressService->pruneDependencies((int) $unitId);
         }
 
         return [

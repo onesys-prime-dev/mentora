@@ -29,9 +29,7 @@ $features = [
         style="background-image: url('<?= base_url('assets/images/placeholder/course-tech-1.png') ?>');">
 
         <div class="w-20 h-20 flex justify-center items-center rounded-[100%] bg-blue-900">
-            <img 
-                class="h-10 w-auto"
-                src="<?= base_url('assets/images/icons/code.png') ?>" alt="">
+            <?= icon('code', 'h-10 w-10') ?>
         </div>
 
         <div class="flex flex-col">

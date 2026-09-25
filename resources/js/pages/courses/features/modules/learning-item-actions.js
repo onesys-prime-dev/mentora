@@ -33,6 +33,12 @@ import {
 
 } from "./video/video-autosave.js";
 
+import {
+
+    flushAutosave as flushLinkAutosave,
+
+} from "./link/link-editor.js";
+
 export function initializeLearningItemActions(
 
     learningItemId,
@@ -353,6 +359,16 @@ async function flushCurrentAutosave() {
     ) {
 
         await flushVideoAutosave();
+
+    }
+
+    else if (
+        document.querySelector(
+            "[data-link-editor]"
+        )
+    ) {
+
+        await flushLinkAutosave();
 
     }
 

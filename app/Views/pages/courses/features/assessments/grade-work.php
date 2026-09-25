@@ -2,10 +2,12 @@
 
 $totalPoints = (float) ($currentAssessment['total_points'] ?? 0);
 
-$submissionStatus = $selectedStudent['submission_status'] ?? null;
+// The attempt on screen (a tab may pick an attempt other than the default).
+$submissionStatus = $submission['status'] ?? $selectedStudent['submission_status'] ?? null;
 
 $statusMeta = match ($submissionStatus) {
     'Submitted' => ['label' => 'Ready for Grading', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]', 'canExpand' => true],
+    'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]', 'canExpand' => true],
     'Grading' => ['label' => 'Grading In Progress', 'class' => 'bg-[#FFF1D6] text-[#946200]', 'canExpand' => true],
     'Graded' => ['label' => 'Graded', 'class' => 'bg-emerald-100 text-emerald-700', 'canExpand' => true],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500', 'canExpand' => false],
@@ -19,6 +21,31 @@ $existingScore = $submission['score'] ?? null;
 $existingRubricScores = $submission['rubric_scores'] ?? [];
 
 $existingGradingMode = $submission['grading_mode'] ?? 'Default';
+
+/*
+|--------------------------------------------------------------------------
+| Grading panel state:
+|   collapsed → Submitted: "Grade Work" expands it (and moves it to Grading)
+|   editing   → Grading: open and editable, "Submit Grade"
+|   locked    → Graded: open and read-only; only the edit button, which
+|               asks for confirmation before reopening the grade
+|   disabled  → nothing gradable (no submission, in progress, returned…)
+|--------------------------------------------------------------------------
+*/
+
+$panelState = match (true) {
+    !$submission => 'disabled',
+    $submissionStatus === 'Graded' => 'locked',
+    $submissionStatus === 'Grading' => 'editing',
+    in_array($submissionStatus, ['Submitted', 'Partially Graded'], true) => 'collapsed',
+    default => 'disabled',
+};
+
+$isLocked = $panelState === 'locked';
+
+$showRubricMode = $currentRubric && $existingGradingMode === 'Rubric';
+
+$attemptTabs ??= [];
 ?>
 
 <div class="flex min-w-0 flex-1 flex-col p-10">
@@ -87,6 +114,7 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                         <option value="">All</option>
                         <option value="Submitted">Submitted</option>
+                        <option value="Partially Graded">Partially Graded</option>
                         <option value="Grading">Grading</option>
                         <option value="Graded">Graded</option>
                         <option value="Returned">Returned</option>
@@ -123,6 +151,7 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                         $rowMeta = match ($rowStatus) {
                             'Submitted' => ['label' => 'Submitted', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]'],
+                            'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
                             'Grading' => ['label' => 'Grading', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
                             'Graded' => ['label' => 'Graded', 'class' => 'bg-emerald-100 text-emerald-700'],
                             'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
@@ -167,6 +196,7 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                         <?php if (!empty($student['is_graded'])): ?>
 
+                            <!-- Counted score: best quiz attempt / latest graded submission -->
                             <span class="shrink-0 text-xs font-bold text-[#5B5B5B]">
                                 <?= esc((int) $student['submission_score']) ?>/<?= esc((int) $totalPoints) ?>
                             </span>
@@ -227,6 +257,46 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                         </div>
 
+                        <?php if ($attemptTabs): ?>
+
+                            <!-- One tab per attempt; ★ marks the attempt that counts -->
+                            <div class="flex flex-wrap gap-2" data-grade-work-attempt-tabs>
+
+                                <?php foreach ($attemptTabs as $tab): ?>
+
+                                    <button
+                                        type="button"
+                                        data-grade-work-attempt="<?= esc($tab['id']) ?>"
+                                        <?= $tab['counts'] ? 'title="This attempt counts toward the grade"' : '' ?>
+                                        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition
+                                            <?= $tab['active']
+                                                ? 'border-[#0040A6] bg-[#0040A6] text-white'
+                                                : 'border-gray-200 bg-white text-gray-600 hover:border-[#0040A6]/50 hover:text-[#0040A6]' ?>">
+
+                                        Attempt <?= esc($tab['number']) ?>
+
+                                        <span class="<?= $tab['active'] ? 'text-white/80' : 'text-gray-400' ?>">·</span>
+
+                                        <?php if ($tab['score'] !== null): ?>
+                                            <?= esc((int) $tab['score']) ?>/<?= esc((int) $totalPoints) ?>
+                                        <?php elseif ($tab['needsGrading']): ?>
+                                            <span class="<?= $tab['active'] ? '' : 'text-[#946200]' ?>">Needs grading</span>
+                                        <?php else: ?>
+                                            Not graded
+                                        <?php endif; ?>
+
+                                        <?php if ($tab['counts']): ?>
+                                            <span aria-label="Counts toward the grade">★</span>
+                                        <?php endif; ?>
+
+                                    </button>
+
+                                <?php endforeach; ?>
+
+                            </div>
+
+                        <?php endif; ?>
+
                         <?php if (!empty($questionResponses)): ?>
 
                             <div class="flex flex-col gap-4">
@@ -245,6 +315,23 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                                                 <?= esc((int) $question['points']) ?> pts
                                             </span>
 
+                                            <?php if (empty($question['auto_gradable'])): ?>
+
+                                                <span class="ml-auto rounded-full bg-[#FFF1D6] px-2 py-0.5 text-[10px] font-bold text-[#946200]">
+                                                    Needs your grade
+                                                </span>
+
+                                            <?php else: ?>
+
+                                                <?php $awarded = (float) ($response['score'] ?? 0); ?>
+
+                                                <span class="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold <?= $awarded > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600' ?>">
+                                                    <?= $awarded > 0 ? '✓ Correct' : ($response ? '✗ Incorrect' : '✗ No answer') ?>
+                                                    · <?= esc((float) $awarded == (int) $awarded ? (int) $awarded : $awarded) ?> pts
+                                                </span>
+
+                                            <?php endif; ?>
+
                                         </div>
 
                                         <p class="pb-3 text-sm font-medium text-[#1F2937]">
@@ -253,12 +340,16 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                                         <?php if ($question['question_type'] === 'Multiple Choice'): ?>
 
+                                            <?php $isMultipleAnswer = !empty($question['allow_multiple_answers']); ?>
+
                                             <div class="flex flex-col gap-1.5">
 
                                                 <?php foreach (($question['choices'] ?? []) as $choice): ?>
 
                                                     <?php
-                                                        $isSelected = $response && (int) $response['selected_choice_id'] === (int) $choice['id'];
+                                                        $isSelected = $isMultipleAnswer
+                                                            ? ($response && in_array((int) $choice['id'], array_map('intval', $response['selected_choice_ids'] ?? []), true))
+                                                            : ($response && (int) $response['selected_choice_id'] === (int) $choice['id']);
                                                         $isCorrect = !empty($choice['is_correct']);
                                                     ?>
 
@@ -274,6 +365,34 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                                                     </div>
 
                                                 <?php endforeach; ?>
+
+                                            </div>
+
+                                        <?php elseif ($question['question_type'] === 'Short Answer'): ?>
+
+                                            <div class="flex flex-col gap-2">
+
+                                                <div class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+                                                    <?php if ($response && trim((string) $response['response_text']) !== ''): ?>
+                                                        <?= esc($response['response_text']) ?>
+                                                    <?php else: ?>
+                                                        <span class="text-gray-400">No response submitted.</span>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <?php if (!empty($question['accepted_answers'])): ?>
+
+                                                    <span class="text-xs text-gray-500">
+                                                        Accepted:
+                                                        <span class="font-semibold text-emerald-700"><?= esc(implode(' · ', $question['accepted_answers'])) ?></span>
+                                                        <?= !empty($question['case_sensitive']) ? ' · case sensitive' : '' ?>
+                                                    </span>
+
+                                                <?php else: ?>
+
+                                                    <span class="text-xs text-gray-400">No answer key — grade this one yourself.</span>
+
+                                                <?php endif; ?>
 
                                             </div>
 
@@ -299,6 +418,10 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                             </div>
 
+                        <?php elseif (!empty($isAssignment)): ?>
+
+                            <?= view('pages/courses/features/assessments/partials/submitted-work', ['attempt' => $submission]) ?>
+
                         <?php else: ?>
 
                             <div class="rounded-xl border border-dashed border-gray-200 bg-[#F9F9FC] px-4 py-6 text-center text-xs text-gray-400">
@@ -317,11 +440,12 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                 data-expandable-grade-work-actions-panel
                 data-submission-id="<?= esc($submission['id'] ?? '') ?>"
                 data-submission-status="<?= esc($submissionStatus ?? '') ?>"
+                data-panel-state="<?= esc($panelState) ?>"
                 data-total-points="<?= esc($totalPoints) ?>"
                 data-has-rubric="<?= $currentRubric ? '1' : '0' ?>"
                 class="flex flex-col rounded-2xl border border-gray-100 p-5">
 
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-3">
 
                     <span
                         data-grade-work-status-label
@@ -335,7 +459,24 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                         <?= $existingScore !== null ? esc((int) $existingScore) . '/' . esc((int) $totalPoints) : 'No Score Yet' ?>
                     </span>
 
-                    <?php if (!$submission || !$statusMeta['canExpand']): ?>
+                    <?php if ($panelState === 'locked'): ?>
+
+                        <!-- Graded: read-only; changing the grade needs a confirmation -->
+                        <button
+                            type="button"
+                            data-regrade-open
+                            title="Change this grade"
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-[#0040A6] hover:text-[#0040A6]">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" />
+                            </svg>
+
+                            Edit
+
+                        </button>
+
+                    <?php elseif ($panelState === 'disabled'): ?>
 
                         <button
                             type="button"
@@ -349,14 +490,12 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                         <button
                             type="button"
                             data-expand-grade-work-actions
-                            data-expanded="0"
+                            data-expanded="<?= $panelState === 'editing' ? '1' : '0' ?>"
                             class="inline-flex items-center gap-1.5 rounded-xl bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">
 
-                            <span data-expand-grade-work-label>
-                                <?= $submissionStatus === 'Graded' ? 'Edit Grade' : 'Grade Work' ?>
-                            </span>
+                            <span data-expand-grade-work-label>Grade Work</span>
 
-                            <svg data-expand-grade-work-icon xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <svg data-expand-grade-work-icon xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform <?= $panelState === 'editing' ? 'rotate-180' : '' ?>" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>
 
@@ -368,48 +507,64 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                 <div
                     data-expanded-grade-work-actions
-                    class="hidden mt-5 flex-col gap-5">
+                    class="<?= in_array($panelState, ['editing', 'locked'], true) ? 'flex' : 'hidden' ?> mt-5 flex-col gap-5">
+
+                    <?php if (!$isLocked && !empty($autoSummary) && $autoSummary['manual'] > 0 && $autoSummary['possible'] > 0): ?>
+
+                        <!-- Auto-graded part already counted in the score below -->
+                        <div class="rounded-xl border border-[#FFE3A3] bg-[#FFF8E6] px-4 py-3 text-sm text-[#946200]">
+                            Auto-graded so far: <strong><?= esc(round($autoSummary['earned'], 2)) ?> of <?= esc(round($autoSummary['possible'], 2)) ?> pts</strong>.
+                            <?= esc($autoSummary['manual']) ?> <?= $autoSummary['manual'] === 1 ? 'question needs' : 'questions need' ?> your grade — add
+                            <?= $autoSummary['manual'] === 1 ? 'its' : 'their' ?> points to the total.
+                        </div>
+
+                    <?php endif; ?>
 
                     <!-- Grade -->
                     <div class="flex flex-col gap-3">
 
                         <span class="text-sm font-bold text-[#1F2937]">
-                            Grade
+                            Grade<?= $isLocked ? ' · ' . ($showRubricMode ? 'Rubric' : 'Default') : '' ?>
                         </span>
 
-                        <div
-                            data-grade-work-type-toggle-container
-                            class="inline-flex w-fit rounded-xl bg-gray-100 p-1">
+                        <?php if (!$isLocked): ?>
 
-                            <button
-                                type="button"
-                                data-default-grade-work-toggle
-                                data-mode="Default"
-                                class="rounded-lg px-4 py-1.5 text-sm font-semibold transition">
+                            <div
+                                data-grade-work-type-toggle-container
+                                class="inline-flex w-fit rounded-xl bg-gray-100 p-1">
 
-                                Default
+                                <button
+                                    type="button"
+                                    data-default-grade-work-toggle
+                                    data-mode="Default"
+                                    class="rounded-lg px-4 py-1.5 text-sm font-semibold transition">
 
-                            </button>
+                                    Default
 
-                            <button
-                                type="button"
-                                data-with-rubric-grade-work-toggle
-                                data-mode="Rubric"
-                                <?= $currentRubric ? '' : 'disabled title="No rubric linked to this assessment"' ?>
-                                class="rounded-lg px-4 py-1.5 text-sm font-semibold transition <?= $currentRubric ? '' : 'cursor-not-allowed opacity-40' ?>">
+                                </button>
 
-                                Rubric Grading
+                                <button
+                                    type="button"
+                                    data-with-rubric-grade-work-toggle
+                                    data-mode="Rubric"
+                                    <?= $currentRubric ? '' : 'disabled title="No rubric linked to this assessment"' ?>
+                                    class="rounded-lg px-4 py-1.5 text-sm font-semibold transition <?= $currentRubric ? '' : 'cursor-not-allowed opacity-40' ?>">
 
-                            </button>
+                                    Rubric Grading
 
-                        </div>
+                                </button>
+
+                            </div>
+
+                        <?php endif; ?>
 
                         <div class="flex flex-col gap-3">
 
                             <!-- Default grading -->
                             <div
                                 data-default-grading-panel
-                                class="flex flex-col gap-3 rounded-xl bg-[#F2F2F2] p-4">
+                                data-active="<?= $showRubricMode ? '0' : '1' ?>"
+                                class="<?= $showRubricMode ? 'hidden' : 'flex' ?> flex-col gap-3 rounded-xl bg-[#F2F2F2] p-4">
 
                                 <div class="flex items-center gap-2">
 
@@ -420,8 +575,9 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                                         max="<?= esc($totalPoints) ?>"
                                         value="<?= $existingGradingMode === 'Default' && $existingScore !== null ? esc($existingScore) : '' ?>"
                                         placeholder="0"
+                                        <?= $isLocked ? 'disabled' : '' ?>
                                         data-grade-work-default-grading-points
-                                        class="w-20 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-lg text-[#0040A6] outline-none">
+                                        class="w-20 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-lg text-[#0040A6] outline-none disabled:border-b-transparent">
 
                                     <span class="text-sm text-[#5B5B5B]">
                                         of
@@ -433,21 +589,26 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                                 </div>
 
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="<?= esc($totalPoints) ?>"
-                                    step="0.5"
-                                    value="<?= $existingGradingMode === 'Default' && $existingScore !== null ? esc($existingScore) : 0 ?>"
-                                    data-grade-work-default-grading-slider
-                                    class="w-full accent-[#0040A6]">
+                                <?php if (!$isLocked): ?>
+
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="<?= esc($totalPoints) ?>"
+                                        step="0.5"
+                                        value="<?= $existingGradingMode === 'Default' && $existingScore !== null ? esc($existingScore) : 0 ?>"
+                                        data-grade-work-default-grading-slider
+                                        class="w-full accent-[#0040A6]">
+
+                                <?php endif; ?>
 
                             </div>
 
                             <!-- Rubric grading -->
                             <div
                                 data-rubric-grading-panel
-                                class="hidden flex-row gap-3">
+                                data-active="<?= $showRubricMode ? '1' : '0' ?>"
+                                class="<?= $showRubricMode ? 'flex' : 'hidden' ?> flex-row gap-3">
 
                                 <?php foreach (($currentRubric['criteria'] ?? []) as $criterion): ?>
 
@@ -471,8 +632,9 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                                                 step="0.5"
                                                 max="<?= esc($criterion['max_points']) ?>"
                                                 value="<?= esc($criterionValue) ?>"
+                                                <?= $isLocked ? 'disabled' : '' ?>
                                                 data-grade-work-rubric-criteria-points
-                                                class="w-16 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-md text-[#0040A6] outline-none">
+                                                class="w-16 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-md text-[#0040A6] outline-none disabled:border-b-transparent">
 
                                             <span class="text-sm text-[#5B5B5B]">
                                                 of
@@ -496,14 +658,18 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 
                                         <?php endif; ?>
 
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="<?= esc($criterion['max_points']) ?>"
-                                            step="0.5"
-                                            value="<?= esc($criterionValue) ?>"
-                                            data-grade-work-rubric-criteria-slider
-                                            class="w-full accent-[#0040A6]">
+                                        <?php if (!$isLocked): ?>
+
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="<?= esc($criterion['max_points']) ?>"
+                                                step="0.5"
+                                                value="<?= esc($criterionValue) ?>"
+                                                data-grade-work-rubric-criteria-slider
+                                                class="w-full accent-[#0040A6]">
+
+                                        <?php endif; ?>
 
                                     </div>
 
@@ -522,22 +688,42 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
                             Feedback
                         </span>
 
-                        <textarea
-                            rows="3"
-                            data-grade-work-feedback
-                            placeholder="Leave feedback for the student..."
-                            class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"><?= esc($submission['feedback'] ?? '') ?></textarea>
+                        <?php if ($isLocked): ?>
+
+                            <?php $lockedFeedback = trim((string) ($submission['feedback'] ?? '')); ?>
+
+                            <p class="rounded-xl border border-gray-100 bg-[#F9F9FC] p-3 text-sm text-[#5B5B5B]">
+                                <?php if ($lockedFeedback !== ''): ?>
+                                    <?= nl2br(esc($lockedFeedback)) ?>
+                                <?php else: ?>
+                                    <span class="italic text-gray-400">No feedback given.</span>
+                                <?php endif; ?>
+                            </p>
+
+                        <?php else: ?>
+
+                            <textarea
+                                rows="3"
+                                data-grade-work-feedback
+                                placeholder="Leave feedback for the student..."
+                                class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"><?= esc($submission['feedback'] ?? '') ?></textarea>
+
+                        <?php endif; ?>
 
                     </div>
 
-                    <button
-                        type="button"
-                        data-grade-work-submit-grade
-                        class="self-end rounded-xl bg-[#0040A6] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#002068]">
+                    <?php if (!$isLocked): ?>
 
-                        Submit Grade
+                        <button
+                            type="button"
+                            data-grade-work-submit-grade
+                            class="self-end rounded-xl bg-[#0040A6] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#002068]">
 
-                    </button>
+                            Submit Grade
+
+                        </button>
+
+                    <?php endif; ?>
 
                 </div>
 
@@ -550,3 +736,5 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
     </div>
 
 </div>
+
+<?= $this->include('pages/courses/features/assessments/partials/modals/regrade-confirm') ?>

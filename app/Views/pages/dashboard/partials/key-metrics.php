@@ -11,19 +11,19 @@ $metrics = [
     [
         'label' => 'Courses Enrolled',
         'value' => $data['courses_enrolled'] ?? 0,
-        'icon'  => 'hat.png',
+        'icon'  => 'hat',
         'accent' => 'bg-blue-800',
     ],
     [
         'label' => 'Pending Tasks',
         'value' => $data['pending_tasks'] ?? 0,
-        'icon'  => 'tasks.png',
+        'icon'  => 'tasks',
         'accent' => 'bg-amber-600',
     ],
     [
         'label' => 'Current GPA',
         'value' => $data['current_gpa'] ?? '—',
-        'icon'  => 'lessons.png',
+        'icon'  => 'lessons',
         'accent' => 'bg-emerald-600',
     ],
 ];
