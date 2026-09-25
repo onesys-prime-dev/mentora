@@ -4,9 +4,7 @@
     <div class="flex flex-col gap-3">
 
         <div class="flex items-center gap-3">
-            <img
-                class="w-5 h-5" 
-                src="<?= base_url('assets/images/icons/info.png') ?>" alt="Instructions Icon">
+            <?= icon('info', 'h-5 w-5') ?>
 
             <span class="font-bold text-lg text-[#0040A6]">
                 Instructions
@@ -64,9 +62,7 @@
     <div class="flex flex-col gap-3">
 
         <div class="flex items-center gap-3">
-            <img
-                class="w-5 h-5"
-                src="<?= base_url('assets/images/icons/info.png') ?>" alt="Instructions Icon">
+            <?= icon('info', 'h-5 w-5') ?>
 
             <span class="font-bold text-lg text-[#0040A6]">
                 Grading Rubrics
@@ -249,9 +245,7 @@
         <div class="flex items-center justify-between">
 
             <div class="flex items-center gap-3">
-                <img
-                    class="w-5 h-5"
-                    src="<?= base_url('assets/images/icons/work.png') ?>" alt="Instructions Icon">
+                <?= icon('work', 'h-5 w-5') ?>
 
                 <span class="font-bold text-lg text-[#0040A6]">
                     Your Work
@@ -387,9 +381,7 @@
                         class="hidden w-full min-h-100 p-10 flex-col justify-center items-center bg-white border border-[#DBDBDB] rounded-b-2xl rounded-r-2xl gap-2
                             group-has-[#work-tab-upload:checked]/work-tabs:flex">
 
-                        <img
-                            class="w-10 h-10 opacity-40"
-                            src="<?= base_url('assets/images/icons/work.png') ?>" alt="">
+                        <?= icon('work', 'h-10 w-10 opacity-40') ?>
 
                         <span class="font-semibold text-sm text-[#5B5B5B]">
                             Drag and drop your file here
@@ -423,9 +415,7 @@
                         class="hidden w-full min-h-100 p-10 flex-col justify-center items-center bg-white border border-[#DBDBDB] rounded-b-2xl rounded-r-2xl gap-2
                             group-has-[#work-tab-link:checked]/work-tabs:flex">
 
-                        <img
-                            class="w-10 h-10 opacity-40"
-                            src="<?= base_url('assets/images/icons/work.png') ?>" alt="">
+                        <?= icon('work', 'h-10 w-10 opacity-40') ?>
 
                         <input
                             type="url"

@@ -16,6 +16,8 @@ use App\Models\Learning\LearningItemModel;
 use App\Models\Learning\LearningUnitModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Models\Courses\CourseOfferingModel;
+use App\Services\Courses\ContentDeletionService;
+use App\Services\Courses\LearningProgressService;
 
 class AssessmentService
 {
@@ -75,10 +77,11 @@ class AssessmentService
         $offering = $this->courseOfferingModel
             ->find($offeringId);
 
-        $assessments = $offering
-            ? $this->assessmentModel
-                ->getAssessmentsWithSubmissions($offering['course_id'], $user->id)
-            : [];
+        // Role-specific metrics, list rows and sidebars (students only get
+        // what they're allowed to see; instructor numbers are this section's).
+        $overview = $offering
+            ? (new AssessmentOverviewService($this))->build($user, $offeringId, (int) $offering['course_id'])
+            : ['role' => $user->inGroup('instructor') ? 'instructor' : 'student', 'metrics' => [], 'assessments' => []];
 
         return [
             'html' => view(
@@ -88,7 +91,7 @@ class AssessmentService
                     'assessmentTypes' => $assessmentTypes,
                     'modules' => $modules,
                     'learningUnits' => $learningUnits,
-                    'assessments' => $assessments,
+                    'overview' => $overview,
                 ]
             ),
         ];
@@ -99,13 +102,54 @@ class AssessmentService
         int $assessmentId
     ): array {
 
-        $data = $this->buildAssessmentContext($assessmentId);
+        $isStudent = !$user->inGroup('instructor');
 
-        $submission = $this->submissionModel
-            ->where('assessment_id', $assessmentId)
-            ->where('student_id', $user->id)
-            ->orderBy('attempt_number', 'DESC')
-            ->first();
+        // Students never see drafts, archived work, or anything whose
+        // Modules item is hidden — not even through a deep link.
+        if ($isStudent) {
+
+            $row = $this->assessmentModel->find($assessmentId);
+
+            if (!$row || !$this->isVisibleToStudent($row)) {
+                throw PageNotFoundException::forPageNotFound('Assessment not found.');
+            }
+
+        }
+
+        $data = $this->buildAssessmentContext($assessmentId, $isStudent);
+
+        $isAssignment = strtolower($data['assessment']['assessment_type']) === 'assignment';
+
+        // The score shown is the attempt that counts: the best quiz attempt,
+        // or the latest graded assignment submission.
+        $scoreResult = (new AssessmentResultService())->resultFor(
+            !$isAssignment,
+            $this->submissionModel
+                ->where('assessment_id', $assessmentId)
+                ->where('student_id', $user->id)
+                ->findAll()
+        );
+
+        $submission = $scoreResult['counted'] ?? $scoreResult['latest'];
+
+        $rubric = $isAssignment ? $this->rubricModel->findByAssessment($assessmentId) : null;
+
+        $learningItemId = (int) ($data['assessment']['learning_item_id'] ?? 0);
+
+        // The student's completion of the linked Modules item, and whether
+        // that item is still locked behind a prerequisite.
+        $data['assessment']['learning_completion'] = $learningItemId && !$user->inGroup('instructor')
+            ? db_connect()->table('learning_completions')
+                ->select(['status', 'completed_at'])
+                ->where('learning_item_id', $learningItemId)
+                ->where('student_user_id', $user->id)
+                ->get()
+                ->getRowArray()
+            : null;
+
+        $lock = $learningItemId
+            ? (new LearningProgressService())->lockFor($user, $learningItemId)
+            : null;
 
         return [
             'html' => view(
@@ -118,6 +162,15 @@ class AssessmentService
                     'previousAssessment' => $data['previousAssessment'],
                     'nextAssessment' => $data['nextAssessment'],
                     'submission' => $submission,
+                    'scoreResult' => $scoreResult,
+                    'currentRubric' => $rubric ? $this->rubricModel->getWithCriteria($rubric['id']) : null,
+                    'assignmentState' => $isAssignment
+                        ? (new AssignmentSubmissionService())->getState($user, $assessmentId)
+                        : null,
+                    'quizState' => !$isAssignment && !$user->inGroup('instructor')
+                        ? $this->quizState($user, $data['assessment'])
+                        : null,
+                    'assessmentLock' => $lock,
                 ]
             ),
         ];
@@ -180,6 +233,9 @@ class AssessmentService
                     'user' => $user,
                     'currentAssessment' => $assessment,
                     'currentQuestions' => $currentQuestions,
+                    // AI generation's "Learning Unit" source: the unit this
+                    // quiz sits under (null when it isn't in one).
+                    'sourceUnit' => (new LearningUnitContentExtractor())->unitForAssessment($assessment, $user),
                 ]
             ),
         ];
@@ -273,7 +329,66 @@ class AssessmentService
         ];
     }
 
-    private function buildAssessmentContext(int $assessmentId): array
+    /**
+     * Assessments a student may see: Published or Closed, and — when linked
+     * to a Modules learning item — only while that item, its unit and its
+     * module are all published. Drafts and archived work stay hidden.
+     *
+     * @param list<array> $assessments assessment rows (need id, status, learning_item_id)
+     * @return array<int, true> visible assessment ids
+     */
+    public function studentVisibleIds(array $assessments): array
+    {
+        $itemIds = array_values(array_filter(array_map(
+            static fn (array $a) => (int) ($a['learning_item_id'] ?? 0),
+            $assessments
+        )));
+
+        $visibleItems = [];
+
+        if ($itemIds !== []) {
+
+            $rows = db_connect()->table('learning_items')
+                ->select('learning_items.id')
+                ->join('learning_units', 'learning_units.id = learning_items.learning_unit_id')
+                ->join('course_modules', 'course_modules.id = learning_units.module_id')
+                ->whereIn('learning_items.id', $itemIds)
+                ->where('learning_items.status', 'published')
+                ->where('learning_units.status', 'published')
+                ->where('course_modules.status', 'published')
+                ->get()
+                ->getResultArray();
+
+            foreach ($rows as $row) {
+                $visibleItems[(int) $row['id']] = true;
+            }
+
+        }
+
+        $visible = [];
+
+        foreach ($assessments as $assessment) {
+
+            $itemId = (int) ($assessment['learning_item_id'] ?? 0);
+
+            if (
+                in_array($assessment['status'] ?? '', ['Published', 'Closed'], true)
+                && ($itemId === 0 || isset($visibleItems[$itemId]))
+            ) {
+                $visible[(int) $assessment['id']] = true;
+            }
+
+        }
+
+        return $visible;
+    }
+
+    public function isVisibleToStudent(array $assessment): bool
+    {
+        return isset($this->studentVisibleIds([$assessment])[(int) $assessment['id']]);
+    }
+
+    private function buildAssessmentContext(int $assessmentId, bool $forStudent = false): array
     {
 
         $assessment = $this->assessmentModel
@@ -289,31 +404,7 @@ class AssessmentService
             ->where('assessment_id', $assessmentId)
             ->first();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Resolve Assessment Type
-        |--------------------------------------------------------------------------
-        */
-
-        $assessmentType = $this->assessmentTypeModel
-            ->find($assessment['assessment_type_id']);
-
-        $assessment['assessment_type'] = $assessmentType['name'] ?? '';
-
-        /*
-        |--------------------------------------------------------------------------
-        | Decode Instructions JSON
-        |--------------------------------------------------------------------------
-        */
-
-        $decodedInstructions = json_decode(
-            $assessment['instructions'] ?? '',
-            true
-        );
-
-        $assessment['instructions'] = is_array($decodedInstructions)
-            ? $decodedInstructions
-            : ['version' => 1, 'blocks' => []];
+        $assessment = $this->withTypeAndInstructions($assessment);
 
         /*
         |--------------------------------------------------------------------------
@@ -358,6 +449,18 @@ class AssessmentService
             ->orderBy('id', 'ASC')
             ->findAll();
 
+        // Students step only through assessments they're allowed to see.
+        if ($forStudent) {
+
+            $visible = $this->studentVisibleIds($siblings);
+
+            $siblings = array_values(array_filter(
+                $siblings,
+                static fn (array $sibling) => isset($visible[(int) $sibling['id']])
+            ));
+
+        }
+
         $currentIndex = null;
 
         foreach ($siblings as $index => $sibling) {
@@ -384,6 +487,234 @@ class AssessmentService
             'previousAssessment' => $previousAssessment,
             'nextAssessment' => $nextAssessment,
         ];
+    }
+
+    /**
+     * Adds `assessment_type` (the type's name, e.g. "Quiz") and decodes the
+     * `instructions` JSON into the editor's block document.
+     */
+    private function withTypeAndInstructions(array $assessment): array
+    {
+        $assessmentType = $this->assessmentTypeModel
+            ->find($assessment['assessment_type_id']);
+
+        $assessment['assessment_type'] = $assessmentType['name'] ?? '';
+
+        $decodedInstructions = json_decode(
+            $assessment['instructions'] ?? '',
+            true
+        );
+
+        $assessment['instructions'] = is_array($decodedInstructions)
+            ? $decodedInstructions
+            : ['version' => 1, 'blocks' => []];
+
+        return $assessment;
+    }
+
+    /**
+     * Everything a quiz/assignment learning item needs to render its
+     * assessment inside Modules. Students get their own progress
+     * (`state`); instructors get submission counts (`counts`).
+     */
+    public function buildLearningItemContext(User $user, int $learningItemId): ?array
+    {
+        $assessment = $this->assessmentModel->findByLearningItem($learningItemId);
+
+        if (!$assessment) {
+            return null;
+        }
+
+        $assessment = $this->withTypeAndInstructions($assessment);
+
+        $assessmentId = (int) $assessment['id'];
+
+        $isInstructor = $user->inGroup('instructor');
+
+        $isQuiz = strtolower($assessment['assessment_type']) === 'quiz';
+
+        $rubric = null;
+
+        if (!$isQuiz) {
+
+            $rubricRow = $this->rubricModel->findByAssessment($assessmentId);
+
+            $rubric = $rubricRow ? $this->rubricModel->getWithCriteria($rubricRow['id']) : null;
+
+        }
+
+        $state = null;
+
+        if (!$isInstructor) {
+
+            $state = $isQuiz
+                ? $this->quizState($user, $assessment)
+                : (new AssignmentSubmissionService())->getState($user, $assessmentId);
+
+        }
+
+        return [
+            'assessment' => $assessment,
+            'settings' => $this->assessmentSettingsModel->where('assessment_id', $assessmentId)->first(),
+            'rubric' => $rubric,
+            'questionCount' => $isQuiz
+                ? $this->questionModel->where('assessment_id', $assessmentId)->where('status', 'Active')->countAllResults()
+                : 0,
+            'state' => $state,
+            'counts' => $isInstructor ? $this->submissionCounts($assessmentId, $this->offeringIdForItem($learningItemId)) : null,
+        ];
+    }
+
+    private function quizState(User $user, array $assessment): array
+    {
+        $attempts = $this->submissionModel
+            ->where('assessment_id', $assessment['id'])
+            ->where('student_id', $user->id)
+            ->orderBy('attempt_number', 'DESC')
+            ->findAll();
+
+        $finished = array_values(array_filter(
+            $attempts,
+            static fn (array $attempt) => $attempt['status'] !== 'In Progress'
+        ));
+
+        $inProgress = count($finished) < count($attempts);
+
+        $attemptLimit = max(1, (int) ($assessment['attempt_limit'] ?? 1));
+
+        $exhausted = !$inProgress && count($finished) >= $attemptLimit;
+
+        // An attempt already running can always be resumed; a new one also
+        // needs the quiz to be open right now.
+        $unavailable = $inProgress ? null : $this->quizAvailabilityReason($assessment);
+
+        $reason = match (true) {
+            $exhausted => $attemptLimit === 1 ? "You've already taken this quiz." : "You've used all {$attemptLimit} attempts.",
+            $unavailable !== null => $unavailable,
+            default => null,
+        };
+
+        $result = (new AssessmentResultService())->resultFor(true, $attempts);
+
+        return [
+            'attempts' => $attempts,
+            'latest' => $finished[0] ?? null,
+            'best' => $result['counted'],
+            'counted' => $result['counted'],
+            'result' => $result,
+            'attemptsUsed' => count($finished),
+            'attemptLimit' => $attemptLimit,
+            'inProgress' => $inProgress,
+            'canTake' => $reason === null,
+            'reason' => $reason,
+        ];
+    }
+
+    /**
+     * Why a student can't start a new attempt at this quiz right now, or
+     * null when they can: it must be Published, inside its availability
+     * window, and not past due unless late attempts are allowed.
+     */
+    public function quizAvailabilityReason(array $assessment): ?string
+    {
+        $now = time();
+
+        if (($assessment['status'] ?? '') === 'Closed') {
+            return 'This quiz is closed.';
+        }
+
+        if (($assessment['status'] ?? '') !== 'Published') {
+            return "This quiz isn't open yet.";
+        }
+
+        if (!empty($assessment['available_from']) && strtotime($assessment['available_from']) > $now) {
+            return 'This quiz opens ' . date('M j, Y g:i A', strtotime($assessment['available_from'])) . '.';
+        }
+
+        if (!empty($assessment['available_until']) && strtotime($assessment['available_until']) < $now) {
+            return 'This quiz closed on ' . date('M j, Y g:i A', strtotime($assessment['available_until'])) . '.';
+        }
+
+        if (!empty($assessment['due_date']) && strtotime($assessment['due_date']) < $now) {
+
+            $settings = $this->assessmentSettingsModel->where('assessment_id', $assessment['id'])->first();
+
+            if (empty($settings['allow_late_submission'])) {
+                return "The due date has passed and late attempts aren't allowed.";
+            }
+
+        }
+
+        return null;
+    }
+
+    /**
+     * Distinct students per state — a student with three attempts counts
+     * once, so these read as "N students", not "N attempts".
+     */
+    private function submissionCounts(int $assessmentId, int $offeringId): array
+    {
+        // Each student counts once, by their latest finished attempt, and
+        // only students of this section — the same numbers Grade Work shows.
+        $overview = new AssessmentOverviewService($this);
+
+        $attempts = $overview->latestAttempts([$assessmentId], $overview->sectionStudentIds($offeringId))[$assessmentId] ?? [];
+
+        $assessment = $this->withTypeAndInstructions($this->assessmentModel->find($assessmentId));
+
+        $isQuiz = strtolower($assessment['assessment_type']) === 'quiz';
+
+        $results = new AssessmentResultService();
+
+        $counts = ['submitted' => 0, 'toGrade' => 0, 'graded' => 0];
+
+        foreach ($attempts as $attempt) {
+
+            $result = $results->resultFor($isQuiz, $attempt['attempts']);
+
+            $counts['submitted'] += $result['finished'] !== [] ? 1 : 0;
+
+            $counts['toGrade'] += $result['pending'] !== [] ? 1 : 0;
+
+            $counts['graded'] += $result['counted'] !== null ? 1 : 0;
+
+        }
+
+        return $counts;
+    }
+
+    private function offeringIdForItem(int $learningItemId): int
+    {
+        return (int) (db_connect()->table('learning_items')
+            ->select('course_modules.offering_id')
+            ->join('learning_units', 'learning_units.id = learning_items.learning_unit_id')
+            ->join('course_modules', 'course_modules.id = learning_units.module_id')
+            ->where('learning_items.id', $learningItemId)
+            ->get()
+            ->getRowArray()['offering_id'] ?? 0);
+    }
+
+    /**
+     * Keeps a quiz/assignment learning item's visibility matching its
+     * assessment. Writes the item directly (not through ModuleService) so the
+     * two sides' syncs can't call back into each other. Closed keeps the item
+     * visible — submission is blocked instead.
+     */
+    private function syncLearningItemStatus(array $assessment, string $status): void
+    {
+        if (empty($assessment['learning_item_id'])) {
+            return;
+        }
+
+        $itemStatus = match ($status) {
+            'Published' => 'published',
+            'Draft', 'Archived' => 'draft',
+            default => null,
+        };
+
+        if ($itemStatus !== null) {
+            $this->learningItemModel->update($assessment['learning_item_id'], ['status' => $itemStatus]);
+        }
     }
 
     public function createAssessment(User $user, int $moduleId, int $learningUnitId, array $data): array {
@@ -503,7 +834,10 @@ class AssessmentService
 
                 'message' => 'Assessment created successfully.',
 
-                'assessment_id' =>  $this->assessmentModel->find($assessmentId)
+                // The modal opens the new assessment's editor next.
+                'assessment_id' => (int) $assessmentId,
+
+                'learning_item_id' => (int) $learningItemId,
 
             ];
 
@@ -786,6 +1120,10 @@ class AssessmentService
                 $assessmentData
             );
 
+            if (array_key_exists('status', $data)) {
+                $this->syncLearningItemStatus($assessment, $data['status']);
+            }
+
             /*
             |--------------------------------------------------------------------------
             | Update Assessment Settings
@@ -883,7 +1221,14 @@ class AssessmentService
             ];
         }
 
-        $this->assessmentModel->delete($assessmentId);
+        // Also deletes the linked learning item (so Modules never shows a
+        // dead quiz/assignment) and purges uploaded files nothing else uses.
+        if (!(new ContentDeletionService())->deleteAssessment($assessmentId)) {
+            return [
+                'success' => false,
+                'message' => 'Unable to delete assessment.'
+            ];
+        }
 
         return [
             'success' => true,

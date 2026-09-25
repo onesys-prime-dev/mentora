@@ -41,6 +41,31 @@ import {
     initializeVideoAutosave,
 } from "./video/video-autosave.js";
 
+import {
+    bindAssessmentHandoffs,
+} from "./assessment-handoff.js";
+
+import {
+    initializeAssignmentSubmission,
+} from "../../../../shared/assignment/submission.js";
+
+import {
+    initializeCompletion,
+} from "./completion/completion.js";
+
+import {
+    initializeVideoProgress,
+    flushVideoProgress,
+} from "./completion/video-progress.js";
+
+import {
+    initializePdfEditor,
+} from "./pdf/pdf-editor.js";
+
+import {
+    initializeLinkEditor,
+} from "./link/link-editor.js";
+
 /*
 |--------------------------------------------------------------------------
 | Learning Items
@@ -126,7 +151,8 @@ export function bindLearningItemEditorEvents(
 
 export async function loadLearningItem(
     learningItemId,
-    refresh
+    refresh,
+    { pushState = true } = {}
 ) {
 
     try {
@@ -135,6 +161,9 @@ export async function loadLearningItem(
 
         state.activeLearningItemId =
             learningItemId;
+
+        // Save the last few seconds of watch progress before leaving a video.
+        flushVideoProgress();
 
         const response =
             await fetchLearningItemView(
@@ -149,13 +178,17 @@ export async function loadLearningItem(
         container.innerHTML =
             response.html;
 
-        history.pushState(
-            {
-                learningItemId,
-            },
-            "",
-            `${window.location.pathname}?item=${learningItemId}`
-        );
+        if (pushState) {
+
+            history.pushState(
+                {
+                    learningItemId,
+                },
+                "",
+                `${window.location.pathname}?item=${learningItemId}`
+            );
+
+        }
 
         bindLearningItemEvents(refresh);
 
@@ -166,6 +199,23 @@ export async function loadLearningItem(
         bindBreadcrumbEvents(refresh);
 
         initializePdfViewer();
+
+        bindAssessmentHandoffs();
+
+        initializeCompletion(refresh);
+
+        initializeVideoProgress();
+
+        initializeAssignmentSubmission({
+
+            onSubmitted: () =>
+                loadLearningItem(
+                    learningItemId,
+                    refresh,
+                    { pushState: false }
+                ),
+
+        });
 
     }
 
@@ -277,6 +327,12 @@ export async function loadLearningItemEditor(
             });
 
         }
+
+        initializePdfEditor();
+
+        initializeLinkEditor();
+
+        bindAssessmentHandoffs();
 
         initializeLearningItemActions(
             learningItemId,

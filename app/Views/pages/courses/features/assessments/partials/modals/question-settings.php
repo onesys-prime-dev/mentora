@@ -68,6 +68,80 @@
 
             </div>
 
+            <div class="hidden flex-col gap-4 border-t border-gray-100 pt-4" data-question-settings-multiple-section>
+
+                <div class="flex items-center justify-between">
+
+                    <label class="text-sm font-medium text-gray-700">
+                        Allow Multiple Answers
+                    </label>
+
+                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+
+                        <input
+                            type="checkbox"
+                            class="peer sr-only"
+                            data-question-settings-allow-multiple>
+
+                        <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+
+                        <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+
+                    </label>
+
+                </div>
+
+                <div class="hidden flex-col gap-2" data-question-settings-answers-count-wrapper>
+
+                    <label class="text-sm font-semibold text-gray-700">
+                        How many answers?
+                    </label>
+
+                    <input
+                        type="number"
+                        min="2"
+                        step="1"
+                        class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                        data-question-settings-answers-count>
+
+                    <span class="text-xs text-gray-400">
+                        How many choices students must select for this question.
+                    </span>
+
+                </div>
+
+            </div>
+
+            <!-- Short Answer only -->
+            <div class="hidden flex-col gap-2 border-t border-gray-100 pt-4" data-question-settings-short-answer-section>
+
+                <div class="flex items-center justify-between">
+
+                    <label class="text-sm font-medium text-gray-700">
+                        Case Sensitive
+                    </label>
+
+                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+
+                        <input
+                            type="checkbox"
+                            class="peer sr-only"
+                            data-question-settings-case-sensitive>
+
+                        <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+
+                        <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+
+                    </label>
+
+                </div>
+
+                <span class="text-xs text-gray-400">
+                    Off: “cpu” matches “CPU”. On: the student’s answer must match the letter case of an accepted answer.
+                </span>
+
+            </div>
+
         </form>
 
         <!-- Footer -->

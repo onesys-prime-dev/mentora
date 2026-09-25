@@ -38,7 +38,7 @@ $drafts = $data['drafts'] ?? [
             <div class="h-full flex flex-col justify-center items-center gap-2 text-center">
 
                 <div class="w-12 h-12 flex justify-center items-center rounded-full bg-white/40 border border-black/5">
-                    <?= icon('lessons.png', 'w-6 h-6 text-gray-500') ?>
+                    <?= icon('lessons', 'w-6 h-6 text-gray-500') ?>
                 </div>
 
                 <span class="text-sm font-medium text-gray-700">Everything's published</span>
@@ -61,7 +61,7 @@ $drafts = $data['drafts'] ?? [
                     <div class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white/45">
 
                         <div class="w-9 h-9 shrink-0 flex justify-center items-center bg-amber-600 rounded-full transition-transform duration-150 group-hover:scale-110">
-                            <?= icon('lessons.png', 'w-5 h-5 text-white') ?>
+                            <?= icon('lessons', 'w-5 h-5 text-white') ?>
                         </div>
 
                         <div class="flex flex-col min-w-0 flex-1">

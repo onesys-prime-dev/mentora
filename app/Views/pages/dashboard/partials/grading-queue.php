@@ -28,13 +28,13 @@ $queue = $data['queue'] ?? [
  * Falls back to the quiz glyph for any type the map doesn't know.
  */
 $typeIcons = [
-    'quiz'       => 'tasks.png',
-    'exam'       => 'tasks.png',
-    'lab'        => 'code.png',
-    'coding'     => 'code.png',
-    'paper'      => 'lessons.png',
-    'project'    => 'lessons.png',
-    'discussion' => 'message.png',
+    'quiz'       => 'tasks',
+    'exam'       => 'tasks',
+    'lab'        => 'code',
+    'coding'     => 'code',
+    'paper'      => 'lessons',
+    'project'    => 'lessons',
+    'discussion' => 'message',
 ];
 
 /** A week unmarked is the point where students start asking about it. */
@@ -73,7 +73,7 @@ $totalUngraded = array_sum(array_column($queue, 'ungraded'));
             <div class="h-full flex flex-col justify-center items-center gap-2 text-center">
 
                 <div class="w-12 h-12 flex justify-center items-center rounded-full bg-white/40 border border-black/5">
-                    <?= icon('tasks.png', 'w-6 h-6 text-gray-500') ?>
+                    <?= icon('tasks', 'w-6 h-6 text-gray-500') ?>
                 </div>
 
                 <span class="text-sm font-medium text-gray-700">Nothing to grade</span>
@@ -97,7 +97,7 @@ $totalUngraded = array_sum(array_column($queue, 'ungraded'));
                     $days = (int) $item['waiting_days'];
                     $style = $waitStyle($days);
 
-                    $typeIcon = $typeIcons[$item['type'] ?? ''] ?? 'tasks.png';
+                    $typeIcon = $typeIcons[$item['type'] ?? ''] ?? 'tasks';
 
                     $submitted = max(1, (int) $item['submitted']);
                     $gradedPct = (int) round(($submitted - $item['ungraded']) / $submitted * 100);

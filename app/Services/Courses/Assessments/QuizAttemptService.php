@@ -9,6 +9,7 @@ use App\Models\Assessments\AssessmentModel;
 use App\Models\Assessments\AssessmentSubmissionModel;
 use App\Models\Assessments\AssessmentQuestionModel;
 use App\Models\Assessments\AssessmentQuestionResponseModel;
+use App\Services\Courses\LearningProgressService;
 
 class QuizAttemptService
 {
@@ -33,15 +34,38 @@ class QuizAttemptService
             throw PageNotFoundException::forPageNotFound('Assessment not found.');
         }
 
-        $submission = $this->submissionModel
+        // A quiz behind an incomplete prerequisite (Modules lock) can't be
+        // started from the Assessments tab either.
+        $lock = !empty($assessment['learning_item_id'])
+            ? (new LearningProgressService())->lockFor($user, (int) $assessment['learning_item_id'])
+            : null;
+
+        $submission = $lock ? null : $this->submissionModel
             ->where('assessment_id', $assessmentId)
             ->where('student_id', $user->id)
             ->where('status', 'In Progress')
             ->first();
 
-        $blocked = false;
+        // Students can only open quizzes they're allowed to see, and can
+        // only start a new attempt while the quiz is open (an attempt that's
+        // already running can still be resumed).
+        $unavailable = null;
 
-        if (!$submission) {
+        if (!$user->inGroup('instructor')) {
+
+            $assessments = new AssessmentService();
+
+            if (!$assessments->isVisibleToStudent($assessment)) {
+                throw PageNotFoundException::forPageNotFound('Assessment not found.');
+            }
+
+            $unavailable = $submission || $lock ? null : $assessments->quizAvailabilityReason($assessment);
+
+        }
+
+        $blocked = $lock !== null || $unavailable !== null;
+
+        if (!$submission && !$blocked) {
 
             $attemptsTaken = $this->submissionModel
                 ->where('assessment_id', $assessmentId)
@@ -81,7 +105,10 @@ class QuizAttemptService
 
             $questions = $this->questionModel->listForAssessment($assessmentId);
 
+            // Answer keys never reach the student's page.
             foreach ($questions as &$question) {
+
+                unset($question['accepted_answers'], $question['case_sensitive']);
 
                 foreach ($question['choices'] as &$choice) {
                     unset($choice['is_correct']);
@@ -95,7 +122,13 @@ class QuizAttemptService
                 ->findAll();
 
             foreach ($responses as $response) {
+
+                $response['selected_choice_ids'] = $response['selected_choice_ids']
+                    ? (json_decode($response['selected_choice_ids'], true) ?? [])
+                    : [];
+
                 $responsesByQuestion[$response['question_id']] = $response;
+
             }
 
             if (!empty($assessment['duration']) && !empty($submission['started_at'])) {
@@ -117,6 +150,8 @@ class QuizAttemptService
                     'currentAssessment' => $assessment,
                     'submission' => $submission,
                     'blocked' => $blocked,
+                    'lock' => $lock,
+                    'unavailableReason' => $unavailable,
                     'questions' => $questions,
                     'responsesByQuestion' => $responsesByQuestion,
                     'endsAt' => $endsAt,
@@ -148,11 +183,17 @@ class QuizAttemptService
             ->where('question_id', $questionId)
             ->first();
 
+        $isMultipleChoice = $question['question_type'] === 'Multiple Choice';
+        $isMultipleAnswer = $isMultipleChoice && !empty($question['allow_multiple_answers']);
+
         $responseData = [
             'submission_id' => $submissionId,
             'question_id' => $questionId,
-            'selected_choice_id' => $question['question_type'] === 'Multiple Choice'
+            'selected_choice_id' => ($isMultipleChoice && !$isMultipleAnswer)
                 ? ($data['selected_choice_id'] ?? null)
+                : null,
+            'selected_choice_ids' => $isMultipleAnswer
+                ? json_encode(array_map('intval', $data['selected_choice_ids'] ?? []))
                 : null,
             'response_text' => in_array($question['question_type'], ['Short Answer', 'Essay'], true)
                 ? ($data['response_text'] ?? null)
@@ -198,29 +239,68 @@ class QuizAttemptService
 
         $autoScore = 0;
 
-        $allAutoGradable = true;
+        // Multiple Choice and Short Answer (with accepted answers) grade
+        // themselves; Essay, File Upload and a Short Answer with no answer
+        // key wait for the instructor.
+        $shortAnswers = new ShortAnswerGrader();
+
+        $autoGradedCount = 0;
+
+        $manualCount = 0;
 
         foreach ($questions as $question) {
 
-            if ($question['question_type'] !== 'Multiple Choice') {
-                $allAutoGradable = false;
-                continue;
-            }
-
             $response = $responsesByQuestion[$question['id']] ?? null;
 
-            $correctChoice = null;
+            if ($question['question_type'] === 'Short Answer' && $shortAnswers->isAutoGradable($question)) {
 
-            foreach ($question['choices'] as $choice) {
-                if (!empty($choice['is_correct'])) {
-                    $correctChoice = $choice;
-                    break;
+                $isCorrect = $response && $shortAnswers->isCorrect($response['response_text'] ?? '', $question);
+
+            } elseif ($question['question_type'] !== 'Multiple Choice') {
+
+                $manualCount++;
+
+                continue;
+
+            } elseif (!empty($question['allow_multiple_answers'])) {
+
+                // Exact match required — the selected set must equal the
+                // correct set precisely, no partial credit. Keeps grading
+                // as unambiguous all-or-nothing as the single-choice case.
+                $correctIds = array_values(array_map(
+                    static fn (array $choice) => (int) $choice['id'],
+                    array_filter($question['choices'], static fn (array $choice) => !empty($choice['is_correct']))
+                ));
+
+                $selectedIds = $response && $response['selected_choice_ids']
+                    ? (json_decode($response['selected_choice_ids'], true) ?? [])
+                    : [];
+
+                $selectedIds = array_values(array_map('intval', $selectedIds));
+
+                sort($correctIds);
+                sort($selectedIds);
+
+                $isCorrect = $response && !empty($correctIds) && $correctIds === $selectedIds;
+
+            } else {
+
+                $correctChoice = null;
+
+                foreach ($question['choices'] as $choice) {
+                    if (!empty($choice['is_correct'])) {
+                        $correctChoice = $choice;
+                        break;
+                    }
                 }
+
+                $isCorrect = $response
+                    && $correctChoice
+                    && (int) $response['selected_choice_id'] === (int) $correctChoice['id'];
+
             }
 
-            $isCorrect = $response
-                && $correctChoice
-                && (int) $response['selected_choice_id'] === (int) $correctChoice['id'];
+            $autoGradedCount++;
 
             $awarded = $isCorrect ? (float) $question['points'] : 0;
 
@@ -255,10 +335,17 @@ class QuizAttemptService
             'score' => $autoScore,
             'percentage' => $percentage,
             'is_late_submission' => $isLate,
-            'status' => $allAutoGradable ? 'Graded' : 'Submitted',
+            // Everything scored → Graded. Some scored, some waiting →
+            // Partially Graded (the auto score shows as "so far"). Nothing
+            // scored → Submitted.
+            'status' => match (true) {
+                $manualCount === 0 => 'Graded',
+                $autoGradedCount > 0 => 'Partially Graded',
+                default => 'Submitted',
+            },
         ];
 
-        if ($allAutoGradable) {
+        if ($manualCount === 0) {
             $submissionData['is_graded'] = true;
             $submissionData['graded_at'] = date('Y-m-d H:i:s');
         }

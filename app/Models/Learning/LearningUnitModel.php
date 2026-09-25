@@ -93,6 +93,11 @@ class LearningUnitModel extends Model
     }
 
     /**
+     * Every unit in an offering with its parent module's title, in course
+     * order — flat, for a grouped picker. Modules hang off offerings, not
+     * courses, so this is offering-scoped rather than course-scoped.
+     */
+    /**
      * Draft units across a set of offerings. A unit can sit in draft under a
      * published module, which is the case students notice — the module opens
      * but part of it is missing.

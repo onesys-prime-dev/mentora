@@ -15,6 +15,11 @@
                 This action cannot be undone.
             </p>
 
+            <p class="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                Every learning item in this unit is deleted too — including its quizzes and
+                assignments, the students' submissions to them, and their uploaded files.
+            </p>
+
         </div>
 
         <form

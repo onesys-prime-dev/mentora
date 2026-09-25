@@ -32,6 +32,7 @@ class LearningItemModel extends Model
         'content',
         'order_index',
         'status',
+        'prerequisite_mode',
     ];
 
     public function retrieveLearningItems(int $learningUnitId, User $user): array
@@ -47,6 +48,7 @@ class LearningItemModel extends Model
                 'content',
                 'order_index',
                 'status',
+                'prerequisite_mode',
             ])
             ->where('learning_unit_id', $learningUnitId);
         
@@ -73,6 +75,7 @@ class LearningItemModel extends Model
                 'content',
                 'order_index',
                 'status',
+                'prerequisite_mode',
             ])
             ->where('id', $learningItemId);
 

@@ -7,7 +7,10 @@
 import {
     startGrading,
     submitGrade,
+    reopenGrading,
 } from "../api.js";
+
+import { bindModal } from "../modals/index.js";
 
 let state = {
     offeringId: null,
@@ -26,8 +29,11 @@ export function initializeGradeWork(offeringId, assessmentId, refresh, loadStude
     bindGradingModeToggle();
     bindLiveInputs();
     bindSubmit();
+    bindAttemptTabs();
+    bindRegrade();
 
-    if (hasAnyExistingScore()) {
+    // A graded (locked) panel shows the recorded score as rendered.
+    if (panelState() !== "locked" && hasAnyExistingScore()) {
         updateScorePreview();
     }
 
@@ -77,9 +83,149 @@ function bindStudentList() {
 
 }
 
-async function loadStudent(studentId) {
+async function loadStudent(studentId, attemptId = null) {
 
-    await state.loadStudent(studentId);
+    await state.loadStudent(studentId, attemptId);
+
+}
+
+function panelState() {
+
+    return document
+        .querySelector("[data-expandable-grade-work-actions-panel]")
+        ?.dataset.panelState ?? "";
+
+}
+
+function selectedStudentId() {
+
+    return document
+        .querySelector("[data-grade-work-student-list]")
+        ?.dataset.selectedStudentId;
+
+}
+
+function currentAttemptId() {
+
+    return document
+        .querySelector("[data-expandable-grade-work-actions-panel]")
+        ?.dataset.submissionId || null;
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Attempt tabs (students with more than one attempt)
+|--------------------------------------------------------------------------
+*/
+
+function bindAttemptTabs() {
+
+    document
+        .querySelectorAll("[data-grade-work-attempt]")
+        .forEach((tab) => {
+
+            tab.addEventListener("click", () => {
+
+                const studentId = selectedStudentId();
+
+                if (studentId) {
+                    loadStudent(studentId, tab.dataset.gradeWorkAttempt);
+                }
+
+            });
+
+        });
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Change a submitted grade (Graded → Grading, after confirming)
+|--------------------------------------------------------------------------
+*/
+
+function bindRegrade() {
+
+    const openButton =
+        document.querySelector("[data-regrade-open]");
+
+    const modal =
+        bindModal({
+            modal: "#regrade-confirm-modal",
+            closeButtons: "[data-close-regrade-modal]",
+        });
+
+    if (!openButton || !modal) {
+        return;
+    }
+
+    const confirmButton =
+        modal.element.querySelector("[data-confirm-regrade]");
+
+    const errorLabel =
+        modal.element.querySelector("[data-regrade-error]");
+
+    const showError = (message) => {
+
+        errorLabel.textContent = message ?? "";
+
+        errorLabel.classList.toggle("hidden", !message);
+
+    };
+
+    openButton.addEventListener("click", () => {
+
+        showError("");
+
+        modal.open();
+
+    });
+
+    confirmButton?.addEventListener("click", async () => {
+
+        const submissionId = currentAttemptId();
+
+        if (!submissionId) {
+            return;
+        }
+
+        confirmButton.disabled = true;
+
+        try {
+
+            const result = await reopenGrading(state.offeringId, submissionId);
+
+            if (!result.success) {
+
+                showError(result.message);
+
+                return;
+
+            }
+
+            modal.close();
+
+            // Same student and attempt, now in Grading: open and editable.
+            await loadStudent(selectedStudentId(), submissionId);
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            showError("Couldn't reopen this grade. Please try again.");
+
+        }
+
+        finally {
+
+            confirmButton.disabled = false;
+
+        }
+
+    });
 
 }
 
@@ -181,7 +327,7 @@ function bindExpandToggle() {
         }
 
         if (
-            panel.dataset.submissionStatus === "Submitted"
+            ["Submitted", "Partially Graded"].includes(panel.dataset.submissionStatus)
             && panel.dataset.submissionId
         ) {
 
@@ -527,13 +673,11 @@ function bindSubmit() {
                     payload
                 );
 
-                const selectedStudentId =
-                    document
-                        .querySelector("[data-grade-work-student-list]")
-                        ?.dataset.selectedStudentId;
+                // Stay on the attempt just graded; it now shows as locked.
+                const studentId = selectedStudentId();
 
-                if (selectedStudentId) {
-                    await loadStudent(selectedStudentId);
+                if (studentId) {
+                    await loadStudent(studentId, submissionId);
                 }
 
             } catch (error) {

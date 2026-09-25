@@ -61,6 +61,18 @@ import {
     bindLearningUnitStatusToggles,
 } from "./learning-unit-status.js";
 
+import {
+    bindLearningItemActionMenus,
+} from "./learning-item-actions-menu.js";
+
+import {
+    bindLearningItemDependenciesModal,
+} from "./modals/learning-item-dependencies.js";
+
+import {
+    flushVideoProgress,
+} from "./completion/video-progress.js";
+
 /*
 |--------------------------------------------------------------------------
 | Initialize
@@ -68,6 +80,10 @@ import {
 */
 
 export async function initialize() {
+
+    // Leaving a video item (back to the list, or re-entering) saves its
+    // last few seconds of watch progress.
+    flushVideoProgress();
 
     const params =
         new URLSearchParams(window.location.search);
@@ -317,6 +333,38 @@ function initializeFeatureBindings() {
 
         create:
             learningItemCreateModal,
+
+        refresh:
+            initialize,
+
+        onCreated: (learningItemId) =>
+            loadLearningItemEditor(
+                learningItemId,
+                initialize
+            ),
+
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Learning Item Actions (⋮ menu → Edit / Dependencies)
+    |--------------------------------------------------------------------------
+    */
+
+    bindLearningItemActionMenus();
+
+    bindLearningItemDependenciesModal({
+
+        modal:
+            bindModal({
+
+                modal:
+                    "#learning-item-dependencies-modal",
+
+                closeButtons:
+                    "[data-close-learning-item-dependencies-modal]",
+
+            }),
 
         refresh:
             initialize,

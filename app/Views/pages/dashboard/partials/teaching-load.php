@@ -67,7 +67,7 @@ $sections = $data['sections'] ?? [
                         <div class="flex items-center gap-3">
 
                             <div class="w-10 h-10 shrink-0 flex justify-center items-center bg-blue-800 rounded-full transition-transform duration-150 group-hover:scale-110">
-                                <?= icon('code.png', 'w-5 h-5 text-white') ?>
+                                <?= icon('code', 'w-5 h-5 text-white') ?>
                             </div>
 
                             <div class="flex flex-col min-w-0">
@@ -85,7 +85,7 @@ $sections = $data['sections'] ?? [
                         </div>
 
                         <div class="flex items-center gap-2 text-[11px] text-gray-700">
-                            <?= icon('time.png', 'w-3.5 h-3.5 text-gray-600') ?>
+                            <?= icon('time', 'w-3.5 h-3.5 text-gray-600') ?>
                             <span class="truncate"><?= esc($section['schedule']) ?></span>
                             <span>·</span>
                             <span class="truncate"><?= esc($section['room']) ?></span>

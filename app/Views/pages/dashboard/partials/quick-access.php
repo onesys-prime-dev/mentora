@@ -3,30 +3,13 @@
  * Labelled destinations. Icon-only tiles force a guess-and-click to learn
  * what each one does and give screen readers nothing, so every tile carries
  * a caption and a real alt text.
+ *
+ * Same global apps as the header's app menu — both come from global_apps()
+ * (app/Helpers/navigation_helper.php), so the two can't drift apart.
  */
 $userRole = esc($user->getGroups()[0]);
 
-/*
- * Students navigate to places; instructors act on things. Same tile grid,
- * different verbs.
- */
-$links = $userRole === 'instructor'
-    ? [
-        ['label' => 'Post',      'icon' => 'message.png',  'url' => site_url($userRole . '/')],
-        ['label' => 'Assess',    'icon' => 'tasks.png',    'url' => site_url($userRole . '/')],
-        ['label' => 'Upload',    'icon' => 'lessons.png',  'url' => site_url($userRole . '/')],
-        ['label' => 'Sections',  'icon' => 'hat.png',      'url' => site_url($userRole . '/courses')],
-        ['label' => 'Roster',    'icon' => 'door.png',     'url' => site_url($userRole . '/')],
-        ['label' => 'Schedule',  'icon' => 'time.png',     'url' => site_url($userRole . '/')],
-    ]
-    : [
-        ['label' => 'Courses',   'icon' => 'hat.png',      'url' => site_url($userRole . '/courses')],
-        ['label' => 'Messages',  'icon' => 'message.png',  'url' => site_url($userRole . '/')],
-        ['label' => 'Calendar',  'icon' => 'calendar.png', 'url' => site_url($userRole . '/')],
-        ['label' => 'Tasks',     'icon' => 'tasks.png',    'url' => site_url($userRole . '/')],
-        ['label' => 'Grades',    'icon' => 'lessons.png',  'url' => site_url($userRole . '/')],
-        ['label' => 'Schedule',  'icon' => 'time.png',     'url' => site_url($userRole . '/')],
-    ];
+$links = global_apps($userRole);
 ?>
 
 <!-- quick access -->
@@ -42,19 +25,7 @@ $links = $userRole === 'instructor'
 
             <?php foreach ($links as $link): ?>
 
-                <a
-                    class="flex flex-col items-center gap-2 group"
-                    href="<?= $link['url'] ?>">
-
-                    <span class="w-full aspect-square flex justify-center items-center bg-white/30 border border-black/5 shadow-md rounded-3xl transition group-hover:bg-white/60">
-                        <?= icon($link['icon'], 'w-8 h-8 text-blue-800') ?>
-                    </span>
-
-                    <span class="text-[11px] text-gray-700 text-center leading-tight">
-                        <?= esc($link['label']) ?>
-                    </span>
-
-                </a>
+                <?= view('components/app-tile', ['app' => $link, 'variant' => 'dashboard', 'active' => false], ['saveData' => false]) ?>
 
             <?php endforeach; ?>
 

@@ -31,7 +31,7 @@ $reminders = $data['reminders'] ?? [];
             <div class="h-full flex flex-col justify-center items-center gap-2 text-center">
 
                 <div class="w-12 h-12 flex justify-center items-center rounded-full bg-white/40 border border-black/5">
-                    <?= icon('bell.png', 'w-6 h-6 text-gray-500') ?>
+                    <?= icon('bell', 'w-6 h-6 text-gray-500') ?>
                 </div>
 
                 <span class="text-sm font-medium text-gray-700">You're all caught up</span>

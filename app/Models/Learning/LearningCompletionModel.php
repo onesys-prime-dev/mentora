@@ -28,6 +28,7 @@ class LearningCompletionModel extends Model
         'student_user_id',
         'completed_at',
         'status',
+        'progress_percent',
     ];
 
     public function retrieveLearningCompletion(int $learningItemId, int $userId)
@@ -38,6 +39,8 @@ class LearningCompletionModel extends Model
             ->select([
                 'id',
                 'status',
+                'progress_percent',
+                'completed_at',
             ])
             ->where('learning_item_id', $learningItemId)
             ->where('student_user_id', $userId)

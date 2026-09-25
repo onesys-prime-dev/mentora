@@ -2,6 +2,7 @@
 
 namespace App\Models\Assessments;
 
+use App\Services\Courses\Assessments\ShortAnswerGrader;
 use CodeIgniter\Model;
 
 class AssessmentQuestionModel extends Model
@@ -17,6 +18,10 @@ class AssessmentQuestionModel extends Model
         'assessment_id',
         'question_text',
         'question_type',
+        'allow_multiple_answers',
+        'answers_count',
+        'accepted_answers',
+        'case_sensitive',
         'points',
         'is_required',
         'order_index',
@@ -39,6 +44,9 @@ class AssessmentQuestionModel extends Model
 
         foreach ($questions as &$question) {
 
+            // Short Answer keys, decoded to a list (see ShortAnswerGrader).
+            $question['accepted_answers'] = ShortAnswerGrader::decode($question['accepted_answers'] ?? null);
+
             $question['choices'] = $question['question_type'] === 'Multiple Choice'
                 ? $choiceModel
                     ->where('question_id', $question['id'])
@@ -58,6 +66,8 @@ class AssessmentQuestionModel extends Model
         if (!$question) {
             return null;
         }
+
+        $question['accepted_answers'] = ShortAnswerGrader::decode($question['accepted_answers'] ?? null);
 
         $choiceModel = new AssessmentQuestionChoiceModel();
 

@@ -9,17 +9,9 @@ $userRole = esc($user->getGroups()[0]);
         <?= esc($currentAssessment['title']) ?>
     </span>
 
-    <?php
-        $assessmentTypeIcon = is_file(FCPATH . 'assets/images/icons/' . $currentAssessment['assessment_type'] . '.png')
-            ? $currentAssessment['assessment_type']
-            : 'assessment';
-    ?>
-
     <div class="flex items-center gap-2">
         <div class="flex justify-center items-center">
-            <img
-                class="h-4 w-auto"
-                src="<?= base_url('assets/images/icons/' . esc($assessmentTypeIcon) . '.png') ?>" alt="">
+            <?= learning_item_icon($currentAssessment['assessment_type'], 'h-4 w-4') ?>
         </div>
 
         <span class="capitalize text-sm text-[#565656]">

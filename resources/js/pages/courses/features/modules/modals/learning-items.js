@@ -9,6 +9,7 @@ import { createLearningItem } from "../api.js";
 export function bindLearningItemCreateModal({
     create,
     refresh,
+    onCreated = null,
 }) {
 
     if (!create) {
@@ -94,6 +95,15 @@ export function bindLearningItemCreateModal({
                 create.close();
 
                 form.reset();
+
+                // Go straight to the new item's editor.
+                if (onCreated && result.learning_item_id) {
+
+                    await onCreated(result.learning_item_id);
+
+                    return;
+
+                }
 
                 refresh();
 

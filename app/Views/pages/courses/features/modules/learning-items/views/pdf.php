@@ -12,6 +12,7 @@ $file = $resource['file'] ?? null;
         <div
             id="pdf-viewer"
             data-url="<?= esc($file['url']) ?>"
+            data-download-url="<?= esc(file_url((int) $file['id'], true)) ?>"
             data-allow-download="<?= ($currentItem['content']['allow_download'] ?? false) ? 'true' : 'false' ?>">
         </div>
 

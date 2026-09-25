@@ -145,6 +145,7 @@ class PdfViewer {
             document.createElement("a");
 
         download.href =
+            this.container.dataset.downloadUrl ||
             this.container.dataset.url;
 
         download.target =

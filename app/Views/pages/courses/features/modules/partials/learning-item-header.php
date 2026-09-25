@@ -11,9 +11,7 @@ $userRole = esc($user->getGroups()[0]);
 
     <div class="flex items-center gap-2">
         <div class="flex justify-center items-center">
-            <img
-                class="h-4 w-auto" 
-                src="<?= base_url('assets/images/icons/' . esc($currentItem['item_type']) . '.png') ?>" alt="">
+            <?= learning_item_icon($currentItem['item_type'], 'h-4 w-4') ?>
         </div>
 
         <span class="capitalize text-sm text-[#565656]">
@@ -26,28 +24,20 @@ $userRole = esc($user->getGroups()[0]);
 
         <?php if ($userRole === 'student'): ?>
     
-            <?php
+            <?php $isCompleted = !empty($currentItem['is_completed']); ?>
 
-                $isCompleted =
-                    $currentItem['learning_completion']
-                    &&
-                    $currentItem['learning_completion']['status'] === 'completed';
+            <!-- both rendered; completion.js swaps them after "Mark as Completed" -->
+            <span
+                data-completion-badge="completed"
+                class="px-3 py-1 rounded-full bg-[#E6F4EA] text-[#5C9F72] text-xs font-black <?= $isCompleted ? '' : 'hidden' ?>">
+                Completed
+            </span>
 
-            ?>
-
-            <?php if ($isCompleted): ?>
-
-                <span class="px-3 py-1 rounded-full bg-[#E6F4EA] text-[#5C9F72] text-xs font-black">
-                    Completed
-                </span>
-
-            <?php else: ?>
-
-                <span class="px-3 py-1 rounded-full bg-[#E0E5F2] text-[#002068] text-xs font-black">
-                    Not Yet Completed
-                </span>
-
-            <?php endif; ?>
+            <span
+                data-completion-badge="pending"
+                class="px-3 py-1 rounded-full bg-[#E0E5F2] text-[#002068] text-xs font-black <?= $isCompleted ? 'hidden' : '' ?>">
+                <?= !empty($currentLock) ? 'Locked' : 'Not Yet Completed' ?>
+            </span>
         
         <?php elseif ($userRole === 'instructor'): ?>
 

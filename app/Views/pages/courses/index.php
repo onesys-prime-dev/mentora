@@ -28,9 +28,7 @@ $userRole = esc($user->getGroups()[0]);
             <div class="relative z-10 flex justify-between items-center">
 
                 <div class="w-12 h-12 flex justify-center items-center rounded-[100%] bg-blue-900">
-                    <img 
-                        class="w-5 h-auto"
-                        src="<?= base_url('assets/images/icons/code.png') ?>" alt="">
+                    <?= icon('code', 'h-5 w-5') ?>
                 </div>
 
                 <div class="flex flex-col justify-end">

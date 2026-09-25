@@ -2,11 +2,15 @@
 
 namespace App\Database\Seeds;
 
+use App\Services\Storage\StorageService;
 use CodeIgniter\Database\Seeder;
 use CodeIgniter\Shield\Models\UserModel;
 
 class FilesSeeder extends Seeder
 {
+    /** Demo files that ship with the seeders, laid out by storage key. */
+    public const ASSET_ROOT = APPPATH . 'Database/Seeds/assets/uploads/';
+
     public function run()
     {
         $userModel = model(UserModel::class);
@@ -73,6 +77,42 @@ class FilesSeeder extends Seeder
             ],
 
         ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Copy the demo files into storage
+        |--------------------------------------------------------------------------
+        |
+        | Uploads live in writable/uploads (served through files/{id}), not
+        | in public/. The demo files ship with the seeders and are copied into
+        | place here; the recorded size is taken from the real file.
+        |
+        */
+
+        $storage = new StorageService();
+
+        foreach ($rows as &$row) {
+
+            $source = self::ASSET_ROOT . $row['storage_key'];
+
+            $target = $storage->path($row['storage_key']);
+
+            if (is_file($source)) {
+
+                if (! is_dir(dirname($target))) {
+                    mkdir(dirname($target), 0777, true);
+                }
+
+                if (! is_file($target)) {
+                    copy($source, $target);
+                }
+
+                $row['file_size'] = filesize($source);
+
+            }
+
+        }
+        unset($row);
 
         $this->db
             ->table('files')

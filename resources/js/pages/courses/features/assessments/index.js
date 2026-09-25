@@ -42,12 +42,32 @@ import {
 } from "./questions/questions.js";
 
 import {
+    initializeAiGeneration,
+} from "./ai-generation/ai-generation.js";
+
+import {
+    initializeImportExport,
+} from "./import-export/import-export.js";
+
+import {
     initializeGradeWork,
 } from "./grading/grading.js";
 
 import {
     initializeQuizTaking,
 } from "./quiz-taking/quiz-taking.js";
+
+import {
+    initializeAssignmentSubmission,
+} from "../../../../shared/assignment/submission.js";
+
+import {
+    swapContent,
+} from "../../../../shared/spa/swap.js";
+
+import {
+    renderAssessmentsSkeleton,
+} from "./skeleton.js";
 
 export async function initialize() {
 
@@ -59,14 +79,19 @@ export async function initialize() {
             params.get("assessment")
         );
 
+    // Editor, builder and grading are instructor screens; a student who
+    // lands on one of those links gets the assessment view instead.
+    const isInstructor =
+        window.coursesConfig.role === "instructor";
+
     const isEditor =
-        params.has("editor");
+        isInstructor && params.has("editor");
 
     const isBuilder =
-        params.has("builder");
+        isInstructor && params.has("builder");
 
     const isGrading =
-        params.has("grade");
+        isInstructor && params.has("grade");
 
     const isView =
         params.has("view");
@@ -76,6 +101,9 @@ export async function initialize() {
 
     const studentId =
         params.get("student");
+
+    const attemptId =
+        params.get("attempt");
 
     if (assessmentId) {
 
@@ -122,7 +150,7 @@ export async function initialize() {
                 assessmentId,
                 studentId,
                 initialize,
-                { pushState: false }
+                { pushState: false, attemptId }
             );
 
         }
@@ -176,20 +204,23 @@ async function loadAssessments() {
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
-
     try {
-        state.data = await fetchAssessments();
 
-        container.innerHTML =
-            state.data.html;
+        const swapped = await swapContent(
+            container,
+            async () => {
+                state.data = await fetchAssessments();
+                return state.data.html;
+            },
+            { skeleton: renderAssessmentsSkeleton() }
+        );
 
-        initializeFeatureBindings();
+        if (swapped) {
+            initializeFeatureBindings();
+        }
+
     } catch (error) {
         console.error(error);
-
-        container.innerHTML =
-            "<p>Unable to load Assessments.</p>";
     } finally {
         state.loading = false;
     }
@@ -250,6 +281,13 @@ function initializeFeatureBindings() {
         refresh:
             initialize,
 
+        onCreated: (assessmentId) =>
+            loadAssessmentEditor(
+                window.coursesConfig.offeringId,
+                assessmentId,
+                initialize
+            ),
+
     });
 
     /*
@@ -259,6 +297,156 @@ function initializeFeatureBindings() {
     */
 
     bindAssessmentLinks(initialize);
+
+    bindListInteractions(initialize);
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| List page: keyboard access, sidebar shortcuts, filter + search
+|--------------------------------------------------------------------------
+*/
+
+function bindListInteractions(refresh) {
+
+    const offeringId =
+        window.coursesConfig.offeringId;
+
+    // Cards and sidebar rows are role="link" elements: Enter/Space opens them.
+    document
+        .querySelectorAll('[data-assessments-overview] [role="link"][tabindex]')
+        .forEach((row) => {
+
+            row.addEventListener("keydown", (event) => {
+
+                if (event.target !== row || (event.key !== "Enter" && event.key !== " ")) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                row.click();
+
+            });
+
+        });
+
+    // Student · Up Next: an in-progress quiz resumes straight away.
+    document
+        .querySelectorAll("[data-take-assessment]")
+        .forEach((row) => {
+
+            row.addEventListener("click", () => {
+
+                loadQuizAttempt(
+                    offeringId,
+                    Number(row.dataset.takeAssessment),
+                    refresh
+                );
+
+            });
+
+        });
+
+    // Instructor · Ready for Grading: open Grade Work on the student who has
+    // been waiting longest.
+    document
+        .querySelectorAll("[data-grade-assessment]")
+        .forEach((row) => {
+
+            row.addEventListener("click", () => {
+
+                loadGradeWork(
+                    offeringId,
+                    Number(row.dataset.gradeAssessment),
+                    row.dataset.gradeStudent || null,
+                    refresh
+                );
+
+            });
+
+        });
+
+    initializeListFilters();
+
+}
+
+function initializeListFilters() {
+
+    const select =
+        document.querySelector("[data-assessments-filter]");
+
+    const search =
+        document.querySelector("[data-assessments-search]");
+
+    const noMatch =
+        document.querySelector("[data-assessments-no-match]");
+
+    const cards = [
+        ...document.querySelectorAll("[data-assessments-list] [data-assessment-card]"),
+    ];
+
+    if (!select || !search) {
+        return;
+    }
+
+    const apply = () => {
+
+        const tag = select.value;
+
+        const term = search.value.trim().toLowerCase();
+
+        let shown = 0;
+
+        cards.forEach((card) => {
+
+            const tags = (card.dataset.filterTags ?? "").split(" ");
+
+            const visible =
+                (!tag || tags.includes(tag))
+                && (!term || (card.dataset.title ?? "").includes(term));
+
+            card.style.display = visible ? "" : "none";
+
+            if (visible) {
+                shown++;
+            }
+
+        });
+
+        const empty = cards.length > 0 && shown === 0;
+
+        noMatch?.classList.toggle("hidden", !empty);
+
+        noMatch?.classList.toggle("flex", empty);
+
+    };
+
+    select.addEventListener("change", apply);
+
+    search.addEventListener("input", apply);
+
+    // Instructor · Drafts → "View all" narrows the list to drafts.
+    document
+        .querySelectorAll("[data-assessments-filter-set]")
+        .forEach((button) => {
+
+            button.addEventListener("click", () => {
+
+                select.value = button.dataset.assessmentsFilterSet;
+
+                search.value = "";
+
+                apply();
+
+                document
+                    .querySelector("[data-assessments-list]")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+            });
+
+        });
 
 }
 
@@ -429,24 +617,23 @@ export async function loadAssessmentView(
     offeringId,
     assessmentId,
     refresh,
-    { pushState = true } = {}
+    { pushState = true, mode = "navigate" } = {}
 ) {
 
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    const swapped = await swapContent(
+        container,
+        async () => (await fetchAssessmentView(offeringId, assessmentId)).html,
+        { mode }
+    );
+
+    if (!swapped) {
+        return;
+    }
 
     try {
-
-        const data =
-            await fetchAssessmentView(
-                offeringId,
-                assessmentId
-            );
-
-        container.innerHTML =
-            data.html;
 
         if (pushState) {
 
@@ -493,12 +680,21 @@ export async function loadAssessmentView(
                 }
             );
 
+        initializeAssignmentSubmission({
+
+            onSubmitted: () =>
+                loadAssessmentView(
+                    offeringId,
+                    assessmentId,
+                    refresh,
+                    { pushState: false, mode: "refresh" }
+                ),
+
+        });
+
     } catch (error) {
 
         console.error(error);
-
-        container.innerHTML =
-            "<p>Unable to load assessment.</p>";
 
     }
 
@@ -508,24 +704,23 @@ export async function loadQuizAttempt(
     offeringId,
     assessmentId,
     refresh,
-    { pushState = true } = {}
+    { pushState = true, mode = "navigate" } = {}
 ) {
 
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    const swapped = await swapContent(
+        container,
+        async () => (await fetchQuizAttempt(offeringId, assessmentId)).html,
+        { mode }
+    );
+
+    if (!swapped) {
+        return;
+    }
 
     try {
-
-        const data =
-            await fetchQuizAttempt(
-                offeringId,
-                assessmentId
-            );
-
-        container.innerHTML =
-            data.html;
 
         if (pushState) {
 
@@ -562,9 +757,6 @@ export async function loadQuizAttempt(
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load the quiz.</p>";
-
     }
 
 }
@@ -573,24 +765,23 @@ export async function loadAssessmentEditor(
     offeringId,
     assessmentId,
     refresh,
-    { pushState = true } = {}
+    { pushState = true, mode = "navigate" } = {}
 ) {
 
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    const swapped = await swapContent(
+        container,
+        async () => (await fetchAssessmentEditor(offeringId, assessmentId)).html,
+        { mode }
+    );
+
+    if (!swapped) {
+        return;
+    }
 
     try {
-
-        const data =
-            await fetchAssessmentEditor(
-                offeringId,
-                assessmentId
-            );
-
-        container.innerHTML =
-            data.html;
 
         if (pushState) {
 
@@ -638,7 +829,7 @@ export async function loadAssessmentEditor(
                     offeringId,
                     assessmentId,
                     refresh,
-                    { pushState: false }
+                    { pushState: false, mode: "refresh" }
                 )
             );
 
@@ -657,7 +848,7 @@ export async function loadAssessmentEditor(
                     offeringId,
                     assessmentId,
                     refresh,
-                    { pushState: false }
+                    { pushState: false, mode: "refresh" }
                 )
             );
 
@@ -692,7 +883,7 @@ export async function loadAssessmentEditor(
                     offeringId,
                     assessmentId,
                     refresh,
-                    { pushState: false }
+                    { pushState: false, mode: "refresh" }
                 )
             );
 
@@ -727,9 +918,6 @@ export async function loadAssessmentEditor(
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load assessment editor.</p>";
-
     }
 
 }
@@ -738,24 +926,23 @@ export async function loadQuizBuilder(
     offeringId,
     assessmentId,
     refresh,
-    { pushState = true } = {}
+    { pushState = true, mode = "navigate" } = {}
 ) {
 
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    const swapped = await swapContent(
+        container,
+        async () => (await fetchQuizBuilder(offeringId, assessmentId)).html,
+        { mode }
+    );
+
+    if (!swapped) {
+        return;
+    }
 
     try {
-
-        const data =
-            await fetchQuizBuilder(
-                offeringId,
-                assessmentId
-            );
-
-        container.innerHTML =
-            data.html;
 
         if (pushState) {
 
@@ -783,23 +970,34 @@ export async function loadQuizBuilder(
                 }
             );
 
-        initializeQuestions(
-            offeringId,
-            assessmentId,
+        const reloadBuilder =
             () => loadQuizBuilder(
                 offeringId,
                 assessmentId,
                 refresh,
-                { pushState: false }
-            )
+                { pushState: false, mode: "refresh" }
+            );
+
+        initializeQuestions(
+            offeringId,
+            assessmentId,
+            reloadBuilder
+        );
+
+        initializeAiGeneration(
+            offeringId,
+            assessmentId
+        );
+
+        initializeImportExport(
+            offeringId,
+            assessmentId,
+            reloadBuilder
         );
 
     } catch (error) {
 
         console.error(error);
-
-        container.innerHTML =
-            "<p>Unable to load quiz builder.</p>";
 
     }
 
@@ -810,35 +1008,33 @@ export async function loadGradeWork(
     assessmentId,
     studentId,
     refresh,
-    { pushState = true } = {}
+    { pushState = true, mode = "navigate", attemptId = null } = {}
 ) {
 
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    const swapped = await swapContent(
+        container,
+        async () => (await fetchGradeWork(offeringId, assessmentId, studentId, attemptId)).html,
+        { mode }
+    );
+
+    if (!swapped) {
+        return;
+    }
 
     try {
-
-        const data =
-            await fetchGradeWork(
-                offeringId,
-                assessmentId,
-                studentId
-            );
-
-        container.innerHTML =
-            data.html;
 
         if (pushState) {
 
             const query =
-                studentId
-                    ? `?assessment=${assessmentId}&grade=1&student=${studentId}`
-                    : `?assessment=${assessmentId}&grade=1`;
+                `?assessment=${assessmentId}&grade=1`
+                + (studentId ? `&student=${studentId}` : "")
+                + (studentId && attemptId ? `&attempt=${attemptId}` : "");
 
             history.pushState(
-                { assessmentId, grade: true, studentId },
+                { assessmentId, grade: true, studentId, attemptId },
                 "",
                 `${window.location.pathname}${query}`
             );
@@ -866,21 +1062,20 @@ export async function loadGradeWork(
             offeringId,
             assessmentId,
             refresh,
-            (nextStudentId) => loadGradeWork(
+            // Switching students (and reloading after a grade) re-renders
+            // the same screen: keep the scroll position, no dimming.
+            (nextStudentId, nextAttemptId = null) => loadGradeWork(
                 offeringId,
                 assessmentId,
                 nextStudentId,
                 refresh,
-                { pushState: true }
+                { pushState: true, mode: "refresh", attemptId: nextAttemptId }
             )
         );
 
     } catch (error) {
 
         console.error(error);
-
-        container.innerHTML =
-            "<p>Unable to load grade work.</p>";
 
     }
 

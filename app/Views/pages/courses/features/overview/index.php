@@ -51,9 +51,7 @@
             <div class="w-full flex gap-4 p-6 border border-black/10 rounded-2xl">
             
                 <div class="w-13 h-13 mt-1 flex justify-center items-center bg-black/6 rounded-[100%]">
-                    <img
-                        class="w-auto h-6" 
-                        src="<?= base_url('assets/images/icons/message-outline.png') ?>" alt="">
+                    <?= icon('message-outline', 'h-6 w-6') ?>
                 </div>
 
                 <div class="flex flex-col">
@@ -79,9 +77,7 @@
             <div class="w-full flex gap-4 p-6 border border-black/10 rounded-2xl">
             
                 <div class="w-13 h-13 mt-1 flex justify-center items-center bg-black/6 rounded-[100%]">
-                    <img
-                        class="w-auto h-6"
-                        src="<?= base_url('assets/images/icons/time.png') ?>" alt="">
+                    <?= icon('time', 'h-6 w-6') ?>
                 </div>
 
                 <div class="flex flex-col">
@@ -103,9 +99,7 @@
             <div class="w-full flex gap-4 p-6 border border-black/10 rounded-2xl">
             
                 <div class="w-13 h-13 mt-1 flex justify-center items-center bg-black/6 rounded-[100%]">
-                    <img
-                        class="w-auto h-6"
-                        src="<?= base_url('assets/images/icons/door.png') ?>" alt="">
+                    <?= icon('door', 'h-6 w-6') ?>
                 </div>
 
                 <div class="flex flex-col">

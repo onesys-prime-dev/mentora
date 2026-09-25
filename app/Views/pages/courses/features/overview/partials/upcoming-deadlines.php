@@ -34,9 +34,7 @@
                 </span>
 
                 <div class="flex items-center gap-2">
-                    <img
-                        class="h-3 w-auto" 
-                        src="<?= base_url('assets/images/icons/time-mono.png') ?>" alt="">    
+                    <?= icon('time-mono', 'h-3 w-3') ?>    
 
                     <span class="text-sm text-black/50">
                         11:59PM
@@ -64,9 +62,7 @@
                 </span>
 
                 <div class="flex items-center gap-2">
-                    <img
-                        class="h-3 w-auto" 
-                        src="<?= base_url('assets/images/icons/time-mono.png') ?>" alt="">    
+                    <?= icon('time-mono', 'h-3 w-3') ?>    
 
                     <span class="text-sm text-black/50">
                         In Class

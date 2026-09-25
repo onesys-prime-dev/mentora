@@ -14,16 +14,32 @@ class GradeWorkController extends BaseController
         $this->gradeWorkService = new GradeWorkService();
     }
 
-    public function show(int $assessmentId, ?int $studentId = null)
+    /**
+     * Grade Work for one section: only students enrolled in $offeringId are
+     * listed, matching the Assessments tab's To Grade numbers.
+     */
+    public function show(int $offeringId, int $assessmentId, ?int $studentId = null)
     {
         $user = auth()->user();
+
+        // ?attempt= picks one of the student's attempts (tabs in Grade Work).
+        $attemptId = $this->request->getGet('attempt');
 
         return $this->response->setJSON(
             $this->gradeWorkService->gradeWork(
                 $user,
+                $offeringId,
                 $assessmentId,
-                $studentId
+                $studentId,
+                ctype_digit((string) $attemptId) ? (int) $attemptId : null
             )
+        );
+    }
+
+    public function reopenGrading(int $submissionId)
+    {
+        return $this->response->setJSON(
+            $this->gradeWorkService->reopenGrading(auth()->user(), $submissionId)
         );
     }
 
