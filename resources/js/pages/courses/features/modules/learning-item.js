@@ -91,6 +91,12 @@ export function bindLearningItemEvents(refresh) {
                         return;
                     }
 
+                    // Locked for this student: not openable (completion.js
+                    // clears data-locked once it unlocks).
+                    if (element.dataset.locked === "1") {
+                        return;
+                    }
+
                     const learningItemId =
                         Number(
                             element.dataset.learningItem
@@ -169,6 +175,22 @@ export async function loadLearningItem(
             await fetchLearningItemView(
                 learningItemId
             );
+
+        // Refused: the item is locked. Back to the Modules list with the
+        // reason — the URL is replaced so Back / refresh don't loop into it.
+        if (response.locked) {
+
+            history.replaceState({}, "", window.location.pathname);
+
+            if (refresh) {
+                await refresh();
+            }
+
+            showLockedNotice(response, refresh);
+
+            return;
+
+        }
 
         const container =
             document.querySelector(
@@ -416,5 +438,66 @@ function bindLearningUnitEvents() {
             );
 
         });
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Locked notice
+|--------------------------------------------------------------------------
+|
+| Shown at the top of the Modules list when a student tried to open a
+| locked item: why, plus a shortcut to the first missing prerequisite.
+|
+*/
+
+function showLockedNotice(result, refresh) {
+
+    const container =
+        document.querySelector("#course-content");
+
+    if (!container) {
+        return;
+    }
+
+    container.querySelector("[data-locked-notice]")?.remove();
+
+    const notice = document.createElement("div");
+
+    notice.dataset.lockedNotice = "";
+    notice.setAttribute("role", "alert");
+    notice.className =
+        "mx-10 mt-6 flex items-center gap-3 rounded-2xl border border-[#FFE3A3] bg-[#FFF8E6] px-5 py-4 text-sm text-[#946200]";
+
+    notice.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0" aria-hidden="true"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <span class="flex-1" data-locked-notice-message></span>
+        <button type="button" data-locked-notice-open class="hidden shrink-0 rounded-lg bg-[#946200] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#7a5100]"></button>
+        <button type="button" data-locked-notice-dismiss title="Dismiss" class="shrink-0 rounded-lg p-1 transition hover:bg-[#FFE3A3]">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>`;
+
+    // Text set as text — titles come from course content.
+    notice.querySelector("[data-locked-notice-message]").textContent =
+        result.message || "This item is locked.";
+
+    const openButton = notice.querySelector("[data-locked-notice-open]");
+
+    if (result.unlock_item_id) {
+
+        openButton.textContent = `Open “${result.unlock_item_title ?? "it"}”`;
+        openButton.classList.remove("hidden");
+
+        openButton.addEventListener("click", () => {
+            loadLearningItem(result.unlock_item_id, refresh);
+        });
+
+    }
+
+    notice
+        .querySelector("[data-locked-notice-dismiss]")
+        .addEventListener("click", () => notice.remove());
+
+    container.prepend(notice);
 
 }

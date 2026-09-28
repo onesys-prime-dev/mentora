@@ -9,6 +9,11 @@
 | completion/completion.js reveals it after marking). On the module's last
 | item it reads "Back to Modules". A locked item shows neither.
 |
+| When the next item is itself locked (it waits on something other than
+| this item), Continue stays visible but disabled, with a lock and a hint
+| naming what's missing; completion.js enables it the moment the server
+| reports that item unlocked. Previous is disabled the same way if locked.
+|
 | Instructors: [Previous] … [Continue], as before.
 |--------------------------------------------------------------------------
 */
@@ -23,6 +28,13 @@ $canComplete = !empty($currentItem['can_complete']);
 
 $showContinue = !$isStudent || ($isCompleted && !$isLocked);
 
+$nextLocked = $isStudent && $nextItem && !empty($nextItem['is_locked']);
+
+$previousLocked = $isStudent && $previousItem && !empty($previousItem['is_locked']);
+
+// "Complete “X” to continue." — from ModuleService (lockMessage wording).
+$nextLockHint = $nextLocked ? ($nextLockHint ?? '') : '';
+
 $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0056E0]';
 ?>
 
@@ -33,8 +45,9 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 
     <button
         type="button"
         class="learning-item-link inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium transition
-            <?= $previousItem ? 'text-gray-500 hover:border-[#0040A6] hover:bg-[#0040A6]/10 hover:text-[#6EA8FF]' : 'cursor-not-allowed opacity-50' ?>"
-        <?= $previousItem ? 'data-learning-item="' . esc($previousItem['id']) . '"' : 'disabled' ?>
+            <?= $previousItem && !$previousLocked ? 'text-gray-500 hover:border-[#0040A6] hover:bg-[#0040A6]/10 hover:text-[#6EA8FF]' : 'cursor-not-allowed opacity-50' ?>"
+        <?= $previousItem && !$previousLocked ? 'data-learning-item="' . esc($previousItem['id']) . '"' : 'disabled' ?>
+        <?= $previousLocked ? 'title="Locked"' : '' ?>
     >
         <svg
             class="h-4 w-4"
@@ -87,12 +100,25 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 
 
         <?php if ($nextItem): ?>
 
+            <?php if ($nextLocked): ?>
+                <!-- Why Continue is disabled; completion.js removes it once the next item unlocks. -->
+                <span data-continue-lock-hint class="max-w-xs text-right text-xs text-gray-400 <?= $showContinue ? '' : 'hidden' ?>">
+                    <?= esc($nextLockHint) ?>
+                </span>
+            <?php endif; ?>
+
             <button
                 type="button"
                 data-continue
-                class="learning-item-link <?= $continueClasses ?> <?= $showContinue ? '' : 'hidden' ?>"
+                data-next-item-id="<?= esc($nextItem['id']) ?>"
+                <?= $nextLocked ? 'data-next-locked="1" disabled title="' . esc($nextLockHint, 'attr') . '"' : '' ?>
+                class="learning-item-link <?= $continueClasses ?> disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300 <?= $showContinue ? '' : 'hidden' ?>"
                 data-learning-item="<?= esc($nextItem['id']) ?>"
             >
+                <span data-continue-lock-icon class="<?= $nextLocked ? '' : 'hidden' ?>">
+                    <?= icon('lock', 'h-4 w-4 text-current') ?>
+                </span>
+
                 <span>Continue</span>
 
                 <svg
