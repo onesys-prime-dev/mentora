@@ -66,6 +66,15 @@ class GradeSheetLayout
         return empty($item['assessment_id']);
     }
 
+    /**
+     * True when the scheme has at least one active grading period — the one
+     * switch that decides whether period columns/formulas appear at all.
+     */
+    public function usesPeriods(): bool
+    {
+        return !empty($this->context['scheme']['uses_periods']) && ($this->context['periods'] ?? []) !== [];
+    }
+
     private function buildColumns(): array
     {
         $columns = [
@@ -74,44 +83,81 @@ class GradeSheetLayout
             ['key' => 'student_name', 'header' => 'Student Name', 'type' => 'student_name'],
         ];
 
-        $categoryColumns = [];
+        $periodColumns = [];
 
-        foreach ($this->context['categories'] as $category) {
+        if ($this->usesPeriods()) {
 
-            foreach ($this->context['items'] as $item) {
+            // A category with no period doesn't count (mirrors the engine),
+            // so it — and its items — are simply left out of the sheet.
+            foreach ($this->context['periods'] as $period) {
 
-                if ((int) $item['category_id'] !== (int) $category['id']) {
-                    continue;
+                foreach ($this->context['categories'] as $category) {
+                    if ((int) ($category['period_id'] ?? 0) === (int) $period['id']) {
+                        $columns = array_merge($columns, $this->columnsForCategory($category));
+                    }
                 }
 
-                $name = $item['assessment_title'] ?? $item['name'];
-
-                $columns[] = [
-                    'key' => 'item:' . $item['id'],
-                    'header' => $name . ' (/' . self::number((float) $item['max_points']) . ')'
-                        . ($this->isManual($item) ? '' : ' [locked]'),
-                    'type' => 'item',
-                    'item' => $item,
-                    'category' => $category,
+                $periodColumns[] = [
+                    'key' => 'period:' . $period['id'],
+                    'header' => $period['name'] . ' % (' . self::number((float) $period['weight_percentage']) . '%)',
+                    'type' => 'period',
+                    'period' => $period,
                 ];
 
             }
 
-            $categoryColumns[] = [
-                'key' => 'category:' . $category['id'],
-                'header' => $category['name'] . ' % (' . self::number((float) $category['weight_percentage']) . '%)',
-                'type' => 'category',
-                'category' => $category,
-            ];
+        } else {
+
+            foreach ($this->context['categories'] as $category) {
+                $columns = array_merge($columns, $this->columnsForCategory($category));
+            }
 
         }
 
-        return array_merge($columns, $categoryColumns, [
+        return array_merge($columns, $periodColumns, [
             ['key' => 'final', 'header' => 'Final %', 'type' => 'final'],
             ['key' => 'grade', 'header' => 'Grade', 'type' => 'grade'],
             ['key' => 'remarks', 'header' => 'Remarks', 'type' => 'remarks'],
             ['key' => 'row_hash', 'header' => 'Check (do not edit)', 'type' => 'row_hash'],
         ]);
+    }
+
+    /**
+     * One category's item columns followed by its own percentage column —
+     * the repeating unit buildColumns() lays out once per category, whether
+     * that's flat or nested under a period.
+     */
+    private function columnsForCategory(array $category): array
+    {
+        $columns = [];
+
+        foreach ($this->context['items'] as $item) {
+
+            if ((int) $item['category_id'] !== (int) $category['id']) {
+                continue;
+            }
+
+            $name = $item['assessment_title'] ?? $item['name'];
+
+            $columns[] = [
+                'key' => 'item:' . $item['id'],
+                'header' => $name . ' (/' . self::number((float) $item['max_points']) . ')'
+                    . ($this->isManual($item) ? '' : ' [locked]'),
+                'type' => 'item',
+                'item' => $item,
+                'category' => $category,
+            ];
+
+        }
+
+        $columns[] = [
+            'key' => 'category:' . $category['id'],
+            'header' => $category['name'] . ' % (' . self::number((float) $category['weight_percentage']) . '%)',
+            'type' => 'category',
+            'category' => $category,
+        ];
+
+        return $columns;
     }
 
     /**
@@ -126,8 +172,10 @@ class GradeSheetLayout
             'scheme' => (int) $scheme['id'],
             'passing' => (float) $scheme['passing_percentage'],
             'scale' => (int) ($scheme['grade_scale_id'] ?? 0),
+            'uses_periods' => $this->usesPeriods(),
+            'periods' => array_map(static fn ($p) => [(int) $p['id'], (float) $p['weight_percentage']], $this->context['periods'] ?? []),
             'bands' => array_map(static fn ($b) => [(int) $b['id'], (float) $b['minimum_percentage']], $this->context['bands']),
-            'categories' => array_map(static fn ($c) => [(int) $c['id'], (float) $c['weight_percentage']], $this->context['categories']),
+            'categories' => array_map(static fn ($c) => [(int) $c['id'], $c['period_id'] !== null ? (int) $c['period_id'] : null, (float) $c['weight_percentage']], $this->context['categories']),
             'items' => array_map(static fn ($i) => [(int) $i['id'], (int) $i['category_id'], (float) $i['max_points']], $this->items()),
         ])), 0, 32);
     }
@@ -216,20 +264,57 @@ class GradeSheetLayout
     }
 
     /**
-     * Final %: weighted average of the categories that have graded work.
+     * Period %: weighted average of that period's category-percentage
+     * columns that have graded work. Same shape as categoryFormula(), one
+     * level up.
+     */
+    public function periodFormula(array $period, int $row): string
+    {
+        return $this->weightedRollupFormula(
+            static fn (array $column) => $column['type'] === 'category' && (int) ($column['category']['period_id'] ?? 0) === (int) $period['id'],
+            static fn (array $column) => (float) $column['category']['weight_percentage'],
+            $row
+        );
+    }
+
+    /**
+     * Final %: weighted average of the periods (if the scheme uses them) or
+     * else the categories directly, whichever have graded work.
      */
     public function finalFormula(int $row): string
+    {
+        if ($this->usesPeriods()) {
+            return $this->weightedRollupFormula(
+                static fn (array $column) => $column['type'] === 'period',
+                static fn (array $column) => (float) $column['period']['weight_percentage'],
+                $row
+            );
+        }
+
+        return $this->weightedRollupFormula(
+            static fn (array $column) => $column['type'] === 'category',
+            static fn (array $column) => (float) $column['category']['weight_percentage'],
+            $row
+        );
+    }
+
+    /**
+     * The shared shape behind category/period/final: a weighted average
+     * over whichever columns $matches picks, blank when none of them have a
+     * value yet — mirrors GradingEngineService::rollup() exactly.
+     */
+    private function weightedRollupFormula(callable $matches, callable $weightOf, int $row): string
     {
         $numerator = [];
         $denominator = [];
 
         foreach ($this->columns as $index => $column) {
 
-            if ($column['type'] !== 'category') {
+            if (!$matches($column)) {
                 continue;
             }
 
-            $weight = (float) $column['category']['weight_percentage'];
+            $weight = $weightOf($column);
 
             if ($weight <= 0) {
                 continue;

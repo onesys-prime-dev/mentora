@@ -26,6 +26,9 @@ import {
     deleteGradeItem,
     resyncGradeItem,
     recalculateGrades,
+    createGradingPeriod,
+    updateGradingPeriod,
+    deleteGradingPeriod,
 } from "../api.js";
 
 import { bindModal } from "../../assessments/modals/index.js";
@@ -220,14 +223,63 @@ function bind(container)
         });
     });
 
+    editor.querySelector("[data-scheme-uses-periods]")
+        ?.addEventListener("change", (event) => {
+            runSave(() => updateGradingScheme({ uses_periods: event.target.checked }));
+        });
+
+    /*
+    | Grading periods
+    */
+
+    editor.querySelector("[data-add-grading-period]")
+        ?.addEventListener("click", () => {
+            runSave(() => createGradingPeriod({ name: "New Period", weight_percentage: 0 }));
+        });
+
+    editor.querySelectorAll("[data-grading-period]").forEach((period) => {
+
+        const periodId = period.dataset.gradingPeriod;
+
+        period.querySelector("[data-grading-period-name]")
+            ?.addEventListener("input", (event) => {
+                queueSave(`period:${periodId}`, { name: event.target.value }, (payload) => updateGradingPeriod(periodId, payload));
+            });
+
+        const weight = period.querySelector("[data-grading-period-weight]");
+
+        weight?.addEventListener("input", updateWeightTotal);
+
+        weight?.addEventListener("change", (event) => {
+            runSave(() => updateGradingPeriod(periodId, { weight_percentage: Number(event.target.value) }));
+        });
+
+        period.querySelector("[data-delete-grading-period]")
+            ?.addEventListener("click", () => {
+                if (confirm("Remove this period? Its categories become Unassigned and stop counting until you move them.")) {
+                    runSave(() => deleteGradingPeriod(periodId));
+                }
+            });
+
+    });
+
     /*
     | Categories
     */
 
-    editor.querySelector("[data-add-grade-category]")
-        ?.addEventListener("click", () => {
-            runSave(() => createGradeCategory({ name: "New category", weight_percentage: 0 }));
+    editor.querySelectorAll("[data-add-grade-category]").forEach((button) => {
+        button.addEventListener("click", () => {
+
+            const periodId = button.dataset.periodId || null;
+
+            runSave(() => createGradeCategory({
+                name: "New category",
+                weight_percentage: 0,
+                ...(periodId ? { period_id: periodId } : {}),
+            }));
+
         });
+    });
 
     editor.querySelectorAll("[data-grade-category]").forEach((category) => {
 
@@ -240,11 +292,26 @@ function bind(container)
 
         const weight = category.querySelector("[data-grade-category-weight]");
 
-        weight?.addEventListener("input", updateWeightTotal);
+        weight?.addEventListener("input", () => {
+
+            updateWeightTotal();
+
+            const periodCard = category.closest("[data-grading-period]");
+
+            if (periodCard) {
+                updatePeriodCategoryWeightTotal(periodCard);
+            }
+
+        });
 
         weight?.addEventListener("change", (event) => {
             runSave(() => updateGradeCategory(categoryId, { weight_percentage: Number(event.target.value) }));
         });
+
+        category.querySelector("[data-grade-category-period]")
+            ?.addEventListener("change", (event) => {
+                runSave(() => updateGradeCategory(categoryId, { period_id: event.target.value || null }));
+            });
 
         category.querySelector("[data-delete-grade-category]")
             ?.addEventListener("click", () => {
@@ -297,22 +364,41 @@ function bind(container)
 }
 
 /**
- * Live weight total while typing (saved on change).
+ * Live top-level weight total while typing (saved on change) — periods'
+ * own weights when the scheme uses them, else the flat categories'.
  */
 function updateWeightTotal()
 {
-    const total = Array.from(document.querySelectorAll("[data-grade-category-weight]"))
+    const usesPeriods = document.querySelector("[data-grading-scheme-editor]")?.dataset.usesPeriods === "1";
+
+    const selector = usesPeriods ? "[data-grading-period-weight]" : "[data-grade-category-weight]";
+
+    const total = Array.from(document.querySelectorAll(selector))
         .reduce((sum, input) => sum + Number(input.value || 0), 0);
 
-    const chip = document.querySelector("[data-scheme-weight-total]");
+    setWeightChip(document.querySelector("[data-scheme-weight-total]"), "Total", total);
+}
 
+/**
+ * Live weight total for one period's own categories.
+ */
+function updatePeriodCategoryWeightTotal(periodCard)
+{
+    const total = Array.from(periodCard.querySelectorAll("[data-grade-category-weight]"))
+        .reduce((sum, input) => sum + Number(input.value || 0), 0);
+
+    setWeightChip(periodCard.querySelector("[data-grading-period-weight-total]"), "Categories", total);
+}
+
+function setWeightChip(chip, label, total)
+{
     if (!chip) {
         return;
     }
 
     const ok = Math.abs(total - 100) < 0.001;
 
-    chip.textContent = `Total: ${Math.round(total * 100) / 100}%${ok ? "" : " — must be 100%"}`;
+    chip.textContent = `${label}: ${Math.round(total * 100) / 100}%${ok ? "" : " — must be 100%"}`;
     chip.classList.toggle("bg-emerald-100", ok);
     chip.classList.toggle("text-emerald-700", ok);
     chip.classList.toggle("bg-[#FFDAD6]", !ok);

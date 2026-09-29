@@ -72,6 +72,19 @@ export const recalculateGrades = () => request(`${base()}/recalculate`, "POST");
 
 /*
 |--------------------------------------------------------------------------
+| Grading periods
+|--------------------------------------------------------------------------
+*/
+
+export const createGradingPeriod = (payload) => request(`${base()}/scheme/periods`, "POST", payload);
+
+export const updateGradingPeriod = (periodId, payload) =>
+    request(`${base()}/scheme/periods/${periodId}`, "PATCH", payload);
+
+export const deleteGradingPeriod = (periodId) => request(`${base()}/scheme/periods/${periodId}`, "DELETE");
+
+/*
+|--------------------------------------------------------------------------
 | Gradebook grid (manual scores + override)
 |--------------------------------------------------------------------------
 */

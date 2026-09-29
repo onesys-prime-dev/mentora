@@ -222,6 +222,7 @@ class GradeService
                 'passing_percentage' => (float) $scheme['passing_percentage'],
             ],
             'categoryBreakdown' => $isPublished ? ($breakdown['categories'] ?? []) : [],
+            'periodBreakdown' => $isPublished ? ($breakdown['periods'] ?? []) : [],
         ];
     }
 }

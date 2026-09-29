@@ -22,6 +22,7 @@ class GradingSchemeModel extends Model
         'course_offering_id',
         'name',
         'is_system_default',
+        'uses_periods',
         'passing_percentage',
         'grade_scale_id',
         'status',

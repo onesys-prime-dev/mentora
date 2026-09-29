@@ -5,6 +5,7 @@ namespace App\Services\Courses\Grades;
 use CodeIgniter\Shield\Entities\User;
 
 use App\Models\Grades\GradingSchemeModel;
+use App\Models\Grades\GradingPeriodModel;
 use App\Models\Grades\GradeCategoryModel;
 use App\Models\Grades\GradeItemModel;
 use App\Models\Grades\GradebookItemScoreModel;
@@ -12,20 +13,22 @@ use App\Models\Grades\GradeScaleModel;
 use App\Models\Grades\GradeScaleItemModel;
 
 /**
- * A course offering's grading scheme: its categories, weights, grade items,
- * passing mark and grade scale.
+ * A course offering's grading scheme: its (optionally periodized) categories,
+ * weights, grade items, passing mark and grade scale.
  *
  * Every offering resolves to exactly one scheme — the first time one is
  * needed it's copied from the system default template (forOffering), so the
  * default is data, not code, and editing an offering's copy never touches it.
  *
- * Changes that alter how grades are computed (weights, categories, what
- * counts, passing mark, scale) mark the scheme `needs_recalculation`; final
- * grades only change when the instructor runs Recalculate.
+ * Changes that alter how grades are computed (weights, categories, periods,
+ * what counts, passing mark, scale) mark the scheme `needs_recalculation`;
+ * final grades only change when the instructor runs Recalculate. Turning
+ * grading periods on/off is the one exception — see updateScheme().
  */
 class GradingSchemeService
 {
     protected GradingSchemeModel $schemeModel;
+    protected GradingPeriodModel $periodModel;
     protected GradeCategoryModel $categoryModel;
     protected GradeItemModel $itemModel;
     protected GradebookItemScoreModel $scoreModel;
@@ -35,6 +38,7 @@ class GradingSchemeService
     public function __construct()
     {
         $this->schemeModel = new GradingSchemeModel();
+        $this->periodModel = new GradingPeriodModel();
         $this->categoryModel = new GradeCategoryModel();
         $this->itemModel = new GradeItemModel();
         $this->scoreModel = new GradebookItemScoreModel();
@@ -128,12 +132,15 @@ class GradingSchemeService
     */
 
     /**
-     * Everything the scheme editor shows: categories with their items, the
-     * weight total, out-of-sync items and the available grade scales.
+     * Everything the scheme editor shows: categories with their items (under
+     * their period, when the scheme uses periods), the weight total(s),
+     * out-of-sync items and the available grade scales.
      */
     public function describe(int $offeringId): array
     {
         $scheme = $this->forOffering($offeringId);
+
+        $usesPeriods = !empty($scheme['uses_periods']);
 
         $categories = $this->categoryModel->listForScheme((int) $scheme['id']);
 
@@ -161,17 +168,54 @@ class GradingSchemeService
             static fn (array $item) => !in_array((int) $item['category_id'], $categoryIds, true)
         ));
 
-        return [
+        $result = [
             'scheme' => $scheme,
+            'uses_periods' => $usesPeriods,
+            // Every active category regardless of period — always present,
+            // whichever mode the scheme is in.
             'categories' => $categories,
             'uncategorized' => $uncategorized,
-            'total_weight' => round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $categories)), 2),
             'out_of_sync_count' => count(array_filter($items, static fn ($item) => $item['is_out_of_sync'])),
             'scales' => $this->scaleModel->where('status', 'Active')->orderBy('id')->findAll(),
             'scale_items' => !empty($scheme['grade_scale_id'])
                 ? $this->scaleItemModel->listForScale((int) $scheme['grade_scale_id'])
                 : [],
         ];
+
+        if (!$usesPeriods) {
+            $result['periods'] = [];
+            $result['unassigned_categories'] = [];
+            $result['total_weight'] = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $categories)), 2);
+            return $result;
+        }
+
+        $periods = $this->periodModel->listForScheme((int) $scheme['id']);
+
+        $periodIds = array_map('intval', array_column($periods, 'id'));
+
+        foreach ($periods as &$period) {
+
+            $period['categories'] = array_values(array_filter(
+                $categories,
+                static fn (array $category) => (int) ($category['period_id'] ?? 0) === (int) $period['id']
+            ));
+
+            $period['weight_total'] = round(array_sum(array_map(
+                static fn ($c) => (float) $c['weight_percentage'],
+                $period['categories']
+            )), 2);
+
+        }
+        unset($period);
+
+        $result['periods'] = $periods;
+        $result['unassigned_categories'] = array_values(array_filter(
+            $categories,
+            static fn (array $category) => !in_array((int) ($category['period_id'] ?? 0), $periodIds, true)
+        ));
+        $result['total_weight'] = round(array_sum(array_map(static fn ($p) => (float) $p['weight_percentage'], $periods)), 2);
+
+        return $result;
     }
 
     /**
@@ -348,6 +392,25 @@ class GradingSchemeService
 
         }
 
+        if (array_key_exists('uses_periods', $data)) {
+
+            $usesPeriods = filter_var($data['uses_periods'], FILTER_VALIDATE_BOOLEAN);
+
+            // Turning periods on for the first time: wrap the existing
+            // categories into one "Full Term" period at 100% so this alone
+            // never changes a single number — only weight edits made
+            // afterward flag needs_recalculation, same as any other edit.
+            if ($usesPeriods && empty($scheme['uses_periods']) && $this->periodModel->listForScheme((int) $scheme['id']) === []) {
+                $this->wrapCategoriesIntoFullTermPeriod((int) $scheme['id']);
+            }
+
+            // Turning it off leaves categories' period_id links in place —
+            // the engine simply ignores them while the flag is off — so
+            // this is fully reversible either way.
+            $update['uses_periods'] = $usesPeriods ? 1 : 0;
+
+        }
+
         if ($affectsGrades) {
             $update['needs_recalculation'] = 1;
         }
@@ -368,20 +431,58 @@ class GradingSchemeService
     }
 
     /**
-     * Why the scheme can't be published yet, or null when it can.
+     * Why the scheme can't be published yet, or null when it can. When the
+     * scheme uses periods this checks both levels: the periods themselves
+     * must total 100%, and so must each period's own categories.
      */
     public function publishProblem(int $schemeId): ?string
     {
-        $categories = $this->categoryModel->listForScheme($schemeId);
+        $scheme = $this->schemeModel->find($schemeId);
 
-        if ($categories === []) {
-            return 'Add at least one category before publishing.';
+        if (empty($scheme['uses_periods'])) {
+
+            $categories = $this->categoryModel->listForScheme($schemeId);
+
+            if ($categories === []) {
+                return 'Add at least one category before publishing.';
+            }
+
+            $total = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $categories)), 2);
+
+            if (abs($total - 100) > 0.001) {
+                return "Category weights add up to {$total}% — they must total 100%.";
+            }
+
+            return null;
+
         }
 
-        $total = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $categories)), 2);
+        $periods = $this->periodModel->listForScheme($schemeId);
 
-        if (abs($total - 100) > 0.001) {
-            return "Category weights add up to {$total}% — they must total 100%.";
+        if ($periods === []) {
+            return 'Add at least one grading period before publishing.';
+        }
+
+        $periodTotal = round(array_sum(array_map(static fn ($p) => (float) $p['weight_percentage'], $periods)), 2);
+
+        if (abs($periodTotal - 100) > 0.001) {
+            return "Period weights add up to {$periodTotal}% — they must total 100%.";
+        }
+
+        foreach ($periods as $period) {
+
+            $categories = $this->categoryModel->listForPeriod((int) $period['id']);
+
+            if ($categories === []) {
+                return "Add at least one category to \"{$period['name']}\" before publishing.";
+            }
+
+            $total = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $categories)), 2);
+
+            if (abs($total - 100) > 0.001) {
+                return "\"{$period['name']}\"'s category weights add up to {$total}% — they must total 100%.";
+            }
+
         }
 
         return null;
@@ -409,12 +510,25 @@ class GradingSchemeService
             return ['success' => false, 'message' => 'Weight must be between 0 and 100.'];
         }
 
+        $periodId = null;
+
+        if (!empty($data['period_id'])) {
+
+            $periodId = (int) $data['period_id'];
+
+            if (!$this->ownedPeriod($scheme, $periodId)) {
+                return ['success' => false, 'message' => 'Grading period not found.'];
+            }
+
+        }
+
         $last = $this->categoryModel->where('grading_scheme_id', $scheme['id'])->orderBy('sort_order', 'DESC')->first();
 
         $now = date('Y-m-d H:i:s');
 
         $this->categoryModel->insert([
             'grading_scheme_id' => $scheme['id'],
+            'period_id' => $periodId,
             'name' => $name,
             'weight_percentage' => $weight,
             'sort_order' => $last ? (int) $last['sort_order'] + 1 : 1,
@@ -464,18 +578,180 @@ class GradingSchemeService
 
         }
 
+        if (array_key_exists('period_id', $data)) {
+
+            $periodId = !empty($data['period_id']) ? (int) $data['period_id'] : null;
+
+            if ($periodId !== null && !$this->ownedPeriod($scheme, $periodId)) {
+                return ['success' => false, 'message' => 'Grading period not found.'];
+            }
+
+            $update['period_id'] = $periodId;
+
+        }
+
         if ($update === []) {
             return ['success' => true, 'message' => 'Nothing to update.', 'category' => $category];
         }
 
         $this->categoryModel->update($categoryId, $update + ['updated_at' => date('Y-m-d H:i:s')]);
 
-        // A rename doesn't change anyone's grade; a weight change does.
-        if (array_key_exists('weight_percentage', $update) && (float) $update['weight_percentage'] !== (float) $category['weight_percentage']) {
+        // A rename doesn't change anyone's grade; a weight or period move does.
+        $weightChanged = array_key_exists('weight_percentage', $update)
+            && (float) $update['weight_percentage'] !== (float) $category['weight_percentage'];
+
+        $periodChanged = array_key_exists('period_id', $update)
+            && $update['period_id'] !== ($category['period_id'] !== null ? (int) $category['period_id'] : null);
+
+        if ($weightChanged || $periodChanged) {
             $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
         }
 
         return ['success' => true, 'message' => 'Category updated.', 'category' => $this->categoryModel->find($categoryId)];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Grading periods
+    |--------------------------------------------------------------------------
+    */
+
+    public function createPeriod(int $offeringId, array $data): array
+    {
+        $scheme = $this->forOffering($offeringId);
+
+        $name = trim((string) ($data['name'] ?? ''));
+
+        if ($name === '') {
+            return ['success' => false, 'message' => 'Period name is required.'];
+        }
+
+        $weight = (float) ($data['weight_percentage'] ?? 0);
+
+        if ($weight < 0 || $weight > 100) {
+            return ['success' => false, 'message' => 'Weight must be between 0 and 100.'];
+        }
+
+        $last = $this->periodModel->where('grading_scheme_id', $scheme['id'])->orderBy('sort_order', 'DESC')->first();
+
+        $now = date('Y-m-d H:i:s');
+
+        $this->periodModel->insert([
+            'grading_scheme_id' => $scheme['id'],
+            'name' => $name,
+            'weight_percentage' => $weight,
+            'sort_order' => $last ? (int) $last['sort_order'] + 1 : 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+            'status' => 'Active',
+        ]);
+
+        $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
+
+        return ['success' => true, 'message' => 'Period added.', 'period' => $this->periodModel->find($this->periodModel->getInsertID())];
+    }
+
+    public function updatePeriod(int $offeringId, int $periodId, array $data): array
+    {
+        $scheme = $this->forOffering($offeringId);
+
+        $period = $this->ownedPeriod($scheme, $periodId);
+
+        if (!$period) {
+            return ['success' => false, 'message' => 'Grading period not found.'];
+        }
+
+        $update = [];
+
+        if (array_key_exists('name', $data)) {
+
+            $name = trim((string) $data['name']);
+
+            if ($name === '') {
+                return ['success' => false, 'message' => 'Period name is required.'];
+            }
+
+            $update['name'] = $name;
+
+        }
+
+        if (array_key_exists('weight_percentage', $data)) {
+
+            $weight = (float) $data['weight_percentage'];
+
+            if ($weight < 0 || $weight > 100) {
+                return ['success' => false, 'message' => 'Weight must be between 0 and 100.'];
+            }
+
+            $update['weight_percentage'] = $weight;
+
+        }
+
+        if ($update === []) {
+            return ['success' => true, 'message' => 'Nothing to update.', 'period' => $period];
+        }
+
+        $this->periodModel->update($periodId, $update + ['updated_at' => date('Y-m-d H:i:s')]);
+
+        if (array_key_exists('weight_percentage', $update) && (float) $update['weight_percentage'] !== (float) $period['weight_percentage']) {
+            $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
+        }
+
+        return ['success' => true, 'message' => 'Period updated.', 'period' => $this->periodModel->find($periodId)];
+    }
+
+    /**
+     * Archives the period and its categories (their items become
+     * Uncategorized, same as deleteCategory) so nothing is left silently
+     * uncounted.
+     */
+    public function deletePeriod(int $offeringId, int $periodId): array
+    {
+        $scheme = $this->forOffering($offeringId);
+
+        $period = $this->ownedPeriod($scheme, $periodId);
+
+        if (!$period) {
+            return ['success' => false, 'message' => 'Grading period not found.'];
+        }
+
+        foreach ($this->categoryModel->listForPeriod($periodId) as $category) {
+            $this->deleteCategory($offeringId, (int) $category['id']);
+        }
+
+        $this->periodModel->update($periodId, ['status' => 'Archived', 'updated_at' => date('Y-m-d H:i:s')]);
+
+        $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
+
+        return ['success' => true, 'message' => 'Period removed.'];
+    }
+
+    /**
+     * Wraps every existing Active category into one new "Full Term" period
+     * at 100% — called once, the moment periods are switched on, so the
+     * grade a student had a second before stays exactly the same after.
+     */
+    private function wrapCategoriesIntoFullTermPeriod(int $schemeId): void
+    {
+        $now = date('Y-m-d H:i:s');
+
+        $this->periodModel->insert([
+            'grading_scheme_id' => $schemeId,
+            'name' => 'Full Term',
+            'weight_percentage' => 100,
+            'sort_order' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+            'status' => 'Active',
+        ]);
+
+        $periodId = (int) $this->periodModel->getInsertID();
+
+        $this->categoryModel
+            ->where('grading_scheme_id', $schemeId)
+            ->where('status', 'Active')
+            ->set(['period_id' => $periodId])
+            ->update();
     }
 
     /**
@@ -686,6 +962,17 @@ class GradingSchemeService
             && (int) $category['grading_scheme_id'] === (int) $scheme['id']
             && $category['status'] === 'Active'
                 ? $category
+                : null;
+    }
+
+    private function ownedPeriod(array $scheme, int $periodId): ?array
+    {
+        $period = $this->periodModel->find($periodId);
+
+        return $period
+            && (int) $period['grading_scheme_id'] === (int) $scheme['id']
+            && $period['status'] === 'Active'
+                ? $period
                 : null;
     }
 

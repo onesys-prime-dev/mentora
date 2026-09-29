@@ -4,8 +4,14 @@
  * Fields autosave (resources/js/pages/courses/features/grades/scheme/scheme.js);
  * anything that changes how grades are computed flags the scheme for an
  * explicit Recalculate.
+ *
+ * Grading periods (Prelim / Midterm / Finals, ...) are optional per scheme
+ * (data-uses-periods). Off, categories render flat exactly as before. On,
+ * each period is its own card holding the same category cards one level
+ * deeper, plus its own weight total.
  */
 $isPublished = $scheme['status'] === 'Published';
+$usesPeriods = !empty($uses_periods);
 $weightOk = abs($total_weight - 100) < 0.001;
 
 $typeBadge = static fn (array $item) => match (true) {
@@ -16,11 +22,39 @@ $typeBadge = static fn (array $item) => match (true) {
 
 $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
 
-$categoryOptions = static function (?int $selected) use ($categories): string {
+$periodCategoryLists = array_map(static fn ($p) => $p['categories'], $periods);
+$periodCategoryLists[] = $unassigned_categories;
+
+$allCategories = $usesPeriods ? array_merge(...$periodCategoryLists) : $categories;
+
+// Category names commonly repeat across periods ("Quizzes" in Prelim AND
+// Midterm) — prefix with the period name so the picker stays unambiguous.
+$categoryPeriodName = [];
+if ($usesPeriods) {
+    foreach ($periods as $period) {
+        foreach ($period['categories'] as $category) {
+            $categoryPeriodName[(int) $category['id']] = $period['name'];
+        }
+    }
+}
+
+$categoryOptions = static function (?int $selected) use ($allCategories, $categoryPeriodName): string {
     $html = '<option value="">Uncategorized (doesn\'t count)</option>';
-    foreach ($categories as $category) {
+    foreach ($allCategories as $category) {
+        $label = isset($categoryPeriodName[(int) $category['id']])
+            ? $categoryPeriodName[(int) $category['id']] . ' — ' . $category['name']
+            : $category['name'];
         $html .= '<option value="' . (int) $category['id'] . '"' . ((int) $category['id'] === $selected ? ' selected' : '') . '>'
-            . esc($category['name']) . '</option>';
+            . esc($label) . '</option>';
+    }
+    return $html;
+};
+
+$periodOptions = static function (?int $selected) use ($periods): string {
+    $html = '<option value="">Unassigned (doesn\'t count)</option>';
+    foreach ($periods as $period) {
+        $html .= '<option value="' . (int) $period['id'] . '"' . ((int) $period['id'] === $selected ? ' selected' : '') . '>'
+            . esc($period['name']) . '</option>';
     }
     return $html;
 };
@@ -63,9 +97,60 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
     </div>
     <?php return (string) ob_get_clean();
 };
+
+/**
+ * A category card: name/weight/delete, its items, "+ Add item"; the
+ * period picker only shows once the scheme actually uses periods.
+ */
+$renderCategory = static function (array $category) use ($renderItem, $points, $periodOptions, $usesPeriods): string {
+    ob_start(); ?>
+    <div class="flex flex-col gap-3 rounded-2xl border border-[#A9A9A9]/50 p-5" data-grade-category="<?= (int) $category['id'] ?>">
+
+        <div class="flex flex-wrap items-center gap-3">
+
+            <input type="text" value="<?= esc($category['name'], 'attr') ?>" data-grade-category-name
+                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 font-bold text-[#646464] outline-none transition hover:border-gray-200 focus:border-[#0040A6]">
+
+            <label class="flex items-center gap-1 text-sm text-gray-500">
+                Weight
+                <input type="number" min="0" max="100" step="0.5" value="<?= $points($category['weight_percentage']) ?>" data-grade-category-weight
+                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-[#0040A6]">
+                %
+            </label>
+
+            <?php if ($usesPeriods): ?>
+                <select data-grade-category-period class="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-[#0040A6]" title="Period">
+                    <?= $periodOptions($category['period_id'] !== null ? (int) $category['period_id'] : null) ?>
+                </select>
+            <?php endif; ?>
+
+            <button type="button" data-delete-grade-category title="Remove category"
+                class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <?php if ($category['items'] === []): ?>
+                <span class="text-xs text-gray-400">No items yet — published quizzes/assignments land here automatically, or add a manual item.</span>
+            <?php endif; ?>
+            <?php foreach ($category['items'] as $item): ?>
+                <?= $renderItem($item) ?>
+            <?php endforeach; ?>
+        </div>
+
+        <button type="button" data-add-grade-item data-category-id="<?= (int) $category['id'] ?>"
+            class="self-start text-xs font-semibold text-[#0040A6] transition hover:underline">
+            + Add manual item (Attendance, Participation…)
+        </button>
+
+    </div>
+    <?php return (string) ob_get_clean();
+};
 ?>
 
-<div class="p-10 flex flex-col gap-8" data-grading-scheme-editor data-scheme-status="<?= esc($scheme['status'], 'attr') ?>">
+<div class="p-10 flex flex-col gap-8" data-grading-scheme-editor data-scheme-status="<?= esc($scheme['status'], 'attr') ?>" data-uses-periods="<?= $usesPeriods ? '1' : '0' ?>">
 
     <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
@@ -154,63 +239,121 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
         </div>
     <?php endif; ?>
 
-    <!-- Categories -->
-    <div class="flex flex-col gap-4">
+    <div class="flex items-center justify-between rounded-xl border border-gray-200 px-5 py-4">
 
-        <div class="flex items-center justify-between">
-            <span class="text-lg font-bold text-[#0040A6]">Categories</span>
-            <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-emerald-100 text-emerald-700' : 'bg-[#FFDAD6] text-[#B3261E]' ?>" data-scheme-weight-total>
-                Total: <?= esc($points($total_weight)) ?>%<?= $weightOk ? '' : ' — must be 100%' ?>
-            </span>
+        <div class="flex flex-col gap-0.5">
+            <span class="text-sm font-medium text-gray-700">Use grading periods</span>
+            <span class="text-xs text-gray-400">Split the term into Prelim / Midterm / Finals (or your own), each with its own weight and categories.</span>
         </div>
 
-        <?php foreach ($categories as $category): ?>
+        <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+            <input type="checkbox" class="peer sr-only" data-scheme-uses-periods <?= $usesPeriods ? 'checked' : '' ?>>
+            <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+            <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+        </label>
 
-            <div class="flex flex-col gap-3 rounded-2xl border border-[#A9A9A9]/50 p-5" data-grade-category="<?= (int) $category['id'] ?>">
+    </div>
 
-                <div class="flex flex-wrap items-center gap-3">
+    <?php if ($usesPeriods): ?>
 
-                    <input type="text" value="<?= esc($category['name'], 'attr') ?>" data-grade-category-name
-                        class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 font-bold text-[#646464] outline-none transition hover:border-gray-200 focus:border-[#0040A6]">
+        <!-- Periods -->
+        <div class="flex flex-col gap-4" data-grading-periods>
 
-                    <label class="flex items-center gap-1 text-sm text-gray-500">
-                        Weight
-                        <input type="number" min="0" max="100" step="0.5" value="<?= $points($category['weight_percentage']) ?>" data-grade-category-weight
-                            class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-[#0040A6]">
-                        %
-                    </label>
+            <div class="flex items-center justify-between">
+                <span class="text-lg font-bold text-[#0040A6]">Grading Periods</span>
+                <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-emerald-100 text-emerald-700' : 'bg-[#FFDAD6] text-[#B3261E]' ?>" data-scheme-weight-total>
+                    Total: <?= esc($points($total_weight)) ?>%<?= $weightOk ? '' : ' — must be 100%' ?>
+                </span>
+            </div>
 
-                    <button type="button" data-delete-grade-category title="Remove category"
-                        class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            <?php foreach ($periods as $period): ?>
+
+                <?php $periodWeightOk = abs((float) $period['weight_total'] - 100) < 0.001; ?>
+
+                <div class="flex flex-col gap-4 rounded-2xl border-2 border-[#0040A6]/20 p-5" data-grading-period="<?= (int) $period['id'] ?>">
+
+                    <div class="flex flex-wrap items-center gap-3">
+
+                        <input type="text" value="<?= esc($period['name'], 'attr') ?>" data-grading-period-name
+                            class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-lg font-bold text-[#0040A6] outline-none transition hover:border-gray-200 focus:border-[#0040A6]">
+
+                        <label class="flex items-center gap-1 text-sm text-gray-500">
+                            Weight
+                            <input type="number" min="0" max="100" step="0.5" value="<?= $points($period['weight_percentage']) ?>" data-grading-period-weight
+                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-[#0040A6]">
+                            %
+                        </label>
+
+                        <button type="button" data-delete-grading-period title="Remove period"
+                            class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+
+                        <span class="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold <?= $periodWeightOk ? 'bg-emerald-100 text-emerald-700' : 'bg-[#FFDAD6] text-[#B3261E]' ?>" data-grading-period-weight-total>
+                            Categories: <?= esc($points($period['weight_total'])) ?>%<?= $periodWeightOk ? '' : ' — must be 100%' ?>
+                        </span>
+
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        <?php if ($period['categories'] === []): ?>
+                            <span class="text-xs text-gray-400">No categories yet.</span>
+                        <?php endif; ?>
+                        <?php foreach ($period['categories'] as $category): ?>
+                            <?= $renderCategory($category) ?>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <button type="button" data-add-grade-category data-period-id="<?= (int) $period['id'] ?>"
+                        class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
+                        + Add category
                     </button>
 
                 </div>
 
-                <div class="flex flex-col gap-2">
-                    <?php if ($category['items'] === []): ?>
-                        <span class="text-xs text-gray-400">No items yet — published quizzes/assignments land here automatically, or add a manual item.</span>
-                    <?php endif; ?>
-                    <?php foreach ($category['items'] as $item): ?>
-                        <?= $renderItem($item) ?>
-                    <?php endforeach; ?>
-                </div>
+            <?php endforeach; ?>
 
-                <button type="button" data-add-grade-item data-category-id="<?= (int) $category['id'] ?>"
-                    class="self-start text-xs font-semibold text-[#0040A6] transition hover:underline">
-                    + Add manual item (Attendance, Participation…)
-                </button>
+            <button type="button" data-add-grading-period
+                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
+                + Add grading period
+            </button>
 
+        </div>
+
+        <?php if ($unassigned_categories !== []): ?>
+            <div class="flex flex-col gap-3 rounded-2xl border border-dashed border-[#FFE3A3] bg-[#FFF8E6] p-5" data-unassigned-categories>
+                <span class="font-bold text-[#946200]">Not in a period</span>
+                <span class="text-xs text-[#946200]">These categories don't count toward the grade until you put them in a period.</span>
+                <?php foreach ($unassigned_categories as $category): ?>
+                    <?= $renderCategory($category) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
+    <?php else: ?>
+
+        <!-- Categories (flat) -->
+        <div class="flex flex-col gap-4">
+
+            <div class="flex items-center justify-between">
+                <span class="text-lg font-bold text-[#0040A6]">Categories</span>
+                <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-emerald-100 text-emerald-700' : 'bg-[#FFDAD6] text-[#B3261E]' ?>" data-scheme-weight-total>
+                    Total: <?= esc($points($total_weight)) ?>%<?= $weightOk ? '' : ' — must be 100%' ?>
+                </span>
             </div>
 
-        <?php endforeach; ?>
+            <?php foreach ($categories as $category): ?>
+                <?= $renderCategory($category) ?>
+            <?php endforeach; ?>
 
-        <button type="button" data-add-grade-category
-            class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
-            + Add category
-        </button>
+            <button type="button" data-add-grade-category
+                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
+                + Add category
+            </button>
 
-    </div>
+        </div>
+
+    <?php endif; ?>
 
     <?php if ($uncategorized !== []): ?>
         <div class="flex flex-col gap-3 rounded-2xl border border-dashed border-gray-300 p-5" data-uncategorized-items>

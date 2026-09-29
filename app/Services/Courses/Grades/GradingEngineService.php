@@ -6,6 +6,7 @@ use CodeIgniter\Shield\Entities\User;
 
 use App\Models\Assessments\GradebookRecordModel;
 use App\Models\Grades\GradingSchemeModel;
+use App\Models\Grades\GradingPeriodModel;
 use App\Models\Grades\GradeCategoryModel;
 use App\Models\Grades\GradeItemModel;
 use App\Models\Grades\GradebookItemScoreModel;
@@ -17,18 +18,22 @@ use App\Models\Grades\GradeHistoryModel;
  * caches them in gradebook_records. The one place course grades are
  * calculated — the Grades pages and the grade-sheet export all read it.
  *
- * Rule (v1, weighted categories):
+ * Rule (weighted categories, optionally grouped into weighted periods):
  *   category % = points earned ÷ points possible over its GRADED items
  *                (not-yet-graded items are left out, not counted as zero)
- *   final %    = Σ(category % × weight) ÷ Σ(weight), over categories that
- *                have graded work — an empty category doesn't pull the
+ *   [with periods] period % = Σ(category % × weight) ÷ Σ(weight), over that
+ *                period's categories that have graded work
+ *   final %    = Σ(entry % × weight) ÷ Σ(weight), over periods (if the
+ *                scheme uses them) or else categories directly — entries
+ *                with no data are left out, so an empty one never drags the
  *                grade down
- * Uncategorized items don't count. The final % maps to the scheme's grade
- * scale; remarks come from its passing mark.
+ * Uncategorized items/categories don't count. The final % maps to the
+ * scheme's grade scale; remarks come from its passing mark.
  */
 class GradingEngineService
 {
     protected GradingSchemeModel $schemeModel;
+    protected GradingPeriodModel $periodModel;
     protected GradeCategoryModel $categoryModel;
     protected GradeItemModel $itemModel;
     protected GradebookItemScoreModel $scoreModel;
@@ -39,6 +44,7 @@ class GradingEngineService
     public function __construct()
     {
         $this->schemeModel = new GradingSchemeModel();
+        $this->periodModel = new GradingPeriodModel();
         $this->categoryModel = new GradeCategoryModel();
         $this->itemModel = new GradeItemModel();
         $this->scoreModel = new GradebookItemScoreModel();
@@ -131,6 +137,7 @@ class GradingEngineService
         return [
             'offeringId' => $offeringId,
             'scheme' => $scheme,
+            'periods' => !empty($scheme['uses_periods']) ? $this->periodModel->listForScheme((int) $scheme['id']) : [],
             'categories' => $categories,
             'items' => $items,
             'studentIds' => $studentIds,
@@ -145,13 +152,11 @@ class GradingEngineService
      * One student's breakdown and final grade.
      *
      * @return array{percentage: ?float, points_earned: float, points_possible: float,
-     *               categories: list<array>, band: ?array, remarks: string}
+     *               categories: list<array>, periods: list<array>, band: ?array, remarks: string}
      */
     public function compute(array $context, int $studentId, array $overrideScores = []): array
     {
         $categories = [];
-        $weighted = 0.0;
-        $weightWithData = 0.0;
         $pointsEarned = 0.0;
         $pointsPossible = 0.0;
 
@@ -181,20 +186,14 @@ class GradingEngineService
 
             $percentage = $possible > 0 ? $earned / $possible * 100 : null;
 
-            $weight = (float) $category['weight_percentage'];
-
-            if ($percentage !== null && $weight > 0) {
-                $weighted += $percentage * $weight;
-                $weightWithData += $weight;
-            }
-
             $pointsEarned += $earned;
             $pointsPossible += $possible;
 
             $categories[] = [
                 'id' => (int) $category['id'],
+                'period_id' => $category['period_id'] !== null ? (int) $category['period_id'] : null,
                 'name' => $category['name'],
-                'weight' => $weight,
+                'weight' => (float) $category['weight_percentage'],
                 'earned' => $earned,
                 'possible' => $possible,
                 'graded_count' => $graded,
@@ -203,16 +202,81 @@ class GradingEngineService
 
         }
 
-        $final = $weightWithData > 0 ? round($weighted / $weightWithData, 2) : null;
+        $periods = [];
+
+        if ($context['periods'] !== []) {
+
+            foreach ($context['periods'] as $period) {
+
+                $periodCategories = array_values(array_filter(
+                    $categories,
+                    static fn (array $category) => $category['period_id'] === (int) $period['id']
+                ));
+
+                $percentage = $this->rollup(array_map(
+                    static fn (array $category) => [$category['percentage'], $category['weight']],
+                    $periodCategories
+                ));
+
+                $periods[] = [
+                    'id' => (int) $period['id'],
+                    'name' => $period['name'],
+                    'weight' => (float) $period['weight_percentage'],
+                    'percentage' => $percentage,
+                    'categories' => $periodCategories,
+                ];
+
+            }
+
+            // A category with no period doesn't count (mirrors an
+            // uncategorized item), same as it wouldn't in flat mode either.
+            $final = $this->rollup(array_map(
+                static fn (array $period) => [$period['percentage'], $period['weight']],
+                $periods
+            ));
+
+        } else {
+
+            $final = $this->rollup(array_map(
+                static fn (array $category) => [$category['percentage'], $category['weight']],
+                $categories
+            ));
+
+        }
 
         return [
             'percentage' => $final,
             'points_earned' => round($pointsEarned, 2),
             'points_possible' => round($pointsPossible, 2),
             'categories' => $categories,
+            'periods' => $periods,
             'band' => $this->bandFor($context['bands'], $final),
             'remarks' => $this->remarksFor($final, (float) $context['scheme']['passing_percentage']),
         ];
+    }
+
+    /**
+     * Weighted average over entries that have data; entries with no
+     * percentage are left out entirely rather than counted as zero, so one
+     * empty category/period never drags the rest of the grade down.
+     *
+     * @param list<array{0: ?float, 1: float}> $entries [percentage, weight]
+     */
+    private function rollup(array $entries): ?float
+    {
+        $weighted = 0.0;
+        $weightWithData = 0.0;
+
+        foreach ($entries as [$percentage, $weight]) {
+
+            if ($percentage !== null && $weight > 0) {
+                $weighted += $percentage * $weight;
+                $weightWithData += $weight;
+            }
+
+        }
+
+        return $weightWithData > 0 ? round($weighted / $weightWithData, 2) : null;
     }
 
     /**

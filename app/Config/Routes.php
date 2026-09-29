@@ -147,6 +147,11 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->post('(:num)/grades/scheme/items/(:num)/resync', 'Courses\Grades\GradingSchemeController::resyncItem/$1/$2');
         $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
 
+        // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
+        $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
+        $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');
+
         // Gradebook grid: manual item scores + final-grade override
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');

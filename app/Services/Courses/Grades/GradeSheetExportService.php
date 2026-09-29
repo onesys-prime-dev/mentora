@@ -170,6 +170,12 @@ class GradeSheetExportService
                 $categoryPercent[$category['id']] = $category['percentage'];
             }
 
+            $periodPercent = [];
+
+            foreach ($student['result']['periods'] as $period) {
+                $periodPercent[$period['id']] = $period['percentage'];
+            }
+
             $row = [];
 
             foreach ($layout->columns() as $column) {
@@ -182,6 +188,9 @@ class GradeSheetExportService
                     'category' => $formulas
                         ? $layout->categoryFormula($column['category'], $rowNumber)
                         : $categoryPercent[(int) $column['category']['id']] ?? null,
+                    'period' => $formulas
+                        ? $layout->periodFormula($column['period'], $rowNumber)
+                        : $periodPercent[(int) $column['period']['id']] ?? null,
                     'final' => $formulas ? $layout->finalFormula($rowNumber) : $student['result']['percentage'],
                     'grade' => $formulas ? $layout->gradeFormula($rowNumber) : ($student['result']['band']['name'] ?? null),
                     'remarks' => $formulas ? $layout->remarksFormula($rowNumber) : $student['result']['remarks'],
@@ -263,7 +272,7 @@ class GradeSheetExportService
 
             }
 
-            if (in_array($column['type'], ['category', 'final'], true)) {
+            if (in_array($column['type'], ['category', 'period', 'final'], true)) {
                 $sheet->getStyle($range)->getNumberFormat()->setFormatCode('0.00');
             }
 

@@ -217,6 +217,7 @@ class GradeSheetImportService
 
                 $expected = match ($column['type']) {
                     'category' => $layout->categoryFormula($column['category'], $rowNumber),
+                    'period' => $layout->periodFormula($column['period'], $rowNumber),
                     'final' => $layout->finalFormula($rowNumber),
                     'grade' => $layout->gradeFormula($rowNumber),
                     'remarks' => $layout->remarksFormula($rowNumber),

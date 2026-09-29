@@ -92,6 +92,33 @@ class GradingSchemeController extends BaseController
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Grading periods
+    |--------------------------------------------------------------------------
+    */
+
+    public function storePeriod(int $offeringId)
+    {
+        return $this->response->setJSON(
+            $this->schemeService->createPeriod($offeringId, $this->request->getJSON(true) ?? [])
+        );
+    }
+
+    public function updatePeriod(int $offeringId, int $periodId)
+    {
+        return $this->response->setJSON(
+            $this->schemeService->updatePeriod($offeringId, $periodId, $this->request->getJSON(true) ?? [])
+        );
+    }
+
+    public function deletePeriod(int $offeringId, int $periodId)
+    {
+        return $this->response->setJSON(
+            $this->schemeService->deletePeriod($offeringId, $periodId)
+        );
+    }
+
     /**
      * The gradebook grid: manual scores + final grades, with override.
      */
