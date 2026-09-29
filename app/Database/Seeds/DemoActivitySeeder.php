@@ -400,92 +400,74 @@ class DemoActivitySeeder extends DemoSeeder
 
     /*
     |--------------------------------------------------------------------------
-    | Gradebook — one row per enrolled student, same counting rule as the app
+    | Gradebook — built by the real grading engine, not computed here
     |--------------------------------------------------------------------------
     |
-    | Quizzes count their best graded attempt, assignments their latest graded
-    | one (AssessmentResultService). Remarks give the Grades page its spread:
-    | Passed (75%+), Failed (below 75%), Incomplete (no graded work yet).
+    | Each offering gets its scheme (a copy of the system default, which also
+    | turns its published assessments into grade items with the students'
+    | counted scores). IT101-A is then customised to show the rest:
+    | Quizzes 40% / Assignments 40% / Participation 20%, with a manual
+    | "Class Participation" item scored for most of the class. Final grades
+    | come from GradingEngineService::recalculateOffering().
     |
     */
 
     private function seedGradebook(): void
     {
-        $rows = $this->db->table('assessment_submissions s')
-            ->select('s.student_id, s.assessment_id, s.score, s.submitted_at, a.course_id, a.total_points, t.name AS type')
-            ->join('assessments a', 'a.id = s.assessment_id')
-            ->join('assessment_types t', 't.id = a.assessment_type_id')
-            ->where('s.is_graded', 1)
-            ->orderBy('s.submitted_at')
-            ->get()->getResultArray();
+        $schemes = new \App\Services\Courses\Grades\GradingSchemeService();
+        $engine = new \App\Services\Courses\Grades\GradingEngineService();
+        $scores = new \App\Services\Courses\Grades\GradebookSyncService();
 
-        $counted = [];
+        $offerings = $this->db->table('course_offerings')->select('id')->get()->getResultArray();
 
-        foreach ($rows as $row) {
-
-            $key = "{$row['course_id']}:{$row['student_id']}:{$row['assessment_id']}";
-
-            $keep = !isset($counted[$key])
-                || $row['type'] !== 'Quiz'
-                || (float) $row['score'] >= (float) $counted[$key]['score'];
-
-            if ($keep) {
-                $counted[$key] = $row;
-            }
-
+        foreach ($offerings as $offering) {
+            $schemes->forOffering((int) $offering['id']);
         }
 
-        $totals = [];
+        // IT101-A: a customised scheme with a manual item.
+        $offeringId = $this->offeringId('IT101', 'A');
+        $instructorId = $this->userId('instructor1@mentora.test');
 
-        // Every enrolled student gets a row, graded work or not.
-        $enrolled = $this->db->table('enrollments e')
-            ->select('e.student_user_id, o.course_id')
-            ->join('course_offerings o', 'o.id = e.offering_id')
-            ->get()->getResultArray();
+        $scheme = $schemes->forOffering($offeringId);
 
-        foreach ($enrolled as $enrollment) {
-            $key = "{$enrollment['course_id']}:{$enrollment['student_user_id']}";
-            $totals[$key] ??= ['course_id' => (int) $enrollment['course_id'], 'student_id' => (int) $enrollment['student_user_id'], 'earned' => 0, 'possible' => 0];
+        foreach ($this->db->table('grade_categories')->where('grading_scheme_id', $scheme['id'])->get()->getResultArray() as $category) {
+            $this->db->table('grade_categories')->where('id', $category['id'])->update(['weight_percentage' => 40]);
         }
 
-        foreach ($counted as $row) {
-            $key = "{$row['course_id']}:{$row['student_id']}";
-            $totals[$key]['course_id'] = (int) $row['course_id'];
-            $totals[$key]['student_id'] = (int) $row['student_id'];
-            $totals[$key]['earned'] = ($totals[$key]['earned'] ?? 0) + (float) $row['score'];
-            $totals[$key]['possible'] = ($totals[$key]['possible'] ?? 0) + (float) $row['total_points'];
+        $this->db->table('grade_categories')->insert([
+            'grading_scheme_id' => $scheme['id'],
+            'name' => 'Participation',
+            'weight_percentage' => 20,
+            'sort_order' => 3,
+            'created_at' => $this->at('-30 days'),
+            'updated_at' => $this->at('-30 days'),
+            'status' => 'Active',
+        ]);
+
+        $participationId = (int) $this->db->insertID();
+
+        $this->db->table('grade_items')->insert([
+            'grading_scheme_id' => $scheme['id'],
+            'category_id' => $participationId,
+            'assessment_id' => null,
+            'name' => 'Class Participation',
+            'max_points' => 10,
+            'sort_order' => 100,
+            'created_by' => $instructorId,
+            'created_at' => $this->at('-30 days'),
+            'updated_at' => $this->at('-30 days'),
+            'status' => 'Active',
+        ]);
+
+        $participationItemId = (int) $this->db->insertID();
+
+        // student5 has none yet — it's left out, not counted as zero.
+        foreach (['student1' => 9, 'student2' => 8, 'student3' => 7.5, 'student4' => 6] as $student => $points) {
+            $scores->setManualScore($offeringId, $participationItemId, $this->student($student), $points, $instructorId);
         }
 
-        foreach ($totals as $total) {
-
-            $hasGrades = $total['possible'] > 0;
-
-            $percentage = $hasGrades ? round($total['earned'] / $total['possible'] * 100, 2) : 0;
-
-            $remarks = match (true) {
-                !$hasGrades => 'Incomplete',
-                $percentage >= 75 => 'Passed',
-                default => 'Failed',
-            };
-
-            $this->db->table('gradebook_records')->insert([
-                'course_id' => $total['course_id'],
-                'student_id' => $total['student_id'],
-                'calculated_final_grade' => $percentage,
-                'overridden_final_grade' => null,
-                'is_override_final_grade' => 0,
-                'overall_percentage' => $percentage,
-                'remarks' => $remarks,
-                'instructor_remarks' => $hasGrades ? null : 'No submissions recorded yet.',
-                'override_reason' => null,
-                'last_calculated_at' => $this->at(),
-                'created_by' => null,
-                'created_at' => $this->at(),
-                'updated_by' => null,
-                'updated_at' => null,
-                'status' => 'Active',
-            ]);
-
+        foreach ($offerings as $offering) {
+            $engine->recalculateOffering((int) $offering['id']);
         }
     }
 }

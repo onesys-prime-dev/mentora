@@ -153,6 +153,16 @@ class ContentDeletionService
         $db->transStart();
 
         if ($assessmentIds !== []) {
+
+            // Their gradebook items stop counting but are kept (archived,
+            // with scores) for history; the grading scheme is flagged for
+            // recalculation.
+            $gradeItems = new \App\Services\Courses\Grades\GradeItemSyncService();
+
+            foreach ($assessmentIds as $assessmentId) {
+                $gradeItems->archiveForAssessment($assessmentId);
+            }
+
             $db->table('assessments')->whereIn('id', $assessmentIds)->delete();
         }
 

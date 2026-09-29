@@ -1367,6 +1367,11 @@ class ModuleService
             $assessmentUpdate['updated_at'] = date('Y-m-d H:i:s');
 
             $this->assessmentModel->update($assessment['id'], $assessmentUpdate);
+
+            // Published from Modules: add it to the gradebook too.
+            if (($assessmentUpdate['status'] ?? null) === 'Published') {
+                (new \App\Services\Courses\Grades\GradeItemSyncService())->syncFromAssessment((int) $assessment['id']);
+            }
         }
     }
 

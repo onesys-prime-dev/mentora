@@ -1,5 +1,8 @@
-import { fetchGrades } from "./api.js";
+import { fetchGrades, recalculateGrades } from "./api.js";
 import { state } from "./state.js";
+import { loadGradingScheme } from "./scheme/scheme.js";
+import { loadGradebookRoster } from "./roster/roster.js";
+import { initializeGradeSheet } from "./import-export/grade-sheet.js";
 
 /*
  * Reuses the Assessments feature's own Grade Work screen rather than
@@ -29,6 +32,8 @@ export async function initialize()
 
         bindAssessmentLinks();
 
+        bindGradebookToolbar();
+
     }
 
     catch (error) {
@@ -45,6 +50,40 @@ export async function initialize()
         state.loading = false;
 
     }
+}
+
+/**
+ * Instructor: grading scheme editor, Recalculate, offline grade sheet.
+ */
+function bindGradebookToolbar()
+{
+    if (!document.querySelector("[data-gradebook-toolbar]")) {
+        return;
+    }
+
+    document.querySelector("[data-open-grading-scheme]")
+        ?.addEventListener("click", () => loadGradingScheme(initialize));
+
+    document.querySelector("[data-open-gradebook-roster]")
+        ?.addEventListener("click", () => loadGradebookRoster(initialize));
+
+    document.querySelectorAll("[data-recalculate-grades]").forEach((button) => {
+        button.addEventListener("click", async () => {
+
+            button.disabled = true;
+
+            try {
+                await recalculateGrades();
+            } catch (error) {
+                console.error(error);
+            }
+
+            await initialize();
+
+        });
+    });
+
+    initializeGradeSheet(initialize);
 }
 
 function bindAssessmentLinks()

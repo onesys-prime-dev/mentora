@@ -14,6 +14,7 @@ use App\Models\Assessments\AssessmentTypeModel;
 
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Files\FileModel;
+use App\Services\Courses\Grades\GradebookSyncService;
 
 class GradeWorkService
 {
@@ -238,6 +239,9 @@ class GradeWorkService
             'is_graded' => 0,
         ]);
 
+        // Another attempt may count now (or none) — keep the gradebook in step.
+        (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $submission['student_id']);
+
         return [
             'success' => true,
             'message' => 'Grading reopened.',
@@ -358,6 +362,9 @@ class GradeWorkService
                 'status' => 'Graded',
             ]
         );
+
+        // Mirror the counted score into the gradebook (and the final grade).
+        (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $submission['student_id']);
 
         return [
             'success' => true,

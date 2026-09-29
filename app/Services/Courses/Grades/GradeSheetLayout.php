@@ -1,0 +1,290 @@
+<?php
+
+namespace App\Services\Courses\Grades;
+
+/**
+ * The offline grade sheet's structure, shared by export and import so the
+ * two can never disagree.
+ *
+ * Rows:   1  META_PREFIX | template signature      (hidden in XLSX)
+ *         2  column keys (student_id, item:12, …)  (hidden in XLSX)
+ *         3  human headers
+ *         4+ one row per enrolled student
+ *
+ * Columns: student id (hidden) · student number · name · one column per
+ * grade item (grouped by category) · one per category % · final % · grade ·
+ * remarks · row hash (hidden). Only manual-item columns are editable.
+ *
+ * - The signature fingerprints the grading setup (categories, weights,
+ *   items, max points, passing mark, scale). A file exported under a
+ *   different setup is rejected rather than half-applied.
+ * - The row hash fingerprints each row's locked values as exported (student
+ *   and quiz/assignment scores), so an edit to a locked cell is caught even
+ *   when those scores have since changed in Mentora.
+ */
+class GradeSheetLayout
+{
+    public const META_PREFIX = '[machine-readable — do not edit]';
+
+    public const FIRST_DATA_ROW = 4;
+
+    private array $columns;
+
+    public function __construct(private array $context)
+    {
+        $this->columns = $this->buildColumns();
+    }
+
+    /**
+     * @return list<array{key: string, header: string, type: string, item?: array, category?: array}>
+     */
+    public function columns(): array
+    {
+        return $this->columns;
+    }
+
+    public function keys(): array
+    {
+        return array_column($this->columns, 'key');
+    }
+
+    /**
+     * Items that appear in the sheet: active, in an active category, in
+     * category then item order. (Uncategorized items don't count, so they're
+     * left out.)
+     */
+    public function items(): array
+    {
+        return array_values(array_map(
+            static fn (array $column) => $column['item'],
+            array_filter($this->columns, static fn (array $column) => $column['type'] === 'item')
+        ));
+    }
+
+    public function isManual(array $item): bool
+    {
+        return empty($item['assessment_id']);
+    }
+
+    private function buildColumns(): array
+    {
+        $columns = [
+            ['key' => 'student_id', 'header' => 'ID (do not edit)', 'type' => 'student_id'],
+            ['key' => 'student_number', 'header' => 'Student Number', 'type' => 'student_number'],
+            ['key' => 'student_name', 'header' => 'Student Name', 'type' => 'student_name'],
+        ];
+
+        $categoryColumns = [];
+
+        foreach ($this->context['categories'] as $category) {
+
+            foreach ($this->context['items'] as $item) {
+
+                if ((int) $item['category_id'] !== (int) $category['id']) {
+                    continue;
+                }
+
+                $name = $item['assessment_title'] ?? $item['name'];
+
+                $columns[] = [
+                    'key' => 'item:' . $item['id'],
+                    'header' => $name . ' (/' . self::number((float) $item['max_points']) . ')'
+                        . ($this->isManual($item) ? '' : ' [locked]'),
+                    'type' => 'item',
+                    'item' => $item,
+                    'category' => $category,
+                ];
+
+            }
+
+            $categoryColumns[] = [
+                'key' => 'category:' . $category['id'],
+                'header' => $category['name'] . ' % (' . self::number((float) $category['weight_percentage']) . '%)',
+                'type' => 'category',
+                'category' => $category,
+            ];
+
+        }
+
+        return array_merge($columns, $categoryColumns, [
+            ['key' => 'final', 'header' => 'Final %', 'type' => 'final'],
+            ['key' => 'grade', 'header' => 'Grade', 'type' => 'grade'],
+            ['key' => 'remarks', 'header' => 'Remarks', 'type' => 'remarks'],
+            ['key' => 'row_hash', 'header' => 'Check (do not edit)', 'type' => 'row_hash'],
+        ]);
+    }
+
+    /**
+     * Fingerprint of everything the sheet's structure and formulas depend on.
+     */
+    public function signature(): string
+    {
+        $scheme = $this->context['scheme'];
+
+        return substr(hash('sha256', json_encode([
+            'offering' => (int) $this->context['offeringId'],
+            'scheme' => (int) $scheme['id'],
+            'passing' => (float) $scheme['passing_percentage'],
+            'scale' => (int) ($scheme['grade_scale_id'] ?? 0),
+            'bands' => array_map(static fn ($b) => [(int) $b['id'], (float) $b['minimum_percentage']], $this->context['bands']),
+            'categories' => array_map(static fn ($c) => [(int) $c['id'], (float) $c['weight_percentage']], $this->context['categories']),
+            'items' => array_map(static fn ($i) => [(int) $i['id'], (int) $i['category_id'], (float) $i['max_points']], $this->items()),
+        ])), 0, 32);
+    }
+
+    /**
+     * Fingerprint of one row's locked values: the student and their
+     * quiz/assignment scores (blank = null), as exported.
+     *
+     * @param array<int, ?float> $lockedScores grade_item_id => score
+     */
+    public function rowHash(int $studentId, string $studentNumber, array $lockedScores): string
+    {
+        $values = [];
+
+        foreach ($this->items() as $item) {
+            if (!$this->isManual($item)) {
+                $score = $lockedScores[(int) $item['id']] ?? null;
+                $values[] = $score === null ? '' : self::number((float) $score);
+            }
+        }
+
+        $secret = (string) (config('Encryption')->key ?? '') ?: 'mentora-grade-sheet';
+
+        return substr(hash_hmac('sha256', implode('|', [
+            (int) $this->context['offeringId'],
+            $studentId,
+            trim($studentNumber),
+            implode(',', $values),
+        ]), $secret), 0, 16);
+    }
+
+    /**
+     * 10 → "10", 7.5 → "7.5" — how numbers are written and compared.
+     */
+    public static function number(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+    }
+
+    /**
+     * Spreadsheet column letter for a 1-based index (1 → A, 27 → AA).
+     */
+    public static function letter(int $index): string
+    {
+        $letter = '';
+
+        while ($index > 0) {
+            $index--;
+            $letter = chr(65 + $index % 26) . $letter;
+            $index = intdiv($index, 26);
+        }
+
+        return $letter;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | XLSX formulas — must compute exactly what GradingEngineService does
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Category %: earned ÷ possible over the category's GRADED (non-blank)
+     * items, blank when none are graded.
+     */
+    public function categoryFormula(array $category, int $row): string
+    {
+        $cells = [];
+        $possible = [];
+
+        foreach ($this->columns as $index => $column) {
+            if ($column['type'] === 'item' && (int) $column['category']['id'] === (int) $category['id']) {
+                $cell = self::letter($index + 1) . $row;
+                $cells[] = $cell;
+                $possible[] = 'IF(ISNUMBER(' . $cell . '),' . self::number((float) $column['item']['max_points']) . ',0)';
+            }
+        }
+
+        if ($cells === []) {
+            return '=""';
+        }
+
+        $possibleSum = '(' . implode('+', $possible) . ')';
+
+        return '=IF(' . $possibleSum . '=0,"",SUM(' . implode(',', $cells) . ')/' . $possibleSum . '*100)';
+    }
+
+    /**
+     * Final %: weighted average of the categories that have graded work.
+     */
+    public function finalFormula(int $row): string
+    {
+        $numerator = [];
+        $denominator = [];
+
+        foreach ($this->columns as $index => $column) {
+
+            if ($column['type'] !== 'category') {
+                continue;
+            }
+
+            $weight = (float) $column['category']['weight_percentage'];
+
+            if ($weight <= 0) {
+                continue;
+            }
+
+            $cell = self::letter($index + 1) . $row;
+            $w = self::number($weight);
+
+            $numerator[] = 'IF(ISNUMBER(' . $cell . '),' . $cell . '*' . $w . ',0)';
+            $denominator[] = 'IF(ISNUMBER(' . $cell . '),' . $w . ',0)';
+
+        }
+
+        if ($numerator === []) {
+            return '=""';
+        }
+
+        $den = '(' . implode('+', $denominator) . ')';
+
+        return '=IF(' . $den . '=0,"",ROUND((' . implode('+', $numerator) . ')/' . $den . ',2))';
+    }
+
+    public function gradeFormula(int $row): string
+    {
+        $final = $this->cellOf('final', $row);
+
+        $bands = $this->context['bands'];
+
+        if ($bands === []) {
+            return '=""';
+        }
+
+        $expression = '"' . str_replace('"', '""', $bands[count($bands) - 1]['name']) . '"';
+
+        foreach (array_reverse(array_slice($bands, 0, -1)) as $band) {
+            $expression = 'IF(' . $final . '>=' . self::number((float) $band['minimum_percentage']) . ',"'
+                . str_replace('"', '""', $band['name']) . '",' . $expression . ')';
+        }
+
+        return '=IF(' . $final . '="","",' . $expression . ')';
+    }
+
+    public function remarksFormula(int $row): string
+    {
+        $final = $this->cellOf('final', $row);
+
+        $passing = self::number((float) $this->context['scheme']['passing_percentage']);
+
+        return '=IF(' . $final . '="","Incomplete",IF(' . $final . '>=' . $passing . ',"Passed","Failed"))';
+    }
+
+    public function cellOf(string $key, int $row): string
+    {
+        $index = array_search($key, $this->keys(), true);
+
+        return self::letter((int) $index + 1) . $row;
+    }
+}

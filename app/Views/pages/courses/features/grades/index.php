@@ -15,6 +15,8 @@ $userRole = esc($user->getGroups()[0]);
 
     <?php if ($userRole === 'instructor'): ?>
 
+        <?= $this->include('pages/courses/features/grades/partials/gradebook-toolbar') ?>
+
         <?= $this->include('pages/courses/features/grades/partials/instructor-summary') ?>
 
         <?= $this->include('pages/courses/features/grades/partials/assessment-list') ?>
@@ -23,8 +25,14 @@ $userRole = esc($user->getGroups()[0]);
 
         <?= $this->include('pages/courses/features/grades/partials/student-summary') ?>
 
+        <?= $this->include('pages/courses/features/grades/partials/grade-categories') ?>
+
         <?= $this->include('pages/courses/features/grades/partials/assessment-breakdown') ?>
 
     <?php endif; ?>
 
 </div>
+
+<?php if ($userRole === 'instructor'): ?>
+    <?= $this->include('pages/courses/features/grades/partials/modals/grade-sheet-import') ?>
+<?php endif; ?>
