@@ -6,45 +6,117 @@
 
 export function renderOverviewSkeleton() {
 
+    // Mirrors overview/index.php: the metric cards run across the top (an
+    // instructor sees four, a student three), then a main column and a
+    // side column of course facts.
+    const metricCount = window.coursesConfig?.role === "instructor" ? 4 : 3;
+
     return `
 
-    <div class="p-10 animate-pulse flex gap-8">
+    <div class="p-10 animate-pulse flex flex-col gap-8">
 
-        <!-- ====================================================== -->
-        <!-- Left Column -->
-        <!-- ====================================================== -->
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 ${metricCount === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}">
 
-        <div class="flex flex-1 flex-col gap-6">
+            ${Array.from({ length: metricCount }, renderMetricCard).join("")}
 
-            ${renderDescriptionCard()}
+        </div>
 
-            <div class="grid grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 gap-8 xl:grid-cols-5">
 
-                ${renderInfoCard()}
-                ${renderInfoCard()}
+            <div class="flex min-w-0 flex-col gap-8 xl:col-span-3">
+
+                ${renderLeadCard()}
+
+                ${renderProgressCard()}
+
+                ${renderUpcomingDeadlinesCard()}
 
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="flex min-w-0 flex-col gap-6 xl:col-span-2">
 
-                ${renderInfoCard()}
-                ${renderInfoCard()}
+                ${renderDescriptionCard()}
+
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+
+                    ${renderInfoCard()}
+                    ${renderInfoCard()}
+                    ${renderInfoCard()}
+                    ${renderInfoCard()}
+
+                </div>
+
+                ${renderRecentActivityCard()}
 
             </div>
 
         </div>
 
-        <!-- ====================================================== -->
-        <!-- Right Column -->
-        <!-- ====================================================== -->
+    </div>
 
-        <div class="w-[350px] flex flex-col gap-6">
+    `;
 
-            ${renderProgressCard()}
+}
 
-            ${renderUpcomingDeadlinesCard()}
+/*
+|--------------------------------------------------------------------------
+| Lead Card
+|--------------------------------------------------------------------------
+| "Continue where you left off" (student) / "Needs Your Attention"
+| (instructor): the first card in the main column.
+*/
 
-            ${renderRecentActivityCard()}
+function renderLeadCard() {
+
+    return `
+
+    <div class="rounded-2xl border border-gray-200 p-6 space-y-5">
+
+        <div class="flex justify-between">
+
+            <div class="h-4 w-52 rounded bg-gray-200"></div>
+
+            <div class="h-6 w-16 rounded-full bg-gray-200"></div>
+
+        </div>
+
+        <div class="space-y-3">
+
+            <div class="h-4 w-40 rounded bg-gray-200"></div>
+
+            <div class="h-7 w-72 rounded bg-gray-200"></div>
+
+        </div>
+
+        <div class="h-9 w-28 rounded-full bg-gray-200"></div>
+
+    </div>
+
+    `;
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Metric Card
+|--------------------------------------------------------------------------
+*/
+
+function renderMetricCard() {
+
+    return `
+
+    <div class="flex items-center gap-4 rounded-2xl border border-gray-200 p-6">
+
+        <div class="h-12 w-12 shrink-0 rounded-full bg-gray-200"></div>
+
+        <div class="flex flex-1 flex-col gap-2">
+
+            <div class="h-3 w-24 rounded bg-gray-200"></div>
+
+            <div class="h-5 w-20 rounded bg-gray-200"></div>
+
+            <div class="h-3 w-32 rounded bg-gray-200"></div>
 
         </div>
 
@@ -246,25 +318,23 @@ function renderActivity() {
 
     return `
 
-    <div class="flex gap-6">
+    <div class="flex gap-5">
 
         <div class="flex flex-col items-center">
 
-            <div class="h-4 w-4 rounded-full bg-gray-200"></div>
+            <div class="h-3.5 w-3.5 rounded-full bg-gray-200"></div>
 
-            <div class="mt-2 h-20 w-[2px] bg-gray-200"></div>
+            <div class="mt-2 h-14 w-0.5 bg-gray-200"></div>
 
         </div>
 
         <div class="flex flex-col gap-3 flex-1">
 
-            <div class="h-5 w-40 rounded bg-gray-200"></div>
+            <div class="h-5 w-36 rounded bg-gray-200"></div>
 
             <div class="h-4 w-full rounded bg-gray-200"></div>
 
-            <div class="h-4 w-3/4 rounded bg-gray-200"></div>
-
-            <div class="h-3 w-24 rounded bg-gray-200 mt-2"></div>
+            <div class="h-3 w-20 rounded bg-gray-200"></div>
 
         </div>
 

@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
         // Courses and who teaches them
         $this->call(CoursesSeeder::class);
         $this->call(CourseOfferingsSeeder::class);
+        $this->call(CourseSchedulesSeeder::class);
         $this->call(InstructorAssignmentsSeeder::class);
         $this->call(ChairpersonAssignmentsSeeder::class);
 

@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 | Key metric cards (built by AssessmentOverviewService):
 |   student    → Due This Week · Overdue · Completed
-|   instructor → To Grade · Due This Week · Submission Rate · Needs Attention
+|   instructor → To Grade · Due This Week · Submission Rate · Missing Work
 | Each: label, icon, tone (neutral|warning|danger), value, detail.
 |--------------------------------------------------------------------------
 */
@@ -40,7 +40,8 @@ $bubble = static fn (string $tone) => match ($tone) {
                     <?= esc($metric['value']) ?>
                 </span>
 
-                <span class="truncate text-xs text-[#878787]" title="<?= esc($metric['detail']) ?>">
+                <?php /* Wraps rather than truncating: these lines carry the explanation ("Nothing past due yet · 2 assessments still open"), and cutting them off hides exactly the part that matters. */ ?>
+                <span class="text-xs leading-snug text-[#878787] wrap-break-word">
                     <?= esc($metric['detail']) ?>
                 </span>
 

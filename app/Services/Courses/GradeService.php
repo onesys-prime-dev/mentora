@@ -150,11 +150,13 @@ class GradeService
      * headline is computed here; an instructor's override on that record
      * still wins.
      */
-    protected function buildStudentGrades(User $user, array $offering): array
+    public function buildStudentGrades(User $user, array $offering, ?array $overview = null): array
     {
         $overviewService = new AssessmentOverviewService();
 
-        $overview = $overviewService->build($user, (int) $offering['id'], (int) $offering['course_id']);
+        // The course Overview already builds this for its own metrics and
+        // hands it in, so the same queries aren't run twice per page load.
+        $overview ??= $overviewService->build($user, (int) $offering['id'], (int) $offering['course_id']);
 
         $now = time();
 

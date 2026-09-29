@@ -11,8 +11,8 @@ use CodeIgniter\Shield\Entities\User;
  *  - student:    Due This Week · Overdue · Completed; the list with the
  *                student's own status per assessment; Up Next (5) and the
  *                latest Feedback (3)
- *  - instructor: To Grade · Due This Week · Submission Rate · Needs
- *                Attention; the list with per-assessment submission counts;
+ *  - instructor: To Grade · Due This Week · Submission Rate · Missing
+ *                Work; the list with per-assessment submission counts;
  *                Drafts (5) and Ready for Grading (5)
  *
  * Instructor numbers are scoped to the section (offering) being viewed.
@@ -427,16 +427,13 @@ class AssessmentOverviewService
             }
         }
 
-        $draftsDueSoon = count(array_filter(
-            $rows,
-            static fn (array $r) => $r['status'] === 'Draft' && $r['due_ts'] !== null && $r['due_ts'] <= $soon
-        ));
-
         $next = $dueThisWeek[0] ?? null;
 
-        $draftNote = $draftsDueSoon > 0
-            ? $draftsDueSoon . ' ' . ($draftsDueSoon === 1 ? 'draft is' : 'drafts are') . ' due but unpublished'
-            : null;
+        // Published with a deadline still ahead: what could become missing.
+        $stillOpen = count(array_filter(
+            $published,
+            static fn (array $r) => $r['due_ts'] !== null && $r['due_ts'] >= $now
+        ));
 
         $metrics = [
             [
@@ -466,15 +463,28 @@ class AssessmentOverviewService
                     ? 'on ' . count($pastDue) . ' past-due ' . (count($pastDue) === 1 ? 'assessment' : 'assessments')
                     : 'No past-due assessments yet',
             ],
+            // The count behind Submission Rate: work that was due, never
+            // arrived, and who it's missing from. Work isn't "missing" until
+            // its due date has passed, so a student who hasn't handed in
+            // something still open doesn't count — the detail line says so,
+            // otherwise "None" reads as a bug next to a student who has
+            // submitted nothing. (Drafts that are due but unpublished are
+            // flagged in the Drafts list, not here.)
             [
-                'label' => 'Needs Attention',
+                'label' => 'Missing Work',
                 'icon' => 'attention',
-                'tone' => ($missing > 0 || $draftsDueSoon > 0) ? 'danger' : 'neutral',
-                'value' => $missing > 0 ? $missing . ' missing' : ($draftsDueSoon > 0 ? $draftsDueSoon . ' ' . ($draftsDueSoon === 1 ? 'draft' : 'drafts') : 'All clear'),
-                'detail' => implode(' · ', array_filter([
-                    $missing > 0 ? 'from ' . count($studentsMissing) . ' ' . (count($studentsMissing) === 1 ? 'student' : 'students') : null,
-                    $draftNote,
-                ])) ?: 'No missing work',
+                'tone' => $missing > 0 ? 'danger' : 'neutral',
+                'value' => $missing > 0
+                    ? $missing . ' ' . ($missing === 1 ? 'submission' : 'submissions')
+                    : 'None',
+                'detail' => $missing > 0
+                    ? 'from ' . count($studentsMissing) . ' ' . (count($studentsMissing) === 1 ? 'student' : 'students')
+                    : implode(' · ', array_filter([
+                        $expected > 0 ? 'Everyone is caught up' : 'Nothing past due yet',
+                        $stillOpen > 0
+                            ? $stillOpen . ' ' . ($stillOpen === 1 ? 'assessment' : 'assessments') . ' still open'
+                            : null,
+                    ])),
             ],
         ];
 

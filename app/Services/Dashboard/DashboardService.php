@@ -10,6 +10,7 @@ use App\Models\Courses\CourseScheduleModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Models\Learning\LearningUnitModel;
+use App\Services\Courses\RosterRiskService;
 use CodeIgniter\Shield\Entities\User;
 
 class DashboardService
@@ -20,6 +21,7 @@ class DashboardService
     protected InstructorAssignmentModel $instructorAssignmentModel;
     protected CourseModuleModel $courseModuleModel;
     protected LearningUnitModel $learningUnitModel;
+    protected RosterRiskService $rosterRiskService;
 
     protected InstitutionUserModel $institutionUserModel;
     protected AcademicTermModel $academicTermModel;
@@ -72,6 +74,7 @@ class DashboardService
         $this->instructorAssignmentModel = new InstructorAssignmentModel();
         $this->courseModuleModel = new CourseModuleModel();
         $this->learningUnitModel = new LearningUnitModel();
+        $this->rosterRiskService = new RosterRiskService();
     }
 
     /**
@@ -198,18 +201,6 @@ class DashboardService
             return ['students' => []];
         }
 
-        $offeringIds = array_column($sections, 'offering_id');
-
-        // Published items per offering — the denominator for "how far along".
-        $itemTotals = [];
-
-        foreach ($this->courseModuleModel->retrieveModuleProgress($offeringIds) as $module) {
-            $offeringId = (int) $module['offering_id'];
-
-            $itemTotals[$offeringId] = ($itemTotals[$offeringId] ?? 0)
-                + (int) $module['item_count'];
-        }
-
         $labels = [];
 
         foreach ($sections as $section) {
@@ -217,55 +208,18 @@ class DashboardService
                 $section['course_code'] . ' - ' . $section['section_code'];
         }
 
-        $students = [];
-
-        foreach ($this->enrollmentModel->retrieveRosterProgress($offeringIds) as $row) {
-            $offeringId = (int) $row['offering_id'];
-            $total = $itemTotals[$offeringId] ?? 0;
-
-            // Nothing published yet means nobody can be behind.
-            if ($total === 0) {
-                continue;
-            }
-
-            $progress = (int) round((int) $row['completed_count'] / $total * 100);
-
-            $daysSince = $row['last_active'] !== null
-                ? (int) ((time() - strtotime($row['last_active'])) / 86400)
-                : null;
-
-            // Silence for two weeks outranks a merely low percentage: a
-            // student still working is not the one who needs chasing.
-            if ($daysSince === null || $daysSince >= 14) {
-                $reason = 'inactive';
-            } elseif ($progress < 50) {
-                $reason = 'behind';
-            } else {
-                continue;
-            }
-
-            $students[] = [
-                'name' => trim($row['first_name'] . ' ' . $row['last_name']),
-                'section' => $labels[$offeringId] ?? '',
-                'progress' => $progress,
-                'last_active' => $this->describeLastActive($daysSince),
-                'reason' => $reason,
-                'sort_key' => $daysSince ?? PHP_INT_MAX,
-            ];
-        }
-
-        // Longest silent first — that is the order an instructor should work in.
-        usort($students, static fn ($a, $b) => $b['sort_key'] <=> $a['sort_key']);
+        // Who counts as at risk is decided by RosterRiskService, shared with
+        // the course Overview; this only shapes it for the widget.
+        $students = $this->rosterRiskService->atRisk(array_keys($labels));
 
         return [
-            'students' => array_map(
-                static function (array $student): array {
-                    unset($student['sort_key']);
-
-                    return $student;
-                },
-                $students
-            ),
+            'students' => array_map(fn (array $student) => [
+                'name'        => $student['name'],
+                'section'     => $labels[$student['offering_id']] ?? '',
+                'progress'    => $student['progress'],
+                'last_active' => $this->describeLastActive($student['days_since']),
+                'reason'      => $student['reason'],
+            ], $students),
         ];
     }
 
