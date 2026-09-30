@@ -221,7 +221,9 @@ class GradingSchemeService
     /**
      * The gradebook grid: every enrolled student, their manual-item scores
      * (the only ones editable here — assessment-backed scores come from
-     * Grade Work / quiz grading) and their final grade, with override state.
+     * Grade Work / quiz grading), a read-only category/period breakdown so
+     * "why is this student at X%" doesn't require leaving the grid, and
+     * their final grade, with override state.
      */
     public function roster(int $offeringId): array
     {
@@ -230,6 +232,10 @@ class GradingSchemeService
         $engine = new GradingEngineService();
 
         $context = $engine->context($offeringId);
+
+        $usesPeriods = !empty($scheme['uses_periods']) && ($context['periods'] ?? []) !== [];
+
+        $breakdownGroups = $usesPeriods ? $context['periods'] : $context['categories'];
 
         $manualItems = array_values(array_filter(
             $this->itemModel->listForScheme((int) $scheme['id']),
@@ -257,8 +263,17 @@ class GradingSchemeService
                 $itemScores[$itemId] = $cell && $cell['raw_score'] !== null ? (float) $cell['raw_score'] : null;
             }
 
+            $result = $engine->compute($context, $studentId);
+
+            $breakdown = [];
+
+            foreach (($usesPeriods ? ($result['periods'] ?? []) : ($result['categories'] ?? [])) as $group) {
+                $breakdown[(int) $group['id']] = $group['percentage'];
+            }
+
             $students[] = $row + [
                 'scores' => $itemScores,
+                'breakdown' => $breakdown,
                 'percentage' => \App\Models\Assessments\GradebookRecordModel::effectivePercentage($record),
                 'calculated_percentage' => $record['calculated_percentage'] ?? null,
                 'is_override' => !empty($record['is_override']),
@@ -271,6 +286,8 @@ class GradingSchemeService
         return [
             'scheme' => $scheme,
             'items' => $manualItems,
+            'uses_periods' => $usesPeriods,
+            'breakdown_groups' => $breakdownGroups,
             'students' => $students,
         ];
     }

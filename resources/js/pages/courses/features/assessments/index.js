@@ -16,6 +16,8 @@ import { bindModal } from "./modals/index.js";
 
 import { bindAssessmentCreateModal } from "./modals/assessments.js";
 
+import { loadGradebookRoster } from "../grades/roster/roster.js";
+
 import {
     initializeTipTap as initializeInstructionsTipTap,
     resetContent as resetInstructionsContent,
@@ -1058,6 +1060,13 @@ export async function loadGradeWork(
                 }
             );
 
+        document
+            .querySelector("[data-view-student-grade]")
+            ?.addEventListener(
+                "click",
+                (event) => viewStudentGrade(event.currentTarget.dataset.viewStudentGrade, refresh)
+            );
+
         initializeGradeWork(
             offeringId,
             assessmentId,
@@ -1079,6 +1088,28 @@ export async function loadGradeWork(
 
     }
 
+}
+
+/**
+ * Grade Work → "View full grade": opens the gradebook roster and briefly
+ * highlights the student's row, so an instructor closing out a grade can
+ * jump straight to how it affected that student's final grade.
+ */
+async function viewStudentGrade(studentId, refresh)
+{
+    await loadGradebookRoster(refresh);
+
+    const row = document.querySelector(`[data-roster-row][data-student-id="${studentId}"]`);
+
+    if (!row) {
+        return;
+    }
+
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    row.classList.add("ring-2", "ring-[#0040A6]");
+
+    setTimeout(() => row.classList.remove("ring-2", "ring-[#0040A6]"), 1500);
 }
 
 /*

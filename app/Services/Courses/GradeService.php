@@ -4,7 +4,6 @@ namespace App\Services\Courses;
 
 use App\Models\Courses\CourseOfferingModel;
 use App\Models\Courses\EnrollmentModel;
-use App\Models\Assessments\AssessmentModel;
 use App\Models\Assessments\GradebookRecordModel;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Grades\GradingSchemeService;
@@ -19,14 +18,12 @@ class GradeService
 {
     protected CourseOfferingModel $courseOfferingModel;
     protected EnrollmentModel $enrollmentModel;
-    protected AssessmentModel $assessmentModel;
     protected GradebookRecordModel $gradebookRecordModel;
 
     public function __construct()
     {
         $this->courseOfferingModel = new CourseOfferingModel();
         $this->enrollmentModel = new EnrollmentModel();
-        $this->assessmentModel = new AssessmentModel();
         $this->gradebookRecordModel = new GradebookRecordModel();
     }
 
@@ -45,7 +42,7 @@ class GradeService
 
         if ($user->inGroup('instructor')) {
 
-            $viewData += $this->buildInstructorGradebook($offering);
+            $viewData += $this->buildInstructorGradebook($user, $offering);
 
         } else {
 
@@ -73,16 +70,19 @@ class GradeService
      * of scores that already exist. Grading happens per assessment, so
      * the page now lists assessments; per-student review happens inside
      * Grade Work, which already has its own student sidebar.
+     *
+     * "Needs review" is sourced from AssessmentOverviewService — the same
+     * per-attempt/latest-submission computation the Assessments tab's "To
+     * Grade" metric uses — instead of a separate raw submission-row count,
+     * so the two tabs can never disagree on how much grading is left.
      */
-    protected function buildInstructorGradebook(array $offering): array
+    protected function buildInstructorGradebook(User $user, array $offering): array
     {
-        $courseId = $offering['course_id'];
-
         // Resolves (and on first use creates) the section's grading scheme.
         $gradebook = (new GradingSchemeService())->describe((int) $offering['id']);
 
-        $assessments = $this->assessmentModel
-            ->getAssessmentSummaryForCourse($courseId, (int) $offering['id']);
+        $overview = (new AssessmentOverviewService())
+            ->build($user, (int) $offering['id'], (int) $offering['course_id']);
 
         $rosterIds = array_map('intval', array_column(
             $this->enrollmentModel->retrieveGradebookRoster($offering['id']),
@@ -94,13 +94,25 @@ class GradeService
         $groups = [];
         $needsReview = 0;
 
-        foreach ($assessments as $assessment) {
+        foreach ($overview['assessments'] as $assessment) {
 
             $type = $assessment['assessment_type'] ?? 'Other';
 
+            $toGrade = (int) ($assessment['section']['toGrade'] ?? 0);
+            $submitted = (int) ($assessment['section']['submitted'] ?? 0);
+
+            $assessment['needs_review_count'] = $toGrade;
+            $assessment['graded_count'] = max(0, $submitted - $toGrade);
+
             $groups[$type][] = $assessment;
 
-            $needsReview += (int) $assessment['needs_review_count'];
+            // Archived assessments are retired from the grading queue —
+            // mirrors AssessmentOverviewService::forInstructor()'s own
+            // toGradeTotal exclusion, so the class-level number matches
+            // the Assessments tab's "To Grade" metric exactly.
+            if (($assessment['status'] ?? null) !== 'Archived') {
+                $needsReview += $toGrade;
+            }
 
         }
 

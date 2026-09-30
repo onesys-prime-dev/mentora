@@ -30,7 +30,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
 
     <p class="text-sm text-gray-500">
         Only manual items (<?= esc(implode(', ', array_map(static fn ($i) => $i['name'], $items)) ?: 'none yet') ?>) are editable here.
-        Quiz and assignment scores come from Grade Work. Click a final grade to override it.
+        Quiz and assignment scores come from Grade Work — the <?= $uses_periods ? 'period' : 'category' ?> columns below are read-only, for context. Click a final grade to override it.
     </p>
 
     <div class="overflow-x-auto rounded-2xl border border-[#A9A9A9]/50">
@@ -46,6 +46,11 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
                             <span class="font-normal text-gray-400">/<?= $points($item['max_points']) ?></span>
                         </th>
                     <?php endforeach; ?>
+                    <?php foreach ($breakdown_groups as $group): ?>
+                        <th class="px-4 py-3 font-semibold text-gray-400 whitespace-nowrap" title="Read-only — from <?= $uses_periods ? 'category weights' : 'quiz/assignment scores' ?>">
+                            <?= esc($group['name']) ?>
+                        </th>
+                    <?php endforeach; ?>
                     <th class="px-4 py-3 font-semibold text-gray-600">Final</th>
                     <th class="px-4 py-3 font-semibold text-gray-600">Remarks</th>
                 </tr>
@@ -54,7 +59,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
             <tbody>
 
                 <?php if ($students === []): ?>
-                    <tr><td colspan="<?= count($items) + 3 ?>" class="px-4 py-8 text-center text-gray-400">No students enrolled in this section.</td></tr>
+                    <tr><td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="px-4 py-8 text-center text-gray-400">No students enrolled in this section.</td></tr>
                 <?php endif; ?>
 
                 <?php foreach ($students as $student): ?>
@@ -74,6 +79,14 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
                                     placeholder="—"
                                     data-manual-score-input data-item-id="<?= (int) $item['id'] ?>"
                                     class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none transition focus:border-[#0040A6]">
+                            </td>
+                        <?php endforeach; ?>
+
+                        <?php foreach ($breakdown_groups as $group): ?>
+                            <td class="px-4 py-2 text-gray-500">
+                                <?= isset($student['breakdown'][(int) $group['id']]) && $student['breakdown'][(int) $group['id']] !== null
+                                    ? $points($student['breakdown'][(int) $group['id']]) . '%'
+                                    : '—' ?>
                             </td>
                         <?php endforeach; ?>
 

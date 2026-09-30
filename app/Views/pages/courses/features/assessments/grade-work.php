@@ -245,9 +245,21 @@ $attemptTabs ??= [];
 
                         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
 
-                            <span class="font-bold text-[#1F2937]">
-                                <?= esc($selectedStudent['student_name']) ?>'s Work
-                            </span>
+                            <div class="flex items-center gap-3">
+
+                                <span class="font-bold text-[#1F2937]">
+                                    <?= esc($selectedStudent['student_name']) ?>'s Work
+                                </span>
+
+                                <button
+                                    type="button"
+                                    data-view-student-grade="<?= esc($selectedStudent['student_id']) ?>"
+                                    class="inline-flex items-center gap-1 text-xs font-semibold text-[#0040A6] transition hover:underline">
+                                    View full grade
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                </button>
+
+                            </div>
 
                             <span class="text-xs text-gray-400">
                                 <?= $submission['submitted_at'] ? 'Submitted ' . esc(date('F j, Y g:i A', strtotime($submission['submitted_at']))) : 'Not submitted' ?>
