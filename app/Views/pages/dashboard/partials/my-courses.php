@@ -7,10 +7,7 @@
  */
 $userRole = esc($user->getGroups()[0]);
 
-$courses = $data['courses'] ?? [
-    ['offering_id' => 1, 'slug' => 'introduction-to-computing', 'course_code' => 'IT101', 'section_code' => 'BSIT-1A', 'course_title' => 'Introduction to Computing',   'progress' => 62],
-    ['offering_id' => 2, 'slug' => 'computer-programming-1',    'course_code' => 'IT102', 'section_code' => 'BSIT-1A', 'course_title' => 'Computer Programming 1',     'progress' => 25],
-];
+$courses = $data['courses'] ?? [];
 ?>
 
 <!-- my courses -->

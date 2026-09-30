@@ -6,16 +6,13 @@
  * written and never published. Students cannot report material they can't
  * see, so nothing else on the page would surface it.
  *
- * Reads the status column on course_modules / learning_units / learning_items.
- * Placeholder rows until the query lands.
+ * Reads the status column on course_modules / learning_units. Data:
+ * DashboardService::getContentStatusData(). A row links straight into that
+ * module/unit's entry in Modules, scrolled to, expanded and highlighted.
  */
 $userRole = esc($user->getGroups()[0]);
 
-$drafts = $data['drafts'] ?? [
-    ['course_code' => 'IT101', 'title' => 'M3 - Number Systems', 'type' => 'Module', 'items' => 4, 'updated' => '3 days ago'],
-    ['course_code' => 'IT101', 'title' => 'Quiz 2 instructions',  'type' => 'Item',   'items' => 1, 'updated' => 'Last week'],
-    ['course_code' => 'IT102', 'title' => 'M2 - Functions',       'type' => 'Unit',   'items' => 6, 'updated' => 'Yesterday'],
-];
+$drafts = $data['drafts'] ?? [];
 ?>
 
 <!-- content status -->
@@ -58,7 +55,11 @@ $drafts = $data['drafts'] ?? [
                         <div class="h-px -mx-3 bg-black/5" aria-hidden="true"></div>
                     <?php endif; ?>
 
-                    <div class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white/45">
+                    <?php $param = $draft['type'] === 'Module' ? 'module' : 'unit'; ?>
+
+                    <a
+                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45"
+                        href="<?= site_url($userRole . '/courses/' . $draft['offering_id'] . '/' . $draft['slug'] . '/modules?' . $param . '=' . $draft['id']) ?>">
 
                         <div class="w-9 h-9 shrink-0 flex justify-center items-center bg-amber-600 rounded-full transition-transform duration-150 group-hover:scale-110">
                             <?= icon('lessons', 'w-5 h-5 text-white') ?>
@@ -82,7 +83,7 @@ $drafts = $data['drafts'] ?? [
                             <?= esc($draft['updated']) ?>
                         </span>
 
-                    </div>
+                    </a>
 
                 <?php endforeach; ?>
 

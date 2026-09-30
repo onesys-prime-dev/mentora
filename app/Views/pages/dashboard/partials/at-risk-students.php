@@ -7,16 +7,13 @@
  * Risk comes from learning_completions: a completion rate well under the
  * section's own cohort, or no activity at all for a stretch of days.
  *
- * Placeholder rows until the query lands.
+ * Data: DashboardService::getAtRiskStudentsData(). A row links into that
+ * student's Gradebook roster entry (course offering's Grades tab, scrolled
+ * to and briefly highlighted).
  */
 $userRole = esc($user->getGroups()[0]);
 
-$students = $data['students'] ?? [
-    ['name' => 'Marco Alcantara', 'section' => 'IT101 - BSIT-1A', 'progress' => 12, 'last_active' => '18 days ago', 'reason' => 'inactive'],
-    ['name' => 'Jonalyn Cruz',    'section' => 'IT101 - BSIT-1A', 'progress' => 24, 'last_active' => '11 days ago', 'reason' => 'inactive'],
-    ['name' => 'Rafael Domingo',  'section' => 'IT102 - BSIT-1B', 'progress' => 31, 'last_active' => '2 days ago',  'reason' => 'behind'],
-    ['name' => 'Aira Villanueva', 'section' => 'IT102 - BSIT-1B', 'progress' => 38, 'last_active' => 'Yesterday',   'reason' => 'behind'],
-];
+$students = $data['students'] ?? [];
 
 $reasonStyles = [
     'inactive' => ['chip' => 'bg-red-500/15 text-red-700',     'label' => 'Inactive',   'bar' => 'bg-red-600'],
@@ -58,7 +55,9 @@ $reasonStyles = [
 
                     <?php $style = $reasonStyles[$student['reason']] ?? $reasonStyles['behind']; ?>
 
-                    <div class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white/45">
+                    <a
+                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45"
+                        href="<?= site_url($userRole . '/courses/' . $student['offering_id'] . '/' . $student['slug'] . '/grades?roster=1&student=' . $student['student_id']) ?>">
 
                         <img
                             class="w-10 h-10 shrink-0 rounded-full object-cover transition-transform duration-150 group-hover:scale-110"
@@ -93,7 +92,7 @@ $reasonStyles = [
                             </div>
                         </div>
 
-                    </div>
+                    </a>
 
                 <?php endforeach; ?>
 

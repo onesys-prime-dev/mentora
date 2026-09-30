@@ -88,6 +88,7 @@ class RosterRiskService
 
             $students[] = [
                 'offering_id' => $offeringId,
+                'student_id'  => (int) $row['student_user_id'],
                 'name'        => trim($row['first_name'] . ' ' . $row['last_name']),
                 'progress'    => $progress,
                 'days_since'  => $daysSince,

@@ -14,9 +14,66 @@ import { initializeGradeSheet } from "./import-export/grade-sheet.js";
  */
 import { loadGradeWork, loadAssessmentView } from "../assessments/index.js";
 
+import { highlightRow } from "../../../../shared/spa/highlight-row.js";
+
 export async function initialize()
 {
     state.loading = true;
+
+    // A dashboard widget (e.g. "Needs Your Attention") can deep-link
+    // straight into a specific student's roster row instead of the plain
+    // assessment list — mirrors how the Assessments feature reads
+    // ?assessment=&grade= for its own deep links.
+    const params =
+        new URLSearchParams(window.location.search);
+
+    if (params.has("roster")) {
+
+        const studentId =
+            params.get("student");
+
+        // Consumed once: strips the query string so the roster's own
+        // "back" button (which just re-calls initialize()) lands on the
+        // plain Grades list instead of looping back into this deep link.
+        history.replaceState({}, "", window.location.pathname);
+
+        await loadGradebookRoster(initialize);
+
+        if (studentId) {
+            highlightRow(`[data-roster-row][data-student-id="${studentId}"]`);
+        }
+
+        state.loading = false;
+
+        return;
+
+    }
+
+    // A dashboard widget (e.g. "Grading Queue") can deep-link straight
+    // into Grade Work for a specific assessment instead of the plain
+    // Grades list — same ?assessment=&grade= pair the Assessments feature
+    // itself reads, just landing on the Grades tab instead.
+    const assessmentId =
+        params.get("assessment");
+
+    if (assessmentId && params.has("grade")) {
+
+        const offeringId =
+            window.coursesConfig.offeringId;
+
+        await loadGradeWork(
+            offeringId,
+            assessmentId,
+            null,
+            initialize,
+            { pushState: false }
+        );
+
+        state.loading = false;
+
+        return;
+
+    }
 
     const container =
         document.querySelector("#course-content");

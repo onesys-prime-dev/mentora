@@ -18,6 +18,8 @@ import { bindAssessmentCreateModal } from "./modals/assessments.js";
 
 import { loadGradebookRoster } from "../grades/roster/roster.js";
 
+import { highlightRow } from "../../../../shared/spa/highlight-row.js";
+
 import {
     initializeTipTap as initializeInstructionsTipTap,
     resetContent as resetInstructionsContent,
@@ -1099,17 +1101,7 @@ async function viewStudentGrade(studentId, refresh)
 {
     await loadGradebookRoster(refresh);
 
-    const row = document.querySelector(`[data-roster-row][data-student-id="${studentId}"]`);
-
-    if (!row) {
-        return;
-    }
-
-    row.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    row.classList.add("ring-2", "ring-[#0040A6]");
-
-    setTimeout(() => row.classList.remove("ring-2", "ring-[#0040A6]"), 1500);
+    highlightRow(`[data-roster-row][data-student-id="${studentId}"]`);
 }
 
 /*

@@ -7,22 +7,30 @@
  * Student-only: instructors get Teaching Load in this slot instead, since
  * counters of sections and students only repeat what their widgets say.
  */
+$coursesEnrolled = (int) ($data['courses_enrolled'] ?? 0);
+$pendingTasks = (int) ($data['pending_tasks'] ?? 0);
+$averageGrade = $data['average_grade'] ?? null;
+
 $metrics = [
     [
         'label' => 'Courses Enrolled',
-        'value' => $data['courses_enrolled'] ?? 0,
+        'value' => $coursesEnrolled,
         'icon'  => 'hat',
         'accent' => 'bg-blue-800',
     ],
     [
         'label' => 'Pending Tasks',
-        'value' => $data['pending_tasks'] ?? 0,
+        // Zero reads as good news here, not an empty state, so it gets its
+        // own affirming copy rather than a bare "0".
+        'value' => $pendingTasks > 0 ? $pendingTasks : 'All caught up',
+        'small' => $pendingTasks === 0,
         'icon'  => 'tasks',
         'accent' => 'bg-amber-600',
     ],
     [
-        'label' => 'Current GPA',
-        'value' => $data['current_gpa'] ?? '—',
+        'label' => 'Average Grade',
+        'value' => $averageGrade !== null ? number_format($averageGrade, 1) . '%' : 'No grades yet',
+        'small' => $averageGrade === null,
         'icon'  => 'lessons',
         'accent' => 'bg-emerald-600',
     ],
@@ -46,7 +54,7 @@ $metrics = [
                 </span>
             </div>
 
-            <span class="text-3xl font-bold font-display shrink-0">
+            <span class="<?= !empty($metric['small']) ? 'text-base font-semibold text-gray-600' : 'text-3xl font-bold font-display' ?> shrink-0">
                 <?= esc($metric['value']) ?>
             </span>
 

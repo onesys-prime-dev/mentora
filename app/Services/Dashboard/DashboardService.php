@@ -10,7 +10,10 @@ use App\Models\Courses\CourseScheduleModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Models\Learning\LearningUnitModel;
+use App\Models\Assessments\GradebookRecordModel;
 use App\Services\Courses\RosterRiskService;
+use App\Services\Courses\Assessments\AssessmentOverviewService;
+use App\Services\Courses\Grades\GradingSchemeService;
 use CodeIgniter\Shield\Entities\User;
 
 class DashboardService
@@ -22,6 +25,7 @@ class DashboardService
     protected CourseModuleModel $courseModuleModel;
     protected LearningUnitModel $learningUnitModel;
     protected RosterRiskService $rosterRiskService;
+    protected GradebookRecordModel $gradebookRecordModel;
 
     protected InstitutionUserModel $institutionUserModel;
     protected AcademicTermModel $academicTermModel;
@@ -75,6 +79,7 @@ class DashboardService
         $this->courseModuleModel = new CourseModuleModel();
         $this->learningUnitModel = new LearningUnitModel();
         $this->rosterRiskService = new RosterRiskService();
+        $this->gradebookRecordModel = new GradebookRecordModel();
     }
 
     /**
@@ -133,21 +138,160 @@ class DashboardService
     /** Student-only widget; instructors show Teaching Load in that slot. */
     protected function getKeyMetricsData(User $user): array
     {
+        $assessments = $this->studentAssessments($user);
+
+        // "actionable" is AssessmentOverviewService's own definition of work
+        // still on the student: in progress, due soon, overdue-with-attempts-
+        // left, or not yet started — not merely "not graded yet".
+        $pending = count(array_filter(
+            $assessments,
+            static fn (array $row) => !empty($row['student']['actionable'])
+        ));
+
+        $percentages = [];
+
+        foreach ($this->enrollmentModel->retrieveStudentCourseOfferings($user->id) as $offering) {
+
+            $scheme = (new GradingSchemeService())->forOffering((int) $offering['offering_id']);
+
+            if ($scheme['status'] !== 'Published') {
+                continue;
+            }
+
+            $record = $this->gradebookRecordModel->findForStudent((int) $offering['offering_id'], (int) $user->id);
+
+            $effective = $record ? GradebookRecordModel::effectivePercentage($record) : null;
+
+            if ($effective !== null) {
+                $percentages[] = $effective;
+            }
+
+        }
+
         return [
             'courses_enrolled' => $this->enrollmentModel->retrieveTotalCoursesEnrolled($user->id),
-            //'pending_tasks' => $this->assessmentModel->retrieveTotalPendingTasks($user),
-            //'current_gpa'   => $this->gradebookModel->retrieveCurrentGpa($user),
+            'pending_tasks'    => $pending,
+            'average_grade'    => $percentages !== [] ? array_sum($percentages) / count($percentages) : null,
         ];
+    }
+
+    /**
+     * Every assessment across every offering the student is enrolled in,
+     * each already carrying its own 'student' state/label/score — resolved
+     * once and reused by Key Metrics and Upcoming Tasks so they never
+     * disagree on what "pending" means.
+     */
+    protected function studentAssessments(User $user): array
+    {
+        $rows = [];
+
+        foreach ($this->enrollmentModel->retrieveStudentCourseOfferings($user->id) as $offering) {
+
+            $overview = (new AssessmentOverviewService())->build(
+                $user,
+                (int) $offering['offering_id'],
+                (int) $offering['course_id']
+            );
+
+            foreach ($overview['assessments'] as $assessment) {
+                $assessment['course_code'] = $offering['course_code'];
+                $assessment['offering_id'] = (int) $offering['offering_id'];
+                $assessment['slug'] = url_title($offering['course_title'], '-', true);
+                $rows[] = $assessment;
+            }
+
+        }
+
+        return $rows;
     }
 
     protected function getUpcomingTasksData(User $user): array
     {
-        return [];
+        $overviewService = new AssessmentOverviewService();
+
+        $now = time();
+
+        $tasks = [];
+
+        foreach ($this->studentAssessments($user) as $row) {
+
+            if ($row['due_ts'] === null) {
+                continue;
+            }
+
+            $isGraded = ($row['student']['result']['counted'] ?? null) !== null;
+            $isSubmitted = $isGraded || !empty($row['student']['submitted']);
+
+            $urgency = match (true) {
+                $row['due_ts'] < $now && !$isSubmitted => 'overdue',
+                $row['due_ts'] <= strtotime('today 23:59:59', $now) => 'today',
+                $row['due_ts'] <= $now + AssessmentOverviewService::SOON_DAYS * 86400 => 'soon',
+                default => 'later',
+            };
+
+            $tasks[] = [
+                'id' => (int) $row['id'],
+                'offering_id' => $row['offering_id'],
+                'slug' => $row['slug'],
+                'code' => $row['course_code'],
+                'title' => $row['title'],
+                'due' => $overviewService->dueLabel($row['due_ts'], $now),
+                'urgency' => $urgency,
+                'status' => $isGraded ? 'graded' : ($isSubmitted ? 'submitted' : null),
+                'due_ts' => $row['due_ts'],
+            ];
+
+        }
+
+        usort($tasks, static fn (array $a, array $b) => $a['due_ts'] <=> $b['due_ts']);
+
+        return ['tasks' => array_slice($tasks, 0, 8)];
     }
 
     protected function getMyCoursesData(User $user): array
     {
-        return [];
+        $offerings = $this->enrollmentModel->retrieveStudentCourseOfferings($user->id);
+
+        if ($offerings === []) {
+            return ['courses' => []];
+        }
+
+        $offeringIds = array_column($offerings, 'offering_id');
+
+        $completed = [];
+
+        foreach ($this->enrollmentModel->retrieveRosterProgress($offeringIds) as $row) {
+            if ((int) $row['student_user_id'] === (int) $user->id) {
+                $completed[(int) $row['offering_id']] = (int) $row['completed_count'];
+            }
+        }
+
+        $itemTotals = [];
+
+        foreach ($this->courseModuleModel->retrieveModuleProgress($offeringIds) as $module) {
+            $offeringId = (int) $module['offering_id'];
+            $itemTotals[$offeringId] = ($itemTotals[$offeringId] ?? 0) + (int) $module['item_count'];
+        }
+
+        $courses = [];
+
+        foreach ($offerings as $offering) {
+
+            $offeringId = (int) $offering['offering_id'];
+            $total = $itemTotals[$offeringId] ?? 0;
+
+            $courses[] = [
+                'offering_id' => $offeringId,
+                'slug' => url_title($offering['course_title'], '-', true),
+                'course_code' => $offering['course_code'],
+                'section_code' => $offering['section_code'],
+                'course_title' => $offering['course_title'],
+                'progress' => $total > 0 ? (int) round(($completed[$offeringId] ?? 0) / $total * 100) : 0,
+            ];
+
+        }
+
+        return ['courses' => $courses];
     }
 
     protected function getAnnouncementsData(User $user): array
@@ -166,12 +310,60 @@ class DashboardService
     }
 
     /**
-     * Blocked on the assessments + submissions tables; returns nothing until
-     * those exist, which renders the widget's empty state.
+     * Every assessment across the instructor's own sections with ungraded
+     * work waiting on it — reuses AssessmentOverviewService's per-attempt
+     * "toGrade"/"waitingSince" computation (same one behind the Assessments
+     * tab's "To Grade" metric) so this never disagrees with that tab, and
+     * stays offering-scoped rather than aggregating a whole course.
      */
     protected function getGradingQueueData(User $user): array
     {
-        return [];
+        $sections = $this->instructorSections($user);
+
+        if ($sections === []) {
+            return ['queue' => []];
+        }
+
+        $overviewService = new AssessmentOverviewService();
+
+        $queue = [];
+
+        foreach ($sections as $section) {
+
+            $offeringId = (int) $section['offering_id'];
+
+            $overview = $overviewService->build($user, $offeringId, (int) $section['course_id']);
+
+            foreach ($overview['assessments'] as $assessment) {
+
+                $toGrade = (int) ($assessment['section']['toGrade'] ?? 0);
+
+                if ($toGrade <= 0 || ($assessment['status'] ?? null) === 'Archived') {
+                    continue;
+                }
+
+                $waitingSince = $assessment['section']['waitingSince'] ?? null;
+
+                $queue[] = [
+                    'assessment_id' => (int) $assessment['id'],
+                    'offering_id' => $offeringId,
+                    'slug' => url_title($section['course_title'], '-', true),
+                    'course_code' => $section['course_code'],
+                    'section_code' => $section['section_code'],
+                    'title' => $assessment['title'],
+                    'type' => strtolower((string) ($assessment['assessment_type'] ?? '')),
+                    'ungraded' => $toGrade,
+                    'submitted' => (int) ($assessment['section']['submitted'] ?? 0),
+                    'waiting_days' => $waitingSince !== null ? max(0, (int) floor((time() - $waitingSince) / 86400)) : 0,
+                ];
+
+            }
+
+        }
+
+        usort($queue, static fn (array $a, array $b) => $b['waiting_days'] <=> $a['waiting_days']);
+
+        return ['queue' => $queue];
     }
 
     public function getAcademicTerm(User $user): array
@@ -202,10 +394,12 @@ class DashboardService
         }
 
         $labels = [];
+        $slugs = [];
 
         foreach ($sections as $section) {
-            $labels[(int) $section['offering_id']] =
-                $section['course_code'] . ' - ' . $section['section_code'];
+            $offeringId = (int) $section['offering_id'];
+            $labels[$offeringId] = $section['course_code'] . ' - ' . $section['section_code'];
+            $slugs[$offeringId] = url_title($section['course_title'], '-', true);
         }
 
         // Who counts as at risk is decided by RosterRiskService, shared with
@@ -215,6 +409,9 @@ class DashboardService
         return [
             'students' => array_map(fn (array $student) => [
                 'name'        => $student['name'],
+                'student_id'  => $student['student_id'],
+                'offering_id' => $student['offering_id'],
+                'slug'        => $slugs[$student['offering_id']] ?? '',
                 'section'     => $labels[$student['offering_id']] ?? '',
                 'progress'    => $student['progress'],
                 'last_active' => $this->describeLastActive($student['days_since']),
@@ -326,9 +523,12 @@ class DashboardService
         $offeringIds = array_column($sections, 'offering_id');
 
         $codes = [];
+        $slugs = [];
 
         foreach ($sections as $section) {
-            $codes[(int) $section['offering_id']] = $section['course_code'];
+            $offeringId = (int) $section['offering_id'];
+            $codes[$offeringId] = $section['course_code'];
+            $slugs[$offeringId] = url_title($section['course_title'], '-', true);
         }
 
         $drafts = [];
@@ -340,8 +540,14 @@ class DashboardService
 
         foreach ($sources as $type => $rows) {
             foreach ($rows as $row) {
+
+                $offeringId = (int) $row['offering_id'];
+
                 $drafts[] = [
-                    'course_code' => $codes[(int) $row['offering_id']] ?? '',
+                    'id' => (int) $row['content_id'],
+                    'offering_id' => $offeringId,
+                    'slug' => $slugs[$offeringId] ?? '',
+                    'course_code' => $codes[$offeringId] ?? '',
                     'title' => $row['title'],
                     'type' => $type,
                     'items' => (int) $row['child_count'],

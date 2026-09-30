@@ -7,20 +7,13 @@
  * work. A flat list of 60 individual submissions would be noise.
  *
  * Ordered by how long the oldest submission has sat unmarked, since that is
- * what students actually feel.
- *
- * NOTE: this widget needs the assessments + submissions tables, which do not
- * exist yet — AssessmentController and GradeController are still stubs. The
- * rows below are placeholders so the layout is settled ahead of that work.
+ * what students actually feel. Data: DashboardService::getGradingQueueData(),
+ * built from AssessmentOverviewService — the same source behind the
+ * Assessments tab's "To Grade" metric, so the two can't disagree.
  */
 $userRole = esc($user->getGroups()[0]);
 
-$queue = $data['queue'] ?? [
-    ['offering_id' => 1, 'slug' => 'introduction-to-computing', 'course_code' => 'IT101', 'title' => 'Quiz 2 - Number Systems', 'type' => 'quiz',       'ungraded' => 24, 'submitted' => 38, 'waiting_days' => 9],
-    ['offering_id' => 2, 'slug' => 'computer-programming-1',    'course_code' => 'IT102', 'title' => 'Lab Exercise 3',          'type' => 'lab',        'ungraded' => 12, 'submitted' => 40, 'waiting_days' => 4],
-    ['offering_id' => 1, 'slug' => 'introduction-to-computing', 'course_code' => 'IT101', 'title' => 'M1 - Reflection Paper',   'type' => 'paper',      'ungraded' => 7,  'submitted' => 38, 'waiting_days' => 2],
-    ['offering_id' => 2, 'slug' => 'computer-programming-1',    'course_code' => 'IT102', 'title' => 'M2 - Case Study',         'type' => 'discussion', 'ungraded' => 3,  'submitted' => 31, 'waiting_days' => 1],
-];
+$queue = $data['queue'] ?? [];
 
 /**
  * What kind of work is waiting — a quiz reads differently from a lab or an
@@ -107,7 +100,7 @@ $totalUngraded = array_sum(array_column($queue, 'ungraded'));
 
                     <a
                         class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45"
-                        href="<?= site_url($userRole . '/courses/' . $item['offering_id'] . '/' . $item['slug']) ?>">
+                        href="<?= site_url($userRole . '/courses/' . $item['offering_id'] . '/' . $item['slug'] . '/grades?assessment=' . $item['assessment_id'] . '&grade=1') ?>">
 
                         <div class="w-11 h-11 shrink-0 flex justify-center items-center <?= $style['bubble'] ?> rounded-full transition-transform duration-150 group-hover:scale-110">
                             <?= icon($typeIcon, 'w-5 h-5 text-white') ?>
@@ -117,6 +110,8 @@ $totalUngraded = array_sum(array_column($queue, 'ungraded'));
                             <div class="flex items-center gap-2 min-w-0">
                                 <div class="flex gap-1 text-sm min-w-0 transition-colors duration-150 group-hover:text-blue-900">
                                     <span class="font-bold shrink-0"><?= esc($item['course_code']) ?></span>
+                                    <span class="shrink-0">-</span>
+                                    <span class="font-bold shrink-0"><?= esc($item['section_code']) ?></span>
                                     <span class="shrink-0">-</span>
                                     <span class="truncate"><?= esc($item['title']) ?></span>
                                 </div>

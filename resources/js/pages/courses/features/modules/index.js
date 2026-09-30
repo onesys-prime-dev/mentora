@@ -57,6 +57,8 @@ import {
     bindModuleStatusToggles,
 } from "./module-status.js";
 
+import { highlightRow } from "../../../../shared/spa/highlight-row.js";
+
 import {
     bindLearningUnitStatusToggles,
 } from "./learning-unit-status.js";
@@ -115,6 +117,47 @@ export async function initialize() {
             );
 
         }
+
+        return;
+
+    }
+
+    // A dashboard widget (e.g. "Unpublished") can deep-link straight into a
+    // specific draft module/unit instead of the plain Modules list.
+    const moduleId =
+        Number(params.get("module")) || null;
+
+    const unitId =
+        Number(params.get("unit")) || null;
+
+    if (moduleId || unitId) {
+
+        // Consumed once: strips the query string so navigating away and
+        // back (e.g. via a browser back button) doesn't re-trigger it.
+        history.replaceState({}, "", window.location.pathname);
+
+        if (moduleId) {
+            state.activeModuleId = moduleId;
+        }
+
+        await loadModules();
+
+        if (unitId) {
+
+            const unitElement =
+                document.querySelector(`[data-learning-unit="${unitId}"]`);
+
+            unitElement
+                ?.closest("[data-module]")
+                ?.click();
+
+        }
+
+        highlightRow(
+            unitId
+                ? `[data-learning-unit="${unitId}"]`
+                : `[data-module="${moduleId}"]`
+        );
 
         return;
 
