@@ -139,6 +139,13 @@ class ModuleService
                 $learningItemId
             );
 
+        // A student can't enter an item behind incomplete prerequisites —
+        // nothing of it is rendered; the client returns to the Modules list
+        // with this notice (learning-item.js). Instructors are never locked.
+        if (!empty($context['currentItem']['is_locked'])) {
+            return $this->lockedItemRefusal($context['currentItem']);
+        }
+
         return [
 
             'html' => view(
@@ -148,6 +155,27 @@ class ModuleService
 
         ];
 
+    }
+
+    /**
+     * What a student gets instead of a locked item: the reason, and the
+     * first missing prerequisite to open instead.
+     */
+    public function lockedItemRefusal(array $item): array
+    {
+        $lockedBy = $item['locked_by'] ?? [];
+
+        $message = preg_replace('/ first\.$/u', '', $this->progressService->lockMessage($lockedBy))
+            . ' to unlock “' . $item['title'] . '”.';
+
+        return [
+            'success' => false,
+            'locked' => true,
+            'message' => $message,
+            'item_title' => $item['title'],
+            'unlock_item_id' => isset($lockedBy[0]['id']) ? (int) $lockedBy[0]['id'] : null,
+            'unlock_item_title' => $lockedBy[0]['title'] ?? null,
+        ];
     }
 
     public function viewLearningItemEditor(
@@ -369,6 +397,11 @@ class ModuleService
             'previousItem' => $navigation['previous'],
 
             'nextItem' => $navigation['next'],
+
+            // Why Continue is disabled while the next item is still locked.
+            'nextLockHint' => !empty($navigation['next']['is_locked'])
+                ? preg_replace('/ first\.$/u', ' to continue.', $this->progressService->lockMessage($navigation['next']['locked_by'] ?? []))
+                : '',
 
             'currentAssessment' => $assessmentContext['assessment'] ?? null,
 
@@ -1334,6 +1367,11 @@ class ModuleService
             $assessmentUpdate['updated_at'] = date('Y-m-d H:i:s');
 
             $this->assessmentModel->update($assessment['id'], $assessmentUpdate);
+
+            // Published from Modules: add it to the gradebook too.
+            if (($assessmentUpdate['status'] ?? null) === 'Published') {
+                (new \App\Services\Courses\Grades\GradeItemSyncService())->syncFromAssessment((int) $assessment['id']);
+            }
         }
     }
 

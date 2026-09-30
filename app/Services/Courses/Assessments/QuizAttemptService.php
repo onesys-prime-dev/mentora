@@ -10,6 +10,7 @@ use App\Models\Assessments\AssessmentSubmissionModel;
 use App\Models\Assessments\AssessmentQuestionModel;
 use App\Models\Assessments\AssessmentQuestionResponseModel;
 use App\Services\Courses\LearningProgressService;
+use App\Services\Courses\Grades\GradebookSyncService;
 
 class QuizAttemptService
 {
@@ -351,6 +352,9 @@ class QuizAttemptService
         }
 
         $this->submissionModel->update($submissionId, $submissionData);
+
+        // Fully auto-graded → it counts now (no-op while partly/un-graded).
+        (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $user->id);
 
         return [
             'success' => true,

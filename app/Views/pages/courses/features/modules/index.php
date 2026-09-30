@@ -410,10 +410,19 @@ $userRole = esc($user->getGroups()[0]);
                                                     class="flex items-center p-1"
                                                     data-learning-item-row>
 
+                                                    <?php
+                                                    // A student can't open a locked item (completion.js re-enables it once unlocked).
+                                                    $itemBlocked = $userRole !== 'instructor' && !empty($learning_item['is_locked']);
+                                                    ?>
+
                                                     <div
-                                                        class="group w-full flex items-center gap-4 px-6 py-4 rounded-2xl cursor-pointer hover:bg-[#ECEEF4]"
+                                                        class="group w-full flex items-center gap-4 px-6 py-4 rounded-2xl <?= $itemBlocked ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-[#ECEEF4]' ?>"
                                                         data-learning-item-wrapper
-                                                        data-learning-item="<?= esc($learning_item['id']) ?>">
+                                                        data-learning-item="<?= esc($learning_item['id']) ?>"
+                                                        <?php if ($itemBlocked): ?>
+                                                            data-locked="1"
+                                                            aria-disabled="true"
+                                                        <?php endif; ?>>
 
                                                         <?php if ($userRole === 'instructor'): ?>
                                                     

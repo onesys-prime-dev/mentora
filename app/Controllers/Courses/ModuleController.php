@@ -36,13 +36,18 @@ class ModuleController extends BaseController
     ) {
         $user = auth()->user();
 
-        return $this->response->setJSON(
-            $this->moduleService->viewLearningItem(
-                $user,
-                $offeringId,
-                $learningItemId
-            )
+        $result = $this->moduleService->viewLearningItem(
+            $user,
+            $offeringId,
+            $learningItemId
         );
+
+        // Locked for this student: refused, with the reason.
+        if (!empty($result['locked'])) {
+            $this->response->setStatusCode(403);
+        }
+
+        return $this->response->setJSON($result);
     }
 
     public function viewLearningItemEditor(
@@ -418,9 +423,26 @@ class ModuleController extends BaseController
         int $learningItemId
     ) {
 
-        return $this->response->setJSON(
-            $this->progressService->markComplete(auth()->user(), $offeringId, $learningItemId)
-        );
+        $user = auth()->user();
+
+        $result = $this->progressService->markComplete($user, $offeringId, $learningItemId);
+
+        // The footer's Continue target: is it still locked now? (It can sit
+        // in another unit, which unlockedItemIds doesn't cover.)
+        $nextItemId = (int) ($this->request->getJSON(true)['next_item_id'] ?? 0);
+
+        if (!empty($result['success']) && $nextItemId > 0) {
+
+            $nextLock = $this->progressService->lockFor($user, $nextItemId);
+
+            $result['nextLocked'] = $nextLock !== null;
+            $result['nextLockHint'] = $nextLock
+                ? preg_replace('/ first\.$/u', ' to continue.', $nextLock['message'])
+                : '';
+
+        }
+
+        return $this->response->setJSON($result);
 
     }
 

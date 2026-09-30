@@ -42,7 +42,8 @@ export function initializeCompletion(refresh) {
         try {
 
             const result = await markLearningItemComplete(
-                Number(button.dataset.learningItemId)
+                Number(button.dataset.learningItemId),
+                Number(document.querySelector("[data-continue][data-next-item-id]")?.dataset.nextItemId) || null
             );
 
             if (!result.success) {
@@ -118,6 +119,8 @@ function showCompleted(button, result) {
 
     document.querySelector("[data-continue]")?.classList.remove("hidden");
 
+    updateContinueLock(result);
+
     document.querySelector('[data-completion-badge="completed"]')?.classList.remove("hidden");
 
     document.querySelector('[data-completion-badge="pending"]')?.classList.add("hidden");
@@ -164,12 +167,62 @@ function markPanelItem(itemId) {
 
 }
 
+/**
+ * Continue stays disabled (lock + hint) while the next item is still
+ * locked; the server tells us after each completion.
+ */
+function updateContinueLock(result) {
+
+    const button = document.querySelector("[data-continue][data-next-item-id]");
+
+    if (!button || result.nextLocked === undefined) {
+        return;
+    }
+
+    const hint = document.querySelector("[data-continue-lock-hint]");
+
+    if (result.nextLocked) {
+
+        button.disabled = true;
+        button.dataset.nextLocked = "1";
+        button.title = result.nextLockHint ?? "";
+        button.querySelector("[data-continue-lock-icon]")?.classList.remove("hidden");
+
+        if (hint) {
+            hint.textContent = result.nextLockHint ?? "";
+            hint.classList.remove("hidden");
+        }
+
+        return;
+    }
+
+    button.disabled = false;
+    delete button.dataset.nextLocked;
+    button.removeAttribute("title");
+    button.querySelector("[data-continue-lock-icon]")?.classList.add("hidden");
+    hint?.remove();
+
+    unlockPanelItem(button.dataset.nextItemId);
+
+}
+
 function unlockPanelItem(itemId) {
 
-    const item = document.querySelector(`[data-panel-item="${itemId}"]`);
+    // Panel row and Modules-list row alike become clickable again.
+    document
+        .querySelectorAll(`[data-panel-item="${itemId}"], [data-learning-item="${itemId}"][data-locked]`)
+        .forEach((item) => {
 
-    item?.querySelector("[data-item-status-lock]")?.classList.add("hidden");
+            item.querySelector("[data-item-status-lock]")?.classList.add("hidden");
 
-    item?.querySelector("[data-item-title]")?.classList.remove("text-gray-400");
+            item.querySelector("[data-item-title]")?.classList.remove("text-gray-400");
+
+            delete item.dataset.locked;
+            item.removeAttribute("aria-disabled");
+            item.removeAttribute("title");
+            item.classList.remove("cursor-not-allowed");
+            item.classList.add("cursor-pointer", "hover:bg-[#ECEEF4]");
+
+        });
 
 }

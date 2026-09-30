@@ -72,14 +72,27 @@
                             $showLock = !$isCompleted && ($isLocked || (!$panelIsStudent && !empty($item['dependency_labels'])));
                         ?>
 
+                            <?php
+                            // A student can't open a locked item; completion.js
+                            // makes it clickable again once it unlocks.
+                            $blocked = $panelIsStudent && $isLocked && !$isCurrent;
+                            ?>
+
                             <!-- item -->
                             <div
-                                class="flex gap-3 items-center px-5 py-4 rounded-2xl border-b border-gray-100 cursor-pointer
-                                <?= $isCurrent
-                                    ? 'bg-[#ECEEF4]'
-                                    : 'hover:bg-[#ECEEF4]' ?>"
+                                class="flex gap-3 items-center px-5 py-4 rounded-2xl border-b border-gray-100
+                                <?= match (true) {
+                                    $isCurrent => 'cursor-pointer bg-[#ECEEF4]',
+                                    $blocked => 'cursor-not-allowed',
+                                    default => 'cursor-pointer hover:bg-[#ECEEF4]',
+                                } ?>"
                                 data-learning-item="<?= esc($item['id']) ?>"
-                                data-panel-item="<?= esc($item['id']) ?>">
+                                data-panel-item="<?= esc($item['id']) ?>"
+                                <?php if ($blocked): ?>
+                                    data-locked="1"
+                                    aria-disabled="true"
+                                    title="<?= esc('Complete ' . implode(', ', array_map(static fn ($p) => '“' . $p['title'] . '”', $item['locked_by'] ?? [])) . ' first', 'attr') ?>"
+                                <?php endif; ?>>
 
                                 <!-- status: completed ✓ / locked / not started — completion.js flips these live -->
                                 <div

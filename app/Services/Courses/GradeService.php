@@ -7,6 +7,9 @@ use App\Models\Courses\EnrollmentModel;
 use App\Models\Assessments\AssessmentModel;
 use App\Models\Assessments\GradebookRecordModel;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
+use App\Services\Courses\Grades\GradingSchemeService;
+use App\Services\Courses\Grades\GradingEngineService;
+use App\Models\Grades\GradeScaleItemModel;
 
 use CodeIgniter\Shield\Entities\User;
 
@@ -75,6 +78,9 @@ class GradeService
     {
         $courseId = $offering['course_id'];
 
+        // Resolves (and on first use creates) the section's grading scheme.
+        $gradebook = (new GradingSchemeService())->describe((int) $offering['id']);
+
         $assessments = $this->assessmentModel
             ->getAssessmentSummaryForCourse($courseId, (int) $offering['id']);
 
@@ -98,10 +104,10 @@ class GradeService
 
         }
 
-        // gradebook_records is per course; only this section's students count.
+        // Final grades as GradingEngineService last computed them.
         $records = $totalStudents > 0
             ? $this->gradebookRecordModel
-                ->where('course_id', $courseId)
+                ->where('course_offering_id', $offering['id'])
                 ->whereIn('student_id', $rosterIds)
                 ->findAll()
             : [];
@@ -115,14 +121,10 @@ class GradeService
                 $passingCount++;
             }
 
-            if ($record['remarks'] !== 'Incomplete') {
+            $effective = GradebookRecordModel::effectivePercentage($record);
 
-                $percentages[] = (float) (
-                    $record['is_override_final_grade']
-                        ? $record['overridden_final_grade']
-                        : $record['calculated_final_grade']
-                );
-
+            if ($effective !== null) {
+                $percentages[] = $effective;
             }
 
         }
@@ -137,6 +139,7 @@ class GradeService
                 'total_students' => $totalStudents,
                 'needs_review'   => $needsReview,
             ],
+            'gradebook' => $gradebook,
         ];
     }
 
@@ -144,14 +147,44 @@ class GradeService
      * A student's Grades page: every assessment of this section they can
      * see, in the same state and counted score the Assessments tab shows
      * (AssessmentOverviewService — best graded quiz attempt, latest graded
-     * assignment), plus a live summary over their graded work.
+     * assignment), plus their final grade from the gradebook
+     * (GradingEngineService) with a per-category breakdown.
      *
-     * gradebook_records isn't recalculated when work is graded, so the
-     * headline is computed here; an instructor's override on that record
-     * still wins.
+     * The final grade shows only once the instructor has published the
+     * grading scheme; an instructor's override wins.
      */
     public function buildStudentGrades(User $user, array $offering, ?array $overview = null): array
     {
+        $offeringId = (int) $offering['id'];
+
+        $scheme = (new GradingSchemeService())->forOffering($offeringId);
+
+        $engine = new GradingEngineService();
+
+        $isPublished = $scheme['status'] === 'Published';
+
+        $record = $this->gradebookRecordModel->findForStudent($offeringId, (int) $user->id);
+
+        // Never calculated for this student yet (e.g. enrolled later).
+        if (!$record && $isPublished) {
+            $engine->recalculateStudent($offeringId, (int) $user->id);
+            $record = $this->gradebookRecordModel->findForStudent($offeringId, (int) $user->id);
+        }
+
+        $context = $engine->context($offeringId, [(int) $user->id]);
+
+        $breakdown = $context ? $engine->compute($context, (int) $user->id) : null;
+
+        $percentage = $isPublished ? GradebookRecordModel::effectivePercentage($record) : null;
+
+        $bandId = !empty($record['is_override'])
+            ? $record['overridden_grade_scale_item_id']
+            : ($record['calculated_grade_scale_item_id'] ?? null);
+
+        $band = $isPublished && $bandId
+            ? (new GradeScaleItemModel())->find((int) $bandId)
+            : null;
+
         $overviewService = new AssessmentOverviewService();
 
         // The course Overview already builds this for its own metrics and
@@ -176,38 +209,22 @@ class GradeService
 
         $graded = array_values(array_filter($assessments, static fn (array $a) => $a['has_grade']));
 
-        $pointsEarned = array_sum(array_column($graded, 'score'));
-        $pointsPossible = array_sum(array_column($graded, 'total_points'));
-
-        $percentage = $pointsPossible > 0 ? round($pointsEarned / $pointsPossible * 100, 2) : null;
-
-        $remarks = match (true) {
-            $percentage === null => 'Incomplete',
-            $percentage >= 75 => 'Passed',
-            default => 'Failed',
-        };
-
-        $record = $this->gradebookRecordModel
-            ->where('course_id', $offering['course_id'])
-            ->where('student_id', $user->id)
-            ->first();
-
-        if (!empty($record['is_override_final_grade'])) {
-            $percentage = (float) $record['overridden_final_grade'];
-            $remarks = $record['remarks'];
-        }
-
         return [
             'assessments' => $assessments,
             'summary' => [
+                'is_published' => $isPublished,
                 'overall_percentage' => $percentage,
-                'points_earned' => $pointsEarned,
-                'points_possible' => $pointsPossible,
-                'remarks' => $remarks,
+                'grade_label' => $band['name'] ?? null,
+                'points_earned' => $breakdown['points_earned'] ?? 0,
+                'points_possible' => $breakdown['points_possible'] ?? 0,
+                'remarks' => $isPublished ? ($record['remarks'] ?? 'Incomplete') : 'Incomplete',
                 'graded_count' => count($graded),
                 'total_count' => count($assessments),
-                'is_override' => !empty($record['is_override_final_grade']),
+                'is_override' => $isPublished && !empty($record['is_override']),
+                'passing_percentage' => (float) $scheme['passing_percentage'],
             ],
+            'categoryBreakdown' => $isPublished ? ($breakdown['categories'] ?? []) : [],
+            'periodBreakdown' => $isPublished ? ($breakdown['periods'] ?? []) : [],
         ];
     }
 }

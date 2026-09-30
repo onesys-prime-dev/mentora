@@ -434,6 +434,18 @@ export async function fetchLearningItemView(
 
     );
 
+    // 403 + locked: a student opening an item behind incomplete
+    // prerequisites — the body says why (learning-item.js shows it).
+    if (response.status === 403) {
+
+        const body = await response.json().catch(() => null);
+
+        if (body?.locked) {
+            return body;
+        }
+
+    }
+
     if (!response.ok) {
 
         throw new Error("Unable to load learning item.");
@@ -718,7 +730,8 @@ export async function updatePdfItem(
 */
 
 export async function markLearningItemComplete(
-    learningItemId
+    learningItemId,
+    nextItemId = null
 ) {
 
     const response = await fetch(
@@ -729,7 +742,11 @@ export async function markLearningItemComplete(
 
             method: "POST",
 
-            headers: defaultHeaders(),
+            headers: { ...defaultHeaders(), "Content-Type": "application/json" },
+
+            // Lets the server say whether the footer's Continue target is
+            // still locked once this item is completed.
+            body: JSON.stringify({ next_item_id: nextItemId }),
 
         }
 

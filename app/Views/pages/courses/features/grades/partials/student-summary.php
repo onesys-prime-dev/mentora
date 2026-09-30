@@ -15,6 +15,9 @@ $remarksMeta = match ($summary['remarks'] ?? null) {
 
 $gradedCount = (int) ($summary['graded_count'] ?? 0);
 $totalCount = (int) ($summary['total_count'] ?? 0);
+
+$isPublished = !empty($summary['is_published']);
+$gradeLabel = $summary['grade_label'] ?? null;
 ?>
 
 <div class="flex flex-1 gap-10">
@@ -32,13 +35,19 @@ $totalCount = (int) ($summary['total_count'] ?? 0);
             </span>
 
             <span class="font-bold text-xl text-[#0040A6]">
-                <?= $finalGrade !== null ? esc(number_format((float) $finalGrade, 1)) . '%' : '—' ?>
+                <?= $finalGrade !== null ? esc(number_format((float) $finalGrade, 2)) . '%' : '—' ?>
+                <?php if ($gradeLabel !== null): ?>
+                    <span class="ml-1 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-sm" data-grades-scale-grade><?= esc($gradeLabel) ?></span>
+                <?php endif; ?>
             </span>
 
             <span class="text-xs text-[#878787]">
-                <?= !empty($summary['is_override'])
-                    ? 'Set by your instructor'
-                    : ($finalGrade !== null ? 'From your graded work so far' : 'Nothing graded yet') ?>
+                <?= match (true) {
+                    !$isPublished => "Your instructor hasn't published the grading yet",
+                    !empty($summary['is_override']) => 'Set by your instructor',
+                    $finalGrade !== null => 'From your graded work so far',
+                    default => 'Nothing graded yet',
+                } ?>
             </span>
 
         </div>

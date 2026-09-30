@@ -1,0 +1,8 @@
+﻿"[machine-readable — do not edit]",eddb3e54dc883a7620bf719e3afa6e51
+student_id,student_number,student_name,item:1,item:4,item:2,item:3,item:11,category:3,category:4,category:11,final,grade,remarks,row_hash
+"ID (do not edit)","Student Number","Student Name","Course Pre-Test (/10) [locked]","Quiz 1: Variables and Data Types (/20) [locked]","Assignment 1: Grade Calculator (/30) [locked]","Lab 1: Designing a Table (/20) [locked]","Class Participation (/10)","Quizzes % (40%)","Assignments % (40%)","Participation % (20%)","Final %",Grade,Remarks,"Check (do not edit)"
+4,2026-05003,"Cruz, Angela",4,,,,6,40,,60,46.67,5.00,Failed,7afbc23472c265f0
+1,2026-02000,"Dela Cruz, Juan",8,19,27,,9,90,90,90,90,1.75,Passed,dd04d16ace2466c9
+2,2026-03001,"Reyes, Pedro",10,,18,,8,100,60,80,80,2.50,Passed,4b83ed6989144641
+3,2026-04002,"Santos, Maria",8,,,,7.5,80,,75,78.33,2.75,Passed,81e3ec8a2a624798
+5,2026-06004,"Villanueva, Michael",,,,,,,,,,,Incomplete,d6745ecb7ed6a8de

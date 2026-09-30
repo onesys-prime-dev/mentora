@@ -18,6 +18,7 @@ use App\Models\Learning\CourseModuleModel;
 use App\Models\Courses\CourseOfferingModel;
 use App\Services\Courses\ContentDeletionService;
 use App\Services\Courses\LearningProgressService;
+use App\Services\Courses\Grades\GradeItemSyncService;
 
 class AssessmentService
 {
@@ -1129,6 +1130,8 @@ class AssessmentService
 
             if (array_key_exists('status', $data)) {
                 $this->syncLearningItemStatus($assessment, $data['status']);
+
+                (new GradeItemSyncService())->syncFromAssessment($assessmentId);
             }
 
             /*
@@ -1287,6 +1290,9 @@ class AssessmentService
                 'updated_at' => date('Y-m-d H:i:s')
             ]
         );
+
+        // Published work counts toward the grade: add it to the gradebook.
+        (new GradeItemSyncService())->syncFromAssessment($assessmentId);
 
         return [
             'success' => true,

@@ -134,5 +134,32 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->post('(:num)/assessments/(:num)/import/apply', 'Courses\Assessments\QuestionImportExportController::apply/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
+
+        // Grading scheme (categories, weights, grade items) + recalculation
+        $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
+        $routes->patch('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::update/$1');
+        $routes->post('(:num)/grades/scheme/categories', 'Courses\Grades\GradingSchemeController::storeCategory/$1');
+        $routes->patch('(:num)/grades/scheme/categories/(:num)', 'Courses\Grades\GradingSchemeController::updateCategory/$1/$2');
+        $routes->delete('(:num)/grades/scheme/categories/(:num)', 'Courses\Grades\GradingSchemeController::deleteCategory/$1/$2');
+        $routes->post('(:num)/grades/scheme/categories/(:num)/items', 'Courses\Grades\GradingSchemeController::storeItem/$1/$2');
+        $routes->patch('(:num)/grades/scheme/items/(:num)', 'Courses\Grades\GradingSchemeController::updateItem/$1/$2');
+        $routes->delete('(:num)/grades/scheme/items/(:num)', 'Courses\Grades\GradingSchemeController::deleteItem/$1/$2');
+        $routes->post('(:num)/grades/scheme/items/(:num)/resync', 'Courses\Grades\GradingSchemeController::resyncItem/$1/$2');
+        $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
+
+        // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
+        $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
+        $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');
+
+        // Gradebook grid: manual item scores + final-grade override
+        $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
+        $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
+        $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+
+        // Offline grade sheet (XLSX / CSV)
+        $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
+        $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
 });
