@@ -28,7 +28,7 @@ if (! function_exists('global_apps')) {
         return [
             ['key' => 'courses',       'label' => 'Courses',       'icon' => 'hat',          'url' => site_url($role . '/courses')],
             ['key' => 'schedule',      'label' => 'Schedule',      'icon' => 'clock',        'url' => null],
-            ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => null],
+            ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],
             ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
             ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => null],
             ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],

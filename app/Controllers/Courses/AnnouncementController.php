@@ -26,4 +26,18 @@ class AnnouncementController extends BaseController
             )
         );
     }
+
+    /** Posting from the Calendar's date-click menu (instructor only). */
+    public function store()
+    {
+        $user = auth()->user();
+
+        $data = $this->request->getJSON(true) ?? [];
+
+        $result = $this->announcementService->create($user, $data);
+
+        return $this->response
+            ->setJSON($result)
+            ->setStatusCode($result['success'] ? 201 : 422);
+    }
 }

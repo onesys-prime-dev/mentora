@@ -30,6 +30,17 @@ class ModuleController extends BaseController
         );
     }
 
+    /** Raw module/unit list for a picker (see ModuleService::listForPicker). */
+    public function picker(int $offeringId)
+    {
+        $user = auth()->user();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'modules' => $this->moduleService->listForPicker($user, $offeringId),
+        ]);
+    }
+
     public function viewLearningItem(
         int $offeringId,
         int $learningItemId
