@@ -21,7 +21,8 @@
 
     <div
         class="absolute right-0 top-12 z-30 hidden w-36 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
-        data-learning-unit-actions-panel>
+        data-learning-unit-actions-panel
+        data-action-menu-panel>
 
         <div class="py-2">
 
@@ -50,6 +51,32 @@
                 </svg>
 
                 Edit
+
+            </button>
+
+            <button
+                type="button"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6] cursor-pointer"
+                data-unit-publish-toggle
+                data-learning-unit-id="<?= esc($learning_unit['id']) ?>"
+                data-status="<?= esc($learning_unit['status']) ?>">
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M5 13l4 4L19 7"/>
+
+                </svg>
+
+                <span data-publish-toggle-label><?= $learning_unit['status'] === 'published' ? 'Unpublish' : 'Publish' ?></span>
 
             </button>
 

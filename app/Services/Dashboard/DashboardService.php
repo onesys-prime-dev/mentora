@@ -428,7 +428,7 @@ class DashboardService
             return ['sections' => []];
         }
 
-        $blocks = $this->groupSchedules(
+        $blocks = $this->courseScheduleModel->groupByOffering(
             $this->courseScheduleModel->retrieveForOfferings(
                 array_column($sections, 'offering_id')
             )
@@ -569,58 +569,6 @@ class DashboardService
                 $drafts
             ),
         ];
-    }
-
-    /**
-     * Folds meeting blocks into one line per offering, collapsing days that
-     * share a start and end time into a single "MWF 8:00-9:30".
-     */
-    protected function groupSchedules(array $rows): array
-    {
-        $letters = [
-            'mon' => 'M',
-            'tue' => 'T',
-            'wed' => 'W',
-            'thu' => 'Th',
-            'fri' => 'F',
-            'sat' => 'Sa',
-            'sun' => 'Su',
-        ];
-
-        $byOffering = [];
-
-        foreach ($rows as $row) {
-            $offeringId = (int) $row['offering_id'];
-
-            $slot = substr((string) $row['start_time'], 0, 5)
-                . '-'
-                . substr((string) $row['end_time'], 0, 5);
-
-            $byOffering[$offeringId][$slot]['days'][] =
-                $letters[$row['day_of_week']] ?? '';
-
-            $byOffering[$offeringId][$slot]['room'] = $row['room'];
-        }
-
-        $grouped = [];
-
-        foreach ($byOffering as $offeringId => $slots) {
-            $parts = [];
-            $room = null;
-
-            foreach ($slots as $slot => $detail) {
-                $parts[] = implode('', $detail['days']) . ' ' . $slot;
-
-                $room ??= $detail['room'];
-            }
-
-            $grouped[$offeringId] = [
-                'schedule' => implode(' / ', $parts),
-                'room' => $room ?: '--',
-            ];
-        }
-
-        return $grouped;
     }
 
     protected function describeLastActive(?int $days): string

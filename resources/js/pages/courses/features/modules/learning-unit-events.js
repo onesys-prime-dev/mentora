@@ -66,7 +66,7 @@ function toggleLearningUnit(
 
     const isOpen =
         content.classList.contains(
-            "max-h-[2000px]"
+            "max-h-[3000px]"
         );
 
     if (isOpen) {
@@ -102,7 +102,7 @@ function openLearningUnit(
     );
 
     content.classList.add(
-        "max-h-[2000px]",
+        "max-h-[3000px]",
         "opacity-100"
     );
 
@@ -118,7 +118,7 @@ function closeLearningUnit(
 ) {
 
     content.classList.remove(
-        "max-h-[2000px]",
+        "max-h-[3000px]",
         "opacity-100"
     );
 

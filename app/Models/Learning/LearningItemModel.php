@@ -30,6 +30,7 @@ class LearningItemModel extends Model
         'title',
         'item_type',
         'content',
+        'estimated_minutes',
         'order_index',
         'status',
         'prerequisite_mode',
@@ -46,12 +47,13 @@ class LearningItemModel extends Model
                 'title',
                 'item_type',
                 'content',
+                'estimated_minutes',
                 'order_index',
                 'status',
                 'prerequisite_mode',
             ])
             ->where('learning_unit_id', $learningUnitId);
-        
+
         if (! $user->inGroup('instructor')) {
             $builder->where('status', 'published');
         }
@@ -73,6 +75,7 @@ class LearningItemModel extends Model
                 'title',
                 'item_type',
                 'content',
+                'estimated_minutes',
                 'order_index',
                 'status',
                 'prerequisite_mode',

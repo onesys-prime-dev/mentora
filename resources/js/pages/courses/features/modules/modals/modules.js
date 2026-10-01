@@ -4,22 +4,29 @@ import {
     deleteModule,
 } from "../api.js";
 
-import { initialize } from "../index.js";
-
 /*
 |--------------------------------------------------------------------------
 | Module Modals
 |--------------------------------------------------------------------------
+|
+| refresh reloads whatever screen is currently showing (the list on
+| index.php, or the module itself on module.php). onDeleted runs instead
+| after a successful delete, since the module that screen depends on may
+| no longer exist — defaults to refresh (fine on the list; module.php
+| passes its own "go back to the list" callback).
+|
 */
 
 export function bindModuleModals({
     editor,
     delete: deleteModal,
+    refresh,
+    onDeleted = refresh,
 }) {
 
-    bindEditor(editor);
+    bindEditor(editor, refresh);
 
-    bindDelete(deleteModal);
+    bindDelete(deleteModal, onDeleted);
 
 }
 
@@ -29,7 +36,7 @@ export function bindModuleModals({
 |--------------------------------------------------------------------------
 */
 
-function bindEditor(modal) {
+function bindEditor(modal, refresh) {
 
     const form =
         document.querySelector("#module-editor-form");
@@ -176,7 +183,7 @@ function bindEditor(modal) {
 
                 form.reset();
 
-                initialize();
+                refresh();
 
             }
 
@@ -197,7 +204,7 @@ function bindEditor(modal) {
 |--------------------------------------------------------------------------
 */
 
-function bindDelete(modal) {
+function bindDelete(modal, onDeleted) {
 
     const form =
         document.querySelector("#module-delete-form");
@@ -261,7 +268,7 @@ function bindDelete(modal) {
 
                 modal.close();
 
-                initialize();
+                onDeleted();
 
             }
 

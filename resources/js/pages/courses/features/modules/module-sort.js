@@ -60,31 +60,9 @@ export function initializeModuleSorting() {
 
             updateModuleWrappers();
 
-            /*
-            |--------------------------------------------------------------------------
-            | Update displayed order immediately
-            |--------------------------------------------------------------------------
-            */
-
-            document
-
-                .querySelectorAll("[data-module-wrapper]")
-
-                .forEach((module, index) => {
-
-                    const label =
-                        module.querySelector(
-                            "[data-module-order]"
-                        );
-
-                    if (label) {
-
-                        label.textContent =
-                            `MODULE ${index + 1}`;
-
-                    }
-
-                });
+            // Module numbers skip drafts, so they can't be recomputed from
+            // position alone client-side; they'll be correct again on the
+            // next reload.
 
             /*
             |--------------------------------------------------------------------------

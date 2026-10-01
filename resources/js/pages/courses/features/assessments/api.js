@@ -723,6 +723,50 @@ export async function submitGrade(offeringId, submissionId, payload) {
 
 }
 
+export async function gradeQuestion(offeringId, submissionId, questionId, payload) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/submissions/${submissionId}/questions/${questionId}/grade`,
+        {
+            method: "PATCH",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to grade that question.");
+    }
+
+    return response.json();
+
+}
+
+export async function postFeedback(offeringId, submissionId, message) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/submissions/${submissionId}/feedback`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ message }),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to send feedback.");
+    }
+
+    return response.json();
+
+}
+
 export async function reorderQuestions(offeringId, assessmentId, questionIds) {
 
     const response = await fetch(

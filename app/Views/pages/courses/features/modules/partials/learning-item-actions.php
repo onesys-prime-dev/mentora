@@ -22,7 +22,8 @@
 
     <div
         class="absolute right-0 top-10 z-30 hidden w-44 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
-        data-learning-item-actions-panel>
+        data-learning-item-actions-panel
+        data-action-menu-panel>
 
         <div class="py-2">
 
@@ -61,6 +62,57 @@
                 <?= icon('lock', 'h-4 w-4 text-current') ?>
 
                 Dependencies
+
+            </button>
+
+            <button
+                type="button"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6] cursor-pointer"
+                data-item-publish-toggle
+                data-learning-item-id="<?= esc($learning_item['id']) ?>"
+                data-status="<?= esc($learning_item['status']) ?>">
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M5 13l4 4L19 7"/>
+
+                </svg>
+
+                <span data-publish-toggle-label><?= $learning_item['status'] === 'published' ? 'Unpublish' : 'Publish' ?></span>
+
+            </button>
+
+            <button
+                type="button"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 transition hover:bg-red-50 cursor-pointer"
+                data-row-delete-learning-item
+                data-learning-item-id="<?= esc($learning_item['id']) ?>">
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M19 7L18.133 19.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8"/>
+
+                </svg>
+
+                Delete
 
             </button>
 

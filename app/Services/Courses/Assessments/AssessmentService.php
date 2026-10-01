@@ -11,6 +11,7 @@ use App\Models\Assessments\AssessmentTypeModel;
 use App\Models\Assessments\AssessmentRubricModel;
 use App\Models\Assessments\AssessmentQuestionModel;
 use App\Models\Assessments\AssessmentSubmissionModel;
+use App\Models\Assessments\AssessmentFeedbackModel;
 
 use App\Models\Learning\LearningItemModel;
 use App\Models\Learning\LearningUnitModel;
@@ -132,6 +133,10 @@ class AssessmentService
         );
 
         $submission = $scoreResult['counted'] ?? $scoreResult['latest'];
+
+        if ($submission) {
+            $submission['feedback_thread'] = (new AssessmentFeedbackModel())->listForSubmission((int) $submission['id']);
+        }
 
         $rubric = $isAssignment ? $this->rubricModel->findByAssessment($assessmentId) : null;
 
@@ -725,6 +730,22 @@ class AssessmentService
         }
     }
 
+    /**
+     * Keeps a quiz's learning item showing the same estimated time as the
+     * quiz's own duration — the module duration badge sums item minutes,
+     * so a quiz's "minutes" must come from here, not be entered twice.
+     */
+    private function syncLearningItemDuration(array $assessment, ?int $duration): void
+    {
+        if (empty($assessment['learning_item_id'])) {
+            return;
+        }
+
+        $this->learningItemModel->update($assessment['learning_item_id'], [
+            'estimated_minutes' => $duration,
+        ]);
+    }
+
     public function createAssessment(User $user, int $moduleId, int $learningUnitId, array $data): array {
         $db = db_connect();
 
@@ -1132,6 +1153,10 @@ class AssessmentService
                 $this->syncLearningItemStatus($assessment, $data['status']);
 
                 (new GradeItemSyncService())->syncFromAssessment($assessmentId);
+            }
+
+            if (array_key_exists('duration', $data)) {
+                $this->syncLearningItemDuration($assessment, $assessmentData['duration'] !== null ? (int) $assessmentData['duration'] : null);
             }
 
             /*

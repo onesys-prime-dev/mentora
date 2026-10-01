@@ -18,6 +18,8 @@ import { bindAssessmentCreateModal } from "./modals/assessments.js";
 
 import { loadGradebookRoster } from "../grades/roster/roster.js";
 
+import { bindFeedbackComposer } from "./feedback/feedback.js";
+
 import { highlightRow } from "../../../../shared/spa/highlight-row.js";
 
 import {
@@ -695,6 +697,13 @@ export async function loadAssessmentView(
                 ),
 
         });
+
+        bindFeedbackComposer(offeringId, () => loadAssessmentView(
+            offeringId,
+            assessmentId,
+            refresh,
+            { pushState: false, mode: "refresh" }
+        ));
 
     } catch (error) {
 

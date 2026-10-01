@@ -16,6 +16,7 @@ use App\Models\Assessments\AssessmentTypeModel;
 use App\Services\Storage\StorageService;
 use App\Services\Courses\Assessments\AssessmentService;
 use App\Services\Courses\LearningProgressService;
+use App\Models\Assignments\InstructorAssignmentModel;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -30,6 +31,7 @@ class ModuleService
     protected FileModel $fileModel;
     protected AssessmentModel $assessmentModel;
     protected AssessmentTypeModel $assessmentTypeModel;
+    protected InstructorAssignmentModel $instructorAssignmentModel;
 
     protected StorageService $storageService;
     protected AssessmentService $assessmentService;
@@ -45,6 +47,7 @@ class ModuleService
         $this->fileModel = new FileModel();
         $this->assessmentModel = new AssessmentModel();
         $this->assessmentTypeModel = new AssessmentTypeModel();
+        $this->instructorAssignmentModel = new InstructorAssignmentModel();
 
         $this->assessmentService = new AssessmentService();
 
@@ -53,65 +56,123 @@ class ModuleService
         $this->progressService = new LearningProgressService();
     }
 
+    /**
+     * Every Modules write method is reachable by anyone in the instructor
+     * Shield group today, regardless of whether they actually teach this
+     * offering (group:instructor only gates the route). This closes that
+     * gap the same way CourseController already resolves "is this user
+     * really the instructor here" — via instructor_assignments, not just
+     * group membership.
+     */
+    private function ensureInstructorOwnsOffering(User $user, int $offeringId): ?array
+    {
+        if (!$user->inGroup('instructor')) {
+            return ['success' => false, 'message' => 'Not authorized.'];
+        }
+
+        $assigned = $this->instructorAssignmentModel
+            ->retrieveInstructorCourseOffering($user->id, $offeringId);
+
+        if (!$assigned) {
+            return ['success' => false, 'message' => 'You are not assigned to this course offering.'];
+        }
+
+        return null;
+    }
+
     public function show(
         User $user,
         int $offeringId
     ): array {
 
-    $modules = $this->courseModuleModel->retrieveCourseModules($offeringId, $user);
+        $modules = $this->courseModuleModel->retrieveCourseModules($offeringId, $user);
 
-    foreach ($modules as &$module) {
+        $isInstructor = $user->inGroup('instructor');
 
-        $module['learning_units'] =
-            $this->learningUnitModel->retrieveLearningUnits($module['id'], $user);
+        $moduleIds = array_column($modules, 'id');
 
-        $totalItems = 0;
-        $completedItems = 0;
+        $durations = $this->courseModuleModel->retrieveDurationMinutes($moduleIds);
+        $itemTypeCounts = $this->courseModuleModel->retrieveItemTypeCounts($moduleIds);
 
-        foreach ($module['learning_units'] as &$unit) {
-
-            $unit['learning_items'] =
-                $this->learningItemModel->retrieveLearningItems($unit['id'], $user);
-
-            foreach ($unit['learning_items'] as &$item) {
-
-                $item = $this->hydrateLearningItem($item);
-
-                $item['learning_completion'] =
-                    $this->learningCompletionModel
-                        ->retrieveLearningCompletion($item['id'], $user->id);
-
-                $item['is_completed'] =
-                    ($item['learning_completion']['status'] ?? null) === 'completed';
-
-                $item['is_started'] =
-                    in_array(
-                        $item['learning_completion']['status'] ?? null,
-                        ['in_progress', 'completed'],
-                        true
-                    );
-
-                $totalItems++;
-
-                if (
-                    $item['learning_completion'] !== null &&
-                    $item['learning_completion']['status'] === 'completed'
-                ) {
-                    $completedItems++;
-                }
-            }
-        }
-
-        $module['progress'] = $totalItems > 0
-            ? round(($completedItems / $totalItems) * 100)
+        // Class-wide completion (instructor) needs the section's roster size;
+        // a student's own completion is tallied per-module below instead.
+        $rosterSize = $isInstructor
+            ? (int) db_connect()->table('enrollments')
+                ->where('offering_id', $offeringId)
+                ->where('status', 'enrolled')
+                ->countAllResults()
             : 0;
 
-        $module['completed_items'] = $completedItems;
-        $module['total_items'] = $totalItems;
+        $classProgress = $isInstructor
+            ? $this->courseModuleModel->retrieveModuleProgress([$offeringId])
+            : [];
 
-        // Locks, "can complete" and the student's real progress.
-        $this->progressService->annotateTree($user, $module);
-    }
+        $classProgressByModule = [];
+
+        foreach ($classProgress as $row) {
+            $classProgressByModule[(int) $row['module_id']] = $row;
+        }
+
+        $displayNumber = 0;
+
+        foreach ($modules as &$module) {
+
+            $module['display_number'] = $module['status'] === 'published'
+                ? ++$displayNumber
+                : null;
+
+            $module['duration_minutes'] = $durations[$module['id']] ?? 0;
+            $module['item_type_counts'] = $itemTypeCounts[$module['id']] ?? [];
+
+            if ($isInstructor) {
+
+                $class = $classProgressByModule[$module['id']] ?? null;
+                $denominator = $class ? $rosterSize * (int) $class['item_count'] : 0;
+
+                $module['progress'] = $denominator > 0
+                    ? (int) round((int) $class['completed_count'] / $denominator * 100)
+                    : 0;
+
+                $module['has_roster'] = $rosterSize > 0;
+
+                continue;
+
+            }
+
+            $totalItems = 0;
+            $completedItems = 0;
+
+            foreach ($this->learningUnitModel->retrieveLearningUnits($module['id'], $user) as $unit) {
+
+                foreach ($this->learningItemModel->retrieveLearningItems($unit['id'], $user) as $item) {
+
+                    $completion = $this->learningCompletionModel
+                        ->retrieveLearningCompletion($item['id'], $user->id);
+
+                    $totalItems++;
+
+                    if (($completion['status'] ?? null) === 'completed') {
+                        $completedItems++;
+                    }
+
+                }
+
+            }
+
+            $module['progress'] = $totalItems > 0
+                ? (int) round($completedItems / $totalItems * 100)
+                : 0;
+
+        }
+        unset($module);
+
+        $courseDescription = db_connect()->table('course_offerings')
+            ->select('courses.description')
+            ->join('courses', 'courses.id = course_offerings.course_id')
+            ->where('course_offerings.id', $offeringId)
+            ->get()
+            ->getRow()
+            ->description ?? '';
 
         return [
 
@@ -120,6 +181,109 @@ class ModuleService
                 [
                     'user' => $user,
                     'modules' => $modules,
+                    'course_description' => $courseDescription,
+                ]
+            ),
+
+        ];
+
+    }
+
+    /**
+     * One module's own page: the units/items tree the list page used to
+     * render inline, plus the same role-scoped progress §3 computes.
+     * Reuses buildModuleTree() — already the data source for the
+     * learning-item view/editor context, not a new query from scratch.
+     */
+    public function showModule(User $user, int $offeringId, int $moduleId): array
+    {
+        $module = $this->courseModuleModel->retrieveCourseModule($moduleId, $user);
+
+        if (!$module || (int) $module['offering_id'] !== $offeringId) {
+            throw new PageNotFoundException('Module not found.');
+        }
+
+        $tree = $this->buildModuleTree($user, $moduleId);
+
+        $isInstructor = $user->inGroup('instructor');
+
+        // The visible module number only counts published modules up to
+        // and including this one, in order — same rule as the list page.
+        $displayNumber = null;
+        $counted = 0;
+
+        foreach ($this->courseModuleModel->retrieveCourseModules($offeringId, $user) as $row) {
+            if ($row['status'] === 'published') {
+                $counted++;
+            }
+            if ((int) $row['id'] === $moduleId) {
+                $displayNumber = $row['status'] === 'published' ? $counted : null;
+                break;
+            }
+        }
+
+        $durations = $this->courseModuleModel->retrieveDurationMinutes([$moduleId]);
+        $tree['duration_minutes'] = $durations[$moduleId] ?? 0;
+        $tree['display_number'] = $displayNumber;
+
+        if ($isInstructor) {
+
+            $rosterSize = (int) db_connect()->table('enrollments')
+                ->where('offering_id', $offeringId)
+                ->where('status', 'enrolled')
+                ->countAllResults();
+
+            $classProgress = $this->courseModuleModel->retrieveModuleProgress([$offeringId]);
+            $row = null;
+
+            foreach ($classProgress as $candidate) {
+                if ((int) $candidate['module_id'] === $moduleId) {
+                    $row = $candidate;
+                    break;
+                }
+            }
+
+            $denominator = $row ? $rosterSize * (int) $row['item_count'] : 0;
+
+            $tree['progress'] = $denominator > 0
+                ? (int) round((int) $row['completed_count'] / $denominator * 100)
+                : 0;
+
+            $tree['has_roster'] = $rosterSize > 0;
+
+        }
+
+        // Student only: the first unlocked, not-yet-completed item, in
+        // display order — "where they left off". Absent when nothing
+        // qualifies (not started, or everything already completed).
+        $resumeItem = null;
+
+        if (!$isInstructor) {
+
+            foreach ($tree['learning_units'] ?? [] as $unit) {
+
+                foreach ($unit['learning_items'] ?? [] as $item) {
+
+                    if (empty($item['is_locked']) && empty($item['is_completed'])) {
+                        $resumeItem = $item + ['learning_unit_id' => $unit['id'], 'learning_unit_title' => $unit['title']];
+                        break 2;
+                    }
+
+                }
+
+            }
+
+        }
+
+        return [
+
+            'html' => view(
+                'pages/courses/features/modules/module',
+                [
+                    'user' => $user,
+                    'module' => $tree,
+                    'resume_item' => $resumeItem,
+                    'is_instructor' => $isInstructor,
                 ]
             ),
 
@@ -557,6 +721,10 @@ class ModuleService
         IncomingRequest $request
     ): array
     {
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         $title = trim(
             $request->getPost('title')
         );
@@ -623,6 +791,10 @@ class ModuleService
         int $moduleId,
         IncomingRequest $request
     ): array {
+
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
 
         $module =
             $this->courseModuleModel
@@ -702,6 +874,10 @@ class ModuleService
         string $status
     ): array {
 
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         $module =
             $this->courseModuleModel
                 ->find($moduleId);
@@ -766,6 +942,10 @@ class ModuleService
 
     ) {
 
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         foreach ($order as $module) {
 
             $this->courseModuleModel->update(
@@ -799,6 +979,10 @@ class ModuleService
         IncomingRequest $request
     ): array
     {
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         $title = trim(
             $request->getPost('title')
         );
@@ -866,6 +1050,10 @@ class ModuleService
         int $learningUnitId,
         IncomingRequest $request
     ): array {
+
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
 
         $unit =
             $this->learningUnitModel
@@ -936,6 +1124,10 @@ class ModuleService
 
     ) {
 
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         $learningUnit =
 
             $this->learningUnitModel
@@ -979,6 +1171,10 @@ class ModuleService
         array $learningUnits
 
     ) {
+
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -1070,6 +1266,10 @@ class ModuleService
         int $learningUnitId,
         IncomingRequest $request
     ): array {
+
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
 
         $module =
             $this->courseModuleModel
@@ -1234,6 +1434,10 @@ class ModuleService
 
     ) {
 
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         $learningItem =
 
             $this->learningItemModel
@@ -1316,6 +1520,25 @@ class ModuleService
 
         }
 
+        if (array_key_exists('estimated_minutes', $payload)) {
+
+            // Quiz items mirror the assessment's own duration setting —
+            // edited there, not independently, so the two can't disagree.
+            if (strtolower((string) $learningItem['item_type']) === 'quiz') {
+
+                return [
+                    'success' => false,
+                    'message' => "A quiz's estimated time comes from its duration setting, not here.",
+                ];
+
+            }
+
+            $update['estimated_minutes'] = $payload['estimated_minutes'] !== null && $payload['estimated_minutes'] !== ''
+                ? max(0, (int) $payload['estimated_minutes'])
+                : null;
+
+        }
+
         $this->learningItemModel
             ->update(
 
@@ -1387,6 +1610,10 @@ class ModuleService
         int $learningItemId
     ): array {
 
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         $learningItem =
             $this->learningItemModel
                 ->find($learningItemId);
@@ -1434,6 +1661,10 @@ class ModuleService
         int $moduleId
     ): array {
 
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
+
         $module = $this->courseModuleModel->find($moduleId);
 
         if (!$module || (int) $module['offering_id'] !== $offeringId) {
@@ -1467,6 +1698,10 @@ class ModuleService
         int $moduleId,
         int $learningUnitId
     ): array {
+
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
 
         $module = $this->courseModuleModel->find($moduleId);
 
@@ -1951,6 +2186,10 @@ class ModuleService
         array $items
 
     ) {
+
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
 
         $unitIds = [];
 

@@ -41,6 +41,28 @@ $scored = $scoreResult !== null ? $scoreResult['counted'] : $submission;
 
 $isGraded = !empty($scored['is_graded']);
 
+/*
+|--------------------------------------------------------------------------
+| Feedback thread — always about the attempt currently on screen
+| ($submission), not necessarily the counted one $scored refers to (an
+| instructor can be viewing a non-counted attempt's tab specifically to
+| leave feedback about it).
+|--------------------------------------------------------------------------
+*/
+
+$thread = $submission['feedback_thread'] ?? [];
+
+$submissionGraded = !empty($submission['is_graded']);
+
+$hasInstructorMessage = array_filter($thread, static fn ($entry) => $entry['author_role'] === 'instructor') !== [];
+
+// A student only sees the thread once graded; the instructor always can.
+$canViewThread = $isInstructor || $submissionGraded;
+
+// The instructor can always add a message once a submission exists; a
+// student can reply once the instructor has started the thread.
+$canCompose = !empty($submission) && ($isInstructor ? true : ($submissionGraded && $hasInstructorMessage));
+
 $scoreCaption = null;
 
 if ($isGraded && $scoreResult !== null) {
@@ -130,8 +152,8 @@ if ($isGraded && $scoreResult !== null) {
 
         </div>
 
-        <!-- Feedbacks -->
-        <div class="flex flex-col gap-3">
+        <!-- Feedback thread -->
+        <div class="flex flex-col gap-3" data-feedback-panel data-feedback-submission-id="<?= (int) ($submission['id'] ?? 0) ?>">
 
             <div class="flex items-center gap-3">
                 <?= icon('feedbacks', 'h-5 w-5') ?>
@@ -141,19 +163,56 @@ if ($isGraded && $scoreResult !== null) {
                 </span>
             </div>
 
-            <?php if ($isGraded && !empty($scored['feedback'])): ?>
+            <?php if ($canViewThread && $thread !== []): ?>
 
-                <div class="w-full aspect-square p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
+                <div class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1" data-feedback-thread>
 
-                    <p class="text-sm text-[#5B5B5B] text-center">
-                        <?= nl2br(esc($scored['feedback'])) ?>
-                    </p>
+                    <?php foreach ($thread as $entry): ?>
+
+                        <?php
+                        $isOwnMessage = (int) $entry['author_id'] === (int) $user->id;
+                        $authorLabel = $isOwnMessage ? 'You' : (trim((string) ($entry['author_name'] ?? '')) ?: ucfirst($entry['author_role']));
+                        ?>
+
+                        <div class="flex flex-col gap-1 rounded-2xl p-3 <?= $isOwnMessage ? 'bg-[#0040A6]/10 items-end text-right' : 'bg-[#F9F9FC] border border-[#DBDBDB] items-start' ?>">
+
+                            <span class="text-xs font-bold <?= $isOwnMessage ? 'text-[#0040A6]' : 'text-[#646464]' ?>">
+                                <?= esc($authorLabel) ?>
+                            </span>
+
+                            <p class="text-sm text-[#5B5B5B] whitespace-pre-line">
+                                <?= nl2br(esc($entry['message'])) ?>
+                            </p>
+
+                            <span class="text-[10px] text-gray-400">
+                                <?= esc(date('M j, g:i A', strtotime($entry['created_at']))) ?>
+                            </span>
+
+                        </div>
+
+                    <?php endforeach; ?>
+
+                </div>
+
+            <?php elseif (!$canViewThread): ?>
+
+                <div class="w-full p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border border-[#DBDBDB] rounded-2xl gap-2">
+
+                    <?= icon('no-feedback', 'h-10 w-10') ?>
+
+                    <span class="font-bold text-md text-[#939393]">
+                        No Feedback Yet
+                    </span>
+
+                    <span class="text-xs text-[#939393] text-center">
+                        Feedback will appear here once your work is graded.
+                    </span>
 
                 </div>
 
             <?php else: ?>
 
-                <div class="w-full aspect-square p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
+                <div class="w-full p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border border-[#DBDBDB] rounded-2xl gap-2">
 
                     <?= icon('no-feedback', 'h-10 w-10') ?>
 
@@ -164,8 +223,31 @@ if ($isGraded && $scoreResult !== null) {
                     <span class="text-xs text-[#939393] text-center">
                         <?= $isInstructor
                             ? 'Feedback you leave for this student will appear here.'
-                            : 'Feedback will appear here once your work is graded.' ?>
+                            : 'Wait for your instructor\'s feedback, then you can reply here.' ?>
                     </span>
+
+                </div>
+
+            <?php endif; ?>
+
+            <?php if ($canCompose): ?>
+
+                <div class="flex flex-col gap-2" data-feedback-composer>
+
+                    <textarea
+                        rows="2"
+                        data-feedback-message
+                        placeholder="<?= $isInstructor ? 'Add a message...' : 'Reply to your instructor...' ?>"
+                        class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"></textarea>
+
+                    <button
+                        type="button"
+                        data-feedback-send
+                        class="self-end rounded-xl bg-[#0040A6] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#002068]">
+                        Send
+                    </button>
+
+                    <span class="hidden text-xs text-red-600" data-feedback-error></span>
 
                 </div>
 

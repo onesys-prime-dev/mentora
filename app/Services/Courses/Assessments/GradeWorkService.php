@@ -14,6 +14,7 @@ use App\Models\Assessments\AssessmentTypeModel;
 
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Files\FileModel;
+use App\Models\Assessments\AssessmentFeedbackModel;
 use App\Services\Courses\Grades\GradebookSyncService;
 
 class GradeWorkService
@@ -24,6 +25,7 @@ class GradeWorkService
     protected AssessmentQuestionModel $questionModel;
     protected AssessmentQuestionResponseModel $responseModel;
     protected AssessmentTypeModel $assessmentTypeModel;
+    protected AssessmentFeedbackModel $feedbackModel;
 
     protected EnrollmentModel $enrollmentModel;
     protected FileModel $fileModel;
@@ -36,6 +38,7 @@ class GradeWorkService
         $this->questionModel = new AssessmentQuestionModel();
         $this->responseModel = new AssessmentQuestionResponseModel();
         $this->assessmentTypeModel = new AssessmentTypeModel();
+        $this->feedbackModel = new AssessmentFeedbackModel();
 
         $this->enrollmentModel = new EnrollmentModel();
         $this->fileModel = new FileModel();
@@ -164,6 +167,8 @@ class GradeWorkService
                     ? $this->fileModel->retrieveFile((int) $submission['submission_file_id'])
                     : null;
 
+                $submission['feedback_thread'] = $this->feedbackModel->listForSubmission($submission['id']);
+
             }
 
         }
@@ -219,8 +224,11 @@ class GradeWorkService
     /**
      * Reopens a graded submission so its grade can be changed. It goes back
      * to Grading and stops counting as graded (the student sees "Being
-     * graded" with no score); the score, feedback and rubric values are kept
-     * so the grading form opens pre-filled.
+     * graded" with no score); the score and rubric values are kept so the
+     * grading form opens pre-filled. Feedback is a thread now, not a field
+     * on the submission — prior messages stay visible regardless, and the
+     * feedback textarea opens empty, ready for a new message if the
+     * regrade warrants one.
      */
     public function reopenGrading(User $user, int $submissionId): array
     {
@@ -299,6 +307,36 @@ class GradeWorkService
 
         $totalPoints = (float) $assessment['total_points'];
 
+        // Quizzes are graded per-question now (gradeQuestion()); the overall
+        // score here is just the sum of those, not something the instructor
+        // types in — there's no Default/Rubric choice for a quiz.
+        if ($this->isQuizAssessment($assessment)) {
+
+            [$score, $percentage] = $this->recomputeSubmissionTotal($submissionId, $totalPoints);
+
+            $this->submissionModel->update($submissionId, [
+                'score' => $score,
+                'percentage' => $percentage,
+                'is_graded' => true,
+                'graded_by' => $user->id,
+                'graded_at' => date('Y-m-d H:i:s'),
+                'status' => 'Graded',
+            ]);
+
+            if (array_key_exists('feedback', $data)) {
+                (new AssessmentFeedbackService())->appendInstructorMessage($user, $submissionId, (string) $data['feedback']);
+            }
+
+            (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $submission['student_id']);
+
+            return [
+                'success' => true,
+                'message' => 'Grade submitted successfully.',
+                'submission' => $this->submissionModel->find($submissionId),
+            ];
+
+        }
+
         $gradingMode = ($data['grading_mode'] ?? 'Default') === 'Rubric' ? 'Rubric' : 'Default';
 
         $rubricScores = [];
@@ -351,7 +389,6 @@ class GradeWorkService
             [
                 'score' => $score,
                 'percentage' => $percentage,
-                'feedback' => $data['feedback'] ?? $submission['feedback'],
                 'grading_mode' => $gradingMode,
                 'rubric_scores' => $gradingMode === 'Rubric'
                     ? json_encode($rubricScores)
@@ -363,6 +400,10 @@ class GradeWorkService
             ]
         );
 
+        if (array_key_exists('feedback', $data)) {
+            (new AssessmentFeedbackService())->appendInstructorMessage($user, $submissionId, (string) $data['feedback']);
+        }
+
         // Mirror the counted score into the gradebook (and the final grade).
         (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $submission['student_id']);
 
@@ -371,6 +412,130 @@ class GradeWorkService
             'message' => 'Grade submitted successfully.',
             'submission' => $this->submissionModel->find($submissionId),
         ];
+    }
+
+    /**
+     * Grades (or reverts) one question's response within a quiz submission.
+     * Scoped by submission_id + question_id so a stray id can't touch
+     * another student's work. Keeps the submission's own score/percentage
+     * and the gradebook in step immediately, rather than waiting for
+     * "Submit Grade".
+     */
+    public function gradeQuestion(User $user, int $submissionId, int $questionId, array $data): array
+    {
+        $submission = $this->submissionModel->find($submissionId);
+
+        if (!$submission) {
+            return ['success' => false, 'message' => 'Submission not found.'];
+        }
+
+        $assessment = $this->assessmentModel->find($submission['assessment_id']);
+
+        if (!$assessment || !$this->isQuizAssessment($assessment)) {
+            return ['success' => false, 'message' => 'Per-question grading only applies to quizzes.'];
+        }
+
+        $question = $this->questionModel->getWithChoices($questionId);
+
+        if (!$question || (int) $question['assessment_id'] !== (int) $assessment['id']) {
+            return ['success' => false, 'message' => 'Question not found.'];
+        }
+
+        $response = $this->responseModel
+            ->where('submission_id', $submissionId)
+            ->where('question_id', $questionId)
+            ->first();
+
+        if (!$response) {
+            return ['success' => false, 'message' => 'No response from this student to grade.'];
+        }
+
+        $quizAttempts = new QuizAttemptService();
+
+        $autoGradable = $quizAttempts->isAutoGradable($question);
+
+        $mode = $data['mode'] ?? null;
+
+        $update = ['graded_at' => date('Y-m-d H:i:s')];
+
+        switch ($mode) {
+
+            case 'auto':
+
+                if (!$autoGradable) {
+                    return ['success' => false, 'message' => 'This question has no auto-grade to revert to.'];
+                }
+
+                $update['score'] = $quizAttempts->computeAutoScore($question, $response);
+                $update['is_auto_graded'] = true;
+
+                break;
+
+            case 'correct':
+            case 'incorrect':
+
+                if (!$autoGradable) {
+                    return ['success' => false, 'message' => 'Correct/Incorrect only applies to auto-gradable questions — use a points score instead.'];
+                }
+
+                $update['score'] = $mode === 'correct' ? (float) $question['points'] : 0.0;
+                $update['is_auto_graded'] = false;
+
+                break;
+
+            case 'points':
+
+                if ($autoGradable) {
+                    return ['success' => false, 'message' => 'This question is auto-graded — use Correct/Incorrect instead.'];
+                }
+
+                $points = (float) ($data['points'] ?? -1);
+
+                if ($points < 0 || $points > (float) $question['points']) {
+                    return ['success' => false, 'message' => 'Points must be between 0 and ' . rtrim(rtrim(number_format((float) $question['points'], 2), '0'), '.') . '.'];
+                }
+
+                $update['score'] = $points;
+                $update['is_auto_graded'] = false;
+
+                break;
+
+            default:
+                return ['success' => false, 'message' => 'Unknown grading mode.'];
+
+        }
+
+        $this->responseModel->update($response['id'], $update);
+
+        [$score, $percentage] = $this->recomputeSubmissionTotal($submissionId, (float) $assessment['total_points']);
+
+        $this->submissionModel->update($submissionId, [
+            'score' => $score,
+            'percentage' => $percentage,
+        ]);
+
+        (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $submission['student_id']);
+
+        return [
+            'success' => true,
+            'response' => $this->responseModel->find($response['id']),
+            'submission' => $this->submissionModel->find($submissionId),
+        ];
+    }
+
+    /** @return array{0: float, 1: float} [score, percentage] */
+    private function recomputeSubmissionTotal(int $submissionId, float $totalPoints): array
+    {
+        $score = (float) ($this->responseModel
+            ->selectSum('score')
+            ->where('submission_id', $submissionId)
+            ->get()
+            ->getRow()
+            ->score ?? 0);
+
+        $percentage = $totalPoints > 0 ? round(($score / $totalPoints) * 100, 2) : 0.0;
+
+        return [$score, $percentage];
     }
 
     private function isQuizAssessment(array $assessment): bool

@@ -289,11 +289,22 @@ class AssessmentOverviewService
         $byId = array_column($rows, null, 'id');
 
         $graded = db_connect()->table('assessment_submissions')
-            ->select(['id', 'assessment_id', 'score', 'feedback', 'graded_at'])
+            ->select(['id', 'assessment_id', 'score', 'graded_at'])
+            ->select(
+                "(SELECT message FROM assessment_feedbacks
+                    WHERE submission_id = assessment_submissions.id
+                    ORDER BY id DESC LIMIT 1) AS feedback",
+                false
+            )
+            ->select(
+                "(SELECT COUNT(*) FROM assessment_feedbacks
+                    WHERE submission_id = assessment_submissions.id) AS message_count",
+                false
+            )
             ->where('student_id', $studentId)
             ->whereIn('assessment_id', array_keys($byId))
             ->where('is_graded', 1)
-            ->where("TRIM(COALESCE(feedback, '')) <> ''", null, false)
+            ->where('EXISTS (SELECT 1 FROM assessment_feedbacks WHERE submission_id = assessment_submissions.id)', null, false)
             ->orderBy('graded_at', 'DESC')
             ->orderBy('id', 'DESC')
             ->limit(self::FEEDBACK_LIMIT)
@@ -304,6 +315,7 @@ class AssessmentOverviewService
             'assessment' => $byId[$g['assessment_id']],
             'score' => (float) $g['score'],
             'feedback' => trim((string) $g['feedback']),
+            'message_count' => (int) $g['message_count'],
             'when' => $this->relativeTime($g['graded_at']),
         ], $graded);
     }

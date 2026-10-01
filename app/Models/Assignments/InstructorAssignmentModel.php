@@ -53,6 +53,13 @@ class InstructorAssignmentModel extends Model
                 'institutions.id AS institution_id',
                 'institutions.name AS institution_name',
             ])
+            ->select(
+                "(SELECT COUNT(*)
+                    FROM enrollments
+                   WHERE enrollments.offering_id = course_offerings.id
+                     AND enrollments.status = 'enrolled') AS enrolled",
+                false
+            )
             ->join(
                 'course_offerings',
                 'course_offerings.id = instructor_assignments.offering_id'
@@ -96,7 +103,7 @@ class InstructorAssignmentModel extends Model
             ->getResultArray();
     }
 
-    public function retrieveInstructorCourseOffering(int $userId, int $offeringId): array
+    public function retrieveInstructorCourseOffering(int $userId, int $offeringId): ?array
     {
         $builder = $this->builder();
 

@@ -116,7 +116,17 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
                     “<?= esc($entry['feedback']) ?>”
                 </p>
 
-                <span class="text-xs text-gray-400"><?= esc($entry['when']) ?></span>
+                <div class="flex items-center justify-between gap-2">
+
+                    <span class="text-xs text-gray-400"><?= esc($entry['when']) ?></span>
+
+                    <?php if ((int) $entry['message_count'] > 1): ?>
+                        <span class="shrink-0 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-[10px] font-bold text-[#0040A6]">
+                            <?= (int) $entry['message_count'] ?> messages
+                        </span>
+                    <?php endif; ?>
+
+                </div>
 
             </div>
 

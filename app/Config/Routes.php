@@ -25,6 +25,7 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
+        $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
         $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
         $routes->post('(:num)/modules/items/(:num)/complete', 'Courses\ModuleController::completeLearningItem/$1/$2');
         $routes->post('(:num)/modules/items/(:num)/progress', 'Courses\ModuleController::saveLearningItemProgress/$1/$2');
@@ -40,6 +41,8 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
         $routes->post('(:num)/submissions/(:num)/submit', 'Courses\Assessments\QuizAttemptController::submit/$2');
 
         $routes->post('(:num)/assessments/(:num)/assignment-submissions', 'Courses\Assessments\AssignmentSubmissionController::submit/$2');
+
+        $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
     });
@@ -59,6 +62,7 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
+        $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
 
         $routes->post('(:num)/modules', 'Courses\ModuleController::storeModule/$1');
         $routes->post('(:num)/modules/(:num)', 'Courses\ModuleController::updateModule/$1/$2');
@@ -120,6 +124,8 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->patch('(:num)/submissions/(:num)/start-grading', 'Courses\Assessments\GradeWorkController::startGrading/$2');
         $routes->patch('(:num)/submissions/(:num)/reopen-grading', 'Courses\Assessments\GradeWorkController::reopenGrading/$2');
         $routes->patch('(:num)/submissions/(:num)/grade', 'Courses\Assessments\GradeWorkController::submitGrade/$2');
+        $routes->patch('(:num)/submissions/(:num)/questions/(:num)/grade', 'Courses\Assessments\GradeWorkController::gradeQuestion/$2/$3');
+        $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->post('(:num)/generate-questions', 'Courses\Assessments\QuestionGenerationController::start/$1');
         $routes->post('(:num)/generation-batches/(:num)/next-chunk', 'Courses\Assessments\QuestionGenerationController::nextChunk/$2');

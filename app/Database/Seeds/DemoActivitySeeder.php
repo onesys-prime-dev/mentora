@@ -282,14 +282,33 @@ class DemoActivitySeeder extends DemoSeeder
 
         $total = (float) $assessment['total_points'];
 
+        $gradedBy = $isGraded && isset($options['grader']) ? $this->userId($options['grader']) : null;
+
         $this->db->table('assessment_submissions')->where('id', $submissionId)->update([
             'score' => $score,
             'percentage' => $total > 0 ? round($score / $total * 100, 2) : 0,
             'is_late_submission' => !empty($options['late']) ? 1 : 0,
             'is_graded' => $isGraded ? 1 : 0,
-            'graded_by' => $isGraded && isset($options['grader']) ? $this->userId($options['grader']) : null,
+            'graded_by' => $gradedBy,
             'graded_at' => $isGraded ? $submittedAt : null,
-            'feedback' => $options['feedback'] ?? null,
+        ]);
+
+        $this->seedFeedback($submissionId, $gradedBy, $options['feedback'] ?? null, $submittedAt);
+    }
+
+    /** The submission's opening instructor message, if the demo data has one. */
+    private function seedFeedback(int $submissionId, ?int $gradedBy, ?string $feedback, string $createdAt): void
+    {
+        if ($gradedBy === null || trim((string) $feedback) === '') {
+            return;
+        }
+
+        $this->db->table('assessment_feedbacks')->insert([
+            'submission_id' => $submissionId,
+            'author_id' => $gradedBy,
+            'author_role' => 'instructor',
+            'message' => $feedback,
+            'created_at' => $createdAt,
         ]);
     }
 
@@ -377,6 +396,9 @@ class DemoActivitySeeder extends DemoSeeder
 
         $submittedAt = $this->at($submittedAgo);
 
+        $gradedBy = $isGraded ? $this->userId($options['grader']) : null;
+        $gradedAt = $isGraded ? date('Y-m-d H:i:s', strtotime($submittedAt) + 86400) : null;
+
         $this->db->table('assessment_submissions')->insert([
             'assessment_id' => $assessmentId,
             'student_id' => $this->student($student),
@@ -389,13 +411,14 @@ class DemoActivitySeeder extends DemoSeeder
             'percentage' => $isGraded && $total > 0 ? round($score / $total * 100, 2) : 0,
             'is_late_submission' => !empty($options['late']) ? 1 : 0,
             'is_graded' => $isGraded ? 1 : 0,
-            'graded_by' => $isGraded ? $this->userId($options['grader']) : null,
-            'graded_at' => $isGraded ? date('Y-m-d H:i:s', strtotime($submittedAt) + 86400) : null,
-            'feedback' => $options['feedback'] ?? null,
+            'graded_by' => $gradedBy,
+            'graded_at' => $gradedAt,
             'grading_mode' => $isGraded ? ($rubricScores ? 'Rubric' : 'Default') : null,
             'rubric_scores' => $rubricScores ? json_encode($rubricScores) : null,
             'status' => $status,
         ]);
+
+        $this->seedFeedback((int) $this->db->insertID(), $gradedBy, $options['feedback'] ?? null, $gradedAt ?? $submittedAt);
     }
 
     /*

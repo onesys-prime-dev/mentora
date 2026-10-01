@@ -69,4 +69,18 @@ class GradeWorkController extends BaseController
             )
         );
     }
+
+    public function gradeQuestion(int $submissionId, int $questionId)
+    {
+        $data = $this->request->getJSON(true) ?? [];
+
+        return $this->response->setJSON(
+            $this->gradeWorkService->gradeQuestion(
+                auth()->user(),
+                $submissionId,
+                $questionId,
+                $data
+            )
+        );
+    }
 }

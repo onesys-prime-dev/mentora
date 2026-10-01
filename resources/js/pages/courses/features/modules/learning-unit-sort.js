@@ -20,7 +20,7 @@ export function initializeLearningUnitSorting() {
 
     document
 
-        .querySelectorAll("[data-module-content]")
+        .querySelectorAll("[data-learning-unit-list]")
 
         .forEach((moduleContent) => {
 
@@ -73,10 +73,6 @@ export function initializeLearningUnitSorting() {
                             wrapper.dataset.learningUnitId
                         );
 
-                    updateDisplayedOrder(
-                        moduleContent
-                    );
-
                     const units =
 
                         Array.from(
@@ -109,60 +105,6 @@ export function initializeLearningUnitSorting() {
                 },
 
             });
-
-        });
-
-}
-
-function updateDisplayedOrder(
-    moduleContent
-) {
-
-    const moduleOrder =
-
-        moduleContent
-
-            .closest(
-                "[data-module-wrapper]"
-            )
-
-            .querySelector(
-                "[data-module-order]"
-            )
-
-            .textContent
-
-            .replace(
-                "MODULE ",
-                ""
-            );
-
-    moduleContent
-
-        .querySelectorAll(
-            "[data-learning-unit-row]"
-        )
-
-        .forEach((row, index) => {
-
-            const label = row.querySelector(
-                "[data-learning-unit-order]"
-            );
-
-            if (!label) {
-                return;
-            }
-
-            const title =
-
-                label.textContent
-                    .split(":")
-                    .slice(1)
-                    .join(":")
-                    .trim();
-
-            label.textContent =
-                `Unit ${moduleOrder}.${index + 1}: ${title}`;
 
         });
 

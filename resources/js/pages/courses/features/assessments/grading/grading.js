@@ -12,6 +12,10 @@ import {
 
 import { bindModal } from "../modals/index.js";
 
+import { bindFeedbackComposer } from "../feedback/feedback.js";
+
+import { bindQuestionScoring } from "./question-scoring.js";
+
 let state = {
     offeringId: null,
     assessmentId: null,
@@ -31,6 +35,16 @@ export function initializeGradeWork(offeringId, assessmentId, refresh, loadStude
     bindSubmit();
     bindAttemptTabs();
     bindRegrade();
+
+    bindFeedbackComposer(offeringId, () => {
+        const studentId = selectedStudentId();
+        return studentId ? loadStudent(studentId, currentAttemptId()) : null;
+    });
+
+    bindQuestionScoring(offeringId, () => {
+        const studentId = selectedStudentId();
+        return studentId ? loadStudent(studentId, currentAttemptId()) : null;
+    });
 
     // A graded (locked) panel shows the recorded score as rendered.
     if (panelState() !== "locked" && hasAnyExistingScore()) {

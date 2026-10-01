@@ -75,7 +75,13 @@ class ActivityFeedService
         if ($byId !== []) {
 
             $graded = db_connect()->table('assessment_submissions')
-                ->select(['assessment_id', 'score', 'feedback', 'graded_at'])
+                ->select(['assessment_id', 'score', 'graded_at'])
+                ->select(
+                    "(SELECT message FROM assessment_feedbacks
+                        WHERE submission_id = assessment_submissions.id
+                        ORDER BY id DESC LIMIT 1) AS feedback",
+                    false
+                )
                 ->where('student_id', $studentId)
                 ->where('is_graded', 1)
                 ->whereIn('assessment_id', array_keys($byId))

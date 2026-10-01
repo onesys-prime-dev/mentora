@@ -212,6 +212,74 @@ class QuizAttemptService
         return ['success' => true, 'message' => 'Answer saved.'];
     }
 
+    /**
+     * Multiple Choice and Short Answer (with accepted answers) grade
+     * themselves; Essay, File Upload and a Short Answer with no answer key
+     * wait for the instructor.
+     */
+    public function isAutoGradable(array $question, ?ShortAnswerGrader $shortAnswers = null): bool
+    {
+        $shortAnswers ??= new ShortAnswerGrader();
+
+        return $question['question_type'] === 'Multiple Choice'
+            || ($question['question_type'] === 'Short Answer' && $shortAnswers->isAutoGradable($question));
+    }
+
+    /**
+     * The auto-graded score for one question's response — used both at
+     * submission time and whenever an instructor reverts a manual override
+     * back to the auto-computed grade (GradeWorkService::gradeQuestion()),
+     * so both paths agree by construction rather than by copy-paste.
+     */
+    public function computeAutoScore(array $question, ?array $response, ?ShortAnswerGrader $shortAnswers = null): float
+    {
+        $shortAnswers ??= new ShortAnswerGrader();
+
+        if ($question['question_type'] === 'Short Answer') {
+
+            $isCorrect = $response && $shortAnswers->isCorrect($response['response_text'] ?? '', $question);
+
+        } elseif (!empty($question['allow_multiple_answers'])) {
+
+            // Exact match required — the selected set must equal the
+            // correct set precisely, no partial credit. Keeps grading
+            // as unambiguous all-or-nothing as the single-choice case.
+            $correctIds = array_values(array_map(
+                static fn (array $choice) => (int) $choice['id'],
+                array_filter($question['choices'], static fn (array $choice) => !empty($choice['is_correct']))
+            ));
+
+            $selectedIds = $response && $response['selected_choice_ids']
+                ? (json_decode($response['selected_choice_ids'], true) ?? [])
+                : [];
+
+            $selectedIds = array_values(array_map('intval', $selectedIds));
+
+            sort($correctIds);
+            sort($selectedIds);
+
+            $isCorrect = $response && !empty($correctIds) && $correctIds === $selectedIds;
+
+        } else {
+
+            $correctChoice = null;
+
+            foreach ($question['choices'] as $choice) {
+                if (!empty($choice['is_correct'])) {
+                    $correctChoice = $choice;
+                    break;
+                }
+            }
+
+            $isCorrect = $response
+                && $correctChoice
+                && (int) $response['selected_choice_id'] === (int) $correctChoice['id'];
+
+        }
+
+        return $isCorrect ? (float) $question['points'] : 0.0;
+    }
+
     public function submitAttempt(User $user, int $submissionId): array
     {
         $submission = $this->submissionModel->find($submissionId);
@@ -253,57 +321,14 @@ class QuizAttemptService
 
             $response = $responsesByQuestion[$question['id']] ?? null;
 
-            if ($question['question_type'] === 'Short Answer' && $shortAnswers->isAutoGradable($question)) {
-
-                $isCorrect = $response && $shortAnswers->isCorrect($response['response_text'] ?? '', $question);
-
-            } elseif ($question['question_type'] !== 'Multiple Choice') {
-
+            if (!$this->isAutoGradable($question, $shortAnswers)) {
                 $manualCount++;
-
                 continue;
-
-            } elseif (!empty($question['allow_multiple_answers'])) {
-
-                // Exact match required — the selected set must equal the
-                // correct set precisely, no partial credit. Keeps grading
-                // as unambiguous all-or-nothing as the single-choice case.
-                $correctIds = array_values(array_map(
-                    static fn (array $choice) => (int) $choice['id'],
-                    array_filter($question['choices'], static fn (array $choice) => !empty($choice['is_correct']))
-                ));
-
-                $selectedIds = $response && $response['selected_choice_ids']
-                    ? (json_decode($response['selected_choice_ids'], true) ?? [])
-                    : [];
-
-                $selectedIds = array_values(array_map('intval', $selectedIds));
-
-                sort($correctIds);
-                sort($selectedIds);
-
-                $isCorrect = $response && !empty($correctIds) && $correctIds === $selectedIds;
-
-            } else {
-
-                $correctChoice = null;
-
-                foreach ($question['choices'] as $choice) {
-                    if (!empty($choice['is_correct'])) {
-                        $correctChoice = $choice;
-                        break;
-                    }
-                }
-
-                $isCorrect = $response
-                    && $correctChoice
-                    && (int) $response['selected_choice_id'] === (int) $correctChoice['id'];
-
             }
 
-            $autoGradedCount++;
+            $awarded = $this->computeAutoScore($question, $response, $shortAnswers);
 
-            $awarded = $isCorrect ? (float) $question['points'] : 0;
+            $autoGradedCount++;
 
             if ($response) {
 

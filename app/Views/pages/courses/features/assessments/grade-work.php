@@ -315,9 +315,19 @@ $attemptTabs ??= [];
 
                                 <?php foreach ($questionResponses as $index => $question): ?>
 
-                                    <?php $response = $question['response'] ?? null; ?>
+                                    <?php
+                                    $response = $question['response'] ?? null;
+                                    $canEditQuestion = $panelState === 'editing';
+                                    $awarded = (float) ($response['score'] ?? 0);
+                                    $awardedLabel = (float) $awarded == (int) $awarded ? (int) $awarded : $awarded;
+                                    ?>
 
-                                    <div class="rounded-xl border border-gray-100 bg-[#F9F9FC] p-4">
+                                    <div
+                                        class="rounded-xl border border-gray-100 bg-[#F9F9FC] p-4"
+                                        data-grade-work-question
+                                        data-question-id="<?= esc($question['id']) ?>"
+                                        data-question-points="<?= esc($question['points']) ?>"
+                                        data-auto-gradable="<?= !empty($question['auto_gradable']) ? '1' : '0' ?>">
 
                                         <div class="flex items-center gap-2 pb-2">
 
@@ -327,20 +337,73 @@ $attemptTabs ??= [];
                                                 <?= esc((int) $question['points']) ?> pts
                                             </span>
 
-                                            <?php if (empty($question['auto_gradable'])): ?>
+                                            <?php if (!empty($question['auto_gradable'])): ?>
 
-                                                <span class="ml-auto rounded-full bg-[#FFF1D6] px-2 py-0.5 text-[10px] font-bold text-[#946200]">
-                                                    Needs your grade
+                                                <span class="ml-auto flex items-center gap-1" data-question-badge>
+
+                                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold <?= $awarded > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600' ?>">
+                                                        <?= $awarded > 0 ? '✓ Correct' : ($response ? '✗ Incorrect' : '✗ No answer') ?>
+                                                        · <?= esc($awardedLabel) ?> pts
+                                                    </span>
+
+                                                    <?php if ($canEditQuestion): ?>
+                                                        <button
+                                                            type="button"
+                                                            data-question-edit-toggle
+                                                            title="Grade this question manually"
+                                                            class="rounded-full p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                    <?php endif; ?>
+
                                                 </span>
+
+                                                <?php if ($canEditQuestion): ?>
+
+                                                    <div class="ml-auto hidden items-center gap-1.5" data-question-manual-controls>
+
+                                                        <button type="button" data-question-mark="correct" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 transition hover:bg-emerald-200">
+                                                            Correct
+                                                        </button>
+
+                                                        <button type="button" data-question-mark="incorrect" class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 transition hover:bg-red-100">
+                                                            Incorrect
+                                                        </button>
+
+                                                        <button type="button" data-question-mark="auto" title="Revert to the auto-grade" class="rounded-full p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        </button>
+
+                                                    </div>
+
+                                                <?php endif; ?>
 
                                             <?php else: ?>
 
-                                                <?php $awarded = (float) ($response['score'] ?? 0); ?>
+                                                <div class="ml-auto flex items-center gap-2">
 
-                                                <span class="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold <?= $awarded > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600' ?>">
-                                                    <?= $awarded > 0 ? '✓ Correct' : ($response ? '✗ Incorrect' : '✗ No answer') ?>
-                                                    · <?= esc((float) $awarded == (int) $awarded ? (int) $awarded : $awarded) ?> pts
-                                                </span>
+                                                    <span class="text-[10px] font-bold text-[#946200]">
+                                                        <?= $response && !empty($response['graded_at']) ? 'Graded' : 'Needs your grade' ?>
+                                                    </span>
+
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.5"
+                                                        max="<?= esc($question['points']) ?>"
+                                                        value="<?= $response ? esc($awardedLabel) : '' ?>"
+                                                        placeholder="0"
+                                                        <?= $canEditQuestion ? '' : 'disabled' ?>
+                                                        data-question-points-input
+                                                        class="w-16 rounded-lg border border-gray-200 px-2 py-1 text-center text-sm font-bold text-[#0040A6] outline-none focus:border-[#0040A6] disabled:bg-gray-100 disabled:text-gray-400">
+
+                                                    <span class="text-[10px] text-gray-500">/ <?= esc((int) $question['points']) ?> pts</span>
+
+                                                </div>
 
                                             <?php endif; ?>
 
@@ -532,6 +595,24 @@ $attemptTabs ??= [];
 
                     <?php endif; ?>
 
+                    <?php if (!$isAssignment): ?>
+
+                        <!-- Quizzes are graded per-question above; this is just the sum. -->
+                        <div class="flex flex-col gap-2 rounded-xl bg-[#F2F2F2] p-4">
+
+                            <span class="text-sm font-bold text-[#1F2937]">Grade</span>
+
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-lg text-[#0040A6]" data-grade-work-quiz-total>
+                                    <?= esc(rtrim(rtrim(number_format((float) ($submission['score'] ?? 0), 2), '0'), '.')) ?>
+                                </span>
+                                <span class="text-sm text-[#5B5B5B]">of <?= esc((int) $totalPoints) ?> pts — from the question grades above</span>
+                            </div>
+
+                        </div>
+
+                    <?php else: ?>
+
                     <!-- Grade -->
                     <div class="flex flex-col gap-3">
 
@@ -693,36 +774,28 @@ $attemptTabs ??= [];
 
                     </div>
 
-                    <!-- Feedback -->
-                    <div class="flex flex-col gap-2">
+                    <?php endif; ?>
 
-                        <span class="text-sm font-bold text-[#1F2937]">
-                            Feedback
-                        </span>
+                    <!-- Feedback: prior messages already show in the sidebar
+                         thread (score-panel.php); this just adds a new one
+                         alongside the grade being submitted right now. -->
+                    <?php if (!$isLocked): ?>
 
-                        <?php if ($isLocked): ?>
+                        <div class="flex flex-col gap-2">
 
-                            <?php $lockedFeedback = trim((string) ($submission['feedback'] ?? '')); ?>
-
-                            <p class="rounded-xl border border-gray-100 bg-[#F9F9FC] p-3 text-sm text-[#5B5B5B]">
-                                <?php if ($lockedFeedback !== ''): ?>
-                                    <?= nl2br(esc($lockedFeedback)) ?>
-                                <?php else: ?>
-                                    <span class="italic text-gray-400">No feedback given.</span>
-                                <?php endif; ?>
-                            </p>
-
-                        <?php else: ?>
+                            <span class="text-sm font-bold text-[#1F2937]">
+                                Add feedback (optional)
+                            </span>
 
                             <textarea
                                 rows="3"
                                 data-grade-work-feedback
                                 placeholder="Leave feedback for the student..."
-                                class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"><?= esc($submission['feedback'] ?? '') ?></textarea>
+                                class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"></textarea>
 
-                        <?php endif; ?>
+                        </div>
 
-                    </div>
+                    <?php endif; ?>
 
                     <?php if (!$isLocked): ?>
 

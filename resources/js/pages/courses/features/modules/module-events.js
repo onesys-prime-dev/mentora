@@ -66,7 +66,8 @@ function toggleModule(moduleId) {
 
     openModule(
         content,
-        arrow
+        arrow,
+        moduleId
     );
 
     state.activeModuleId = Number(moduleId);
@@ -104,13 +105,20 @@ function closeAllModules() {
 
         });
 
+    document
+        .querySelectorAll("[data-module-details-label]")
+        .forEach((label) => {
+            label.classList.remove("opacity-100");
+        });
+
     updateModuleWrappers();
 
 }
 
 function openModule(
     content,
-    arrow
+    arrow,
+    moduleId
 ) {
 
     content.classList.remove(
@@ -127,6 +135,10 @@ function openModule(
     arrow.classList.add(
         "rotate-180"
     );
+
+    document
+        .querySelector(`[data-module-details-label="${moduleId}"]`)
+        ?.classList.add("opacity-100");
 
 }
 

@@ -148,6 +148,76 @@ class CourseModuleModel extends Model
             ->getResultArray();
     }
 
+    /**
+     * Summed estimated_minutes of each module's published items — the
+     * "duration" badge on the module list. Keyed by module id; a module
+     * with nothing published (or nothing estimated) is simply absent.
+     */
+    public function retrieveDurationMinutes(array $moduleIds): array
+    {
+        if ($moduleIds === []) {
+            return [];
+        }
+
+        $rows = $this->builder()
+            ->select([
+                'course_modules.id AS module_id',
+                'SUM(learning_items.estimated_minutes) AS minutes',
+            ])
+            ->join('learning_units', 'learning_units.module_id = course_modules.id')
+            ->join('learning_items', 'learning_items.learning_unit_id = learning_units.id')
+            ->whereIn('course_modules.id', $moduleIds)
+            ->where('learning_units.status', 'published')
+            ->where('learning_items.status', 'published')
+            ->where('learning_items.estimated_minutes IS NOT NULL')
+            ->groupBy('course_modules.id')
+            ->get()
+            ->getResultArray();
+
+        $byModule = [];
+
+        foreach ($rows as $row) {
+            $byModule[(int) $row['module_id']] = (int) $row['minutes'];
+        }
+
+        return $byModule;
+    }
+
+    /**
+     * How many published items of each type ("Video", "PDF", …) sit under
+     * each module — the "What's included" row. Keyed by module id, each
+     * value a map of item_type => count.
+     */
+    public function retrieveItemTypeCounts(array $moduleIds): array
+    {
+        if ($moduleIds === []) {
+            return [];
+        }
+
+        $rows = $this->builder()
+            ->select([
+                'course_modules.id AS module_id',
+                'learning_items.item_type',
+                'COUNT(*) AS item_count',
+            ])
+            ->join('learning_units', 'learning_units.module_id = course_modules.id')
+            ->join('learning_items', 'learning_items.learning_unit_id = learning_units.id')
+            ->whereIn('course_modules.id', $moduleIds)
+            ->where('learning_units.status', 'published')
+            ->where('learning_items.status', 'published')
+            ->groupBy(['course_modules.id', 'learning_items.item_type'])
+            ->get()
+            ->getResultArray();
+
+        $byModule = [];
+
+        foreach ($rows as $row) {
+            $byModule[(int) $row['module_id']][$row['item_type']] = (int) $row['item_count'];
+        }
+
+        return $byModule;
+    }
+
     /** Draft modules across a set of offerings, newest edit first. */
     public function retrieveDrafts(array $offeringIds): array
     {

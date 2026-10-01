@@ -1,7 +1,13 @@
 /*
 |--------------------------------------------------------------------------
-| Modules Feature
+| Modules Feature — list page
 |--------------------------------------------------------------------------
+|
+| Units/items now live on the per-module page (module.js); this page only
+| shows module summaries. The learning-item view/editor deep link
+| (?item=&editor=) is still handled here because a page reload/breadcrumb
+| can land back on this bundle before navigating into a module.
+|
 */
 
 import {
@@ -25,13 +31,10 @@ import {
 import { bindBreadcrumbEvents } from "./breadcrumb.js";
 
 import { bindModuleActionMenus } from "./module-actions.js";
-import { bindLearningUnitActionMenus } from "./learning-unit-actions.js";
 
 import { bindModal } from "./modals/index.js";
 
 import { bindModuleModals } from "./modals/modules.js";
-import { bindLearningUnitModals } from "./modals/learning-units.js";
-import { bindLearningItemCreateModal }from "./modals/learning-items.js";
 
 import {
     initializeModuleSorting,
@@ -41,35 +44,11 @@ import {
     bindLearningNavigation,
 } from "./navigation.js";
 
-import {
-    bindLearningUnitEvents,
-} from "./learning-unit-events.js";
+import { bindPublishToggles } from "./publish-toggle.js";
 
-import {
-    initializeLearningUnitSorting,
-} from "./learning-unit-sort.js";
-
-import {
-    initializeLearningItemSorting,
-} from "./learning-item-sort.js";
-
-import {
-    bindModuleStatusToggles,
-} from "./module-status.js";
+import { loadModule } from "./module.js";
 
 import { highlightRow } from "../../../../shared/spa/highlight-row.js";
-
-import {
-    bindLearningUnitStatusToggles,
-} from "./learning-unit-status.js";
-
-import {
-    bindLearningItemActionMenus,
-} from "./learning-item-actions-menu.js";
-
-import {
-    bindLearningItemDependenciesModal,
-} from "./modals/learning-item-dependencies.js";
 
 import {
     flushVideoProgress,
@@ -83,8 +62,6 @@ import {
 
 export async function initialize() {
 
-    // Leaving a video item (back to the list, or re-entering) saves its
-    // last few seconds of watch progress.
     flushVideoProgress();
 
     const params =
@@ -101,63 +78,36 @@ export async function initialize() {
     if (learningItemId) {
 
         if (isEditor) {
-
-            await loadLearningItemEditor(
-                learningItemId,
-                initialize
-            );
-
-        }
-
-        else {
-
-            await loadLearningItem(
-                learningItemId,
-                initialize
-            );
-
+            await loadLearningItemEditor(learningItemId, initialize);
+        } else {
+            await loadLearningItem(learningItemId, initialize);
         }
 
         return;
 
     }
 
-    // A dashboard widget (e.g. "Unpublished") can deep-link straight into a
-    // specific draft module/unit instead of the plain Modules list.
     const moduleId =
         Number(params.get("module")) || null;
 
-    const unitId =
-        Number(params.get("unit")) || null;
+    // ?module=<id>&view=1 — navigated into that module's own page (e.g. a
+    // reload while on it, or "back" from a learning item inside it).
+    if (moduleId && params.get("view") === "1") {
+        await loadModule(moduleId, initialize);
+        return;
+    }
 
-    if (moduleId || unitId) {
+    // A dashboard widget (e.g. "Unpublished") can deep-link to a specific
+    // draft module on the list; units/items now live on that module's own
+    // page, so a unit deep-link isn't resolvable from the list alone and
+    // is dropped gracefully rather than guessed at.
+    if (moduleId) {
 
-        // Consumed once: strips the query string so navigating away and
-        // back (e.g. via a browser back button) doesn't re-trigger it.
         history.replaceState({}, "", window.location.pathname);
-
-        if (moduleId) {
-            state.activeModuleId = moduleId;
-        }
 
         await loadModules();
 
-        if (unitId) {
-
-            const unitElement =
-                document.querySelector(`[data-learning-unit="${unitId}"]`);
-
-            unitElement
-                ?.closest("[data-module]")
-                ?.click();
-
-        }
-
-        highlightRow(
-            unitId
-                ? `[data-learning-unit="${unitId}"]`
-                : `[data-module="${moduleId}"]`
-        );
+        highlightRow(`[data-module-wrapper][data-module-id="${moduleId}"]`);
 
         return;
 
@@ -219,18 +169,11 @@ async function loadModules() {
 
 function initializeFeatureBindings() {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Core UI
-    |--------------------------------------------------------------------------
-    */
-
     bindModuleEvents();
 
     if (state.activeModuleId) {
 
         const activeModule =
-
             document.querySelector(
                 `[data-module="${state.activeModuleId}"]`
             );
@@ -243,175 +186,40 @@ function initializeFeatureBindings() {
 
     initializeModuleSorting();
 
-    bindModuleStatusToggles();
+    bindPublishToggles(loadModules);
 
-    bindLearningUnitEvents();
+    document.querySelectorAll("[data-go-to-module]").forEach((button) => {
+        button.addEventListener("click", () => {
+            loadModule(button.dataset.goToModule, initialize);
+        });
+    });
 
-    initializeLearningUnitSorting();
+    bindLearningItemEvents(initialize);
 
-    bindLearningUnitStatusToggles();
+    bindLearningNavigation(initialize);
 
-    bindLearningUnitActionMenus();
+    bindLearningItemEditorEvents(initialize);
 
-    bindLearningItemEvents(
-        initialize
-    );
-
-    initializeLearningItemSorting();
-
-    bindLearningNavigation(
-        initialize
-    );
-
-    bindLearningItemEditorEvents(
-        initialize
-    );
-
-    bindBreadcrumbEvents(
-        initialize
-    );
+    bindBreadcrumbEvents(initialize);
 
     initializePdfViewer();
 
-    /*
-    |--------------------------------------------------------------------------
-    | Module Modals
-    |--------------------------------------------------------------------------
-    */
-
     const moduleEditorModal =
         bindModal({
-
-            modal:
-                "#module-editor-modal",
-
-            closeButtons:
-                "[data-close-module-modal]",
-
+            modal: "#module-editor-modal",
+            closeButtons: "[data-close-module-modal]",
         });
 
     const moduleDeleteModal =
         bindModal({
-
-            modal:
-                "#module-delete-modal",
-
-            closeButtons:
-                "[data-close-module-delete-modal]",
-
+            modal: "#module-delete-modal",
+            closeButtons: "[data-close-module-delete-modal]",
         });
 
     bindModuleModals({
-
-        editor:
-            moduleEditorModal,
-
-        delete:
-            moduleDeleteModal,
-
-        refresh:
-            initialize,
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Learning Unit Modals
-    |--------------------------------------------------------------------------
-    */
-
-    const learningUnitEditorModal =
-        bindModal({
-
-            modal:
-                "#learning-unit-editor-modal",
-
-            closeButtons:
-                "[data-close-learning-unit-modal]",
-
-        });
-
-    const learningUnitDeleteModal =
-        bindModal({
-
-            modal:
-                "#learning-unit-delete-modal",
-
-            closeButtons:
-                "[data-close-learning-unit-delete-modal]",
-
-        });
-
-    bindLearningUnitModals({
-
-        editor:
-            learningUnitEditorModal,
-
-        delete:
-            learningUnitDeleteModal,
-
-        refresh:
-            initialize,
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Learning Item Modals
-    |--------------------------------------------------------------------------
-    */
-
-    const learningItemCreateModal =
-        bindModal({
-
-            modal:
-                "#learning-item-create-modal",
-
-            closeButtons:
-                "[data-close-learning-item-modal]",
-
-        });
-
-    bindLearningItemCreateModal({
-
-        create:
-            learningItemCreateModal,
-
-        refresh:
-            initialize,
-
-        onCreated: (learningItemId) =>
-            loadLearningItemEditor(
-                learningItemId,
-                initialize
-            ),
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Learning Item Actions (⋮ menu → Edit / Dependencies)
-    |--------------------------------------------------------------------------
-    */
-
-    bindLearningItemActionMenus();
-
-    bindLearningItemDependenciesModal({
-
-        modal:
-            bindModal({
-
-                modal:
-                    "#learning-item-dependencies-modal",
-
-                closeButtons:
-                    "[data-close-learning-item-dependencies-modal]",
-
-            }),
-
-        refresh:
-            initialize,
-
+        editor: moduleEditorModal,
+        delete: moduleDeleteModal,
+        refresh: initialize,
     });
 
 }

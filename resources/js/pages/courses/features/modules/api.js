@@ -48,6 +48,30 @@ export async function fetchModules() {
 
 }
 
+export async function fetchModule(moduleId) {
+
+    const response = await fetch(
+
+        `${window.coursesConfig.apiBaseUrl}/modules/${moduleId}`,
+
+        {
+
+            headers: defaultHeaders(),
+
+        }
+
+    );
+
+    if (!response.ok) {
+
+        throw new Error("Unable to load module.");
+
+    }
+
+    return response.json();
+
+}
+
 export async function createModule(
     offeringId,
     formData
