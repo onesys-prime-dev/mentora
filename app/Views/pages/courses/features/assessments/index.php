@@ -15,12 +15,101 @@ $rows = $overview['assessments'] ?? [];
 $filters = $isInstructor
     ? ['' => 'All', 'published' => 'Published', 'draft' => 'Draft', 'closed' => 'Closed', 'archived' => 'Archived']
     : ['' => 'All', 'todo' => 'To do', 'submitted' => 'Submitted', 'graded' => 'Graded', 'overdue' => 'Overdue'];
+
+/*
+|--------------------------------------------------------------------------
+| Metric cards — a composition count, not Overview's urgency numbers.
+|--------------------------------------------------------------------------
+| Overview already answers "what needs me right now" (To Grade, Due This
+| Week, Missing Work…). This list page answers a different question —
+| "what's in this list" — so the cards here count what's on screen instead,
+| using exactly the same tags assessment-card.php gives each card for the
+| filter dropdown below. That's deliberate: the numbers on these cards
+| always match what clicking the matching filter shows, because they're
+| built from the same rule, not a second copy of it.
+*/
+
+$total = count($rows);
+
+if ($isInstructor) {
+
+    $byStatus = ['Published' => 0, 'Draft' => 0, 'Closed' => 0, 'Archived' => 0];
+
+    foreach ($rows as $row) {
+        $byStatus[$row['status']] = ($byStatus[$row['status']] ?? 0) + 1;
+    }
+
+    $listMetrics = [
+        [
+            'label' => 'Total Assessments', 'icon' => 'assessments', 'tone' => 'neutral',
+            'value' => (string) $total, 'detail' => 'Across every module in this section',
+        ],
+        [
+            'label' => 'Published', 'icon' => 'check', 'tone' => 'neutral',
+            'value' => (string) $byStatus['Published'], 'detail' => 'Visible to students now',
+        ],
+        [
+            'label' => 'Draft', 'icon' => 'drafts', 'tone' => $byStatus['Draft'] > 0 ? 'warning' : 'neutral',
+            'value' => (string) $byStatus['Draft'],
+            'detail' => $byStatus['Draft'] > 0 ? 'Not visible to students yet' : 'Everything is published',
+        ],
+        [
+            'label' => 'Archived', 'icon' => 'lock', 'tone' => 'neutral',
+            'value' => (string) $byStatus['Archived'], 'detail' => 'Retired from grading and the list',
+        ],
+    ];
+
+} else {
+
+    $todo = 0;
+    $submitted = 0;
+    $graded = 0;
+
+    foreach ($rows as $row) {
+
+        $student = $row['student'];
+
+        if ($student['actionable']) {
+            $todo++;
+        }
+
+        if (in_array($student['key'], ['submitted', 'grading', 'resubmitted', 'partially_graded'], true)) {
+            $submitted++;
+        }
+
+        if ($student['key'] === 'graded') {
+            $graded++;
+        }
+
+    }
+
+    $listMetrics = [
+        [
+            'label' => 'Total Assessments', 'icon' => 'assessments', 'tone' => 'neutral',
+            'value' => (string) $total, 'detail' => 'Visible to you in this course',
+        ],
+        [
+            'label' => 'To Do', 'icon' => 'tasks', 'tone' => $todo > 0 ? 'warning' : 'neutral',
+            'value' => (string) $todo,
+            'detail' => $todo > 0 ? 'Still need your attention' : "You're all caught up",
+        ],
+        [
+            'label' => 'Submitted', 'icon' => 'in-progress', 'tone' => 'neutral',
+            'value' => (string) $submitted, 'detail' => 'Waiting on a grade',
+        ],
+        [
+            'label' => 'Graded', 'icon' => 'score', 'tone' => 'neutral',
+            'value' => (string) $graded, 'detail' => 'Already scored',
+        ],
+    ];
+
+}
 ?>
 
 <div class="flex flex-col gap-10 p-10" data-assessments-overview>
 
     <!-- Key metrics -->
-    <?= view('pages/courses/features/assessments/partials/overview/metrics', ['metrics' => $overview['metrics'] ?? []]) ?>
+    <?= view('pages/courses/features/assessments/partials/overview/metrics', ['metrics' => $listMetrics]) ?>
 
     <div class="flex flex-1 gap-10">
 
