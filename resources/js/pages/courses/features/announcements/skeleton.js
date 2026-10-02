@@ -4,6 +4,7 @@
 |--------------------------------------------------------------------------
 */
 
+/** Full-page skeleton — initial load / browser redirect into this tab only. */
 export function renderAnnouncementsSkeleton() {
 
     return `
@@ -18,19 +19,40 @@ export function renderAnnouncementsSkeleton() {
 
             <div class="flex min-w-0 flex-col gap-6">
 
-                <div class="h-10 w-48 rounded-xl bg-gray-200"></div>
-
-                <div class="flex flex-col gap-5">
-
-                    ${renderCard()}
-
-                    ${renderCard()}
-
-                </div>
+                ${renderMainContents()}
 
             </div>
 
         </div>
+
+    </div>
+
+    `;
+
+}
+
+/**
+ * Main-column-only skeleton — filter/sort/search changes and posting/
+ * deleting an announcement re-skeleton just this part, leaving the header
+ * and sidebar untouched so the page doesn't flash as a whole.
+ */
+export function renderAnnouncementsMainSkeleton() {
+
+    return `<div class="animate-pulse flex flex-col gap-6">${renderMainContents()}</div>`;
+
+}
+
+function renderMainContents() {
+
+    return `
+
+    <div class="h-10 w-48 rounded-xl bg-gray-200"></div>
+
+    <div class="flex flex-col gap-5">
+
+        ${renderCard()}
+
+        ${renderCard()}
 
     </div>
 

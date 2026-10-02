@@ -22,7 +22,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
             'pinned' => $pinned,
         ]) ?>
 
-        <div class="flex min-w-0 flex-col gap-6">
+        <div class="flex min-w-0 flex-col gap-6" data-announcements-main>
 
             <?php if ($isInstructor): ?>
 

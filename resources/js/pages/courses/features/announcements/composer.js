@@ -1,16 +1,18 @@
 /*
 |--------------------------------------------------------------------------
-| Announcement composer binding
+| Announcement composer binding — creating a new post only. Editing an
+| existing post happens in place on its own card (see card-editor.js),
+| not here.
 |--------------------------------------------------------------------------
 */
 
-import { createAnnouncement, updateAnnouncement, uploadAnnouncementAttachment } from "./api.js";
+import { createAnnouncement, uploadAnnouncementAttachment } from "./api.js";
 import { initializeComposerEditor, getComposerEditor, resetComposerEditor } from "./composer/tiptap.js";
 import { initializeComposerToolbar } from "./composer/toolbar.js";
 import { serializeMessage, plainTextFrom } from "./composer/serializer.js";
 import { mountEmojiPicker } from "./emoji-picker.js";
-import { parseInstructions as parseMessage } from "../assessments/instructions/parser.js";
 import { closeAllActionMenus } from "../modules/action-menus.js";
+import { closeActiveCardEdit } from "./card-editor.js";
 
 export function bindComposer(root, refresh) {
 
@@ -46,6 +48,9 @@ export function bindComposer(root, refresh) {
     let attachments = []; // [{file_id, original_filename}]
 
     toggleButton?.addEventListener("click", () => {
+        // Editing a card and creating a new post are mutually exclusive —
+        // the two share the one TipTap instance (composer/tiptap.js).
+        closeActiveCardEdit();
         openComposer();
         subjectInput.focus();
     });
@@ -65,6 +70,15 @@ export function bindComposer(root, refresh) {
 
     getComposerEditor()?.on("update", updateDirtyState);
 
+    function resetAndClose() {
+        subjectInput.value = "";
+        resetComposerEditor();
+        attachments = [];
+        renderAttachments();
+        updateDirtyState();
+        closeComposer();
+    }
+
     composer.querySelector("[data-composer-dismiss]")?.addEventListener("click", () => {
 
         const hasContent = subjectInput.value.trim() !== "" || plainTextFrom(getComposerEditor()) !== "";
@@ -73,14 +87,7 @@ export function bindComposer(root, refresh) {
             return;
         }
 
-        subjectInput.value = "";
-        resetComposerEditor();
-        attachments = [];
-        renderAttachments();
-        updateDirtyState();
-        composer.dataset.mode = "create";
-        composer.dataset.announcementId = "";
-        closeComposer();
+        resetAndClose();
 
     });
 
@@ -167,7 +174,7 @@ export function bindComposer(root, refresh) {
 
     });
 
-    // Submit (create or edit, depending on the composer's current mode)
+    // Submit (create only)
     submitButton?.addEventListener("click", async () => {
 
         const subject = subjectInput.value.trim();
@@ -186,24 +193,14 @@ export function bindComposer(root, refresh) {
 
         try {
 
-            const mode = composer.dataset.mode;
-            const announcementId = composer.dataset.announcementId;
-
-            const result = mode === "edit"
-                ? await updateAnnouncement(announcementId, payload)
-                : await createAnnouncement(payload);
+            const result = await createAnnouncement(payload);
 
             if (!result.success) {
                 alert(result.message);
                 return;
             }
 
-            subjectInput.value = "";
-            resetComposerEditor();
-            attachments = [];
-            renderAttachments();
-            composer.dataset.mode = "create";
-            composer.dataset.announcementId = "";
+            resetAndClose();
 
             await refresh();
 
@@ -224,33 +221,9 @@ export function bindComposer(root, refresh) {
 
     return {
 
-        /** Fills the composer for editing an existing post. */
-        prefill({ announcementId, subject, message, existingAttachments = [] }) {
-
-            openComposer();
-
-            composer.dataset.mode = "edit";
-            composer.dataset.announcementId = announcementId;
-
-            subjectInput.value = subject;
-
-            let parsed = {};
-            try {
-                parsed = JSON.parse(message || "{}");
-            } catch (e) {
-                console.error("Invalid announcement message JSON", e);
-            }
-
-            getComposerEditor()?.commands.setContent(parseMessage(parsed));
-
-            attachments = existingAttachments.map((a) => ({ file_id: a.file_id, original_filename: a.original_filename }));
-            renderAttachments();
-
-            composer.scrollIntoView({ behavior: "smooth", block: "start" });
-            subjectInput.focus();
-
-            updateDirtyState();
-
+        /** Closes the composer (discarding nothing — used when a card's own edit mode is opening). */
+        close() {
+            closeComposer();
         },
 
     };

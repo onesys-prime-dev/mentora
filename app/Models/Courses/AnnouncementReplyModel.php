@@ -31,6 +31,17 @@ class AnnouncementReplyModel extends Model
             ->findAll();
     }
 
+    public function retrieveOne(int $id): ?array
+    {
+        return $this->select([
+            'announcement_replies.*',
+            "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS author_name",
+        ])
+            ->join('user_profiles', 'user_profiles.user_id = announcement_replies.author_id', 'left')
+            ->where('announcement_replies.id', $id)
+            ->first();
+    }
+
     /** Batched equivalent of calling retrieveForAnnouncement() per id. */
     public function retrieveForAnnouncements(array $announcementIds): array
     {

@@ -4,11 +4,11 @@
 
     <?php if ($pinned === []): ?>
 
-        <span class="text-xs text-[#939393]">No pinned announcements yet.</span>
+        <span class="text-xs text-[#939393]" data-sidebar-pinned-empty>No pinned announcements yet.</span>
 
     <?php else: ?>
 
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col gap-1" data-sidebar-pinned-list>
             <?php foreach ($pinned as $item): ?>
                 <button
                     type="button"

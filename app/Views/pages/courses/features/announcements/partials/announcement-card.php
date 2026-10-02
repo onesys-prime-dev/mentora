@@ -8,6 +8,8 @@ $quickReactions = [
     'haha' => ['label' => 'Haha', 'emoji' => '😂'],
     'wow' => ['label' => 'Wow', 'emoji' => '😮'],
 ];
+
+$reactionTotal = array_sum($announcement['reaction_counts']);
 ?>
 
 <div
@@ -18,12 +20,10 @@ $quickReactions = [
     data-announcement-message="<?= esc($announcement['message'] ?: '{}', 'attr') ?>"
     data-announcement-attachments="<?= esc(json_encode(array_map(static fn ($f) => ['file_id' => $f['id'], 'original_filename' => $f['original_filename']], $announcement['attachments'])), 'attr') ?>">
 
-    <?php if ($announcement['is_pinned']): ?>
-        <div class="flex items-center gap-1.5 rounded-t-2xl bg-[#0040A6]/5 px-5 py-1.5 text-xs font-bold text-[#0040A6]">
-            <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2a1 1 0 011 1v6.17l3.293 3.293a1 1 0 01-.707 1.707H13v6a1 1 0 11-2 0v-6H6.414a1 1 0 01-.707-1.707L9 9.17V3a1 1 0 011-1h4z"/></svg>
-            Pinned
-        </div>
-    <?php endif; ?>
+    <div class="flex items-center gap-1.5 rounded-t-2xl bg-[#0040A6]/5 px-5 py-1.5 text-xs font-bold text-[#0040A6] <?= $announcement['is_pinned'] ? '' : 'hidden' ?>" data-pinned-banner>
+        <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2a1 1 0 011 1v6.17l3.293 3.293a1 1 0 01-.707 1.707H13v6a1 1 0 11-2 0v-6H6.414a1 1 0 01-.707-1.707L9 9.17V3a1 1 0 011-1h4z"/></svg>
+        Pinned
+    </div>
 
     <!-- hover overlay: quick reacts + more options -->
     <div class="absolute right-4 top-4 z-20 flex items-center gap-1 rounded-full border border-gray-200 bg-white px-1.5 py-1 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100" data-announcement-hover-menu>
@@ -63,7 +63,7 @@ $quickReactions = [
 
                     <?php if ($announcement['can_pin']): ?>
                         <button type="button" data-toggle-pin class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
-                            <?= $announcement['is_pinned'] ? 'Unpin' : 'Pin for everyone' ?>
+                            <span data-toggle-pin-label><?= $announcement['is_pinned'] ? 'Unpin' : 'Pin for everyone' ?></span>
                         </button>
                     <?php endif; ?>
 
@@ -92,36 +92,35 @@ $quickReactions = [
             </div>
         </div>
 
-        <span class="text-xl font-bold text-[#0040A6]"><?= esc($announcement['subject']) ?></span>
+        <!-- normal display content; hidden in place while this card is being edited -->
+        <div class="flex flex-col gap-3" data-card-display>
 
-        <div class="text-[#1F2937] leading-relaxed [&_p]:min-h-[1em]" data-announcement-message data-collapsed="1">
-            <?= $messageHtml ?>
-        </div>
-        <button type="button" data-see-more class="hidden self-start text-sm font-semibold text-[#0040A6] hover:underline">See more</button>
+            <span class="text-xl font-bold text-[#0040A6]"><?= esc($announcement['subject']) ?></span>
 
-        <?php if ($announcement['attachments'] !== []): ?>
-
-            <div class="grid grid-cols-4 gap-2">
-                <?php foreach ($announcement['attachments'] as $file): ?>
-                    <?php $isImage = str_starts_with((string) $file['mime_type'], 'image/'); ?>
-                    <a href="<?= esc($file['url']) ?>" target="_blank" rel="noopener" class="group flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-2 text-center transition hover:border-[#0040A6]/40">
-                        <?php if ($isImage): ?>
-                            <img src="<?= esc($file['url']) ?>" class="h-14 w-full rounded-lg object-cover" alt="">
-                        <?php else: ?>
-                            <svg class="h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                        <?php endif; ?>
-                        <span class="w-full truncate text-[11px] text-gray-500"><?= esc($file['original_filename']) ?></span>
-                    </a>
-                <?php endforeach; ?>
+            <div class="text-[#1F2937] leading-relaxed [&_p]:min-h-[1em]" data-announcement-message data-collapsed="1">
+                <?= $messageHtml ?>
             </div>
+            <button type="button" data-see-more class="hidden self-start text-sm font-semibold text-[#0040A6] hover:underline">See more</button>
 
-        <?php endif; ?>
+            <?php if ($announcement['attachments'] !== []): ?>
 
-        <?php
-        $reactionTotal = array_sum($announcement['reaction_counts']);
-        ?>
-        <?php if ($reactionTotal > 0): ?>
-            <div class="flex items-center gap-1.5 text-sm text-gray-500" data-reaction-summary>
+                <div class="grid grid-cols-4 gap-2">
+                    <?php foreach ($announcement['attachments'] as $file): ?>
+                        <?php $isImage = str_starts_with((string) $file['mime_type'], 'image/'); ?>
+                        <a href="<?= esc($file['url']) ?>" target="_blank" rel="noopener" class="group flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-2 text-center transition hover:border-[#0040A6]/40">
+                            <?php if ($isImage): ?>
+                                <img src="<?= esc($file['url']) ?>" class="h-14 w-full rounded-lg object-cover" alt="">
+                            <?php else: ?>
+                                <svg class="h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            <?php endif; ?>
+                            <span class="w-full truncate text-[11px] text-gray-500"><?= esc($file['original_filename']) ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+
+            <?php endif; ?>
+
+            <div class="flex items-center gap-1.5 text-sm text-gray-500 <?= $reactionTotal > 0 ? '' : 'hidden' ?>" data-reaction-summary>
                 <?php foreach ($announcement['reaction_counts'] as $emojiKey => $count): ?>
                     <?php if ($count > 0): ?>
                         <span class="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5">
@@ -130,7 +129,61 @@ $quickReactions = [
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div>
-        <?php endif; ?>
+
+        </div>
+
+        <!-- in-place editor; the "existing card converted to composer" for Edit -->
+        <div class="hidden flex-col gap-3 rounded-2xl border border-gray-200" data-card-editor>
+
+            <div class="border-b border-gray-100 px-4 py-3">
+                <input
+                    type="text"
+                    data-card-editor-subject
+                    placeholder="Add a subject"
+                    autocomplete="off"
+                    class="w-full text-lg font-bold text-[#0040A6] placeholder:text-gray-300 placeholder:font-bold outline-none">
+            </div>
+
+            <div class="border-b border-gray-100 px-4 py-2 flex items-center gap-1">
+                <button type="button" data-action="bold" title="Bold" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h8a3.5 3.5 0 010 7H6zM6 11h9a3.5 3.5 0 010 7H6z"/></svg></button>
+                <button type="button" data-action="italic" title="Italic" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 4h8M6 20h8M13 4L9 20"/></svg></button>
+                <button type="button" data-action="underline" title="Underline" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4v7a6 6 0 0012 0V4M4 20h16"/></svg></button>
+                <span class="mx-1 h-5 w-px bg-gray-200"></span>
+                <button type="button" data-action="insertUnorderedList" title="Bulleted list" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+                <button type="button" data-action="insertOrderedList" title="Numbered list" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M4 6h1v2M4 10h2l-2 2.5h2M4.5 16h1.5a.75.75 0 010 1.5H5m1 0a.75.75 0 010 1.5H4"/></svg></button>
+            </div>
+
+            <div class="px-4 py-3" data-card-editor-mount></div>
+
+            <div class="flex flex-wrap gap-2 px-4" data-card-editor-attachments></div>
+
+            <div class="flex items-center justify-between px-4 py-3">
+
+                <div class="flex items-center gap-1">
+
+                    <button type="button" data-card-editor-emoji-toggle title="Emoji" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </button>
+
+                    <button type="button" data-card-editor-attach title="Attach files" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    </button>
+                    <input type="file" data-card-editor-file-input class="hidden" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+
+                    <div class="relative">
+                        <div class="absolute left-0 bottom-full z-30 mb-2 hidden" data-card-editor-emoji-panel data-action-menu-panel></div>
+                    </div>
+
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" data-card-editor-cancel class="rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition hover:bg-gray-100">Cancel</button>
+                    <button type="button" data-card-editor-save class="rounded-full bg-[#0040A6] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Save</button>
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
 

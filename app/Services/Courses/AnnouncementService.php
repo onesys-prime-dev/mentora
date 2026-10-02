@@ -409,9 +409,17 @@ class AnnouncementService
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
+        $replyId = (int) $this->replyModel->getInsertID();
+
+        // Rendered HTML for just the new reply, not the whole thread — the
+        // caller appends it directly for an instant, no-reload reply.
         return [
             'success' => true,
-            'replies' => $this->replyModel->retrieveForAnnouncement($announcementId),
+            'reply_id' => $replyId,
+            'html' => view('pages/courses/features/announcements/partials/reply', [
+                'reply' => $this->replyModel->retrieveOne($replyId),
+                'userId' => (int) $user->id,
+            ]),
         ];
     }
 
