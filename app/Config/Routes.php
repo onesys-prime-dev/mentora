@@ -29,6 +29,7 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
         $routes->patch('reminders/(:num)/done', 'Calendar\ReminderController::markDone/$1');
         $routes->delete('reminders/(:num)', 'Calendar\ReminderController::destroy/$1');
     });
+    $routes->get('schedule', 'Schedule\ScheduleController::index');
 
     $routes->group('api/courses', function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
@@ -76,6 +77,7 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
 
         $routes->post('announcements', 'Courses\AnnouncementController::store');
     });
+    $routes->get('schedule', 'Schedule\ScheduleController::index');
 
     $routes->group('api/courses', function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
