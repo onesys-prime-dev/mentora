@@ -97,7 +97,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 
             <span class="text-xl font-bold text-[#0040A6]"><?= esc($announcement['subject']) ?></span>
 
-            <div class="text-[#1F2937] leading-relaxed [&_p]:min-h-[1em]" data-announcement-message data-collapsed="1">
+            <div class="text-[#1A1C1E] leading-relaxed [&_p]:min-h-[1em]" data-announcement-message data-collapsed="1">
                 <?= $messageHtml ?>
             </div>
             <button type="button" data-see-more class="hidden self-start text-sm font-semibold text-[#0040A6] hover:underline">See more</button>

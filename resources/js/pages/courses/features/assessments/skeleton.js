@@ -88,7 +88,7 @@ export function renderAssessmentsSkeleton() {
                 ${metric.repeat(4)}
             </div>
 
-            <div class="flex gap-10">
+            <div class="flex flex-col gap-10 lg:flex-row">
 
                 <div class="flex w-full flex-col gap-5">
                     <div class="flex items-center justify-between">
@@ -102,7 +102,7 @@ export function renderAssessmentsSkeleton() {
                     <div class="flex flex-col gap-3">${card.repeat(rememberedRows("assessments"))}</div>
                 </div>
 
-                <div class="flex w-2/5 shrink-0 flex-col gap-10">
+                <div class="flex w-full shrink-0 flex-col gap-10 lg:w-2/5">
                     ${sidebarSections()}
                 </div>
 

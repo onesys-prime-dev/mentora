@@ -14,7 +14,7 @@ $userRole = esc($user->getGroups()[0]);
             <?= learning_item_icon($currentAssessment['assessment_type'], 'h-4 w-4') ?>
         </div>
 
-        <span class="capitalize text-sm text-[#565656]">
+        <span class="capitalize text-sm text-[#646464]">
             <?= esc(str_replace('-', ' ', $currentAssessment['assessment_type'])) ?>
 
             •
@@ -35,15 +35,11 @@ $userRole = esc($user->getGroups()[0]);
 
             <?php if ($isCompleted): ?>
 
-                <span class="px-3 py-1 rounded-full bg-[#E6F4EA] text-[#5C9F72] text-xs font-black">
-                    Completed
-                </span>
+                <?= view('components/status-badge', ['tone' => 'success', 'icon' => 'check', 'label' => 'Completed'], ['saveData' => false]) ?>
 
             <?php else: ?>
 
-                <span class="px-3 py-1 rounded-full bg-[#E0E5F2] text-[#002068] text-xs font-black">
-                    Not Yet Completed
-                </span>
+                <?= view('components/status-badge', ['tone' => 'info', 'label' => 'Not Yet Completed'], ['saveData' => false]) ?>
 
             <?php endif; ?>
         
@@ -68,7 +64,7 @@ $userRole = esc($user->getGroups()[0]);
                 src="<?= base_url('assets/images/placeholder/profile.png') ?>" alt="">
         </div>
 
-        <span class="capitalize text-sm text-[#565656]">
+        <span class="capitalize text-sm text-[#646464]">
             Jalen Brunson  •  June 22, 2026  •  7:30AM 
         </span>
     </div>

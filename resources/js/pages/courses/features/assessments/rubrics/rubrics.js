@@ -636,11 +636,11 @@ function renderCriteriaCard(criterion, key, context) {
 
             </div>
 
-            <span class="font-bold text-sm text-[#5B5B5B]">
+            <span class="font-bold text-sm text-[#646464]">
                 ${escapeHtml(title)}
             </span>
 
-            <span class="text-sm text-[#5B5B5B]">
+            <span class="text-sm text-[#646464]">
                 ${escapeHtml(description)}
             </span>
 

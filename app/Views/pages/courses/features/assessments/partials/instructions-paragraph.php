@@ -51,7 +51,7 @@ if (!function_exists('renderInstructionsInline')) {
 
 <?php else: ?>
 
-    <div class="flex flex-col gap-3 text-sm text-[#5B5B5B]">
+    <div class="flex flex-col gap-3 text-sm text-[#646464]">
 
         <?php foreach ($blocks as $block): ?>
 

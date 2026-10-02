@@ -84,7 +84,7 @@ $cards[] = [
 
     </div>
 
-    <p class="text-sm leading-relaxed <?= $description === '' ? 'text-[#878787]' : '' ?>">
+    <p class="text-sm leading-relaxed <?= $description === '' ? 'text-[#767676]' : '' ?>">
         <?= $description !== '' ? esc($description) : 'No description has been added for this course yet.' ?>
     </p>
 
@@ -114,7 +114,7 @@ $cards[] = [
 
             <div class="flex min-w-0 flex-col">
 
-                <span class="uppercase text-sm font-bold text-[#878787]">
+                <span class="uppercase text-sm font-bold text-[#767676]">
                     <?= esc($card['label']) ?>
                 </span>
 

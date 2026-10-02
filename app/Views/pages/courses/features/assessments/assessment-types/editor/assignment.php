@@ -81,7 +81,7 @@
                 <button
                     type="button"
                     class="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-[#DBDBDB] bg-[#F9F9FC]
-                           text-sm font-semibold text-[#5B5B5B] transition-colors
+                           text-sm font-semibold text-[#646464] transition-colors
                         hover:border-[#0040A6] hover:bg-[#0040A6]/5 hover:text-[#0040A6]"
                     data-use-existing-rubric>
 
@@ -107,7 +107,7 @@
                 <button
                     type="button"
                     class="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-[#DBDBDB] bg-[#F9F9FC]
-                           text-sm font-semibold text-[#5B5B5B] transition-colors
+                           text-sm font-semibold text-[#646464] transition-colors
                         hover:border-[#0040A6] hover:bg-[#0040A6]/5 hover:text-[#0040A6]"
                     data-create-new-rubric>
 
@@ -139,7 +139,7 @@
                 <button
                     type="button"
                     title="Remove rubric"
-                    class="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-[#DBDBDB] bg-white text-[#5B5B5B] shadow-sm transition-colors
+                    class="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-[#DBDBDB] bg-white text-[#646464] shadow-sm transition-colors
                         hover:bg-[#0040A6] hover:text-white hover:border-[#0040A6]"
                     data-unselect-rubric
                     data-rubric-id="<?= esc($currentRubric['id'] ?? '') ?>">
@@ -173,11 +173,11 @@
                                 <?= esc((int) $criterion['max_points']) ?> pts
                             </span>
 
-                            <span class="font-bold text-sm text-[#5B5B5B]">
+                            <span class="font-bold text-sm text-[#646464]">
                                 <?= esc($criterion['criteria_title']) ?>
                             </span>
 
-                            <span class="text-sm text-[#5B5B5B]">
+                            <span class="text-sm text-[#646464]">
                                 <?= esc($criterion['description']) ?>
                             </span>
 
@@ -293,11 +293,11 @@
 
                 <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
 
-                    <span class="text-sm font-semibold text-[#5B5B5B]">
+                    <span class="text-sm font-semibold text-[#646464]">
                         No submission method configured
                     </span>
 
-                    <span class="text-xs text-[#939393]">
+                    <span class="text-xs text-[#767676]">
                         Click "Configure" above to allow file upload, text entry, or link submissions.
                     </span>
 
@@ -383,11 +383,11 @@
 
                         <?= icon('work', 'h-10 w-10 opacity-40') ?>
 
-                        <span class="font-semibold text-sm text-[#5B5B5B]">
+                        <span class="font-semibold text-sm text-[#646464]">
                             Drag and drop your file here
                         </span>
 
-                        <span class="text-xs text-[#939393]">
+                        <span class="text-xs text-[#767676]">
                             or click to browse
                         </span>
 
@@ -402,7 +402,7 @@
                             group-has-[#work-tab-text:checked]/work-tabs:flex">
 
                         <textarea
-                            class="h-full w-full resize-none border-0 text-sm text-[#5B5B5B] outline-none"
+                            class="h-full w-full resize-none border-0 text-sm text-[#646464] outline-none"
                             placeholder="Type your response here..."></textarea>
 
                     </div>
@@ -420,9 +420,9 @@
                         <input
                             type="url"
                             placeholder="https://..."
-                            class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#5B5B5B] outline-none transition focus:border-[#0040A6]">
+                            class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#646464] outline-none transition focus:border-[#0040A6]">
 
-                        <span class="text-xs text-[#939393]">
+                        <span class="text-xs text-[#767676]">
                             Paste a link to your work (e.g. Google Docs, GitHub).
                         </span>
 

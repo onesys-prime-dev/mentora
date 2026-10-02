@@ -19,11 +19,13 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 
         <div class="flex items-center gap-3">
 
-            <span class="rounded-full px-3 py-1 text-xs font-bold <?= $isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' ?>">
-                <?= $isPublished ? 'Grading published' : 'Grading in draft — students don\'t see final grades' ?>
-            </span>
+            <?= view('components/status-badge', [
+                'tone' => $isPublished ? 'success' : 'neutral',
+                'icon' => $isPublished ? 'check' : 'lock',
+                'label' => $isPublished ? 'Grading published' : "Grading in draft — students don't see final grades",
+            ], ['saveData' => false]) ?>
 
-            <span class="text-sm text-[#878787]">
+            <span class="text-sm text-[#767676]">
                 <?= esc($scheme['name'] ?? 'Grading Scheme') ?>
                 · Passing <?= esc(rtrim(rtrim(number_format((float) ($scheme['passing_percentage'] ?? 75), 2), '0'), '.')) ?>%
                 <?php if (!empty($scheme['last_recalculated_at'])): ?>

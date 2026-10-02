@@ -49,7 +49,7 @@ $isStudent = $role === 'student';
                 <?= $isStudent ? "You're all caught up" : 'Nothing closing soon' ?>
             </span>
 
-            <span class="text-xs text-[#878787]">
+            <span class="text-xs text-[#767676]">
                 <?= $isStudent
                     ? 'New deadlines will show up here as they are published.'
                     : 'Published assessments with an upcoming due date will show up here.' ?>

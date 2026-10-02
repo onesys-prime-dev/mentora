@@ -22,11 +22,11 @@ $prerequisites = $lock['prerequisites'] ?? [];
 
     <div class="flex flex-col gap-1.5">
 
-        <span class="text-lg font-bold text-[#1F2937]">
+        <span class="text-lg font-bold text-[#1A1C1E]">
             This item is locked
         </span>
 
-        <span class="text-sm text-[#6B7280]">
+        <span class="text-sm text-[#646464]">
             <?= esc($lock['message'] ?? 'Complete the required items first.') ?>
         </span>
 
@@ -55,7 +55,7 @@ $prerequisites = $lock['prerequisites'] ?? [];
 
                 <?php else: ?>
 
-                    <span class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-semibold text-[#5B5B5B]">
+                    <span class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-semibold text-[#646464]">
                         <?= esc($prerequisite['title']) ?>
                     </span>
 
@@ -66,7 +66,7 @@ $prerequisites = $lock['prerequisites'] ?? [];
         </div>
 
         <?php if (!$lockLinks): ?>
-            <span class="text-xs text-[#939393]">You'll find them in the Modules tab.</span>
+            <span class="text-xs text-[#767676]">You'll find them in the Modules tab.</span>
         <?php endif; ?>
 
     <?php endif; ?>

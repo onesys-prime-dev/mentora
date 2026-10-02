@@ -39,11 +39,11 @@
                             <?= esc((int) $criterion['max_points']) ?> pts
                         </span>
 
-                        <span class="font-bold text-sm text-[#5B5B5B]">
+                        <span class="font-bold text-sm text-[#646464]">
                             <?= esc($criterion['criteria_title']) ?>
                         </span>
 
-                        <span class="text-sm text-[#5B5B5B]">
+                        <span class="text-sm text-[#646464]">
                             <?= esc($criterion['description']) ?>
                         </span>
 

@@ -25,7 +25,7 @@ $emphasis = ['grade', 'submission'];
 
             <span class="text-sm font-bold text-[#646464]">No recent activity</span>
 
-            <span class="text-xs text-[#878787]">
+            <span class="text-xs text-[#767676]">
                 <?= $role === 'student'
                     ? 'Grades and course updates from the last 30 days will show up here.'
                     : 'Submissions and new students from the last 30 days will show up here.' ?>

@@ -71,7 +71,7 @@ $barColor = static fn (string $tone) => match ($tone) {
                 Class Progress
             </span>
 
-            <span class="text-sm text-[#878787]">by module</span>
+            <span class="text-sm text-[#767676]">by module</span>
 
         </div>
 
@@ -83,7 +83,7 @@ $barColor = static fn (string $tone) => match ($tone) {
                     <?= $class_progress['roster'] === 0 ? 'No students enrolled yet' : 'No published modules yet' ?>
                 </span>
 
-                <span class="text-xs text-[#878787]">
+                <span class="text-xs text-[#767676]">
                     <?= $class_progress['roster'] === 0
                         ? 'Completion shows up here once students join this section.'
                         : 'Publish a module and completion will show up here.' ?>

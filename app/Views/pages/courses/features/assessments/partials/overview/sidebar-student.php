@@ -51,7 +51,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
                     <div class="flex min-w-0 flex-col">
                         <span class="truncate font-bold text-[#646464]"><?= esc($item['title']) ?></span>
-                        <span class="text-xs <?= in_array($state['key'], ['overdue', 'in_progress'], true) ? 'font-semibold text-[#946200]' : 'text-[#878787]' ?>">
+                        <span class="text-xs <?= in_array($state['key'], ['overdue', 'in_progress'], true) ? 'font-semibold text-[#946200]' : 'text-[#767676]' ?>">
                             <?= esc($item['nextDetail']) ?>
                         </span>
                     </div>
@@ -106,13 +106,13 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
                     </div>
 
-                    <span class="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                    <span class="shrink-0 rounded-full bg-[#E8F5EC] px-2.5 py-0.5 text-xs font-bold text-[#2E7D4F]">
                         <?= (int) $entry['score'] ?>/<?= (int) $item['total_points'] ?>
                     </span>
 
                 </div>
 
-                <p class="line-clamp-3 text-sm text-[#5B5B5B]">
+                <p class="line-clamp-3 text-sm text-[#646464]">
                     “<?= esc($entry['feedback']) ?>”
                 </p>
 

@@ -62,7 +62,7 @@ $progressAttributes = $trackProgress
 
 <?php if ($trackProgress && ($file || ! empty($resource['youtube_id'])) && empty($currentItem['is_completed'])): ?>
 
-    <div class="flex items-center gap-3 text-xs text-[#6B7280]">
+    <div class="flex items-center gap-3 text-xs text-[#646464]">
 
         <div class="h-1.5 w-40 overflow-hidden rounded-full bg-[#E7E6E6]">
             <div

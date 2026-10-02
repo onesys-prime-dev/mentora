@@ -36,7 +36,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
             </div>
 
             <div class="flex min-w-0 flex-1 flex-col">
-                <span class="truncate text-sm font-semibold text-[#1F2937]">
+                <span class="truncate text-sm font-semibold text-[#1A1C1E]">
                     <?= esc($submissionFile['original_filename']) ?>
                 </span>
                 <span class="text-xs text-gray-400">

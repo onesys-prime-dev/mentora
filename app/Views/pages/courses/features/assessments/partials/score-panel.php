@@ -99,12 +99,12 @@ if ($isGraded && $scoreResult !== null) {
                         <?= esc((int) $scored['score']) ?>/<?= esc((int) $totalPoints) ?>
                     </span>
 
-                    <span class="text-sm font-semibold text-[#939393]">
+                    <span class="text-sm font-semibold text-[#767676]">
                         <?= esc((float) ($scored['percentage'] ?? 0)) ?>%
                     </span>
 
                     <?php if ($scoreCaption): ?>
-                        <span class="text-center text-xs text-[#939393]"><?= esc($scoreCaption) ?></span>
+                        <span class="text-center text-xs text-[#767676]"><?= esc($scoreCaption) ?></span>
                     <?php endif; ?>
 
                 </div>
@@ -136,11 +136,11 @@ if ($isGraded && $scoreResult !== null) {
 
                     <?= icon('no-score', 'h-10 w-10') ?>
 
-                    <span class="font-bold text-md text-[#939393]">
+                    <span class="font-bold text-md text-[#767676]">
                         No Score Yet
                     </span>
 
-                    <span class="text-xs text-[#939393] text-center">
+                    <span class="text-xs text-[#767676] text-center">
                         <?= $isInstructor
                             ? 'A score will appear here once this student has been graded.'
                             : 'Your score will appear here once the instructor has given the grade.' ?>
@@ -180,7 +180,7 @@ if ($isGraded && $scoreResult !== null) {
                                 <?= esc($authorLabel) ?>
                             </span>
 
-                            <p class="text-sm text-[#5B5B5B] whitespace-pre-line">
+                            <p class="text-sm text-[#646464] whitespace-pre-line">
                                 <?= nl2br(esc($entry['message'])) ?>
                             </p>
 
@@ -200,11 +200,11 @@ if ($isGraded && $scoreResult !== null) {
 
                     <?= icon('no-feedback', 'h-10 w-10') ?>
 
-                    <span class="font-bold text-md text-[#939393]">
+                    <span class="font-bold text-md text-[#767676]">
                         No Feedback Yet
                     </span>
 
-                    <span class="text-xs text-[#939393] text-center">
+                    <span class="text-xs text-[#767676] text-center">
                         Feedback will appear here once your work is graded.
                     </span>
 
@@ -216,11 +216,11 @@ if ($isGraded && $scoreResult !== null) {
 
                     <?= icon('no-feedback', 'h-10 w-10') ?>
 
-                    <span class="font-bold text-md text-[#939393]">
+                    <span class="font-bold text-md text-[#767676]">
                         No Feedback Yet
                     </span>
 
-                    <span class="text-xs text-[#939393] text-center">
+                    <span class="text-xs text-[#767676] text-center">
                         <?= $isInstructor
                             ? 'Feedback you leave for this student will appear here.'
                             : 'Wait for your instructor\'s feedback, then you can reply here.' ?>

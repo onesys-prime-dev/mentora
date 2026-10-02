@@ -26,7 +26,7 @@ $meta = array_filter([
 
 $chipClasses = static fn (string $tone) => match ($tone) {
     'info' => 'bg-[#0040A6]/10 text-[#0040A6]',
-    'success' => 'bg-emerald-100 text-emerald-700',
+    'success' => 'bg-[#E8F5EC] text-[#2E7D4F]',
     'warning' => 'bg-[#FFF1D6] text-[#946200]',
     'danger' => 'bg-red-50 text-red-600',
     'muted' => 'bg-gray-100 text-gray-500',
@@ -79,22 +79,17 @@ if ($isInstructor) {
                 <?php if ($isInstructor): ?>
 
                     <?php
-                        $statusClasses = match ($a['status']) {
-                            'Published' => 'bg-[#E0E5F2] text-[#002068]',
-                            'Closed' => 'bg-[#FFF1D6] text-[#946200]',
-                            'Archived' => 'bg-gray-100 text-gray-500',
-                            default => 'bg-gray-100 text-gray-600',
+                        $statusTone = match ($a['status']) {
+                            'Published' => 'info',
+                            'Closed' => 'warning',
+                            default => 'neutral',
                         };
                     ?>
 
-                    <span class="rounded-full px-3 py-1 text-xs font-black <?= $statusClasses ?>">
-                        <?= esc($a['status']) ?>
-                    </span>
+                    <?= view('components/status-badge', ['tone' => $statusTone, 'label' => $a['status']], ['saveData' => false]) ?>
 
                     <?php if ($a['section']['toGrade'] > 0): ?>
-                        <span class="rounded-full bg-[#FFF1D6] px-3 py-1 text-xs font-black text-[#946200]">
-                            <?= esc($a['section']['toGrade']) ?> to grade
-                        </span>
+                        <?= view('components/status-badge', ['tone' => 'warning', 'icon' => 'tasks', 'label' => $a['section']['toGrade'] . ' to grade'], ['saveData' => false]) ?>
                     <?php endif; ?>
 
                 <?php else: ?>
@@ -107,7 +102,7 @@ if ($isInstructor) {
 
             </div>
 
-            <span class="text-sm text-[#878787]">
+            <span class="text-sm text-[#767676]">
                 <?= esc(implode(' | ', $meta)) ?>
             </span>
 
@@ -124,7 +119,7 @@ if ($isInstructor) {
         <?php if ($isInstructor): ?>
 
             <?php if ($a['status'] !== 'Draft'): ?>
-                <span class="text-sm text-[#878787]">
+                <span class="text-sm text-[#767676]">
                     <strong class="text-[#646464]"><?= esc($a['section']['submitted']) ?>/<?= esc($a['section']['students']) ?></strong> submitted
                 </span>
             <?php endif; ?>

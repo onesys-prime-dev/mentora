@@ -16,8 +16,8 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
 <?php if (!$currentAssessment): ?>
 
     <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
-        <span class="text-sm font-semibold text-[#5B5B5B]">This quiz isn't set up yet</span>
-        <span class="text-xs text-[#939393]">No quiz is linked to this learning item.</span>
+        <span class="text-sm font-semibold text-[#646464]">This quiz isn't set up yet</span>
+        <span class="text-xs text-[#767676]">No quiz is linked to this learning item.</span>
     </div>
 
 <?php else: ?>
@@ -52,17 +52,17 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
             <?php if ($isInstructor): ?>
 
                 <div class="flex flex-col gap-1.5">
-                    <span class="text-lg font-bold text-[#1F2937]">
+                    <span class="text-lg font-bold text-[#1A1C1E]">
                         <?= $questionCount ?> question<?= $questionCount === 1 ? '' : 's' ?>
                     </span>
-                    <span class="text-sm text-[#6B7280]">
+                    <span class="text-sm text-[#646464]">
                         <?= $questionCount === 0
                             ? "Students can't answer anything until you add questions."
                             : 'Students take this quiz from here or from the Assessments tab.' ?>
                     </span>
                 </div>
 
-                <div class="flex items-center gap-6 text-sm text-[#5B5B5B]">
+                <div class="flex items-center gap-6 text-sm text-[#646464]">
                     <span><strong class="text-[#0040A6]"><?= (int) ($quizCounts['submitted'] ?? 0) ?></strong> submitted</span>
                     <span><strong class="text-[#946200]"><?= (int) ($quizCounts['toGrade'] ?? 0) ?></strong> to grade</span>
                     <span><strong class="text-emerald-700"><?= (int) ($quizCounts['graded'] ?? 0) ?></strong> graded</span>
@@ -92,7 +92,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
 
                 <div class="flex flex-col gap-1.5">
 
-                    <span class="text-lg font-bold text-[#1F2937]">
+                    <span class="text-lg font-bold text-[#1A1C1E]">
                         <?php if (!empty($quizState['inProgress'])): ?>
                             You have a quiz in progress
                         <?php elseif ($latestAttempt): ?>
@@ -106,7 +106,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
                         <?php endif; ?>
                     </span>
 
-                    <span class="text-sm text-[#6B7280]">
+                    <span class="text-sm text-[#646464]">
                         <?= esc((int) ($quizState['attemptsUsed'] ?? 0)) ?> of <?= esc((int) ($quizState['attemptLimit'] ?? 1)) ?> attempt<?= (int) ($quizState['attemptLimit'] ?? 1) === 1 ? '' : 's' ?> used
                         <?php if (!empty($currentAssessment['duration'])): ?>
                             · Once you start, the <?= (int) $currentAssessment['duration'] ?>-minute timer keeps running.

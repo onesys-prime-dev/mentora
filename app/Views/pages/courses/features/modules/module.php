@@ -40,7 +40,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                 <div class="flex items-center gap-2">
                     <span class="text-2xl font-bold text-[#0040A6]"><?= esc($module['title']) ?></span>
                     <?php if ($isDraft): ?>
-                        <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#8F9198]">
+                        <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                             Draft
                         </span>
                     <?php endif; ?>
@@ -66,16 +66,16 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
         <?php if ($module['progress'] == 100): ?>
 
-            <span class="self-start px-6 py-2 bg-[#E6F4EA] uppercase text-xs font-black text-[#5C9F72] rounded-4xl">Completed</span>
+            <?= view('components/status-badge', ['tone' => 'success', 'icon' => 'check', 'label' => 'Completed'], ['saveData' => false]) ?>
 
         <?php elseif ($isInstructor && empty($module['has_roster'])): ?>
 
-            <span class="self-start px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#8F9198] rounded-4xl">No students enrolled</span>
+            <span class="self-start px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#767676] rounded-4xl">No students enrolled</span>
 
         <?php else: ?>
 
             <div class="flex items-center justify-between">
-                <span class="text-sm font-bold text-[#5B5B5B]"><?= $isInstructor ? 'Class progress' : 'Your progress' ?></span>
+                <span class="text-sm font-bold text-[#646464]"><?= $isInstructor ? 'Class progress' : 'Your progress' ?></span>
                 <span class="text-sm font-bold text-[#0040A6]"><?= esc($module['progress']) ?>%</span>
             </div>
 
@@ -88,7 +88,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
     </div>
 
     <?php if (trim((string) $module['description']) !== ''): ?>
-        <p class="text-[#5B5B5B] leading-relaxed"><?= esc($module['description']) ?></p>
+        <p class="text-[#646464] leading-relaxed"><?= esc($module['description']) ?></p>
     <?php endif; ?>
 
     <?php if (!$isInstructor && $resume_item): ?>
@@ -134,7 +134,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
                 <?php if ($isInstructor): ?>
 
-                    <div data-learning-unit-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1C2431] active:cursor-grabbing">
+                    <div data-learning-unit-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
                             <circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/>
                             <circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/>
@@ -158,13 +158,11 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                             <span class="text-lg truncate <?= $unitFullyLocked ? 'text-gray-400' : 'text-[#1A1C1E]' ?>"><?= esc($learning_unit['title']) ?></span>
 
                             <?php if ($unitAllCompleted): ?>
-                                <span class="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#E6F4EA] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#5C9F72]">
-                                    <?= icon('check', 'h-3 w-3 text-[#5C9F72]') ?> Completed
-                                </span>
+                                <?= view('components/status-badge', ['tone' => 'success', 'icon' => 'check', 'label' => 'Completed'], ['saveData' => false]) ?>
                             <?php endif; ?>
 
                             <?php if ($unitIsDraft): ?>
-                                <span class="shrink-0 rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#8F9198]">
+                                <span class="shrink-0 rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                                     Draft
                                 </span>
                             <?php endif; ?>
@@ -197,7 +195,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                         <div class="w-full flex flex-col gap-1 px-3 pb-4" data-learning-unit-items>
 
                             <?php if ($unitItems === []): ?>
-                                <p class="px-3 pb-2 text-sm text-[#939393] italic">No items yet</p>
+                                <p class="px-3 pb-2 text-sm text-[#767676] italic">No items yet</p>
                             <?php endif; ?>
 
                             <?php foreach (($learning_unit['learning_items'] ?? []) as $learning_item): ?>
@@ -214,7 +212,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
                                         <?php if ($isInstructor): ?>
 
-                                            <div data-learning-item-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1C2431] active:cursor-grabbing">
+                                            <div data-learning-item-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
                                                     <circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/>
                                                     <circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/>
@@ -280,7 +278,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                                     <div class="flex justify-center items-center">
                                                         <?= learning_item_icon($learning_item['item_type'], 'h-4 w-4') ?>
                                                     </div>
-                                                    <span class="text-sm text-[#565656]">
+                                                    <span class="text-sm text-[#646464]">
                                                         <?= $learning_item['item_type'] === 'pdf' ? 'PDF' : esc(ucfirst($learning_item['item_type'])) ?>
                                                     </span>
                                                 </div>
@@ -358,9 +356,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
         <?php endif; ?>
 
         <?php if (($module['learning_units'] ?? []) === []): ?>
-            <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
-                <span class="text-sm font-semibold text-[#5B5B5B]">No learning units yet</span>
-            </div>
+            <?= view('components/empty-state', ['icon' => 'folder', 'title' => 'No learning units yet'], ['saveData' => false]) ?>
         <?php endif; ?>
 
     </div>

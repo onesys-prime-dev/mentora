@@ -35,7 +35,7 @@ $typeHeadings = [
             <?= icon('no-score', 'h-8 w-8 opacity-60') ?>
 
             <span class="font-bold text-[#646464]">No assessments yet</span>
-            <span class="text-sm text-[#878787]">Once you publish an assessment, it'll show up here to grade.</span>
+            <span class="text-sm text-[#767676]">Once you publish an assessment, it'll show up here to grade.</span>
 
         </div>
 
@@ -47,7 +47,7 @@ $typeHeadings = [
 
                 <div class="flex flex-col gap-3">
 
-                    <span class="uppercase font-bold text-xs tracking-wide text-[#878787]">
+                    <span class="uppercase font-bold text-xs tracking-wide text-[#767676]">
                         <?= esc($typeHeadings[$type] ?? $type) ?>
                     </span>
 
@@ -65,7 +65,7 @@ $typeHeadings = [
                                     'label' => $needsReview . ' Need' . ($needsReview === 1 ? 's' : '') . ' Review',
                                 ],
                                 $graded > 0 => [
-                                    'chip'  => 'bg-emerald-100 text-emerald-700',
+                                    'chip'  => 'bg-[#E8F5EC] text-[#2E7D4F]',
                                     'label' => 'All Graded',
                                 ],
                                 default => [
@@ -96,7 +96,7 @@ $typeHeadings = [
                                             <?= esc($assessment['title']) ?>
                                         </span>
 
-                                        <span class="text-sm text-[#878787]">
+                                        <span class="text-sm text-[#767676]">
                                             Due: <?= esc(date('F j, Y', strtotime($assessment['due_date']))) ?> | <?= esc((int) $assessment['total_points']) ?> Points
                                         </span>
 

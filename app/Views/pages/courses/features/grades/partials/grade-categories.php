@@ -28,7 +28,7 @@ $categoryCard = static function (array $category) use ($points): string {
             <?= $category['percentage'] !== null ? esc(number_format($category['percentage'], 2)) . '%' : '—' ?>
         </span>
 
-        <span class="text-xs text-[#878787]">
+        <span class="text-xs text-[#767676]">
             <?= $category['graded_count'] > 0
                 ? esc(round($category['earned'], 2)) . ' of ' . esc(round($category['possible'], 2)) . ' pts'
                 : 'Nothing graded yet' ?>
@@ -43,7 +43,7 @@ $categoryCard = static function (array $category) use ($points): string {
 
     <div class="flex flex-col gap-5" data-grade-categories data-uses-periods="1">
 
-        <span class="uppercase font-bold text-xs tracking-wide text-[#878787]">
+        <span class="uppercase font-bold text-xs tracking-wide text-[#767676]">
             How your grade is calculated
         </span>
 
@@ -75,7 +75,7 @@ $categoryCard = static function (array $category) use ($points): string {
 
     <div class="flex flex-col gap-3" data-grade-categories>
 
-        <span class="uppercase font-bold text-xs tracking-wide text-[#878787]">
+        <span class="uppercase font-bold text-xs tracking-wide text-[#767676]">
             How your grade is calculated
         </span>
 

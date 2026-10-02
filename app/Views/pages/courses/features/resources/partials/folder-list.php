@@ -22,7 +22,7 @@
     <?php if ($items === []): ?>
         <div class="flex flex-col items-center justify-center gap-2 px-8 py-14 text-center">
             <?= icon('folder', 'h-10 w-10 text-gray-300') ?>
-            <span class="text-sm font-semibold text-[#5B5B5B]"><?= esc($emptyLabel) ?></span>
+            <span class="text-sm font-semibold text-[#646464]"><?= esc($emptyLabel) ?></span>
         </div>
     <?php endif; ?>
 

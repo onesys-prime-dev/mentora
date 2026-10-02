@@ -1439,7 +1439,7 @@ function createQuestionCardElement(question) {
         </div>
 
         <div class="flex flex-col gap-3 pt-3">
-            <textarea rows="2" data-question-text placeholder="Type your question..." class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-sm font-medium text-[#1F2937] outline-none transition placeholder:text-gray-300 focus:bg-gray-50">${escapeHtml(question.question_text)}</textarea>
+            <textarea rows="2" data-question-text placeholder="Type your question..." class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-sm font-medium text-[#1A1C1E] outline-none transition placeholder:text-gray-300 focus:bg-gray-50">${escapeHtml(question.question_text)}</textarea>
             ${bodyHtml}
         </div>
     `;

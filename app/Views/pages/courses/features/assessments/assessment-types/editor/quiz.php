@@ -19,17 +19,17 @@
 
             <div class="flex flex-col gap-1.5">
 
-                <span class="text-lg font-bold text-[#1F2937]">
+                <span class="text-lg font-bold text-[#1A1C1E]">
                     Build your quiz
                 </span>
 
-                <span class="text-sm text-[#6B7280]">
+                <span class="text-sm text-[#646464]">
                     Add questions, set points, and mark the correct answers.
                 </span>
 
             </div>
 
-            <div class="flex items-center gap-6 text-sm text-[#5B5B5B]">
+            <div class="flex items-center gap-6 text-sm text-[#646464]">
 
                 <div class="flex items-center gap-1.5">
                     <?= icon('quiz', 'h-4 w-4 opacity-60') ?>
@@ -73,7 +73,7 @@
                                 Q<?= esc($index + 1) ?>
                             </span>
 
-                            <span class="truncate text-sm text-[#5B5B5B]">
+                            <span class="truncate text-sm text-[#646464]">
                                 <?= esc($question['question_text']) ?>
                             </span>
 

@@ -6,10 +6,7 @@ $level = $level ?? 'offering';
 
 <div class="flex flex-col gap-6 p-10" data-resources-page data-offering-id="<?= esc($offeringId) ?>">
 
-    <div class="flex items-center gap-4">
-        <?= icon('resources', 'h-6 w-6') ?>
-        <span class="text-2xl font-bold text-[#0040A6]">Resources</span>
-    </div>
+    <?= view('components/page-header', ['icon' => 'resources', 'title' => 'Resources'], ['saveData' => false]) ?>
 
     <?= view('pages/courses/features/resources/partials/toolbar', [
         'filters' => $filters,
@@ -29,11 +26,7 @@ $level = $level ?? 'offering';
 
             <?php if ($resources === []): ?>
 
-                <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
-                    <?= icon('folder', 'h-10 w-10 text-gray-300') ?>
-                    <span class="text-sm font-semibold text-[#5B5B5B]">No resources yet</span>
-                    <span class="text-xs text-[#939393]">There are no resources in this learning unit.</span>
-                </div>
+                <?= view('components/empty-state', ['icon' => 'folder', 'title' => 'No resources yet', 'text' => 'There are no resources in this learning unit.'], ['saveData' => false]) ?>
 
             <?php elseif ($view === 'grid'): ?>
 

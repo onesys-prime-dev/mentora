@@ -26,7 +26,7 @@
                     ·
                 </span>
 
-                <span class="text-lg font-semibold text-[#5B5B5B]">
+                <span class="text-lg font-semibold text-[#646464]">
                     <?= esc($currentAssessment['title']) ?>
                 </span>
 
@@ -161,11 +161,11 @@
                     class="<?= empty($currentQuestions) ? 'flex' : 'hidden' ?> flex-col items-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center"
                     data-question-list-empty>
 
-                    <span class="text-sm font-semibold text-[#5B5B5B]">
+                    <span class="text-sm font-semibold text-[#646464]">
                         No questions yet
                     </span>
 
-                    <span class="text-xs text-[#939393]">
+                    <span class="text-xs text-[#767676]">
                         Drag a question type from the left, or click one to add it here.
                     </span>
 

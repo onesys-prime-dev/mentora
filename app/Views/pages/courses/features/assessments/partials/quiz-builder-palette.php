@@ -60,7 +60,7 @@ $elements = [
                 </span>
 
                 <span class="flex flex-col gap-0.5">
-                    <span class="text-sm font-semibold text-[#1F2937]">
+                    <span class="text-sm font-semibold text-[#1A1C1E]">
                         <?= esc($element['label']) ?>
                     </span>
                     <span class="text-xs text-gray-500">
@@ -98,7 +98,7 @@ $elements = [
             </span>
 
             <span class="flex flex-col gap-0.5">
-                <span class="text-sm font-semibold text-[#1F2937]">Generate with AI</span>
+                <span class="text-sm font-semibold text-[#1A1C1E]">Generate with AI</span>
                 <span class="text-xs text-gray-500">From a topic, pasted text, a file, or a learning unit.</span>
             </span>
 

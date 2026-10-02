@@ -283,7 +283,7 @@ function updateSidebarPinned(card, isPinned) {
             row.remove();
 
             const placeholder = document.createElement("span");
-            placeholder.className = "text-xs text-[#939393]";
+            placeholder.className = "text-xs text-[#767676]";
             placeholder.dataset.sidebarPinnedEmpty = "";
             placeholder.textContent = "No pinned announcements yet.";
             list.appendChild(placeholder);

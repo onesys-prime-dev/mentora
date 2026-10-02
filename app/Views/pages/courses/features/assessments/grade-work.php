@@ -9,7 +9,7 @@ $statusMeta = match ($submissionStatus) {
     'Submitted' => ['label' => 'Ready for Grading', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]', 'canExpand' => true],
     'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]', 'canExpand' => true],
     'Grading' => ['label' => 'Grading In Progress', 'class' => 'bg-[#FFF1D6] text-[#946200]', 'canExpand' => true],
-    'Graded' => ['label' => 'Graded', 'class' => 'bg-emerald-100 text-emerald-700', 'canExpand' => true],
+    'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]', 'canExpand' => true],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500', 'canExpand' => false],
     'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500', 'canExpand' => false],
     'In Progress' => ['label' => 'Not Submitted Yet', 'class' => 'bg-gray-100 text-gray-400', 'canExpand' => false],
@@ -76,7 +76,7 @@ $attemptTabs ??= [];
                     ·
                 </span>
 
-                <span class="text-lg font-semibold text-[#5B5B5B]">
+                <span class="text-lg font-semibold text-[#646464]">
                     <?= esc($currentAssessment['title']) ?>
                 </span>
 
@@ -153,7 +153,7 @@ $attemptTabs ??= [];
                             'Submitted' => ['label' => 'Submitted', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]'],
                             'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
                             'Grading' => ['label' => 'Grading', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
-                            'Graded' => ['label' => 'Graded', 'class' => 'bg-emerald-100 text-emerald-700'],
+                            'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
                             'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
                             'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500'],
                             'In Progress' => ['label' => 'In Progress', 'class' => 'bg-gray-100 text-gray-400'],
@@ -184,7 +184,7 @@ $attemptTabs ??= [];
 
                         <div class="flex min-w-0 flex-1 flex-col">
 
-                            <span class="truncate text-sm font-semibold text-[#1F2937]">
+                            <span class="truncate text-sm font-semibold text-[#1A1C1E]">
                                 <?= esc($student['student_name']) ?>
                             </span>
 
@@ -197,7 +197,7 @@ $attemptTabs ??= [];
                         <?php if (!empty($student['is_graded'])): ?>
 
                             <!-- Counted score: best quiz attempt / latest graded submission -->
-                            <span class="shrink-0 text-xs font-bold text-[#5B5B5B]">
+                            <span class="shrink-0 text-xs font-bold text-[#646464]">
                                 <?= esc((int) $student['submission_score']) ?>/<?= esc((int) $totalPoints) ?>
                             </span>
 
@@ -228,15 +228,15 @@ $attemptTabs ??= [];
                 <?php if (!$selectedStudent): ?>
 
                     <div class="flex h-full flex-col items-center justify-center gap-2 py-16 text-center">
-                        <span class="text-sm font-semibold text-[#5B5B5B]">Select a student</span>
-                        <span class="text-xs text-[#939393]">Choose a student from the left to view their work.</span>
+                        <span class="text-sm font-semibold text-[#646464]">Select a student</span>
+                        <span class="text-xs text-[#767676]">Choose a student from the left to view their work.</span>
                     </div>
 
                 <?php elseif (!$submission): ?>
 
                     <div class="flex h-full flex-col items-center justify-center gap-2 py-16 text-center">
-                        <span class="text-sm font-semibold text-[#5B5B5B]">No submission yet</span>
-                        <span class="text-xs text-[#939393]"><?= esc($selectedStudent['student_name']) ?> has not submitted this assessment.</span>
+                        <span class="text-sm font-semibold text-[#646464]">No submission yet</span>
+                        <span class="text-xs text-[#767676]"><?= esc($selectedStudent['student_name']) ?> has not submitted this assessment.</span>
                     </div>
 
                 <?php else: ?>
@@ -247,7 +247,7 @@ $attemptTabs ??= [];
 
                             <div class="flex items-center gap-3">
 
-                                <span class="font-bold text-[#1F2937]">
+                                <span class="font-bold text-[#1A1C1E]">
                                     <?= esc($selectedStudent['student_name']) ?>'s Work
                                 </span>
 
@@ -341,7 +341,7 @@ $attemptTabs ??= [];
 
                                                 <span class="ml-auto flex items-center gap-1" data-question-badge>
 
-                                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold <?= $awarded > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600' ?>">
+                                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-bold <?= $awarded > 0 ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-red-50 text-red-600' ?>">
                                                         <?= $awarded > 0 ? '✓ Correct' : ($response ? '✗ Incorrect' : '✗ No answer') ?>
                                                         · <?= esc($awardedLabel) ?> pts
                                                     </span>
@@ -409,7 +409,7 @@ $attemptTabs ??= [];
 
                                         </div>
 
-                                        <p class="pb-3 text-sm font-medium text-[#1F2937]">
+                                        <p class="pb-3 text-sm font-medium text-[#1A1C1E]">
                                             <?= esc($question['question_text']) ?>
                                         </p>
 
@@ -600,13 +600,13 @@ $attemptTabs ??= [];
                         <!-- Quizzes are graded per-question above; this is just the sum. -->
                         <div class="flex flex-col gap-2 rounded-xl bg-[#F2F2F2] p-4">
 
-                            <span class="text-sm font-bold text-[#1F2937]">Grade</span>
+                            <span class="text-sm font-bold text-[#1A1C1E]">Grade</span>
 
                             <div class="flex items-center gap-2">
                                 <span class="font-bold text-lg text-[#0040A6]" data-grade-work-quiz-total>
                                     <?= esc(rtrim(rtrim(number_format((float) ($submission['score'] ?? 0), 2), '0'), '.')) ?>
                                 </span>
-                                <span class="text-sm text-[#5B5B5B]">of <?= esc((int) $totalPoints) ?> pts — from the question grades above</span>
+                                <span class="text-sm text-[#646464]">of <?= esc((int) $totalPoints) ?> pts — from the question grades above</span>
                             </div>
 
                         </div>
@@ -616,7 +616,7 @@ $attemptTabs ??= [];
                     <!-- Grade -->
                     <div class="flex flex-col gap-3">
 
-                        <span class="text-sm font-bold text-[#1F2937]">
+                        <span class="text-sm font-bold text-[#1A1C1E]">
                             Grade<?= $isLocked ? ' · ' . ($showRubricMode ? 'Rubric' : 'Default') : '' ?>
                         </span>
 
@@ -672,11 +672,11 @@ $attemptTabs ??= [];
                                         data-grade-work-default-grading-points
                                         class="w-20 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-lg text-[#0040A6] outline-none disabled:border-b-transparent">
 
-                                    <span class="text-sm text-[#5B5B5B]">
+                                    <span class="text-sm text-[#646464]">
                                         of
                                     </span>
 
-                                    <span class="font-bold text-sm text-[#5B5B5B]">
+                                    <span class="font-bold text-sm text-[#646464]">
                                         <?= esc((int) $totalPoints) ?> pts
                                     </span>
 
@@ -729,23 +729,23 @@ $attemptTabs ??= [];
                                                 data-grade-work-rubric-criteria-points
                                                 class="w-16 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-md text-[#0040A6] outline-none disabled:border-b-transparent">
 
-                                            <span class="text-sm text-[#5B5B5B]">
+                                            <span class="text-sm text-[#646464]">
                                                 of
                                             </span>
 
-                                            <span class="font-bold text-sm text-[#5B5B5B]">
+                                            <span class="font-bold text-sm text-[#646464]">
                                                 <?= esc((int) $criterion['max_points']) ?> pts
                                             </span>
 
                                         </div>
 
-                                        <span class="font-bold text-sm text-[#5B5B5B]">
+                                        <span class="font-bold text-sm text-[#646464]">
                                             <?= esc($criterion['criteria_title']) ?>
                                         </span>
 
                                         <?php if (!empty($criterion['description'])): ?>
 
-                                            <span class="text-xs text-[#878787]">
+                                            <span class="text-xs text-[#767676]">
                                                 <?= esc($criterion['description']) ?>
                                             </span>
 
@@ -783,7 +783,7 @@ $attemptTabs ??= [];
 
                         <div class="flex flex-col gap-2">
 
-                            <span class="text-sm font-bold text-[#1F2937]">
+                            <span class="text-sm font-bold text-[#1A1C1E]">
                                 Add feedback (optional)
                             </span>
 

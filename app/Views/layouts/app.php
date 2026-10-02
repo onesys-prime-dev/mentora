@@ -20,6 +20,8 @@ $fullHeight = $fullHeight ?? false;
 
 $bodyHeight  = $fullHeight ? 'min-h-screen lg:h-screen lg:overflow-hidden' : 'min-h-screen';
 $shellHeight = $fullHeight ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen';
+// A page can pass a narrower, responsive gutter; everything else keeps px-40.
+$mainGutter  = $mainGutter ?? 'px-40';
 $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 ?>
 <!DOCTYPE html>
@@ -41,7 +43,7 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 
         <?= $this->include('layouts/partials/header') ?>
 
-        <main class="flex-1 px-40 <?= $mainSpacing ?>">
+        <main class="flex-1 <?= $mainGutter ?> <?= $mainSpacing ?>">
 
             <?= $this->renderSection('content') ?>
 

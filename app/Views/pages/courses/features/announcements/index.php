@@ -9,10 +9,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
 
 <div class="flex flex-col gap-6 p-10" data-announcements-page>
 
-    <div class="flex items-center gap-4">
-        <?= icon('announcement', 'h-6 w-6 text-[#0040A6]') ?>
-        <span class="text-2xl font-bold text-[#0040A6]">Announcements</span>
-    </div>
+    <?= view('components/page-header', ['icon' => 'announcement', 'title' => 'Announcements'], ['saveData' => false]) ?>
 
     <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[350px_1fr] lg:items-start lg:gap-8">
 
@@ -57,16 +54,11 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
                 <?php endforeach; ?>
 
                 <?php if ($announcements === []): ?>
-                    <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
-                        <span class="text-sm font-semibold text-[#5B5B5B]">
-                            <?= ($filters['search'] ?? '') !== '' || !empty($filters['pinned_only'])
-                                ? 'No announcements match'
-                                : 'No announcements yet' ?>
-                        </span>
-                        <span class="text-xs text-[#939393]">
-                            <?= $isInstructor ? 'Post one above to let your students know what\'s new.' : 'Your instructor hasn\'t posted anything yet.' ?>
-                        </span>
-                    </div>
+                    <?= view('components/empty-state', [
+                        'icon' => 'announcement',
+                        'title' => ($filters['search'] ?? '') !== '' || !empty($filters['pinned_only']) ? 'No announcements match' : 'No announcements yet',
+                        'text' => $isInstructor ? "Post one above to let your students know what's new." : "Your instructor hasn't posted anything yet.",
+                    ], ['saveData' => false]) ?>
                 <?php endif; ?>
 
                 <div data-announcements-sentinel class="h-px"></div>

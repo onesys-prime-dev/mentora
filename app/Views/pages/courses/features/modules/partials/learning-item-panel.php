@@ -8,7 +8,7 @@
             Module <?= esc($module['order_index']) ?>
         </span>
 
-        <span class="text-md text-[#878787] font-bold">
+        <span class="text-md text-[#767676] font-bold">
             <?= esc($module['title']) ?>
         </span>
 
@@ -43,7 +43,7 @@
                         class="w-full flex justify-between items-center py-2 cursor-pointer"
                         data-learning-unit="<?= esc($unit['id']) ?>">
 
-                        <span class="text-sm font-bold text-[#565656]/50">
+                        <span class="text-sm font-bold text-[#646464]/50">
                             <?= esc($unit['title']) ?>
                         </span>
 
@@ -126,7 +126,7 @@
 
                                         <?= learning_item_icon($item['item_type'], 'h-3 w-3') ?>
 
-                                        <span class="text-xs text-[#565656]">
+                                        <span class="text-xs text-[#646464]">
                                             <?= $item['item_type'] === 'pdf' ? 'PDF' : esc(ucfirst($item['item_type'])) ?> • June 22, 2026
                                         </span>
 

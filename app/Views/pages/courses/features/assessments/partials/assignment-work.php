@@ -44,7 +44,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
 $statusMeta = static fn (?string $status) => match ($status) {
     'Submitted' => ['label' => 'Submitted', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]'],
     'Grading' => ['label' => 'Being Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
-    'Graded' => ['label' => 'Graded', 'class' => 'bg-emerald-100 text-emerald-700'],
+    'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
     'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500'],
     default => ['label' => 'Not Submitted', 'class' => 'bg-gray-100 text-gray-400'],
@@ -92,7 +92,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
         <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
 
-            <span class="text-sm font-semibold text-[#5B5B5B]">
+            <span class="text-sm font-semibold text-[#646464]">
                 Students submit their work here
             </span>
 
@@ -106,13 +106,13 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                     <?php endforeach; ?>
                 </div>
 
-                <span class="text-xs text-[#939393]">
+                <span class="text-xs text-[#767676]">
                     Up to <?= esc($attemptLimit) ?> submission<?= $attemptLimit === 1 ? '' : 's' ?> per student.
                 </span>
 
             <?php else: ?>
 
-                <span class="text-xs text-[#939393]">
+                <span class="text-xs text-[#767676]">
                     No submission method is turned on yet — students can't submit until you allow file upload, text entry, or a link.
                 </span>
 
@@ -124,12 +124,12 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
         <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#DBDBDB] bg-[#F9F9FC] p-8 text-center">
 
-            <span class="text-sm font-semibold text-[#5B5B5B]">
+            <span class="text-sm font-semibold text-[#646464]">
                 <?= esc($assignmentState['reason'] ?? "Submissions aren't available.") ?>
             </span>
 
             <?php if ($latestAttempt): ?>
-                <span class="text-xs text-[#939393]">
+                <span class="text-xs text-[#767676]">
                     Your latest submission is shown in the history below.
                 </span>
             <?php endif; ?>
@@ -188,11 +188,11 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
                     <span
                         data-assignment-file-name
-                        class="pointer-events-none text-sm font-semibold text-[#5B5B5B]">
+                        class="pointer-events-none text-sm font-semibold text-[#646464]">
                         Drag and drop your file here
                     </span>
 
-                    <span class="pointer-events-none text-xs text-[#939393]">
+                    <span class="pointer-events-none text-xs text-[#767676]">
                         or click to browse · up to 20 MB
                     </span>
 
@@ -209,7 +209,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                     <textarea
                         name="submission_text"
                         rows="8"
-                        class="min-h-52 w-full flex-1 resize-y border-0 text-sm text-[#5B5B5B] outline-none"
+                        class="min-h-52 w-full flex-1 resize-y border-0 text-sm text-[#646464] outline-none"
                         placeholder="Type your response here..."></textarea>
 
                 </div>
@@ -228,9 +228,9 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                         type="url"
                         name="submission_link"
                         placeholder="https://..."
-                        class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#5B5B5B] outline-none transition focus:border-[#0040A6]">
+                        class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#646464] outline-none transition focus:border-[#0040A6]">
 
-                    <span class="text-xs text-[#939393]">
+                    <span class="text-xs text-[#767676]">
                         Paste a link to your work (e.g. Google Docs, GitHub).
                     </span>
 
@@ -240,7 +240,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
             <div class="mt-3 flex items-center justify-between gap-4">
 
-                <span class="text-xs text-[#939393]">
+                <span class="text-xs text-[#767676]">
                     <?php if (count($enabledTypes) > 1): ?>
                         You can fill in more than one tab — everything is sent together.
                     <?php endif; ?>

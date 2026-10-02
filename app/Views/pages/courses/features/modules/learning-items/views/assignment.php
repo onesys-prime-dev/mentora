@@ -8,8 +8,8 @@ $assignmentCounts = $assessmentContext['counts'] ?? null;
 <?php if (!$currentAssessment): ?>
 
     <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
-        <span class="text-sm font-semibold text-[#5B5B5B]">This assignment isn't set up yet</span>
-        <span class="text-xs text-[#939393]">No assignment is linked to this learning item.</span>
+        <span class="text-sm font-semibold text-[#646464]">This assignment isn't set up yet</span>
+        <span class="text-xs text-[#767676]">No assignment is linked to this learning item.</span>
     </div>
 
 <?php else: ?>
@@ -24,7 +24,7 @@ $assignmentCounts = $assessmentContext['counts'] ?? null;
 
                 <div class="flex items-center gap-3">
 
-                    <span class="text-xs text-[#5B5B5B]">
+                    <span class="text-xs text-[#646464]">
                         <strong class="text-[#0040A6]"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
                         · <strong class="text-[#946200]"><?= (int) ($assignmentCounts['toGrade'] ?? 0) ?></strong> to grade
                     </span>

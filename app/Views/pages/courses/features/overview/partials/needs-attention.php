@@ -46,7 +46,7 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
 
             <span class="text-sm font-bold text-[#646464]">You're all caught up</span>
 
-            <span class="text-xs text-[#878787]">
+            <span class="text-xs text-[#767676]">
                 Ungraded work, students falling behind and unpublished content will show up here.
             </span>
 
@@ -68,12 +68,12 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
 
                     <div class="flex items-center justify-between">
 
-                        <span class="uppercase text-xs font-bold tracking-wide text-[#878787]">
+                        <span class="uppercase text-xs font-bold tracking-wide text-[#767676]">
                             <?= esc($list['label']) ?>
                         </span>
 
                         <?php if ($list['total'] > count($rows)): ?>
-                            <span class="text-xs text-[#878787]">
+                            <span class="text-xs text-[#767676]">
                                 Showing <?= count($rows) ?> of <?= esc($list['total']) ?>
                             </span>
                         <?php endif; ?>

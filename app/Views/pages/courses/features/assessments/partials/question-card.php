@@ -21,7 +21,7 @@ $typeBadgeColors = match ($question['question_type']) {
 
         <div class="flex flex-wrap items-center gap-2">
 
-            <span class="text-sm font-bold text-[#5B5B5B]">
+            <span class="text-sm font-bold text-[#646464]">
                 Q<?= esc($index + 1) ?>
             </span>
 
@@ -75,7 +75,7 @@ $typeBadgeColors = match ($question['question_type']) {
 
     </div>
 
-    <p class="text-sm text-[#5B5B5B]">
+    <p class="text-sm text-[#646464]">
         <?= esc($question['question_text']) ?>
     </p>
 
@@ -95,7 +95,7 @@ $typeBadgeColors = match ($question['question_type']) {
                         <?php endif; ?>
                     </span>
 
-                    <span class="<?= !empty($choice['is_correct']) ? 'font-semibold text-[#0040A6]' : 'text-[#5B5B5B]' ?>">
+                    <span class="<?= !empty($choice['is_correct']) ? 'font-semibold text-[#0040A6]' : 'text-[#646464]' ?>">
                         <?= esc($choice['choice_text']) ?>
                     </span>
 

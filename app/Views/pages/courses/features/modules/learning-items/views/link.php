@@ -24,7 +24,7 @@ $host = $isSafeUrl ? preg_replace('/^www\./', '', (string) parse_url($url, PHP_U
             </div>
 
             <div class="flex min-w-0 flex-col">
-                <span class="text-sm font-semibold text-[#1F2937]"><?= esc($host) ?></span>
+                <span class="text-sm font-semibold text-[#1A1C1E]"><?= esc($host) ?></span>
                 <span class="truncate text-xs text-gray-400"><?= esc($url) ?></span>
             </div>
 
@@ -32,7 +32,7 @@ $host = $isSafeUrl ? preg_replace('/^www\./', '', (string) parse_url($url, PHP_U
 
         <?php if ($description !== ''): ?>
 
-            <p class="text-sm leading-relaxed text-[#5B5B5B]">
+            <p class="text-sm leading-relaxed text-[#646464]">
                 <?= nl2br(esc($description)) ?>
             </p>
 
@@ -64,9 +64,9 @@ $host = $isSafeUrl ? preg_replace('/^www\./', '', (string) parse_url($url, PHP_U
 
         <?= icon('link', 'h-10 w-10') ?>
 
-        <span class="text-sm font-semibold text-[#5B5B5B]">No link yet</span>
+        <span class="text-sm font-semibold text-[#646464]">No link yet</span>
 
-        <span class="text-xs text-[#939393]">This learning item doesn't have a link attached.</span>
+        <span class="text-xs text-[#767676]">This learning item doesn't have a link attached.</span>
 
     </section>
 

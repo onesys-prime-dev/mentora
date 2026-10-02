@@ -24,34 +24,58 @@ $features = [
 
 <div class="flex flex-col gap-5">
 
-    <div 
-        class="flex items-center gap-5 px-10 py-6 rounded-3xl bg-cyan-200 bg-cover bg-center bg-no-repeat text-white overflow-hidden"
-        style="background-image: url('<?= base_url('assets/images/placeholder/course-tech-1.png') ?>');">
+    <?php
+    // Per-course artwork can be supplied later via $course['banner_image'];
+    // the scrim below keeps the text readable on any image, and the solid
+    // brand colour underneath is the fallback when there is none.
+    $bannerImage = $course['banner_image'] ?? base_url('assets/images/placeholder/course-tech-1.png');
+    ?>
 
-        <div class="w-20 h-20 flex justify-center items-center rounded-[100%] bg-blue-900">
-            <?= icon('code', 'h-10 w-10') ?>
-        </div>
+    <div
+        class="relative overflow-hidden rounded-3xl bg-[#002068] bg-cover bg-center bg-no-repeat text-white"
+        style="background-image: url('<?= esc($bannerImage, 'attr') ?>');">
 
-        <div class="flex flex-col">
-            <span class="text-xl">
-                <?= esc($course['course_code']) . ' - ' . esc($course['section_code']) ?>
-            </span>
+        <div class="absolute inset-0 bg-linear-to-r from-[#002068]/90 via-[#002068]/65 to-[#002068]/20" aria-hidden="true"></div>
 
-            <h1 class="text-3xl font-bold">
-                <?= esc($course['course_title']) ?>
-            </h1>
+        <div class="relative flex items-center gap-4 px-5 py-5 sm:gap-5 sm:px-10 sm:py-6">
+
+            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30 sm:h-20 sm:w-20">
+                <?= icon('code', 'h-7 w-7 sm:h-10 sm:w-10') ?>
+            </div>
+
+            <div class="flex min-w-0 flex-col">
+
+                <span class="text-sm font-medium text-white/85 sm:text-xl">
+                    <?= esc($course['course_code']) . ' - ' . esc($course['section_code']) ?>
+                </span>
+
+                <h1 class="text-2xl font-bold sm:text-3xl">
+                    <?= esc($course['course_title']) ?>
+                </h1>
+
+                <?php if (!empty($course['term_name'])): ?>
+                    <span class="mt-1 text-xs text-white/80 sm:text-sm">
+                        <?= esc($course['term_name']) ?><?= !empty($course['academic_year']) ? ' · ' . esc($course['academic_year']) : '' ?>
+                    </span>
+                <?php endif; ?>
+
+            </div>
+
         </div>
 
     </div>
 
     <div class="flex flex-col">
 
-        <div class="flex gap-2 ml-10">
+        <div class="flex gap-2 ml-4 overflow-x-auto sm:ml-10" role="tablist" aria-label="Course sections">
 
             <?php foreach ($features as $feature => $label): ?>
 
                 <button
-                    class="course-feature px-6 py-1 cursor-pointer text-white bg-blue-900 rounded-t-2xl"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    class="course-feature shrink-0 whitespace-nowrap px-4 py-1.5 cursor-pointer text-white bg-blue-900 hover:bg-blue-800 rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:px-6"
                     data-course-feature="<?= esc($feature) ?>"
                 >
                     <?= esc($label) ?>
@@ -64,6 +88,7 @@ $features = [
         <div 
             class="w-full bg-white rounded-3xl"
             id="course-content"
+            role="tabpanel"
         >
 
     </div>

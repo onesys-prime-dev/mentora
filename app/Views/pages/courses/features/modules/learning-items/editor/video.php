@@ -21,7 +21,7 @@ $source = !empty($resource['file'])
 
         <div class="border-b border-gray-200 px-6 py-4">
 
-            <h2 class="text-base font-semibold text-[#1C2431]">
+            <h2 class="text-base font-semibold text-[#1A1C1E]">
                 Video Source
             </h2>
 
@@ -81,7 +81,7 @@ $source = !empty($resource['file'])
 
         <div class="border-b border-gray-200 px-6 py-4">
 
-            <h2 class="font-semibold text-[#1C2431]">
+            <h2 class="font-semibold text-[#1A1C1E]">
                 Upload Video
             </h2>
 
@@ -145,7 +145,7 @@ $source = !empty($resource['file'])
 
         <div class="border-b border-gray-200 px-6 py-4">
 
-            <h2 class="font-semibold text-[#1C2431]">
+            <h2 class="font-semibold text-[#1A1C1E]">
                 External Video
             </h2>
 
@@ -182,7 +182,7 @@ $source = !empty($resource['file'])
 
         <div class="border-b border-gray-200 px-6 py-4">
 
-            <h2 class="font-semibold text-[#1C2431]">
+            <h2 class="font-semibold text-[#1A1C1E]">
                 Preview
             </h2>
 
@@ -211,7 +211,7 @@ $source = !empty($resource['file'])
 
         <div class="border-b border-gray-200 px-6 py-4">
 
-            <h2 class="font-semibold text-[#1C2431]">
+            <h2 class="font-semibold text-[#1A1C1E]">
                 Playback
             </h2>
 

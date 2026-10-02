@@ -26,7 +26,7 @@ $statusMeta = static fn (?string $status) => match ($status) {
     'Submitted' => ['label' => 'Submitted', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]'],
     'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
     'Grading' => ['label' => 'Being Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
-    'Graded' => ['label' => 'Graded', 'class' => 'bg-emerald-100 text-emerald-700'],
+    'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
     'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500'],
     default => ['label' => 'Not Submitted', 'class' => 'bg-gray-100 text-gray-400'],
@@ -56,7 +56,7 @@ $timeTaken = static function (array $attempt): ?string {
 
     <?php if (empty($historyAttempts)): ?>
 
-        <span class="text-sm italic text-[#5B5B5B]">
+        <span class="text-sm italic text-[#646464]">
             <?= $isQuizHistory ? "You haven't taken this quiz yet." : "You haven't submitted this assignment yet." ?>
         </span>
 
@@ -101,7 +101,7 @@ $timeTaken = static function (array $attempt): ?string {
                                     </svg>
                                 <?php endif; ?>
 
-                                <span class="text-sm font-semibold text-[#1F2937]">
+                                <span class="text-sm font-semibold text-[#1A1C1E]">
                                     Attempt <?= esc((int) $attempt['attempt_number']) ?>
                                 </span>
 

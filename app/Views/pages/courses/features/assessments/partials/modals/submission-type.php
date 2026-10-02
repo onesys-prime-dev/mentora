@@ -82,7 +82,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
 
                 <div class="flex flex-col">
 
-                    <span class="font-semibold text-[#5B5B5B]">
+                    <span class="font-semibold text-[#646464]">
                         File Upload
                     </span>
 
@@ -121,7 +121,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
 
                 <div class="flex flex-col">
 
-                    <span class="font-semibold text-[#5B5B5B]">
+                    <span class="font-semibold text-[#646464]">
                         Text Entry
                     </span>
 
@@ -160,7 +160,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
 
                 <div class="flex flex-col">
 
-                    <span class="font-semibold text-[#5B5B5B]">
+                    <span class="font-semibold text-[#646464]">
                         Link Entry
                     </span>
 

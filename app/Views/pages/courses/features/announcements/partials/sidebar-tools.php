@@ -5,7 +5,7 @@ $sort = $filters['sort'] ?? 'newest';
 
 <div class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5" data-sidebar-tools>
 
-    <span class="text-xs font-bold uppercase tracking-wide text-[#878787]">Announcement Tools</span>
+    <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Announcement Tools</span>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 transition focus-within:border-[#0040A6]/50">
         <svg class="h-4 w-4 shrink-0 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -21,25 +21,25 @@ $sort = $filters['sort'] ?? 'newest';
     </label>
 
     <div class="flex flex-col gap-2">
-        <span class="text-xs font-semibold text-[#5B5B5B]">Filter</span>
+        <span class="text-xs font-semibold text-[#646464]">Filter</span>
         <div class="flex items-center gap-2" data-announcements-filter>
             <button
                 type="button"
                 data-filter="all"
-                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'all' ? 'bg-[#0040A6] text-white' : 'border border-gray-300 text-[#5B5B5B] hover:bg-gray-50' ?>">
+                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'all' ? 'bg-[#0040A6] text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
                 All
             </button>
             <button
                 type="button"
                 data-filter="pinned"
-                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'pinned' ? 'bg-[#0040A6] text-white' : 'border border-gray-300 text-[#5B5B5B] hover:bg-gray-50' ?>">
+                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'pinned' ? 'bg-[#0040A6] text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
                 Pinned
             </button>
         </div>
     </div>
 
     <div class="flex flex-col gap-2">
-        <span class="text-xs font-semibold text-[#5B5B5B]">Sort</span>
+        <span class="text-xs font-semibold text-[#646464]">Sort</span>
         <select data-announcements-sort class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-[#1A1C1E] outline-none">
             <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
             <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>

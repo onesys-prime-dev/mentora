@@ -23,10 +23,10 @@ foreach (($assessments ?? []) as $assessment) {
 $formatPoints = static fn (float $points) => (float) (int) $points === $points ? (string) (int) $points : (string) round($points, 2);
 
 $chipClasses = [
-    'success' => 'bg-emerald-100 text-emerald-700',
+    'success' => 'bg-[#E8F5EC] text-[#2E7D4F]',
     'warning' => 'bg-[#FFF1D6] text-[#946200]',
     'info'    => 'bg-[#0040A6]/10 text-[#0040A6]',
-    'danger'  => 'bg-[#FFDAD6] text-[#B3261E]',
+    'danger'  => 'bg-[#FDEDEC] text-[#C33939]',
     'muted'   => 'bg-gray-100 text-gray-500',
     'neutral' => 'bg-gray-100 text-gray-500',
 ];
@@ -51,7 +51,7 @@ $chipClasses = [
             <?= icon('no-score', 'h-8 w-8 opacity-60') ?>
 
             <span class="font-bold text-[#646464]">No assessments yet</span>
-            <span class="text-sm text-[#878787]">Quizzes and assignments for this course will show up here with your scores.</span>
+            <span class="text-sm text-[#767676]">Quizzes and assignments for this course will show up here with your scores.</span>
 
         </div>
 
@@ -63,7 +63,7 @@ $chipClasses = [
 
                 <div class="flex flex-col gap-3">
 
-                    <span class="uppercase font-bold text-xs tracking-wide text-[#878787]">
+                    <span class="uppercase font-bold text-xs tracking-wide text-[#767676]">
                         <?= esc($typeHeadings[$type] ?? $type) ?>
                     </span>
 
@@ -100,7 +100,7 @@ $chipClasses = [
                                             <?= esc($assessment['title']) ?>
                                         </span>
 
-                                        <span class="text-sm text-[#878787]">
+                                        <span class="text-sm text-[#767676]">
                                             <?= esc($assessment['due_label']) ?> · <?= esc($formatPoints($totalPoints)) ?> points
                                         </span>
 
@@ -116,7 +116,7 @@ $chipClasses = [
                                             <?= esc($scoreText) ?>
                                         </span>
 
-                                        <span class="text-xs text-[#878787]">
+                                        <span class="text-xs text-[#767676]">
                                             <?= $totalPoints > 0 ? esc(round($score / $totalPoints * 100)) . '%' : '' ?>
                                         </span>
 
@@ -131,7 +131,7 @@ $chipClasses = [
                                             <?= esc($scoreText) ?> so far
                                         </span>
 
-                                        <span class="text-xs text-[#878787]">The rest is being graded</span>
+                                        <span class="text-xs text-[#767676]">The rest is being graded</span>
 
                                     </div>
 

@@ -68,7 +68,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
                         <span class="truncate font-bold text-[#646464]"><?= esc($draft['title']) ?></span>
 
-                        <span class="text-xs text-[#878787]">
+                        <span class="text-xs text-[#767676]">
                             <?= esc(implode(' · ', array_filter([
                                 $draft['edited'] ? 'Edited ' . $draft['edited'] : null,
                                 $draft['is_quiz'] ? (int) $draft['question_count'] . ' ' . ((int) $draft['question_count'] === 1 ? 'question' : 'questions') : ucfirst((string) $draft['assessment_type']),
@@ -76,7 +76,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
                         </span>
 
                         <?php if ($draft['dueWarning']): ?>
-                            <span class="mt-1 w-fit rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+                            <span class="mt-1 w-fit rounded-full bg-[#FDEDEC] px-2 py-0.5 text-[11px] font-bold text-[#C33939]">
                                 <?= esc($draft['dueWarning']) ?>
                             </span>
                         <?php endif; ?>
@@ -133,7 +133,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
                         <span class="truncate font-bold text-[#646464]"><?= esc($item['title']) ?></span>
 
-                        <span class="text-xs text-[#878787]">
+                        <span class="text-xs text-[#767676]">
                             <strong class="text-[#946200]"><?= (int) $item['section']['toGrade'] ?> to grade</strong>
                             <?= $item['waiting'] ? '· oldest waiting ' . esc($item['waiting']) : '' ?>
                         </span>

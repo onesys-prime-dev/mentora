@@ -35,44 +35,34 @@ $formatDuration = static function (int $minutes): string {
 
     <div class="flex flex-col gap-3">
 
-        <div class="flex items-center gap-4 justify-between">
+        <?php
+        ob_start();
+        if ($isInstructor): ?>
+            <button
+                class="inline-flex items-center gap-2 rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]"
+                data-create-module-button>
 
-            <div class="flex items-center gap-4">
-                <div class="flex justify-center items-center">
-                    <?= icon('modules', 'h-6 w-6') ?>
-                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                </svg>
 
-                <span class="text-2xl font-bold text-[#0040A6]">
-                    Course Modules
-                </span>
-            </div>
+                <span>Add Module</span>
 
-            <?php if ($isInstructor): ?>
+            </button>
+        <?php endif;
+        $headerActions = ob_get_clean();
+        ?>
 
-                <button
-                    class="inline-flex items-center gap-2 rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]"
-                    data-create-module-button>
-
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
-                    </svg>
-
-                    <span>Add Module</span>
-
-                </button>
-
-            <?php endif; ?>
-
-        </div>
+        <?= view('components/page-header', ['icon' => 'modules', 'title' => 'Course Modules', 'actions' => $headerActions], ['saveData' => false]) ?>
 
         <?php if ($moduleCount > 0): ?>
-            <p class="text-[#5B5B5B] font-bold text-lg py-4">
+            <p class="text-[#646464] font-bold text-lg py-4">
                 There <?= $moduleCount === 1 ? 'is' : 'are' ?> <?= esc($moduleCount) ?> module<?= $moduleCount === 1 ? '' : 's' ?> in this course
             </p>
         <?php endif; ?>
 
         <?php if (trim((string) $course_description) !== ''): ?>
-            <p class="text-[#5B5B5B]/80 leading-relaxed">
+            <p class="text-[#646464]/80 leading-relaxed">
                 <?= esc($course_description) ?>
             </p>
         <?php endif; ?>
@@ -88,7 +78,7 @@ $formatDuration = static function (int $minutes): string {
 
                 <?php if ($isInstructor): ?>
 
-                    <div data-module-card-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1C2431] active:cursor-grabbing">
+                    <div data-module-card-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
                             <circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/>
                             <circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/>
@@ -130,7 +120,7 @@ $formatDuration = static function (int $minutes): string {
                                             <?= esc($module['title']) ?>
                                         </span>
                                         <?php if ($isDraft): ?>
-                                            <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#8F9198]">
+                                            <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                                                 Draft
                                             </span>
                                         <?php endif; ?>
@@ -149,13 +139,11 @@ $formatDuration = static function (int $minutes): string {
 
                                 <?php if ($module['progress'] == 100): ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E6F4EA] uppercase text-xs font-black text-[#5C9F72] rounded-4xl">
-                                        Completed
-                                    </span>
+                                    <?= view('components/status-badge', ['tone' => 'success', 'icon' => 'check', 'label' => 'Completed'], ['saveData' => false]) ?>
 
                                 <?php elseif ($isInstructor && empty($module['has_roster'])): ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#8F9198] rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#767676] rounded-4xl">
                                         No students enrolled
                                     </span>
 
@@ -173,7 +161,7 @@ $formatDuration = static function (int $minutes): string {
 
                                 <?php else: ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#8F9198] rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#767676] rounded-4xl">
                                         Not yet started
                                     </span>
 
@@ -209,14 +197,14 @@ $formatDuration = static function (int $minutes): string {
 
                         <div class="pb-6 flex flex-col gap-4">
 
-                            <span class="text-[#565656] leading-relaxed">
+                            <span class="text-[#646464] leading-relaxed">
                                 <?= esc($module['description']) ?>
                             </span>
 
                             <?php if ($module['item_type_counts'] !== []): ?>
 
                                 <div class="flex flex-col gap-2">
-                                    <span class="text-xs font-bold uppercase text-[#878787]">What's included</span>
+                                    <span class="text-xs font-bold uppercase text-[#767676]">What's included</span>
                                     <div class="flex flex-wrap items-center gap-3">
                                         <?php foreach ($module['item_type_counts'] as $type => $count): ?>
                                             <?php
@@ -234,7 +222,7 @@ $formatDuration = static function (int $minutes): string {
 
                             <?php elseif ($isInstructor): ?>
 
-                                <span class="text-sm text-[#939393] italic">No content yet</span>
+                                <span class="text-sm text-[#767676] italic">No content yet</span>
 
                             <?php endif; ?>
 
@@ -259,12 +247,11 @@ $formatDuration = static function (int $minutes): string {
         <?php endforeach; ?>
 
         <?php if ($modules === []): ?>
-            <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
-                <span class="text-sm font-semibold text-[#5B5B5B]">No modules yet</span>
-                <?php if ($isInstructor): ?>
-                    <span class="text-xs text-[#939393]">Create one with "Add Module" to get started.</span>
-                <?php endif; ?>
-            </div>
+            <?= view('components/empty-state', [
+                'icon' => 'folder',
+                'title' => 'No modules yet',
+                'text' => $isInstructor ? 'Create one with "Add Module" to get started.' : '',
+            ], ['saveData' => false]) ?>
         <?php endif; ?>
 
     </div>

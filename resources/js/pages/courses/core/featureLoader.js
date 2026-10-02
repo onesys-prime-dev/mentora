@@ -41,6 +41,11 @@ export async function loadFeature(feature)
             button.classList.toggle("border-t", isActive);
             button.classList.toggle("border-black/15", isActive);
             button.classList.toggle("!text-black", isActive);
+
+            // The active tab is white, so the dark hover would flip it back.
+            button.classList.toggle("hover:bg-blue-800", !isActive);
+
+            button.setAttribute("aria-selected", String(isActive));
         });
 }
 

@@ -36,7 +36,7 @@ $previewLabels = [
                     ·
                 </span>
 
-                <span class="text-lg font-semibold text-[#5B5B5B]">
+                <span class="text-lg font-semibold text-[#646464]">
                     <?= esc($currentAssessment['title']) ?>
                 </span>
 
@@ -87,9 +87,9 @@ $previewLabels = [
 
             <?= icon('lock', 'h-10 w-10') ?>
 
-            <span class="text-lg font-bold text-[#5B5B5B]">This quiz is locked</span>
+            <span class="text-lg font-bold text-[#646464]">This quiz is locked</span>
 
-            <span class="text-sm text-[#939393]">
+            <span class="text-sm text-[#767676]">
                 <?= esc($lock['message']) ?> You'll find them in the Modules tab.
             </span>
 
@@ -99,9 +99,9 @@ $previewLabels = [
 
         <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
 
-            <span class="text-lg font-bold text-[#5B5B5B]">This quiz isn't available</span>
+            <span class="text-lg font-bold text-[#646464]">This quiz isn't available</span>
 
-            <span class="text-sm text-[#939393]"><?= esc($unavailableReason) ?></span>
+            <span class="text-sm text-[#767676]"><?= esc($unavailableReason) ?></span>
 
         </div>
 
@@ -109,9 +109,9 @@ $previewLabels = [
 
         <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
 
-            <span class="text-lg font-bold text-[#5B5B5B]">No attempts remaining</span>
+            <span class="text-lg font-bold text-[#646464]">No attempts remaining</span>
 
-            <span class="text-sm text-[#939393]">
+            <span class="text-sm text-[#767676]">
                 You've used all <?= esc((int) ($currentAssessment['attempt_limit'] ?? 1)) ?> allowed attempt<?= (int) ($currentAssessment['attempt_limit'] ?? 1) === 1 ? '' : 's' ?> for this quiz.
             </span>
 
@@ -121,9 +121,9 @@ $previewLabels = [
 
         <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
 
-            <span class="text-lg font-bold text-[#5B5B5B]">This attempt has already been submitted</span>
+            <span class="text-lg font-bold text-[#646464]">This attempt has already been submitted</span>
 
-            <span class="text-sm text-[#939393]">Check the assessment view for your score once it's graded.</span>
+            <span class="text-sm text-[#767676]">Check the assessment view for your score once it's graded.</span>
 
         </div>
 
@@ -138,7 +138,7 @@ $previewLabels = [
 
                     <div class="flex items-center justify-between text-sm">
 
-                        <span class="font-semibold text-[#1F2937]" data-quiz-progress-label>
+                        <span class="font-semibold text-[#1A1C1E]" data-quiz-progress-label>
                             0 of <?= esc(count($questions)) ?> answered
                         </span>
 
@@ -190,7 +190,7 @@ $previewLabels = [
                                             <?= esc($index + 1) ?>
                                         </span>
 
-                                        <p class="text-base font-semibold text-[#1F2937]">
+                                        <p class="text-base font-semibold text-[#1A1C1E]">
                                             <?= esc($question['question_text']) ?>
                                             <?php if (!empty($question['is_required'])): ?>
                                                 <span class="text-red-500">*</span>
@@ -270,7 +270,7 @@ $previewLabels = [
                         <?php if (empty($questions)): ?>
 
                             <div class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-[#F9F9FC] p-10 text-center">
-                                <span class="text-sm font-semibold text-[#5B5B5B]">This quiz has no questions yet.</span>
+                                <span class="text-sm font-semibold text-[#646464]">This quiz has no questions yet.</span>
                             </div>
 
                         <?php endif; ?>

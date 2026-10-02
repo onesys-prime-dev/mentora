@@ -97,7 +97,11 @@ class CourseController extends BaseController
 
                 'activeFeature' => $activeFeature,
 
-                'previousPage' => 'courses'
+                'previousPage' => 'courses',
+
+                // The workspace gets a gutter that shrinks on small screens
+                // instead of the fixed 160px the rest of the app uses.
+                'mainGutter' => 'px-4 sm:px-8 lg:px-20 xl:px-40',
 
             ]
         );

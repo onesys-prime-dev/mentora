@@ -21,11 +21,11 @@
 
             <div class="flex flex-col gap-1.5">
 
-                <span class="text-lg font-bold text-[#1F2937]">
+                <span class="text-lg font-bold text-[#1A1C1E]">
                     <?= $userRole === 'instructor' ? 'Students will take this quiz here' : 'Ready to test your knowledge?' ?>
                 </span>
 
-                <span class="text-sm text-[#6B7280]">
+                <span class="text-sm text-[#646464]">
                     <?= $userRole === 'instructor'
                         ? 'This is a preview of what students see before starting the quiz.'
                         : 'Once you start, make sure you have enough time to finish in one sitting.' ?>
@@ -33,7 +33,7 @@
 
             </div>
 
-            <div class="flex items-center gap-6 text-sm text-[#5B5B5B]">
+            <div class="flex items-center gap-6 text-sm text-[#646464]">
 
                 <?php if (!empty($currentAssessment['duration'])): ?>
                     <div class="flex items-center gap-1.5">

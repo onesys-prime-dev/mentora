@@ -8,8 +8,8 @@ $questionCount = (int) ($assessmentContext['questionCount'] ?? 0);
 <?php if (!$currentAssessment): ?>
 
     <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
-        <span class="text-sm font-semibold text-[#5B5B5B]">No quiz is linked to this learning item</span>
-        <span class="text-xs text-[#939393]">Delete this item and add the quiz again from the learning unit.</span>
+        <span class="text-sm font-semibold text-[#646464]">No quiz is linked to this learning item</span>
+        <span class="text-xs text-[#767676]">Delete this item and add the quiz again from the learning unit.</span>
     </div>
 
 <?php else: ?>

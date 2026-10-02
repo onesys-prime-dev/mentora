@@ -14,7 +14,7 @@ $userRole = esc($user->getGroups()[0]);
             <?= learning_item_icon($currentItem['item_type'], 'h-4 w-4') ?>
         </div>
 
-        <span class="capitalize text-sm text-[#565656]">
+        <span class="capitalize text-sm text-[#646464]">
             <?= esc($currentItem['item_type']) ?>
 
             •
@@ -60,7 +60,7 @@ $userRole = esc($user->getGroups()[0]);
                 src="<?= base_url('assets/images/placeholder/profile.png') ?>" alt="">
         </div>
 
-        <span class="capitalize text-sm text-[#565656]">
+        <span class="capitalize text-sm text-[#646464]">
             Jalen Brunson  •  June 22, 2026  •  7:30AM 
         </span>
     </div>

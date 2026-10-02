@@ -111,7 +111,7 @@ if ($isInstructor) {
     <!-- Key metrics -->
     <?= view('pages/courses/features/assessments/partials/overview/metrics', ['metrics' => $listMetrics]) ?>
 
-    <div class="flex flex-1 gap-10">
+    <div class="flex flex-1 flex-col gap-10 lg:flex-row">
 
         <!-- Assessment list -->
         <div class="flex w-full min-w-0 flex-col gap-5">
@@ -185,8 +185,8 @@ if ($isInstructor) {
                 <?php if (!$rows): ?>
 
                     <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
-                        <span class="text-sm font-semibold text-[#5B5B5B]">No assessments yet</span>
-                        <span class="text-xs text-[#939393]">
+                        <span class="text-sm font-semibold text-[#646464]">No assessments yet</span>
+                        <span class="text-xs text-[#767676]">
                             <?= $isInstructor
                                 ? 'Create one with “Add Assessment”, or add a quiz or assignment to a learning unit in Modules.'
                                 : 'Your instructor hasn’t published any assessments yet.' ?>
@@ -198,8 +198,8 @@ if ($isInstructor) {
                 <div
                     data-assessments-no-match
                     class="hidden flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
-                    <span class="text-sm font-semibold text-[#5B5B5B]">Nothing matches</span>
-                    <span class="text-xs text-[#939393]">Try another filter or search term.</span>
+                    <span class="text-sm font-semibold text-[#646464]">Nothing matches</span>
+                    <span class="text-xs text-[#767676]">Try another filter or search term.</span>
                 </div>
 
             </div>
@@ -207,7 +207,7 @@ if ($isInstructor) {
         </div>
 
         <!-- Sidebar -->
-        <div class="flex h-full w-2/5 shrink-0 flex-col gap-10">
+        <div class="flex h-full w-full shrink-0 flex-col gap-10 lg:w-2/5">
 
             <?= view(
                 $isInstructor

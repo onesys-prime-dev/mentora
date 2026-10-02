@@ -26,7 +26,7 @@ helper('number');
             </div>
 
             <div class="flex min-w-0 flex-1 flex-col">
-                <span data-pdf-current-name class="truncate text-sm font-semibold text-[#1F2937]">
+                <span data-pdf-current-name class="truncate text-sm font-semibold text-[#1A1C1E]">
                     <?= esc($file['original_filename'] ?? '') ?>
                 </span>
                 <span data-pdf-current-size class="text-xs text-gray-400">
@@ -58,11 +58,11 @@ helper('number');
 
             <?= icon('pdf', 'pointer-events-none h-10 w-10 opacity-40') ?>
 
-            <span data-pdf-status class="pointer-events-none text-sm font-semibold text-[#5B5B5B]">
+            <span data-pdf-status class="pointer-events-none text-sm font-semibold text-[#646464]">
                 <?= $file ? 'Drop a new PDF here to replace it' : 'Drag and drop a PDF here' ?>
             </span>
 
-            <span class="pointer-events-none text-xs text-[#939393]">
+            <span class="pointer-events-none text-xs text-[#767676]">
                 or click to browse · PDF only · up to 25 MB
             </span>
 

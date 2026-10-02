@@ -12,8 +12,8 @@ $submissionTypes = array_keys(array_filter([
 <?php if (!$currentAssessment): ?>
 
     <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
-        <span class="text-sm font-semibold text-[#5B5B5B]">No assignment is linked to this learning item</span>
-        <span class="text-xs text-[#939393]">Delete this item and add the assignment again from the learning unit.</span>
+        <span class="text-sm font-semibold text-[#646464]">No assignment is linked to this learning item</span>
+        <span class="text-xs text-[#767676]">Delete this item and add the assignment again from the learning unit.</span>
     </div>
 
 <?php else: ?>
@@ -44,7 +44,7 @@ $submissionTypes = array_keys(array_filter([
 
                 <span class="text-xs font-bold uppercase tracking-wide text-gray-400">Rubric</span>
 
-                <span class="text-sm font-semibold text-[#5B5B5B]">
+                <span class="text-sm font-semibold text-[#646464]">
                     <?= $currentRubric
                         ? esc($currentRubric['title']) . ' · ' . count($currentRubric['criteria'] ?? []) . ' criteria'
                         : 'No rubric' ?>
@@ -56,7 +56,7 @@ $submissionTypes = array_keys(array_filter([
 
                 <span class="text-xs font-bold uppercase tracking-wide text-gray-400">Submissions</span>
 
-                <span class="text-sm text-[#5B5B5B]">
+                <span class="text-sm text-[#646464]">
                     <strong class="text-[#0040A6]"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
                     · <strong class="text-[#946200]"><?= (int) ($assignmentCounts['toGrade'] ?? 0) ?></strong> to grade
                     · <strong class="text-emerald-700"><?= (int) ($assignmentCounts['graded'] ?? 0) ?></strong> graded

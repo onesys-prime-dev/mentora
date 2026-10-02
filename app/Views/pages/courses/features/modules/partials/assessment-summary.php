@@ -40,7 +40,7 @@ if (!$summaryIsQuiz && !empty($currentAssessment['due_date'])) {
 
     <?php foreach ($summaryChips as $chip): ?>
 
-        <span class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-[#5B5B5B]">
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-[#646464]">
             <?= icon($chip['icon'], 'h-3.5 w-3.5 opacity-60') ?>
             <?= esc($chip['text']) ?>
         </span>
