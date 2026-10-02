@@ -4,6 +4,7 @@ namespace App\Services\Dashboard;
 
 use App\Models\Users\UserProfileModel;
 use App\Models\Courses\EnrollmentModel;
+use App\Models\Courses\AnnouncementModel;
 use App\Models\Academic\InstitutionUserModel;
 use App\Models\Academic\AcademicTermModel;
 use App\Models\Courses\CourseScheduleModel;
@@ -20,6 +21,7 @@ class DashboardService
 {
     protected UserProfileModel $userProfileModel;
     protected EnrollmentModel $enrollmentModel;
+    protected AnnouncementModel $announcementModel;
     protected CourseScheduleModel $courseScheduleModel;
     protected InstructorAssignmentModel $instructorAssignmentModel;
     protected CourseModuleModel $courseModuleModel;
@@ -72,6 +74,7 @@ class DashboardService
     {
         $this->userProfileModel = new UserProfileModel();
         $this->enrollmentModel = new EnrollmentModel();
+        $this->announcementModel = new AnnouncementModel();
         $this->institutionUserModel = new InstitutionUserModel();
         $this->academicTermModel = new AcademicTermModel();
         $this->courseScheduleModel = new CourseScheduleModel();
@@ -296,7 +299,43 @@ class DashboardService
 
     protected function getAnnouncementsData(User $user): array
     {
-        return [];
+        $offerings = $this->enrollmentModel->retrieveStudentCourseOfferings($user->id);
+
+        if ($offerings === []) {
+            return ['announcements' => []];
+        }
+
+        $byOffering = [];
+
+        foreach ($offerings as $offering) {
+            $byOffering[(int) $offering['offering_id']] = $offering;
+        }
+
+        $rows = $this->announcementModel->retrieveForOfferings(array_keys($byOffering), 8);
+
+        $announcements = [];
+
+        foreach ($rows as $row) {
+
+            $offering = $byOffering[(int) $row['offering_id']] ?? null;
+
+            if ($offering === null) {
+                continue;
+            }
+
+            $announcements[] = [
+                'id' => (int) $row['id'],
+                'offering_id' => (int) $row['offering_id'],
+                'slug' => url_title($offering['course_title'], '-', true),
+                'code' => $offering['course_code'] . ' - ' . $offering['section_code'],
+                'title' => $row['subject'],
+                'author' => trim((string) $row['author_name']) !== '' ? $row['author_name'] : 'Instructor',
+                'posted' => $this->describeEditedAt($row['created_at']),
+            ];
+
+        }
+
+        return ['announcements' => $announcements];
     }
 
     protected function getRemindersData(User $user): array

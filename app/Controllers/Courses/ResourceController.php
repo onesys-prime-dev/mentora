@@ -22,7 +22,15 @@ class ResourceController extends BaseController
         return $this->response->setJSON(
             $this->resourceService->show(
                 $user,
-                $offeringId
+                $offeringId,
+                [
+                    'module' => $this->request->getGet('module'),
+                    'unit' => $this->request->getGet('unit'),
+                    'search' => $this->request->getGet('search'),
+                    'sort' => $this->request->getGet('sort'),
+                    'type' => $this->request->getGet('type'),
+                    'view' => $this->request->getGet('view'),
+                ]
             )
         );
     }
