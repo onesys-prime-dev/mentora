@@ -123,7 +123,7 @@ class EnrollmentModel extends Model
             ->getResultArray();
     }
 
-    public function retrieveStudentCourseOffering(int $userId, int $offeringId): array
+    public function retrieveStudentCourseOffering(int $userId, int $offeringId): ?array
     {
         $builder = $this->builder();
 

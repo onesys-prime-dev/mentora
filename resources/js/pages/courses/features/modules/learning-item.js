@@ -1,9 +1,10 @@
-import { 
-    fetchLearningItemView, 
-    fetchLearningItemEditor 
+import {
+    fetchLearningItemView,
+    fetchLearningItemEditor
 } from "./api.js";
 
 import { state } from "./state.js";
+import { renderLearningItemSkeleton, renderLearningItemMainSkeleton } from "./skeleton.js";
 
 import { initializePdfViewer } from "../../../../shared/pdf/viewer.js";
 
@@ -171,6 +172,21 @@ export async function loadLearningItem(
         // Save the last few seconds of watch progress before leaving a video.
         flushVideoProgress();
 
+        const container =
+            document.querySelector("#course-content");
+
+        // Previous/Continue stays on this same view — only the header,
+        // content, detail-panel and nav need to placeholder while the next
+        // item loads, not the whole page (left panel + breadcrumb stay put).
+        const mainSection =
+            container.querySelector("[data-learning-item-main]");
+
+        if (mainSection) {
+            mainSection.innerHTML = renderLearningItemMainSkeleton();
+        } else {
+            container.innerHTML = renderLearningItemSkeleton();
+        }
+
         const response =
             await fetchLearningItemView(
                 learningItemId
@@ -191,11 +207,6 @@ export async function loadLearningItem(
             return;
 
         }
-
-        const container =
-            document.querySelector(
-                "#course-content"
-            );
 
         container.innerHTML =
             response.html;
@@ -218,7 +229,7 @@ export async function loadLearningItem(
 
         bindLearningUnitEvents();
 
-        bindBreadcrumbEvents(refresh);
+        bindBreadcrumbEvents();
 
         initializePdfViewer();
 
@@ -267,6 +278,9 @@ export async function loadLearningItemEditor(
         state.activeLearningItemId =
             learningItemId;
 
+        document.querySelector("#course-content").innerHTML =
+            renderLearningItemSkeleton();
+
         const response =
             await fetchLearningItemEditor(
                 learningItemId
@@ -299,7 +313,7 @@ export async function loadLearningItemEditor(
 
         bindLearningUnitEvents();
 
-        bindBreadcrumbEvents(refresh);
+        bindBreadcrumbEvents();
 
         initializePdfViewer();
 

@@ -3,22 +3,25 @@
 | Breadcrumb
 |--------------------------------------------------------------------------
 |
-| Handles breadcrumb navigation within the Modules feature.
+| Handles breadcrumb navigation within the Modules feature. "Modules"
+| always goes to the plain list, regardless of which page we're on;
+| "<module name>" always goes to that module's own page. Both targets
+| are context-independent, so the handlers here are self-sufficient —
+| nothing needs to be threaded in from the caller.
 |
 */
 
-export function bindBreadcrumbEvents(refresh) {
+import { initialize as goToModulesList } from "./index.js";
+import { loadModule } from "./module.js";
 
-    const breadcrumb =
+export function bindBreadcrumbEvents() {
+
+    const modulesCrumb =
         document.querySelector(
             "[data-modules-breadcrumb]"
         );
 
-    if (!breadcrumb) {
-        return;
-    }
-
-    breadcrumb.addEventListener(
+    modulesCrumb?.addEventListener(
         "click",
         async () => {
 
@@ -28,7 +31,28 @@ export function bindBreadcrumbEvents(refresh) {
                 window.location.pathname
             );
 
-            await refresh();
+            await goToModulesList();
+
+        }
+    );
+
+    const moduleCrumb =
+        document.querySelector(
+            "[data-module-breadcrumb]"
+        );
+
+    moduleCrumb?.addEventListener(
+        "click",
+        async () => {
+
+            const moduleId =
+                Number(moduleCrumb.dataset.moduleId);
+
+            if (!moduleId) {
+                return;
+            }
+
+            await loadModule(moduleId, goToModulesList);
 
         }
     );

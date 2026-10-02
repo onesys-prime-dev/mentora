@@ -21,12 +21,20 @@ export function bindActionMenu(triggerSelector, panelSelector) {
 
     document.querySelectorAll(triggerSelector).forEach((button) => {
 
+        // Re-binding after an incremental DOM append (e.g. infinite scroll)
+        // must skip triggers already wired, or they'd get a second listener.
+        if (button.dataset.actionMenuBound === "1") {
+            return;
+        }
+
         const panel =
             button.closest(".relative")?.querySelector(panelSelector);
 
         if (!panel) {
             return;
         }
+
+        button.dataset.actionMenuBound = "1";
 
         button.addEventListener("click", (event) => {
 
@@ -59,6 +67,10 @@ export function bindActionMenu(triggerSelector, panelSelector) {
 
     }
 
+}
+
+export function closeAllActionMenus() {
+    closeAllMenus();
 }
 
 function closeAllMenus() {

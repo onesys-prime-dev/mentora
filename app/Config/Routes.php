@@ -23,7 +23,11 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
     $routes->group('api/courses', function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
-        
+        $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
+        $routes->post('(:num)/announcements/(:num)/reply', 'Courses\AnnouncementController::reply/$1/$2');
+        $routes->delete('(:num)/announcements/replies/(:num)', 'Courses\AnnouncementController::deleteReply/$1/$2');
+        $routes->post('(:num)/announcements/(:num)/react', 'Courses\AnnouncementController::react/$1/$2');
+
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
         $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
         $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
@@ -60,7 +64,16 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
     $routes->group('api/courses', function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
-        
+        $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
+        $routes->post('(:num)/announcements', 'Courses\AnnouncementController::store/$1');
+        $routes->patch('(:num)/announcements/(:num)', 'Courses\AnnouncementController::update/$1/$2');
+        $routes->delete('(:num)/announcements/(:num)', 'Courses\AnnouncementController::destroy/$1/$2');
+        $routes->patch('(:num)/announcements/(:num)/pin', 'Courses\AnnouncementController::togglePin/$1/$2');
+        $routes->post('(:num)/announcements/attachments', 'Courses\AnnouncementController::uploadAttachment/$1');
+        $routes->post('(:num)/announcements/(:num)/reply', 'Courses\AnnouncementController::reply/$1/$2');
+        $routes->delete('(:num)/announcements/replies/(:num)', 'Courses\AnnouncementController::deleteReply/$1/$2');
+        $routes->post('(:num)/announcements/(:num)/react', 'Courses\AnnouncementController::react/$1/$2');
+
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
         $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
 

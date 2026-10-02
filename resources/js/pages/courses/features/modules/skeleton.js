@@ -30,19 +30,22 @@ function renderToolbar() {
 
     return `
 
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col gap-3">
 
-        <div class="h-8 w-56 rounded bg-gray-200"></div>
+        <div class="flex items-center justify-between gap-4">
 
-        <div class="flex gap-4">
-
-            <div class="h-10 w-48 rounded-full bg-gray-200"></div>
-
-            <div class="h-10 w-72 rounded-full bg-gray-200"></div>
+            <div class="flex items-center gap-4">
+                <div class="h-6 w-6 rounded bg-gray-200"></div>
+                <div class="h-8 w-56 rounded bg-gray-200"></div>
+            </div>
 
             <div class="h-10 w-36 rounded-full bg-gray-200"></div>
 
         </div>
+
+        <div class="h-5 w-72 rounded bg-gray-200"></div>
+
+        <div class="h-4 w-full max-w-150 rounded bg-gray-200"></div>
 
     </div>
 
@@ -61,7 +64,7 @@ function renderModule() {
 
             <div class="flex gap-5 items-center flex-1">
 
-                <div class="h-14 w-14 rounded-full bg-gray-200"></div>
+                <div class="h-15 w-15 rounded-full bg-gray-200"></div>
 
                 <div class="flex flex-col gap-3 flex-1">
 
@@ -73,19 +76,64 @@ function renderModule() {
 
             </div>
 
-            <div class="h-8 w-24 rounded-full bg-gray-200"></div>
+            <div class="h-8 w-32 rounded-full bg-gray-200"></div>
 
         </div>
 
-        <div class="px-25 pb-6 space-y-5">
+    </div>
 
-            <div class="h-4 w-2/3 rounded bg-gray-200"></div>
+    `;
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Single Module Page
+|--------------------------------------------------------------------------
+*/
+
+export function renderModulePageSkeleton() {
+
+    return `
+
+    <div class="p-10 animate-pulse flex flex-col gap-8">
+
+        <!-- top bar -->
+        <div class="flex items-start justify-between gap-5 pb-6 border-b border-black/10">
+
+            <div class="flex items-center gap-4">
+
+                <div class="h-10 w-10 rounded-lg bg-gray-200"></div>
+
+                <div class="flex flex-col gap-2">
+                    <div class="h-7 w-56 rounded bg-gray-200"></div>
+                    <div class="h-4 w-32 rounded bg-gray-200"></div>
+                </div>
+
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div class="h-9 w-32 rounded-full bg-gray-200"></div>
+                <div class="h-9 w-9 rounded-lg bg-gray-200"></div>
+                <div class="h-9 w-9 rounded-lg bg-gray-200"></div>
+            </div>
+
+        </div>
+
+        <!-- progress -->
+        <div class="flex flex-col gap-2">
+            <div class="h-4 w-40 rounded bg-gray-200"></div>
+            <div class="h-2 w-full rounded-full bg-gray-200"></div>
+        </div>
+
+        <div class="h-4 w-2/3 rounded bg-gray-200"></div>
+
+        <!-- learning units -->
+        <div class="flex flex-col gap-3">
 
             ${renderLearningUnit()}
 
             ${renderLearningUnit()}
-
-            ${renderAddDivider()}
 
         </div>
 
@@ -164,6 +212,109 @@ function renderAddDivider() {
         <div class="h-10 w-10 rounded-full bg-gray-200"></div>
 
         <div class="h-px flex-1 bg-gray-200"></div>
+
+    </div>
+
+    `;
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Learning Item View / Editor
+|--------------------------------------------------------------------------
+*/
+
+export function renderLearningItemSkeleton() {
+
+    return `
+
+    <div class="flex animate-pulse">
+
+        <!-- left nav panel -->
+        <div class="hidden w-72 shrink-0 flex-col gap-4 border-r border-gray-100 p-6 lg:flex">
+
+            <div class="h-6 w-40 rounded bg-gray-200"></div>
+
+            ${renderPanelUnit()}
+            ${renderPanelUnit()}
+            ${renderPanelUnit()}
+
+        </div>
+
+        <div class="flex min-w-0 flex-1 flex-col gap-5 p-10">
+
+            <!-- breadcrumb -->
+            <div class="h-4 w-64 rounded bg-gray-200"></div>
+
+            ${renderLearningItemBody()}
+
+        </div>
+
+    </div>
+
+    `;
+
+}
+
+/**
+ * Prev/Continue stays on the learning-item view and only swaps the header +
+ * content + detail-panel + nav block — the left unit/item panel and the
+ * breadcrumb above it aren't touched, so navigating between items doesn't
+ * flash the whole page.
+ */
+export function renderLearningItemMainSkeleton() {
+
+    return `<div class="animate-pulse">${renderLearningItemBody()}</div>`;
+
+}
+
+function renderLearningItemBody() {
+
+    return `
+
+    <div class="flex items-start justify-between gap-4">
+
+        <div class="flex flex-col gap-2">
+            <div class="h-3 w-24 rounded bg-gray-200"></div>
+            <div class="h-7 w-80 rounded bg-gray-200"></div>
+        </div>
+
+        <div class="h-9 w-24 rounded-lg bg-gray-200"></div>
+
+    </div>
+
+    <!-- content -->
+    <div class="flex flex-col gap-3 rounded-2xl border border-gray-100 p-6">
+        <div class="h-4 w-full rounded bg-gray-200"></div>
+        <div class="h-4 w-full rounded bg-gray-200"></div>
+        <div class="h-4 w-5/6 rounded bg-gray-200"></div>
+        <div class="h-48 w-full rounded-xl bg-gray-200"></div>
+    </div>
+
+    <!-- prev/next nav -->
+    <div class="mt-auto flex items-center justify-between pt-6">
+        <div class="h-9 w-28 rounded-lg bg-gray-200"></div>
+        <div class="h-9 w-28 rounded-lg bg-gray-200"></div>
+    </div>
+
+    `;
+
+}
+
+function renderPanelUnit() {
+
+    return `
+
+    <div class="flex flex-col gap-2">
+
+        <div class="h-4 w-48 rounded bg-gray-200"></div>
+
+        <div class="ml-4 flex flex-col gap-2">
+            <div class="h-3 w-40 rounded bg-gray-200"></div>
+            <div class="h-3 w-36 rounded bg-gray-200"></div>
+            <div class="h-3 w-44 rounded bg-gray-200"></div>
+        </div>
 
     </div>
 

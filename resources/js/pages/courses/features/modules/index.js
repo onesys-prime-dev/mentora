@@ -200,7 +200,7 @@ function initializeFeatureBindings() {
 
     bindLearningItemEditorEvents(initialize);
 
-    bindBreadcrumbEvents(initialize);
+    bindBreadcrumbEvents();
 
     initializePdfViewer();
 

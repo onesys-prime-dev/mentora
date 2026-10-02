@@ -12,6 +12,7 @@
 
 import { fetchModule } from "./api.js";
 import { state } from "./state.js";
+import { renderModulePageSkeleton } from "./skeleton.js";
 
 import { initializePdfViewer } from "../../../../shared/pdf/viewer.js";
 
@@ -50,7 +51,7 @@ export async function loadModule(moduleId, backToList) {
 
     const container = document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    container.innerHTML = renderModulePageSkeleton();
 
     try {
 
@@ -101,7 +102,7 @@ function bindModuleBindings(moduleId, refresh, backToList) {
     bindLearningItemActionMenus();
 
     bindLearningNavigation(refresh);
-    bindBreadcrumbEvents(refresh);
+    bindBreadcrumbEvents();
 
     initializePdfViewer();
 
