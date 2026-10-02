@@ -1,3 +1,5 @@
+import { rememberedRows } from "../../../../shared/spa/skeleton-rows.js";
+
 /*
 |--------------------------------------------------------------------------
 | Modules Skeleton
@@ -14,9 +16,7 @@ export function renderModulesSkeleton() {
 
         <div class="flex flex-col gap-5">
 
-            ${renderModule()}
-
-            ${renderModule()}
+            ${Array.from({ length: rememberedRows("modules") }, renderModule).join("")}
 
         </div>
 
@@ -39,7 +39,7 @@ function renderToolbar() {
                 <div class="h-8 w-56 rounded bg-gray-200"></div>
             </div>
 
-            <div class="h-10 w-36 rounded-full bg-gray-200"></div>
+            ${window.coursesConfig?.role === "instructor" ? '<div class="h-10 w-36 rounded-full bg-gray-200"></div>' : ""}
 
         </div>
 
@@ -94,6 +94,8 @@ function renderModule() {
 
 export function renderModulePageSkeleton() {
 
+    const instructor = window.coursesConfig?.role === "instructor";
+
     return `
 
     <div class="p-10 animate-pulse flex flex-col gap-8">
@@ -112,11 +114,12 @@ export function renderModulePageSkeleton() {
 
             </div>
 
+            ${instructor ? `
             <div class="flex items-center gap-2">
                 <div class="h-9 w-32 rounded-full bg-gray-200"></div>
                 <div class="h-9 w-9 rounded-lg bg-gray-200"></div>
                 <div class="h-9 w-9 rounded-lg bg-gray-200"></div>
-            </div>
+            </div>` : ""}
 
         </div>
 
@@ -128,12 +131,20 @@ export function renderModulePageSkeleton() {
 
         <div class="h-4 w-2/3 rounded bg-gray-200"></div>
 
+        ${instructor ? "" : `
+        <!-- student: "continue where you left off" -->
+        <div class="flex items-center gap-4 rounded-2xl border border-gray-200 px-6 py-5">
+            <div class="h-10 w-10 rounded-full bg-gray-200"></div>
+            <div class="flex flex-col gap-2">
+                <div class="h-3 w-40 rounded bg-gray-200"></div>
+                <div class="h-5 w-56 rounded bg-gray-200"></div>
+            </div>
+        </div>`}
+
         <!-- learning units -->
         <div class="flex flex-col gap-3">
 
-            ${renderLearningUnit()}
-
-            ${renderLearningUnit()}
+            ${Array.from({ length: rememberedRows("module-units") }, renderLearningUnit).join("")}
 
         </div>
 

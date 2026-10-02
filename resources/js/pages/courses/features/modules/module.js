@@ -12,6 +12,7 @@
 
 import { fetchModule } from "./api.js";
 import { state } from "./state.js";
+import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
 import { renderModulePageSkeleton } from "./skeleton.js";
 
 import { initializePdfViewer } from "../../../../shared/pdf/viewer.js";
@@ -84,6 +85,8 @@ export async function loadModule(moduleId, backToList) {
 }
 
 function bindModuleBindings(moduleId, refresh, backToList) {
+
+    rememberRows("module-units", document.querySelectorAll("[data-learning-unit-row]").length);
 
     document
         .querySelector("[data-back-to-modules]")

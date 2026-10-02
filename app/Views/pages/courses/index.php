@@ -10,8 +10,6 @@ $userRole = esc($user->getGroups()[0]);
 
 <div class="flex justify-between items-center">
     <?= $this->include('components/back') ?>
-
-    <?= $this->include('components/search') ?>
 </div>
 
 <div class="grid grid-cols-5 gap-5 px-1 py-3">

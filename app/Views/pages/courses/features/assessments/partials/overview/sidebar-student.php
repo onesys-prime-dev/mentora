@@ -20,7 +20,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 ?>
 
 <!-- Up Next -->
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-4" data-sidebar-section="upnext">
 
     <div class="flex items-center gap-3">
         <?= icon('start', 'h-5 w-5') ?>
@@ -75,7 +75,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 </div>
 
 <!-- Feedback -->
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-4" data-sidebar-section="feedback">
 
     <div class="flex items-center gap-3">
         <?= icon('feedbacks', 'h-5 w-5') ?>

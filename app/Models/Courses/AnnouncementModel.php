@@ -64,6 +64,31 @@ class AnnouncementModel extends Model
         return $builder->findAll();
     }
 
+    /**
+     * Newest posts across a set of offerings (e.g. every course a student
+     * is enrolled in), for the dashboard's Announcements widget — pinned
+     * status doesn't matter at this scale, just recency.
+     */
+    public function retrieveForOfferings(array $offeringIds, int $limit = 8): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        return $this->select([
+            'announcements.*',
+            "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS author_name",
+            'auth_groups_users.group AS author_role',
+        ])
+            ->join('user_profiles', 'user_profiles.user_id = announcements.author_id', 'left')
+            ->join('auth_groups_users', 'auth_groups_users.user_id = announcements.author_id', 'left')
+            ->whereIn('announcements.offering_id', $offeringIds)
+            ->orderBy('announcements.created_at', 'DESC')
+            ->orderBy('announcements.id', 'DESC')
+            ->limit($limit)
+            ->findAll();
+    }
+
     /** Posts across a set of offerings, posted within [from, to] — the Calendar's announcement events. */
     public function retrieveForOfferingsInRange(array $offeringIds, string $from, string $to): array
     {

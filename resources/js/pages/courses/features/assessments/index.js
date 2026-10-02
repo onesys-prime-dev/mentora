@@ -73,6 +73,11 @@ import {
 
 import {
     renderAssessmentsSkeleton,
+    renderAssessmentDetailSkeleton,
+    renderGradeWorkSkeleton,
+    renderAssessmentListSkeleton,
+    rememberAssessmentCount,
+    rememberSidebarSections,
 } from "./skeleton.js";
 
 export async function initialize() {
@@ -210,25 +215,32 @@ async function loadAssessments() {
     const container =
         document.querySelector("#course-content");
 
+    container.innerHTML = renderAssessmentsSkeleton();
+
     try {
 
-        const swapped = await swapContent(
-            container,
-            async () => {
-                state.data = await fetchAssessments();
-                return state.data.html;
-            },
-            { skeleton: renderAssessmentsSkeleton() }
-        );
+        state.data = await fetchAssessments();
 
-        if (swapped) {
-            initializeFeatureBindings();
-        }
+        container.innerHTML =
+            state.data.html;
 
-    } catch (error) {
+        initializeFeatureBindings();
+
+    }
+
+    catch (error) {
+
         console.error(error);
-    } finally {
+
+        container.innerHTML =
+            "<p>Unable to load Assessments.</p>";
+
+    }
+
+    finally {
+
         state.loading = false;
+
     }
 }
 
@@ -376,6 +388,8 @@ function bindListInteractions(refresh) {
 
     initializeListFilters();
 
+    rememberSidebarSections(document);
+
 }
 
 function initializeListFilters() {
@@ -397,21 +411,29 @@ function initializeListFilters() {
         return;
     }
 
-    const apply = () => {
+    // The next page-load skeleton matches this list's size.
+    rememberAssessmentCount(cards.length);
+
+    const matches = (card) => {
 
         const tag = select.value;
 
         const term = search.value.trim().toLowerCase();
 
+        const tags = (card.dataset.filterTags ?? "").split(" ");
+
+        return (!tag || tags.includes(tag))
+            && (!term || (card.dataset.title ?? "").includes(term));
+
+    };
+
+    const apply = () => {
+
         let shown = 0;
 
         cards.forEach((card) => {
 
-            const tags = (card.dataset.filterTags ?? "").split(" ");
-
-            const visible =
-                (!tag || tags.includes(tag))
-                && (!term || (card.dataset.title ?? "").includes(term));
+            const visible = matches(card);
 
             card.style.display = visible ? "" : "none";
 
@@ -429,9 +451,56 @@ function initializeListFilters() {
 
     };
 
-    select.addEventListener("change", apply);
+    // Filtering is client-side and instant, so the skeleton is a brief,
+    // list-only flash: the rows are swapped for placeholders, then the
+    // filtered rows come back. Nothing outside the list changes.
+    const list = document.querySelector("[data-assessments-list]");
 
-    search.addEventListener("input", apply);
+    let skeletonTimer = null;
+
+    const applyWithSkeleton = () => {
+
+        if (!list) {
+            apply();
+            return;
+        }
+
+        clearTimeout(skeletonTimer);
+
+        list.parentElement
+            ?.querySelector("[data-assessments-list-skeleton]")
+            ?.remove();
+
+        list.classList.add("hidden");
+
+        // As many placeholder rows as will actually appear, kept between 1 and 3.
+        list.insertAdjacentHTML(
+            "beforebegin",
+            renderAssessmentListSkeleton(cards.filter(matches).length)
+        );
+
+        skeletonTimer = setTimeout(() => {
+
+            list.parentElement
+                ?.querySelector("[data-assessments-list-skeleton]")
+                ?.remove();
+
+            apply();
+
+            list.classList.remove("hidden");
+
+        }, 350);
+
+    };
+
+    let searchTimer = null;
+
+    select.addEventListener("change", applyWithSkeleton);
+
+    search.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyWithSkeleton, 250);
+    });
 
     // Instructor · Drafts → "View all" narrows the list to drafts.
     document
@@ -444,10 +513,12 @@ function initializeListFilters() {
 
                 search.value = "";
 
-                apply();
+                applyWithSkeleton();
 
+                // The list itself is hidden while its skeleton shows, so scroll to its container.
                 document
                     .querySelector("[data-assessments-list]")
+                    ?.parentElement
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
 
             });
@@ -632,7 +703,11 @@ export async function loadAssessmentView(
     const swapped = await swapContent(
         container,
         async () => (await fetchAssessmentView(offeringId, assessmentId)).html,
-        { mode }
+        {
+            mode,
+            skeleton: mode === "navigate" ? renderAssessmentDetailSkeleton() : null,
+            forceSkeleton: true,
+        }
     );
 
     if (!swapped) {
@@ -726,7 +801,11 @@ export async function loadQuizAttempt(
     const swapped = await swapContent(
         container,
         async () => (await fetchQuizAttempt(offeringId, assessmentId)).html,
-        { mode }
+        {
+            mode,
+            skeleton: mode === "navigate" ? renderAssessmentDetailSkeleton() : null,
+            forceSkeleton: true,
+        }
     );
 
     if (!swapped) {
@@ -787,7 +866,11 @@ export async function loadAssessmentEditor(
     const swapped = await swapContent(
         container,
         async () => (await fetchAssessmentEditor(offeringId, assessmentId)).html,
-        { mode }
+        {
+            mode,
+            skeleton: mode === "navigate" ? renderAssessmentDetailSkeleton() : null,
+            forceSkeleton: true,
+        }
     );
 
     if (!swapped) {
@@ -948,7 +1031,11 @@ export async function loadQuizBuilder(
     const swapped = await swapContent(
         container,
         async () => (await fetchQuizBuilder(offeringId, assessmentId)).html,
-        { mode }
+        {
+            mode,
+            skeleton: mode === "navigate" ? renderAssessmentDetailSkeleton() : null,
+            forceSkeleton: true,
+        }
     );
 
     if (!swapped) {
@@ -1030,7 +1117,11 @@ export async function loadGradeWork(
     const swapped = await swapContent(
         container,
         async () => (await fetchGradeWork(offeringId, assessmentId, studentId, attemptId)).html,
-        { mode }
+        {
+            mode,
+            skeleton: mode === "navigate" ? renderGradeWorkSkeleton() : null,
+            forceSkeleton: true,
+        }
     );
 
     if (!swapped) {

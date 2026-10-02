@@ -1,5 +1,7 @@
 import { fetchGrades, recalculateGrades } from "./api.js";
 import { state } from "./state.js";
+import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
+import { renderGradesSkeleton } from "./skeleton.js";
 import { loadGradingScheme } from "./scheme/scheme.js";
 import { loadGradebookRoster } from "./roster/roster.js";
 import { initializeGradeSheet } from "./import-export/grade-sheet.js";
@@ -78,7 +80,7 @@ export async function initialize()
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    container.innerHTML = renderGradesSkeleton();
 
     try {
 
@@ -86,6 +88,8 @@ export async function initialize()
 
         container.innerHTML =
             state.data.html;
+
+        rememberRows("grades", document.querySelectorAll("[data-assessment]").length);
 
         bindAssessmentLinks();
 

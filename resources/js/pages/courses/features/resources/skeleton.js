@@ -1,3 +1,5 @@
+import { rememberedRows } from "../../../../shared/spa/skeleton-rows.js";
+
 /*
 |--------------------------------------------------------------------------
 | Resources Skeleton
@@ -23,9 +25,7 @@ export function renderResourcesSkeleton() {
         <div class="h-4 w-48 rounded bg-gray-200"></div>
 
         <div class="flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white">
-            ${renderRow()}
-            ${renderRow()}
-            ${renderRow()}
+            ${Array.from({ length: rememberedRows("resources") }, renderRow).join("")}
         </div>
 
     </div>
@@ -40,9 +40,7 @@ export function renderResourcesContentSkeleton() {
     return `
 
     <div class="animate-pulse flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white">
-        ${renderRow()}
-        ${renderRow()}
-        ${renderRow()}
+        ${Array.from({ length: rememberedRows("resources") }, renderRow).join("")}
     </div>
 
     `;

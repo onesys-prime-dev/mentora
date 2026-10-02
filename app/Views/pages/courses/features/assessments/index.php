@@ -41,20 +41,20 @@ if ($isInstructor) {
 
     $listMetrics = [
         [
-            'label' => 'Total Assessments', 'icon' => 'assessments', 'tone' => 'neutral',
+            'label' => 'Total Assessments', 'filter' => '', 'icon' => 'assessments', 'tone' => 'neutral',
             'value' => (string) $total, 'detail' => 'Across every module in this section',
         ],
         [
-            'label' => 'Published', 'icon' => 'check', 'tone' => 'neutral',
+            'label' => 'Published', 'filter' => 'published', 'icon' => 'check', 'tone' => 'neutral',
             'value' => (string) $byStatus['Published'], 'detail' => 'Visible to students now',
         ],
         [
-            'label' => 'Draft', 'icon' => 'drafts', 'tone' => $byStatus['Draft'] > 0 ? 'warning' : 'neutral',
+            'label' => 'Draft', 'filter' => 'draft', 'icon' => 'drafts', 'tone' => $byStatus['Draft'] > 0 ? 'warning' : 'neutral',
             'value' => (string) $byStatus['Draft'],
             'detail' => $byStatus['Draft'] > 0 ? 'Not visible to students yet' : 'Everything is published',
         ],
         [
-            'label' => 'Archived', 'icon' => 'lock', 'tone' => 'neutral',
+            'label' => 'Archived', 'filter' => 'archived', 'icon' => 'lock', 'tone' => 'neutral',
             'value' => (string) $byStatus['Archived'], 'detail' => 'Retired from grading and the list',
         ],
     ];
@@ -85,20 +85,20 @@ if ($isInstructor) {
 
     $listMetrics = [
         [
-            'label' => 'Total Assessments', 'icon' => 'assessments', 'tone' => 'neutral',
+            'label' => 'Total Assessments', 'filter' => '', 'icon' => 'assessments', 'tone' => 'neutral',
             'value' => (string) $total, 'detail' => 'Visible to you in this course',
         ],
         [
-            'label' => 'To Do', 'icon' => 'tasks', 'tone' => $todo > 0 ? 'warning' : 'neutral',
+            'label' => 'To Do', 'filter' => 'todo', 'icon' => 'tasks', 'tone' => $todo > 0 ? 'warning' : 'neutral',
             'value' => (string) $todo,
             'detail' => $todo > 0 ? 'Still need your attention' : "You're all caught up",
         ],
         [
-            'label' => 'Submitted', 'icon' => 'in-progress', 'tone' => 'neutral',
+            'label' => 'Submitted', 'filter' => 'submitted', 'icon' => 'in-progress', 'tone' => 'neutral',
             'value' => (string) $submitted, 'detail' => 'Waiting on a grade',
         ],
         [
-            'label' => 'Graded', 'icon' => 'score', 'tone' => 'neutral',
+            'label' => 'Graded', 'filter' => 'graded', 'icon' => 'score', 'tone' => 'neutral',
             'value' => (string) $graded, 'detail' => 'Already scored',
         ],
     ];

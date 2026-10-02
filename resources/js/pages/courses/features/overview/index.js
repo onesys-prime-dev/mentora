@@ -1,6 +1,7 @@
 import { renderOverviewSkeleton } from "./skeleton.js";
 
 import { fetchOverview } from "./api.js";
+import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
 import { state } from "./state.js";
 
 /*
@@ -31,6 +32,8 @@ export async function initialize()
 
         container.innerHTML =
             state.data.html;
+
+        rememberRows("overview-deadlines", document.querySelectorAll("[data-overview-open]").length);
 
         bindRowActions();
 

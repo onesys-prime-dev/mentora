@@ -1,11 +1,15 @@
 import { fetchResources } from "./api.js";
 import { state } from "./state.js";
+import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
 import { renderResourcesSkeleton, renderResourcesContentSkeleton } from "./skeleton.js";
 import { bindToolbar } from "./toolbar.js";
 import { bindNavigation } from "./navigation.js";
 import { bindCards, scrollToHashedResource } from "./card.js";
 
 let currentParams = { module: null, unit: null, search: "", sort: "name", type: "", view: "list" };
+
+const rememberResourceRows = (root) =>
+    rememberRows("resources", root.querySelectorAll("[data-resource-row], [data-resources-folder-list] > button").length);
 
 function paramsFromUrl() {
 
@@ -68,6 +72,8 @@ export async function initialize(patch = null)
 
         container.innerHTML =
             state.data.html;
+
+        rememberResourceRows(container);
 
         bindToolbar(container, (toolbarPatch) => initialize(toolbarPatch));
         bindNavigation(container, (navPatch) => initialize(navPatch));
@@ -142,6 +148,7 @@ async function refreshBelowBreadcrumb(patch)
         rebind("[data-resources-breadcrumb]", (node) => bindNavigation(node, (p) => initialize(p)));
 
         rebind("[data-resources-content]", (node) => {
+            rememberResourceRows(node);
             bindNavigation(node, (p) => initialize(p));
             bindCards(node);
             scrollToHashedResource(node);

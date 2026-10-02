@@ -10,66 +10,33 @@ $totalStudents = (int) ($classSummary['total_students'] ?? 0);
 $needsReview = (int) ($classSummary['needs_review'] ?? 0);
 ?>
 
-<div class="flex flex-1 gap-10">
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
-    <div class="p-6 flex w-full items-center gap-5 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
+    <?= view('components/metric-card', [
+        'label' => 'Class Average',
+        'icon' => 'points',
+        'size' => 'prominent',
+        'value' => $classAverage !== null ? number_format((float) $classAverage, 1) . '%' : '—',
+        'detail' => $classAverage !== null ? 'Across graded work so far' : 'Nothing graded yet',
+    ], ['saveData' => false]) ?>
 
-        <div class="h-12 w-12 rounded-[100%] bg-[#EEEEEE] flex justify-center items-center">
-            <?= icon('points', 'h-6 w-6') ?>
-        </div>
+    <?= view('components/metric-card', [
+        'label' => 'Passing',
+        'icon' => 'check',
+        'size' => 'prominent',
+        'tone' => $totalStudents > 0 && $passingCount === $totalStudents ? 'success' : 'neutral',
+        'value' => $passingCount . '/' . $totalStudents . ' Students',
+        'detail' => $totalStudents > 0 && $passingCount === $totalStudents ? 'Everyone is passing' : 'At or above the passing mark',
+    ], ['saveData' => false]) ?>
 
-        <div class="flex flex-col gap-1">
-
-            <span class="uppercase font-bold text-sm text-[#878787]">
-                Class Average
-            </span>
-
-            <span class="font-bold text-xl text-[#0040A6]">
-                <?= $classAverage !== null ? esc(number_format((float) $classAverage, 1)) . '%' : '—' ?>
-            </span>
-
-        </div>
-
-    </div>
-
-    <div class="p-6 flex w-full items-center gap-4 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
-
-        <div class="h-12 w-12 rounded-[100%] bg-[#EEEEEE] flex justify-center items-center">
-            <?= icon('check', 'h-6 w-6') ?>
-        </div>
-
-        <div class="flex flex-col gap-1">
-
-            <span class="uppercase font-bold text-sm text-[#878787]">
-                Passing
-            </span>
-
-            <span class="font-bold text-xl text-[#0040A6]">
-                <?= esc($passingCount) ?>/<?= esc($totalStudents) ?> Students
-            </span>
-
-        </div>
-
-    </div>
-
-    <div class="p-6 flex w-full items-center gap-4 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
-
-        <div class="h-12 w-12 rounded-[100%] <?= $needsReview > 0 ? 'bg-[#FFDAD6]' : 'bg-[#EEEEEE]' ?> flex justify-center items-center">
-            <?= icon('attention', 'h-6 w-6') ?>
-        </div>
-
-        <div class="flex flex-col gap-1">
-
-            <span class="uppercase font-bold text-sm text-[#878787]">
-                Needs Review
-            </span>
-
-            <span class="font-bold text-xl text-[#0040A6]">
-                <?= esc($needsReview) ?> Submission<?= $needsReview === 1 ? '' : 's' ?>
-            </span>
-
-        </div>
-
-    </div>
+    <?= view('components/metric-card', [
+        'label' => 'Needs Review',
+        'icon' => 'attention',
+        'size' => 'prominent',
+        'tone' => $needsReview > 0 ? 'danger' : 'neutral',
+        'value' => $needsReview . ' Submission' . ($needsReview === 1 ? '' : 's'),
+        'detail' => $needsReview > 0 ? 'Waiting on a grade' : 'Nothing waiting',
+        'feature' => 'assessments',
+    ], ['saveData' => false]) ?>
 
 </div>

@@ -29,16 +29,19 @@ let latestSwap = 0;
 /**
  * @param {HTMLElement} container          element whose content is replaced
  * @param {() => Promise<string>} loadHtml resolves to the new HTML
- * @param {{ mode?: "navigate"|"refresh", skeleton?: string|null }} options
+ * @param {{ mode?: "navigate"|"refresh", skeleton?: string|null, forceSkeleton?: boolean }} options
  * @returns {Promise<boolean>} true once swapped; false if it failed or a
  *          newer swap replaced it (callers should then skip their bindings)
  */
-export async function swapContent(container, loadHtml, { mode = "navigate", skeleton = null } = {}) {
+export async function swapContent(container, loadHtml, { mode = "navigate", skeleton = null, forceSkeleton = false } = {}) {
 
     const swapId = ++latestSwap;
 
+    // forceSkeleton: child pages replace the current screen with their own
+    // shape straight away instead of keeping the old one up while loading.
     const hasContent =
-        container.childElementCount > 0 && container.dataset.spaSkeleton === undefined;
+        !(skeleton && forceSkeleton)
+        && container.childElementCount > 0 && container.dataset.spaSkeleton === undefined;
 
     // First visit to the screen: nothing to keep, so show its shape.
     if (!hasContent && skeleton) {
@@ -49,11 +52,18 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
 
     }
 
+    const skeletonShown = container.dataset.spaSkeleton !== undefined;
+
     const scrollY = window.scrollY;
 
     const pending = setTimeout(() => {
 
         if (swapId !== latestSwap) {
+            return;
+        }
+
+        // A skeleton is its own loading state — no dimming, no top bar.
+        if (container.dataset.spaSkeleton !== undefined) {
             return;
         }
 
@@ -136,7 +146,8 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
 
     };
 
-    const animate = mode === "navigate" && !prefersReducedMotion();
+    // No crossfade out of a skeleton either: the new page just replaces it.
+    const animate = mode === "navigate" && !prefersReducedMotion() && !skeletonShown;
 
     if (animate && typeof document.startViewTransition === "function") {
 

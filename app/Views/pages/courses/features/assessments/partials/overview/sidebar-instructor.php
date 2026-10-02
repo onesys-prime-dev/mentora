@@ -24,7 +24,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 ?>
 
 <!-- Drafts -->
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-4" data-sidebar-section="drafts">
 
     <div class="flex items-center justify-between gap-3">
 
@@ -102,7 +102,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 </div>
 
 <!-- Ready for Grading -->
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-4" data-sidebar-section="ready">
 
     <div class="flex items-center gap-3">
         <?= icon('tasks', 'h-5 w-5 text-[#0040A6]') ?>

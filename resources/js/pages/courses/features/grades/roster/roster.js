@@ -9,6 +9,7 @@
 |
 */
 
+import { renderGradebookSkeleton } from "../skeleton.js";
 import { fetchGradebookRoster, updateManualScore, overrideGrade } from "../api.js";
 import { bindModal } from "../../assessments/modals/index.js";
 
@@ -23,7 +24,7 @@ export async function loadGradebookRoster(back)
 
     const container = document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    container.innerHTML = renderGradebookSkeleton();
 
     try {
 

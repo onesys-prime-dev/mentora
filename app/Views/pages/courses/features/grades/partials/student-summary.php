@@ -1,16 +1,15 @@
 <?php
 /**
- * Three-card summary strip, matching the header cards on the assessments
- * page (same border/icon-bubble treatment) so grades reads as the same
- * feature area rather than a different page style.
+ * Three-card summary strip: the shared metric-card (prominent size), the
+ * same card the Overview and Assessments tabs use.
  */
 $finalGrade = $summary['overall_percentage'] ?? null;
 
 $remarksMeta = match ($summary['remarks'] ?? null) {
-    'Passed'     => ['label' => 'Passed',      'class' => 'bg-emerald-100 text-emerald-700', 'icon' => 'check'],
-    'Failed'     => ['label' => 'Failed',      'class' => 'bg-[#FFDAD6] text-[#B3261E]',      'icon' => 'attention'],
-    'Withdrawn'  => ['label' => 'Withdrawn',   'class' => 'bg-gray-100 text-gray-500',        'icon' => 'attention'],
-    default      => ['label' => 'In Progress', 'class' => 'bg-[#FFF1D6] text-[#946200]',     'icon' => 'in-progress'],
+    'Passed'     => ['label' => 'Passed',      'tone' => 'success', 'icon' => 'check'],
+    'Failed'     => ['label' => 'Failed',      'tone' => 'danger',  'icon' => 'attention'],
+    'Withdrawn'  => ['label' => 'Withdrawn',   'tone' => 'neutral', 'icon' => 'attention'],
+    default      => ['label' => 'In Progress', 'tone' => 'warning', 'icon' => 'in-progress'],
 };
 
 $gradedCount = (int) ($summary['graded_count'] ?? 0);
@@ -20,82 +19,47 @@ $isPublished = !empty($summary['is_published']);
 $gradeLabel = $summary['grade_label'] ?? null;
 ?>
 
-<div class="flex flex-1 gap-10">
+<?php
+$overallValue = $finalGrade !== null ? number_format((float) $finalGrade, 2) . '%' : '—';
 
-    <div class="p-6 flex w-full items-center gap-5 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
+$overallHtml = esc($overallValue);
 
-        <div class="h-12 w-12 rounded-[100%] bg-[#EEEEEE] flex justify-center items-center">
-            <?= icon('points', 'h-6 w-6') ?>
-        </div>
+if ($gradeLabel !== null) {
+    $overallHtml .= ' <span class="ml-1 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-sm" data-grades-scale-grade>' . esc($gradeLabel) . '</span>';
+}
+?>
 
-        <div class="flex flex-col gap-1">
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
-            <span class="uppercase font-bold text-sm text-[#878787]">
-                Overall Grade
-            </span>
+    <?= view('components/metric-card', [
+        'label' => 'Overall Grade',
+        'icon' => 'points',
+        'size' => 'prominent',
+        'value_html' => $overallHtml,
+        'detail' => match (true) {
+            !$isPublished => "Your instructor hasn't published the grading yet",
+            !empty($summary['is_override']) => 'Set by your instructor',
+            $finalGrade !== null => 'From your graded work so far',
+            default => 'Nothing graded yet',
+        },
+    ], ['saveData' => false]) ?>
 
-            <span class="font-bold text-xl text-[#0040A6]">
-                <?= $finalGrade !== null ? esc(number_format((float) $finalGrade, 2)) . '%' : '—' ?>
-                <?php if ($gradeLabel !== null): ?>
-                    <span class="ml-1 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-sm" data-grades-scale-grade><?= esc($gradeLabel) ?></span>
-                <?php endif; ?>
-            </span>
+    <?= view('components/metric-card', [
+        'label' => 'Points Earned',
+        'icon' => 'score',
+        'size' => 'prominent',
+        'value' => round((float) ($summary['points_earned'] ?? 0), 2) . '/' . round((float) ($summary['points_possible'] ?? 0), 2),
+        'detail' => $gradedCount . ' of ' . $totalCount . ' graded',
+        'detail_attrs' => 'data-grades-graded-count',
+    ], ['saveData' => false]) ?>
 
-            <span class="text-xs text-[#878787]">
-                <?= match (true) {
-                    !$isPublished => "Your instructor hasn't published the grading yet",
-                    !empty($summary['is_override']) => 'Set by your instructor',
-                    $finalGrade !== null => 'From your graded work so far',
-                    default => 'Nothing graded yet',
-                } ?>
-            </span>
-
-        </div>
-
-    </div>
-
-    <div class="p-6 flex w-full items-center gap-4 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
-
-        <div class="h-12 w-12 rounded-[100%] bg-[#EEEEEE] flex justify-center items-center">
-            <?= icon('score', 'h-6 w-6') ?>
-        </div>
-
-        <div class="flex flex-col gap-1">
-
-            <span class="uppercase font-bold text-sm text-[#878787]">
-                Points Earned
-            </span>
-
-            <span class="font-bold text-xl text-[#0040A6]">
-                <?= esc(round((float) ($summary['points_earned'] ?? 0), 2)) ?>/<?= esc(round((float) ($summary['points_possible'] ?? 0), 2)) ?>
-            </span>
-
-            <span class="text-xs text-[#878787]" data-grades-graded-count>
-                <?= esc($gradedCount) ?> of <?= esc($totalCount) ?> graded
-            </span>
-
-        </div>
-
-    </div>
-
-    <div class="p-6 flex w-full items-center gap-4 border-[1px] border-[#A9A9A9]/50 rounded-2xl">
-
-        <div class="h-12 w-12 rounded-[100%] <?= $remarksMeta['class'] ?> flex justify-center items-center">
-            <?= icon($remarksMeta['icon'], 'h-6 w-6') ?>
-        </div>
-
-        <div class="flex flex-col gap-1">
-
-            <span class="uppercase font-bold text-sm text-[#878787]">
-                Standing
-            </span>
-
-            <span class="font-bold text-xl text-[#0040A6]">
-                <?= esc($remarksMeta['label']) ?>
-            </span>
-
-        </div>
-
-    </div>
+    <?= view('components/metric-card', [
+        'label' => 'Standing',
+        'icon' => $remarksMeta['icon'],
+        'size' => 'prominent',
+        'tone' => $remarksMeta['tone'],
+        'value' => $remarksMeta['label'],
+        'detail' => '',
+    ], ['saveData' => false]) ?>
 
 </div>

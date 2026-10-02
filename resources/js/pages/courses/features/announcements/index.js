@@ -4,11 +4,14 @@ import { bindComposer } from "./composer.js";
 import { bindCards } from "./card.js";
 import { bindSidebar } from "./sidebar.js";
 import { bindInfiniteScroll } from "./infinite-scroll.js";
+import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
 import { renderAnnouncementsSkeleton, renderAnnouncementsMainSkeleton } from "./skeleton.js";
 
 let currentFilters = { search: "", sort: "newest", pinned: false };
 
 function bindEverything(container) {
+
+    rememberRows("announcements", container.querySelectorAll("[data-announcement-card]").length);
 
     const composerApi = bindComposer(container, refreshMain);
 

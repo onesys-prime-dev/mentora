@@ -1,3 +1,5 @@
+import { rememberedRows } from "../../../../shared/spa/skeleton-rows.js";
+
 /*
 |--------------------------------------------------------------------------
 | Announcements Skeleton
@@ -46,13 +48,11 @@ function renderMainContents() {
 
     return `
 
-    <div class="h-10 w-48 rounded-xl bg-gray-200"></div>
+    ${window.coursesConfig?.role === "instructor" ? '<div class="h-10 w-48 rounded-xl bg-gray-200"></div>' : ""}
 
     <div class="flex flex-col gap-5">
 
-        ${renderCard()}
-
-        ${renderCard()}
+        ${Array.from({ length: rememberedRows("announcements") }, renderCard).join("")}
 
     </div>
 

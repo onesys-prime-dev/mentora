@@ -15,6 +15,7 @@
 |
 */
 
+import { renderSchemeSkeleton } from "../skeleton.js";
 import {
     fetchGradingScheme,
     updateGradingScheme,
@@ -44,7 +45,7 @@ export async function loadGradingScheme(back)
 
     const container = document.querySelector("#course-content");
 
-    container.innerHTML = "Loading...";
+    container.innerHTML = renderSchemeSkeleton();
 
     try {
 

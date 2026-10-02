@@ -39,23 +39,22 @@ $accountLinks = [
         py-3
         shadow
     ">
-    <div class="flex gap-2 items-center font-lao">
+    <div class="flex gap-2 items-stretch font-lao">
         <a
-            class="flex gap-1 items-center"
+            class="flex gap-1 items-center self-center"
             href="<?= site_url($userRole . '/dashboard') ?>">
             <img
                 class="h-11 w-auto"
-                src="<?= base_url('assets/images/logos/logo.png') ?>" alt="">
-            <span class="text-2xl font-normal text-[#0040A6]">
-                Mentora
-            </span>
+                src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="">
         </a>
 
-        <span class="text-2xl font-bold text-[#0040A6] capitalize">
-            <?php if ($page !== null && $page !== 'dashboard'): ?>
-                <?= esc($page ?? '') ?>
-            <?php endif; ?>
-        </span>
+        <div class="flex items-end">
+            <span class="text-2xl font-semibold text-[#0040A6] capitalize pb-px">
+                <?php if ($page !== null && $page !== 'dashboard'): ?>
+                    <?= esc($page ?? '') ?>
+                <?php endif; ?>
+            </span>
+        </div>
     </div>
 
     <div class="flex gap-4 items-center">

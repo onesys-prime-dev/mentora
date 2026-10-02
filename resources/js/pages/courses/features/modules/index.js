@@ -16,6 +16,7 @@ import {
 
 import { fetchModules } from "./api.js";
 import { state } from "./state.js";
+import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
 
 import { initializePdfViewer } from "../../../../shared/pdf/viewer.js";
 
@@ -168,6 +169,8 @@ async function loadModules() {
 */
 
 function initializeFeatureBindings() {
+
+    rememberRows("modules", document.querySelectorAll("[data-module-wrapper]").length);
 
     bindModuleEvents();
 

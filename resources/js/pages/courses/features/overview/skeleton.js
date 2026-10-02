@@ -1,3 +1,5 @@
+import { rememberedRows } from "../../../../shared/spa/skeleton-rows.js";
+
 /*
 |--------------------------------------------------------------------------
 | Overview Skeleton
@@ -260,8 +262,7 @@ function renderUpcomingDeadlinesCard() {
 
         </div>
 
-        ${renderDeadline()}
-        ${renderDeadline()}
+        ${Array.from({ length: rememberedRows("overview-deadlines") }, renderDeadline).join("")}
 
     </div>
 
@@ -305,8 +306,7 @@ function renderRecentActivityCard() {
 
         <div class="h-7 w-40 rounded bg-gray-200"></div>
 
-        ${renderActivity()}
-        ${renderActivity()}
+        ${Array.from({ length: rememberedRows("overview-activity") }, renderActivity).join("")}
 
     </div>
 
