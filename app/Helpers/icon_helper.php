@@ -80,6 +80,8 @@ if (! function_exists('icon_registry')) {
             /* course structure */
             'modules' => ['color' => $blue, 'body' => $path('M4 6h16M4 12h16M4 18h16')],
             'learning-unit' => ['color' => 'text-[#1E7A8C]', 'body' => $path('M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z')],
+            'resources' => ['color' => $blue, 'body' => $path('M9 13h6m-6 4h6m-7 4h8a2 2 0 002-2V7.414a1 1 0 00-.293-.707l-4.414-4.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v14a2 2 0 002 2z')],
+            'folder' => ['color' => $blue, 'body' => $path('M3 7a2 2 0 012-2h4.586a1 1 0 01.707.293L12.414 7H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z')],
             'lessons' => ['color' => 'text-white', 'body' => $path('M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253')],
             'tasks' => ['color' => 'text-white', 'body' => $path($clipboard, 'M9 14l2 2 4-4')],
 
@@ -90,6 +92,12 @@ if (! function_exists('icon_registry')) {
             'link' => ['color' => $gray, 'body' => $path('M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1')],
             'assignment' => ['color' => $gray, 'body' => $path($clipboard, 'M10 16.5v-1.75l4.25-4.25 1.75 1.75-4.25 4.25H10z')],
             'file' => ['color' => $gray, 'body' => $path($document)],
+
+            /* resource file types (Resources repository) */
+            'word' => ['color' => $gray, 'body' => $path($document, 'M8 13l1.5 5 1.5-4 1.5 4L14 13')],
+            'excel' => ['color' => $gray, 'body' => $path($document, 'M9 13l3 4m0-4l-3 4M15 13l-3 4m0-4l3 4')],
+            'powerpoint' => ['color' => $gray, 'body' => $path($document, 'M9 17V13h2a1.5 1.5 0 010 3H9z')],
+            'image' => ['color' => $gray, 'body' => $path($document, 'M9 16l1.5-2 1.5 1.5L14.5 13 17 16')],
 
             /* assessments */
             'quiz' => ['color' => $blue, 'body' => $path('M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z', $question)],
@@ -176,6 +184,23 @@ if (! function_exists('learning_item_icon')) {
 
         // Item-type icons read as metadata next to a title, so they share
         // one muted color unless the caller asks otherwise.
+        return icon($name, $class);
+    }
+}
+
+if (! function_exists('resource_type_icon')) {
+
+    /**
+     * Icon for a Resources-repository file-type bucket (pdf, word,
+     * powerpoint, excel, image, video, link, other).
+     */
+    function resource_type_icon(string $typeBucket, string $class = 'h-5 w-5'): string
+    {
+        $name = match (strtolower($typeBucket)) {
+            'pdf', 'word', 'excel', 'powerpoint', 'image', 'video', 'link' => strtolower($typeBucket),
+            default => 'file',
+        };
+
         return icon($name, $class);
     }
 }
