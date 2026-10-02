@@ -39,5 +39,8 @@ class DatabaseSeeder extends Seeder
 
         // Enrollments, attempts, submissions, progress, gradebook
         $this->call(DemoActivitySeeder::class);
+
+        // Announcements + personal reminders, for the Calendar
+        $this->call(CalendarDemoSeeder::class);
     }
 }

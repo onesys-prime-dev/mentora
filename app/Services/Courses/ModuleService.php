@@ -2229,4 +2229,33 @@ class ModuleService
         ];
 
     }
+
+    /**
+     * Modules and their learning units, id + title only — what a course
+     * picker needs to fill a cascading module → unit select, without the
+     * completion/lock annotation or full item trees show() builds for the
+     * Modules tab itself.
+     *
+     * Used by the Calendar's "Add Assessment" form: an assessment needs a
+     * module_id and learning_unit_id, and that's the only place in the app
+     * asking for one outside the Modules tab.
+     */
+    public function listForPicker(User $user, int $offeringId): array
+    {
+        $modules = $this->courseModuleModel->retrieveCourseModules($offeringId, $user);
+
+        foreach ($modules as &$module) {
+
+            $module['learning_units'] = array_map(
+                static fn (array $unit) => ['id' => (int) $unit['id'], 'title' => $unit['title']],
+                $this->learningUnitModel->retrieveLearningUnits($module['id'], $user)
+            );
+
+        }
+
+        return array_map(
+            static fn (array $m) => ['id' => (int) $m['id'], 'title' => $m['title'], 'learning_units' => $m['learning_units']],
+            $modules
+        );
+    }
 }

@@ -14,14 +14,15 @@
 | room…) and the recent-activity feed are reference material and sit in the
 | side column.
 |
-| The metric cards are the Assessments tab's own partial, so both tabs read
-| as one product.
+| The metric cards are Overview's own partial (split off from Assessments'
+| copy on request) — same data source, so the numbers still agree, but the
+| markup can now diverge between the two pages.
 */
 ?>
 
 <div class="p-10 flex flex-col gap-8">
 
-    <?= $this->include('pages/courses/features/assessments/partials/overview/metrics') ?>
+    <?= $this->include('pages/courses/features/overview/partials/metrics') ?>
 
     <div class="grid grid-cols-1 gap-8 xl:grid-cols-5">
 
