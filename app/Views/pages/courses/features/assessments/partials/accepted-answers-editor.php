@@ -34,7 +34,7 @@ $rows = $acceptedAnswers !== [] ? $acceptedAnswers : [''];
                     placeholder="<?= $index === 0 ? 'Correct answer' : 'Alternative answer' ?>"
                     class="min-w-0 flex-1 border-0 bg-transparent px-1 py-0.5 text-sm font-semibold text-emerald-700 outline-none placeholder:font-normal placeholder:text-emerald-700/40">
 
-                <button type="button" data-remove-accepted-answer title="Remove" class="shrink-0 rounded-lg p-1 text-emerald-700/40 transition hover:bg-red-50 hover:text-red-500">
+                <button type="button" data-remove-accepted-answer title="Remove" class="shrink-0 rounded-lg p-1 text-emerald-700/40 transition hover:bg-red-50 hover:text-red-500" aria-label="Remove">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
 

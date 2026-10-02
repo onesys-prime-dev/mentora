@@ -312,7 +312,7 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-save-instructions
-            class="rounded-lg bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">
+            class="rounded-xl bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">
 
             Save Changes
 

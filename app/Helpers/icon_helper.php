@@ -81,6 +81,7 @@ if (! function_exists('icon_registry')) {
             'modules' => ['color' => $blue, 'body' => $path('M4 6h16M4 12h16M4 18h16')],
             'learning-unit' => ['color' => 'text-[#1E7A8C]', 'body' => $path('M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z')],
             'resources' => ['color' => $blue, 'body' => $path('M9 13h6m-6 4h6m-7 4h8a2 2 0 002-2V7.414a1 1 0 00-.293-.707l-4.414-4.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v14a2 2 0 002 2z')],
+            'pin' => ['color' => $blue, 'fill' => true, 'body' => $path('M14 2a1 1 0 011 1v6.17l3.293 3.293a1 1 0 01-.707 1.707H13v6a1 1 0 11-2 0v-6H6.414a1 1 0 01-.707-1.707L9 9.17V3a1 1 0 011-1h4z')],
             'folder' => ['color' => $blue, 'body' => $path('M3 7a2 2 0 012-2h4.586a1 1 0 01.707.293L12.414 7H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z')],
             'lessons' => ['color' => 'text-white', 'body' => $path('M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253')],
             'tasks' => ['color' => 'text-white', 'body' => $path($clipboard, 'M9 14l2 2 4-4')],
@@ -178,7 +179,7 @@ if (! function_exists('learning_item_icon')) {
     function learning_item_icon(string $itemType, string $class = 'h-4 w-4'): string
     {
         $name = match (strtolower($itemType)) {
-            'reading', 'video', 'pdf', 'link', 'quiz', 'assignment' => strtolower($itemType),
+            'reading', 'video', 'pdf', 'link', 'quiz', 'assignment', 'discussion' => strtolower($itemType),
             default => 'file',
         };
 

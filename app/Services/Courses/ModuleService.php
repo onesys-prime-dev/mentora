@@ -16,6 +16,8 @@ use App\Models\Assessments\AssessmentTypeModel;
 use App\Services\Storage\StorageService;
 use App\Services\Courses\Assessments\AssessmentService;
 use App\Services\Courses\LearningProgressService;
+use App\Services\Courses\DiscussionService;
+use App\Models\Courses\DiscussionThreadModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -548,7 +550,30 @@ class ModuleService
                 ? $this->assessmentService->buildLearningItemContext($user, $learningItemId)
                 : null;
 
+        $discussion = null;
+
+        if ($currentItem['item_type'] === 'discussion' && empty($currentItem['is_locked'])) {
+
+            $threadRow = (new DiscussionThreadModel())
+                ->where('learning_item_id', $learningItemId)
+                ->first();
+
+            if ($threadRow) {
+
+                $discussion = (new DiscussionService())
+                    ->getThread($user, (int) $threadRow['offering_id'], (int) $threadRow['id']);
+
+                // The thread belongs to the item: it is edited/removed with the item, not here.
+                $discussion['thread']['can_edit'] = false;
+                $discussion['thread']['can_delete'] = false;
+
+            }
+
+        }
+
         return [
+
+            'discussion' => $discussion,
 
             'user' => $user,
 
@@ -1406,6 +1431,23 @@ class ModuleService
                     );
 
             }
+
+        }
+
+        // A discussion item is backed by one thread the instructor opens
+        // (title now, prompt later); students reply inside it.
+        if ($itemType === 'discussion') {
+
+            $now = (new \DateTime())->format('Y-m-d H:i:s.u');
+
+            (new DiscussionThreadModel())->insert([
+                'offering_id' => $offeringId,
+                'learning_item_id' => $learningItemId,
+                'author_id' => $user->id,
+                'title' => $title,
+                'body' => '',
+                'last_activity_at' => $now,
+            ]);
 
         }
 

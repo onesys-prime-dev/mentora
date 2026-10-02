@@ -11,6 +11,7 @@ $typeLabels = [
     'link' => ['Link', 'Links'],
     'quiz' => ['Quiz', 'Quizzes'],
     'assignment' => ['Assignment', 'Assignments'],
+    'discussion' => ['Discussion', 'Discussions'],
 ];
 
 // One consistent accent for every "What's included" pill — a touch
@@ -229,7 +230,7 @@ $formatDuration = static function (int $minutes): string {
                             <button
                                 type="button"
                                 data-go-to-module="<?= esc($module['id']) ?>"
-                                class="self-start mt-2 inline-flex items-center gap-2 rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]">
+                                class="self-start mt-2 inline-flex items-center gap-2 rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]">
                                 Go to module
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />

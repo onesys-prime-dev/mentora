@@ -126,7 +126,7 @@ $attemptTabs ??= [];
                     <button
                         type="button"
                         data-sort-students
-                        title="Sort by name"
+                        title="Sort by name" aria-label="Sort by name"
                         class="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-100">
 
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -350,7 +350,7 @@ $attemptTabs ??= [];
                                                         <button
                                                             type="button"
                                                             data-question-edit-toggle
-                                                            title="Grade this question manually"
+                                                            title="Grade this question manually" aria-label="Grade this question manually"
                                                             class="rounded-full p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -372,7 +372,7 @@ $attemptTabs ??= [];
                                                             Incorrect
                                                         </button>
 
-                                                        <button type="button" data-question-mark="auto" title="Revert to the auto-grade" class="rounded-full p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
+                                                        <button type="button" data-question-mark="auto" title="Revert to the auto-grade" aria-label="Revert to the auto-grade" class="rounded-full p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                             </svg>
@@ -540,7 +540,7 @@ $attemptTabs ??= [];
                         <button
                             type="button"
                             data-regrade-open
-                            title="Change this grade"
+                            title="Change this grade" aria-label="Change this grade"
                             class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-[#0040A6] hover:text-[#0040A6]">
 
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

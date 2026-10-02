@@ -33,6 +33,19 @@
     }
 }
 
+/*
+ * Course Workspace keyboard focus: every button, link and role="link" card
+ * gets a visible brand-blue ring without each one needing its own classes.
+ * Elements that already define a focus-visible style keep theirs (inline
+ * Tailwind utilities are more specific than this :where() rule).
+ */
+@layer base {
+    :where(#course-content, [role="tablist"]) :where(button, a, input, select, textarea, summary, [role="link"], [tabindex="0"]):focus-visible {
+        outline: 2px solid rgb(0 64 166 / 0.55);
+        outline-offset: 2px;
+    }
+}
+
 @import "./components/reading.css";
 
 @layer components {

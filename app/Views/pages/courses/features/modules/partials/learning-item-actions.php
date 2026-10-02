@@ -4,7 +4,7 @@
         type="button"
         data-learning-item-actions
         title="Item actions"
-        class="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-all duration-200 hover:bg-white hover:text-[#0040A6] focus:outline-none focus:ring-2 focus:ring-[#0040A6]/20 cursor-pointer">
+        class="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-all duration-200 hover:bg-white hover:text-[#0040A6] focus:outline-none focus:ring-2 focus:ring-[#0040A6]/20 cursor-pointer" aria-label="Item actions">
 
         <svg
             xmlns="http://www.w3.org/2000/svg"

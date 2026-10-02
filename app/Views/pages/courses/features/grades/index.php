@@ -13,6 +13,8 @@ $userRole = esc($user->getGroups()[0]);
 
 <div class="p-10 flex flex-col gap-10">
 
+    <?= view('components/page-header', ['icon' => 'grades', 'title' => 'Grades'], ['saveData' => false]) ?>
+
     <?php if ($userRole === 'instructor'): ?>
 
         <?= $this->include('pages/courses/features/grades/partials/gradebook-toolbar') ?>

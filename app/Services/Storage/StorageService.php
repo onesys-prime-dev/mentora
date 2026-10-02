@@ -26,6 +26,7 @@ class StorageService
         'assessment_question_responses' => 'uploaded_file_id',
         'ai_generation_batches' => 'source_file_id',
         'announcement_attachments' => 'file_id',
+        'discussion_attachments' => 'file_id',
     ];
 
     /*

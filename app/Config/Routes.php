@@ -47,6 +47,18 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
 
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
         $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
+        $routes->get('(:num)/discussions/more', 'Courses\DiscussionController::loadMore/$1');
+        $routes->get('(:num)/discussions/(:num)', 'Courses\DiscussionController::thread/$1/$2');
+        $routes->post('(:num)/discussions/attachments', 'Courses\DiscussionController::uploadAttachment/$1');
+        $routes->post('(:num)/discussions', 'Courses\DiscussionController::store/$1');
+        $routes->patch('(:num)/discussions/(:num)', 'Courses\DiscussionController::update/$1/$2');
+        $routes->delete('(:num)/discussions/(:num)', 'Courses\DiscussionController::destroy/$1/$2');
+        $routes->patch('(:num)/discussions/(:num)/pin', 'Courses\DiscussionController::pin/$1/$2');
+        $routes->patch('(:num)/discussions/(:num)/lock', 'Courses\DiscussionController::lock/$1/$2');
+        $routes->post('(:num)/discussions/(:num)/reply', 'Courses\DiscussionController::reply/$1/$2');
+        $routes->delete('(:num)/discussions/replies/(:num)', 'Courses\DiscussionController::deleteReply/$1/$2');
+        $routes->post('(:num)/discussions/(:num)/react', 'Courses\DiscussionController::react/$1/$2');
+        $routes->post('(:num)/discussions/(:num)/answer', 'Courses\DiscussionController::markAnswer/$1/$2');
 
         $routes->get('(:num)/assessments', 'Courses\Assessments\AssessmentController::show/$1');
         $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$2');
@@ -127,6 +139,18 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
 
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
         $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
+        $routes->get('(:num)/discussions/more', 'Courses\DiscussionController::loadMore/$1');
+        $routes->get('(:num)/discussions/(:num)', 'Courses\DiscussionController::thread/$1/$2');
+        $routes->post('(:num)/discussions/attachments', 'Courses\DiscussionController::uploadAttachment/$1');
+        $routes->post('(:num)/discussions', 'Courses\DiscussionController::store/$1');
+        $routes->patch('(:num)/discussions/(:num)', 'Courses\DiscussionController::update/$1/$2');
+        $routes->delete('(:num)/discussions/(:num)', 'Courses\DiscussionController::destroy/$1/$2');
+        $routes->patch('(:num)/discussions/(:num)/pin', 'Courses\DiscussionController::pin/$1/$2');
+        $routes->patch('(:num)/discussions/(:num)/lock', 'Courses\DiscussionController::lock/$1/$2');
+        $routes->post('(:num)/discussions/(:num)/reply', 'Courses\DiscussionController::reply/$1/$2');
+        $routes->delete('(:num)/discussions/replies/(:num)', 'Courses\DiscussionController::deleteReply/$1/$2');
+        $routes->post('(:num)/discussions/(:num)/react', 'Courses\DiscussionController::react/$1/$2');
+        $routes->post('(:num)/discussions/(:num)/answer', 'Courses\DiscussionController::markAnswer/$1/$2');
         $routes->get('(:num)/assessments', 'Courses\Assessments\AssessmentController::show/$1');
         $routes->post('(:num)/modules/(:num)/learning-units/(:num)/assessments', 'Courses\Assessments\AssessmentController::create/$1/$2/$3');
         $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$2');

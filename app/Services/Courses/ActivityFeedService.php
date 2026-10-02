@@ -26,8 +26,9 @@ use App\Services\Courses\Assessments\AssessmentOverviewService;
  *
  * What each role sees:
  *   student    → grades posted to them, assessments that opened, modules
- *                that appeared or changed
- *   instructor → work handed in by their section, students who joined
+ *                that appeared or changed, discussions others started
+ *   instructor → work handed in by their section, students who joined,
+ *                discussions students started
  */
 class ActivityFeedService
 {
@@ -44,7 +45,7 @@ class ActivityFeedService
      * people actually act on - grades and submissions, which are always
      * listed individually.
      */
-    protected const COLLAPSIBLE = ['joined', 'module', 'assessment'];
+    protected const COLLAPSIBLE = ['joined', 'module', 'assessment', 'discussion'];
 
     /** How many names/titles a collapsed line spells out before "+N more". */
     protected const COLLAPSED_NAMES = 3;
@@ -136,7 +137,11 @@ class ActivityFeedService
 
         }
 
-        return $this->finish(array_merge($events, $this->moduleEvents($offeringId, $since, $now)));
+        return $this->finish(array_merge(
+            $events,
+            $this->moduleEvents($offeringId, $since, $now),
+            $this->discussionEvents($offeringId, $since, $now, $studentId, false)
+        ));
     }
 
     /**
@@ -212,7 +217,7 @@ class ActivityFeedService
 
         }
 
-        return $this->finish($events);
+        return $this->finish(array_merge($events, $this->discussionEvents($offeringId, $since, $now, 0, true)));
     }
 
     /**
@@ -246,6 +251,49 @@ class ActivityFeedService
             );
 
         }, $modules);
+    }
+
+    /**
+     * Discussions someone else started. A student hears about anyone's (but
+     * not their own, and never a draft item's); an instructor only about
+     * ones students started, since their own aren't news to them.
+     *
+     * @return list<array>
+     */
+    protected function discussionEvents(int $offeringId, string $since, int $now, int $exceptUserId, bool $studentsOnly): array
+    {
+        $builder = db_connect()->table('discussion_threads t')
+            ->select(['t.title', 't.created_at', "CONCAT(up.first_name, ' ', up.last_name) AS author_name"])
+            ->join('user_profiles up', 'up.user_id = t.author_id', 'left')
+            ->join('learning_items li', 'li.id = t.learning_item_id', 'left')
+            ->where('t.offering_id', $offeringId)
+            ->where('t.created_at >=', $since)
+            ->where('t.created_at <=', date('Y-m-d H:i:s', $now))
+            ->orderBy('t.created_at', 'DESC')
+            ->limit(self::LIMIT);
+
+        if ($exceptUserId > 0) {
+            $builder->where('t.author_id !=', $exceptUserId)
+                ->groupStart()
+                ->where('t.learning_item_id IS NULL', null, false)
+                ->orWhere('li.status', 'published')
+                ->groupEnd();
+        }
+
+        if ($studentsOnly) {
+            $builder->where('t.learning_item_id IS NULL', null, false)
+                ->join('auth_groups_users g', "g.user_id = t.author_id AND g.group = 'student'");
+        }
+
+        return array_map(fn (array $row) => $this->event(
+            'discussion',
+            'New discussion',
+            trim((string) $row['author_name']) !== ''
+                ? $row['title'] . ' · ' . trim((string) $row['author_name'])
+                : $row['title'],
+            $row['created_at'],
+            $row['title']
+        ), $builder->get()->getResultArray());
     }
 
     /*

@@ -18,7 +18,7 @@
 
     <div class="absolute right-3 top-3">
 
-        <button type="button" data-resource-menu-toggle title="More options" class="rounded-lg bg-white/80 p-1.5 text-gray-400 opacity-0 transition hover:bg-gray-100 group-hover:opacity-100">
+        <button type="button" data-resource-menu-toggle title="More options" class="rounded-lg bg-white/80 p-1.5 text-gray-400 opacity-0 transition hover:bg-gray-100 group-hover:opacity-100" aria-label="More options">
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
         </button>
 

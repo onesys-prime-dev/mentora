@@ -17,7 +17,7 @@
 
     <div class="relative shrink-0">
 
-        <button type="button" data-resource-menu-toggle title="More options" class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100">
+        <button type="button" data-resource-menu-toggle title="More options" class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100" aria-label="More options">
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
         </button>
 

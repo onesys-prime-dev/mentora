@@ -1,10 +1,10 @@
-<?php 
+<?php
 $userRole = esc($user->getGroups()[0]);
+$isInstructor = $userRole === 'instructor';
+$loadError = $loadError ?? false;
 ?>
 
 <?= $this->extend('layouts/app') ?>
-
-
 
 <?= $this->section('content') ?>
 
@@ -12,86 +12,56 @@ $userRole = esc($user->getGroups()[0]);
     <?= $this->include('components/back') ?>
 </div>
 
-<div class="grid grid-cols-5 gap-5 px-1 py-3">
+<div class="flex flex-col gap-6 py-3">
 
-    <?php foreach ($courses as $course): ?>
+    <div class="flex flex-col gap-1">
+        <h1 class="flex items-center gap-4 text-2xl font-bold text-[#0040A6]">
+            <?= icon('hat', 'h-6 w-6 shrink-0 text-[#0040A6]') ?>
+            Courses
+        </h1>
+        <p class="text-sm text-[#3D3D3D]">
+            <?= $isInstructor ? 'The courses you teach this term.' : 'The courses you are enrolled in.' ?>
+        </p>
+    </div>
 
-        <?php $progress = max(0, min(100, (int) ($course['progress'] ?? 0))); ?>
+    <?php if ($loadError): ?>
 
-        <a
-            class="group relative h-80 flex flex-1 flex-col justify-between p-6 rounded-3xl bg-cyan-200 bg-cover bg-center bg-no-repeat text-white overflow-hidden
-                    transition-transform duration-200 ease-out
-                    hover:-translate-y-1 hover:shadow-2xl
-                    active:translate-y-0 active:scale-[0.99]
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            style="background-image: url('<?= base_url('assets/images/placeholder/course-tech-1.png') ?>');"
-            href="<?= site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']) ?>">
+        <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#C33939]/30 bg-white px-8 py-14 text-center" role="alert">
+            <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
+            <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your courses</span>
+            <span class="text-xs text-[#646464]">Something went wrong on our side. Your courses have not gone anywhere.</span>
+            <a href="<?= site_url($userRole . '/courses') ?>" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">Try again</a>
+        </div>
 
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+    <?php elseif ($courses === []): ?>
 
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="pointer-events-none absolute top-6 right-6 z-10 h-5 w-5 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-70 group-hover:translate-x-0"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+        <div class="rounded-2xl bg-white/70">
+            <?= view('components/empty-state', [
+                'icon' => 'hat',
+                'title' => 'No courses yet',
+                'text' => $isInstructor
+                    ? 'Courses assigned to you will appear here.'
+                    : 'Courses you are enrolled in will appear here.',
+            ], ['saveData' => false]) ?>
+        </div>
 
-            <div class="relative z-10 flex justify-between items-center">
+    <?php else: ?>
 
-                <div class="w-12 h-12 flex justify-center items-center rounded-[100%] bg-blue-900 transition-transform duration-200 group-hover:scale-110">
-                    <?= icon('code', 'h-5 w-5') ?>
-                </div>
+        <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Your courses">
 
-                <div class="flex flex-col justify-end">
-                    <span class="text-md text-end"><?= esc($course['schedule'] ?: 'No schedule set') ?></span>
-                    <span class="text-xs text-end opacity-70">Room <?= esc($course['room'] ?? '--') ?></span>
-                </div>
+            <?php foreach ($courses as $course): ?>
+                <li>
+                    <?= view('pages/courses/partials/course-card', [
+                        'course' => $course,
+                        'userRole' => $userRole,
+                        'isInstructor' => $isInstructor,
+                    ], ['saveData' => false]) ?>
+                </li>
+            <?php endforeach; ?>
 
-            </div>
+        </ul>
 
-            <div class="relative z-10 flex flex-col">
-
-                <div class="flex flex-col border-b border-b-gray-50 py-3">
-                    <div class="flex gap-1 text-md items-center opacity-70">
-                        <span class=""><?= esc($course['course_code']) ?></span>
-                        <span class="">-</span>
-                        <span class=""><?= esc($course['section_code']) ?></span>
-                    </div>
-
-                    <span class="font-bold text-2xl">
-                        <?= esc($course['course_title']) ?>
-                    </span>
-                </div>
-
-                <?php if (isset($course['instructor_name'])): ?>
-                    <div class="flex gap-2 items-center py-3">
-                        <img
-                            src="<?= base_url('assets/images/placeholder/profile.png') ?>"
-                            class="w-6 h-6"
-                            alt="">
-
-                            <span class="text-xs opacity-70">
-                                Instr. <?= esc($course['instructor_name']) ?>
-                            </span>
-                    </div>
-                <?php endif; ?>
-
-                <div class="flex flex-col mt-3">
-                    <div class="flex justify-between">
-                        <span class="text-xs opacity-60">PROGRESS</span>
-
-                        <span class="text-xs opacity-60"><?= $progress ?>%</span>
-                    </div>
-
-                    <div class="h-2 bg-amber-50 rounded-2xl">
-                        <div class="h-2 bg-amber-300 rounded-2xl transition-[width] duration-300" style="width: <?= $progress ?>%;"></div>
-                    </div>
-                </div>
-
-            </div>
-        </a>
-
-    <?php endforeach; ?>
+    <?php endif; ?>
 
 </div>
 

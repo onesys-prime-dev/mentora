@@ -26,7 +26,7 @@
             <button
                 type="button"
                 data-ai-tray-accept-all
-                class="rounded-lg bg-[#0040A6] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-[#0040A6] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#002068]">
                 Accept All
             </button>
 
@@ -34,7 +34,7 @@
                 type="button"
                 data-ai-tray-dismiss
                 title="Close tray"
-                class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-200">
+                class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-200" aria-label="Close tray">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>

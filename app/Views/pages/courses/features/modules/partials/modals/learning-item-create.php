@@ -169,6 +169,18 @@
                         </div>
                     </label>
 
+                    <label class="cursor-pointer">
+                        <input
+                            type="radio"
+                            name="item_type"
+                            value="discussion"
+                            class="peer hidden">
+
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                            Discussion
+                        </div>
+                    </label>
+
                 </div>
 
             </div>

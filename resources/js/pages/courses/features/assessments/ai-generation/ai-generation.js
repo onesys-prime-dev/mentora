@@ -774,7 +774,7 @@ function createCard(question) {
                 <button type="button" data-ai-discard-question title="Discard" class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
-                <button type="button" data-ai-accept-question class="rounded-lg bg-[#0040A6] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#002068]">
+                <button type="button" data-ai-accept-question class="rounded-xl bg-[#0040A6] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#002068]">
                     Accept
                 </button>
             </div>

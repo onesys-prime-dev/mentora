@@ -19,7 +19,15 @@ class CourseController extends BaseController
     {
         $user = auth()->user();
 
-        $courses = $this->courseService->getCourseOfferings($user);
+        $loadError = false;
+
+        try {
+            $courses = $this->courseService->getCourseOfferings($user);
+        } catch (\Throwable $e) {
+            log_message('error', 'Courses page failed to load: ' . $e->getMessage());
+            $courses = [];
+            $loadError = true;
+        }
 
         foreach ($courses as &$course) {
             $course['slug'] = url_title(
@@ -36,6 +44,8 @@ class CourseController extends BaseController
             'page'    => 'courses',
             'user'    => $user,
             'courses' => $courses,
+            'loadError' => $loadError,
+            'mainGutter' => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
             'previousPage' => 'dashboard'
         ]);
     }

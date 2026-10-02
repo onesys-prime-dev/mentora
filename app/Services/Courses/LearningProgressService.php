@@ -302,6 +302,18 @@ class LearningProgressService
                     ? [true, null]
                     : [false, $isQuiz ? 'Submit the quiz to complete it.' : 'Submit your work to complete it.'];
 
+            case 'discussion':
+
+                $replied = db_connect()->table('discussion_replies')
+                    ->join('discussion_threads', 'discussion_threads.id = discussion_replies.thread_id')
+                    ->where('discussion_threads.learning_item_id', $itemId)
+                    ->where('discussion_replies.author_id', $user->id)
+                    ->countAllResults() > 0;
+
+                return $replied
+                    ? [true, null]
+                    : [false, 'Post a reply in the discussion to complete it.'];
+
             default:
 
                 return [true, null];

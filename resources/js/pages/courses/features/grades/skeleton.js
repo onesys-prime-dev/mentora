@@ -14,6 +14,12 @@ export function renderGradesSkeleton() {
 
     const instructor = window.coursesConfig?.role === "instructor";
 
+    const pageTitle = `
+        <div class="flex items-center gap-4">
+            <div class="h-6 w-6 rounded bg-gray-200"></div>
+            <div class="h-8 w-32 rounded bg-gray-200"></div>
+        </div>`;
+
     const metric = `
         <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 px-6 py-6">
             <div class="flex items-start justify-between">
@@ -45,10 +51,7 @@ export function renderGradesSkeleton() {
     const listing = `
         <div class="flex flex-col gap-3">
 
-            <div class="flex items-center gap-4">
-                <div class="h-7 w-7 rounded bg-gray-200"></div>
-                <div class="h-8 w-28 rounded bg-gray-200"></div>
-            </div>
+            <div class="h-7 w-36 rounded bg-gray-200"></div>
 
             <div class="flex flex-col gap-3">
                 <div class="h-3 w-24 rounded bg-gray-200"></div>
@@ -62,6 +65,8 @@ export function renderGradesSkeleton() {
         // gradebook toolbar → class summary → assessments to grade
         return `
             <div class="flex animate-pulse flex-col gap-10 p-10" aria-hidden="true">
+
+                ${pageTitle}
 
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-3">
@@ -98,6 +103,8 @@ export function renderGradesSkeleton() {
 
     return `
         <div class="flex animate-pulse flex-col gap-10 p-10" aria-hidden="true">
+
+            ${pageTitle}
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 ${metric.repeat(3)}

@@ -149,7 +149,7 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 
 
             <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
+                class="inline-flex items-center gap-2 rounded-xl bg-[#0040A6] px-5 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
                 disabled>
                 <span>Continue</span>
             </button>

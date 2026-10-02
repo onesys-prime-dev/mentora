@@ -138,7 +138,7 @@
 
                 <button
                     type="button"
-                    title="Remove rubric"
+                    title="Remove rubric" aria-label="Remove rubric"
                     class="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-[#DBDBDB] bg-white text-[#646464] shadow-sm transition-colors
                         hover:bg-[#0040A6] hover:text-white hover:border-[#0040A6]"
                     data-unselect-rubric
@@ -254,7 +254,7 @@
 
             <button
                 type="button"
-                title="Configure submission types"
+                title="Configure submission types" aria-label="Configure submission types"
                 class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#0040A6] transition-colors
                     hover:bg-[#0040A6]/10"
                 data-configure-submission-type>

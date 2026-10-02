@@ -22,6 +22,8 @@
 
 <div class="p-10 flex flex-col gap-8">
 
+    <?= view('components/page-header', ['icon' => 'info', 'title' => 'Overview'], ['saveData' => false]) ?>
+
     <?= $this->include('pages/courses/features/overview/partials/metrics') ?>
 
     <div class="grid grid-cols-1 gap-8 xl:grid-cols-5">

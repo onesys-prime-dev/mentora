@@ -12,6 +12,7 @@ $isPublished = $module['status'] === 'published';
     <button
         type="button"
         title="<?= $isPublished ? 'Unpublish module' : 'Publish module' ?>"
+        aria-label="<?= $isPublished ? 'Unpublish module' : 'Publish module' ?>"
         class="flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold transition <?= $isPublished ? 'text-[#767676] hover:bg-gray-100' : 'text-[#0040A6] hover:bg-[#0040A6]/5' ?>"
         data-module-publish-toggle
         data-module-id="<?= esc($module['id']) ?>"
@@ -34,6 +35,7 @@ $isPublished = $module['status'] === 'published';
     <button
         type="button"
         title="Edit module"
+        aria-label="Edit module"
         class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-[#0040A6]"
         data-edit-module
         data-module-id="<?= esc($module['id']) ?>"
@@ -47,6 +49,7 @@ $isPublished = $module['status'] === 'published';
     <button
         type="button"
         title="Delete module"
+        aria-label="Delete module"
         class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"
         data-delete-module
         data-module-id="<?= esc($module['id']) ?>">

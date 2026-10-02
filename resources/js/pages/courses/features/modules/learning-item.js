@@ -50,8 +50,10 @@ import {
     initializeAssignmentSubmission,
 } from "../../../../shared/assignment/submission.js";
 
+import { bindThread } from "../discussions/thread.js";
 import {
     initializeCompletion,
+    enableMarkComplete,
 } from "./completion/completion.js";
 
 import {
@@ -236,6 +238,8 @@ export async function loadLearningItem(
         bindAssessmentHandoffs();
 
         initializeCompletion(refresh);
+
+        initializeDiscussionItem();
 
         initializeVideoProgress();
 
@@ -513,5 +517,32 @@ function showLockedNotice(result, refresh) {
         .addEventListener("click", () => notice.remove());
 
     container.prepend(notice);
+
+}
+
+
+/**
+ * A discussion learning item embeds the same thread screen the Discussions
+ * tab uses; replying is what lets a student complete the item.
+ */
+let repliedListenerBound = false;
+
+function initializeDiscussionItem() {
+
+    const root = document.querySelector("#course-content");
+
+    if (!root?.querySelector("[data-thread-body]")) {
+        return;
+    }
+
+    bindThread(root, () => {});
+
+    if (!repliedListenerBound) {
+
+        repliedListenerBound = true;
+
+        document.addEventListener("discussions:replied", () => enableMarkComplete());
+
+    }
 
 }

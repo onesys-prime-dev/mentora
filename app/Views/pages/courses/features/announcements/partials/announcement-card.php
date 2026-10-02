@@ -39,7 +39,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
         <?php endforeach; ?>
 
         <div class="relative">
-            <button type="button" data-emoji-panel-toggle title="More reactions" class="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100">
+            <button type="button" data-emoji-panel-toggle title="More reactions" class="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100" aria-label="More reactions">
                 <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6"/></svg>
             </button>
             <div class="absolute right-0 top-9 z-30 hidden" data-emoji-panel data-action-menu-panel></div>
@@ -51,7 +51,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 
             <div class="relative">
 
-                <button type="button" data-more-options-toggle title="More options" class="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100">
+                <button type="button" data-more-options-toggle title="More options" class="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100" aria-label="More options">
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
                 </button>
 
@@ -145,12 +145,12 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
             </div>
 
             <div class="border-b border-gray-100 px-4 py-2 flex items-center gap-1">
-                <button type="button" data-action="bold" title="Bold" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h8a3.5 3.5 0 010 7H6zM6 11h9a3.5 3.5 0 010 7H6z"/></svg></button>
-                <button type="button" data-action="italic" title="Italic" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 4h8M6 20h8M13 4L9 20"/></svg></button>
-                <button type="button" data-action="underline" title="Underline" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4v7a6 6 0 0012 0V4M4 20h16"/></svg></button>
+                <button type="button" data-action="bold" title="Bold" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100" aria-label="Bold"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h8a3.5 3.5 0 010 7H6zM6 11h9a3.5 3.5 0 010 7H6z"/></svg></button>
+                <button type="button" data-action="italic" title="Italic" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100" aria-label="Italic"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 4h8M6 20h8M13 4L9 20"/></svg></button>
+                <button type="button" data-action="underline" title="Underline" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100" aria-label="Underline"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4v7a6 6 0 0012 0V4M4 20h16"/></svg></button>
                 <span class="mx-1 h-5 w-px bg-gray-200"></span>
-                <button type="button" data-action="insertUnorderedList" title="Bulleted list" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
-                <button type="button" data-action="insertOrderedList" title="Numbered list" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M4 6h1v2M4 10h2l-2 2.5h2M4.5 16h1.5a.75.75 0 010 1.5H5m1 0a.75.75 0 010 1.5H4"/></svg></button>
+                <button type="button" data-action="insertUnorderedList" title="Bulleted list" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100" aria-label="Bulleted list"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+                <button type="button" data-action="insertOrderedList" title="Numbered list" class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100" aria-label="Numbered list"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M4 6h1v2M4 10h2l-2 2.5h2M4.5 16h1.5a.75.75 0 010 1.5H5m1 0a.75.75 0 010 1.5H4"/></svg></button>
             </div>
 
             <div class="px-4 py-3" data-card-editor-mount></div>
@@ -161,11 +161,11 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 
                 <div class="flex items-center gap-1">
 
-                    <button type="button" data-card-editor-emoji-toggle title="Emoji" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                    <button type="button" data-card-editor-emoji-toggle title="Emoji" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Emoji">
                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </button>
 
-                    <button type="button" data-card-editor-attach title="Attach files" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                    <button type="button" data-card-editor-attach title="Attach files" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Attach files">
                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                     </button>
                     <input type="file" data-card-editor-file-input class="hidden" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
@@ -219,7 +219,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
                     placeholder="Reply in thread"
                     class="flex-1 resize-none text-sm outline-none placeholder:text-gray-400"></textarea>
                 <div class="flex items-center gap-1 pb-0.5">
-                    <button type="button" data-reply-send title="Send" class="rounded-lg p-1.5 text-[#0040A6] transition hover:bg-[#0040A6]/10 disabled:opacity-40" disabled>
+                    <button type="button" data-reply-send title="Send" class="rounded-lg p-1.5 text-[#0040A6] transition hover:bg-[#0040A6]/10 disabled:opacity-40" disabled aria-label="Send">
                         <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a1 1 0 00-1.39 1.17L4.5 12 2 18.23a1 1 0 001.4 1.17z"/></svg>
                     </button>
                 </div>

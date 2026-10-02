@@ -17,6 +17,11 @@ export function renderOverviewSkeleton() {
 
     <div class="p-10 animate-pulse flex flex-col gap-8">
 
+        <div class="flex items-center gap-4">
+            <div class="h-6 w-6 rounded bg-gray-200"></div>
+            <div class="h-8 w-40 rounded bg-gray-200"></div>
+        </div>
+
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 ${metricCount === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}">
 
             ${Array.from({ length: metricCount }, renderMetricCard).join("")}

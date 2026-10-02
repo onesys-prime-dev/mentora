@@ -108,6 +108,8 @@ if ($isInstructor) {
 
 <div class="flex flex-col gap-10 p-10" data-assessments-overview>
 
+    <?= view('components/page-header', ['icon' => 'assessments', 'title' => 'Assessments'], ['saveData' => false]) ?>
+
     <!-- Key metrics -->
     <?= view('pages/courses/features/assessments/partials/overview/metrics', ['metrics' => $listMetrics]) ?>
 
@@ -116,17 +118,7 @@ if ($isInstructor) {
         <!-- Assessment list -->
         <div class="flex w-full min-w-0 flex-col gap-5">
 
-            <div class="flex flex-wrap items-center justify-between gap-4">
-
-                <div class="flex items-center gap-4">
-
-                    <?= icon('assessments', 'h-6 w-6') ?>
-
-                    <span class="text-2xl font-bold text-[#0040A6]">
-                        Assessments
-                    </span>
-
-                </div>
+            <div class="flex flex-wrap items-center justify-end gap-4">
 
                 <div class="flex flex-wrap gap-4">
 
@@ -159,7 +151,7 @@ if ($isInstructor) {
 
                         <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]"
+                            class="inline-flex items-center gap-2 rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]"
                             data-create-assessment-button>
 
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

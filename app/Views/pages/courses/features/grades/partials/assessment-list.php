@@ -18,15 +18,7 @@ $typeHeadings = [
 
 <div class="flex flex-col gap-3 w-full">
 
-    <div class="flex items-center gap-4">
-
-        <?= icon('assessments', 'h-7 w-7') ?>
-
-        <span class="font-bold text-2xl text-[#0040A6]">
-            Grades
-        </span>
-
-    </div>
+    <h3 class="text-xl font-bold text-[#0040A6]">Assessments</h3>
 
     <?php if (($assessmentGroups ?? []) === []): ?>
 
