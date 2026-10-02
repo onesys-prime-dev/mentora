@@ -20,10 +20,12 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
 
+    $routes->get('schedule', 'Schedule\ScheduleController::index');
+
     $routes->group('api/courses', function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
-        
+
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
         $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
         $routes->post('(:num)/modules/items/(:num)/complete', 'Courses\ModuleController::completeLearningItem/$1/$2');
@@ -54,10 +56,12 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
 
+    $routes->get('schedule', 'Schedule\ScheduleController::index');
+
     $routes->group('api/courses', function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
-        
+
         $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
 
         $routes->post('(:num)/modules', 'Courses\ModuleController::storeModule/$1');
