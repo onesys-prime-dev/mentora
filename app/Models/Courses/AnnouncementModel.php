@@ -64,6 +64,21 @@ class AnnouncementModel extends Model
         return $builder->findAll();
     }
 
+    /** Posts across a set of offerings, posted within [from, to] — the Calendar's announcement events. */
+    public function retrieveForOfferingsInRange(array $offeringIds, string $from, string $to): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        return $this->select('announcements.*')
+            ->whereIn('announcements.offering_id', $offeringIds)
+            ->where('announcements.created_at >=', $from)
+            ->where('announcements.created_at <=', $to)
+            ->orderBy('announcements.created_at', 'DESC')
+            ->findAll();
+    }
+
     public function retrieveOne(int $id): ?array
     {
         return $this->select([

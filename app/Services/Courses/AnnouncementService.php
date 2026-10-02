@@ -48,7 +48,6 @@ class AnnouncementService
     public function __construct()
     {
         $this->announcementModel = new AnnouncementModel();
-<<<<<<< HEAD
         $this->replyModel = new AnnouncementReplyModel();
         $this->reactionModel = new AnnouncementReactionModel();
         $this->attachmentModel = new AnnouncementAttachmentModel();
@@ -89,7 +88,9 @@ class AnnouncementService
     */
 
     /**
-     * @param array{search?: string, sort?: string, pinned?: bool, page?: int} $filters
+     * @param array{search?: string, sort?: string, pinned?: bool, page?: int, focus?: int} $filters
+     *        focus: a post to land on (e.g. from a Calendar link) — loads as many
+     *        pages as it takes to include it, so it's on screen without paging down.
      */
     public function show(User $user, int $offeringId, array $filters = []): array
     {
@@ -98,13 +99,33 @@ class AnnouncementService
         $page = max(1, (int) ($filters['page'] ?? 1));
         $queryFilters = $this->normalizeFilters($filters);
 
+        $pages = 1;
+        $focusId = (int) ($filters['focus'] ?? 0);
+
+        if ($focusId > 0 && $page === 1) {
+
+            $position = array_search(
+                $focusId,
+                array_map('intval', array_column($this->announcementModel->retrieveForOffering($offeringId, $queryFilters), 'id')),
+                true
+            );
+
+            if ($position !== false) {
+                $pages = (int) ceil(($position + 1) / self::PAGE_SIZE);
+            }
+
+        }
+
+        $window = self::PAGE_SIZE * $pages;
+
         $rows = $this->announcementModel->retrieveForOffering($offeringId, $queryFilters + [
-            'limit' => self::PAGE_SIZE + 1,
+            'limit' => $window + 1,
             'offset' => self::PAGE_SIZE * ($page - 1),
         ]);
 
-        $hasMore = count($rows) > self::PAGE_SIZE;
-        $announcements = $this->hydrate(array_slice($rows, 0, self::PAGE_SIZE), $user, $isInstructor);
+        $hasMore = count($rows) > $window;
+        $announcements = $this->hydrate(array_slice($rows, 0, $window), $user, $isInstructor);
+        $page += $pages - 1;
 
         $pinned = $this->announcementModel->retrieveForOffering($offeringId, [
             'pinned_only' => true,
@@ -464,72 +485,6 @@ class AnnouncementService
         return $result + [
             'success' => true,
             'reaction_counts' => $this->reactionModel->retrieveCounts([$announcementId])[$announcementId] ?? [],
-=======
-    }
-
-    public function show(
-        User $user,
-        int $offeringId
-    ): array {
-
-        return [
-
-            'html' => view(
-                'pages/courses/features/announcements/index'
-            ),
-
-        ];
-
-    }
-
-    /**
-     * A new post to one section, instructor-only. Reused by the
-     * Announcements tab (once it's built) and the Calendar's date-click
-     * menu — same authorization, same validation, one place either can
-     * call into.
-     *
-     * @return array{success: bool, message?: string, announcement?: array}
-     */
-    public function create(User $user, array $data): array
-    {
-        if (! $user->inGroup('instructor')) {
-            return ['success' => false, 'message' => 'Only an instructor can post an announcement.'];
-        }
-
-        $offeringId = (int) ($data['offering_id'] ?? 0);
-
-        $teaches = db_connect()->table('instructor_assignments')
-            ->where('offering_id', $offeringId)
-            ->where('instructor_user_id', $user->id)
-            ->countAllResults() > 0;
-
-        if (! $teaches) {
-            return ['success' => false, 'message' => 'You do not teach this section.'];
-        }
-
-        $payload = [
-            'offering_id' => $offeringId,
-            'author_id'   => $user->id,
-            'title'       => trim((string) ($data['title'] ?? '')),
-            'body'        => trim((string) ($data['body'] ?? '')),
-            'status'      => 'Published',
-        ];
-
-        if (! $this->announcementModel->validate($payload)) {
-
-            return [
-                'success' => false,
-                'message' => implode(' ', $this->announcementModel->errors()),
-            ];
-
-        }
-
-        $id = $this->announcementModel->insert($payload, true);
-
-        return [
-            'success'      => true,
-            'announcement' => $this->announcementModel->find($id),
->>>>>>> course
         ];
     }
 }

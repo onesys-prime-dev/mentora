@@ -92,3 +92,45 @@ if (! function_exists('announcement_inline')) {
     }
 
 }
+
+if (! function_exists('announcement_plain_text')) {
+
+    /** Flattens a composer message ({version, blocks} JSON) to plain text, e.g. for a one-line preview. */
+    function announcement_plain_text(?string $json): string
+    {
+        $data = json_decode((string) $json, true);
+
+        $blocks = is_array($data) ? ($data['blocks'] ?? []) : [];
+
+        $parts = [];
+
+        foreach ($blocks as $block) {
+
+            $nodeLists = isset($block['items']) ? $block['items'] : [$block['content'] ?? []];
+
+            foreach ($nodeLists as $nodes) {
+                $parts[] = implode('', array_map(static fn ($n) => (string) ($n['text'] ?? ''), $nodes));
+            }
+
+        }
+
+        return trim(preg_replace('/\s+/', ' ', implode(' ', $parts)));
+    }
+
+}
+
+if (! function_exists('announcement_message_from_text')) {
+
+    /** Wraps plain text (one paragraph per line) into the composer's {version, blocks} JSON. */
+    function announcement_message_from_text(string $text): string
+    {
+        $blocks = [];
+
+        foreach (preg_split('/\R/', trim($text)) as $line) {
+            $blocks[] = ['type' => 'paragraph', 'content' => [['text' => $line, 'marks' => []]]];
+        }
+
+        return json_encode(['version' => 1, 'blocks' => $blocks]);
+    }
+
+}

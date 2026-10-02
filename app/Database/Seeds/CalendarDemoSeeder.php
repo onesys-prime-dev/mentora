@@ -33,6 +33,8 @@ class CalendarDemoSeeder extends DemoSeeder
 
     protected function seedAnnouncements(int $authorId, int $offeringId, int $variant = 0): void
     {
+        helper('announcement');
+
         $posts = $variant === 0
             ? [
                 ['M1 - Coding Activity now open',     'The first coding activity is live under Module 1. Submit before the deadline shown in Assessments.', '-2 days'],
@@ -48,7 +50,7 @@ class CalendarDemoSeeder extends DemoSeeder
 
             $exists = $this->db->table('announcements')
                 ->where('offering_id', $offeringId)
-                ->where('title', $title)
+                ->where('subject', $title)
                 ->countAllResults() > 0;
 
             if ($exists) {
@@ -60,9 +62,9 @@ class CalendarDemoSeeder extends DemoSeeder
             $this->db->table('announcements')->insert([
                 'offering_id' => $offeringId,
                 'author_id'   => $authorId,
-                'title'       => $title,
-                'body'        => $body,
-                'status'      => 'Published',
+                'subject'     => $title,
+                'message'     => announcement_message_from_text($body),
+                'is_pinned'   => 0,
                 'created_at'  => $when,
                 'updated_at'  => $when,
             ]);

@@ -358,8 +358,15 @@ function eventChip(event)
 {
     const meta = KIND_META[event.kind] || KIND_META.reminder;
 
+    // Announcements link straight into their course tab. The cell itself is a
+    // <button> (an <a> can't nest in one), so the chip is a span that
+    // navigates on click — see bindCellClicks().
+    const link = event.kind === "announcement" && event.url
+        ? ` role="link" data-calendar-chip-url="${escapeHtml(event.url)}"`
+        : "";
+
     return `
-    <span class="truncate rounded px-1.5 py-0.5 text-[11px] font-semibold ${meta.chip}" title="${escapeHtml(event.title)}">
+    <span${link} class="truncate rounded px-1.5 py-0.5 text-[11px] font-semibold ${meta.chip} ${link ? "cursor-pointer hover:underline" : ""}" title="${escapeHtml(event.title)}">
         ${escapeHtml(event.title)}
     </span>
     `;
@@ -367,6 +374,15 @@ function eventChip(event)
 
 function bindCellClicks()
 {
+    document.querySelectorAll("[data-calendar-chip-url]").forEach((chip) => {
+
+        chip.addEventListener("click", (e) => {
+            e.stopPropagation();
+            window.location.href = chip.dataset.calendarChipUrl;
+        });
+
+    });
+
     document.querySelectorAll("[data-calendar-cell]").forEach((cell) => {
 
         cell.addEventListener("click", () => {
@@ -458,6 +474,11 @@ function bindEventRowClicks()
             const [kind, id] = row.dataset.calendarEvent.split(":");
 
             const event = findEvent(kind, Number(id));
+
+            if (event?.kind === "announcement" && event.url) {
+                window.location.href = event.url;
+                return;
+            }
 
             if (event) {
                 openEventDetail(event);

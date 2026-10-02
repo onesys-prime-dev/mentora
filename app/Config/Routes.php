@@ -81,7 +81,7 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->patch('reminders/(:num)/done', 'Calendar\ReminderController::markDone/$1');
         $routes->delete('reminders/(:num)', 'Calendar\ReminderController::destroy/$1');
 
-        $routes->post('announcements', 'Courses\AnnouncementController::store');
+        $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar');
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 

@@ -35,6 +35,7 @@ class AnnouncementController extends BaseController
             'sort' => (string) $this->request->getGet('sort'),
             'pinned' => $this->request->getGet('pinned') === '1',
             'page' => (int) ($this->request->getGet('page') ?? 1),
+            'focus' => (int) ($this->request->getGet('focus') ?? 0),
         ];
     }
 
@@ -43,6 +44,23 @@ class AnnouncementController extends BaseController
         return $this->response->setJSON(
             $this->announcementService->create(auth()->user(), $offeringId, $this->request->getJSON(true) ?? [])
         );
+    }
+
+    /** Posting from the Calendar's date-click menu: plain title/body, offering chosen in the form. */
+    public function storeFromCalendar()
+    {
+        helper('announcement');
+
+        $data = $this->request->getJSON(true) ?? [];
+
+        $result = $this->announcementService->create(auth()->user(), (int) ($data['offering_id'] ?? 0), [
+            'subject' => $data['title'] ?? '',
+            'message' => announcement_message_from_text((string) ($data['body'] ?? '')),
+        ]);
+
+        return $this->response
+            ->setJSON($result)
+            ->setStatusCode($result['success'] ? 201 : 422);
     }
 
     public function update(int $offeringId, int $announcementId)

@@ -13,6 +13,7 @@ function buildQuery(filters = {}) {
     if (filters.sort) { params.set("sort", filters.sort); }
     if (filters.pinned) { params.set("pinned", "1"); }
     if (filters.page) { params.set("page", String(filters.page)); }
+    if (filters.focus) { params.set("focus", String(filters.focus)); }
 
     const qs = params.toString();
 

@@ -50,7 +50,7 @@ class CalendarEventService
 
         $events = array_merge(
             $this->assessmentEvents($user, $offeringIds, $courses, $from, $to),
-            $this->announcementEvents($offeringIds, $courses, $from, $to),
+            $this->announcementEvents($user, $offeringIds, $courses, $from, $to),
             $this->reminderEvents((int) $user->id, $from, $to),
         );
 
@@ -116,21 +116,39 @@ class CalendarEventService
     |--------------------------------------------------------------------------
     */
 
-    protected function announcementEvents(array $offeringIds, array $courses, string $from, string $to): array
+    protected function announcementEvents(User $user, array $offeringIds, array $courses, string $from, string $to): array
     {
         $labels = $this->courseLabels($courses);
 
-        return array_map(static fn (array $row) => [
-            'kind'    => 'announcement',
-            'id'      => (int) $row['id'],
-            'date'    => substr((string) $row['created_at'], 0, 10),
-            'time'    => date('g:i A', strtotime($row['created_at'])),
-            'title'   => $row['title'],
-            'course'  => $labels[(int) $row['offering_id']] ?? '',
-            'offering_id' => (int) $row['offering_id'],
-            'tone'    => 'info',
-            'detail'  => mb_strlen($row['body']) > 80 ? mb_substr($row['body'], 0, 79) . '…' : $row['body'],
-        ], $this->announcementModel->retrieveForOfferingsInRange($offeringIds, $from, $to));
+        $role = $user->inGroup('instructor') ? 'instructor' : 'student';
+
+        $slugs = [];
+
+        foreach ($courses as $course) {
+            $slugs[(int) $course['offering_id']] = url_title($course['course_title'], '-', true);
+        }
+
+        helper('announcement');
+
+        return array_map(static function (array $row) use ($labels, $slugs, $role) {
+
+            $preview = announcement_plain_text($row['message']);
+
+            return [
+                'kind'    => 'announcement',
+                'id'      => (int) $row['id'],
+                'date'    => substr((string) $row['created_at'], 0, 10),
+                'time'    => date('g:i A', strtotime($row['created_at'])),
+                'title'   => $row['subject'],
+                'course'  => $labels[(int) $row['offering_id']] ?? '',
+                'offering_id' => (int) $row['offering_id'],
+                'tone'    => 'info',
+                // Straight into the course's Announcements tab, landing on this post.
+                'url'     => site_url("{$role}/courses/{$row['offering_id']}/" . ($slugs[(int) $row['offering_id']] ?? 'course') . "/announcements?announcement={$row['id']}"),
+                'detail'  => mb_strlen($preview) > 80 ? mb_substr($preview, 0, 79) . '…' : $preview,
+            ];
+
+        }, $this->announcementModel->retrieveForOfferingsInRange($offeringIds, $from, $to));
     }
 
     /*
