@@ -34,6 +34,21 @@ export function renderResourcesSkeleton() {
 
 }
 
+/** Below-the-breadcrumb skeleton: folder/resource rows only, header/toolbar/breadcrumb stay put. */
+export function renderResourcesContentSkeleton() {
+
+    return `
+
+    <div class="animate-pulse flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white">
+        ${renderRow()}
+        ${renderRow()}
+        ${renderRow()}
+    </div>
+
+    `;
+
+}
+
 function renderRow() {
 
     return `

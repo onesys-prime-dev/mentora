@@ -23,42 +23,46 @@ $level = $level ?? 'offering';
         'unit' => $unit ?? null,
     ]) ?>
 
-    <?php if ($level === 'unit'): ?>
+    <div class="flex flex-col gap-6" data-resources-content>
 
-        <?php if ($resources === []): ?>
+        <?php if ($level === 'unit'): ?>
 
-            <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
-                <?= icon('folder', 'h-10 w-10 text-gray-300') ?>
-                <span class="text-sm font-semibold text-[#5B5B5B]">No resources yet</span>
-                <span class="text-xs text-[#939393]">There are no resources in this learning unit.</span>
-            </div>
+            <?php if ($resources === []): ?>
 
-        <?php elseif ($view === 'grid'): ?>
+                <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center">
+                    <?= icon('folder', 'h-10 w-10 text-gray-300') ?>
+                    <span class="text-sm font-semibold text-[#5B5B5B]">No resources yet</span>
+                    <span class="text-xs text-[#939393]">There are no resources in this learning unit.</span>
+                </div>
 
-            <?= view('pages/courses/features/resources/partials/grid-view', ['resources' => $resources]) ?>
+            <?php elseif ($view === 'grid'): ?>
+
+                <?= view('pages/courses/features/resources/partials/grid-view', ['resources' => $resources]) ?>
+
+            <?php else: ?>
+
+                <?= view('pages/courses/features/resources/partials/list-view', ['resources' => $resources]) ?>
+
+            <?php endif; ?>
+
+        <?php elseif ($level === 'module'): ?>
+
+            <?= view('pages/courses/features/resources/partials/folder-list', [
+                'items' => $units,
+                'kind' => 'unit',
+                'emptyLabel' => 'No learning units yet.',
+            ]) ?>
 
         <?php else: ?>
 
-            <?= view('pages/courses/features/resources/partials/list-view', ['resources' => $resources]) ?>
+            <?= view('pages/courses/features/resources/partials/folder-list', [
+                'items' => $modules,
+                'kind' => 'module',
+                'emptyLabel' => 'No modules yet.',
+            ]) ?>
 
         <?php endif; ?>
 
-    <?php elseif ($level === 'module'): ?>
-
-        <?= view('pages/courses/features/resources/partials/folder-list', [
-            'items' => $units,
-            'kind' => 'unit',
-            'emptyLabel' => 'No learning units yet.',
-        ]) ?>
-
-    <?php else: ?>
-
-        <?= view('pages/courses/features/resources/partials/folder-list', [
-            'items' => $modules,
-            'kind' => 'module',
-            'emptyLabel' => 'No modules yet.',
-        ]) ?>
-
-    <?php endif; ?>
+    </div>
 
 </div>
