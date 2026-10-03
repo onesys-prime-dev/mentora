@@ -10,6 +10,7 @@
 |
 */
 
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
 import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { fetchModule } from "./api.js";
 import { state } from "./state.js";
@@ -54,11 +55,17 @@ export async function loadModule(moduleId, backToList, { highlight = null } = {}
 
     const container = document.querySelector("#course-content");
 
-    container.innerHTML = renderModulePageSkeleton();
+    const load = beginLoad(container, renderModulePageSkeleton(), 0);
 
     try {
 
         const result = await fetchModule(moduleId);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         container.innerHTML = result.html;
 
@@ -84,6 +91,12 @@ export async function loadModule(moduleId, backToList, { highlight = null } = {}
     } catch (error) {
 
         console.error(error);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         showLoadError(container, "this module", () => loadModule(moduleId, backToList));
 

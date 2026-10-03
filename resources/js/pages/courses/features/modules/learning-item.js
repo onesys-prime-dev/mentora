@@ -1,3 +1,5 @@
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import {
     fetchLearningItemView,
     fetchLearningItemEditor
@@ -164,6 +166,8 @@ export async function loadLearningItem(
     { pushState = true } = {}
 ) {
 
+    let load = null;
+
     try {
 
         state.loading = true;
@@ -183,16 +187,24 @@ export async function loadLearningItem(
         const mainSection =
             container.querySelector("[data-learning-item-main]");
 
-        if (mainSection) {
-            mainSection.innerHTML = renderLearningItemMainSkeleton();
-        } else {
-            container.innerHTML = renderLearningItemSkeleton();
-        }
+        load = beginLoad(
+            container,
+            mainSection ? renderLearningItemMainSkeleton() : renderLearningItemSkeleton(),
+            0,
+            mainSection ?? container
+        );
 
         const response =
             await fetchLearningItemView(
                 learningItemId
             );
+
+        // Superseded by a newer navigation: that one owns the screen now.
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         // Refused: the item is locked. Back to the Modules list with the
         // reason — the URL is replaced so Back / refresh don't loop into it.
@@ -260,6 +272,15 @@ export async function loadLearningItem(
 
         console.error(error);
 
+        // Never leave the skeleton up forever (unless a newer load owns it).
+        if (!load || load.current()) {
+            showLoadError(
+                document.querySelector("#course-content"),
+                "this learning item",
+                () => loadLearningItem(learningItemId, refresh, { pushState: false })
+            );
+        }
+
     }
 
     finally {
@@ -275,6 +296,8 @@ export async function loadLearningItemEditor(
     refresh
 ) {
 
+    let load = null;
+
     try {
 
         state.loading = true;
@@ -282,13 +305,22 @@ export async function loadLearningItemEditor(
         state.activeLearningItemId =
             learningItemId;
 
-        document.querySelector("#course-content").innerHTML =
-            renderLearningItemSkeleton();
+        load = beginLoad(
+            document.querySelector("#course-content"),
+            renderLearningItemSkeleton(),
+            0
+        );
 
         const response =
             await fetchLearningItemEditor(
                 learningItemId
             );
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         const container =
             document.querySelector(
@@ -384,6 +416,14 @@ export async function loadLearningItemEditor(
     catch (error) {
 
         console.error(error);
+
+        if (!load || load.current()) {
+            showLoadError(
+                document.querySelector("#course-content"),
+                "this editor",
+                () => loadLearningItemEditor(learningItemId, refresh)
+            );
+        }
 
     }
 

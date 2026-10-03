@@ -6,7 +6,8 @@
 | beginLoad(el, skeleton)
 |   - starts a load for `el`; the skeleton only appears if it is still
 |     loading after `delay` ms, so a fast load shows no flash at all
-|     (delay 0 = show it straight away, for scoped list refreshes)
+|     (delay 0 = show it straight away, for scoped refreshes and child
+|     screens; `into` draws it in a part of `el`, e.g. below a breadcrumb)
 |   - supersedes any earlier load on the same element
 |
 | The returned handle:
@@ -34,7 +35,7 @@ export function supersede(el) {
 
 }
 
-export function beginLoad(el, skeletonHtml, delay = SKELETON_DELAY_MS) {
+export function beginLoad(el, skeletonHtml, delay = SKELETON_DELAY_MS, into = el) {
 
     supersede(el);
 
@@ -43,11 +44,11 @@ export function beginLoad(el, skeletonHtml, delay = SKELETON_DELAY_MS) {
     const current = () => tokens.get(el) === id;
 
     if (delay <= 0) {
-        el.innerHTML = skeletonHtml;
+        into.innerHTML = skeletonHtml;
     } else {
         timers.set(el, setTimeout(() => {
             if (current()) {
-                el.innerHTML = skeletonHtml;
+                into.innerHTML = skeletonHtml;
             }
         }, delay));
     }

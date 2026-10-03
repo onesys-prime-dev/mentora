@@ -7,6 +7,7 @@
 */
 
 import { setBusy } from "../../../../shared/spa/busy-button.js";
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
 import { showLoadError } from "../../../../shared/spa/error-state.js";
 import {
     fetchThread,
@@ -28,7 +29,7 @@ export async function loadThread(threadId, backToList, { pushState = true } = {}
 
     const container = document.querySelector("#course-content");
 
-    container.innerHTML = renderThreadSkeleton();
+    const load = beginLoad(container, renderThreadSkeleton(), 0);
 
     // "Discussions" is already real in the skeleton, so going back works while loading.
     container.querySelector("[data-discussions-breadcrumb]")
@@ -37,6 +38,12 @@ export async function loadThread(threadId, backToList, { pushState = true } = {}
     try {
 
         const result = await fetchThread(threadId);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         container.innerHTML = result.html;
 
@@ -49,6 +56,12 @@ export async function loadThread(threadId, backToList, { pushState = true } = {}
     } catch (error) {
 
         console.error(error);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         showLoadError(container, "this discussion", () => loadThread(threadId, backToList, { pushState: false }));
 
