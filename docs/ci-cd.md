@@ -16,6 +16,7 @@ day-to-day workflow.
 |---|---|---|
 | PHP syntax (8.2, 8.5) | `php -l` on every file in `app/`, `tests/`, `public/` and `spark` | 8.2 is the minimum in `composer.json` and the local version; 8.5 is the version the staging site runs |
 | Composer | `composer validate --strict`, `composer install`, `composer audit` | The manifest and lock agree, dependencies install, no known vulnerable packages |
+| Tests on MySQL (8.2, 8.5) | A MySQL 8.4 container, `php spark migrate --all -g tests` on the empty database, then PHPUnit (coverage report on 8.2) | Migrations work on a fresh install, and the test suite passes on the minimum and the production PHP |
 | Frontend build and audit | `npm ci`, `npm audit --omit=dev --audit-level=high`, `npm run build`, manifest exists | The lockfile installs cleanly on Linux (where the server builds), no high-severity advisories, assets build |
 | Secret scan | gitleaks over the full history | No leaked passwords or keys |
 | **CI passed** | Fails if any job above failed | The single check that branch protection requires |
@@ -41,7 +42,7 @@ when a second developer joins or a production server exists.
 
 ## What is not here yet
 
-Tracked in the plan: tests on MySQL, static analysis (PHPStan, Semgrep),
+Tracked in the plan: the domain-by-domain tests (see `docs/testing.md`), static analysis (PHPStan, Semgrep),
 migrations and backups on deploy, release folders with rollback, a health
 check, end-to-end tests, and the production environment with approval.
 Until the deploy rewrite, the Deploy workflow still copies files straight

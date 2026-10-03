@@ -79,6 +79,72 @@ jobs:
       - name: Audit dependencies for known vulnerabilities
         run: composer audit
 
+  tests:
+    name: Tests on MySQL (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Coverage is measured on 8.2 only (pcov); 8.5 just has to pass.
+          - php: "8.2"
+            coverage: pcov
+            phpunit_args: --coverage-text
+          - php: "8.5"
+            coverage: none
+            phpunit_args: --no-coverage
+    services:
+      # Same major version as the staging server's MySQL (8.4). The tests
+      # connect as root with no password (the defaults in app/Config/Database.php),
+      # which is fine for a throwaway container that only lives for this job.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: mentora_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, mysqli, zip, gd
+          coverage: ${{ matrix.coverage }}
+          tools: composer
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      # The same command the server runs, on an empty database. If any
+      # migration (App or Shield) is broken on a fresh install, it fails here.
+      - name: Migrate the empty database
+        run: php spark migrate --all -g tests
+
+      - name: Run tests
+        run: vendor/bin/phpunit ${{ matrix.phpunit_args }}
+
+      - name: Upload coverage report
+        if: always() && matrix.coverage == 'pcov'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/logs
+          if-no-files-found: ignore
+
   assets:
     name: Frontend build and audit
     runs-on: ubuntu-latest
@@ -119,7 +185,7 @@ jobs:
   ci-passed:
     name: CI passed
     if: always()
-    needs: [php-syntax, composer, assets, secrets]
+    needs: [php-syntax, composer, tests, assets, secrets]
     runs-on: ubuntu-latest
     steps:
       - name: Require every job to have succeeded
