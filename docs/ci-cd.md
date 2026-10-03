@@ -8,7 +8,7 @@ day-to-day workflow.
 | Workflow | File | Runs when | Purpose |
 |---|---|---|---|
 | CI | `.github/workflows/ci.yml` | PR into `staging` / `main`, push to `main` | Prove the change is sound |
-| Deploy | `.github/workflows/deploy.yml` | push to `staging` | Build and copy the app to the staging server (not gated on CI yet) |
+| Deploy | `.github/workflows/deploy.yml` | push to `staging` | Build, back up the database, copy the app, migrate, health-check (not gated on CI yet; see `deploy.md`) |
 
 ## CI jobs (all must pass)
 
@@ -42,8 +42,7 @@ production server exists.
 
 ## What is not here yet
 
-Tracked in the plan: the domain-by-domain tests (see `docs/testing.md`), static analysis (PHPStan, Semgrep),
-migrations and backups on deploy, release folders with rollback, a health
-check, end-to-end tests, and the production environment with approval.
-Until the deploy rewrite, the Deploy workflow still copies files straight
-into the live folder.
+Tracked in the plan: the domain-by-domain tests (see `docs/testing.md`), static
+analysis (PHPStan, Semgrep), release folders with automatic rollback, a CI gate
+on the deploy, end-to-end tests, and the production environment with approval.
+The deploy itself is described in `docs/deploy.md`.
