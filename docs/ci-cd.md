@@ -7,8 +7,8 @@ day-to-day workflow.
 
 | Workflow | File | Runs when | Purpose |
 |---|---|---|---|
-| CI | `.github/workflows/ci.yml` | PR into `staging` / `main`, push to `main`, and called by Deploy | Prove the change is sound |
-| Deploy | `.github/workflows/deploy.yml` | push to `staging` | Run CI first; only if it passes, build and copy the app to the staging server |
+| CI | `.github/workflows/ci.yml` | PR into `staging` / `main`, push to `main` | Prove the change is sound |
+| Deploy | `.github/workflows/deploy.yml` | push to `staging` | Build and copy the app to the staging server (not gated on CI yet) |
 
 ## CI jobs (all must pass)
 
@@ -26,19 +26,19 @@ against `staging`; they run the same checks.
 
 ## What stops a bad change (and what does not)
 
-**The deploy gate (active).** `deploy.yml` calls `ci.yml` first and deploys only
-if **CI passed**. A broken push to `staging` therefore never reaches the demo
-server, however it got there.
+**Nothing enforces it yet.** GitHub does not enforce rulesets or branch
+protection on a private repository on a free plan, and the deploy is not gated
+on CI. So today nothing technically prevents a direct push to `staging` or
+`main`, merging a PR with red checks, or deploying a commit that failed CI. The
+PR workflow in `CONTRIBUTING.md` is followed by habit: open a PR, wait for
+**CI passed**, then merge.
 
-**Branch rules (not enforced).** GitHub does not enforce rulesets or branch
-protection on a private repository on a free plan. So today nothing technically
-prevents a direct push to `staging` or `main`, or merging a PR with red checks;
-the PR workflow in `CONTRIBUTING.md` is followed by habit, and the deploy gate
-is the backstop. If rulesets ever become enforceable (public repo, or a paid
-plan/organization), create one each for `staging` and `main`: require a pull
-request, require the status check **CI passed** (up to date with the base
-branch), require linear history, block force pushes and deletions. Revisit this
-when a second developer joins or a production server exists.
+Options when that is not enough: make `deploy.yml` call `ci.yml` first and
+deploy only if it passes (a deploy gate), and/or turn on rulesets if the repo
+becomes public or moves to a paid plan/organization (one each for `staging` and
+`main`: require a pull request, require **CI passed**, require linear history,
+block force pushes and deletions). Revisit when a second developer joins or a
+production server exists.
 
 ## What is not here yet
 
