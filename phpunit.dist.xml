@@ -38,6 +38,9 @@
         </include>
         <exclude>
             <directory suffix=".php">./app/Views</directory>
+            <!-- Migrations and seeders run on every build, so counting them would
+                 inflate coverage without proving any application logic. -->
+            <directory suffix=".php">./app/Database</directory>
             <file>./app/Config/Routes.php</file>
         </exclude>
     </source>
