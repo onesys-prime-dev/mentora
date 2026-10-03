@@ -26,7 +26,7 @@ $submissionTypes = array_keys(array_filter([
 
             <div class="flex flex-col gap-2 rounded-xl bg-[#F9F9FC] p-4">
 
-                <span class="text-xs font-bold uppercase tracking-wide text-gray-400">Students Submit By</span>
+                <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Students Submit By</span>
 
                 <?php if ($submissionTypes): ?>
                     <div class="flex flex-wrap gap-1.5">
@@ -42,7 +42,7 @@ $submissionTypes = array_keys(array_filter([
 
             <div class="flex flex-col gap-2 rounded-xl bg-[#F9F9FC] p-4">
 
-                <span class="text-xs font-bold uppercase tracking-wide text-gray-400">Rubric</span>
+                <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Rubric</span>
 
                 <span class="text-sm font-semibold text-[#646464]">
                     <?= $currentRubric
@@ -54,7 +54,7 @@ $submissionTypes = array_keys(array_filter([
 
             <div class="flex flex-col gap-2 rounded-xl bg-[#F9F9FC] p-4">
 
-                <span class="text-xs font-bold uppercase tracking-wide text-gray-400">Submissions</span>
+                <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Submissions</span>
 
                 <span class="text-sm text-[#646464]">
                     <strong class="text-[#0040A6]"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
@@ -76,7 +76,7 @@ $submissionTypes = array_keys(array_filter([
 
         <div class="flex flex-col gap-2">
 
-            <span class="text-xs font-bold uppercase tracking-wide text-gray-400">Instructions</span>
+            <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Instructions</span>
 
             <?= $this->setData(['instructionsEmptyText' => 'No instructions yet. Add them in Edit Instructions & Submission.'])
                 ->include('pages/courses/features/assessments/partials/instructions-paragraph') ?>
@@ -101,7 +101,7 @@ $submissionTypes = array_keys(array_filter([
                 View Submissions
             </button>
 
-            <span class="ml-auto text-xs text-gray-400">
+            <span class="ml-auto text-xs text-[#767676]">
                 Publishing or drafting this item also publishes or drafts the assignment.
             </span>
 

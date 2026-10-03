@@ -25,7 +25,7 @@ $host = $isSafeUrl ? preg_replace('/^www\./', '', (string) parse_url($url, PHP_U
 
             <div class="flex min-w-0 flex-col">
                 <span class="text-sm font-semibold text-[#1A1C1E]"><?= esc($host) ?></span>
-                <span class="truncate text-xs text-gray-400"><?= esc($url) ?></span>
+                <span class="truncate text-xs text-[#767676]"><?= esc($url) ?></span>
             </div>
 
         </div>

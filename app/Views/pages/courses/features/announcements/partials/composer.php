@@ -11,7 +11,7 @@ $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?
             <span class="font-semibold text-[#1A1C1E]"><?= esc($fullName) ?></span>
         </div>
 
-        <button type="button" data-composer-dismiss title="Discard" class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600" aria-label="Discard">
+        <button type="button" data-composer-dismiss title="Discard" class="rounded-lg p-1.5 text-[#767676] transition hover:bg-gray-100 hover:text-gray-600" aria-label="Discard">
             <svg data-composer-close-icon xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>

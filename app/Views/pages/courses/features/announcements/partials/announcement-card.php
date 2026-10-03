@@ -39,7 +39,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
         <?php endforeach; ?>
 
         <div class="relative">
-            <button type="button" data-emoji-panel-toggle title="More reactions" class="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100" aria-label="More reactions">
+            <button type="button" data-emoji-panel-toggle title="More reactions" class="flex h-8 w-8 items-center justify-center rounded-full text-[#767676] transition hover:bg-gray-100" aria-label="More reactions">
                 <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6"/></svg>
             </button>
             <div class="absolute right-0 top-9 z-30 hidden" data-emoji-panel data-action-menu-panel></div>
@@ -86,7 +86,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
             <div class="flex flex-col">
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-[#1A1C1E]"><?= esc(trim((string) $announcement['author_name'])) ?></span>
-                    <span class="text-xs text-gray-400"><?= esc(date('M j, Y g:i A', strtotime($announcement['created_at']))) ?></span>
+                    <span class="text-xs text-[#767676]"><?= esc(date('M j, Y g:i A', strtotime($announcement['created_at']))) ?></span>
                 </div>
                 <span class="text-xs text-gray-500"><?= $announcement['author_role'] === 'instructor' ? 'Instructor' : 'Student' ?></span>
             </div>
@@ -111,7 +111,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
                             <?php if ($isImage): ?>
                                 <img src="<?= esc($file['url']) ?>" class="h-14 w-full rounded-lg object-cover" alt="">
                             <?php else: ?>
-                                <svg class="h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                <svg class="h-8 w-8 text-[#767676]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                             <?php endif; ?>
                             <span class="w-full truncate text-[11px] text-gray-500"><?= esc($file['original_filename']) ?></span>
                         </a>
@@ -207,7 +207,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 
         <button type="button" data-reply-trigger class="flex w-full items-center gap-3 text-left">
             <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-8 w-8 shrink-0 rounded-full" alt="">
-            <span class="flex-1 rounded-2xl border border-gray-200 px-4 py-2 text-sm text-gray-400 transition hover:border-[#0040A6]/40">Reply in thread</span>
+            <span class="flex-1 rounded-2xl border border-gray-200 px-4 py-2 text-sm text-[#767676] transition hover:border-[#0040A6]/40">Reply in thread</span>
         </button>
 
         <div class="hidden items-center gap-3" data-reply-form>
@@ -217,7 +217,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
                     rows="1"
                     data-reply-input
                     placeholder="Reply in thread"
-                    class="flex-1 resize-none text-sm outline-none placeholder:text-gray-400"></textarea>
+                    class="flex-1 resize-none text-sm outline-none placeholder:text-[#767676]"></textarea>
                 <div class="flex items-center gap-1 pb-0.5">
                     <button type="button" data-reply-send title="Send" class="rounded-lg p-1.5 text-[#0040A6] transition hover:bg-[#0040A6]/10 disabled:opacity-40" disabled aria-label="Send">
                         <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a1 1 0 00-1.39 1.17L4.5 12 2 18.23a1 1 0 001.4 1.17z"/></svg>

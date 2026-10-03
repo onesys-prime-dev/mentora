@@ -24,7 +24,7 @@
             aria-label="Discussion title"
             placeholder="Title"
             autocomplete="off"
-            class="w-full text-lg font-bold text-[#0040A6] outline-none placeholder:font-bold placeholder:text-gray-400">
+            class="w-full text-lg font-bold text-[#0040A6] outline-none placeholder:font-bold placeholder:text-[#767676]">
     </div>
 
     <div class="flex items-center gap-1 border-t border-gray-100 px-5 py-2" data-composer-toolbar>

@@ -1389,12 +1389,12 @@ function createQuestionCardElement(question) {
            <button type="button" data-add-choice-inline class="self-start text-xs font-semibold text-[#0040A6] transition hover:underline">+ Add choice</button>`
         : question.question_type === "Short Answer"
             ? renderAcceptedAnswersEditor(question.accepted_answers || [], isFlagTrue(question.case_sensitive))
-            : `<div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-400">${escapeHtml(PREVIEW_LABELS[question.question_type] || "Students will respond here.")}</div>`;
+            : `<div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-[#767676]">${escapeHtml(PREVIEW_LABELS[question.question_type] || "Students will respond here.")}</div>`;
 
     card.innerHTML = `
         <div class="flex items-center gap-2 border-b border-gray-100 pb-3">
 
-            <button type="button" data-drag-handle title="Drag to reorder" class="cursor-grab rounded p-1 text-gray-400 transition hover:bg-gray-100 active:cursor-grabbing">
+            <button type="button" data-drag-handle title="Drag to reorder" class="cursor-grab rounded p-1 text-[#767676] transition hover:bg-gray-100 active:cursor-grabbing">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                     <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
                     <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
@@ -1402,12 +1402,12 @@ function createQuestionCardElement(question) {
                 </svg>
             </button>
 
-            <span class="text-sm font-bold text-gray-400" data-question-number>Q?</span>
+            <span class="text-sm font-bold text-[#767676]" data-question-number>Q?</span>
 
             <span class="rounded-full bg-[#0040A6]/10 px-2.5 py-0.5 text-xs font-bold text-[#0040A6]" data-question-type-badge>${escapeHtml(question.question_type)}</span>
 
             <input type="number" data-question-points-input min="0" step="0.5" value="${formatPointsValue(question.points)}" class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-[#0040A6]">
-            <span class="text-[10px] text-gray-400">pts</span>
+            <span class="text-[10px] text-[#767676]">pts</span>
 
             <span class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500 ${isRequired ? "" : "hidden"}" data-question-required-badge>Required</span>
 

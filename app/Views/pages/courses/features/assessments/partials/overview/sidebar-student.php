@@ -65,7 +65,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
         <?php endforeach; ?>
 
         <?php if (!$upNext): ?>
-            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-gray-400">
+            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-[#767676]">
                 You're all caught up.
             </p>
         <?php endif; ?>
@@ -118,7 +118,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
                 <div class="flex items-center justify-between gap-2">
 
-                    <span class="text-xs text-gray-400"><?= esc($entry['when']) ?></span>
+                    <span class="text-xs text-[#767676]"><?= esc($entry['when']) ?></span>
 
                     <?php if ((int) $entry['message_count'] > 1): ?>
                         <span class="shrink-0 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-[10px] font-bold text-[#0040A6]">
@@ -133,7 +133,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
         <?php endforeach; ?>
 
         <?php if (!$feedback): ?>
-            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-gray-400">
+            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-[#767676]">
                 Feedback from your instructor will show up here.
             </p>
         <?php endif; ?>

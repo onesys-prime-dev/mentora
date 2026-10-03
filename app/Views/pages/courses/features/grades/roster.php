@@ -43,11 +43,11 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
                     <?php foreach ($items as $item): ?>
                         <th class="px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">
                             <?= esc($item['name']) ?>
-                            <span class="font-normal text-gray-400">/<?= $points($item['max_points']) ?></span>
+                            <span class="font-normal text-[#767676]">/<?= $points($item['max_points']) ?></span>
                         </th>
                     <?php endforeach; ?>
                     <?php foreach ($breakdown_groups as $group): ?>
-                        <th class="px-4 py-3 font-semibold text-gray-400 whitespace-nowrap" title="Read-only — from <?= $uses_periods ? 'category weights' : 'quiz/assignment scores' ?>">
+                        <th class="px-4 py-3 font-semibold text-[#767676] whitespace-nowrap" title="Read-only — from <?= $uses_periods ? 'category weights' : 'quiz/assignment scores' ?>">
                             <?= esc($group['name']) ?>
                         </th>
                     <?php endforeach; ?>
@@ -59,7 +59,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
             <tbody>
 
                 <?php if ($students === []): ?>
-                    <tr><td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="px-4 py-8 text-center text-gray-400">No students enrolled in this section.</td></tr>
+                    <tr><td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="px-4 py-8 text-center text-[#767676]">No students enrolled in this section.</td></tr>
                 <?php endif; ?>
 
                 <?php foreach ($students as $student): ?>
@@ -68,7 +68,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
 
                         <td class="px-4 py-2 whitespace-nowrap">
                             <div class="font-semibold text-[#646464]"><?= esc($student['student_name']) ?></div>
-                            <div class="text-xs text-gray-400"><?= esc($student['student_number']) ?></div>
+                            <div class="text-xs text-[#767676]"><?= esc($student['student_number']) ?></div>
                         </td>
 
                         <?php foreach ($items as $item): ?>

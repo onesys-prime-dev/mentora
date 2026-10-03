@@ -39,7 +39,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
                 <span class="truncate text-sm font-semibold text-[#1A1C1E]">
                     <?= esc($submissionFile['original_filename']) ?>
                 </span>
-                <span class="text-xs text-gray-400">
+                <span class="text-xs text-[#767676]">
                     <?= esc(number_to_size((int) $submissionFile['file_size'])) ?>
                 </span>
             </div>
@@ -96,7 +96,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
 
     <?php if (!$hasContent): ?>
 
-        <div class="rounded-xl border border-dashed border-gray-200 bg-[#F9F9FC] px-4 py-6 text-center text-xs text-gray-400">
+        <div class="rounded-xl border border-dashed border-gray-200 bg-[#F9F9FC] px-4 py-6 text-center text-xs text-[#767676]">
             Nothing was attached to this submission.
         </div>
 

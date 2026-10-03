@@ -8,7 +8,7 @@
 
         <div class="flex items-center gap-2">
             <span class="text-sm font-bold text-[#1A1C1E]"><?= esc(trim((string) $reply['author_name'])) ?></span>
-            <span class="text-xs text-gray-400"><?= esc(date('M j, Y g:i A', strtotime($reply['created_at']))) ?></span>
+            <span class="text-xs text-[#767676]"><?= esc(date('M j, Y g:i A', strtotime($reply['created_at']))) ?></span>
 
             <?php if ($isOwn): ?>
                 <button type="button" data-delete-reply class="ml-auto opacity-0 transition group-hover:opacity-100 text-xs text-red-500 hover:underline">Delete</button>

@@ -29,7 +29,7 @@ $statusMeta = static fn (?string $status) => match ($status) {
     'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
     'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500'],
-    default => ['label' => 'Not Submitted', 'class' => 'bg-gray-100 text-gray-400'],
+    default => ['label' => 'Not Submitted', 'class' => 'bg-gray-100 text-[#767676]'],
 };
 
 $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', strtotime($datetime)) : '';
@@ -96,7 +96,7 @@ $timeTaken = static function (array $attempt): ?string {
                             <div class="flex items-center gap-3">
 
                                 <?php if (!$isQuizHistory): ?>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#767676] transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                                     </svg>
                                 <?php endif; ?>
@@ -105,7 +105,7 @@ $timeTaken = static function (array $attempt): ?string {
                                     Attempt <?= esc((int) $attempt['attempt_number']) ?>
                                 </span>
 
-                                <span class="text-xs text-gray-400">
+                                <span class="text-xs text-[#767676]">
                                     <?= esc(implode(' · ', array_filter($details))) ?>
                                 </span>
 

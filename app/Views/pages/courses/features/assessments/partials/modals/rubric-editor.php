@@ -130,7 +130,7 @@
                 </div>
 
                 <div
-                    class="hidden text-center text-sm text-gray-400"
+                    class="hidden text-center text-sm text-[#767676]"
                     data-rubric-criteria-editor-empty>
 
                     No criteria yet. Add one to get started.

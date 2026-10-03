@@ -83,13 +83,13 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                     placeholder="No limit"
                     class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-14 text-sm outline-none transition focus:border-[#0040A6]">
 
-                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#767676]">
                     min
                 </span>
 
             </div>
 
-            <span class="text-xs text-gray-400">
+            <span class="text-xs text-[#767676]">
                 Leave empty for no time limit. Starts the countdown timer once a student begins the quiz.
             </span>
 
@@ -114,7 +114,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                     value="<?= esc($passingPercentage ?? '') ?>"
                     class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-8 text-sm outline-none transition focus:border-[#0040A6]">
 
-                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#767676]">
                     %
                 </span>
 
@@ -137,7 +137,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                 value="<?= $passingScore !== null ? esc(rtrim(rtrim(number_format((float) $passingScore, 2, '.', ''), '0'), '.')) : '' ?>"
                 class="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 outline-none">
 
-            <span class="text-xs text-gray-400">
+            <span class="text-xs text-[#767676]">
                 Calculated from total points × passing percentage.
             </span>
 

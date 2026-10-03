@@ -760,18 +760,18 @@ function createCard(question) {
         <div class="flex items-center gap-2">
             <span class="rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-[10px] font-bold text-[#0040A6]">${escapeHtml(question.question_type)}</span>
             <input type="number" data-ai-points-input min="0" step="0.5" value="${question.points}" class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none focus:border-[#0040A6]">
-            <span class="text-[10px] text-gray-400">pts</span>
+            <span class="text-[10px] text-[#767676]">pts</span>
             ${multipleBadge}
             ${similarityBadge}
             ${mathCheckBadge}
             <div class="ml-auto flex items-center gap-1">
-                <button type="button" data-ai-open-settings title="Question settings" class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-[#0040A6]">
+                <button type="button" data-ai-open-settings title="Question settings" class="rounded-lg p-1.5 text-[#767676] transition hover:bg-gray-100 hover:text-[#0040A6]">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </button>
-                <button type="button" data-ai-discard-question title="Discard" class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
+                <button type="button" data-ai-discard-question title="Discard" class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
                 <button type="button" data-ai-accept-question class="rounded-xl bg-[#0040A6] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#002068]">

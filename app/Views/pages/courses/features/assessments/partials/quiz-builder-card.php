@@ -34,7 +34,7 @@ $caseSensitive = !empty($question['case_sensitive']);
             type="button"
             data-drag-handle
             title="Drag to reorder"
-            class="cursor-grab rounded p-1 text-gray-400 transition hover:bg-gray-100 active:cursor-grabbing" aria-label="Drag to reorder">
+            class="cursor-grab rounded p-1 text-[#767676] transition hover:bg-gray-100 active:cursor-grabbing" aria-label="Drag to reorder">
 
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                 <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
@@ -44,7 +44,7 @@ $caseSensitive = !empty($question['case_sensitive']);
 
         </button>
 
-        <span class="text-sm font-bold text-gray-400" data-question-number>
+        <span class="text-sm font-bold text-[#767676]" data-question-number>
             Q<?= esc($index + 1) ?>
         </span>
 
@@ -59,7 +59,7 @@ $caseSensitive = !empty($question['case_sensitive']);
             step="0.5"
             value="<?= esc($pointsValue) ?>"
             class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-[#0040A6]">
-        <span class="text-[10px] text-gray-400">pts</span>
+        <span class="text-[10px] text-[#767676]">pts</span>
 
         <span
             class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500 <?= empty($question['is_required']) ? 'hidden' : '' ?>"
@@ -189,7 +189,7 @@ $caseSensitive = !empty($question['case_sensitive']);
 
         <?php else: ?>
 
-            <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-400">
+            <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-[#767676]">
                 <?= esc($previewLabels[$question['question_type']] ?? 'Students will respond here.') ?>
             </div>
 

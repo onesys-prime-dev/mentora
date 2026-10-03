@@ -36,7 +36,7 @@
                 <label class="text-sm font-semibold text-gray-700">Max points</label>
                 <input type="number" min="0.01" step="0.5" data-grade-item-create-max required value="100"
                     class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]">
-                <span class="text-xs text-gray-400">Scores are entered through the offline grade sheet.</span>
+                <span class="text-xs text-[#767676]">Scores are entered through the offline grade sheet.</span>
             </div>
 
             <div data-grade-item-create-error class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>

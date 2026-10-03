@@ -184,7 +184,7 @@ if ($isGraded && $scoreResult !== null) {
                                 <?= nl2br(esc($entry['message'])) ?>
                             </p>
 
-                            <span class="text-[10px] text-gray-400">
+                            <span class="text-[10px] text-[#767676]">
                                 <?= esc(date('M j, g:i A', strtotime($entry['created_at']))) ?>
                             </span>
 

@@ -47,7 +47,7 @@ $statusMeta = static fn (?string $status) => match ($status) {
     'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
     'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500'],
-    default => ['label' => 'Not Submitted', 'class' => 'bg-gray-100 text-gray-400'],
+    default => ['label' => 'Not Submitted', 'class' => 'bg-gray-100 text-[#767676]'],
 };
 
 $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', strtotime($datetime)) : '';

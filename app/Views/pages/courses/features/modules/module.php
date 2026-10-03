@@ -155,7 +155,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                             <div class="w-10 h-10 shrink-0 flex justify-center items-center rounded-full <?= $unitFullyLocked ? 'bg-gray-100' : 'bg-[#1E7A8C]/10' ?>">
                                 <?= $unitFullyLocked ? icon('lock', 'h-4 w-4') : icon('learning-unit', 'h-5 w-5') ?>
                             </div>
-                            <span class="text-lg truncate <?= $unitFullyLocked ? 'text-gray-400' : 'text-[#1A1C1E]' ?>"><?= esc($learning_unit['title']) ?></span>
+                            <span class="text-lg truncate <?= $unitFullyLocked ? 'text-[#767676]' : 'text-[#1A1C1E]' ?>"><?= esc($learning_unit['title']) ?></span>
 
                             <?php if ($unitAllCompleted): ?>
                                 <?= view('components/status-badge', ['tone' => 'success', 'icon' => 'check', 'label' => 'Completed'], ['saveData' => false]) ?>
@@ -244,12 +244,12 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                             <div class="flex flex-col gap-1">
 
                                                 <div class="flex items-center gap-4">
-                                                    <span class="text-md <?= !empty($learning_item['is_locked']) ? 'text-gray-400' : '' ?>">
+                                                    <span class="text-md <?= !empty($learning_item['is_locked']) ? 'text-[#767676]' : '' ?>">
                                                         <?= esc($learning_item['title']) ?>
                                                     </span>
 
                                                     <?php if (!empty($learning_item['is_locked'])): ?>
-                                                        <span class="text-xs text-gray-400">
+                                                        <span class="text-xs text-[#767676]">
                                                             Complete <?= esc(implode(', ', array_map(static fn ($p) => '"' . $p['title'] . '"', $learning_item['locked_by']))) ?> first
                                                         </span>
                                                     <?php endif; ?>
@@ -308,7 +308,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                     <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-[#0040A6]/40"></div>
 
                                     <div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:border-[#0040A6] group-hover:bg-[#0040A6]">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-all duration-200 group-hover:rotate-90 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#767676] transition-all duration-200 group-hover:rotate-90 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
                                         </svg>
                                     </div>
@@ -340,7 +340,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                 <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-[#0040A6]/40"></div>
 
                 <div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:border-[#0040A6] group-hover:bg-[#0040A6]">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-all duration-200 group-hover:rotate-90 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#767676] transition-all duration-200 group-hover:rotate-90 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
                     </svg>
                 </div>

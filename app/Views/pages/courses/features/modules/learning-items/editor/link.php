@@ -30,7 +30,7 @@ $content = is_array($currentItem['content'] ?? null) ? $currentItem['content'] :
     <div class="flex flex-col gap-2">
 
         <label class="text-sm font-semibold text-gray-700" for="link-editor-description">
-            Description <span class="font-normal text-gray-400">(optional)</span>
+            Description <span class="font-normal text-[#767676]">(optional)</span>
         </label>
 
         <textarea
@@ -42,7 +42,7 @@ $content = is_array($currentItem['content'] ?? null) ? $currentItem['content'] :
 
     </div>
 
-    <span class="text-xs text-gray-400">
+    <span class="text-xs text-[#767676]">
         Students open the link in a new tab. Changes save automatically.
     </span>
 

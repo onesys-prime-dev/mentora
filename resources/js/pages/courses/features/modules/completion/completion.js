@@ -215,7 +215,7 @@ function unlockPanelItem(itemId) {
 
             item.querySelector("[data-item-status-lock]")?.classList.add("hidden");
 
-            item.querySelector("[data-item-title]")?.classList.remove("text-gray-400");
+            item.querySelector("[data-item-title]")?.classList.remove("text-[#767676]");
 
             delete item.dataset.locked;
             item.removeAttribute("aria-disabled");

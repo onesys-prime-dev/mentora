@@ -92,7 +92,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
         <?php endforeach; ?>
 
         <?php if (!$drafts): ?>
-            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-gray-400">
+            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-[#767676]">
                 No drafts — everything is published.
             </p>
         <?php endif; ?>
@@ -149,7 +149,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
         <?php endforeach; ?>
 
         <?php if (!$ready): ?>
-            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-gray-400">
+            <p class="rounded-2xl border border-dashed border-gray-200 px-5 py-6 text-center text-sm text-[#767676]">
                 Nothing waiting to be graded.
             </p>
         <?php endif; ?>

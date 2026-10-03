@@ -11,7 +11,7 @@
 
             <span class="min-w-0 flex-1 truncate font-semibold text-[#1A1C1E]"><?= esc($item['title']) ?></span>
 
-            <svg class="h-5 w-5 shrink-0 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="h-5 w-5 shrink-0 text-[#767676]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M9 18l6-6-6-6"/>
             </svg>
 

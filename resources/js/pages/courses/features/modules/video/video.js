@@ -171,7 +171,7 @@ function updatePreview() {
 
             preview.innerHTML = `
 
-                <div class="flex h-full items-center justify-center text-gray-400">
+                <div class="flex h-full items-center justify-center text-[#767676]">
 
                     Video preview will appear here.
 
@@ -223,7 +223,7 @@ function updatePreview() {
 
         preview.innerHTML = `
 
-            <div class="flex h-full items-center justify-center text-gray-400">
+            <div class="flex h-full items-center justify-center text-[#767676]">
 
                 Video preview will appear here.
 

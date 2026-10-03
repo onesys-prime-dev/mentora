@@ -107,7 +107,7 @@ if ($isInstructor) {
             </span>
 
             <?php if (!$isInstructor && !empty($student['lock'])): ?>
-                <span class="mt-0.5 text-xs text-gray-400"><?= esc($student['lock']['message']) ?></span>
+                <span class="mt-0.5 text-xs text-[#767676]"><?= esc($student['lock']['message']) ?></span>
             <?php endif; ?>
 
         </div>

@@ -125,7 +125,7 @@
                 </div>
 
                 <div
-                    class="text-center text-sm text-gray-400"
+                    class="text-center text-sm text-[#767676]"
                     data-rubric-criteria-create-empty>
 
                     No criteria yet. Add one to get started.

@@ -89,7 +89,7 @@ $sourceUnitSummary = $sourceUnit
                         name="file"
                         accept=".pdf,.png,.jpg,.jpeg,.webp"
                         class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
-                    <span class="text-xs text-gray-400">PDF or image (scanned pages are read with OCR).</span>
+                    <span class="text-xs text-[#767676]">PDF or image (scanned pages are read with OCR).</span>
                 </div>
 
                 <?php if ($sourceUnit): ?>
@@ -107,7 +107,7 @@ $sourceUnitSummary = $sourceUnit
                             </span>
 
                             <div class="flex min-w-0 flex-col">
-                                <span class="truncate text-[11px] font-semibold uppercase tracking-wide text-gray-400"><?= esc($sourceUnit['module_title']) ?></span>
+                                <span class="truncate text-[11px] font-semibold uppercase tracking-wide text-[#767676]"><?= esc($sourceUnit['module_title']) ?></span>
                                 <span class="truncate text-sm font-bold text-[#0040A6]" data-ai-source-unit-title><?= esc($sourceUnit['title']) ?></span>
                                 <?php if ($sourceUnitReadable > 0): ?>
                                     <span class="text-xs text-gray-500">Reads <?= esc($sourceUnitSummary) ?></span>
@@ -117,7 +117,7 @@ $sourceUnitSummary = $sourceUnit
                         </div>
 
                         <?php if ($sourceUnitReadable > 0): ?>
-                            <span class="text-xs text-gray-400">Questions come from this quiz's learning unit. Videos, links and other assessments aren't read yet.</span>
+                            <span class="text-xs text-[#767676]">Questions come from this quiz's learning unit. Videos, links and other assessments aren't read yet.</span>
                         <?php else: ?>
                             <span class="rounded-lg border border-[#FFE3A3] bg-[#FFF8E6] px-3 py-2 text-xs text-[#946200]">
                                 This unit has no readings or PDFs yet — add some, or use another source.
@@ -148,7 +148,7 @@ $sourceUnitSummary = $sourceUnit
 
                 <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Points each <span class="normal-case text-gray-400">(optional)</span>
+                        Points each <span class="normal-case text-[#767676]">(optional)</span>
                     </label>
                     <input
                         type="number"

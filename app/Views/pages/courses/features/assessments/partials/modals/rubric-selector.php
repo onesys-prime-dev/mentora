@@ -62,7 +62,7 @@
                     No other rubrics found yet.
                 </span>
 
-                <span class="text-xs text-gray-400">
+                <span class="text-xs text-[#767676]">
                     Create a new rubric instead.
                 </span>
 

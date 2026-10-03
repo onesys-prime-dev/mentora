@@ -90,7 +90,7 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
         </select>
 
         <button type="button" data-remove-grade-item title="<?= $item['is_manual'] ? 'Remove item' : 'Don\'t count this in the grade' ?>"
-            class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
+            class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
@@ -125,7 +125,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
             <?php endif; ?>
 
             <button type="button" data-delete-grade-category title="Remove category"
-                class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500" aria-label="Remove category">
+                class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500" aria-label="Remove category">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
             </button>
 
@@ -133,7 +133,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
         <div class="flex flex-col gap-2">
             <?php if ($category['items'] === []): ?>
-                <span class="text-xs text-gray-400">No items yet — published quizzes/assignments land here automatically, or add a manual item.</span>
+                <span class="text-xs text-[#767676]">No items yet — published quizzes/assignments land here automatically, or add a manual item.</span>
             <?php endif; ?>
             <?php foreach ($category['items'] as $item): ?>
                 <?= $renderItem($item) ?>
@@ -243,7 +243,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
         <div class="flex flex-col gap-0.5">
             <span class="text-sm font-medium text-gray-700">Use grading periods</span>
-            <span class="text-xs text-gray-400">Split the term into Prelim / Midterm / Finals (or your own), each with its own weight and categories.</span>
+            <span class="text-xs text-[#767676]">Split the term into Prelim / Midterm / Finals (or your own), each with its own weight and categories.</span>
         </div>
 
         <label class="relative inline-flex shrink-0 cursor-pointer items-center">
@@ -285,7 +285,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
                         </label>
 
                         <button type="button" data-delete-grading-period title="Remove period"
-                            class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500" aria-label="Remove period">
+                            class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500" aria-label="Remove period">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
 
@@ -297,7 +297,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
                     <div class="flex flex-col gap-3">
                         <?php if ($period['categories'] === []): ?>
-                            <span class="text-xs text-gray-400">No categories yet.</span>
+                            <span class="text-xs text-[#767676]">No categories yet.</span>
                         <?php endif; ?>
                         <?php foreach ($period['categories'] as $category): ?>
                             <?= $renderCategory($category) ?>
@@ -358,7 +358,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
     <?php if ($uncategorized !== []): ?>
         <div class="flex flex-col gap-3 rounded-2xl border border-dashed border-gray-300 p-5" data-uncategorized-items>
             <span class="font-bold text-[#646464]">Uncategorized</span>
-            <span class="text-xs text-gray-400">These don't count toward the grade until you put them in a category.</span>
+            <span class="text-xs text-[#767676]">These don't count toward the grade until you put them in a category.</span>
             <?php foreach ($uncategorized as $item): ?>
                 <?= $renderItem($item) ?>
             <?php endforeach; ?>

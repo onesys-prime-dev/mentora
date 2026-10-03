@@ -62,7 +62,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
                 <?php endif; ?>
 
                 <div data-announcements-sentinel class="h-px"></div>
-                <div data-announcements-loading class="hidden py-2 text-center text-xs text-gray-400">Loading more…</div>
+                <div data-announcements-loading class="hidden py-2 text-center text-xs text-[#767676]">Loading more…</div>
 
             </div>
 

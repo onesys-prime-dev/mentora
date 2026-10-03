@@ -90,7 +90,7 @@ export function openCardEditor(card, { onBeforeOpen, onSaved } = {}) {
 
             const remove = document.createElement("button");
             remove.type = "button";
-            remove.className = "text-gray-400 hover:text-red-500";
+            remove.className = "text-[#767676] hover:text-red-500";
             remove.textContent = "×";
             remove.addEventListener("click", () => {
                 attachments.splice(index, 1);

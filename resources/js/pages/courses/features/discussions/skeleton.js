@@ -84,7 +84,7 @@ export function renderThreadSkeleton() {
             <nav aria-label="Breadcrumb">
                 <ol class="flex items-center gap-2 text-sm">
                     <li><button type="button" data-discussions-breadcrumb class="rounded font-medium text-[#646464] transition hover:text-[#0040A6]">Discussions</button></li>
-                    <li class="flex items-center gap-2 text-gray-400">›<span class="inline-block h-4 w-40 animate-pulse rounded bg-gray-200"></span></li>
+                    <li class="flex items-center gap-2 text-[#767676]">›<span class="inline-block h-4 w-40 animate-pulse rounded bg-gray-200"></span></li>
                 </ol>
             </nav>
 

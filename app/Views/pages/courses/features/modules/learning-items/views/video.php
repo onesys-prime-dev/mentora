@@ -75,7 +75,7 @@ $progressAttributes = $trackProgress
             <?= (int) ($currentItem['progress_percent'] ?? 0) ?>% watched
         </span>
 
-        <span class="text-gray-400">· watch 90% to complete · skipping ahead doesn't count</span>
+        <span class="text-[#767676]">· watch 90% to complete · skipping ahead doesn't count</span>
 
     </div>
 

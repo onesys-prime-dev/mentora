@@ -193,7 +193,7 @@ async function openSelectorModal() {
     }
 
     list.innerHTML =
-        "<p class=\"text-sm text-gray-400\">Loading...</p>";
+        "<p class=\"text-sm text-[#767676]\">Loading...</p>";
 
     modals.selector.open();
 
@@ -309,7 +309,7 @@ function renderRubricCard(rubric) {
                     ${escapeHtml(rubric.description ?? "")}
                 </span>
 
-                <span class="text-xs font-medium text-gray-400">
+                <span class="text-xs font-medium text-[#767676]">
                     ${criteriaCount} ${criteriaCount === 1 ? "criterion" : "criteria"}
                 </span>
 

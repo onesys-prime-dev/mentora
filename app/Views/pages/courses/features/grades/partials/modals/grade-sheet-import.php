@@ -79,7 +79,7 @@
 
         <div class="flex items-center justify-between border-t border-gray-200 px-8 py-6">
 
-            <span data-grade-sheet-status class="text-xs text-gray-400"></span>
+            <span data-grade-sheet-status class="text-xs text-[#767676]"></span>
 
             <div class="flex gap-3">
 

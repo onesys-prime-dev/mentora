@@ -117,7 +117,7 @@
                                         class="text-sm
                                         <?= $isCurrent
                                             ? 'font-semibold text-[#0040A6]'
-                                            : ($isLocked ? 'text-gray-400' : '') ?>"
+                                            : ($isLocked ? 'text-[#767676]' : '') ?>"
                                         data-item-title>
                                         <?= esc($item['title']) ?>
                                     </span>

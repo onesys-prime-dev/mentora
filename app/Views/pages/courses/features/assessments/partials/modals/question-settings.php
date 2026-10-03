@@ -104,7 +104,7 @@
                         class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
                         data-question-settings-answers-count>
 
-                    <span class="text-xs text-gray-400">
+                    <span class="text-xs text-[#767676]">
                         How many choices students must select for this question.
                     </span>
 
@@ -136,7 +136,7 @@
 
                 </div>
 
-                <span class="text-xs text-gray-400">
+                <span class="text-xs text-[#767676]">
                     Off: “cpu” matches “CPU”. On: the student’s answer must match the letter case of an accepted answer.
                 </span>
 

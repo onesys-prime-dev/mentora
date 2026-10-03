@@ -71,7 +71,7 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 
 
             <span
                 data-complete-hint
-                class="max-w-xs text-right text-xs text-gray-400 <?= ($isCompleted || $canComplete) ? 'hidden' : '' ?>">
+                class="max-w-xs text-right text-xs text-[#767676] <?= ($isCompleted || $canComplete) ? 'hidden' : '' ?>">
                 <?= esc($currentItem['complete_hint'] ?? '') ?>
             </span>
 
@@ -102,7 +102,7 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 
 
             <?php if ($nextLocked): ?>
                 <!-- Why Continue is disabled; completion.js removes it once the next item unlocks. -->
-                <span data-continue-lock-hint class="max-w-xs text-right text-xs text-gray-400 <?= $showContinue ? '' : 'hidden' ?>">
+                <span data-continue-lock-hint class="max-w-xs text-right text-xs text-[#767676] <?= $showContinue ? '' : 'hidden' ?>">
                     <?= esc($nextLockHint) ?>
                 </span>
             <?php endif; ?>

@@ -12,8 +12,8 @@ $statusMeta = match ($submissionStatus) {
     'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]', 'canExpand' => true],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500', 'canExpand' => false],
     'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500', 'canExpand' => false],
-    'In Progress' => ['label' => 'Not Submitted Yet', 'class' => 'bg-gray-100 text-gray-400', 'canExpand' => false],
-    default => ['label' => 'No Submission', 'class' => 'bg-gray-100 text-gray-400', 'canExpand' => false],
+    'In Progress' => ['label' => 'Not Submitted Yet', 'class' => 'bg-gray-100 text-[#767676]', 'canExpand' => false],
+    default => ['label' => 'No Submission', 'class' => 'bg-gray-100 text-[#767676]', 'canExpand' => false],
 };
 
 $existingScore = $submission['score'] ?? null;
@@ -102,7 +102,7 @@ $attemptTabs ??= [];
 
             <div class="flex items-center justify-between">
 
-                <span class="text-xs font-bold uppercase tracking-wide text-gray-400">
+                <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">
                     Students
                 </span>
 
@@ -156,8 +156,8 @@ $attemptTabs ??= [];
                             'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
                             'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
                             'Cancelled' => ['label' => 'Cancelled', 'class' => 'bg-red-50 text-red-500'],
-                            'In Progress' => ['label' => 'In Progress', 'class' => 'bg-gray-100 text-gray-400'],
-                            default => ['label' => 'No Submission', 'class' => 'bg-gray-100 text-gray-400'],
+                            'In Progress' => ['label' => 'In Progress', 'class' => 'bg-gray-100 text-[#767676]'],
+                            default => ['label' => 'No Submission', 'class' => 'bg-gray-100 text-[#767676]'],
                         };
 
                         $isActive = (int) $student['student_id'] === (int) ($selectedStudentId ?? 0);
@@ -209,7 +209,7 @@ $attemptTabs ??= [];
 
                 <?php if (empty($students)): ?>
 
-                    <div class="rounded-xl border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
+                    <div class="rounded-xl border border-dashed border-gray-200 p-4 text-center text-xs text-[#767676]">
                         No students enrolled.
                     </div>
 
@@ -261,7 +261,7 @@ $attemptTabs ??= [];
 
                             </div>
 
-                            <span class="text-xs text-gray-400">
+                            <span class="text-xs text-[#767676]">
                                 <?= $submission['submitted_at'] ? 'Submitted ' . esc(date('F j, Y g:i A', strtotime($submission['submitted_at']))) : 'Not submitted' ?>
                                 <?= !empty($submission['is_late_submission']) ? ' · Late' : '' ?>
                                 · Attempt <?= esc((int) ($submission['attempt_number'] ?? 1)) ?>
@@ -287,7 +287,7 @@ $attemptTabs ??= [];
 
                                         Attempt <?= esc($tab['number']) ?>
 
-                                        <span class="<?= $tab['active'] ? 'text-white/80' : 'text-gray-400' ?>">·</span>
+                                        <span class="<?= $tab['active'] ? 'text-white/80' : 'text-[#767676]' ?>">·</span>
 
                                         <?php if ($tab['score'] !== null): ?>
                                             <?= esc((int) $tab['score']) ?>/<?= esc((int) $totalPoints) ?>
@@ -331,7 +331,7 @@ $attemptTabs ??= [];
 
                                         <div class="flex items-center gap-2 pb-2">
 
-                                            <span class="text-xs font-bold text-gray-400">Q<?= esc($index + 1) ?></span>
+                                            <span class="text-xs font-bold text-[#767676]">Q<?= esc($index + 1) ?></span>
 
                                             <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">
                                                 <?= esc((int) $question['points']) ?> pts
@@ -351,7 +351,7 @@ $attemptTabs ??= [];
                                                             type="button"
                                                             data-question-edit-toggle
                                                             title="Grade this question manually" aria-label="Grade this question manually"
-                                                            class="rounded-full p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
+                                                            class="rounded-full p-1 text-[#767676] transition hover:bg-gray-200 hover:text-gray-600">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                             </svg>
@@ -372,7 +372,7 @@ $attemptTabs ??= [];
                                                             Incorrect
                                                         </button>
 
-                                                        <button type="button" data-question-mark="auto" title="Revert to the auto-grade" aria-label="Revert to the auto-grade" class="rounded-full p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
+                                                        <button type="button" data-question-mark="auto" title="Revert to the auto-grade" aria-label="Revert to the auto-grade" class="rounded-full p-1 text-[#767676] transition hover:bg-gray-200 hover:text-gray-600">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                             </svg>
@@ -451,7 +451,7 @@ $attemptTabs ??= [];
                                                     <?php if ($response && trim((string) $response['response_text']) !== ''): ?>
                                                         <?= esc($response['response_text']) ?>
                                                     <?php else: ?>
-                                                        <span class="text-gray-400">No response submitted.</span>
+                                                        <span class="text-[#767676]">No response submitted.</span>
                                                     <?php endif; ?>
                                                 </div>
 
@@ -465,7 +465,7 @@ $attemptTabs ??= [];
 
                                                 <?php else: ?>
 
-                                                    <span class="text-xs text-gray-400">No answer key — grade this one yourself.</span>
+                                                    <span class="text-xs text-[#767676]">No answer key — grade this one yourself.</span>
 
                                                 <?php endif; ?>
 
@@ -482,7 +482,7 @@ $attemptTabs ??= [];
                                             <div class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
                                                 <?= $response && $response['response_text'] !== null && $response['response_text'] !== ''
                                                     ? nl2br(esc($response['response_text']))
-                                                    : '<span class="text-gray-400">No response submitted.</span>' ?>
+                                                    : '<span class="text-[#767676]">No response submitted.</span>' ?>
                                             </div>
 
                                         <?php endif; ?>
@@ -499,7 +499,7 @@ $attemptTabs ??= [];
 
                         <?php else: ?>
 
-                            <div class="rounded-xl border border-dashed border-gray-200 bg-[#F9F9FC] px-4 py-6 text-center text-xs text-gray-400">
+                            <div class="rounded-xl border border-dashed border-gray-200 bg-[#F9F9FC] px-4 py-6 text-center text-xs text-[#767676]">
                                 No submission content available to preview for this assessment type.
                             </div>
 
@@ -556,7 +556,7 @@ $attemptTabs ??= [];
                         <button
                             type="button"
                             disabled
-                            class="inline-flex cursor-not-allowed items-center gap-1 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-400">
+                            class="inline-flex cursor-not-allowed items-center gap-1 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-[#767676]">
                             Grade Work
                         </button>
 

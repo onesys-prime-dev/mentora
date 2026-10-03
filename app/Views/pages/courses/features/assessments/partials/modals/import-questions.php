@@ -72,7 +72,7 @@
 
             <div data-import-diff-list class="flex flex-col gap-2"></div>
 
-            <p class="text-xs text-gray-400">
+            <p class="text-xs text-[#767676]">
                 Added and changed questions are always applied. For questions no longer found in the document,
                 check the ones you want to actually delete — anything left unchecked stays in the quiz.
             </p>
@@ -81,7 +81,7 @@
 
         <div class="flex items-center justify-between border-t border-gray-200 px-8 py-6">
 
-            <span data-import-status class="text-xs text-gray-400"></span>
+            <span data-import-status class="text-xs text-[#767676]"></span>
 
             <div class="flex gap-3">
 

@@ -11,7 +11,7 @@
             class="h-fit rounded-lg p-2 transition hover:bg-red-50">
 
             <svg xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6 text-gray-400 transition hover:text-red-500"
+                class="h-6 w-6 text-[#767676] transition hover:text-red-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"

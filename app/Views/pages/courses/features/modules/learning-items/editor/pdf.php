@@ -29,7 +29,7 @@ helper('number');
                 <span data-pdf-current-name class="truncate text-sm font-semibold text-[#1A1C1E]">
                     <?= esc($file['original_filename'] ?? '') ?>
                 </span>
-                <span data-pdf-current-size class="text-xs text-gray-400">
+                <span data-pdf-current-size class="text-xs text-[#767676]">
                     <?= $file ? esc(number_to_size((int) $file['file_size'])) : '' ?>
                 </span>
             </div>

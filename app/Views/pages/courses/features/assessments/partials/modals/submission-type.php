@@ -86,7 +86,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
                         File Upload
                     </span>
 
-                    <span class="text-xs text-gray-400">
+                    <span class="text-xs text-[#767676]">
                         Students upload a file as their submission.
                     </span>
 
@@ -125,7 +125,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
                         Text Entry
                     </span>
 
-                    <span class="text-xs text-gray-400">
+                    <span class="text-xs text-[#767676]">
                         Students type their response directly.
                     </span>
 
@@ -164,7 +164,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
                         Link Entry
                     </span>
 
-                    <span class="text-xs text-gray-400">
+                    <span class="text-xs text-[#767676]">
                         Students submit a URL (e.g. Google Docs, GitHub).
                     </span>
 

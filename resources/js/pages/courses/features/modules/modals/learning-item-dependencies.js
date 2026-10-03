@@ -78,7 +78,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
 
             const empty = document.createElement("p");
 
-            empty.className = "px-2 py-3 text-center text-xs text-gray-400";
+            empty.className = "px-2 py-3 text-center text-xs text-[#767676]";
 
             empty.textContent = "There are no earlier items in this unit.";
 
@@ -108,7 +108,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
 
             const meta = document.createElement("span");
 
-            meta.className = "shrink-0 text-xs capitalize text-gray-400";
+            meta.className = "shrink-0 text-xs capitalize text-[#767676]";
             meta.textContent = candidate.status === "published"
                 ? candidate.item_type
                 : `${candidate.item_type} · ${candidate.status}`;

@@ -248,7 +248,7 @@ $previewLabels = [
 
                                 <?php elseif ($question['question_type'] === 'File Upload'): ?>
 
-                                    <div class="ml-9 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-400">
+                                    <div class="ml-9 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-[#767676]">
                                         File upload isn't available yet for this quiz.
                                     </div>
 

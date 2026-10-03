@@ -33,7 +33,7 @@ $elements = [
     class="sticky top-6 flex w-[290px] shrink-0 flex-col gap-3 self-start"
     data-builder-palette>
 
-    <span class="text-xs font-bold uppercase tracking-wide text-gray-400">
+    <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">
         Add a Question
     </span>
 
@@ -74,13 +74,13 @@ $elements = [
 
     </div>
 
-    <span class="text-xs text-gray-400">
+    <span class="text-xs text-[#767676]">
         Drag a question type onto the canvas, or click it to add it to the end.
     </span>
 
     <div class="h-px bg-gray-200"></div>
 
-    <span class="text-xs font-bold uppercase tracking-wide text-gray-400">
+    <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">
         Build Faster
     </span>
 

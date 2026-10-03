@@ -265,7 +265,7 @@ function renderDiff(diff) {
 
         const row = document.createElement("div");
 
-        row.className = "rounded-xl border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400";
+        row.className = "rounded-xl border border-dashed border-gray-200 p-4 text-center text-xs text-[#767676]";
         row.textContent = "No differences found — this matches the current quiz exactly.";
 
         list.appendChild(row);

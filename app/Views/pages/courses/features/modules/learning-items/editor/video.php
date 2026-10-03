@@ -94,7 +94,7 @@ $source = !empty($resource['file'])
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="mb-4 h-10 w-10 text-gray-400"
+                    class="mb-4 h-10 w-10 text-[#767676]"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -193,7 +193,7 @@ $source = !empty($resource['file'])
             data-existing-video="<?= esc($resource['file']['url'] ?? '') ?>"
             class="aspect-video overflow-hidden bg-neutral-900">
 
-            <div class="flex h-full items-center justify-center text-gray-400">
+            <div class="flex h-full items-center justify-center text-[#767676]">
 
                 Video preview will appear here.
 
