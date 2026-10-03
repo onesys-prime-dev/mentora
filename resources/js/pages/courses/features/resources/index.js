@@ -1,3 +1,5 @@
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { fetchResources } from "./api.js";
 import { state } from "./state.js";
 import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
@@ -64,11 +66,17 @@ export async function initialize(patch = null)
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = renderResourcesSkeleton();
+    const load = beginLoad(container, renderResourcesSkeleton());
 
     try {
 
         state.data = await fetchResources(currentParams);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         container.innerHTML =
             state.data.html;
@@ -87,8 +95,13 @@ export async function initialize(patch = null)
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load Resources.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(container, "Resources", initialize);
 
     }
 
@@ -116,13 +129,19 @@ async function refreshBelowBreadcrumb(patch)
         return initialize();
     }
 
-    content.innerHTML = renderResourcesContentSkeleton();
+    const load = beginLoad(content, renderResourcesContentSkeleton(), 0);
 
     state.loading = true;
 
     try {
 
         state.data = await fetchResources(currentParams);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         const parsed = document.createElement("div");
         parsed.innerHTML = state.data.html;
@@ -162,7 +181,13 @@ async function refreshBelowBreadcrumb(patch)
 
         console.error(error);
 
-        content.innerHTML = "<p>Unable to load Resources.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(content, "Resources", initialize);
 
     }
 

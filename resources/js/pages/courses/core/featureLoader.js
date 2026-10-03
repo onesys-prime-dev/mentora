@@ -1,3 +1,5 @@
+import { supersede } from "../../../shared/spa/load-guard.js";
+
 const loaders = {
 
     overview: () => import("../features/overview/index.js"),
@@ -16,8 +18,14 @@ const loaders = {
 
 };
 
+// Bumped on every tab change so a slower, older tab can't start (or keep
+// painting its shell) after the user has already moved on.
+let latestLoad = 0;
+
 export async function loadFeature(feature)
 {
+    const loadId = ++latestLoad;
+
     const loader = loaders[feature];
 
     if (!loader) {
@@ -28,9 +36,42 @@ export async function loadFeature(feature)
 
     }
 
-    const module = await loader();
+    const content = document.querySelector("#course-content");
 
-    module.initialize();
+    content?.setAttribute("aria-busy", "true");
+
+    if (content) {
+
+        // A slower request from the tab we just left must not paint over this
+        // one, and its (now wrong) content shouldn't linger under the new tab.
+        supersede(content);
+
+        content.replaceChildren();
+
+    }
+
+    let module;
+
+    try {
+        module = await loader();
+    } catch (error) {
+        console.error(error);
+        content?.removeAttribute("aria-busy");
+        return;
+    }
+
+    if (loadId !== latestLoad) {
+        return;
+    }
+
+    // Not awaited: the tab highlight below shouldn't wait on the data fetch.
+    Promise.resolve(module.initialize())
+        .catch((error) => console.error(error))
+        .finally(() => {
+            if (loadId === latestLoad) {
+                content?.removeAttribute("aria-busy");
+            }
+        });
 
     document
         .querySelectorAll("[data-course-feature]")

@@ -6,6 +6,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { setBusy } from "../../../../shared/spa/busy-button.js";
 import { createThread, updateThread, uploadDiscussionAttachment } from "./api.js";
 import { initializeComposerEditor, getComposerEditor, destroyComposerEditor } from "../announcements/composer/tiptap.js";
 import { initializeComposerToolbar } from "../announcements/composer/toolbar.js";
@@ -128,7 +129,7 @@ export function setupComposer(root, onSaved) {
             return;
         }
 
-        submit.disabled = true;
+        setBusy(submit, true, mode === "edit" ? "Saving…" : "Posting…");
 
         const payload = {
             title,
@@ -160,6 +161,7 @@ export function setupComposer(root, onSaved) {
 
         } finally {
 
+            setBusy(submit, false);
             refresh();
 
         }

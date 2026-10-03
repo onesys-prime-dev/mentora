@@ -15,6 +15,7 @@
 |
 */
 
+import { showLoadError } from "../../../../../shared/spa/error-state.js";
 import { renderSchemeSkeleton } from "../skeleton.js";
 import {
     fetchGradingScheme,
@@ -59,7 +60,7 @@ export async function loadGradingScheme(back)
 
         console.error(error);
 
-        container.innerHTML = "<p>Unable to load the grading scheme.</p>";
+        showLoadError(container, "the grading scheme", () => loadGradingScheme(back));
 
     }
 }

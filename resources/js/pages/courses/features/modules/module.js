@@ -10,6 +10,7 @@
 |
 */
 
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { fetchModule } from "./api.js";
 import { state } from "./state.js";
 import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
@@ -84,7 +85,7 @@ export async function loadModule(moduleId, backToList, { highlight = null } = {}
 
         console.error(error);
 
-        container.innerHTML = "<p>Unable to load this module.</p>";
+        showLoadError(container, "this module", () => loadModule(moduleId, backToList));
 
     } finally {
 

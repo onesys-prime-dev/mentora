@@ -9,6 +9,7 @@
 |
 */
 
+import { showLoadError } from "../../../../../shared/spa/error-state.js";
 import { renderGradebookSkeleton } from "../skeleton.js";
 import { fetchGradebookRoster, updateManualScore, overrideGrade } from "../api.js";
 import { bindModal } from "../../assessments/modals/index.js";
@@ -38,7 +39,7 @@ export async function loadGradebookRoster(back)
 
         console.error(error);
 
-        container.innerHTML = "<p>Unable to load the gradebook.</p>";
+        showLoadError(container, "the gradebook", () => loadGradebookRoster(back));
 
     }
 }

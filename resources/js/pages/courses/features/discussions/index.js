@@ -1,3 +1,5 @@
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { fetchDiscussions, fetchMoreDiscussions } from "./api.js";
 import { state } from "./state.js";
 import { renderDiscussionsSkeleton, renderDiscussionListSkeleton } from "./skeleton.js";
@@ -37,11 +39,17 @@ export async function initialize()
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = renderDiscussionsSkeleton();
+    const load = beginLoad(container, renderDiscussionsSkeleton());
 
     try {
 
         state.data = await fetchDiscussions(currentFilters);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         container.innerHTML =
             state.data.html;
@@ -54,8 +62,13 @@ export async function initialize()
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load Discussions.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(container, "Discussions", initialize);
 
     }
 
@@ -112,11 +125,17 @@ async function refreshResults(patch) {
         return initialize();
     }
 
-    results.innerHTML = renderDiscussionListSkeleton();
+    const load = beginLoad(results, renderDiscussionListSkeleton(), 0);
 
     try {
 
         state.data = await fetchDiscussions(currentFilters);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         const parsed = document.createElement("div");
         parsed.innerHTML = state.data.html;
@@ -134,7 +153,13 @@ async function refreshResults(patch) {
 
         console.error(error);
 
-        results.innerHTML = "<p>Unable to load Discussions.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(results, "Discussions", () => refreshResults({}));
 
     }
 

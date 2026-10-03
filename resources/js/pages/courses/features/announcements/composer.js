@@ -6,6 +6,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { setBusy } from "../../../../shared/spa/busy-button.js";
 import { createAnnouncement, uploadAnnouncementAttachment } from "./api.js";
 import { initializeComposerEditor, getComposerEditor, resetComposerEditor } from "./composer/tiptap.js";
 import { initializeComposerToolbar } from "./composer/toolbar.js";
@@ -189,7 +190,7 @@ export function bindComposer(root, refresh) {
             attachment_file_ids: attachments.map((a) => a.file_id),
         };
 
-        submitButton.disabled = true;
+        setBusy(submitButton, true, "Posting…");
 
         try {
 
@@ -210,7 +211,7 @@ export function bindComposer(root, refresh) {
 
         } finally {
 
-            submitButton.disabled = false;
+            setBusy(submitButton, false);
             updateDirtyState();
 
         }

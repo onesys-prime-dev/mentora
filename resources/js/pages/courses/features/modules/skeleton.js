@@ -10,7 +10,7 @@ export function renderModulesSkeleton() {
 
     return `
 
-    <div class="p-10 animate-pulse flex flex-col gap-10">
+    <div class="p-10 animate-pulse flex flex-col gap-10" aria-hidden="true">
 
         ${renderToolbar()}
 
@@ -98,7 +98,7 @@ export function renderModulePageSkeleton() {
 
     return `
 
-    <div class="p-10 animate-pulse flex flex-col gap-8">
+    <div class="p-10 animate-pulse flex flex-col gap-8" aria-hidden="true">
 
         <!-- top bar -->
         <div class="flex items-start justify-between gap-5 pb-6 border-b border-black/10">
@@ -240,7 +240,7 @@ export function renderLearningItemSkeleton() {
 
     return `
 
-    <div class="flex animate-pulse">
+    <div class="flex animate-pulse" aria-hidden="true">
 
         <!-- left nav panel -->
         <div class="hidden w-72 shrink-0 flex-col gap-4 border-r border-gray-100 p-6 lg:flex">
@@ -276,7 +276,7 @@ export function renderLearningItemSkeleton() {
  */
 export function renderLearningItemMainSkeleton() {
 
-    return `<div class="animate-pulse">${renderLearningItemBody()}</div>`;
+    return `<div class="animate-pulse" aria-hidden="true">${renderLearningItemBody()}</div>`;
 
 }
 

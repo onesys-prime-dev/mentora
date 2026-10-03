@@ -10,6 +10,8 @@
 |
 */
 
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import {
     renderModulesSkeleton,
 } from "./skeleton.js";
@@ -131,12 +133,18 @@ async function loadModules() {
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = renderModulesSkeleton();
+    const load = beginLoad(container, renderModulesSkeleton());
 
     try {
 
         state.data =
             await fetchModules();
+
+            if (!load.current()) {
+                return;
+            }
+
+            load.finish();
 
         container.innerHTML =
             state.data.html;
@@ -149,8 +157,13 @@ async function loadModules() {
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load modules.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(container, "Modules", initialize);
 
     }
 

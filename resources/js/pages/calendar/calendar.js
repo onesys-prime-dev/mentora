@@ -15,6 +15,8 @@
 |--------------------------------------------------------------------------
 */
 
+import { showLoadError } from "../../shared/spa/error-state.js";
+
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -149,13 +151,27 @@ function rangeForView()
     return { from: `${isoDate(from)} 00:00:00`, to: `${isoDate(to)} 23:59:59` };
 }
 
+let latestFetch = 0;
+
 async function fetchAndRender()
 {
     const { from, to } = rangeForView();
 
     const body = document.getElementById("calendar-body");
 
+    const fetchId = ++latestFetch;
+
     body.setAttribute("aria-busy", "true");
+
+    // The grid keeps its shape between months, so the current one stays up
+    // and only dims if the fetch is slow; fast loads show nothing extra.
+    const dimTimer = setTimeout(() => {
+        if (fetchId === latestFetch) {
+            body.classList.add("opacity-60", "pointer-events-none", "transition-opacity");
+        }
+    }, 150);
+
+    let data;
 
     try {
 
@@ -168,9 +184,7 @@ async function fetchAndRender()
             throw new Error("Unable to load calendar events.");
         }
 
-        const data = await response.json();
-
-        setEvents(data.events || []);
+        data = await response.json();
 
     }
 
@@ -178,11 +192,31 @@ async function fetchAndRender()
 
         console.error(error);
 
-        body.innerHTML = `<p class="p-10 text-sm text-[#878787]">Unable to load the calendar. Try again.</p>`;
+        // A newer navigation already owns the calendar; its result wins.
+        if (fetchId !== latestFetch) {
+            return;
+        }
+
+        clearTimeout(dimTimer);
+        body.classList.remove("opacity-60", "pointer-events-none", "transition-opacity");
+        body.removeAttribute("aria-busy");
+
+        showLoadError(body, "the calendar", fetchAndRender);
 
         return;
 
     }
+
+    // A slower, older request must not overwrite a newer month/view.
+    if (fetchId !== latestFetch) {
+        return;
+    }
+
+    clearTimeout(dimTimer);
+    body.classList.remove("opacity-60", "pointer-events-none", "transition-opacity");
+    body.removeAttribute("aria-busy");
+
+    setEvents(data.events || []);
 
     render();
 }

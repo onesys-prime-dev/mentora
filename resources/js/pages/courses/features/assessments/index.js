@@ -1,3 +1,4 @@
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import {
     fetchAssessments,
     fetchAssessmentView,
@@ -232,8 +233,7 @@ async function loadAssessments() {
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load Assessments.</p>";
+        showLoadError(container, "Assessments", initialize);
 
     }
 

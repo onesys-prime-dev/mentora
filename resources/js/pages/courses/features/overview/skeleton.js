@@ -15,7 +15,7 @@ export function renderOverviewSkeleton() {
 
     return `
 
-    <div class="p-10 animate-pulse flex flex-col gap-8">
+    <div class="p-10 animate-pulse flex flex-col gap-8" aria-hidden="true">
 
         <div class="flex items-center gap-4">
             <div class="h-6 w-6 rounded bg-gray-200"></div>

@@ -211,6 +211,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    /* Skeletons stay visible (that is the loading signal) but stop pulsing. */
+    .animate-pulse {
+        animation: none;
+    }
+
     .spa-enter,
     ::view-transition-old(course-content),
     ::view-transition-new(course-content) {

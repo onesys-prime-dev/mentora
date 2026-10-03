@@ -1,3 +1,5 @@
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { renderOverviewSkeleton } from "./skeleton.js";
 
 import { fetchOverview } from "./api.js";
@@ -24,11 +26,17 @@ export async function initialize()
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = renderOverviewSkeleton();
+    const load = beginLoad(container, renderOverviewSkeleton());
 
     try {
 
         state.data = await fetchOverview();
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         container.innerHTML =
             state.data.html;
@@ -43,8 +51,13 @@ export async function initialize()
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load Overview.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(container, "Overview", initialize);
 
     }
 

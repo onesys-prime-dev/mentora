@@ -10,7 +10,7 @@ export function renderResourcesSkeleton() {
 
     return `
 
-    <div class="p-10 animate-pulse flex flex-col gap-6">
+    <div class="p-10 animate-pulse flex flex-col gap-6" aria-hidden="true">
 
         <div class="h-8 w-40 rounded bg-gray-200"></div>
 
@@ -39,7 +39,7 @@ export function renderResourcesContentSkeleton() {
 
     return `
 
-    <div class="animate-pulse flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white">
+    <div class="animate-pulse flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white" aria-hidden="true">
         ${Array.from({ length: rememberedRows("resources") }, renderRow).join("")}
     </div>
 

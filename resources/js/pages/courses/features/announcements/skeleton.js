@@ -11,7 +11,7 @@ export function renderAnnouncementsSkeleton() {
 
     return `
 
-    <div class="p-10 animate-pulse flex flex-col gap-6">
+    <div class="p-10 animate-pulse flex flex-col gap-6" aria-hidden="true">
 
         <div class="h-8 w-56 rounded bg-gray-200"></div>
 
@@ -40,7 +40,7 @@ export function renderAnnouncementsSkeleton() {
  */
 export function renderAnnouncementsMainSkeleton() {
 
-    return `<div class="animate-pulse flex flex-col gap-6">${renderMainContents()}</div>`;
+    return `<div class="animate-pulse flex flex-col gap-6" aria-hidden="true">${renderMainContents()}</div>`;
 
 }
 

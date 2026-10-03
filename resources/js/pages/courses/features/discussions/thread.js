@@ -6,6 +6,8 @@
 |--------------------------------------------------------------------------
 */
 
+import { setBusy } from "../../../../shared/spa/busy-button.js";
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import {
     fetchThread,
     postReply,
@@ -48,7 +50,7 @@ export async function loadThread(threadId, backToList, { pushState = true } = {}
 
         console.error(error);
 
-        container.innerHTML = "<p class=\"p-10 text-sm text-[#646464]\">Unable to load this discussion.</p>";
+        showLoadError(container, "this discussion", () => loadThread(threadId, backToList, { pushState: false }));
 
     }
 
@@ -454,7 +456,7 @@ function bindReplyBox(body, threadId) {
             return;
         }
 
-        send.disabled = true;
+        setBusy(send, true, "Sending…");
 
         try {
 
@@ -486,6 +488,7 @@ function bindReplyBox(body, threadId) {
 
         } finally {
 
+            setBusy(send, false);
             refresh();
 
         }

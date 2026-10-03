@@ -1,3 +1,5 @@
+import { beginLoad } from "../../../../shared/spa/load-guard.js";
+import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { fetchAnnouncements } from "./api.js";
 import { state } from "./state.js";
 import { bindComposer } from "./composer.js";
@@ -72,11 +74,17 @@ export async function initialize()
     const container =
         document.querySelector("#course-content");
 
-    container.innerHTML = renderAnnouncementsSkeleton();
+    const load = beginLoad(container, renderAnnouncementsSkeleton());
 
     try {
 
         state.data = await fetchAnnouncements({ ...currentFilters, focus: focusId });
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         container.innerHTML =
             state.data.html;
@@ -93,8 +101,13 @@ export async function initialize()
 
         console.error(error);
 
-        container.innerHTML =
-            "<p>Unable to load Announcements.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(container, "Announcements", initialize);
 
     }
 
@@ -131,11 +144,17 @@ async function refreshMainAndSidebar() {
         return initialize();
     }
 
-    main.innerHTML = renderAnnouncementsMainSkeleton();
+    const load = beginLoad(main, renderAnnouncementsMainSkeleton(), 0);
 
     try {
 
         state.data = await fetchAnnouncements(currentFilters);
+
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
 
         const parsed = document.createElement("div");
         parsed.innerHTML = state.data.html;
@@ -161,7 +180,13 @@ async function refreshMainAndSidebar() {
 
         console.error(error);
 
-        main.innerHTML = "<p>Unable to load Announcements.</p>";
+        if (!load.current()) {
+            return;
+        }
+
+        load.finish();
+
+        showLoadError(main, "Announcements", initialize);
 
     }
 
