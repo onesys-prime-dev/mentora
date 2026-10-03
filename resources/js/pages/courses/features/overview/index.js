@@ -1,3 +1,4 @@
+import { enterFeatureTab } from "../../core/featureLoader.js";
 import { beginLoad } from "../../../../shared/spa/load-guard.js";
 import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { renderOverviewSkeleton } from "./skeleton.js";
@@ -103,8 +104,9 @@ function bindRowActions()
                     return;
                 }
 
+                // Instructors land on the Assessments tab, not just its screen.
                 if (isInstructor) {
-                    loadGradeWork(offeringId, assessmentId, null, initialize);
+                    loadGradeWork(offeringId, assessmentId, null, enterFeatureTab("assessments"));
                     return;
                 }
 
@@ -124,7 +126,7 @@ function bindRowActions()
                     element.dataset.overviewEdit;
 
                 if (assessmentId) {
-                    loadAssessmentEditor(offeringId, assessmentId, initialize);
+                    loadAssessmentEditor(offeringId, assessmentId, enterFeatureTab("assessments"));
                 }
 
             });

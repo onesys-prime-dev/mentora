@@ -282,16 +282,25 @@ export function renderLearningItemMainSkeleton() {
 
 function renderLearningItemBody() {
 
+    const isStudent = window.coursesConfig?.role === "student";
+
+    // Mirrors the real header: "TYPE • UNIT" + status pill, the title, then
+    // the author line. The pill is a short rounded chip in both roles.
     return `
 
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex flex-col gap-3">
 
-        <div class="flex flex-col gap-2">
-            <div class="h-3 w-24 rounded bg-gray-200"></div>
-            <div class="h-7 w-80 rounded bg-gray-200"></div>
+        <div class="flex items-center gap-3">
+            <div class="h-3 w-40 rounded bg-gray-200"></div>
+            <div class="h-6 ${isStudent ? "w-32" : "w-20"} rounded-full bg-gray-200"></div>
         </div>
 
-        <div class="h-9 w-24 rounded-lg bg-gray-200"></div>
+        <div class="h-8 w-80 max-w-full rounded bg-gray-200"></div>
+
+        <div class="flex items-center gap-2">
+            <div class="h-8 w-8 rounded-full bg-gray-200"></div>
+            <div class="h-3 w-56 rounded bg-gray-200"></div>
+        </div>
 
     </div>
 
@@ -303,10 +312,13 @@ function renderLearningItemBody() {
         <div class="h-48 w-full rounded-xl bg-gray-200"></div>
     </div>
 
-    <!-- prev/next nav -->
+    <!-- footer: students also get Mark as completed; instructors just move between items -->
     <div class="mt-auto flex items-center justify-between pt-6">
         <div class="h-9 w-28 rounded-lg bg-gray-200"></div>
-        <div class="h-9 w-28 rounded-lg bg-gray-200"></div>
+        <div class="flex items-center gap-3">
+            ${isStudent ? "<div class=\"h-9 w-40 rounded-lg bg-gray-200\"></div>" : ""}
+            <div class="h-9 w-28 rounded-lg bg-gray-200"></div>
+        </div>
     </div>
 
     `;

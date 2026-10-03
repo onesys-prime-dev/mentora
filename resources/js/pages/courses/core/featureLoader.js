@@ -22,6 +22,49 @@ const loaders = {
 // painting its shell) after the user has already moved on.
 let latestLoad = 0;
 
+/** Marks one course tab as the active one; does not load anything. */
+export function highlightFeatureTab(feature)
+{
+    document
+        .querySelectorAll("[data-course-feature]")
+        .forEach(button => {
+            const isActive = button.dataset.courseFeature === feature;
+
+            button.classList.toggle("bg-white", isActive);
+            button.classList.toggle("border-t", isActive);
+            button.classList.toggle("border-black/15", isActive);
+            button.classList.toggle("!text-black", isActive);
+
+            // The active tab is white, so the dark hover would flip it back.
+            button.classList.toggle("hover:bg-blue-800", !isActive);
+
+            button.setAttribute("aria-selected", String(isActive));
+        });
+}
+
+/**
+ * Makes `feature` the active tab (highlight + URL) without loading its
+ * list, for a click elsewhere that opens one of its inner screens directly
+ * (e.g. an Overview row opening an assessment). Returns a "back" callback
+ * that does load that tab's list, so Back lands where the tab says you are.
+ */
+export function enterFeatureTab(feature)
+{
+    history.pushState({}, "", `${window.coursesConfig.browserBaseUrl}/${feature}`);
+
+    window.coursesConfig.activeFeature = feature;
+
+    highlightFeatureTab(feature);
+
+    return () => {
+
+        history.pushState({}, "", `${window.coursesConfig.browserBaseUrl}/${feature}`);
+
+        return loadFeature(feature);
+
+    };
+}
+
 export async function loadFeature(feature)
 {
     const loadId = ++latestLoad;
@@ -73,21 +116,7 @@ export async function loadFeature(feature)
             }
         });
 
-    document
-        .querySelectorAll("[data-course-feature]")
-        .forEach(button => {
-            const isActive = button.dataset.courseFeature === feature;
-
-            button.classList.toggle("bg-white", isActive);
-            button.classList.toggle("border-t", isActive);
-            button.classList.toggle("border-black/15", isActive);
-            button.classList.toggle("!text-black", isActive);
-
-            // The active tab is white, so the dark hover would flip it back.
-            button.classList.toggle("hover:bg-blue-800", !isActive);
-
-            button.setAttribute("aria-selected", String(isActive));
-        });
+    highlightFeatureTab(feature);
 }
 
 export function initializeFeatureLoader()
