@@ -7,8 +7,8 @@ day-to-day workflow.
 
 | Workflow | File | Runs when | Purpose |
 |---|---|---|---|
-| CI | `.github/workflows/ci.yml` | PR into or push to `staging` / `main` | Prove the change is sound before it can merge |
-| Deploy | `.github/workflows/deploy.yml` | push to `staging` | Build and copy the app to the staging server |
+| CI | `.github/workflows/ci.yml` | PR into `staging` / `main`, push to `main`, and called by Deploy | Prove the change is sound |
+| Deploy | `.github/workflows/deploy.yml` | push to `staging` | Run CI first; only if it passes, build and copy the app to the staging server |
 
 ## CI jobs (all must pass)
 
@@ -23,15 +23,21 @@ day-to-day workflow.
 Dependabot opens weekly update PRs for Composer, npm and GitHub Actions
 against `staging`; they run the same checks.
 
-## Branch protection (set in GitHub, not in code)
+## What stops a bad change (and what does not)
 
-Settings > Rules > Rulesets, for both `staging` and `main`:
+**The deploy gate (active).** `deploy.yml` calls `ci.yml` first and deploys only
+if **CI passed**. A broken push to `staging` therefore never reaches the demo
+server, however it got there.
 
-- Require a pull request before merging (required approvals: 0 while you are
-  the only developer; raise it when someone joins).
-- Require status checks to pass: **CI passed**. Require branches to be up to
-  date before merging.
-- Block force pushes and branch deletion.
+**Branch rules (not enforced).** GitHub does not enforce rulesets or branch
+protection on a private repository on a free plan. So today nothing technically
+prevents a direct push to `staging` or `main`, or merging a PR with red checks;
+the PR workflow in `CONTRIBUTING.md` is followed by habit, and the deploy gate
+is the backstop. If rulesets ever become enforceable (public repo, or a paid
+plan/organization), create one each for `staging` and `main`: require a pull
+request, require the status check **CI passed** (up to date with the base
+branch), require linear history, block force pushes and deletions. Revisit this
+when a second developer joins or a production server exists.
 
 ## What is not here yet
 

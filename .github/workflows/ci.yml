@@ -1,15 +1,17 @@
 name: CI
 
-# Runs on every pull request into staging/main and on every push to them.
-# The single job named "CI passed" at the bottom is the one that branch
-# protection requires, so jobs can be added or renamed here without editing
-# the repository settings each time.
+# Runs on every pull request into staging/main, on pushes to main, and is
+# called by deploy.yml before anything is copied to a server (so a push to
+# staging that fails these checks is never deployed). The job named
+# "CI passed" at the bottom is the single result to look at (and the one to
+# require in a branch ruleset if enforcement is ever turned on).
 
 on:
   pull_request:
     branches: [staging, main]
   push:
-    branches: [staging, main]
+    branches: [main]
+  workflow_call:
 
 # A newer push to the same PR cancels the older, now-pointless run.
 concurrency:

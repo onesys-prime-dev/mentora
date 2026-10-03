@@ -21,7 +21,10 @@ feature/my-change ──PR──▶ staging ──PR──▶ main
 - **`feature/*`** branches are where all work happens. One branch per change.
 - **`staging`** is what the demo server runs. Merging a PR into it deploys it.
 - **`main`** is the production line. It is only updated from `staging`.
-- You never push directly to `staging` or `main`. GitHub refuses it.
+- You never push directly to `staging` or `main`. GitHub does not enforce this
+  on a private repo on a free plan, so it is a habit, not a lock. If you slip
+  and push a broken commit to `staging`, the deploy refuses to run because CI
+  fails, but the commit stays on the branch and has to be fixed or reverted.
 
 ## The recipe
 
@@ -46,7 +49,8 @@ feature/my-change ──PR──▶ staging ──PR──▶ main
    re-runs on the new commit. You do not open a new PR.
 7. **Read your own diff** under "Files changed" before merging. Most mistakes
    are caught this way.
-8. **Merge.** The merge button stays grey until CI is green. Use
+8. **Merge only when CI is green.** GitHub will not stop you from merging a
+   red PR (see above), so check the "CI passed" line yourself. Use
    "Squash and merge" so each PR becomes one clean commit on `staging`.
 9. **Watch the deploy.** Merging into `staging` starts the Deploy workflow
    (Actions tab). When it is green the change is on the demo server.
