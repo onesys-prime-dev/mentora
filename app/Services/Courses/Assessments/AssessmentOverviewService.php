@@ -73,6 +73,13 @@ class AssessmentOverviewService
 
         $now = time();
 
+        // One batched lookup for every assessment's learning item, rather
+        // than re-reading a unit per assessment.
+        $locks = $progress->locksFor($user, array_values(array_filter(array_map(
+            static fn (array $a) => (int) ($a['learning_item_id'] ?? 0),
+            $assessments
+        ))));
+
         $rows = [];
 
         foreach ($assessments as $assessment) {
@@ -82,7 +89,7 @@ class AssessmentOverviewService
             $attempt = $attempts[$id][(int) $user->id] ?? null;
 
             $lock = !empty($assessment['learning_item_id'])
-                ? $progress->lockFor($user, (int) $assessment['learning_item_id'])
+                ? ($locks[(int) $assessment['learning_item_id']] ?? null)
                 : null;
 
             $assessment['student'] = $this->studentState($assessment, $attempt, $lock, $now);

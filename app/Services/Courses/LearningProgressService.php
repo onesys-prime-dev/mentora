@@ -148,6 +148,81 @@ class LearningProgressService
         ];
     }
 
+    /**
+     * lockFor() for many items at once, in a fixed number of queries
+     * regardless of how many items or units are involved. For lists (the
+     * dashboard's assessments) where asking per item re-reads each unit.
+     *
+     * @param list<int> $learningItemIds
+     * @return array<int, array{message: string, prerequisites: list<array{id: int, title: string}>}|null> item id → lock or null
+     */
+    public function locksFor(User $user, array $learningItemIds): array
+    {
+        $locks = array_fill_keys(array_map('intval', $learningItemIds), null);
+
+        if ($locks === [] || $user->inGroup('instructor')) {
+            return $locks;
+        }
+
+        $db = db_connect();
+
+        $gated = $db->table('learning_items')
+            ->select(['id', 'learning_unit_id'])
+            ->whereIn('id', array_keys($locks))
+            ->where('prerequisite_mode !=', 'none')
+            ->get()
+            ->getResultArray();
+
+        if ($gated === []) {
+            return $locks;
+        }
+
+        $unitIds = array_values(array_unique(array_map(static fn (array $r) => (int) $r['learning_unit_id'], $gated)));
+
+        $rows = $db->table('learning_items')
+            ->select(['id', 'learning_unit_id', 'title', 'item_type', 'prerequisite_mode'])
+            ->whereIn('learning_unit_id', $unitIds)
+            ->where('status', 'published')
+            ->orderBy('order_index', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $byUnit = [];
+        $allIds = [];
+
+        foreach ($rows as $row) {
+            $byUnit[(int) $row['learning_unit_id']][] = $row;
+            $allIds[] = (int) $row['id'];
+        }
+
+        $completions = $this->completionMap((int) $user->id, $allIds);
+        $custom = $this->customPrerequisiteMap($allIds);
+
+        $states = [];
+
+        foreach ($byUnit as $items) {
+            $states += $this->evaluateItems($items, $completions, $custom);
+        }
+
+        foreach ($gated as $row) {
+
+            $id = (int) $row['id'];
+
+            $state = $states[$id] ?? null;
+
+            if ($state && $state['is_locked']) {
+                $locks[$id] = [
+                    'message' => $this->lockMessage($state['locked_by']),
+                    'prerequisites' => $state['locked_by'],
+                ];
+            }
+
+        }
+
+        return $locks;
+    }
+
     public function lockMessage(array $lockedBy): string
     {
         $titles = array_map(static fn (array $p) => '“' . $p['title'] . '”', $lockedBy);
