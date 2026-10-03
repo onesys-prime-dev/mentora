@@ -18,6 +18,8 @@ concurrency:
 
 permissions:
   contents: read
+  # gitleaks reads the PR's commit list through the API on pull_request runs.
+  pull-requests: read
 
 jobs:
   php-syntax:
