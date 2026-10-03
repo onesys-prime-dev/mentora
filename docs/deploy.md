@@ -34,7 +34,7 @@ Repository secrets (Settings > Secrets and variables > Actions):
 | `VPS_PRIVATE_KEY` | SSH private key whose public half is in the server user's `authorized_keys` |
 | `VPS_USERNAME` | `mentora` |
 | `VPS_HOST` | the server's host name or IP |
-| `VPS_KNOWN_HOSTS` | *(recommended, not required yet)* the server's SSH host key line(s), so the runner verifies it is talking to the real server |
+| `VPS_KNOWN_HOSTS` | *(recommended)* the server's ssh-ed25519 host key, so the runner verifies it is talking to the real server. Only the `ssh-ed25519 AAAA...` part is used and it is paired with `VPS_HOST`, so it does not matter whether the scan used the IP or the host name |
 
 To create `VPS_KNOWN_HOSTS`, run this on your own computer and copy the output
 line(s) into the secret:
