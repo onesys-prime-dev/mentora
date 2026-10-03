@@ -39,8 +39,13 @@ before changing anything.
 - Put it in `tests/unit/` (no database), `tests/database/` (service and model
   tests that need MySQL) or later `tests/feature/` (HTTP routes).
 - A database test: `final class FooTest extends \Tests\Support\DatabaseTestCase`.
-  The schema is built once per run and not rolled back, so a test deletes the
-  rows it creates (or uses unique values) so it does not affect the others.
+  The schema is built once per run. Set `protected bool $isolateTests = true;`
+  and each test runs inside a transaction that is rolled back afterwards (the
+  tables are emptied once before the class's first test), so tests never see
+  each other's rows and the suite stays fast.
+- Build data with `Tests\Support\CourseFactory` (users in a role, an offering,
+  enrolments, modules, units, items, progress). A test then reads as the
+  situation it sets up, for example `CourseFactory::items($unitId, [[], ['mode' => 'previous']])`.
 - A bug fix includes a test that fails without the fix.
 - Never call the AI question service from a test; use a fake that implements
   `App\Services\AI\QuestionGeneratorClientInterface`.
@@ -63,7 +68,7 @@ baseline and only ever raised.
 Checklist, one pull request per domain, in this order:
 
 - [x] Foundation: MySQL test database, safety guard, migrations apply cleanly on an empty database
-- [ ] Modules and progress: `ModuleService`, `LearningProgressService` (`lockFor` equals `locksFor`), `ContentDeletionService`
+- [ ] Modules and progress: `LearningProgressService` is covered (locks, `lockFor` equals `locksFor`, completion rules, video progress, dependencies; 49 tests). Still to do: `ModuleService`, `ContentDeletionService`
 - [ ] Grades: `GradeService`, `GradingSchemeService`, `GradingEngineService`, `GradeItemSync`, `GradebookSync`, sheet import and export, `RosterRiskService`
 - [ ] Auth and roles: `LoginService`, `RedirectController`, role separation on every route group
 - [ ] Discussions: `DiscussionService`, `DiscussionController`
