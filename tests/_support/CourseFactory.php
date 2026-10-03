@@ -197,14 +197,121 @@ final class CourseFactory
         ]);
     }
 
-    /** A learning resource (a video link, for instance) attached to an item. */
-    public static function resource(int $itemId, string $type, ?string $url): void
+    /**
+     * A learning resource attached to an item: a link (pass $url) or an
+     * uploaded file (pass $fileId, from file()).
+     */
+    public static function resource(int $itemId, string $type, ?string $url, ?int $fileId = null): void
     {
         db_connect()->table('learning_resources')->insert([
             'learning_item_id' => $itemId,
+            'file_id' => $fileId,
             'title' => 'Resource',
             'resource_type' => $type,
             'resource_url' => $url,
         ]);
+    }
+
+    /** @var list<string> disk paths created by file(), removed by removeCreatedFiles() */
+    private static array $createdFiles = [];
+
+    /**
+     * An uploaded file: a row in `files` plus a real file under
+     * writable/uploads/tests/, so deletion tests can check both are removed.
+     * Call removeCreatedFiles() in tearDown (the database rolls back by
+     * itself, the disk does not).
+     *
+     * @return array{id: int, path: string}
+     */
+    public static function file(User $owner, string $content = 'test file'): array
+    {
+        $key = 'tests/' . uniqid('f', true) . '.txt';
+        $path = WRITEPATH . 'uploads/' . $key;
+
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0775, true);
+        }
+
+        file_put_contents($path, $content);
+        self::$createdFiles[] = $path;
+
+        $db = db_connect();
+
+        $db->table('files')->insert([
+            'owner_user_id' => $owner->id,
+            'original_filename' => 'test.txt',
+            'stored_filename' => basename($key),
+            'mime_type' => 'text/plain',
+            'file_size' => strlen($content),
+            'storage_key' => $key,
+            'status' => 'ready',
+            'uploaded_at' => self::now(),
+        ]);
+
+        return ['id' => (int) $db->insertID(), 'path' => $path];
+    }
+
+    public static function removeCreatedFiles(): void
+    {
+        foreach (self::$createdFiles as $path) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        self::$createdFiles = [];
+    }
+
+    /**
+     * A quiz or assignment for an offering, optionally tied to a learning
+     * item (as Modules creates them).
+     *
+     * @return int assessment id
+     */
+    public static function assessment(int $offeringId, User $creator, ?int $moduleId = null, ?int $itemId = null, string $type = 'Quiz'): int
+    {
+        $db = db_connect();
+
+        $typeRow = $db->table('assessment_types')->where('name', $type)->get()->getRowArray();
+
+        if ($typeRow === null) {
+            $db->table('assessment_types')->insert(['name' => $type, 'created_at' => self::now()]);
+            $typeId = (int) $db->insertID();
+        } else {
+            $typeId = (int) $typeRow['id'];
+        }
+
+        $courseId = (int) $db->table('course_offerings')->where('id', $offeringId)->get()->getRowArray()['course_id'];
+
+        $db->table('assessments')->insert([
+            'course_id' => $courseId,
+            'module_id' => $moduleId,
+            'learning_item_id' => $itemId,
+            'assessment_type_id' => $typeId,
+            'title' => $type . ' ' . self::next(),
+            'available_from' => '2026-09-01 08:00:00',
+            'due_date' => '2026-12-01 23:59:00',
+            'created_by' => $creator->id,
+            'created_at' => self::now(),
+        ]);
+
+        return (int) $db->insertID();
+    }
+
+    /** A discussion thread, optionally backing a discussion learning item. */
+    public static function thread(int $offeringId, User $author, ?int $itemId = null): int
+    {
+        $db = db_connect();
+
+        $db->table('discussion_threads')->insert([
+            'offering_id' => $offeringId,
+            'learning_item_id' => $itemId,
+            'author_id' => $author->id,
+            'title' => 'Thread ' . self::next(),
+            'body' => '',
+            'last_activity_at' => self::now(),
+        ]);
+
+        return (int) $db->insertID();
     }
 }

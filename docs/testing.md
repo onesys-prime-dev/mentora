@@ -68,7 +68,7 @@ baseline and only ever raised.
 Checklist, one pull request per domain, in this order:
 
 - [x] Foundation: MySQL test database, safety guard, migrations apply cleanly on an empty database
-- [ ] Modules and progress: `LearningProgressService` is covered (locks, `lockFor` equals `locksFor`, completion rules, video progress, dependencies; 49 tests). Still to do: `ModuleService`, `ContentDeletionService`
+- [ ] Modules and progress: `LearningProgressService` is covered (locks, `lockFor` equals `locksFor`, completion rules, video progress, dependencies; 49 tests). `ContentDeletionService` is covered too (cascades, renumbering, other courses untouched, discussion threads kept, assessments removed, files purged only when unused; 14 tests). Still to do: `ModuleService`
 - [ ] Grades: `GradeService`, `GradingSchemeService`, `GradingEngineService`, `GradeItemSync`, `GradebookSync`, sheet import and export, `RosterRiskService`
 - [ ] Auth and roles: `LoginService`, `RedirectController`, role separation on every route group
 - [ ] Discussions: `DiscussionService`, `DiscussionController`
