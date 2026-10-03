@@ -11,7 +11,7 @@ jobs:
 
     env:
       SSH_PORT: 22
-      DEPLOY_PATH: /home/mentora/htdocs/mentora.srv1404227.hstgr.cloud
+      DEPLOY_PATH: /home/mentora/htdocs/mentora
 
     steps:
       ########################################################
