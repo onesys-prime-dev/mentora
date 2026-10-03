@@ -11,12 +11,8 @@
         <div class="flex items-center justify-start">
             <img
                 class="h-10 w-auto"
-                src="<?= base_url('assets/images/logos/logo.png') ?>"
+                src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>"
                 alt="Mentora logo">
-
-            <span class="text-2xl font-bold font-display text-blue-800 tracking-tight">
-                Mentora
-            </span>
         </div>
 
         <div class="mt-8 flex flex-col gap-1 text-center">
