@@ -137,17 +137,22 @@ jobs:
       # 0 when it cannot connect, so the next check proves the migrations
       # really ran: the history table must hold at least one row per App
       # migration file.
-      - name: Migrate the empty database
+      - name: Migrate an empty database (as the server does)
         run: |
+          # A database of its own: spark records the migration history under
+          # the "default" group, while PHPUnit migrates the "tests" group, so
+          # sharing mentora_test would make PHPUnit re-run every migration.
+          php -r '(new mysqli("127.0.0.1", "root", ""))->query("CREATE DATABASE mentora_spark_check");'
+
           env database.default.hostname=127.0.0.1 \
-              database.default.database=mentora_test \
+              database.default.database=mentora_spark_check \
               database.default.username=root \
               database.default.password= \
               database.default.DBDriver=MySQLi \
               php spark migrate --all
 
           php -r '
-            $db = new mysqli("127.0.0.1", "root", "", "mentora_test");
+            $db = new mysqli("127.0.0.1", "root", "", "mentora_spark_check");
             $ran = (int) $db->query("SELECT COUNT(*) AS c FROM migrations")->fetch_assoc()["c"];
             $files = count(glob("app/Database/Migrations/*.php"));
             echo "{$ran} migrations recorded, {$files} App migration files\n";
