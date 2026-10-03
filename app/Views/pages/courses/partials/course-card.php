@@ -52,7 +52,7 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
 
         <div class="flex flex-col gap-0.5">
             <span class="text-sm font-medium text-[#1A1C1E]"><?= esc($course['schedule'] ?: 'No schedule set') ?></span>
-            <span class="text-xs text-[#646464]">Room <?= esc($course['room'] ?? '--') ?></span>
+            <span class="text-xs text-[#646464]"><?= esc($course['room'] ?? '--') ?></span>
             <?php if (!empty($course['instructor_name'])): ?>
                 <span class="text-xs text-[#646464]">Instr. <?= esc($course['instructor_name']) ?></span>
             <?php endif; ?>
