@@ -1,3 +1,4 @@
+import { setBusy } from "../../../../shared/spa/busy-button.js";
 import { beginLoad } from "../../../../shared/spa/load-guard.js";
 import { showLoadError } from "../../../../shared/spa/error-state.js";
 import { fetchGrades, recalculateGrades } from "./api.js";
@@ -144,7 +145,7 @@ function bindGradebookToolbar()
     document.querySelectorAll("[data-recalculate-grades]").forEach((button) => {
         button.addEventListener("click", async () => {
 
-            button.disabled = true;
+            setBusy(button, true, "Recalculating…");
 
             try {
                 await recalculateGrades();

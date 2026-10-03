@@ -9,6 +9,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { setBusy } from "../../../../shared/spa/busy-button.js";
 import { updateAnnouncement, uploadAnnouncementAttachment } from "./api.js";
 import { initializeComposerEditor, getComposerEditor, destroyComposerEditor } from "./composer/tiptap.js";
 import { initializeComposerToolbar } from "./composer/toolbar.js";
@@ -180,7 +181,7 @@ export function openCardEditor(card, { onBeforeOpen, onSaved } = {}) {
             return;
         }
 
-        saveButton.disabled = true;
+        setBusy(saveButton, true, "Saving…");
 
         try {
 
@@ -207,7 +208,7 @@ export function openCardEditor(card, { onBeforeOpen, onSaved } = {}) {
 
         } finally {
 
-            saveButton.disabled = false;
+            setBusy(saveButton, false);
 
         }
 

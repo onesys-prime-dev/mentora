@@ -11,6 +11,7 @@
 |
 */
 
+import { setBusy } from "../../../../../shared/spa/busy-button.js";
 import { postFeedback } from "../api.js";
 
 export function bindFeedbackComposer(offeringId, reload) {
@@ -43,7 +44,7 @@ export function bindFeedbackComposer(offeringId, reload) {
         const submissionId =
             panel.dataset.feedbackSubmissionId;
 
-        button.disabled = true;
+        setBusy(button, true, "Sending…");
 
         error.classList.add("hidden");
 
@@ -68,7 +69,7 @@ export function bindFeedbackComposer(offeringId, reload) {
 
         } finally {
 
-            button.disabled = false;
+            setBusy(button, false);
 
         }
 
