@@ -136,21 +136,23 @@ jobs:
       # Deploy
       ########################################################
 
+      # The leading "/" on each exclude limits it to the project root; without
+      # it a rule such as "tests" also matched folders inside vendor/.
       - name: Deploy application
         run: |
           rsync -az --delete \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude=".env" \
-            --exclude="node_modules" \
-            --exclude="tests" \
-            --exclude="writable" \
-            --exclude="python-question-builder-service" \
-            --exclude="docs" \
-            --exclude="builds" \
-            --exclude=".claude" \
-            --exclude="env" \
-            --exclude="phpunit.dist.xml" \
+            --exclude="/.git" \
+            --exclude="/.github" \
+            --exclude="/.env" \
+            --exclude="/node_modules" \
+            --exclude="/tests" \
+            --exclude="/writable" \
+            --exclude="/python-question-builder-service" \
+            --exclude="/docs" \
+            --exclude="/builds" \
+            --exclude="/.claude" \
+            --exclude="/env" \
+            --exclude="/phpunit.dist.xml" \
             -e "ssh $SSH_OPTS" \
             ./ \
             "$REMOTE:$DEPLOY_PATH"
@@ -182,10 +184,13 @@ jobs:
       # Health check
       ########################################################
 
+      # -k: the staging site uses a self-signed certificate (no real domain
+      # yet), which curl would otherwise reject. Remove -k once the site has a
+      # certificate from a real authority.
       - name: Check the site is healthy
         run: |
           for attempt in 1 2 3 4 5 6; do
-            body=$(curl -fsS --max-time 15 "$HEALTH_URL" || true)
+            body=$(curl -kfsS --max-time 15 "$HEALTH_URL" || true)
             echo "Attempt $attempt: $body"
             if echo "$body" | grep -q '"status":"ok"'; then
               echo "Healthy."

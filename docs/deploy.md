@@ -20,10 +20,10 @@ secrets belong in this file.
 1. **Build** on the GitHub runner: Composer (production only, PHP 8.5), `npm ci`, `npm run build`.
 2. **Check the target**: stops unless the live folder has `.env` and `writable/`, and `php8.5` exists. A wrong path fails here instead of silently deploying to a dead folder.
 3. **Back up the database** to `~/backups/deploy-<timestamp>.sql.gz` on the server. The deploy stops if the dump did not finish. The 10 newest backups are kept.
-4. **Copy** the app with `rsync --delete`. Never touched: `.env`, `writable/`, `node_modules/`. Never copied: tests, docs, `.github`, `.claude`, the Python question-builder service, and other development files.
+4. **Copy** the app with `rsync --delete`. Excludes are anchored to the project root (`/tests`, not any folder named tests). Never touched: `.env`, `writable/`, `node_modules/`. Never copied: tests, docs, `.github`, `.claude`, the Python question-builder service, and other development files.
 5. **Fix `writable/` permissions.**
 6. **Run `php8.5 spark migrate --all`** so the database matches the code.
-7. **Health check**: `GET /health` must answer `{"status":"ok"}` (it only does when the app can reach its database). Retried for about a minute, then the deploy fails.
+7. **Health check**: `GET /health` must answer `{"status":"ok"}` (it only does when the app can reach its database). Retried for about a minute, then the deploy fails. The check skips certificate verification (`curl -k`) because staging uses a self-signed certificate; remove that once the site has a real one.
 
 ## Secrets and settings it needs
 
