@@ -6,12 +6,22 @@ on:
       - staging
 
 jobs:
+  # The deploy only starts if every CI check passes on this exact commit.
+  # This is the safeguard while GitHub branch rules cannot be enforced on a
+  # private repo on a free plan: a bad push to staging never reaches the server.
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      pull-requests: read
+
   deploy:
+    needs: ci
     runs-on: ubuntu-latest
 
     env:
       SSH_PORT: 22
-      DEPLOY_PATH: /home/mentora/htdocs/mentora.srv1404227.hstgr.cloud
+      DEPLOY_PATH: /home/mentora/htdocs/mentora
 
     steps:
       ########################################################
