@@ -70,6 +70,38 @@ final class GradeFactory
         return (int) $db->insertID();
     }
 
+    /**
+     * The system default scheme every offering's scheme is copied from the
+     * first time it is needed (is_system_default = 1, no offering).
+     *
+     * @param array<string, int|float> $categories name => weight
+     *
+     * @return int scheme id
+     */
+    public static function systemDefault(float $passing = 75.0, array $categories = ['Quizzes' => 30, 'Exams' => 70]): int
+    {
+        $db = db_connect();
+
+        $db->table('grading_schemes')->insert([
+            'course_offering_id' => null,
+            'name' => 'System default',
+            'is_system_default' => 1,
+            'passing_percentage' => $passing,
+            'grade_scale_id' => self::scale(),
+            'status' => 'Published',
+            'created_at' => self::now(),
+        ]);
+
+        $schemeId = (int) $db->insertID();
+        $order = 1;
+
+        foreach ($categories as $name => $weight) {
+            self::category($schemeId, (string) $name, (float) $weight, null, $order++);
+        }
+
+        return $schemeId;
+    }
+
     public static function period(int $schemeId, string $name, float $weight, int $order = 1): int
     {
         $db = db_connect();
@@ -101,14 +133,15 @@ final class GradeFactory
         return (int) $db->insertID();
     }
 
-    /** A manual gradebook item (not tied to an assessment). */
-    public static function item(int $schemeId, ?int $categoryId, string $name, float $maxPoints, int $order = 1): int
+    /** A gradebook item: manual by default, or tied to an assessment. */
+    public static function item(int $schemeId, ?int $categoryId, string $name, float $maxPoints, int $order = 1, ?int $assessmentId = null): int
     {
         $db = db_connect();
 
         $db->table('grade_items')->insert([
             'grading_scheme_id' => $schemeId,
             'category_id' => $categoryId,
+            'assessment_id' => $assessmentId,
             'name' => $name,
             'max_points' => $maxPoints,
             'sort_order' => $order,
