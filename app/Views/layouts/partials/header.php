@@ -59,12 +59,16 @@ $accountLinks = [
 
     <div class="flex gap-4 items-center">
         <button
-            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer">
-            <?= icon('bell', 'h-4 w-4') ?>
+            type="button"
+            aria-label="Notifications"
+            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
+            <?= icon('bell', 'h-4 w-4 text-current') ?>
         </button>
         <button
-            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer">
-            <?= icon('night', 'h-4 w-4') ?>
+            type="button"
+            aria-label="Toggle dark mode"
+            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
+            <?= icon('night', 'h-4 w-4 text-current') ?>
         </button>
 
         <div class="relative">
@@ -75,8 +79,8 @@ $accountLinks = [
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="app-menu-panel"
-                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer">
-                <?= icon('apps', 'h-4 w-4') ?>
+                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2 aria-expanded:bg-[#0040A6] aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
+                <?= icon('apps', 'h-4 w-4 text-current') ?>
             </button>
 
             <!-- Global apps — same list as the dashboard's Quick Access (global_apps()) -->
@@ -111,7 +115,7 @@ $accountLinks = [
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="profile-menu-panel"
-                class="h-11 flex items-center gap-5 p-1 pr-3 border border-gray-300 rounded-4xl cursor-pointer">
+                class="h-11 flex items-center gap-5 p-1 pr-3 border border-gray-300 rounded-4xl cursor-pointer transition duration-150 hover:-translate-y-0.5 hover:border-[#0040A6]/50 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 aria-expanded:border-[#0040A6] aria-expanded:bg-[#0040A6]/10 aria-expanded:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
                 <img
                     class="h-full w-auto rounded-full"
                     src="<?= $avatarUrl ?>"
@@ -120,7 +124,7 @@ $accountLinks = [
                 <!-- arrow-down svg -->
                 <svg
                     id="profile-menu-arrow"
-                    class="h-5 w-5 text-gray-500 transition-transform duration-200"
+                    class="h-5 w-5 text-gray-500 transition duration-200 group-hover:text-[#0040A6]"
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     fill="none"

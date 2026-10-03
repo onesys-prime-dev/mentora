@@ -55,11 +55,18 @@ $drafts = $data['drafts'] ?? [];
                         <div class="h-px -mx-3 bg-black/5" aria-hidden="true"></div>
                     <?php endif; ?>
 
-                    <?php $param = $draft['type'] === 'Module' ? 'module' : 'unit'; ?>
+                    <?php
+                    $base = site_url($userRole . '/courses/' . $draft['offering_id'] . '/' . $draft['slug'] . '/modules');
+                    $href = match ($draft['type']) {
+                        'Module' => $base . '?module=' . $draft['id'],
+                        'Unit' => $base . '?module=' . $draft['module_id'] . '&view=1&highlight=unit:' . $draft['id'],
+                        default => $base . '?module=' . $draft['module_id'] . '&view=1&highlight=item:' . $draft['id'],
+                    };
+                    ?>
 
                     <a
                         class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45"
-                        href="<?= site_url($userRole . '/courses/' . $draft['offering_id'] . '/' . $draft['slug'] . '/modules?' . $param . '=' . $draft['id']) ?>">
+                        href="<?= $href ?>">
 
                         <div class="w-9 h-9 shrink-0 flex justify-center items-center bg-amber-600 rounded-full transition-transform duration-150 group-hover:scale-110">
                             <?= icon('lessons', 'w-5 h-5 text-white') ?>
@@ -75,7 +82,7 @@ $drafts = $data['drafts'] ?? [];
                                 <span class="shrink-0">·</span>
                                 <span class="shrink-0"><?= esc($draft['type']) ?></span>
                                 <span class="shrink-0">·</span>
-                                <span class="truncate"><?= esc($draft['items']) ?> items</span>
+                                <span class="truncate"><?= $draft['detail'] !== null ? esc($draft['detail']) : esc($draft['items']) . ' items' ?></span>
                             </div>
                         </div>
 

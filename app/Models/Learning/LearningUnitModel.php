@@ -111,6 +111,7 @@ class LearningUnitModel extends Model
         return $this->builder()
             ->select([
                 'learning_units.id AS content_id',
+                'course_modules.id AS module_id',
                 'course_modules.offering_id',
                 'learning_units.title',
                 'learning_units.updated_at',

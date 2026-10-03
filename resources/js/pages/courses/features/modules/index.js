@@ -94,7 +94,7 @@ export async function initialize() {
     // ?module=<id>&view=1 — navigated into that module's own page (e.g. a
     // reload while on it, or "back" from a learning item inside it).
     if (moduleId && params.get("view") === "1") {
-        await loadModule(moduleId, initialize);
+        await loadModule(moduleId, initialize, { highlight: params.get("highlight") });
         return;
     }
 

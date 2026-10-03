@@ -14,6 +14,7 @@ import { fetchModule } from "./api.js";
 import { state } from "./state.js";
 import { rememberRows } from "../../../../shared/spa/skeleton-rows.js";
 import { renderModulePageSkeleton } from "./skeleton.js";
+import { highlightRow } from "../../../../shared/spa/highlight-row.js";
 
 import { initializePdfViewer } from "../../../../shared/pdf/viewer.js";
 
@@ -44,7 +45,7 @@ import { bindRowDeleteLearningItem } from "./learning-item-row-delete.js";
 
 import { flushVideoProgress } from "./completion/video-progress.js";
 
-export async function loadModule(moduleId, backToList) {
+export async function loadModule(moduleId, backToList, { highlight = null } = {}) {
 
     flushVideoProgress();
 
@@ -69,6 +70,15 @@ export async function loadModule(moduleId, backToList) {
         const refresh = () => loadModule(moduleId, backToList);
 
         bindModuleBindings(moduleId, refresh, backToList);
+
+        // Dashboard deep link (?highlight=unit:ID | item:ID): mark that row.
+        const [kind, id] = String(highlight ?? "").split(":");
+
+        if (kind === "unit" && Number(id)) {
+            highlightRow(`[data-learning-unit-wrapper][data-learning-unit-id="${Number(id)}"]`, { durationMs: 2500 });
+        } else if (kind === "item" && Number(id)) {
+            highlightRow(`[data-learning-item-wrapper][data-learning-item="${Number(id)}"]`, { durationMs: 2500 });
+        }
 
     } catch (error) {
 

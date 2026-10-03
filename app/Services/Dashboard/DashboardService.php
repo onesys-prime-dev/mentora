@@ -26,6 +26,7 @@ class DashboardService
     protected InstructorAssignmentModel $instructorAssignmentModel;
     protected CourseModuleModel $courseModuleModel;
     protected LearningUnitModel $learningUnitModel;
+    protected \App\Models\Learning\LearningItemModel $learningItemModel;
     protected RosterRiskService $rosterRiskService;
     protected GradebookRecordModel $gradebookRecordModel;
 
@@ -81,6 +82,7 @@ class DashboardService
         $this->instructorAssignmentModel = new InstructorAssignmentModel();
         $this->courseModuleModel = new CourseModuleModel();
         $this->learningUnitModel = new LearningUnitModel();
+        $this->learningItemModel = new \App\Models\Learning\LearningItemModel();
         $this->rosterRiskService = new RosterRiskService();
         $this->gradebookRecordModel = new GradebookRecordModel();
     }
@@ -566,7 +568,7 @@ class DashboardService
 
         foreach ($sections as $section) {
             $offeringId = (int) $section['offering_id'];
-            $codes[$offeringId] = $section['course_code'];
+            $codes[$offeringId] = $section['course_code'] . (!empty($section['section_code']) ? ' - ' . $section['section_code'] : '');
             $slugs[$offeringId] = url_title($section['course_title'], '-', true);
         }
 
@@ -575,6 +577,7 @@ class DashboardService
         $sources = [
             'Module' => $this->courseModuleModel->retrieveDrafts($offeringIds),
             'Unit' => $this->learningUnitModel->retrieveDrafts($offeringIds),
+            'Item' => $this->learningItemModel->retrieveDrafts($offeringIds),
         ];
 
         foreach ($sources as $type => $rows) {
@@ -584,13 +587,15 @@ class DashboardService
 
                 $drafts[] = [
                     'id' => (int) $row['content_id'],
+                    'module_id' => (int) ($row['module_id'] ?? $row['content_id']),
                     'offering_id' => $offeringId,
                     'slug' => $slugs[$offeringId] ?? '',
                     'course_code' => $codes[$offeringId] ?? '',
                     'title' => $row['title'],
                     'type' => $type,
-                    'items' => (int) $row['child_count'],
-                    'updated' => $this->describeEditedAt($row['updated_at']),
+                    'items' => (int) ($row['child_count'] ?? 0),
+                    'detail' => $type === 'Item' ? ucfirst((string) $row['item_type']) : null,
+                    'updated' => $row['updated_at'] ? date('M d', strtotime((string) $row['updated_at'])) : '',
                     'sort_key' => strtotime((string) $row['updated_at']),
                 ];
             }
