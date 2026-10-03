@@ -81,10 +81,15 @@ jobs:
       - name: Trust the server's SSH host key
         env:
           KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          SERVER_HOST: ${{ secrets.VPS_HOST }}
         run: |
           mkdir -p ~/.ssh
-          if [ -n "$KNOWN_HOSTS" ]; then
-            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # Only the key itself ("ssh-ed25519 AAAA...") is taken from the
+          # secret and paired with VPS_HOST, so it works whether the secret
+          # holds a host name, an IP, or a whole ssh-keyscan line.
+          key=$(printf '%s\n' "$KNOWN_HOSTS" | awk '/ssh-ed25519/ { print $(NF-1), $NF; exit }')
+          if [ -n "$key" ]; then
+            printf '%s %s\n' "$SERVER_HOST" "$key" > ~/.ssh/known_hosts
             echo "SSH_OPTS=-p ${SSH_PORT} -o StrictHostKeyChecking=yes" >> "$GITHUB_ENV"
           else
             echo "::warning::VPS_KNOWN_HOSTS is not set, so the server's identity is not verified. See docs/deploy.md."
