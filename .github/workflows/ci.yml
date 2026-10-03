@@ -131,11 +131,38 @@ jobs:
 
       # The same command the server runs, on an empty database. If any
       # migration (App or Shield) is broken on a fresh install, it fails here.
+      #
+      # spark ignores `-g tests`, so the default connection is pointed at the
+      # test database through environment variables instead. spark also exits
+      # 0 when it cannot connect, so the next check proves the migrations
+      # really ran: the history table must hold at least one row per App
+      # migration file.
       - name: Migrate the empty database
-        run: php spark migrate --all -g tests
+        run: |
+          env database.default.hostname=127.0.0.1 \
+              database.default.database=mentora_test \
+              database.default.username=root \
+              database.default.password= \
+              database.default.DBDriver=MySQLi \
+              php spark migrate --all
+
+          php -r '
+            $db = new mysqli("127.0.0.1", "root", "", "mentora_test");
+            $ran = (int) $db->query("SELECT COUNT(*) AS c FROM migrations")->fetch_assoc()["c"];
+            $files = count(glob("app/Database/Migrations/*.php"));
+            echo "{$ran} migrations recorded, {$files} App migration files\n";
+            exit($ran >= $files ? 0 : 1);
+          '
 
       - name: Run tests
-        run: vendor/bin/phpunit ${{ matrix.phpunit_args }}
+        shell: bash
+        run: vendor/bin/phpunit ${{ matrix.phpunit_args }} | tee phpunit-output.txt
+
+      # Overall line coverage may never drop below .github/coverage-floor.
+      # Raise that number in the same PR that adds tests; never lower it.
+      - name: Check the coverage floor
+        if: matrix.coverage == 'pcov'
+        run: php .github/scripts/check-coverage.php phpunit-output.txt .github/coverage-floor
 
       - name: Upload coverage report
         if: always() && matrix.coverage == 'pcov'

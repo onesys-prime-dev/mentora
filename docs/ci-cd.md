@@ -16,7 +16,7 @@ day-to-day workflow.
 |---|---|---|
 | PHP syntax (8.2, 8.5) | `php -l` on every file in `app/`, `tests/`, `public/` and `spark` | 8.2 is the minimum in `composer.json` and the local version; 8.5 is the version the staging site runs |
 | Composer | `composer validate --strict`, `composer install`, `composer audit` | The manifest and lock agree, dependencies install, no known vulnerable packages |
-| Tests on MySQL (8.2, 8.5) | A MySQL 8.4 container, `php spark migrate --all -g tests` on the empty database, then PHPUnit (coverage report on 8.2) | Migrations work on a fresh install, and the test suite passes on the minimum and the production PHP |
+| Tests on MySQL (8.2, 8.5) | A MySQL 8.4 container, `php spark migrate --all` on the empty database (then checked: the history table must hold a row for every App migration), then PHPUnit. On 8.2 the build also fails if line coverage drops below `.github/coverage-floor` | Migrations work on a fresh install, the test suite passes on the minimum and the production PHP, and coverage can only go up |
 | Frontend build and audit | `npm ci`, `npm audit --omit=dev --audit-level=high`, `npm run build`, manifest exists | The lockfile installs cleanly on Linux (where the server builds), no high-severity advisories, assets build |
 | Secret scan | gitleaks over the full history | No leaked passwords or keys |
 | **CI passed** | Fails if any job above failed | The single check that branch protection requires |

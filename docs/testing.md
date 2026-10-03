@@ -63,7 +63,7 @@ and PHP 8.5 (the version the staging site runs).
 depth following the risk (grades, locks, permissions and file access get every
 branch and boundary; plain CRUD gets the normal case plus a permission and a
 validation check). A coverage minimum will be set from the first measured
-baseline and only ever raised.
+baseline and only ever raised. It lives in `.github/coverage-floor` (one number) and CI fails if overall line coverage falls below it (checked on the PHP 8.2 job by `.github/scripts/check-coverage.php`). Raise the number in the same PR that adds tests; never lower it to merge. Migrations and seeders are excluded from the measurement.
 
 Checklist, one pull request per domain, in this order:
 
