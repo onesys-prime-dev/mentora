@@ -7,6 +7,9 @@ $routes->get('/', 'Auth\RedirectController::index');
 
 service('auth')->routes($routes);
 
+// Public liveness check for the deploy pipeline; see HealthController.
+$routes->get('health', 'HealthController::index');
+
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
