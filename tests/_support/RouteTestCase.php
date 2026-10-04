@@ -24,20 +24,66 @@ abstract class RouteTestCase extends DatabaseTestCase
 
     protected bool $isolateTests = true;
 
+    /** Set when this test had to create the stand-in Vite manifest (so it removes it again). */
+    private bool $createdViteManifest = false;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $_SERVER['HTTPS'] = 'on';
+
+        $this->ensureViteManifest();
     }
 
     protected function tearDown(): void
     {
         auth()->logout();
 
+        $this->removeStandInViteManifest();
+
         unset($_SERVER['HTTPS']);
 
         parent::tearDown();
+    }
+
+    /**
+     * Every full page asks vite() for the built assets, which reads
+     * public/build/.vite/manifest.json. That file only exists after
+     * `npm run build`, and tests must not depend on a build having run (the
+     * CI tests job does not build the frontend). When there is no real
+     * manifest, a minimal stand-in is written for the duration of the test.
+     */
+    private function ensureViteManifest(): void
+    {
+        $manifest = ROOTPATH . 'public/build/.vite/manifest.json';
+
+        if (is_file($manifest)) {
+            return;
+        }
+
+        if (! is_dir(dirname($manifest))) {
+            mkdir(dirname($manifest), 0775, true);
+        }
+
+        file_put_contents($manifest, json_encode([
+            'resources/js/app.js' => ['file' => 'assets/test-app.js', 'css' => []],
+        ]));
+
+        $this->createdViteManifest = true;
+    }
+
+    private function removeStandInViteManifest(): void
+    {
+        if (! $this->createdViteManifest) {
+            return;
+        }
+
+        @unlink(ROOTPATH . 'public/build/.vite/manifest.json');
+        @rmdir(ROOTPATH . 'public/build/.vite');
+        @rmdir(ROOTPATH . 'public/build');
+
+        $this->createdViteManifest = false;
     }
 
     /** Logs in as the user for the rest of the test. */
