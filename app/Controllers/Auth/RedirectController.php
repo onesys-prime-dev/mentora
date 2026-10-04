@@ -36,6 +36,9 @@ class RedirectController extends BaseController
 
         }
 
-        abort(403);
+        // Signed in, but in none of the groups above (abort() is not a CodeIgniter function).
+        return $this->response
+            ->setStatusCode(403)
+            ->setBody('Your account does not have a role that can use this site yet.');
     }
 }
