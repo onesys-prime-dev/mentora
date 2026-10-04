@@ -165,19 +165,25 @@ class Database extends Config
     public array $tests = [
         'DSN'         => '',
         'hostname'    => '127.0.0.1',
-        'username'    => '',
+        'username'    => 'root',
         'password'    => '',
-        'database'    => ':memory:',
-        'DBDriver'    => 'SQLite3',
-        'DBPrefix'    => 'db_',  // Needed to ensure we're working correctly with prefixes live. DO NOT REMOVE FOR CI DEVS
+        // Tests run on MySQL (the app's migrations use MySQL-only types such
+        // as DATETIME(6)), in a database of their own: never mentora_db.
+        // Override per machine/CI with database.tests.* in .env.
+        'database'    => 'mentora_test',
+        'DBDriver'    => 'MySQLi',
+        // Empty on purpose, same as the app: raw SQL in the services names
+        // tables without a prefix, so a prefix here would break those queries.
+        'DBPrefix'    => '',
         'pConnect'    => false,
         'DBDebug'     => true,
-        'charset'     => 'utf8',
-        'DBCollat'    => '',
+        'charset'     => 'utf8mb4',
+        'DBCollat'    => 'utf8mb4_general_ci',
         'swapPre'     => '',
         'encrypt'     => false,
         'compress'    => false,
-        'strictOn'    => true,
+        // Same as the default group, so tests see the SQL mode the app runs in.
+        'strictOn'    => false,
         'failover'    => [],
         'port'        => 3306,
         'foreignKeys' => true,

@@ -1,8 +1,8 @@
 name: CI
 
-# Runs on every pull request into staging/main, on pushes to main, and is
-# called by deploy.yml before anything is copied to a server (so a push to
-# staging that fails these checks is never deployed). The job named
+# Runs on every pull request into staging/main and on pushes to main. It can
+# also be called from another workflow (workflow_call), which is how a deploy
+# gate would reuse it; deploy.yml does not do that yet. The job named
 # "CI passed" at the bottom is the single result to look at (and the one to
 # require in a branch ruleset if enforcement is ever turned on).
 
@@ -79,6 +79,104 @@ jobs:
       - name: Audit dependencies for known vulnerabilities
         run: composer audit
 
+  tests:
+    name: Tests on MySQL (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Coverage is measured on 8.2 only (pcov); 8.5 just has to pass.
+          - php: "8.2"
+            coverage: pcov
+            phpunit_args: --coverage-text
+          - php: "8.5"
+            coverage: none
+            phpunit_args: --no-coverage
+    services:
+      # Same major version as the staging server's MySQL (8.4). The tests
+      # connect as root with no password (the defaults in app/Config/Database.php),
+      # which is fine for a throwaway container that only lives for this job.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: mentora_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, mysqli, zip, gd
+          coverage: ${{ matrix.coverage }}
+          tools: composer
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      # The same command the server runs, on an empty database. If any
+      # migration (App or Shield) is broken on a fresh install, it fails here.
+      #
+      # spark ignores `-g tests`, so the default connection is pointed at the
+      # test database through environment variables instead. spark also exits
+      # 0 when it cannot connect, so the next check proves the migrations
+      # really ran: the history table must hold at least one row per App
+      # migration file.
+      - name: Migrate an empty database (as the server does)
+        run: |
+          # A database of its own: spark records the migration history under
+          # the "default" group, while PHPUnit migrates the "tests" group, so
+          # sharing mentora_test would make PHPUnit re-run every migration.
+          php -r '(new mysqli("127.0.0.1", "root", ""))->query("CREATE DATABASE mentora_spark_check");'
+
+          env database.default.hostname=127.0.0.1 \
+              database.default.database=mentora_spark_check \
+              database.default.username=root \
+              database.default.password= \
+              database.default.DBDriver=MySQLi \
+              php spark migrate --all
+
+          php -r '
+            $db = new mysqli("127.0.0.1", "root", "", "mentora_spark_check");
+            $ran = (int) $db->query("SELECT COUNT(*) AS c FROM migrations")->fetch_assoc()["c"];
+            $files = count(glob("app/Database/Migrations/*.php"));
+            echo "{$ran} migrations recorded, {$files} App migration files\n";
+            exit($ran >= $files ? 0 : 1);
+          '
+
+      - name: Run tests
+        shell: bash
+        run: vendor/bin/phpunit ${{ matrix.phpunit_args }} | tee phpunit-output.txt
+
+      # Overall line coverage may never drop below .github/coverage-floor.
+      # Raise that number in the same PR that adds tests; never lower it.
+      - name: Check the coverage floor
+        if: matrix.coverage == 'pcov'
+        run: php .github/scripts/check-coverage.php phpunit-output.txt .github/coverage-floor
+
+      - name: Upload coverage report
+        if: always() && matrix.coverage == 'pcov'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/logs
+          if-no-files-found: ignore
+
   assets:
     name: Frontend build and audit
     runs-on: ubuntu-latest
@@ -119,7 +217,7 @@ jobs:
   ci-passed:
     name: CI passed
     if: always()
-    needs: [php-syntax, composer, assets, secrets]
+    needs: [php-syntax, composer, tests, assets, secrets]
     runs-on: ubuntu-latest
     steps:
       - name: Require every job to have succeeded

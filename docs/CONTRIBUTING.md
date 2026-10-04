@@ -22,9 +22,9 @@ feature/my-change ──PR──▶ staging ──PR──▶ main
 - **`staging`** is what the demo server runs. Merging a PR into it deploys it.
 - **`main`** is the production line. It is only updated from `staging`.
 - You never push directly to `staging` or `main`. GitHub does not enforce this
-  on a private repo on a free plan, so it is a habit, not a lock. If you slip
-  and push a broken commit to `staging`, the deploy refuses to run because CI
-  fails, but the commit stays on the branch and has to be fixed or reverted.
+  on a private repo on a free plan, so it is a habit, not a lock: nothing
+  technically stops a direct push, and a push to `staging` is deployed even if
+  CI would have failed. Stick to the workflow.
 
 ## The recipe
 
