@@ -37,7 +37,9 @@ before changing anything.
 ## Writing a test
 
 - Put it in `tests/unit/` (no database), `tests/database/` (service and model
-  tests that need MySQL) or later `tests/feature/` (HTTP routes).
+  tests that need MySQL) or `tests/feature/` (real HTTP routes through the filters
+  and controllers: extend `Tests\Support\RouteTestCase`, then `$this->loggedInAs($user)`
+  and `$this->get(...)` / `->post(...)`).
 - A database test: `final class FooTest extends \Tests\Support\DatabaseTestCase`.
   The schema is built once per run. Set `protected bool $isolateTests = true;`
   and each test runs inside a transaction that is rolled back afterwards (the
@@ -70,7 +72,7 @@ Checklist, one pull request per domain, in this order:
 - [x] Foundation: MySQL test database, safety guard, migrations apply cleanly on an empty database
 - [ ] Modules and progress: `LearningProgressService` is covered (locks, `lockFor` equals `locksFor`, completion rules, video progress, dependencies; 49 tests). `ContentDeletionService` is covered too (cascades, renumbering, other courses untouched, discussion threads kept, assessments removed, files purged only when unused; 14 tests). Still to do: `ModuleService`
 - [ ] Grades: `GradingEngineService` is covered (weighted categories and periods, ungraded work left out, band and pass boundaries, stored records, overrides and their history; 44 tests). `GradingSchemeService` is covered too (copying the system default, publish checks, settings, categories, periods, items, manual scores and what each edit does to "needs recalculation"; 46 tests). Still to do: `GradeService`, `GradeItemSync`, `GradebookSync`, sheet import and export, `RosterRiskService`
-- [ ] Auth and roles: `LoginService`, `RedirectController`, role separation on every route group
+- [x] Auth and roles: every route under `/student` and `/instructor` (read from the real route table, so new routes are checked automatically) sends a logged-out visitor to login and turns away the other role (336 route checks); the role landing pages, a 403 instead of a crash for users with no role, switched-off registration and magic-link login, login-only file downloads, and course-level access (enrolled student / assigned instructor only). A new top-level route fails a test until someone decides who may reach it. 355 tests in `tests/feature/`. (`LoginService` is an empty file, so there is nothing to test there.)
 - [ ] Discussions: `DiscussionService` is covered (access, start/edit/delete, pin and lock, replies, answers, reactions, list order/search/filters/paging, draft-item threads, unread, screens; 41 tests). Still to do: `DiscussionController` (route tests)
 - [ ] Assessments: assessment, quiz, assignment, grading, rubric, question import/export and generation services
 - [ ] Courses and schedule: `CourseService`, `ScheduleService`
