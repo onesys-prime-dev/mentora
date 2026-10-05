@@ -15,6 +15,19 @@ Tests run against **MySQL**, in a database of their own. They never touch
    composer test:coverage   # needs PCOV or Xdebug installed; CI does this for you
    ```
 
+### Frontend (JavaScript)
+
+The browser code in `resources/js` is unit-tested with Vitest in jsdom. No PHP,
+database or build is needed:
+
+```bash
+npm test             # one run, what CI does
+npm run test:watch   # re-runs as you edit
+```
+
+Tests live in `tests/js/`, mirroring the paths under `resources/js/`, and are
+named `*.test.js`.
+
 The first run builds the whole schema from the migrations (App and Shield), so
 it takes a few seconds longer; later runs reuse it.
 
@@ -81,4 +94,5 @@ Checklist, one pull request per domain, in this order:
 - [x] Calendar and reminders: `CalendarEventService` (15 tests), `ReminderService` (10) and the Calendar routes (6); fixed hidden-content due dates showing on a student's calendar and reminders filed under courses the person is not in
 - [x] Dashboard and overview: `DashboardService` (32 tests), `OverviewService` (27 + 3 route tests), `ActivityFeedService` (16), and query-count budgets (6) that fail on an N+1; fixed the course Overview being readable by people outside the section
 - [x] Helpers: announcement (18 tests), icon (30), navigation (4 + 3), storage and vite (6); fixed stored XSS through a message block's alignment and crashes on malformed announcement content
-- [ ] Frontend: Vitest for the shared JS helpers; Playwright for the main user flows
+- [x] Frontend, Vitest: the shared SPA helpers (swap, load guard, busy button, error state, highlight row, skeleton rows), the header menus, assignment submission, and the reading/instructions editor JSON (119 tests; runs in CI)
+- [ ] Frontend, Playwright: the main user flows in a real browser
