@@ -138,9 +138,17 @@ class QuestionService
             ];
         }
 
-        $assessmentId = $question['assessment_id'];
+                $assessmentId = $question['assessment_id'];
 
         $now = date('Y-m-d H:i:s');
+
+        // Make room right after the original: everything below it moves down
+        // one, so the copy doesn't tie with (and sort behind) the next question.
+        $this->questionModel
+            ->where('assessment_id', $assessmentId)
+            ->where('order_index >', (int) $question['order_index'])
+            ->set('order_index', 'order_index + 1', false)
+            ->update();
 
         $this->questionModel->insert([
 
@@ -190,13 +198,18 @@ class QuestionService
 
     public function reorderQuestions(int $assessmentId, array $orderedIds): array
     {
-        $order = 1;
+                $order = 1;
 
         foreach ($orderedIds as $questionId) {
 
-            $this->questionModel->update((int) $questionId, [
-                'order_index' => $order++,
-            ]);
+            // Only this assessment's own questions can be renumbered here.
+            $this->questionModel
+                ->where('id', (int) $questionId)
+                ->where('assessment_id', $assessmentId)
+                ->set('order_index', $order)
+                ->update();
+
+            $order++;
 
         }
 
