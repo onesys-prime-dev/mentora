@@ -632,7 +632,6 @@ class GradeWorkService
 
         $builder->where('enrollments.status', 'enrolled');
 
-        $builder->groupBy('enrollments.student_user_id');
 
         $builder->orderBy('student_name', 'ASC');
 
