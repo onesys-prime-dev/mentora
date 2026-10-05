@@ -121,4 +121,39 @@ final class AssessmentFactory
 
         return (int) $db->insertID();
     }
+
+    /**
+     * A rubric on an assessment with the given criteria maximums.
+     *
+     * @param list<float> $criteria
+     *
+     * @return array{rubric: int, criteria: list<int>}
+     */
+    public static function rubric(int $assessmentId, User $creator, array $criteria): array
+    {
+        $db = db_connect();
+
+        $db->table('assessment_rubrics')->insert([
+            'assessment_id' => $assessmentId,
+            'title' => 'Rubric',
+            'total_points' => array_sum($criteria),
+            'created_by' => $creator->id,
+            'created_at' => self::now(),
+        ]);
+        $rubric = (int) $db->insertID();
+        $ids = [];
+
+        foreach ($criteria as $index => $max) {
+            $db->table('assessment_rubric_criteria')->insert([
+                'rubric_id' => $rubric,
+                'criteria_title' => 'Criterion ' . ($index + 1),
+                'max_points' => $max,
+                'order_index' => $index + 1,
+                'created_at' => self::now(),
+            ]);
+            $ids[] = (int) $db->insertID();
+        }
+
+        return ['rubric' => $rubric, 'criteria' => $ids];
+    }
 }
