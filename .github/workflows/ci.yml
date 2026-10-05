@@ -196,6 +196,11 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
+      # Unit tests for the browser code in resources/js (jsdom; no PHP,
+      # database or build needed).
+      - name: Run frontend unit tests
+        run: npm test
+
       - name: Build Vite assets
         run: npm run build
 
