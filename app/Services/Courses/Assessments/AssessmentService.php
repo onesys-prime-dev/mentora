@@ -1092,9 +1092,13 @@ class AssessmentService
             |--------------------------------------------------------------------------
             */
 
+                        // An optional field the editor emptied arrives as null and must
+            // clear it; one that must hold a value keeps its old one instead.
+            $optional = static fn (string $key, array $current) => array_key_exists($key, $data) ? $data[$key] : $current[$key];
+
             $totalPoints = $data['total_points'] ?? $assessment['total_points'];
 
-            $passingPercentage = $data['passing_percentage'] ?? $assessment['passing_percentage'];
+            $passingPercentage = $optional('passing_percentage', $assessment);
 
             $passingScore = $passingPercentage !== null
                 ? round(((float) $totalPoints) * ((float) $passingPercentage) / 100, 2)
@@ -1114,17 +1118,17 @@ class AssessmentService
 
                 'title'              => $data['title'] ?? $assessment['title'],
 
-                'description'        => $data['description'] ?? $assessment['description'],
+                'description'        => $optional('description', $assessment),
 
-                'instructions'       => $data['instructions'] ?? $assessment['instructions'],
+                'instructions'       => $optional('instructions', $assessment),
 
                 'available_from'     => $data['available_from'] ?? $assessment['available_from'],
 
                 'due_date'           => $data['due_date'] ?? $assessment['due_date'],
 
-                'available_until'    => $data['available_until'] ?? $assessment['available_until'],
+                'available_until'    => $optional('available_until', $assessment),
 
-                'duration'           => $data['duration'] ?? $assessment['duration'],
+                'duration'           => $optional('duration', $assessment),
 
                 'total_points'       => $totalPoints,
 
@@ -1185,7 +1189,7 @@ class AssessmentService
                         $data['require_password'] ?? $settings['require_password'],
 
                     'password' =>
-                        $data['password'] ?? $settings['password'],
+                        $optional('password', $settings),
 
                     'randomize_questions' =>
                         $data['randomize_questions'] ?? $settings['randomize_questions'],
