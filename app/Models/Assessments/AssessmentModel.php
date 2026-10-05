@@ -42,6 +42,28 @@ class AssessmentModel extends Model
         return $this->where('learning_item_id', $learningItemId)->first();
     }
 
+    /** The course offering (section) an assessment belongs to, through its module. */
+    public function offeringIdOf(int $assessmentId): ?int
+    {
+        $row = db_connect()->table('assessments')
+            ->select('course_modules.offering_id')
+            ->join('course_modules', 'course_modules.id = assessments.module_id')
+            ->where('assessments.id', $assessmentId)
+            ->get()
+            ->getRowArray();
+
+        return $row ? (int) $row['offering_id'] : null;
+    }
+
+    /**
+     * An assessment id taken from a URL only counts inside the course offering
+     * the URL names — the route's own course check says nothing about it.
+     */
+    public function belongsToOffering(int $assessmentId, int $offeringId): bool
+    {
+        return $this->offeringIdOf($assessmentId) === $offeringId;
+    }
+
     /**
      * One row per assessment in a course, each carrying how much grading
      * work it represents — this is what the instructor's Grades page lists

@@ -3,6 +3,7 @@
 namespace App\Controllers\Courses\Assessments;
 
 use App\Controllers\BaseController;
+use App\Models\Assessments\AssessmentModel;
 use App\Services\Courses\Assessments\AssessmentService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -27,8 +28,12 @@ class AssessmentController extends BaseController
         );
     }
 
-    public function viewAssessment(int $assessmentId)
+    public function viewAssessment(int $offeringId, int $assessmentId)
     {
+        if (! (new AssessmentModel())->belongsToOffering($assessmentId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Assessment not found.');
+        }
+
         $user = auth()->user();
 
         return $this->response->setJSON(

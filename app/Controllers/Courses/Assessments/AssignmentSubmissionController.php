@@ -3,7 +3,9 @@
 namespace App\Controllers\Courses\Assessments;
 
 use App\Controllers\BaseController;
+use App\Models\Assessments\AssessmentModel;
 use App\Services\Courses\Assessments\AssignmentSubmissionService;
+use CodeIgniter\Exceptions\PageNotFoundException;
 
 /**
  * Submitted files are downloaded through the shared files/{id} route
@@ -22,8 +24,12 @@ class AssignmentSubmissionController extends BaseController
      * multipart/form-data: submission_text, submission_link, file — any
      * subset, limited to the assignment's allowed submission types.
      */
-    public function submit(int $assessmentId)
+    public function submit(int $offeringId, int $assessmentId)
     {
+        if (! (new AssessmentModel())->belongsToOffering($assessmentId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Assignment not found.');
+        }
+
         $post = $this->request->getPost();
 
         $file = $this->request->getFile('file');

@@ -27,11 +27,26 @@ class QuizAttemptService
         $this->responseModel = new AssessmentQuestionResponseModel();
     }
 
-    public function startAttempt(User $user, int $assessmentId): array
+    /** Seconds past the timer a late save or submit is still accepted (the browser's own delay). */
+    public const TIME_LIMIT_GRACE_SECONDS = 60;
+
+    public function startAttempt(User $user, int $assessmentId, ?int $offeringId = null): array
     {
         $assessment = $this->assessmentModel->find($assessmentId);
 
         if (!$assessment) {
+            throw PageNotFoundException::forPageNotFound('Assessment not found.');
+        }
+
+        // The quiz must belong to the course it's opened from, and a student
+        // must be enrolled in that course.
+        $assessmentOffering = $this->assessmentModel->offeringIdOf($assessmentId);
+
+        if (
+            $assessmentOffering === null
+            || ($offeringId !== null && $assessmentOffering !== $offeringId)
+            || (!$user->inGroup('instructor') && !$this->isEnrolled((int) $user->id, $assessmentOffering))
+        ) {
             throw PageNotFoundException::forPageNotFound('Assessment not found.');
         }
 
@@ -173,10 +188,23 @@ class QuizAttemptService
             return ['success' => false, 'message' => 'This attempt is no longer in progress.'];
         }
 
+        // The question must be one of this attempt's quiz.
         $question = $this->questionModel->find($questionId);
 
-        if (!$question) {
+        if (
+            !$question
+            || (int) $question['assessment_id'] !== (int) $submission['assessment_id']
+            || $question['status'] !== 'Active'
+        ) {
             return ['success' => false, 'message' => 'Question not found.'];
+        }
+
+        // The timer is the browser's, but the server holds the line too: no
+        // new answers once the time limit (plus a moment's grace) is over.
+        // Submitting stays possible, so a late auto-submit keeps the work
+        // that was saved in time.
+        if ($this->timeIsUp($submission)) {
+            return ['success' => false, 'message' => 'Time is up for this attempt.'];
         }
 
         $existing = $this->responseModel
@@ -210,6 +238,29 @@ class QuizAttemptService
         }
 
         return ['success' => true, 'message' => 'Answer saved.'];
+    }
+
+    private function isEnrolled(int $studentId, int $offeringId): bool
+    {
+        return db_connect()->table('enrollments')
+            ->where('student_user_id', $studentId)
+            ->where('offering_id', $offeringId)
+            ->where('status', 'enrolled')
+            ->countAllResults() > 0;
+    }
+
+    /** True when the quiz has a time limit and this attempt has used it up. */
+    private function timeIsUp(array $submission): bool
+    {
+        $assessment = $this->assessmentModel->find((int) $submission['assessment_id']);
+
+        $minutes = (int) ($assessment['duration'] ?? 0);
+
+        if ($minutes <= 0 || empty($submission['started_at'])) {
+            return false;
+        }
+
+        return time() > strtotime($submission['started_at']) + $minutes * 60 + self::TIME_LIMIT_GRACE_SECONDS;
     }
 
     /**
