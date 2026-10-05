@@ -91,6 +91,14 @@ class ModuleService
     | checked against the offering before anything is read or written.
     */
 
+        /** The statuses modules, units and items can hold (the database enum). */
+    public const STATUSES = ['draft', 'published', 'inactive'];
+
+    private function invalidStatus(): array
+    {
+        return ['success' => false, 'message' => 'Choose a valid status.'];
+    }
+
     private function moduleBelongsToOffering(int $moduleId, int $offeringId): bool
     {
         return $this->courseModuleModel
@@ -960,6 +968,12 @@ class ModuleService
 
         }
 
+                if (! in_array($status, self::STATUSES, true)) {
+
+            return $this->invalidStatus();
+
+        }
+
         $this->courseModuleModel
             ->update(
 
@@ -1211,16 +1225,15 @@ class ModuleService
             throw new PageNotFoundException();
         }
 
+                if (! in_array($payload['status'] ?? null, self::STATUSES, true)) {
+            return $this->invalidStatus();
+        }
+
         $this->learningUnitModel->update(
-
             $learningUnitId,
-
             [
-
                 'status' => $payload['status'],
-
             ]
-
         );
 
         return [
@@ -1535,6 +1548,13 @@ class ModuleService
 
                 if (!$learningItem || !$this->itemBelongsToOffering($learningItem, $offeringId)) {
             throw new PageNotFoundException();
+        }
+
+                if (
+            array_key_exists('status', $payload)
+            && ! in_array($payload['status'], self::STATUSES, true)
+        ) {
+            return $this->invalidStatus();
         }
 
         // Link items store {url, description}; only http(s) links are
