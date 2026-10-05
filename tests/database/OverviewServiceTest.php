@@ -148,6 +148,17 @@ final class OverviewServiceTest extends DatabaseTestCase
         $this->service->show($this->student, 999999);
     }
 
+    public function testTheHeaderNamesTheFirstAssignedInstructorOnACoTaughtCourse(): void
+    {
+        $second = $this->person('instructor', 'Ben', 'Second');
+        CourseFactory::assignInstructor($this->offering, $second);
+
+        $info = (new \App\Models\Courses\CourseOfferingModel())->getCourseOverviewData($this->offering);
+
+        $this->assertSame('Tess Teacher', $info['instructor_name']);
+        $this->assertSame((int) $this->offering, (int) $info['offering_id']);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Resuming

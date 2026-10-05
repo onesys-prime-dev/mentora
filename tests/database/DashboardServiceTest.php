@@ -356,6 +356,49 @@ final class DashboardServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Student: reminders
+    |--------------------------------------------------------------------------
+    */
+
+    private function remind(User $user, string $title, string $at, string $status = 'pending'): void
+    {
+        db_connect()->table('reminders')->insert(['user_id' => $user->id, 'title' => $title, 'remind_at' => $at, 'status' => $status, 'created_at' => $at]);
+    }
+
+    public function testTheRemindersCardListsTheStudentsOwnPendingRemindersSoonestFirst(): void
+    {
+        $classmate = $this->person('student', 'Cam', 'Mate');
+        $this->remind($this->student, 'Later this week', date('Y-m-d 18:00:00', strtotime('+3 days')));
+        $this->remind($this->student, 'Tonight', date('Y-m-d 23:30:00'));
+        $this->remind($this->student, 'Already done', date('Y-m-d 23:00:00'), 'done');
+        $this->remind($classmate, 'Not mine', date('Y-m-d 23:00:00'));
+
+        $reminders = $this->widget($this->student, 'reminders')['reminders'];
+
+        $this->assertSame(['Tonight', 'Later this week'], array_column($reminders, 'title'));
+        $this->assertSame('Today · 11:30 PM', $reminders[0]['due']);
+        $this->assertSame(date('M j', strtotime('+3 days')) . ' · 6:00 PM', $reminders[1]['due']);
+    }
+
+    public function testPastRemindersLeaveTheCardAndOnlySixAreShown(): void
+    {
+        $this->remind($this->student, 'Yesterday', date('Y-m-d 09:00:00', strtotime('-1 day')));
+        for ($i = 1; $i <= 8; $i++) {
+            $this->remind($this->student, "R{$i}", date('Y-m-d 09:00:00', strtotime("+{$i} days")));
+        }
+
+        $reminders = $this->widget($this->student, 'reminders')['reminders'];
+
+        $this->assertSame(['R1', 'R2', 'R3', 'R4', 'R5', 'R6'], array_column($reminders, 'title'));
+    }
+
+    public function testNoRemindersIsAnEmptyList(): void
+    {
+        $this->assertSame(['reminders' => []], $this->widget($this->student, 'reminders'));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Instructor: grading queue
     |--------------------------------------------------------------------------
     */

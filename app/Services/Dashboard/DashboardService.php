@@ -3,6 +3,7 @@
 namespace App\Services\Dashboard;
 
 use App\Models\Users\UserProfileModel;
+use App\Models\Users\ReminderModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Courses\AnnouncementModel;
 use App\Models\Academic\InstitutionUserModel;
@@ -342,7 +343,19 @@ class DashboardService
 
     protected function getRemindersData(User $user): array
     {
-        return [];
+        return [
+            'reminders' => array_map(function (array $row): array {
+
+                $at = strtotime($row['remind_at']);
+
+                return [
+                    'id' => (int) $row['id'],
+                    'title' => $row['title'],
+                    'due' => (date('Y-m-d', $at) === date('Y-m-d') ? 'Today' : date('M j', $at)) . ' · ' . date('g:i A', $at),
+                ];
+
+            }, (new ReminderModel())->retrieveUpcomingForUser((int) $user->id)),
+        ];
     }
 
     protected function getQuickAccessData(User $user): array

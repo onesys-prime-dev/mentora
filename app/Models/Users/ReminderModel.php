@@ -53,6 +53,20 @@ class ReminderModel extends Model
             ->findAll();
     }
 
+    /**
+     * A user's pending reminders from the start of today on, soonest first —
+     * what the dashboard's Reminders card lists.
+     */
+    public function retrieveUpcomingForUser(int $userId, int $limit = 6): array
+    {
+        return $this->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->where('remind_at >=', date('Y-m-d 00:00:00'))
+            ->orderBy('remind_at', 'ASC')
+            ->limit($limit)
+            ->findAll();
+    }
+
     /** Ownership check before an update/delete ever touches the row. */
     public function belongsTo(int $reminderId, int $userId): bool
     {
