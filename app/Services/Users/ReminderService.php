@@ -3,6 +3,7 @@
 namespace App\Services\Users;
 
 use App\Models\Users\ReminderModel;
+use App\Services\Courses\Assessments\AssessmentScopeService;
 use CodeIgniter\Shield\Entities\User;
 
 class ReminderService
@@ -24,6 +25,13 @@ class ReminderService
             'note'        => trim((string) ($data['note'] ?? '')) ?: null,
             'remind_at'   => $data['remind_at'] ?? null,
         ];
+
+        // A reminder can only be filed under a course the person is in.
+        if ($payload['offering_id'] !== null && ! (new AssessmentScopeService())->canAccess($user, $payload['offering_id'])) {
+
+            return ['success' => false, 'message' => 'Choose one of your own courses.'];
+
+        }
 
         if (! $this->reminderModel->validate($payload)) {
 
