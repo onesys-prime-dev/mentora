@@ -205,6 +205,83 @@ final class ModuleServiceTest extends DatabaseTestCase
         $this->assertSame('draft', $this->row('course_modules', $elsewhere)['status']);
     }
 
+    /** @return iterable<string, array{0: mixed}> */
+    public static function badStatuses(): iterable
+    {
+        yield 'unknown word' => ['banana'];
+        yield 'wrong case' => ['Published'];
+        yield 'empty' => [''];
+        yield 'null' => [null];
+    }
+
+    #[PHPUnit\Framework\Attributes\DataProvider('badStatuses')]
+    public function testAModuleStatusMustBeOneTheDatabaseKnows(mixed $status): void
+    {
+        $module = CourseFactory::module($this->offeringId, 'draft');
+
+        $result = $this->service->updateModuleStatus($this->instructor, $this->offeringId, $module, (string) $status);
+
+        $this->assertRefused($result, 'Choose a valid status.');
+        $this->assertSame('draft', $this->row('course_modules', $module)['status']);
+    }
+
+    #[PHPUnit\Framework\Attributes\DataProvider('badStatuses')]
+    public function testAUnitStatusMustBeOneTheDatabaseKnows(mixed $status): void
+    {
+        [, $unit] = $this->tree('reading', 'draft');
+
+        $result = $this->service->updateLearningUnitStatus($this->instructor, $this->offeringId, $unit, ['status' => $status]);
+
+        $this->assertRefused($result, 'Choose a valid status.');
+        $this->assertSame('draft', $this->row('learning_units', $unit)['status']);
+    }
+
+    public function testAUnitStatusRequestWithoutAStatusIsRefused(): void
+    {
+        [, $unit] = $this->tree('reading', 'draft');
+
+        $this->assertRefused($this->service->updateLearningUnitStatus($this->instructor, $this->offeringId, $unit, []), 'Choose a valid status.');
+    }
+
+    #[PHPUnit\Framework\Attributes\DataProvider('badStatuses')]
+    public function testAnItemStatusMustBeOneTheDatabaseKnows(mixed $status): void
+    {
+        [, , $item] = $this->tree('reading', 'draft');
+
+        $result = $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['title' => 'Changed', 'status' => $status]);
+
+        $this->assertRefused($result, 'Choose a valid status.');
+        $row = $this->row('learning_items', $item);
+        $this->assertSame('draft', $row['status']);
+        $this->assertNotSame('Changed', $row['title'], 'nothing is saved when the request is refused');
+    }
+
+    public function testEveryStatusTheDatabaseKnowsIsAccepted(): void
+    {
+        foreach (['published', 'inactive', 'draft'] as $status) {
+            [$module, $unit, $item] = $this->tree('reading', 'draft');
+
+            $this->assertTrue($this->service->updateModuleStatus($this->instructor, $this->offeringId, $module, $status)['success'], $status);
+            $this->assertTrue($this->service->updateLearningUnitStatus($this->instructor, $this->offeringId, $unit, ['status' => $status])['success'], $status);
+            $this->assertTrue($this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['status' => $status])['success'], $status);
+
+            $this->assertSame($status, $this->row('course_modules', $module)['status']);
+            $this->assertSame($status, $this->row('learning_units', $unit)['status']);
+            $this->assertSame($status, $this->row('learning_items', $item)['status']);
+        }
+    }
+
+    public function testAnInactiveQuizItemTurnsItsAssessmentIntoADraft(): void
+    {
+        [$module, , $item] = $this->tree('quiz', 'published');
+        $assessmentId = CourseFactory::assessment($this->offeringId, $this->instructor, $module, $item);
+        db_connect()->table('assessments')->where('id', $assessmentId)->update(['status' => 'Published']);
+
+        $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['status' => 'inactive']);
+
+        $this->assertSame('Draft', $this->row('assessments', $assessmentId)['status']);
+    }
+
     public function testReorderingModules(): void
     {
         $a = CourseFactory::module($this->offeringId, 'published', 1);
