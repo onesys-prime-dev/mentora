@@ -95,25 +95,35 @@ class EnrollmentModel extends Model
                 'institutions.id = academic_terms.institution_id
                 AND institutions.id = programs.institution_id'
             )
+                        // The card shows one instructor (the first assigned). Joined as
+            // an optional single row so a co-taught course is not listed
+            // once per teacher and a course with nobody assigned yet is not
+            // dropped from the student's list.
             ->join(
                 'instructor_assignments',
-                'instructor_assignments.offering_id = course_offerings.id'
+                'instructor_assignments.id = (
+                    SELECT MIN(first_assignment.id)
+                      FROM instructor_assignments first_assignment
+                     WHERE first_assignment.offering_id = course_offerings.id
+                )',
+                'left',
+                false
             )
-
             ->join(
                 'users',
-                'users.id = instructor_assignments.instructor_user_id'
+                'users.id = instructor_assignments.instructor_user_id',
+                'left'
             )
-
             ->join(
                 'user_profiles',
-                'user_profiles.user_id = users.id'
+                'user_profiles.user_id = users.id',
+                'left'
             )
-
             ->join(
                 'auth_identities',
                 "auth_identities.user_id = users.id
-                AND auth_identities.type = 'email_password'"
+                AND auth_identities.type = 'email_password'",
+                'left'
             )
             ->where('enrollments.student_user_id', $userId)
             ->where('enrollments.status', 'enrolled')
