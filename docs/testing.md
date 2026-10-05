@@ -79,6 +79,6 @@ Checklist, one pull request per domain, in this order:
 - [x] Announcements: `AnnouncementService` (32 tests) and the routes (17 tests); fixed announcements readable by users outside the course, attaching other users' files, the unused 10-attachment cap, deleting replies across sections, and unchecked reaction values
 - [x] Resources and storage: `ResourceService` (34 tests), `StorageService` (21), `FileAccessService` (14), the `files/{id}` route (8) and the Resources route (4); fixed announcement and discussion attachments being unreadable to classmates, and instructors of a sibling section reading this section's student work
 - [x] Calendar and reminders: `CalendarEventService` (15 tests), `ReminderService` (10) and the Calendar routes (6); fixed hidden-content due dates showing on a student's calendar and reminders filed under courses the person is not in
-- [ ] Dashboard and overview: `DashboardService`, `OverviewService`, `ActivityFeedService` (with query-count budgets)
+- [x] Dashboard and overview: `DashboardService` (32 tests), `OverviewService` (27 + 3 route tests), `ActivityFeedService` (16), and query-count budgets (6) that fail on an N+1; fixed the course Overview being readable by people outside the section
 - [ ] Helpers: announcement, icon, navigation, storage, vite
 - [ ] Frontend: Vitest for the shared JS helpers; Playwright for the main user flows

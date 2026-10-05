@@ -82,10 +82,17 @@ class CourseOfferingModel extends Model
             )
             ->join('courses', 'courses.id = course_offerings.course_id')
             ->join('academic_terms', 'academic_terms.id = course_offerings.term_id')
+            // The first-assigned instructor, so a co-taught course always
+            // names the same person rather than whichever row comes first.
             ->join(
                 'instructor_assignments',
-                'instructor_assignments.offering_id = course_offerings.id',
-                'left'
+                'instructor_assignments.id = (
+                    SELECT MIN(first_assignment.id)
+                      FROM instructor_assignments first_assignment
+                     WHERE first_assignment.offering_id = course_offerings.id
+                )',
+                'left',
+                false
             )
             ->join(
                 'user_profiles',
