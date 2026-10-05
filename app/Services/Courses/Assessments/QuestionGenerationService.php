@@ -259,10 +259,16 @@ class QuestionGenerationService
             return ['success' => false, 'message' => 'Question not found.'];
         }
 
-        $batch = $this->batchModel->find($row['batch_id']);
+                $batch = $this->batchModel->find($row['batch_id']);
 
         if (empty($batch['assessment_id'])) {
             return ['success' => false, 'message' => 'This batch is not linked to an assessment.'];
+        }
+
+        // Only a question still waiting in the tray can be added: accepting
+        // twice would add it twice, and a discarded one was turned down.
+        if ($row['status'] !== 'pending') {
+            return ['success' => false, 'message' => 'This question has already been ' . $row['status'] . '.'];
         }
 
         $result = (new QuestionService())->createQuestion($user, $batch['assessment_id'], [

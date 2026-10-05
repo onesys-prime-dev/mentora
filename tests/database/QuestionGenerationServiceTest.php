@@ -1,0 +1,530 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Services\AI\QuestionGeneratorBusyException;
+use App\Services\AI\QuestionGeneratorClientInterface;
+use App\Services\AI\QuestionGeneratorUnavailableException;
+use App\Services\Courses\Assessments\QuestionGenerationService;
+use CodeIgniter\HTTP\Files\UploadedFile;
+use CodeIgniter\Shield\Entities\User;
+use Tests\Support\AssessmentFactory;
+use Tests\Support\CourseFactory;
+use Tests\Support\DatabaseTestCase;
+
+/**
+ * AI question generation without the AI: a fake generator hands back
+ * questions, and the service's own job is checked: batches and chunks, the
+ * review tray (edit, discard, accept, accept all), what is kept from the
+ * generator, and what happens when it is busy or unavailable.
+ *
+ * @internal
+ */
+final class QuestionGenerationServiceTest extends DatabaseTestCase
+{
+    protected bool $isolateTests = true;
+
+    private int $offering;
+    private int $courseId;
+    private int $module;
+    private int $unit;
+    private int $quiz;
+    private User $instructor;
+    private FakeGenerator $generator;
+    private QuestionGenerationService $service;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->offering = CourseFactory::offering();
+        $this->courseId = (int) db_connect()->table('course_offerings')->where('id', $this->offering)->get()->getRowArray()['course_id'];
+        $this->module = CourseFactory::module($this->offering);
+        $this->unit = CourseFactory::unit($this->module);
+        $this->instructor = CourseFactory::user('instructor');
+        CourseFactory::assignInstructor($this->offering, $this->instructor);
+        $this->quiz = CourseFactory::assessment($this->offering, $this->instructor, $this->module);
+        $this->generator = new FakeGenerator();
+        $this->service = new QuestionGenerationService($this->generator);
+    }
+
+    private function start(array $data = [], ?UploadedFile $file = null): array
+    {
+        return $this->service->startBatch($this->instructor, $data + [
+            'assessment_id' => $this->quiz,
+            'course_id' => $this->courseId,
+            'offering_id' => $this->offering,
+            'source_type' => 'topic',
+            'topic' => 'Planets',
+            'count' => 3,
+        ], $file);
+    }
+
+    private function batch(int $id): array
+    {
+        return db_connect()->table('ai_generation_batches')->where('id', $id)->get()->getRowArray();
+    }
+
+    private function generated(int $id): array
+    {
+        return db_connect()->table('ai_generated_questions')->where('id', $id)->get()->getRowArray();
+    }
+
+    /** @return list<array> the quiz's real questions */
+    private function questions(): array
+    {
+        return db_connect()->table('assessment_questions')->where('assessment_id', $this->quiz)->orderBy('order_index')->get()->getResultArray();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Starting a batch
+    |--------------------------------------------------------------------------
+    */
+
+    public function testABatchNeedsARealAssessment(): void
+    {
+        $this->assertSame(['success' => false, 'message' => 'Assessment not found.'], $this->start(['assessment_id' => null]));
+        $this->assertSame(['success' => false, 'message' => 'Assessment not found.'], $this->start(['assessment_id' => 999999]));
+        $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
+    }
+
+    public function testATopicBatchStoresItsRequestAndGeneratesTheFirstChunk(): void
+    {
+        $this->generator->chunk = 2;
+
+        $result = $this->start(['topic' => 'The solar system', 'count' => 5, 'type_mix' => ['Multiple Choice' => 3, 'Essay' => 2], 'points_per_question' => 2.5]);
+
+        $this->assertTrue($result['success']);
+        $batch = $this->batch((int) $result['batch']['id']);
+        $this->assertSame('The solar system', $batch['topic']);
+        $this->assertSame('topic', $batch['source_type']);
+        $this->assertSame($this->quiz, (int) $batch['assessment_id']);
+        $this->assertSame($this->courseId, (int) $batch['course_id']);
+        $this->assertSame(5, (int) $batch['requested_count']);
+        $this->assertSame(2, (int) $batch['generated_count']);
+        $this->assertSame('generating', $batch['status']);
+        $this->assertEquals(2.5, $batch['points_per_question']);
+        $this->assertEqualsCanonicalizing(['Multiple Choice' => 3, 'Essay' => 2], json_decode($batch['type_mix'], true));
+        $this->assertSame($this->instructor->id, (int) $batch['created_by']);
+        $this->assertCount(2, $result['questions']);
+        $this->assertFalse($result['stopped_early']);
+        $this->assertSame([], $result['skipped_sources']);
+    }
+
+    public function testTheGeneratorIsGivenTheRequestAndTheNumberStillWanted(): void
+    {
+        $this->start(['topic' => 'Planets', 'count' => 3, 'type_mix' => ['Essay' => 3], 'points_per_question' => 4]);
+
+        $call = $this->generator->calls[0];
+        $this->assertSame('Planets', $call['topic']);
+        $this->assertSame(3, $call['count']);
+        $this->assertSame(['Essay' => 3], $call['type_mix']);
+        $this->assertEquals(4, $call['points_per_question']);
+        $this->assertSame([], $call['recent_questions']);
+    }
+
+    public function testAnAllAtOnceBatchIsCompleted(): void
+    {
+        $result = $this->start(['count' => 3]);
+
+        $this->assertSame('completed', $result['batch']['status']);
+        $this->assertSame(3, (int) $result['batch']['generated_count']);
+    }
+
+    public function testEveryGeneratedQuestionIsStagedAsPendingWithItsChecks(): void
+    {
+        $this->generator->questions = [[
+            'question_text' => 'Which planet is largest?', 'question_type' => 'Multiple Choice', 'points' => 2,
+            'choices' => [['text' => 'Jupiter', 'is_correct' => true], ['text' => 'Mars', 'is_correct' => false]], 'math_check' => 'verified',
+        ]];
+
+        $result = $this->start(['count' => 1, 'source_text' => 'Jupiter is the largest planet in the solar system.']);
+
+        $row = $result['questions'][0];
+        $this->assertSame('pending', $row['status']);
+        $this->assertSame('Which planet is largest?', $row['question_text']);
+        $this->assertEquals(2, $row['points']);
+        $this->assertSame(1, (int) $row['is_required'], 'required unless the generator says otherwise');
+        $this->assertSame([['text' => 'Jupiter', 'is_correct' => true], ['text' => 'Mars', 'is_correct' => false]], $row['choices']);
+        $this->assertSame('verified', $row['math_check']);
+        $this->assertNotNull($row['similarity_score'], 'compared with the source text');
+        $this->assertSame([], $row['accepted_answers']);
+    }
+
+    public function testWithoutSourceTextThereIsNoSimilarityScoreAndMathCheckDefaults(): void
+    {
+        $this->generator->questions = [['question_text' => 'Q', 'question_type' => 'Essay', 'points' => 1]];
+
+        $row = $this->start(['count' => 1])['questions'][0];
+
+        $this->assertNull($row['similarity_score']);
+        $this->assertSame('not_applicable', $row['math_check']);
+    }
+
+    public function testAShortAnswerKeepsTheGeneratorsAnswerKeyOthersDoNot(): void
+    {
+        $this->generator->questions = [
+            ['question_text' => 'S', 'question_type' => 'Short Answer', 'points' => 1, 'accepted_answers' => ['  Paris ', 'paris', 'City of Light']],
+            ['question_text' => 'E', 'question_type' => 'Essay', 'points' => 1, 'accepted_answers' => ['ignored']],
+        ];
+
+        $questions = $this->start(['count' => 2])['questions'];
+
+        $this->assertSame(['Paris', 'paris', 'City of Light'], $questions[0]['accepted_answers']);
+        $this->assertSame([], $questions[1]['accepted_answers']);
+    }
+
+    public function testABusyGeneratorLeavesTheBatchWaitingForTheNextTry(): void
+    {
+        $this->generator->failure = new QuestionGeneratorBusyException('Another job is running.');
+
+        $result = $this->start();
+
+        $this->assertSame(['success' => false, 'busy' => true, 'message' => 'Another job is running.', 'skipped_sources' => []], $result);
+        $batch = db_connect()->table('ai_generation_batches')->get()->getRowArray();
+        $this->assertSame('generating', $batch['status'], 'not failed: it can be retried');
+        $this->assertSame(0, db_connect()->table('ai_generated_questions')->countAllResults());
+    }
+
+    public function testAnUnavailableGeneratorFailsTheBatchWithItsReason(): void
+    {
+        $this->generator->failure = new QuestionGeneratorUnavailableException('The service is down.');
+
+        $result = $this->start();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('The service is down.', $result['message']);
+        $batch = db_connect()->table('ai_generation_batches')->get()->getRowArray();
+        $this->assertSame('failed', $batch['status']);
+        $this->assertSame('The service is down.', $batch['error_message']);
+    }
+
+    public function testAFileSourceNeedsAValidFile(): void
+    {
+        $this->assertSame(['success' => false, 'message' => 'A valid file is required.'], $this->start(['source_type' => 'file']));
+        $broken = new UploadedFile('', 'notes.pdf', 'application/pdf', 0, UPLOAD_ERR_INI_SIZE);
+        $this->assertSame(['success' => false, 'message' => 'A valid file is required.'], $this->start(['source_type' => 'file'], $broken));
+        $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
+    }
+
+    public function testAQuizOutsideAUnitCannotUseTheUnitAsASource(): void
+    {
+        db_connect()->table('assessments')->where('id', $this->quiz)->update(['learning_item_id' => null, 'module_id' => null]);
+
+        $result = $this->start(['source_type' => 'learning_unit']);
+
+        $this->assertSame(['success' => false, 'message' => "This quiz isn't in a learning unit."], $result);
+    }
+
+    public function testAUnitWithNothingToReadCannotBeTheSource(): void
+    {
+        [$item] = CourseFactory::items($this->unit, [['type' => 'quiz']]);
+        db_connect()->table('assessments')->where('id', $this->quiz)->update(['learning_item_id' => $item]);
+
+        $result = $this->start(['source_type' => 'learning_unit']);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('no readings or PDFs', $result['message']);
+        $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | More chunks
+    |--------------------------------------------------------------------------
+    */
+
+    public function testNextChunkGeneratesWhatIsStillMissingAndShowsTheRecentQuestionsToAvoidRepeats(): void
+    {
+        $this->generator->chunk = 2;
+        $batchId = (int) $this->start(['count' => 5])['batch']['id'];
+
+        $second = $this->service->nextChunk($batchId);
+
+        $this->assertSame(4, (int) $second['batch']['generated_count']);
+        $call = $this->generator->calls[1];
+        $this->assertSame(3, $call['count'], 'five wanted, two have');
+        $this->assertCount(2, $call['recent_questions']);
+
+        $third = $this->service->nextChunk($batchId);
+        $this->assertSame('completed', $third['batch']['status']);
+        $this->assertSame(5, (int) $third['batch']['generated_count']);
+        $this->assertSame(1, $this->generator->calls[2]['count']);
+    }
+
+    public function testDiscardedQuestionsAreNotShownToTheGeneratorAgain(): void
+    {
+        $this->generator->chunk = 1;
+        $first = $this->start(['count' => 3]);
+        $discarded = (int) $first['questions'][0]['id'];
+        $this->service->discardGeneratedQuestion($discarded);
+
+        $this->service->nextChunk((int) $first['batch']['id']);
+
+        $this->assertNotContains('Generated question 1', $this->generator->calls[1]['recent_questions']);
+    }
+
+    public function testOnlyTheThirtyMostRecentQuestionsAreShown(): void
+    {
+        $this->generator->chunk = 40;
+        $batchId = (int) $this->start(['count' => 41])['batch']['id'];
+
+        $this->service->nextChunk($batchId);
+
+        $this->assertCount(30, $this->generator->calls[1]['recent_questions']);
+    }
+
+    public function testAFinishedBatchIsNotGeneratedAgain(): void
+    {
+        $batchId = (int) $this->start(['count' => 3])['batch']['id'];
+        $calls = count($this->generator->calls);
+
+        $result = $this->service->nextChunk($batchId);
+
+        $this->assertSame('completed', $result['batch']['status']);
+        $this->assertCount($calls, $this->generator->calls);
+    }
+
+    public function testAFailedBatchIsNotRetriedByNextChunk(): void
+    {
+        $this->generator->failure = new QuestionGeneratorUnavailableException('The service is down.');
+        $this->start(['count' => 3]);
+        $batchId = (int) db_connect()->table('ai_generation_batches')->get()->getRowArray()['id'];
+        $this->generator->failure = null;
+        $calls = count($this->generator->calls);
+
+        $result = $this->service->nextChunk($batchId);
+
+        $this->assertSame('failed', $result['batch']['status']);
+        $this->assertCount($calls, $this->generator->calls, 'the generator is not asked again');
+        $this->assertSame([], $result['questions']);
+    }
+
+    public function testAChunkWithNothingNewEndsTheBatchEarly(): void
+    {
+        $this->generator->chunk = 2;
+        $batchId = (int) $this->start(['count' => 6])['batch']['id'];
+        $this->generator->questions = [];
+        $this->generator->chunk = 0;
+
+        $result = $this->service->nextChunk($batchId);
+
+        $this->assertSame('completed', $result['batch']['status']);
+        $this->assertTrue($result['stopped_early'], 'the model ran out of distinct content');
+        $this->assertSame(2, (int) $result['batch']['generated_count']);
+    }
+
+    public function testChunksForAMissingBatchAreRefused(): void
+    {
+        $this->assertSame(['success' => false, 'message' => 'Batch not found.'], $this->service->nextChunk(999999));
+        $this->assertSame(['success' => false, 'message' => 'Batch not found.'], $this->service->getBatch(999999));
+    }
+
+    public function testTheBatchSummaryOnlyListsQuestionsStillPending(): void
+    {
+        $result = $this->start(['count' => 3]);
+        $this->service->discardGeneratedQuestion((int) $result['questions'][0]['id']);
+        $this->service->acceptGeneratedQuestion($this->instructor, (int) $result['questions'][1]['id']);
+
+        $summary = $this->service->getBatch((int) $result['batch']['id']);
+
+        $this->assertCount(1, $summary['questions']);
+        $this->assertSame('Generated question 3', $summary['questions'][0]['question_text']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The review tray
+    |--------------------------------------------------------------------------
+    */
+
+    public function testEditingAStagedQuestionChangesOnlyWhatIsSent(): void
+    {
+        $id = (int) $this->start(['count' => 1])['questions'][0]['id'];
+
+        $result = $this->service->updateGeneratedQuestion($id, ['question_text' => 'Reworded', 'points' => 5, 'is_required' => false]);
+
+        $this->assertTrue($result['success']);
+        $row = $this->generated($id);
+        $this->assertSame('Reworded', $row['question_text']);
+        $this->assertEquals(5, $row['points']);
+        $this->assertSame(0, (int) $row['is_required']);
+        $this->assertSame('Multiple Choice', $row['question_type'], 'untouched');
+        $this->assertSame('Reworded', $result['question']['question_text']);
+        $this->assertSame('pending', $row['status']);
+    }
+
+    public function testEditingChoicesAndMultipleAnswers(): void
+    {
+        $id = (int) $this->start(['count' => 1])['questions'][0]['id'];
+
+        $this->service->updateGeneratedQuestion($id, ['choices' => [['text' => 'A', 'is_correct' => true], ['text' => 'B', 'is_correct' => true]], 'allow_multiple_answers' => true, 'answers_count' => 1]);
+
+        $row = $this->generated($id);
+        $this->assertSame([['text' => 'A', 'is_correct' => true], ['text' => 'B', 'is_correct' => true]], json_decode($row['choices'], true));
+        $this->assertSame(1, (int) $row['allow_multiple_answers']);
+        $this->assertSame(2, (int) $row['answers_count'], 'at least two');
+
+        $this->service->updateGeneratedQuestion($id, ['allow_multiple_answers' => false]);
+        $this->assertNull($this->generated($id)['answers_count']);
+    }
+
+    public function testAShortAnswerKeyIsEditedAndDroppedWhenTheTypeChanges(): void
+    {
+        $this->generator->questions = [['question_text' => 'S', 'question_type' => 'Short Answer', 'points' => 1, 'accepted_answers' => ['Paris']]];
+        $id = (int) $this->start(['count' => 1])['questions'][0]['id'];
+
+        $this->service->updateGeneratedQuestion($id, ['accepted_answers' => [' Lyon ', 'Nice'], 'case_sensitive' => 'true']);
+        $row = $this->service->updateGeneratedQuestion($id, [])['question'];
+        $this->assertSame(['Lyon', 'Nice'], $row['accepted_answers']);
+        $this->assertSame(1, (int) $row['case_sensitive']);
+
+        $row = $this->service->updateGeneratedQuestion($id, ['question_type' => 'Essay'])['question'];
+        $this->assertSame([], $row['accepted_answers']);
+        $this->assertSame(0, (int) $row['case_sensitive']);
+    }
+
+    public function testEditingOrDiscardingAMissingQuestionIsRefused(): void
+    {
+        $this->assertSame(['success' => false, 'message' => 'Question not found.'], $this->service->updateGeneratedQuestion(999999, []));
+        $this->assertSame(['success' => false, 'message' => 'Question not found.'], $this->service->discardGeneratedQuestion(999999));
+        $this->assertSame(['success' => false, 'message' => 'Question not found.'], $this->service->acceptGeneratedQuestion($this->instructor, 999999));
+    }
+
+    public function testDiscardingMarksItDiscarded(): void
+    {
+        $id = (int) $this->start(['count' => 1])['questions'][0]['id'];
+
+        $this->assertSame(['success' => true, 'message' => 'Discarded.'], $this->service->discardGeneratedQuestion($id));
+
+        $this->assertSame('discarded', $this->generated($id)['status']);
+        $this->assertSame([], $this->questions(), 'nothing reaches the quiz');
+    }
+
+    public function testAcceptingAddsItToTheQuizWithItsChoicesAndAnswerKey(): void
+    {
+        $this->generator->questions = [
+            ['question_text' => 'Largest planet?', 'question_type' => 'Multiple Choice', 'points' => 3, 'choices' => [['text' => 'Jupiter', 'is_correct' => true], ['text' => 'Mars']]],
+            ['question_text' => 'Capital?', 'question_type' => 'Short Answer', 'points' => 2, 'accepted_answers' => ['Paris', 'paris france']],
+        ];
+        $staged = $this->start(['count' => 2])['questions'];
+
+        $mc = $this->service->acceptGeneratedQuestion($this->instructor, (int) $staged[0]['id']);
+        $short = $this->service->acceptGeneratedQuestion($this->instructor, (int) $staged[1]['id']);
+
+        $this->assertTrue($mc['success']);
+        $this->assertSame(['Jupiter', 'Mars'], array_column($mc['question']['choices'], 'choice_text'));
+        $this->assertSame([1, 0], array_map('intval', array_column($mc['question']['choices'], 'is_correct')));
+        $this->assertSame(['Paris', 'paris france'], $short['question']['accepted_answers']);
+        $this->assertSame('accepted', $this->generated((int) $staged[0]['id'])['status']);
+        $this->assertSame(['Largest planet?', 'Capital?'], array_column($this->questions(), 'question_text'));
+        $this->assertEquals(5, db_connect()->table('assessments')->where('id', $this->quiz)->get()->getRowArray()['total_points']);
+    }
+
+    public function testAcceptingTheSameQuestionTwiceDoesNotAddItTwice(): void
+    {
+        $id = (int) $this->start(['count' => 1])['questions'][0]['id'];
+        $this->service->acceptGeneratedQuestion($this->instructor, $id);
+
+        $again = $this->service->acceptGeneratedQuestion($this->instructor, $id);
+
+        $this->assertFalse($again['success']);
+        $this->assertCount(1, $this->questions());
+    }
+
+    public function testADiscardedQuestionCannotBeAcceptedAnyMore(): void
+    {
+        $id = (int) $this->start(['count' => 1])['questions'][0]['id'];
+        $this->service->discardGeneratedQuestion($id);
+
+        $this->assertFalse($this->service->acceptGeneratedQuestion($this->instructor, $id)['success']);
+        $this->assertSame([], $this->questions());
+    }
+
+    public function testABatchWithoutAnAssessmentCannotBeAccepted(): void
+    {
+        $id = (int) $this->start(['count' => 1])['questions'][0]['id'];
+        $batchId = (int) $this->generated($id)['batch_id'];
+        db_connect()->table('ai_generation_batches')->where('id', $batchId)->update(['assessment_id' => null]);
+
+        $this->assertSame('This batch is not linked to an assessment.', $this->service->acceptGeneratedQuestion($this->instructor, $id)['message']);
+        $this->assertSame('This batch is not linked to an assessment.', $this->service->acceptAll($this->instructor, $batchId)['message']);
+    }
+
+    public function testAcceptAllAddsEveryPendingQuestionAndSaysHowMany(): void
+    {
+        $result = $this->start(['count' => 3]);
+        $this->service->discardGeneratedQuestion((int) $result['questions'][0]['id']);
+        $this->service->acceptGeneratedQuestion($this->instructor, (int) $result['questions'][1]['id']);
+
+        $all = $this->service->acceptAll($this->instructor, (int) $result['batch']['id']);
+
+        $this->assertTrue($all['success']);
+        $this->assertSame('1 question(s) accepted.', $all['message']);
+        $this->assertSame(1, $all['accepted_count']);
+        $this->assertSame(['Generated question 3'], array_column($all['questions'], 'question_text'));
+        $this->assertSame(['Generated question 2', 'Generated question 3'], array_column($this->questions(), 'question_text'), 'the discarded one never arrives');
+        $this->assertSame(0, db_connect()->table('ai_generated_questions')->where('status', 'pending')->countAllResults());
+    }
+
+    public function testAcceptAllOnAMissingBatchIsRefused(): void
+    {
+        $this->assertSame(['success' => false, 'message' => 'Batch not found.'], $this->service->acceptAll($this->instructor, 999999));
+    }
+}
+
+/** A stand-in for the question generator that hands back canned questions. */
+final class FakeGenerator implements QuestionGeneratorClientInterface
+{
+    /** @var list<array> what generate() was asked */
+    public array $calls = [];
+
+    /** @var list<array>|null fixed questions to return (otherwise made up) */
+    public ?array $questions = null;
+
+    /** How many made-up questions per call (at most what was asked for); 0 with no fixed list means none. */
+    public ?int $chunk = null;
+
+    public ?\Throwable $failure = null;
+
+    private int $made = 0;
+
+    public function generate(array $params): array
+    {
+        $this->calls[] = $params;
+
+        if ($this->failure !== null) {
+            throw $this->failure;
+        }
+
+        if ($this->questions !== null) {
+            return ['questions' => array_slice($this->questions, 0, $params['count']), 'model_used' => 'fake'];
+        }
+
+        $count = min($params['count'], $this->chunk ?? $params['count']);
+        $questions = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $this->made++;
+            $questions[] = [
+                'question_text' => 'Generated question ' . $this->made,
+                'question_type' => 'Multiple Choice',
+                'points' => $params['points_per_question'] ?? 1,
+                'choices' => [['text' => 'Yes', 'is_correct' => true], ['text' => 'No', 'is_correct' => false]],
+            ];
+        }
+
+        return ['questions' => $questions, 'model_used' => 'fake'];
+    }
+
+    public function extractText(string $filePath, string $mimeType): array
+    {
+        return ['text' => 'extracted', 'used_ocr' => false, 'pages' => 1];
+    }
+
+    public function isAvailable(): bool
+    {
+        return true;
+    }
+}
