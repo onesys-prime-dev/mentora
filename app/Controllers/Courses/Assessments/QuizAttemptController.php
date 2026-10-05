@@ -14,14 +14,15 @@ class QuizAttemptController extends BaseController
         $this->quizAttemptService = new QuizAttemptService();
     }
 
-    public function start(int $assessmentId)
+    public function start(int $offeringId, int $assessmentId)
     {
         $user = auth()->user();
 
         return $this->response->setJSON(
             $this->quizAttemptService->startAttempt(
                 $user,
-                $assessmentId
+                $assessmentId,
+                $offeringId
             )
         );
     }

@@ -8,6 +8,7 @@ use App\Models\Courses\CourseOfferingModel;
 use App\Models\Courses\CourseScheduleModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
+use App\Services\Courses\Assessments\AssessmentScopeService;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -66,7 +67,9 @@ class OverviewService
 
         $offering = $this->courseOfferingModel->find($offeringId);
 
-        if ($offering === null) {
+        // Only the section's own people: its assigned instructors and
+        // enrolled students. Everything below is that section's data.
+        if ($offering === null || ! (new AssessmentScopeService())->canAccess($user, $offeringId)) {
             throw PageNotFoundException::forPageNotFound();
         }
 

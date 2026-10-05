@@ -94,6 +94,10 @@ class AnnouncementService
      */
     public function show(User $user, int $offeringId, array $filters = []): array
     {
+        if (!$this->canViewOffering($user, $offeringId)) {
+            return ['success' => false, 'message' => 'Not authorized.'];
+        }
+
         $isInstructor = $this->isInstructorHere($user, $offeringId);
 
         $page = max(1, (int) ($filters['page'] ?? 1));
@@ -153,6 +157,10 @@ class AnnouncementService
      */
     public function loadMore(User $user, int $offeringId, array $filters = []): array
     {
+        if (!$this->canViewOffering($user, $offeringId)) {
+            return ['success' => false, 'message' => 'Not authorized.'];
+        }
+
         $isInstructor = $this->isInstructorHere($user, $offeringId);
 
         $page = max(1, (int) ($filters['page'] ?? 2));
@@ -254,7 +262,7 @@ class AnnouncementService
 
         $announcementId = (int) $this->announcementModel->getInsertID();
 
-        $this->attachFiles($announcementId, $data['attachment_file_ids'] ?? []);
+        $this->attachFiles($announcementId, (int) $user->id, $data['attachment_file_ids'] ?? []);
 
         return ['success' => true, 'message' => 'Announcement posted.', 'announcement_id' => $announcementId];
     }
@@ -287,7 +295,7 @@ class AnnouncementService
             $existing = $this->attachmentModel->where('announcement_id', $announcementId)->findColumn('file_id') ?? [];
 
             $this->attachmentModel->where('announcement_id', $announcementId)->delete();
-            $this->attachFiles($announcementId, $data['attachment_file_ids']);
+            $this->attachFiles($announcementId, (int) $user->id, $data['attachment_file_ids']);
 
             $this->storageService->purgeFiles($existing);
 
@@ -340,15 +348,21 @@ class AnnouncementService
     |--------------------------------------------------------------------------
     */
 
-    private function attachFiles(int $announcementId, array $fileIds): void
+    /** Only files the author uploaded themselves, at most MAX_ATTACHMENTS, so an id can't pull in (or later purge) someone else's file. */
+    private function attachFiles(int $announcementId, int $authorId, array $fileIds): void
     {
+        $fileIds = array_values(array_unique(array_filter(array_map('intval', $fileIds))));
+
+        $owned = $fileIds === [] ? [] : array_map('intval', $this->fileModel
+            ->where('owner_user_id', $authorId)
+            ->whereIn('id', $fileIds)
+            ->findColumn('id') ?? []);
+
+        $fileIds = array_slice(array_values(array_intersect($fileIds, $owned)), 0, self::MAX_ATTACHMENTS);
+
         $order = 1;
 
         foreach ($fileIds as $fileId) {
-
-            if (!$fileId) {
-                continue;
-            }
 
             $this->attachmentModel->insert([
                 'announcement_id' => $announcementId,
@@ -449,7 +463,9 @@ class AnnouncementService
     {
         $reply = $this->replyModel->find($replyId);
 
-        if (!$reply) {
+        $announcement = $reply ? $this->announcementModel->find($reply['announcement_id']) : null;
+
+        if (!$reply || !$announcement || (int) $announcement['offering_id'] !== $offeringId) {
             return ['success' => false, 'message' => 'Reply not found.'];
         }
 
@@ -478,6 +494,12 @@ class AnnouncementService
 
         if (!$this->canViewOffering($user, $offeringId)) {
             return ['success' => false, 'message' => 'Not authorized.'];
+        }
+
+        $emoji = trim($emoji);
+
+        if ($emoji === '' || mb_strlen($emoji) > 32) {
+            return ['success' => false, 'message' => 'Pick a reaction.'];
         }
 
         $result = $this->reactionModel->toggle($announcementId, (int) $user->id, $emoji);

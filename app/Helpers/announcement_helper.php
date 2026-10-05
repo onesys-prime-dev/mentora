@@ -8,24 +8,56 @@
 |--------------------------------------------------------------------------
 */
 
+if (! function_exists('announcement_blocks')) {
+
+    /**
+     * The blocks of a stored message, or none when it isn't a readable
+     * {version, blocks} document. Anything in the list that isn't a block
+     * (a stray string or number) is dropped rather than breaking the page.
+     *
+     * @return list<array>
+     */
+    function announcement_blocks(?string $json): array
+    {
+        $data = json_decode((string) $json, true);
+
+        $blocks = is_array($data) ? ($data['blocks'] ?? []) : [];
+
+        return is_array($blocks) ? array_values(array_filter($blocks, 'is_array')) : [];
+    }
+
+}
+
+if (! function_exists('announcement_lists')) {
+
+    /**
+     * The items of a list block, each a list of text nodes.
+     *
+     * @return list<array>
+     */
+    function announcement_lists(array $block): array
+    {
+        $items = $block['items'] ?? [];
+
+        return is_array($items) ? array_values(array_filter($items, 'is_array')) : [];
+    }
+
+}
+
 if (! function_exists('render_announcement_message')) {
 
     function render_announcement_message(?string $json): string
     {
-        $data = json_decode((string) $json, true);
-
-        $blocks = $data['blocks'] ?? [];
-
-        if (!is_array($blocks) || $blocks === []) {
-            return '';
-        }
-
         $html = '';
 
-        foreach ($blocks as $block) {
+        foreach (announcement_blocks($json) as $block) {
 
             $type = $block['type'] ?? 'paragraph';
+
+            // Only the editor's four alignments: the value ends up inside a
+            // class attribute, so anything else must never reach it.
             $align = $block['align'] ?? 'left';
+            $align = in_array($align, ['left', 'center', 'right', 'justify'], true) ? $align : 'left';
             $alignClass = $align !== 'left' ? " text-{$align}" : '';
 
             switch ($type) {
@@ -37,7 +69,7 @@ if (! function_exists('render_announcement_message')) {
 
                 case 'unordered-list':
                     $html .= '<ul class="list-disc pl-5">';
-                    foreach ($block['items'] ?? [] as $item) {
+                    foreach (announcement_lists($block) as $item) {
                         $html .= '<li>' . announcement_inline($item) . '</li>';
                     }
                     $html .= '</ul>';
@@ -45,7 +77,7 @@ if (! function_exists('render_announcement_message')) {
 
                 case 'ordered-list':
                     $html .= '<ol class="list-decimal pl-5">';
-                    foreach ($block['items'] ?? [] as $item) {
+                    foreach (announcement_lists($block) as $item) {
                         $html .= '<li>' . announcement_inline($item) . '</li>';
                     }
                     $html .= '</ol>';
@@ -65,14 +97,18 @@ if (! function_exists('render_announcement_message')) {
 
 if (! function_exists('announcement_inline')) {
 
-    function announcement_inline(array $nodes): string
+    function announcement_inline(mixed $nodes): string
     {
         $out = '';
 
-        foreach ($nodes as $node) {
+        foreach (is_array($nodes) ? $nodes : [] as $node) {
+
+            if (!is_array($node)) {
+                continue;
+            }
 
             $text = esc((string) ($node['text'] ?? ''));
-            $marks = $node['marks'] ?? [];
+            $marks = is_array($node['marks'] ?? null) ? $node['marks'] : [];
 
             if (in_array('bold', $marks, true)) {
                 $text = "<strong>{$text}</strong>";
@@ -98,18 +134,17 @@ if (! function_exists('announcement_plain_text')) {
     /** Flattens a composer message ({version, blocks} JSON) to plain text, e.g. for a one-line preview. */
     function announcement_plain_text(?string $json): string
     {
-        $data = json_decode((string) $json, true);
-
-        $blocks = is_array($data) ? ($data['blocks'] ?? []) : [];
-
         $parts = [];
 
-        foreach ($blocks as $block) {
+        foreach (announcement_blocks($json) as $block) {
 
-            $nodeLists = isset($block['items']) ? $block['items'] : [$block['content'] ?? []];
+            $nodeLists = isset($block['items']) ? announcement_lists($block) : [$block['content'] ?? []];
 
             foreach ($nodeLists as $nodes) {
-                $parts[] = implode('', array_map(static fn ($n) => (string) ($n['text'] ?? ''), $nodes));
+                $parts[] = implode('', array_map(
+                    static fn ($n) => is_array($n) ? (string) ($n['text'] ?? '') : '',
+                    is_array($nodes) ? $nodes : []
+                ));
             }
 
         }

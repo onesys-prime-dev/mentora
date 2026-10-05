@@ -34,7 +34,7 @@ jobs:
         # 8.5 is what the staging site's PHP-FPM actually runs.
         php: ["8.2", "8.5"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -54,7 +54,7 @@ jobs:
     name: Composer (validate, install, audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -67,7 +67,7 @@ jobs:
         run: composer validate --strict
 
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/composer/files
           key: composer-${{ hashFiles('composer.lock') }}
@@ -110,7 +110,7 @@ jobs:
           --health-timeout=5s
           --health-retries=20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -120,7 +120,7 @@ jobs:
           tools: composer
 
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/composer/files
           key: composer-${{ hashFiles('composer.lock') }}
@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload coverage report
         if: always() && matrix.coverage == 'pcov'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: build/logs
@@ -181,9 +181,9 @@ jobs:
     name: Frontend build and audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -196,6 +196,11 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
+      # Unit tests for the browser code in resources/js (jsdom; no PHP,
+      # database or build needed).
+      - name: Run frontend unit tests
+        run: npm test
+
       - name: Build Vite assets
         run: npm run build
 
@@ -206,11 +211,11 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # scan history, not just the latest commit
 
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

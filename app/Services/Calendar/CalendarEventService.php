@@ -87,9 +87,28 @@ class CalendarEventService
             ->where('a.due_date >=', $from)
             ->where('a.due_date <=', $to);
 
-        $builder = $isInstructor
-            ? $builder->where('a.status !=', 'Archived')
-            : $builder->where('a.status', 'Published');
+        if ($isInstructor) {
+
+            $builder->where('a.status !=', 'Archived');
+
+        } else {
+
+            // Same rule as the course's own lists: a student only learns of
+            // a due date while its module, and the unit and item it hangs
+            // off (if any), are published.
+            $builder->where('a.status', 'Published')
+                ->where('cm.status', 'published')
+                ->join('learning_items li', 'li.id = a.learning_item_id', 'left')
+                ->join('learning_units lu', 'lu.id = li.learning_unit_id', 'left')
+                ->groupStart()
+                    ->where('a.learning_item_id IS NULL', null, false)
+                    ->orGroupStart()
+                        ->where('li.status', 'published')
+                        ->where('lu.status', 'published')
+                    ->groupEnd()
+                ->groupEnd();
+
+        }
 
         return array_map(function (array $row) use ($labels) {
 

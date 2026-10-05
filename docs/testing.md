@@ -15,6 +15,19 @@ Tests run against **MySQL**, in a database of their own. They never touch
    composer test:coverage   # needs PCOV or Xdebug installed; CI does this for you
    ```
 
+### Frontend (JavaScript)
+
+The browser code in `resources/js` is unit-tested with Vitest in jsdom. No PHP,
+database or build is needed:
+
+```bash
+npm test             # one run, what CI does
+npm run test:watch   # re-runs as you edit
+```
+
+Tests live in `tests/js/`, mirroring the paths under `resources/js/`, and are
+named `*.test.js`.
+
 The first run builds the whole schema from the migrations (App and Shield), so
 it takes a few seconds longer; later runs reuse it.
 
@@ -70,15 +83,113 @@ baseline and only ever raised. It lives in `.github/coverage-floor` (one number)
 Checklist, one pull request per domain, in this order:
 
 - [x] Foundation: MySQL test database, safety guard, migrations apply cleanly on an empty database
-- [ ] Modules and progress: `LearningProgressService` is covered (locks, `lockFor` equals `locksFor`, completion rules, video progress, dependencies; 49 tests). `ContentDeletionService` is covered too (cascades, renumbering, other courses untouched, discussion threads kept, assessments removed, files purged only when unused; 14 tests). Still to do: `ModuleService`
-- [ ] Grades: `GradingEngineService` is covered (weighted categories and periods, ungraded work left out, band and pass boundaries, stored records, overrides and their history; 44 tests). `GradingSchemeService` is covered too (copying the system default, publish checks, settings, categories, periods, items, manual scores and what each edit does to "needs recalculation"; 46 tests). Still to do: `GradeService`, `GradeItemSync`, `GradebookSync`, sheet import and export, `RosterRiskService`
+- [x] Modules and progress: `LearningProgressService` is covered (locks, `lockFor` equals `locksFor`, completion rules, video progress, dependencies; 49 tests). `ContentDeletionService` is covered too (cascades, renumbering, other courses untouched, discussion threads kept, assessments removed, files purged only when unused; 14 tests). `ModuleService` is covered too (who may edit, modules, units and items: create, edit, publish, reorder, delete; quiz, discussion and link items; the linked assessment following its item; PDF settings, video links, the module picker and the module pages; 56 tests, plus 17 that point every write method at another section's module, unit or item and expect a refusal; module, unit and item statuses outside draft, published and inactive are refused with a message). Not covered: uploading a video or PDF file (needs a real HTTP upload), and the item view/editor context builders
+- [x] Grades: `GradingEngineService` is covered (weighted categories and periods, ungraded work left out, band and pass boundaries, stored records, overrides and their history; 44 tests). `GradingSchemeService` is covered too (copying the system default, publish checks, settings, categories, periods, items, manual scores and what each edit does to "needs recalculation"; 46 tests). `GradeItemSyncService` (publish to grade item, category matching, snapshot points and resync, archive; 24 tests), `GradebookSyncService` (counted attempt per type, cleared when nothing counts, manual scores, when final grades refresh; 16 tests) and `RosterRiskService` (inactive and behind thresholds, ordering; 13 tests) are covered too. The offline grade sheet is covered too: `GradeSheetLayout` (columns, signature and row hash, every formula; 29 tests) and export, import preview and apply (CSV and XLSX round trips, every refusal, out-of-range scores, locked and calculated cells, when final grades refresh; 44 tests). `GradeService` is covered too (the student's page: final grade hidden until the scheme is published, overrides, first-visit calculation, per-category breakdown, visible assessments; the instructor's page: grouping, needs-review counts, class average and passing count; 23 tests)
 - [x] Auth and roles: every route under `/student` and `/instructor` (read from the real route table, so new routes are checked automatically) sends a logged-out visitor to login and turns away the other role (336 route checks); the role landing pages, a 403 instead of a crash for users with no role, switched-off registration and magic-link login, login-only file downloads, and course-level access (enrolled student / assigned instructor only). A new top-level route fails a test until someone decides who may reach it. 355 tests in `tests/feature/`. (`LoginService` is an empty file, so there is nothing to test there.)
-- [ ] Discussions: `DiscussionService` is covered (access, start/edit/delete, pin and lock, replies, answers, reactions, list order/search/filters/paging, draft-item threads, unread, screens; 41 tests). Still to do: `DiscussionController` (route tests)
-- [ ] Assessments: assessment, quiz, assignment, grading, rubric, question import/export and generation services
-- [ ] Courses and schedule: `CourseService`, `ScheduleService`
-- [ ] Announcements: `AnnouncementService`
-- [ ] Resources and storage: `ResourceService`, `StorageService`, `FileAccessService`
-- [ ] Calendar and reminders: `CalendarEventService`, `ReminderService`
-- [ ] Dashboard and overview: `DashboardService`, `OverviewService`, `ActivityFeedService` (with query-count budgets)
-- [ ] Helpers: announcement, icon, navigation, storage, vite
-- [ ] Frontend: Vitest for the shared JS helpers; Playwright for the main user flows
+- [x] Discussions: `DiscussionService` is covered (access, start/edit/delete, pin and lock, replies, answers, reactions, list order/search/filters/paging, draft-item threads, unread, screens; 41 tests). `DiscussionController` is covered through the real routes as a student and as the instructor (start, list with search and paging, open, edit, delete, pin, lock, reply, answer, react; the other section's threads read as not found and every write there is refused and changes nothing; 50 tests in `tests/feature/DiscussionRoutesTest.php`). Not covered: a real file upload
+- [x] Assessments: `AssessmentResultService` (which attempt counts: best quiz attempt, latest assignment, pending and reopened work; 19 tests), `ShortAnswerGrader` (accepted answers, spacing and case, no fuzzy matching; 25 tests) and `QuizAttemptService` (start and resume, attempt limit, availability window and locks, saving answers, auto-grading every question type, the resulting status, lateness, the gradebook, answers only for the quiz's own questions, a server-side time limit with 60 seconds' grace; 51 tests) are covered, and `tests/feature/AssessmentSectionAccessTest.php` checks that an assessment id only opens inside the course in the URL (8 tests). `AssignmentSubmissionService` (allowed ways to submit, open/closed/late rules, submission limit, link checks, who may submit; 31 tests), `AssessmentFeedbackService` (who may write in a feedback thread and when; 11 tests) and `GradeWorkService` (starting and reopening, grading by points or rubric, question-by-question quiz grading, the gradebook, the Grade Work page; 33 tests) are covered too. Every route that names an assessment, submission, question, rubric, criterion or generated question is also checked against the course in its URL (the `assessmentscope` route filter; `tests/feature/AssessmentRoutesScopeTest.php`, 93 tests: every instructor route from another section and from an unassigned instructor, nonexistent ids, and own-section controls). `QuestionService` (adding, editing, duplicating, reordering and deleting questions, answer keys, the quiz total; 29 tests) and `RubricService` (create and replace, the course library and copying, criteria with the total following; 21 tests) are covered too. `AssessmentService` is covered too (creating with defaults and its learning item, partial edits and clearing optional fields, passing score, attempt limit, status carrying to the Modules item and the gradebook, duration, who sees what, the availability window, submission counts, the pages; 67 tests including statuses outside Draft, Published, Closed and Archived being refused, duplicating with its own Modules item, questions and rubric, and the settings nothing enforces not being stored). The question export and import are covered too (the Word and RTF files, reading a file back as added, changed and removed questions, the AI fallback for foreign files, applying a confirmed preview and only ever to the quiz's own questions; 30 tests). Question generation is covered too, with a fake generator standing in for the AI (batches and chunks, the busy and unavailable cases, the review tray edit, discard, accept and accept all, accepting a question only once; 31 tests). `AssessmentOverviewService` (the student's status on each assessment and what is due, overdue, up next and newly marked; the instructor's grading queue, submission rate, missing work and drafts; the date labels; 56 tests) and the learning-unit content extractor (readings and PDFs as generation text, the length cap, unreadable PDFs; 18 tests) are covered too
+- [x] Courses and schedule: `CourseService` (21 tests), `ScheduleService` (16 tests); fixed co-taught courses listed twice and instructor-less courses hidden from students
+- [x] Announcements: `AnnouncementService` (32 tests) and the routes (17 tests); fixed announcements readable by users outside the course, attaching other users' files, the unused 10-attachment cap, deleting replies across sections, and unchecked reaction values
+- [x] Resources and storage: `ResourceService` (34 tests), `StorageService` (21), `FileAccessService` (14), the `files/{id}` route (8) and the Resources route (4); fixed announcement and discussion attachments being unreadable to classmates, and instructors of a sibling section reading this section's student work
+- [x] Calendar and reminders: `CalendarEventService` (15 tests), `ReminderService` (10) and the Calendar routes (6); fixed hidden-content due dates showing on a student's calendar and reminders filed under courses the person is not in
+- [x] Dashboard and overview: `DashboardService` (32 tests), `OverviewService` (27 + 3 route tests), `ActivityFeedService` (16), and query-count budgets (6) that fail on an N+1; fixed the course Overview being readable by people outside the section
+- [x] Helpers: announcement (18 tests), icon (30), navigation (4 + 3), storage and vite (6); fixed stored XSS through a message block's alignment and crashes on malformed announcement content
+- [x] Frontend, Vitest: the shared SPA helpers (swap, load guard, busy button, error state, highlight row, skeleton rows), the header menus, assignment submission, and the reading/instructions editor JSON (119 tests; runs in CI)
+- [ ] Frontend, Playwright: the main user flows in a real browser
+
+## Handoff notes (where this stands, and what is still open)
+
+Written at the end of the coverage work so whoever continues has the context
+that is not obvious from the code. Everything in the checklist above is done
+except Playwright.
+
+### Open decisions (none of these are started)
+
+- **Playwright end-to-end tests.** Needs a running PHP app, a seeded database, a
+  login step and a CI job with MySQL. Suggested first set: log in as a student
+  and as an instructor, post an announcement, take a quiz, submit an
+  assignment. Chromium is preinstalled in the cloud sandbox; locally run
+  `npx playwright install chromium`.
+- **The PHP coverage floor is stale.** `.github/coverage-floor` is still `17.5`;
+  the suite has grown from roughly 1,000 to about 1,750 tests since it was set,
+  so real coverage is far higher and the floor guards nothing. Read the
+  `Lines: NN.NN%` summary from the "Tests on MySQL (PHP 8.2)" job on a recent
+  run, set the floor just below it, and keep raising it with new tests. It could
+  not be measured while writing these tests (no PCOV or Xdebug in the sandbox).
+- **No static analysis or linting in CI** (only `php -l` syntax checks). The
+  most useful first step is PHPStan with a baseline file, so CI fails only on
+  new problems; ESLint would help most on the untested page scripts in
+  `resources/js/pages`. A code-style tool is lower value here: the code mixes
+  CRLF and LF line endings, so it would reformat many files at once.
+- **`deploy.yml` does not wait for CI.** A push to `staging` deploys and then
+  checks `/health`; it never calls the CI workflow.
+- **JavaScript coverage is partial.** Only the shared helpers and the editor
+  JSON are tested (`tests/js/`). The large page scripts (calendar, questions,
+  grading, rubrics, AI generation) have no tests and there is no JS coverage
+  threshold.
+- **The AI question-generation boundary.** The PHP side is tested against a fake
+  generator. Nothing exercises the real `python-question-builder-service`
+  against the PHP code, so a contract change there would not fail CI.
+
+### Behaviour that was looked at and deliberately left alone
+
+- **The student dashboard writes on a first visit.** The first time a student
+  opens the dashboard, each enrolled course that has no grading scheme gets one
+  copied from the system default (created as `Published`; the average grade
+  depends on it). The Grades tab does the same. That is lazy initialisation by
+  design, not a bug, so it was only measured (about 73 queries on the first
+  visit, about 18 afterwards). If it should change, create the scheme when the
+  offering is created instead.
+- **The calendar shows only `Published` assessments to students**, while the
+  course lists also show `Closed` ones, so past-due closed work does not appear
+  on the calendar. Left as it was; say so if closed work should be included.
+- **Not covered by any test:** uploading a real video or PDF file over HTTP
+  (the services are tested, the multipart upload is not), the Vite
+  development-server branch of `vite()` (it depends on the `ENVIRONMENT`
+  constant), and the "+" button on the dashboard's Reminders card, which has
+  no handler yet.
+
+### Pitfalls that cost time while writing these tests
+
+These apply to any new database test; the first two silently break *other*
+tests, which makes them confusing to track down.
+
+1. **Never use `emptyTable()` or `TRUNCATE`.** In MySQL that is an implicit
+   commit, so it ends the per-test transaction and leaks data into later
+   tests. Use `->where('id >', 0)->delete()`.
+2. **A failed insert can poison unrelated tests.** The connection does not
+   throw on a SQL error (a wrong column name, a duplicate key); it marks the
+   shared transaction as failed, and later code that uses a transaction (for
+   example the grade sheet import) then rolls back with a vague message. If a
+   test passes alone but unrelated tests fail after it, look for an insert
+   with a wrong column name, and run the two files together in that order.
+3. **Grade-reading code needs the system-default grading scheme.** Anything
+   that reaches `GradingSchemeService::forOffering()` (the student dashboard,
+   the course Overview, the Grades page) copies it per course. Call
+   `GradeFactory::systemDefault()` in `setUp()`; a real install always has it
+   seeded.
+4. **Do not name a test helper `count()`, `fileExists()` or similar.** PHPUnit
+   declares those `final`, which is a fatal error that shows up as a confusing
+   framework "ErrorException" rather than a normal failure.
+5. **Real people have a profile row and a sign-in.** Several queries (the
+   instructor's course list, the Overview header, the roster) join
+   `user_profiles` and `auth_identities` with inner joins. `CourseFactory::user()`
+   makes neither, so tests that go through those queries add them (see the
+   `person()` helpers in the dashboard and overview tests).
+6. **When mutation-testing by hand, never restore with `git checkout <file>`
+   if the file also holds an uncommitted fix.** Copy the file aside first.
+   Most of the source files use CRLF line endings, so a scripted edit has to
+   keep them (edit through Python and restore `\r\n`).
+7. **Route registry:** `service('routes')->getRoutes('GET')` needs an upper-case
+   verb, and in a unit test `\Config\Services::routes(false)->loadRoutes()` is
+   needed first (see `NavigationHelperTest`).
+
+### Running the pieces
+
+- PHP: `composer test` (needs the `mentora_test` MySQL database, see above).
+- JavaScript: `npm test`.
+- A single PHP test file: `vendor/bin/phpunit --no-coverage tests/database/FooTest.php`.
+- Query-count budgets live in `tests/database/DashboardQueryBudgetTest.php`.
+  The numbers in its comments were measured on a repeat visit; if a legitimate
+  change adds a query, raise the budget in the same PR and say why, rather
+  than loosening it silently.

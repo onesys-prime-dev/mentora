@@ -34,7 +34,7 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', function ($routes) {
+    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -64,13 +64,13 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
         $routes->post('(:num)/discussions/(:num)/answer', 'Courses\DiscussionController::markAnswer/$1/$2');
 
         $routes->get('(:num)/assessments', 'Courses\Assessments\AssessmentController::show/$1');
-        $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$2');
+        $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$1/$2');
 
-        $routes->get('(:num)/assessments/(:num)/take', 'Courses\Assessments\QuizAttemptController::start/$2');
+        $routes->get('(:num)/assessments/(:num)/take', 'Courses\Assessments\QuizAttemptController::start/$1/$2');
         $routes->post('(:num)/submissions/(:num)/questions/(:num)/answer', 'Courses\Assessments\QuizAttemptController::saveAnswer/$2/$3');
         $routes->post('(:num)/submissions/(:num)/submit', 'Courses\Assessments\QuizAttemptController::submit/$2');
 
-        $routes->post('(:num)/assessments/(:num)/assignment-submissions', 'Courses\Assessments\AssignmentSubmissionController::submit/$2');
+        $routes->post('(:num)/assessments/(:num)/assignment-submissions', 'Courses\Assessments\AssignmentSubmissionController::submit/$1/$2');
 
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
@@ -100,7 +100,7 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', function ($routes) {
+    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -156,7 +156,7 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->post('(:num)/discussions/(:num)/answer', 'Courses\DiscussionController::markAnswer/$1/$2');
         $routes->get('(:num)/assessments', 'Courses\Assessments\AssessmentController::show/$1');
         $routes->post('(:num)/modules/(:num)/learning-units/(:num)/assessments', 'Courses\Assessments\AssessmentController::create/$1/$2/$3');
-        $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$2');
+        $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$1/$2');
         $routes->get('(:num)/assessments/(:num)/editor', 'Courses\Assessments\AssessmentController::editAssessment/$2');
         $routes->get('(:num)/assessments/(:num)/quiz-builder', 'Courses\Assessments\AssessmentController::quizBuilder/$2');
         $routes->patch('(:num)/assessments/(:num)', 'Courses\Assessments\AssessmentController::update/$2');

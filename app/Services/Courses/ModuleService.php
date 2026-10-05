@@ -79,7 +79,41 @@ class ModuleService
             return ['success' => false, 'message' => 'You are not assigned to this course offering.'];
         }
 
-        return null;
+                return null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Section scope
+    |--------------------------------------------------------------------------
+    | Being assigned to an offering must only open that offering's own content:
+    | a module, unit or item id taken from the URL or the request body is
+    | checked against the offering before anything is read or written.
+    */
+
+        /** The statuses modules, units and items can hold (the database enum). */
+    public const STATUSES = ['draft', 'published', 'inactive'];
+
+    private function invalidStatus(): array
+    {
+        return ['success' => false, 'message' => 'Choose a valid status.'];
+    }
+
+    private function moduleBelongsToOffering(int $moduleId, int $offeringId): bool
+    {
+        return $this->courseModuleModel
+            ->where('id', $moduleId)
+            ->where('offering_id', $offeringId)
+            ->countAllResults() > 0;
+    }
+
+    private function unitBelongsToOffering(int $learningUnitId, int $offeringId): bool
+    {
+        return $this->learningUnitModel
+            ->join('course_modules', 'course_modules.id = learning_units.module_id')
+            ->where('learning_units.id', $learningUnitId)
+            ->where('course_modules.offering_id', $offeringId)
+            ->countAllResults() > 0;
     }
 
     public function show(
@@ -934,6 +968,12 @@ class ModuleService
 
         }
 
+                if (! in_array($status, self::STATUSES, true)) {
+
+            return $this->invalidStatus();
+
+        }
+
         $this->courseModuleModel
             ->update(
 
@@ -971,7 +1011,14 @@ class ModuleService
             return $error;
         }
 
-        foreach ($order as $module) {
+                foreach ($order as $module) {
+
+            if (
+                ! isset($module['id'], $module['order_index'])
+                || ! $this->moduleBelongsToOffering((int) $module['id'], $offeringId)
+            ) {
+                continue;
+            }
 
             $this->courseModuleModel->update(
 
@@ -1006,6 +1053,18 @@ class ModuleService
     {
         if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
             return $error;
+        }
+
+                if (! $this->moduleBelongsToOffering($moduleId, $offeringId)) {
+
+            return [
+
+                'success' => false,
+
+                'message' => 'Module not found.',
+
+            ];
+
         }
 
         $title = trim(
@@ -1080,11 +1139,15 @@ class ModuleService
             return $error;
         }
 
-        $unit =
+                $unit =
             $this->learningUnitModel
                 ->find($learningUnitId);
 
-        if (! $unit) {
+        if (
+            ! $unit
+            || (int) $unit['module_id'] !== $moduleId
+            || ! $this->moduleBelongsToOffering($moduleId, $offeringId)
+        ) {
 
             return [
 
@@ -1158,22 +1221,19 @@ class ModuleService
             $this->learningUnitModel
                 ->find($learningUnitId);
 
-        if (!$learningUnit) {
-
+                if (!$learningUnit || !$this->unitBelongsToOffering($learningUnitId, $offeringId)) {
             throw new PageNotFoundException();
+        }
 
+                if (! in_array($payload['status'] ?? null, self::STATUSES, true)) {
+            return $this->invalidStatus();
         }
 
         $this->learningUnitModel->update(
-
             $learningUnitId,
-
             [
-
                 'status' => $payload['status'],
-
             ]
-
         );
 
         return [
@@ -1486,10 +1546,15 @@ class ModuleService
 
                 ->find($learningItemId);
 
-        if (!$learningItem) {
-
+                if (!$learningItem || !$this->itemBelongsToOffering($learningItem, $offeringId)) {
             throw new PageNotFoundException();
+        }
 
+                if (
+            array_key_exists('status', $payload)
+            && ! in_array($payload['status'], self::STATUSES, true)
+        ) {
+            return $this->invalidStatus();
         }
 
         // Link items store {url, description}; only http(s) links are
@@ -1798,7 +1863,11 @@ class ModuleService
         int $offeringId,
         int $learningItemId,
         IncomingRequest $request
-    ): array {
+        ): array {
+
+        if ($error = $this->ensureInstructorOwnsOffering($user, $offeringId)) {
+            return $error;
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -1810,7 +1879,7 @@ class ModuleService
             $this->learningItemModel
                 ->find($learningItemId);
 
-        if (! $learningItem) {
+        if (! $learningItem || ! $this->itemBelongsToOffering($learningItem, $offeringId)) {
 
             throw PageNotFoundException::forPageNotFound();
 
@@ -2235,23 +2304,27 @@ class ModuleService
 
         $unitIds = [];
 
-        foreach ($items as $item) {
+                foreach ($items as $item) {
+
+            if (! isset($item['id'], $item['order_index'])) {
+                continue;
+            }
+
+            $learningItem = $this->learningItemModel->find($item['id']);
+
+            if (! $learningItem || ! $this->itemBelongsToOffering($learningItem, $offeringId)) {
+                continue;
+            }
 
             $this->learningItemModel->update(
-
                 $item['id'],
-
                 [
-
                     'order_index' =>
-
                         $item['order_index'],
-
                 ]
-
             );
 
-            $unitIds[] = $this->learningItemModel->find($item['id'])['learning_unit_id'] ?? null;
+            $unitIds[] = $learningItem['learning_unit_id'];
 
         }
 

@@ -10,6 +10,8 @@ use App\Models\Assessments\AssessmentSettingsModel;
 use App\Models\Assessments\AssessmentTypeModel;
 use App\Models\Assessments\AssessmentRubricModel;
 use App\Models\Assessments\AssessmentQuestionModel;
+use App\Models\Assessments\AssessmentQuestionChoiceModel;
+use App\Models\Assessments\AssessmentRubricCriteriaModel;
 use App\Models\Assessments\AssessmentSubmissionModel;
 use App\Models\Assessments\AssessmentFeedbackModel;
 
@@ -34,7 +36,10 @@ class AssessmentService
     protected LearningItemModel $learningItemModel;
     protected LearningUnitModel $learningUnitModel;
     protected CourseModuleModel $courseModuleModel;
-    protected CourseOfferingModel $courseOfferingModel;
+        protected CourseOfferingModel $courseOfferingModel;
+
+    /** The statuses an assessment can hold (the database enum). */
+    public const STATUSES = ['Draft', 'Published', 'Closed', 'Archived'];
 
     public function __construct()
     {
@@ -1009,33 +1014,11 @@ class AssessmentService
             'allow_link_entry'
                 => $data['allow_link_entry'] ?? false,
 
-            'allow_late_submission'
+                        'allow_late_submission'
                 => $data['allow_late_submission'] ?? false,
-
-            'show_results_immediately'
-                => $data['show_results_immediately'] ?? false,
-
-            'show_correct_answers'
-                => $data['show_correct_answers'] ?? false,
-
-            'allow_review_after_submission'
-                => $data['allow_review_after_submission'] ?? true,
-
-            'require_password'
-                => $data['require_password'] ?? false,
-
-            'password'
-                => $data['password'] ?? null,
-
-            'randomize_questions'
-                => $data['randomize_questions'] ?? false,
-
-            'randomize_choices'
-                => $data['randomize_choices'] ?? false,
-
-            'browser_lockdown'
-                => $data['browser_lockdown'] ?? false,
-
+            // Password, lockdown, randomising and the show-results options
+            // have no screen and nothing acts on them, so they are neither
+            // accepted nor stored (their columns keep the defaults).
             'allow_multiple_attempts'
                 => $data['allow_multiple_attempts'] ?? false,
 
@@ -1068,7 +1051,7 @@ class AssessmentService
                 ];
             }
 
-            /*
+                        /*
             |--------------------------------------------------------------------------
             | Retrieve Assessment Settings
             |--------------------------------------------------------------------------
@@ -1077,6 +1060,16 @@ class AssessmentService
             $settings = $this->assessmentSettingsModel
                 ->where('assessment_id', $assessmentId)
                 ->first();
+
+            // Only a real status can be saved (null means "not changing it").
+            $newStatus = $data['status'] ?? null;
+
+            if ($newStatus !== null && !in_array($newStatus, self::STATUSES, true)) {
+                return [
+                    'success' => false,
+                    'message' => 'Choose a valid status.',
+                ];
+            }
 
             /*
             |--------------------------------------------------------------------------
@@ -1092,9 +1085,13 @@ class AssessmentService
             |--------------------------------------------------------------------------
             */
 
+                        // An optional field the editor emptied arrives as null and must
+            // clear it; one that must hold a value keeps its old one instead.
+            $optional = static fn (string $key, array $current) => array_key_exists($key, $data) ? $data[$key] : $current[$key];
+
             $totalPoints = $data['total_points'] ?? $assessment['total_points'];
 
-            $passingPercentage = $data['passing_percentage'] ?? $assessment['passing_percentage'];
+            $passingPercentage = $optional('passing_percentage', $assessment);
 
             $passingScore = $passingPercentage !== null
                 ? round(((float) $totalPoints) * ((float) $passingPercentage) / 100, 2)
@@ -1114,17 +1111,17 @@ class AssessmentService
 
                 'title'              => $data['title'] ?? $assessment['title'],
 
-                'description'        => $data['description'] ?? $assessment['description'],
+                'description'        => $optional('description', $assessment),
 
-                'instructions'       => $data['instructions'] ?? $assessment['instructions'],
+                'instructions'       => $optional('instructions', $assessment),
 
                 'available_from'     => $data['available_from'] ?? $assessment['available_from'],
 
                 'due_date'           => $data['due_date'] ?? $assessment['due_date'],
 
-                'available_until'    => $data['available_until'] ?? $assessment['available_until'],
+                'available_until'    => $optional('available_until', $assessment),
 
-                'duration'           => $data['duration'] ?? $assessment['duration'],
+                'duration'           => $optional('duration', $assessment),
 
                 'total_points'       => $totalPoints,
 
@@ -1149,8 +1146,9 @@ class AssessmentService
                 $assessmentData
             );
 
-            if (array_key_exists('status', $data)) {
-                $this->syncLearningItemStatus($assessment, $data['status']);
+                        if ($newStatus !== null) {
+
+                $this->syncLearningItemStatus($assessment, $newStatus);
 
                 (new GradeItemSyncService())->syncFromAssessment($assessmentId);
             }
@@ -1172,29 +1170,7 @@ class AssessmentService
                     'allow_late_submission' =>
                         $data['allow_late_submission'] ?? $settings['allow_late_submission'],
 
-                    'show_results_immediately' =>
-                        $data['show_results_immediately'] ?? $settings['show_results_immediately'],
-
-                    'show_correct_answers' =>
-                        $data['show_correct_answers'] ?? $settings['show_correct_answers'],
-
-                    'allow_review_after_submission' =>
-                        $data['allow_review_after_submission'] ?? $settings['allow_review_after_submission'],
-
-                    'require_password' =>
-                        $data['require_password'] ?? $settings['require_password'],
-
-                    'password' =>
-                        $data['password'] ?? $settings['password'],
-
-                    'randomize_questions' =>
-                        $data['randomize_questions'] ?? $settings['randomize_questions'],
-
-                    'randomize_choices' =>
-                        $data['randomize_choices'] ?? $settings['randomize_choices'],
-
-                    'browser_lockdown' =>
-                        $data['browser_lockdown'] ?? $settings['browser_lockdown'],
+                    
 
                     'allow_multiple_attempts' =>
                         $allowMultipleAttempts,
@@ -1283,12 +1259,15 @@ class AssessmentService
 
         $this->assessmentModel->update(
             $assessmentId,
-            [
+                        [
                 'status'     => 'Archived',
                 'updated_by' => $user->id,
                 'updated_at' => date('Y-m-d H:i:s')
             ]
         );
+
+        $this->syncLearningItemStatus($assessment, 'Archived');
+
 
         return [
             'success' => true,
@@ -1309,12 +1288,15 @@ class AssessmentService
 
         $this->assessmentModel->update(
             $assessmentId,
-            [
+                        [
                 'status'     => 'Published',
                 'updated_by' => $user->id,
                 'updated_at' => date('Y-m-d H:i:s')
             ]
         );
+
+        $this->syncLearningItemStatus($assessment, 'Published');
+
 
         // Published work counts toward the grade: add it to the gradebook.
         (new GradeItemSyncService())->syncFromAssessment($assessmentId);
@@ -1345,6 +1327,8 @@ class AssessmentService
             ]
         );
 
+        $this->syncLearningItemStatus($assessment, 'Draft');
+
         return [
             'success' => true,
             'message' => 'Assessment unpublished successfully.',
@@ -1352,16 +1336,18 @@ class AssessmentService
         ];
     } 
     
-    public function duplicateAssessment(User $user, int $assessmentId): array { 
+    /**
+     * A draft copy of an assessment: its own Modules item (right after the
+     * original's, in the same unit), the same settings, its questions with
+     * their choices and answer keys, and its rubric. Student work is not
+     * copied. Sharing the original's learning item would make deleting the
+     * copy delete the original's item with it.
+     */
+    public function duplicateAssessment(User $user, int $assessmentId): array {
+
         $db = db_connect();
 
         try {
-
-            /*
-            |--------------------------------------------------------------------------
-            | Retrieve Assessment
-            |--------------------------------------------------------------------------
-            */
 
             $assessment = $this->assessmentModel->find($assessmentId);
 
@@ -1372,28 +1358,48 @@ class AssessmentService
                 ];
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Retrieve Assessment Settings
-            |--------------------------------------------------------------------------
-            */
-
             $settings = $this->assessmentSettingsModel
                 ->where('assessment_id', $assessmentId)
                 ->first();
 
-            /*
-            |--------------------------------------------------------------------------
-            | Transaction
-            |--------------------------------------------------------------------------
-            */
+            $now = date('Y-m-d H:i:s');
 
             $db->transBegin();
 
             /*
-            |--------------------------------------------------------------------------
-            | Duplicate Assessment
-            |--------------------------------------------------------------------------
+            | The copy's own learning item
+            */
+
+            $newItemId = null;
+
+            if (!empty($assessment['learning_item_id'])) {
+
+                $item = $this->learningItemModel->find($assessment['learning_item_id']);
+
+                if ($item) {
+
+                    $last = $this->learningItemModel
+                        ->where('learning_unit_id', $item['learning_unit_id'])
+                        ->orderBy('order_index', 'DESC')
+                        ->first();
+
+                    $this->learningItemModel->insert([
+                        'learning_unit_id' => $item['learning_unit_id'],
+                        'title' => $item['title'] . ' (Copy)',
+                        'item_type' => $item['item_type'],
+                        'estimated_minutes' => $item['estimated_minutes'],
+                        'order_index' => (int) ($last['order_index'] ?? 0) + 1,
+                        'status' => 'draft',
+                    ]);
+
+                    $newItemId = $this->learningItemModel->getInsertID();
+
+                }
+
+            }
+
+            /*
+            | The assessment
             */
 
             unset(
@@ -1404,8 +1410,9 @@ class AssessmentService
 
             $assessment['title'] .= ' (Copy)';
             $assessment['status'] = 'Draft';
+            $assessment['learning_item_id'] = $newItemId;
             $assessment['created_by'] = $user->id;
-            $assessment['created_at'] = date('Y-m-d H:i:s');
+            $assessment['created_at'] = $now;
             $assessment['updated_by'] = null;
             $assessment['updated_at'] = null;
 
@@ -1414,9 +1421,7 @@ class AssessmentService
             $newAssessmentId = $this->assessmentModel->getInsertID();
 
             /*
-            |--------------------------------------------------------------------------
-            | Duplicate Assessment Settings
-            |--------------------------------------------------------------------------
+            | Settings
             */
 
             if ($settings) {
@@ -1428,17 +1433,92 @@ class AssessmentService
                 );
 
                 $settings['assessment_id'] = $newAssessmentId;
-                $settings['created_at'] = date('Y-m-d H:i:s');
+                $settings['created_at'] = $now;
                 $settings['updated_at'] = null;
 
                 $this->assessmentSettingsModel->insert($settings);
+
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | Commit Transaction
-            |--------------------------------------------------------------------------
+            | Questions (active ones) with their choices and answer keys
             */
+
+            $choiceModel = new AssessmentQuestionChoiceModel();
+
+            foreach ($this->questionModel->listForAssessment($assessmentId) as $question) {
+
+                $this->questionModel->insert([
+                    'assessment_id' => $newAssessmentId,
+                    'question_text' => $question['question_text'],
+                    'question_type' => $question['question_type'],
+                    'allow_multiple_answers' => $question['allow_multiple_answers'],
+                    'answers_count' => $question['answers_count'],
+                    'accepted_answers' => ShortAnswerGrader::encode($question['accepted_answers']),
+                    'case_sensitive' => (int) $question['case_sensitive'],
+                    'points' => $question['points'],
+                    'is_required' => $question['is_required'],
+                    'order_index' => $question['order_index'],
+                    'created_by' => $user->id,
+                    'created_at' => $now,
+                    'status' => 'Active',
+                ]);
+
+                $newQuestionId = $this->questionModel->getInsertID();
+
+                foreach ($question['choices'] as $choice) {
+
+                    $choiceModel->insert([
+                        'question_id' => $newQuestionId,
+                        'choice_text' => $choice['choice_text'],
+                        'is_correct' => $choice['is_correct'],
+                        'order_index' => $choice['order_index'],
+                        'created_at' => $now,
+                    ]);
+
+                }
+
+            }
+
+            /*
+            | Rubric
+            */
+
+            $rubric = $this->rubricModel->findByAssessment($assessmentId);
+
+            if ($rubric) {
+
+                $source = $this->rubricModel->getWithCriteria((int) $rubric['id']);
+
+                $this->rubricModel->insert([
+                    'question_id' => null,
+                    'assessment_id' => $newAssessmentId,
+                    'title' => $source['title'],
+                    'description' => $source['description'],
+                    'total_points' => $source['total_points'],
+                    'created_by' => $user->id,
+                    'created_at' => $now,
+                    'status' => 'Active',
+                ]);
+
+                $newRubricId = $this->rubricModel->getInsertID();
+
+                $criteriaModel = new AssessmentRubricCriteriaModel();
+
+                foreach ($source['criteria'] as $criterion) {
+
+                    $criteriaModel->insert([
+                        'rubric_id' => $newRubricId,
+                        'criteria_title' => $criterion['criteria_title'],
+                        'description' => $criterion['description'],
+                        'max_points' => $criterion['max_points'],
+                        'order_index' => $criterion['order_index'],
+                        'created_at' => $now,
+                    ]);
+
+                }
+
+            }
 
             if ($db->transStatus() === false) {
 
@@ -1448,6 +1528,7 @@ class AssessmentService
                     'success' => false,
                     'message' => 'Unable to duplicate assessment.'
                 ];
+
             }
 
             $db->transCommit();
@@ -1463,9 +1544,11 @@ class AssessmentService
             $db->transRollback();
 
             throw $e;
+
         }
-    } 
-    
+
+    }
+
     public function restoreAssessment(User $user, int $assessmentId): array { 
         $assessment = $this->assessmentModel->find($assessmentId);
 
@@ -1484,6 +1567,8 @@ class AssessmentService
                 'updated_at' => date('Y-m-d H:i:s')
             ]
         );
+
+        $this->syncLearningItemStatus($assessment, 'Draft');
 
         return [
             'success' => true,

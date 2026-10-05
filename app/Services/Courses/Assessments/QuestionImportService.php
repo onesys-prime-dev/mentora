@@ -87,7 +87,14 @@ class QuestionImportService
      */
     public function applyDiff(User $user, int $assessmentId, array $changes): array
     {
-        $questionService = new QuestionService();
+                $questionService = new QuestionService();
+
+        // The ids come from the request body: only this assessment's own
+        // questions can be changed or removed through it.
+        $own = array_flip(array_map(
+            static fn (array $question) => (int) $question['id'],
+            $this->questionModel->listForAssessment($assessmentId)
+        ));
 
         $addedCount = 0;
         $changedCount = 0;
@@ -105,8 +112,10 @@ class QuestionImportService
 
         foreach (($changes['changed'] ?? []) as $item) {
 
-            if (empty($item['id'])) {
+                        if (empty($item['id']) || !isset($own[(int) $item['id']])) {
+
                 continue;
+
             }
 
             $result = $questionService->updateQuestion($user, (int) $item['id'], $item);
@@ -117,7 +126,13 @@ class QuestionImportService
 
         }
 
-        foreach (($changes['remove_ids'] ?? []) as $questionId) {
+                foreach (($changes['remove_ids'] ?? []) as $questionId) {
+
+            if (!isset($own[(int) $questionId])) {
+
+                continue;
+
+            }
 
             $result = $questionService->deleteQuestion((int) $questionId);
 
