@@ -253,14 +253,43 @@ final class AssessmentServiceTest extends DatabaseTestCase
     {
         $id = $this->create()['assessment'];
 
-        $this->service->updateAssessment($this->instructor, $id, ['allow_late_submission' => 1, 'show_correct_answers' => 1, 'randomize_questions' => 1]);
+        $this->service->updateAssessment($this->instructor, $id, ['allow_late_submission' => 1]);
 
         $settings = $this->settings($id);
         $this->assertSame(1, (int) $settings['allow_late_submission']);
-        $this->assertSame(1, (int) $settings['show_correct_answers']);
-        $this->assertSame(1, (int) $settings['randomize_questions']);
-        $this->assertSame(1, (int) $settings['allow_review_after_submission'], 'untouched');
-        $this->assertSame(0, (int) $settings['browser_lockdown'], 'untouched');
+        $this->assertSame(1, (int) $settings['allow_file_upload'], 'untouched');
+        $this->assertSame(0, (int) $settings['allow_multiple_attempts'], 'untouched');
+    }
+
+    /** @return iterable<string, array{0: string, 1: mixed}> */
+    public static function settingsNothingEnforces(): iterable
+    {
+        yield 'a quiz password' => ['password', 'secret'];
+        yield 'requiring the password' => ['require_password', true];
+        yield 'browser lockdown' => ['browser_lockdown', true];
+        yield 'randomised questions' => ['randomize_questions', true];
+        yield 'randomised choices' => ['randomize_choices', true];
+        yield 'showing results immediately' => ['show_results_immediately', true];
+        yield 'showing correct answers' => ['show_correct_answers', true];
+        yield 'review after submission' => ['allow_review_after_submission', false];
+    }
+
+    /**
+     * No screen offers these and nothing in the app acts on them, so storing
+     * them would only suggest protection (a quiz password, lockdown) that
+     * does not exist. They are not accepted.
+     */
+    #[PHPUnit\Framework\Attributes\DataProvider('settingsNothingEnforces')]
+    public function testSettingsThatNothingEnforcesAreNotStored(string $key, mixed $value): void
+    {
+        $created = $this->create([$key => $value])['assessment'];
+        $before = $this->settings($created);
+
+        $this->service->updateAssessment($this->instructor, $created, [$key => $value]);
+
+        $after = $this->settings($created);
+        $this->assertSame($before[$key], $after[$key], $key);
+        $this->assertSame(['password' => null, 'require_password' => 0, 'browser_lockdown' => 0, 'randomize_questions' => 0, 'randomize_choices' => 0, 'show_results_immediately' => 0, 'show_correct_answers' => 0, 'allow_review_after_submission' => 1][$key], is_numeric($after[$key]) ? (int) $after[$key] : $after[$key]);
     }
 
     public function testChangingTheStatusFollowsToTheLearningItem(): void
@@ -272,6 +301,59 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
             $this->assertSame($status, $this->row('assessments', $ids['assessment'])['status']);
             $this->assertSame($item, $this->row('learning_items', $ids['item'])['status'], $status);
+        }
+    }
+
+    /** @return iterable<string, array{0: mixed}> */
+    public static function badStatuses(): iterable
+    {
+        yield 'unknown word' => ['banana'];
+        yield 'wrong case' => ['published'];
+        yield 'empty' => [''];
+    }
+
+    #[PHPUnit\Framework\Attributes\DataProvider('badStatuses')]
+    public function testAnUnknownStatusIsRefusedAndNothingIsSaved(mixed $status): void
+    {
+        $ids = $this->create();
+
+        $result = $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => $status, 'title' => 'Changed']);
+
+        $this->assertSame(['success' => false, 'message' => 'Choose a valid status.'], $result);
+        $row = $this->row('assessments', $ids['assessment']);
+        $this->assertSame('Draft', $row['status']);
+        $this->assertSame('Week 1 quiz', $row['title']);
+        $this->assertSame('draft', $this->row('learning_items', $ids['item'])['status']);
+    }
+
+    public function testEveryRealStatusIsAccepted(): void
+    {
+        $id = $this->create()['assessment'];
+
+        foreach (['Published', 'Closed', 'Archived', 'Draft'] as $status) {
+            $this->assertTrue($this->service->updateAssessment($this->instructor, $id, ['status' => $status])['success'], $status);
+            $this->assertSame($status, $this->row('assessments', $id)['status']);
+        }
+    }
+
+    public function testAStatusLeftNullKeepsTheCurrentOne(): void
+    {
+        $id = $this->create()['assessment'];
+        $this->service->updateAssessment($this->instructor, $id, ['status' => 'Published']);
+
+        $this->assertTrue($this->service->updateAssessment($this->instructor, $id, ['status' => null, 'title' => 'Renamed'])['success']);
+
+        $this->assertSame('Published', $this->row('assessments', $id)['status']);
+    }
+
+    public function testTheStatusShortcutsKeepTheLearningItemInStep(): void
+    {
+        $ids = $this->create();
+
+        foreach ([['publishedAssessment', 'published'], ['unpublishedAssessment', 'draft'], ['publishedAssessment', 'published'], ['archiveAssessment', 'draft'], ['restoreAssessment', 'draft']] as [$method, $item]) {
+            $this->service->{$method}($this->instructor, $ids['assessment']);
+
+            $this->assertSame($item, $this->row('learning_items', $ids['item'])['status'], $method);
         }
     }
 
@@ -348,17 +430,6 @@ final class AssessmentServiceTest extends DatabaseTestCase
         $this->assertSame('2026-10-01 08:00:00', $row['available_from']);
         $this->assertEquals(40, $row['total_points']);
         $this->assertSame('Week 1 quiz', $row['title']);
-    }
-
-    public function testClearingTheQuizPasswordRemovesIt(): void
-    {
-        $id = $this->create(['require_password' => true, 'password' => 'secret'])['assessment'];
-
-        $this->service->updateAssessment($this->instructor, $id, ['require_password' => false, 'password' => null]);
-
-        $settings = $this->settings($id);
-        $this->assertSame(0, (int) $settings['require_password']);
-        $this->assertNull($settings['password']);
     }
 
     public function testInstructionsAreStoredAsReadableJson(): void
@@ -440,7 +511,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
     public function testADuplicateIsADraftCopyWithItsSettings(): void
     {
         $id = $this->create(['total_points' => 20])['assessment'];
-        $this->service->updateAssessment($this->instructor, $id, ['status' => 'Published', 'show_correct_answers' => 1]);
+        $this->service->updateAssessment($this->instructor, $id, ['status' => 'Published', 'allow_late_submission' => 1]);
 
         $result = $this->service->duplicateAssessment($this->instructor, $id);
 
@@ -450,9 +521,85 @@ final class AssessmentServiceTest extends DatabaseTestCase
         $this->assertSame('Week 1 quiz (Copy)', $copy['title']);
         $this->assertSame('Draft', $copy['status']);
         $this->assertEquals(20, $copy['total_points']);
-        $this->assertSame(1, (int) $this->settings((int) $copy['id'])['show_correct_answers']);
+        $this->assertSame(1, (int) $this->settings((int) $copy['id'])['allow_late_submission']);
         $this->assertSame('Published', $this->row('assessments', $id)['status'], 'the original is untouched');
         $this->assertSame('Assessment not found.', $this->service->duplicateAssessment($this->instructor, 999999)['message']);
+    }
+
+    public function testADuplicateGetsItsOwnLearningItemAtTheEndOfTheUnit(): void
+    {
+        $ids = $this->create(['title' => 'Quiz']);
+        $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => 'Published']);
+        [$other] = CourseFactory::items($this->unit, [[]]);
+        db_connect()->table('learning_items')->where('id', $other)->update(['order_index' => 2]);
+
+        $copy = $this->service->duplicateAssessment($this->instructor, $ids['assessment'])['assessment'];
+
+        $this->assertNotSame($ids['item'], (int) $copy['learning_item_id'], 'not shared with the original');
+        $item = $this->row('learning_items', (int) $copy['learning_item_id']);
+        $this->assertSame('Quiz (Copy)', $item['title']);
+        $this->assertSame('quiz', $item['item_type']);
+        $this->assertSame('draft', $item['status']);
+        $this->assertSame($this->unit, (int) $item['learning_unit_id']);
+        $this->assertSame(3, (int) $item['order_index'], 'after the original and the other item');
+        $this->assertSame('published', $this->row('learning_items', $ids['item'])['status'], 'the original item is untouched');
+    }
+
+    public function testDeletingADuplicateDoesNotTakeTheOriginalsItemWithIt(): void
+    {
+        $ids = $this->create();
+        $copy = $this->service->duplicateAssessment($this->instructor, $ids['assessment'])['assessment'];
+
+        $this->service->deleteAssessment((int) $copy['id']);
+
+        $this->assertNotNull($this->row('assessments', $ids['assessment']));
+        $this->assertNotNull($this->row('learning_items', $ids['item']));
+    }
+
+    public function testADuplicateCopiesTheQuestionsTheirChoicesAndTheRubric(): void
+    {
+        $ids = $this->create(['total_points' => 7]);
+        $quiz = $ids['assessment'];
+        $mc = AssessmentFactory::multipleChoice($quiz, $this->instructor, [false, true], 4);
+        $short = AssessmentFactory::shortAnswer($quiz, $this->instructor, ['Paris', 'paris france'], 3, true);
+        $archived = AssessmentFactory::question($quiz, $this->instructor, 'Essay', 9);
+        db_connect()->table('assessment_questions')->where('id', $archived)->update(['status' => 'Archived']);
+        $rubric = AssessmentFactory::rubric($quiz, $this->instructor, [10, 5]);
+
+        $copy = (int) $this->service->duplicateAssessment($this->instructor, $quiz)['assessment']['id'];
+
+        $questions = (new App\Models\Assessments\AssessmentQuestionModel())->listForAssessment($copy);
+        $this->assertCount(2, $questions, 'archived questions are not copied');
+        $this->assertSame(['Multiple Choice', 'Short Answer'], array_column($questions, 'question_type'));
+        $this->assertSame([1, 2], array_map('intval', array_column($questions, 'order_index')));
+        $this->assertEquals([4, 3], array_column($questions, 'points'));
+        $this->assertSame(['Choice 1', 'Choice 2'], array_column($questions[0]['choices'], 'choice_text'));
+        $this->assertSame([0, 1], array_map('intval', array_column($questions[0]['choices'], 'is_correct')));
+        $this->assertSame([1, 2], array_map('intval', array_column($questions[0]['choices'], 'order_index')));
+        $this->assertSame(['Paris', 'paris france'], $questions[1]['accepted_answers']);
+        $this->assertSame(1, (int) $questions[1]['case_sensitive']);
+
+        $copiedRubric = db_connect()->table('assessment_rubrics')->where('assessment_id', $copy)->get()->getRowArray();
+        $this->assertNotNull($copiedRubric);
+        $this->assertNotSame($rubric['rubric'], (int) $copiedRubric['id']);
+        $this->assertEquals(15, $copiedRubric['total_points']);
+        $criteria = db_connect()->table('assessment_rubric_criteria')->where('rubric_id', $copiedRubric['id'])->orderBy('order_index')->get()->getResultArray();
+        $this->assertEquals([10, 5], array_column($criteria, 'max_points'));
+
+        // The copy is independent of the original.
+        db_connect()->table('assessment_questions')->where('id', $questions[0]['id'])->update(['question_text' => 'Changed in the copy']);
+        $this->assertNotSame('Changed in the copy', db_connect()->table('assessment_questions')->where('id', $mc['question'])->get()->getRowArray()['question_text']);
+        $this->assertNotSame($short, (int) $questions[1]['id']);
+    }
+
+    public function testADuplicateKeepsNoStudentWork(): void
+    {
+        $id = $this->create()['assessment'];
+        AssessmentFactory::attempt($id, $this->student, 'Graded', 5);
+
+        $copy = (int) $this->service->duplicateAssessment($this->instructor, $id)['assessment']['id'];
+
+        $this->assertSame(0, db_connect()->table('assessment_submissions')->where('assessment_id', $copy)->countAllResults());
     }
 
     public function testReadingOneAssessmentAndItsFigures(): void
