@@ -14,8 +14,10 @@ use CodeIgniter\Shield\Entities\User;
  *    instructors; enrolled students once the item is published, visible
  *    and not locked behind an incomplete prerequisite
  *  - assignment submission / quiz response upload: the student who
- *    submitted it, and instructors teaching the course
+ *    submitted it, and instructors teaching that section
  *  - AI generation source: instructors teaching the course
+ *  - announcement / discussion attachment: the course section's instructors
+ *    and enrolled students
  *  - anything: the user who uploaded it
  */
 class FileAccessService
@@ -117,16 +119,18 @@ class FileAccessService
         $work = array_merge(
 
             $db->table('assessment_submissions')
-                ->select(['assessment_submissions.student_id', 'assessments.course_id'])
+                ->select(['assessment_submissions.student_id', 'assessments.course_id', 'course_modules.offering_id'])
                 ->join('assessments', 'assessments.id = assessment_submissions.assessment_id')
+                ->join('course_modules', 'course_modules.id = assessments.module_id', 'left')
                 ->where('assessment_submissions.submission_file_id', $fileId)
                 ->get()
                 ->getResultArray(),
 
             $db->table('assessment_question_responses')
-                ->select(['assessment_submissions.student_id', 'assessments.course_id'])
+                ->select(['assessment_submissions.student_id', 'assessments.course_id', 'course_modules.offering_id'])
                 ->join('assessment_submissions', 'assessment_submissions.id = assessment_question_responses.submission_id')
                 ->join('assessments', 'assessments.id = assessment_submissions.assessment_id')
+                ->join('course_modules', 'course_modules.id = assessments.module_id', 'left')
                 ->where('assessment_question_responses.uploaded_file_id', $fileId)
                 ->get()
                 ->getResultArray()
@@ -139,7 +143,13 @@ class FileAccessService
                 return true;
             }
 
-            if ($isInstructor && $this->teachesCourse($userId, (int) $row['course_id'])) {
+            // The section the work belongs to; only an assessment that sits
+            // in no module falls back to any section of the course.
+            if ($isInstructor && (
+                $row['offering_id'] !== null
+                    ? $this->teachesOffering($userId, (int) $row['offering_id'])
+                    : $this->teachesCourse($userId, (int) $row['course_id'])
+            )) {
                 return true;
             }
 
@@ -163,6 +173,40 @@ class FileAccessService
                 if ($this->teachesCourse($userId, (int) $batch['course_id'])) {
                     return true;
                 }
+            }
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Announcement and discussion attachments
+        |--------------------------------------------------------------------------
+        */
+
+        $offerings = array_merge(
+
+            $db->table('announcement_attachments')
+                ->select('announcements.offering_id')
+                ->join('announcements', 'announcements.id = announcement_attachments.announcement_id')
+                ->where('announcement_attachments.file_id', $fileId)
+                ->get()
+                ->getResultArray(),
+
+            $db->table('discussion_attachments')
+                ->select('discussion_threads.offering_id')
+                ->join('discussion_threads', 'discussion_threads.id = discussion_attachments.thread_id')
+                ->where('discussion_attachments.file_id', $fileId)
+                ->get()
+                ->getResultArray()
+
+        );
+
+        foreach ($offerings as $row) {
+
+            $offeringId = (int) $row['offering_id'];
+
+            if ($isInstructor ? $this->teachesOffering($userId, $offeringId) : $this->enrolledInOffering($userId, $offeringId)) {
+                return true;
             }
 
         }
