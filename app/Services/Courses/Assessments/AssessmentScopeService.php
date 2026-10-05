@@ -40,7 +40,7 @@ class AssessmentScopeService
     /** Does this path touch assessment work at all? */
     public function appliesTo(array $segments): bool
     {
-        return array_intersect(['assessments', 'submissions', 'questions', 'rubrics', 'rubric-criteria', 'generation-batches', 'generated-questions'], $segments) !== [];
+        return array_intersect(['announcements', 'assessments', 'submissions', 'questions', 'rubrics', 'rubric-criteria', 'generation-batches', 'generated-questions'], $segments) !== [];
     }
 
     /**
