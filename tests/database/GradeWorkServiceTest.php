@@ -111,6 +111,29 @@ final class GradeWorkServiceTest extends DatabaseTestCase
         }
     }
 
+    public function testWorkThatWasNeverHandedInCannotBeGraded(): void
+    {
+        $assignment = $this->assessment('Assignment', 20);
+        $quiz = $this->assessment('Quiz', 10);
+        $essay = AssessmentFactory::question($quiz, $this->instructor, 'Essay', 10);
+
+        foreach (['In Progress', 'Cancelled'] as $status) {
+            $submission = AssessmentFactory::attempt($assignment, $this->ada, $status);
+            $attempt = AssessmentFactory::attempt($quiz, $this->ada, $status);
+            AssessmentFactory::response($attempt, $essay, ['response_text' => 'Draft answer']);
+
+            $this->assertSame(['success' => false, 'message' => 'This work has not been handed in yet.'], $this->service->submitGrade($this->instructor, $submission, ['score' => 20]), $status);
+            $this->assertSame(['success' => false, 'message' => 'This work has not been handed in yet.'], $this->service->submitGrade($this->instructor, $attempt, []), $status);
+            $this->assertSame(['success' => false, 'message' => 'This work has not been handed in yet.'], $this->service->gradeQuestion($this->instructor, $attempt, $essay, ['mode' => 'points', 'points' => 5]), $status);
+            $this->assertSame(['success' => false, 'message' => 'This work has not been handed in yet.'], $this->service->startGrading($this->instructor, $submission), $status);
+
+            $this->assertSame($status, $this->row($submission)['status']);
+            $this->assertSame($status, $this->row($attempt)['status']);
+            $this->assertSame(0, (int) $this->row($submission)['is_graded']);
+            $this->assertEquals(0, $this->row($attempt)['score']);
+        }
+    }
+
     public function testStartingMissingWorkIsRefused(): void
     {
         $this->assertSame(['success' => false, 'message' => 'Submission not found.'], $this->service->startGrading($this->instructor, 999999));

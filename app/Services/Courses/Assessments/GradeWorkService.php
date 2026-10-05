@@ -257,7 +257,7 @@ class GradeWorkService
         ];
     }
 
-    public function startGrading(User $user, int $submissionId): array
+        public function startGrading(User $user, int $submissionId): array
     {
         $submission = $this->submissionModel->find($submissionId);
 
@@ -267,6 +267,11 @@ class GradeWorkService
                 'message' => 'Submission not found.'
             ];
         }
+
+        if (!$this->wasHandedIn($submission)) {
+            return $this->notHandedIn();
+        }
+
 
         // Opening work to grade — including a quiz whose auto-gradable part
         // is already scored — moves it to Grading.
@@ -285,7 +290,7 @@ class GradeWorkService
         ];
     }
 
-    public function submitGrade(User $user, int $submissionId, array $data): array
+        public function submitGrade(User $user, int $submissionId, array $data): array
     {
         $submission = $this->submissionModel->find($submissionId);
 
@@ -295,6 +300,11 @@ class GradeWorkService
                 'message' => 'Submission not found.'
             ];
         }
+
+        if (!$this->wasHandedIn($submission)) {
+            return $this->notHandedIn();
+        }
+
 
         $assessment = $this->assessmentModel->find($submission['assessment_id']);
 
@@ -423,10 +433,14 @@ class GradeWorkService
      */
     public function gradeQuestion(User $user, int $submissionId, int $questionId, array $data): array
     {
-        $submission = $this->submissionModel->find($submissionId);
+                $submission = $this->submissionModel->find($submissionId);
 
         if (!$submission) {
             return ['success' => false, 'message' => 'Submission not found.'];
+        }
+
+        if (!$this->wasHandedIn($submission)) {
+            return $this->notHandedIn();
         }
 
         $assessment = $this->assessmentModel->find($submission['assessment_id']);
@@ -536,6 +550,17 @@ class GradeWorkService
         $percentage = $totalPoints > 0 ? round(($score / $totalPoints) * 100, 2) : 0.0;
 
         return [$score, $percentage];
+    }
+
+        /** Only work the student handed in can be graded (not a draft attempt, not a cancelled one). */
+    private function wasHandedIn(array $submission): bool
+    {
+        return in_array($submission['status'], AssessmentResultService::FINISHED_STATUSES, true);
+    }
+
+    private function notHandedIn(): array
+    {
+        return ['success' => false, 'message' => 'This work has not been handed in yet.'];
     }
 
     private function isQuizAssessment(array $assessment): bool
