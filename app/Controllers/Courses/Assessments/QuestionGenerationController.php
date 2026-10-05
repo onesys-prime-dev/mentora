@@ -3,7 +3,9 @@
 namespace App\Controllers\Courses\Assessments;
 
 use App\Controllers\BaseController;
+use App\Services\Courses\Assessments\AssessmentScopeService;
 use App\Services\Courses\Assessments\QuestionGenerationService;
+use CodeIgniter\Exceptions\PageNotFoundException;
 use App\Models\Courses\CourseOfferingModel;
 
 class QuestionGenerationController extends BaseController
@@ -29,7 +31,17 @@ class QuestionGenerationController extends BaseController
 
         $post = $this->request->getPost();
 
-        $offering = $this->courseOfferingModel->find($offeringId);
+                $offering = $this->courseOfferingModel->find($offeringId);
+
+        // The assessment the questions are meant for comes from the form: it
+        // must be one of this offering's own.
+        if (
+            ($post['assessment_id'] ?? '') !== ''
+            && ! (new AssessmentScopeService())->assessmentBelongsTo((int) $post['assessment_id'], $offeringId)
+        ) {
+            throw PageNotFoundException::forPageNotFound('Assessment not found.');
+        }
+
 
         $data = [
             'assessment_id' => $post['assessment_id'] ?? null,

@@ -34,7 +34,7 @@ $routes->group('student', ['filter' => 'group:student'], function ($routes) {
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', function ($routes) {
+    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -100,7 +100,7 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', function ($routes) {
+    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
