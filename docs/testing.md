@@ -96,3 +96,100 @@ Checklist, one pull request per domain, in this order:
 - [x] Helpers: announcement (18 tests), icon (30), navigation (4 + 3), storage and vite (6); fixed stored XSS through a message block's alignment and crashes on malformed announcement content
 - [x] Frontend, Vitest: the shared SPA helpers (swap, load guard, busy button, error state, highlight row, skeleton rows), the header menus, assignment submission, and the reading/instructions editor JSON (119 tests; runs in CI)
 - [ ] Frontend, Playwright: the main user flows in a real browser
+
+## Handoff notes (where this stands, and what is still open)
+
+Written at the end of the coverage work so whoever continues has the context
+that is not obvious from the code. Everything in the checklist above is done
+except Playwright.
+
+### Open decisions (none of these are started)
+
+- **Playwright end-to-end tests.** Needs a running PHP app, a seeded database, a
+  login step and a CI job with MySQL. Suggested first set: log in as a student
+  and as an instructor, post an announcement, take a quiz, submit an
+  assignment. Chromium is preinstalled in the cloud sandbox; locally run
+  `npx playwright install chromium`.
+- **The PHP coverage floor is stale.** `.github/coverage-floor` is still `17.5`;
+  the suite has grown from roughly 1,000 to about 1,750 tests since it was set,
+  so real coverage is far higher and the floor guards nothing. Read the
+  `Lines: NN.NN%` summary from the "Tests on MySQL (PHP 8.2)" job on a recent
+  run, set the floor just below it, and keep raising it with new tests. It could
+  not be measured while writing these tests (no PCOV or Xdebug in the sandbox).
+- **No static analysis or linting in CI** (only `php -l` syntax checks). The
+  most useful first step is PHPStan with a baseline file, so CI fails only on
+  new problems; ESLint would help most on the untested page scripts in
+  `resources/js/pages`. A code-style tool is lower value here: the code mixes
+  CRLF and LF line endings, so it would reformat many files at once.
+- **`deploy.yml` does not wait for CI.** A push to `staging` deploys and then
+  checks `/health`; it never calls the CI workflow.
+- **JavaScript coverage is partial.** Only the shared helpers and the editor
+  JSON are tested (`tests/js/`). The large page scripts (calendar, questions,
+  grading, rubrics, AI generation) have no tests and there is no JS coverage
+  threshold.
+- **The AI question-generation boundary.** The PHP side is tested against a fake
+  generator. Nothing exercises the real `python-question-builder-service`
+  against the PHP code, so a contract change there would not fail CI.
+
+### Behaviour that was looked at and deliberately left alone
+
+- **The student dashboard writes on a first visit.** The first time a student
+  opens the dashboard, each enrolled course that has no grading scheme gets one
+  copied from the system default (created as `Published`; the average grade
+  depends on it). The Grades tab does the same. That is lazy initialisation by
+  design, not a bug, so it was only measured (about 73 queries on the first
+  visit, about 18 afterwards). If it should change, create the scheme when the
+  offering is created instead.
+- **The calendar shows only `Published` assessments to students**, while the
+  course lists also show `Closed` ones, so past-due closed work does not appear
+  on the calendar. Left as it was; say so if closed work should be included.
+- **Not covered by any test:** uploading a real video or PDF file over HTTP
+  (the services are tested, the multipart upload is not), the Vite
+  development-server branch of `vite()` (it depends on the `ENVIRONMENT`
+  constant), and the "+" button on the dashboard's Reminders card, which has
+  no handler yet.
+
+### Pitfalls that cost time while writing these tests
+
+These apply to any new database test; the first two silently break *other*
+tests, which makes them confusing to track down.
+
+1. **Never use `emptyTable()` or `TRUNCATE`.** In MySQL that is an implicit
+   commit, so it ends the per-test transaction and leaks data into later
+   tests. Use `->where('id >', 0)->delete()`.
+2. **A failed insert can poison unrelated tests.** The connection does not
+   throw on a SQL error (a wrong column name, a duplicate key); it marks the
+   shared transaction as failed, and later code that uses a transaction (for
+   example the grade sheet import) then rolls back with a vague message. If a
+   test passes alone but unrelated tests fail after it, look for an insert
+   with a wrong column name, and run the two files together in that order.
+3. **Grade-reading code needs the system-default grading scheme.** Anything
+   that reaches `GradingSchemeService::forOffering()` (the student dashboard,
+   the course Overview, the Grades page) copies it per course. Call
+   `GradeFactory::systemDefault()` in `setUp()`; a real install always has it
+   seeded.
+4. **Do not name a test helper `count()`, `fileExists()` or similar.** PHPUnit
+   declares those `final`, which is a fatal error that shows up as a confusing
+   framework "ErrorException" rather than a normal failure.
+5. **Real people have a profile row and a sign-in.** Several queries (the
+   instructor's course list, the Overview header, the roster) join
+   `user_profiles` and `auth_identities` with inner joins. `CourseFactory::user()`
+   makes neither, so tests that go through those queries add them (see the
+   `person()` helpers in the dashboard and overview tests).
+6. **When mutation-testing by hand, never restore with `git checkout <file>`
+   if the file also holds an uncommitted fix.** Copy the file aside first.
+   Most of the source files use CRLF line endings, so a scripted edit has to
+   keep them (edit through Python and restore `\r\n`).
+7. **Route registry:** `service('routes')->getRoutes('GET')` needs an upper-case
+   verb, and in a unit test `\Config\Services::routes(false)->loadRoutes()` is
+   needed first (see `NavigationHelperTest`).
+
+### Running the pieces
+
+- PHP: `composer test` (needs the `mentora_test` MySQL database, see above).
+- JavaScript: `npm test`.
+- A single PHP test file: `vendor/bin/phpunit --no-coverage tests/database/FooTest.php`.
+- Query-count budgets live in `tests/database/DashboardQueryBudgetTest.php`.
+  The numbers in its comments were measured on a repeat visit; if a legitimate
+  change adds a query, raise the budget in the same PR and say why, rather
+  than loosening it silently.
