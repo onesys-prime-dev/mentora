@@ -232,6 +232,41 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
         $this->assertCount(0, $this->attemptsOf($this->bob));
     }
 
+    public function testAStudentNotEnrolledInTheQuizsSectionCannotStartIt(): void
+    {
+        $outsider = CourseFactory::user('student');
+        CourseFactory::enroll(CourseFactory::offering('B'), $outsider);
+
+        try {
+            $this->start($outsider);
+            $this->fail('an outsider started the quiz');
+        } catch (PageNotFoundException) {
+            $this->assertCount(0, $this->attemptsOf($outsider));
+        }
+    }
+
+    public function testAStudentWhoDroppedTheCourseCannotStartItsQuiz(): void
+    {
+        db_connect()->table('enrollments')->where('student_user_id', $this->bob->id)->update(['status' => 'dropped']);
+
+        $this->expectException(PageNotFoundException::class);
+
+        $this->start($this->bob);
+    }
+
+    public function testTheQuizMustBelongToTheCourseItIsOpenedFrom(): void
+    {
+        $other = CourseFactory::offering('B');
+        $this->expectException(PageNotFoundException::class);
+
+        $this->service->startAttempt($this->ada, $this->quiz, $other);
+    }
+
+    public function testTheQuizOpensFromItsOwnCourse(): void
+    {
+        $this->assertIsString($this->service->startAttempt($this->ada, $this->quiz, $this->offeringId)['html']);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Saving answers
@@ -322,6 +357,83 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
 
         $this->assertSame('This attempt is no longer in progress.', $result['message']);
         $this->assertNull($this->response($q['attempt'], $q['short']));
+    }
+
+    public function testAnAnswerCannotBeSavedForAQuestionOfAnotherQuiz(): void
+    {
+        $q = $this->running();
+        $otherQuiz = CourseFactory::assessment($this->offeringId, $this->instructor, $this->moduleId);
+        $foreign = AssessmentFactory::shortAnswer($otherQuiz, $this->instructor, ['Paris']);
+
+        $result = $this->service->saveAnswer($this->ada, $q['attempt'], $foreign, ['response_text' => 'Paris']);
+
+        $this->assertSame(['success' => false, 'message' => 'Question not found.'], $result);
+        $this->assertNull($this->response($q['attempt'], $foreign));
+    }
+
+    public function testAnAnswerCannotBeSavedForAnArchivedQuestion(): void
+    {
+        $q = $this->running();
+        db_connect()->table('assessment_questions')->where('id', $q['short'])->update(['status' => 'Archived']);
+
+        $result = $this->service->saveAnswer($this->ada, $q['attempt'], $q['short'], ['response_text' => 'Paris']);
+
+        $this->assertFalse($result['success']);
+        $this->assertNull($this->response($q['attempt'], $q['short']));
+    }
+
+    private function timedAttempt(int $minutes, string $startedAgo): array
+    {
+        db_connect()->table('assessments')->where('id', $this->quiz)->update(['duration' => $minutes]);
+        $q = $this->running();
+        db_connect()->table('assessment_submissions')->where('id', $q['attempt'])->update(['started_at' => date('Y-m-d H:i:s', strtotime($startedAgo))]);
+
+        return $q;
+    }
+
+    public function testAnswersAreAcceptedWhileTimeRemains(): void
+    {
+        $q = $this->timedAttempt(10, '-9 minutes');
+
+        $this->assertTrue($this->service->saveAnswer($this->ada, $q['attempt'], $q['short'], ['response_text' => 'Paris'])['success']);
+    }
+
+    public function testAnswersAreAcceptedForAFewSecondsAfterTheTimerEndsToAllowForLatency(): void
+    {
+        $q = $this->timedAttempt(10, '-10 minutes -30 seconds');
+
+        $this->assertTrue($this->service->saveAnswer($this->ada, $q['attempt'], $q['short'], ['response_text' => 'Paris'])['success']);
+    }
+
+    public function testNoAnswersAreAcceptedOnceTheTimeLimitHasPassed(): void
+    {
+        $q = $this->timedAttempt(10, '-3 hours');
+
+        $result = $this->service->saveAnswer($this->ada, $q['attempt'], $q['short'], ['response_text' => 'Paris']);
+
+        $this->assertSame(['success' => false, 'message' => 'Time is up for this attempt.'], $result);
+        $this->assertNull($this->response($q['attempt'], $q['short']));
+    }
+
+    public function testAQuizWithoutATimeLimitHasNoDeadline(): void
+    {
+        $q = $this->timedAttempt(0, '-3 hours');
+
+        $this->assertTrue($this->service->saveAnswer($this->ada, $q['attempt'], $q['short'], ['response_text' => 'Paris'])['success']);
+    }
+
+    public function testAnExpiredAttemptCanStillBeSubmittedButOnlyScoresWhatWasSavedInTime(): void
+    {
+        $q = $this->timedAttempt(10, '-5 minutes');
+        $this->service->saveAnswer($this->ada, $q['attempt'], $q['short'], ['response_text' => 'Paris']);
+        db_connect()->table('assessment_submissions')->where('id', $q['attempt'])->update(['started_at' => date('Y-m-d H:i:s', strtotime('-3 hours'))]);
+
+        $late = $this->service->saveAnswer($this->ada, $q['attempt'], $q['mc']['question'], ['selected_choice_id' => $q['mc']['choices'][1]]);
+        $submitted = $this->service->submitAttempt($this->ada, $q['attempt']);
+
+        $this->assertFalse($late['success']);
+        $this->assertTrue($submitted['success'], 'the browser may submit a moment late: the work is not lost');
+        $this->assertEquals(2, $this->row('assessment_submissions', $q['attempt'])['score'], 'only the short answer saved in time scored');
     }
 
     public function testMissingAttemptsAndQuestionsAreRefused(): void
