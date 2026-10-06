@@ -62,6 +62,17 @@ before changing anything.
   enrolments, modules, units, items, progress). A test then reads as the
   situation it sets up, for example `CourseFactory::items($unitId, [[], ['mode' => 'previous']])`.
 - A bug fix includes a test that fails without the fix.
+- **A new service or a new table needs tests, and two guard tests enforce it.**
+  `tests/unit/ServiceTestInventoryTest.php` reads every class under
+  `app/Services` and `tests/database/TableTestInventoryTest.php` reads every
+  table in the migrated database. Each must be named in some test (a table
+  by its quoted name or through its model). If you add one without tests the
+  guard fails and names it. Write the tests; only if that is truly not
+  possible, add the entry to the `NOT_NAMED_IN_A_TEST` / `NOT_TOUCHED_BY_A_TEST`
+  list in the guard with a real reason. Those lists must not go stale: once the
+  thing gets a test, the guard fails until you delete the entry. Tables that
+  belong to Shield or Settings go in `PACKAGE_TABLES`. "Named in a test" is a
+  floor, not a measure of quality; the coverage checks judge the depth.
 - Never call the AI question service from a test; use a fake that implements
   `App\Services\AI\QuestionGeneratorClientInterface`.
 
