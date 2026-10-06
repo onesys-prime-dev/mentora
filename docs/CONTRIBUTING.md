@@ -76,6 +76,7 @@ approval step (a GitHub "Environment" with required reviewers, or a manual
 |---|---|---|
 | PHP syntax | A PHP file has a syntax error | Run `php -l path/to/file.php` locally |
 | Composer | `composer.json`/`composer.lock` disagree, or a dependency has a known vulnerability | Run `composer validate --strict` and `composer audit` locally |
+| Static analysis (PHPStan) | Your change introduced a new problem (a wrong type, an undefined method, a condition that is always true or false) | Run `vendor/bin/phpstan analyse --memory-limit=1G` and fix what it lists; do not add it to the baseline |
 | Tests on MySQL | A test fails, a migration breaks on an empty database, coverage fell below `.github/coverage-floor`, or the lines your PR changed are not covered enough (the log lists them: add tests for exactly those lines) | Run `composer test` locally (see `docs/testing.md`) |
 | Frontend build and audit | A Vitest test fails, the Vite build breaks, or an npm package has a high-severity advisory | Run `npm ci && npm test && npm run build && npm audit --omit=dev` locally |
 | Secret scan | Something that looks like a password or key is in the code or its history | Remove it, rotate the secret, then ask before rewriting history |

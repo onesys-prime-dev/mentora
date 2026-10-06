@@ -1,0 +1,21 @@
+# Static analysis. CI fails only on problems that are NOT in phpstan-baseline.neon,
+# so the existing ones are tracked, not ignored. See docs/ci-cd.md.
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - app
+    excludePaths:
+        # Views mix HTML and PHP and are not analysed as code.
+        - app/Views
+    bootstrapFiles:
+        - vendor/codeigniter4/framework/system/Test/bootstrap.php
+    scanDirectories:
+        - app/Helpers
+    tmpDir: build/phpstan
+    treatPhpDocTypesAsCertain: false
+    # Set per environment at runtime, so comparisons against it are not constant.
+    dynamicConstantNames:
+        - ENVIRONMENT

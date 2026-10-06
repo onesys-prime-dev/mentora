@@ -1,0 +1,61 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Left side of && is always true\.$#'
+			identifier: booleanAnd.leftAlwaysTrue
+			count: 1
+			path: app/Config/Events.php
+
+		-
+			message: '#^Call to an undefined method CodeIgniter\\Database\\ConnectionInterface\:\:insertID\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Database/Migrations/2026-09-28-000001_CreateGradingSchemeTables.php
+
+		-
+			message: '#^Offset int does not exist on array\{\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Services/Courses/Assessments/AssessmentOverviewService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Assessments\\AssessmentQuestionResponseModel\:\:get\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Courses/Assessments/GradeWorkService.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 1
+			path: app/Services/Courses/Grades/GradeItemSyncService.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: string$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Services/Courses/Grades/GradeSheetExportService.php
+
+		-
+			message: '#^Offset ''period'' does not exist on array\{key\: string, header\: string, type\: ''period'', item\?\: array, category\?\: array\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 2
+			path: app/Services/Courses/Grades/GradeSheetExportService.php
+
+		-
+			message: '#^Left side of \|\| is always false\.$#'
+			identifier: booleanOr.leftAlwaysFalse
+			count: 2
+			path: app/Services/Courses/Grades/GradingSchemeService.php
+
+		-
+			message: '#^Offset ''student_id'' does not exist on array\{offering_id\: int, name\: string, progress\: int, days_since\: int\|null, reason\: string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Services/Dashboard/DashboardService.php
+
+		-
+			message: '#^Call to an undefined method CodeIgniter\\Files\\File\:\:getClientName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Storage/StorageService.php

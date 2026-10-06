@@ -76,6 +76,36 @@ jobs:
       - name: Audit dependencies for known vulnerabilities
         run: composer audit
 
+  # PHPStan (phpstan.neon). Problems that already existed are recorded in
+  # phpstan-baseline.neon and tolerated; anything new fails the build. When you
+  # fix baselined code, shrink the baseline (see docs/ci-cd.md); never grow it
+  # to get a build through.
+  static-analysis:
+    name: Static analysis (PHPStan)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, intl, mysqli, zip
+          coverage: none
+          tools: composer
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G --error-format=github
+
   tests:
     name: Tests on MySQL (PHP ${{ matrix.php }})
     runs-on: ubuntu-24.04
@@ -233,7 +263,7 @@ jobs:
   ci-passed:
     name: CI passed
     if: always()
-    needs: [php-syntax, composer, tests, assets, secrets]
+    needs: [php-syntax, composer, static-analysis, tests, assets, secrets]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every job to have succeeded
