@@ -108,6 +108,10 @@ jobs:
           --health-retries=20
     steps:
       - uses: actions/checkout@v7
+        with:
+          # On a pull request HEAD is the merge of the PR into main, so its
+          # first parent (HEAD^1) is main; two commits are enough to diff them.
+          fetch-depth: 2
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -165,6 +169,16 @@ jobs:
       - name: Check the coverage floor
         if: matrix.coverage == 'pcov'
         run: php .github/scripts/check-coverage.php phpunit-output.txt .github/coverage-floor
+
+      # The lines this pull request adds or changes under app/ must be covered
+      # (minimum in .github/diff-coverage-threshold). Only meaningful on a pull
+      # request, where there is a base to diff against; a push to main has
+      # already passed this check on its way in.
+      - name: Check coverage of the changed lines
+        if: matrix.coverage == 'pcov' && github.event_name == 'pull_request'
+        run: |
+          git diff -U0 HEAD^1 HEAD -- app > changes.diff
+          php .github/scripts/check-diff-coverage.php build/logs/clover.xml changes.diff .github/diff-coverage-threshold
 
       - name: Upload coverage report
         if: always() && matrix.coverage == 'pcov'

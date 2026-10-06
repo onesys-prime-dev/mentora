@@ -113,10 +113,15 @@ except Playwright.
 - ~~The PHP coverage floor is stale.~~ Done: measured at **86.92%** lines
   (9424/10842, PHP 8.2 with PCOV, 1,735 tests, 2026-10-06) and the floor in
   `.github/coverage-floor` is now `86.5`. Keep raising it with new tests, in the
-  same PR. Still open: a check on changed lines, so new code cannot hide behind
-  the overall number. The weakest areas at that baseline are the controllers
-  (assessment, question, rubric, course and quiz-attempt controllers are at
-  roughly 9-35% of lines) and `ModuleService` (77%).
+  same PR. A changed-lines check now runs on pull requests too (so new code
+  cannot hide behind the overall number): at least the percentage in
+  `.github/diff-coverage-threshold` (80) of the executable lines a PR adds or
+  edits under `app/` must be covered. If it fails, the job log lists the
+  uncovered lines; add tests for those. Note that it makes any edit to a weakly
+  covered file (see below) come with tests for the edited lines. The weakest
+  areas at the 2026-10-06 baseline are the controllers (assessment, question,
+  rubric, course and quiz-attempt controllers are at roughly 9-35% of lines)
+  and `ModuleService` (77%).
 - **No static analysis or linting in CI** (only `php -l` syntax checks). The
   most useful first step is PHPStan with a baseline file, so CI fails only on
   new problems; ESLint would help most on the untested page scripts in
