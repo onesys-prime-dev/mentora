@@ -31,6 +31,7 @@ jobs:
     env:
       SSH_PORT: 22
       DEPLOY_PATH: /home/mentora/htdocs/mentora
+      SITE_URL: https://mentora.srv1404227.hstgr.cloud
       HEALTH_URL: https://mentora.srv1404227.hstgr.cloud/health
       REMOTE: ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}
 
@@ -219,3 +220,15 @@ jobs:
           done
           echo "::error::The site did not report healthy at $HEALTH_URL after deploying. The database backup from this deploy is in ~/backups on the server."
           exit 1
+
+      ########################################################
+      # Smoke test
+      ########################################################
+
+      # /health only proves the app reaches its database. This checks what a
+      # visitor meets first: the login form, the built CSS and JS it links to,
+      # and that anonymous visitors are sent to login (.github/scripts/smoke-test.php).
+      # --insecure for the same reason as -k above: remove it once the site has a
+      # certificate from a real authority.
+      - name: Smoke test the site
+        run: php .github/scripts/smoke-test.php "$SITE_URL" --insecure
