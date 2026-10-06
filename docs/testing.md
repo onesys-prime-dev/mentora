@@ -121,8 +121,8 @@ except Playwright.
   new problems; ESLint would help most on the untested page scripts in
   `resources/js/pages`. A code-style tool is lower value here: the code mixes
   CRLF and LF line endings, so it would reformat many files at once.
-- **`deploy.yml` does not wait for CI.** A push to `staging` deploys and then
-  checks `/health`; it never calls the CI workflow.
+- ~~`deploy.yml` does not wait for CI.~~ Done: it now calls `ci.yml` and the
+  deploy job `needs: ci`; the trunk is `main` (the `staging` branch is retired).
 - **JavaScript coverage is partial.** Only the shared helpers and the editor
   JSON are tested (`tests/js/`). The large page scripts (calendar, questions,
   grading, rubrics, AI generation) have no tests and there is no JS coverage

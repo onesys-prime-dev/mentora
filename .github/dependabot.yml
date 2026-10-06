@@ -8,17 +8,17 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    target-branch: staging
+    target-branch: main
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    target-branch: staging
+    target-branch: main
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    target-branch: staging
+    target-branch: main

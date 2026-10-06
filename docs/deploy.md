@@ -1,8 +1,12 @@
 # Deploying to staging
 
-Merging a pull request into `staging` runs `.github/workflows/deploy.yml`. This
+Merging a pull request into `main` runs `.github/workflows/deploy.yml`, which
+first runs the full CI workflow on that commit and deploys only if it passes
+(you can also start it by hand from the Actions tab; CI still runs first). This
 page explains what it does, what it needs, and what to do when it fails. No
-secrets belong in this file.
+secrets belong in this file. The server below is the **staging** server; the
+production server is a separate, later step (a `v*` tag or GitHub Release, with
+CI re-checked and an approval before it deploys).
 
 ## Where it goes
 
@@ -17,6 +21,7 @@ secrets belong in this file.
 
 ## What a deploy does, in order
 
+0. **CI** runs first (the `ci` job calls `ci.yml`). If it fails, nothing below runs.
 1. **Build** on the GitHub runner: Composer (production only, PHP 8.5), `npm ci`, `npm run build`.
 2. **Check the target**: stops unless the live folder has `.env` and `writable/`, and `php8.5` exists. A wrong path fails here instead of silently deploying to a dead folder.
 3. **Back up the database** to `~/backups/deploy-<timestamp>.sql.gz` on the server. The deploy stops if the dump did not finish. The 10 newest backups are kept.
@@ -77,7 +82,7 @@ the data back to that moment; anything entered since is lost.
 
 There is no automatic rollback yet. To undo a bad release, revert the pull
 request on GitHub (a "Revert" button on the merged PR) and merge the revert into
-`staging`; that deploys the previous code. If the bad release also ran a
+`main`; that deploys the previous code. If the bad release also ran a
 migration, decide separately whether to restore the backup.
 
 ## Known limits (planned improvements)

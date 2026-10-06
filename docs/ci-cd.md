@@ -7,8 +7,8 @@ day-to-day workflow.
 
 | Workflow | File | Runs when | Purpose |
 |---|---|---|---|
-| CI | `.github/workflows/ci.yml` | PR into `staging` / `main`, push to `main` | Prove the change is sound |
-| Deploy | `.github/workflows/deploy.yml` | push to `staging` | Build, back up the database, copy the app, migrate, health-check (not gated on CI yet; see `deploy.md`) |
+| CI | `.github/workflows/ci.yml` | PR into `main`; also called by Deploy | Prove the change is sound |
+| Deploy | `.github/workflows/deploy.yml` | push to `main`, or a manual run | Run CI first (`needs: ci`); only if it passes: build, back up the database, copy the app, migrate, health-check (see `deploy.md`) |
 
 ## CI jobs (all must pass)
 
@@ -22,27 +22,26 @@ day-to-day workflow.
 | **CI passed** | Fails if any job above failed | The single check that branch protection requires |
 
 Dependabot opens weekly update PRs for Composer, npm and GitHub Actions
-against `staging`; they run the same checks.
+against `main`; they run the same checks.
 
 ## What stops a bad change (and what does not)
 
-**Nothing enforces it yet.** GitHub does not enforce rulesets or branch
-protection on a private repository on a free plan, and the deploy is not gated
-on CI. So today nothing technically prevents a direct push to `staging` or
-`main`, merging a PR with red checks, or deploying a commit that failed CI. The
-PR workflow in `CONTRIBUTING.md` is followed by habit: open a PR, wait for
-**CI passed**, then merge.
+**The deploy is gated.** `deploy.yml` calls `ci.yml` and its `deploy` job
+`needs: ci`, so a commit that fails CI is never deployed, even if it reached
+`main` by a direct push.
 
-Options when that is not enough: make `deploy.yml` call `ci.yml` first and
-deploy only if it passes (a deploy gate), and/or turn on rulesets if the repo
-becomes public or moves to a paid plan/organization (one each for `staging` and
-`main`: require a pull request, require **CI passed**, require linear history,
-block force pushes and deletions). Revisit when a second developer joins or a
-production server exists.
+**Merging is not yet enforced.** GitHub does not enforce rulesets or branch
+protection on a private repository on a free plan. So nothing technically
+prevents a direct push to `main` or merging a PR with red checks; the PR
+workflow in `CONTRIBUTING.md` is followed by habit. When enforcement is
+available (public repo, paid plan or organization), add one ruleset for `main`:
+require a pull request, require **CI passed**, require linear history, block
+force pushes and deletions.
 
 ## What is not here yet
 
-Tracked in the plan: the domain-by-domain tests (see `docs/testing.md`), static
-analysis (PHPStan, Semgrep), release folders with automatic rollback, a CI gate
-on the deploy, end-to-end tests, and the production environment with approval.
+Tracked in the plan: the coverage floor from the measured value and a
+changed-lines coverage check, static analysis (PHPStan, ESLint), release
+folders with automatic rollback, a post-deploy smoke test, end-to-end tests
+(Playwright), and the production environment with approval.
 The deploy itself is described in `docs/deploy.md`.
