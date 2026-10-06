@@ -23,7 +23,7 @@ permissions:
 jobs:
   php-syntax:
     name: PHP syntax (${{ matrix.php }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -49,7 +49,7 @@ jobs:
 
   composer:
     name: Composer (validate, install, audit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
@@ -78,7 +78,7 @@ jobs:
 
   tests:
     name: Tests on MySQL (PHP ${{ matrix.php }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -176,7 +176,7 @@ jobs:
 
   assets:
     name: Frontend build and audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
@@ -206,7 +206,7 @@ jobs:
 
   secrets:
     name: Secret scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -220,7 +220,7 @@ jobs:
     name: CI passed
     if: always()
     needs: [php-syntax, composer, tests, assets, secrets]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Require every job to have succeeded
         run: |
