@@ -1,0 +1,347 @@
+# P1 test cases: the critical journeys
+
+17 cases. Read [README.md](README.md) first for the format, the demo accounts and
+how to reseed. **All are `Draft`**: derived from the code, the seed data and the
+existing automated tests, awaiting a person to confirm each expected result.
+"(wording to confirm)" marks on-screen text read from code but not yet seen in
+a browser.
+
+Run order matters where a case says "uses the result of"; otherwise any order
+works on a fresh seed. A full run needs a fresh seed.
+
+| ID | Case | Role |
+|---|---|---|
+| [TC-AUTH-01](#tc-auth-01-student-signs-in) | Student signs in | Student |
+| [TC-AUTH-02](#tc-auth-02-instructor-signs-in) | Instructor signs in | Instructor |
+| [TC-AUTH-03](#tc-auth-03-wrong-password-is-refused) | Wrong password is refused | Anonymous |
+| [TC-AUTH-04](#tc-auth-04-signing-out-ends-the-session) | Signing out ends the session | Student |
+| [TC-AUTH-05](#tc-auth-05-protected-pages-need-the-right-role) | Protected pages need the right role | Anonymous, Student |
+| [TC-ANN-01](#tc-ann-01-instructor-posts-an-announcement-and-the-section-sees-it) | Instructor posts an announcement; the section sees it | Instructor, Student |
+| [TC-ANN-02](#tc-ann-02-people-outside-the-section-cannot-post-or-read) | People outside the section cannot post or read | Student, Instructor |
+| [TC-MOD-01](#tc-mod-01-items-unlock-in-order) | Items unlock in order | Student |
+| [TC-MOD-02](#tc-mod-02-draft-work-is-hidden-from-students) | Draft work is hidden from students | Instructor, Student |
+| [TC-QUIZ-01](#tc-quiz-01-student-takes-and-submits-a-quiz) | Student takes and submits a quiz | Student |
+| [TC-QUIZ-02](#tc-quiz-02-the-attempt-limit-stops-another-attempt) | The attempt limit stops another attempt | Student |
+| [TC-QUIZ-03](#tc-quiz-03-a-past-due-quiz-is-closed) | A past-due quiz is closed | Student |
+| [TC-ASG-01](#tc-asg-01-student-submits-an-assignment) | Student submits an assignment | Student |
+| [TC-ASG-02](#tc-asg-02-a-late-submission-is-accepted-and-marked-late) | A late submission is accepted and marked late | Student |
+| [TC-GRD-01](#tc-grd-01-instructor-grades-an-assignment-with-a-rubric) | Instructor grades an assignment with a rubric | Instructor, Student |
+| [TC-GRD-02](#tc-grd-02-instructor-grades-a-quizs-essay) | Instructor grades a quiz's essay | Instructor, Student |
+| [TC-GRD-03](#tc-grd-03-student-sees-their-grades) | Student sees their grades | Student |
+
+---
+
+## Sign-in and roles
+
+### TC-AUTH-01 Student signs in
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student5@mentora.test` / `Student123!`
+- **Steps:**
+  1. Open the site while signed out. You are sent to the login page.
+  2. Enter the email and password, and press Login.
+- **Expected:**
+  - You land on the student dashboard (`/student/dashboard`).
+  - The sidebar offers Courses, Calendar and Schedule (wording to confirm).
+- **Already automated:** `tests/feature/AuthFlowTest.php`:
+  `testALoggedOutVisitorOnTheHomePageGoesToLogin`, `testStudentsLandOnTheStudentDashboard`
+- **Playwright:** planned
+- **Basis:** `app/Controllers/Auth/RedirectController.php`, `app/Views/pages/auth/login.php`
+- **Review:** Draft
+
+### TC-AUTH-02 Instructor signs in
+
+- **Role:** Instructor. **Priority:** P1
+- **Data:** `instructor1@mentora.test` / `Instructor123!`
+- **Steps:** as TC-AUTH-01.
+- **Expected:** you land on the instructor dashboard (`/instructor/dashboard`), not the student one.
+- **Already automated:** `AuthFlowTest::testInstructorsLandOnTheInstructorDashboard`
+- **Playwright:** planned
+- **Basis:** `RedirectController.php`
+- **Review:** Draft
+
+### TC-AUTH-03 Wrong password is refused
+
+- **Role:** Anonymous. **Priority:** P1
+- **Data:** `student5@mentora.test` with the password `wrong-password`
+- **Steps:** open the login page, enter the email and the wrong password, press Login.
+- **Expected:**
+  - You stay on the login page and are not signed in.
+  - An error says the sign-in failed, for example "Unable to log you in. Please
+    check your credentials." (wording to confirm; this is the sign-in library's
+    text and the page shows it in a banner above the form).
+  - Opening `/student/dashboard` still sends you to login.
+- **Already automated:** **nothing.** This is a gap: add a PHPUnit test in `tests/feature/AuthFlowTest.php`.
+- **Playwright:** planned
+- **Basis:** `vendor/codeigniter4/shield/src/Language/en/Auth.php` (`badAttempt`), `login.php` (error banner)
+- **Review:** Draft
+
+### TC-AUTH-04 Signing out ends the session
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student5@mentora.test`, signed in
+- **Steps:** sign out from the account menu; then open `/student/courses` directly.
+- **Expected:** you are on the login page after signing out, and `/student/courses` sends you back to login.
+- **Already automated:** `AuthFlowTest::testLoggingOutEndsTheSession`
+- **Playwright:** planned
+- **Basis:** `app/Config/Auth.php` (`logout` redirect to `login`)
+- **Review:** Draft
+
+### TC-AUTH-05 Protected pages need the right role
+
+- **Role:** Anonymous, then Student. **Priority:** P1
+- **Steps:**
+  1. Signed out, open `/student/dashboard`, `/instructor/dashboard` and `/files/1`.
+  2. Sign in as `student5@mentora.test` and open `/instructor/dashboard`.
+- **Expected:**
+  - Step 1: each address sends you to the login page.
+  - Step 2: you are turned away (redirected), not shown the instructor dashboard.
+- **Already automated:** `tests/feature/RouteAccessTest.php` checks every `/student` and
+  `/instructor` route both ways (336 checks); the post-deploy smoke test checks four of them on staging.
+- **Playwright:** no (fully covered by the PHP tests)
+- **Basis:** `app/Config/Routes.php` (`group:student`, `group:instructor` filters)
+- **Review:** Draft
+
+---
+
+## Announcements
+
+### TC-ANN-01 Instructor posts an announcement and the section sees it
+
+- **Role:** Instructor, then Student. **Priority:** P1
+- **Data:** instructor `instructor2@mentora.test`, course IT102-A; student `student3@mentora.test` (enrolled in IT102-A)
+- **Steps:**
+  1. As the instructor, open IT102-A and its Announcements.
+  2. Try to post with an empty subject.
+  3. Post one with the subject "Quiz reminder" and a message.
+  4. Sign out. Sign in as student3, open IT102-A, Announcements.
+- **Expected:**
+  - Step 2 is refused: "Add a subject before posting."
+  - Step 3 succeeds: "Announcement posted." and it appears in the instructor's announcement list.
+  - Step 4: student3 sees "Quiz reminder" with the message.
+- **Already automated:** `tests/database/AnnouncementServiceTest.php`: `testTheInstructorPostsAnAnnouncement`,
+  `testASubjectIsRequired`; `tests/feature/AnnouncementRoutesTest.php`: `testTheInstructorPostsEditsPinsAndDeletes`,
+  `testStudentsReadReplyAndReactThroughTheirOwnRoutes`
+- **Playwright:** planned
+- **Basis:** `app/Services/Courses/AnnouncementService.php`, `app/Config/Routes.php`
+- **Review:** Draft
+
+### TC-ANN-02 People outside the section cannot post or read
+
+- **Role:** Student, Instructor. **Priority:** P1
+- **Data:** the announcement from TC-ANN-01 (uses the result of it); `student5@mentora.test` (not in IT102-A); `instructor1@mentora.test` (does not teach IT102-A); `student3@mentora.test`
+- **Steps:**
+  1. As student5, look for IT102-A in Courses, then open its address directly.
+  2. As student3 (enrolled), look for a way to post an announcement.
+  3. As instructor1, try to open IT102-A or post to it.
+- **Expected:**
+  - Step 1: IT102-A is not listed and the direct address is refused as not found.
+  - Step 2: a student should have no way to post (UI to confirm); posting by other means is refused ("Only the instructor can post announcements.").
+  - Step 3: instructor1 cannot open or post to a section they are not assigned to.
+- **Already automated:** `AuthFlowTest::testAStudentCannotReadACourseTheyAreNotEnrolledIn`,
+  `testAnInstructorCanOnlyOpenTheirOwnSection`; `AnnouncementRoutesTest::testAStudentCannotUseTheInstructorPostRoute`,
+  `testAnotherSectionIsNotFoundForStudentsAndInstructors`; `AnnouncementServiceTest::testStudentsAndOtherCoursesInstructorsCannotPost`
+- **Playwright:** planned (the visible parts: not listed, no post control)
+- **Basis:** `AnnouncementService.php`, the `assessmentscope` route filter
+- **Review:** Draft
+
+---
+
+## Modules and progress
+
+### TC-MOD-01 Items unlock in order
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student3@mentora.test`, course IT102-A, module "Setting Up PHP", unit "Your Development Environment" (items in order: PDF "XAMPP Installation Guide", reading "Your First PHP Script", quiz "Quiz: PHP Setup")
+- **Steps:**
+  1. Open the unit. The first item is open; the second and third show as locked.
+  2. Try to open or complete "Your First PHP Script".
+  3. Open "XAMPP Installation Guide" and press Mark as Completed.
+  4. Return to "Your First PHP Script".
+- **Expected:**
+  - Step 2: locked, with the reason "Complete “XAMPP Installation Guide” first." and Mark as Completed disabled, hint "Complete the required items first." (wording to confirm).
+  - Step 3: the PDF is completed right away (PDFs, readings and links complete immediately).
+  - Step 4: the reading is now open and can be completed.
+  - The lock is enforced by the server, not just the button.
+- **Already automated:** `tests/database/LearningProgressServiceTest.php`:
+  `testPreviousModeLocksUntilThePreviousItemIsCompleted`, `testTheFirstItemIsNotLockedEvenInPreviousMode`,
+  `testStartedButUnfinishedDoesNotUnlock`, `testOneStudentsProgressDoesNotUnlockForAnother`
+- **Playwright:** planned
+- **Basis:** `app/Services/Courses/LearningProgressService.php` (`lockMessage`, header comment)
+- **Review:** Draft
+- **Note:** run this before TC-QUIZ-03, which needs "Quiz: PHP Setup" unlocked for student3.
+
+### TC-MOD-02 Draft work is hidden from students
+
+- **Role:** Instructor, then Student. **Priority:** P1
+- **Data:** course IT101-A, unit "Introduction to Databases", draft quiz "Quiz 2: Database Basics"; `instructor1@mentora.test`; `student5@mentora.test`
+- **Steps:**
+  1. As the instructor, open the unit and Assessments. Note the draft quiz and its Draft status.
+  2. As student5, open the same unit and the Assessments tab.
+  3. As student5, try to open the quiz by its address.
+- **Expected:**
+  - Step 1: the instructor sees "Quiz 2: Database Basics" marked as a draft.
+  - Step 2: student5 does not see it in the module or in the assessment list.
+  - Step 3: not found, even through a direct link.
+- **Already automated:** `tests/database/AssessmentServiceTest.php`: `testStudentsSeePublishedAndClosedAssessmentsOnly`,
+  `testStudentsGetANotFoundForDraftsEvenThroughADirectLink`; `GradeServiceTest::testDraftAssessmentsAreHiddenFromStudents`
+- **Playwright:** planned
+- **Basis:** `DemoContentSeeder.php` (the draft item), `AssessmentService.php`
+- **Review:** Draft
+
+---
+
+## Quizzes
+
+### TC-QUIZ-01 Student takes and submits a quiz
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student5@mentora.test`, course IT101-A, unit "Variables and Data Types". Quiz 1: Variables and Data Types: 20 points, 30 minutes, 2 attempts, open (due 3 days after seeding). Questions: (1) Which of these values is a string? [3 pts, correct answer `"42"`]; (2) Which two are valid variable names? [4 pts, correct: `total_score` and `firstName`]; (3) What data type holds only true or false? [3 pts, `boolean` or `bool`]; (4) A named value that cannot change once it is set is called a … [3 pts, `constant`]; (5) essay [7 pts, graded by the instructor].
+- **Steps:**
+  1. Complete the two items before the quiz: reading "What Is a Variable?" and PDF "Data Types Cheat Sheet".
+  2. Open Quiz 1 and start it. The timer starts.
+  3. Answer questions 1 to 4 correctly and write a short essay. Each answer saves as you go.
+  4. Submit.
+- **Expected:**
+  - Step 1: the quiz is locked until both are completed.
+  - Step 2: an attempt starts (attempt 1 of 2).
+  - Step 3: each answer is saved ("Answer saved." in the background).
+  - Step 4: "Quiz submitted successfully." The four auto-graded answers score 13 of 20 points; the essay is not scored, so the attempt shows as **Partially Graded** and the full score appears only once the instructor has graded the essay (wording to confirm).
+  - The quiz item counts as completed. A second attempt can be started (attempt 2 of 2).
+- **Already automated:** `tests/database/QuizAttemptServiceTest.php`: `testOnlyChoiceQuestionsAndKeyedShortAnswersGradeThemselves`,
+  `testEachAutoGradedAnswerIsScoredAndMarked`, `testTheAttemptLimitStopsANewAttempt`, `testAnswersAreAcceptedWhileTimeRemains`;
+  `tests/unit/ShortAnswerGraderTest.php` (case and spacing); `tests/feature/AssessmentSectionAccessTest.php::testAStudentCanTakeTheirOwnSectionsQuiz`
+- **Playwright:** planned
+- **Basis:** `DemoContentSeeder.php` (Quiz 1), `QuizAttemptService.php`
+- **Review:** Draft
+
+### TC-QUIZ-02 The attempt limit stops another attempt
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student5@mentora.test`, course IT201-A, "Quiz: Keys and Relationships" (one attempt allowed, already taken and graded in the seed, still open)
+- **Steps:** open the quiz and try to start it again.
+- **Expected:** no new attempt starts. The page says "You've already taken this quiz." (for a quiz with more attempts the text is "You've used all N attempts."), and the earlier result stays viewable (wording to confirm).
+- **Already automated:** `QuizAttemptServiceTest::testTheAttemptLimitStopsANewAttempt`, `testTheDefaultLimitIsOneAttempt`;
+  `tests/database/AssessmentServiceTest.php::testAStudentWhoUsedAllAttemptsIsToldSo`
+- **Playwright:** planned
+- **Basis:** `AssessmentService.php` (the `$reason` match around line 610), `DemoActivitySeeder.php`
+- **Review:** Draft
+
+### TC-QUIZ-03 A past-due quiz is closed
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student3@mentora.test`, course IT102-A, "Quiz: PHP Setup" (due 1 day before seeding; late attempts not allowed; unlocked by TC-MOD-01, which you run first)
+- **Steps:** open the quiz and try to start it.
+- **Expected:** it does not start. The page says "The due date has passed and late attempts aren't allowed." (wording to confirm).
+- **Already automated:** `QuizAttemptServiceTest::testAfterTheDueDateOnlyAQuizAllowingLateAttemptsStarts`,
+  `testAQuizPastItsAvailabilityWindowDoesNotStart`, `testAClosedQuizDoesNotStartANewAttempt`
+- **Playwright:** planned
+- **Basis:** `AssessmentService.php::quizAvailabilityReason`
+- **Review:** Draft
+- **Note:** other states of the same rule have their own wording: "This quiz opens <date>." before the window, "This quiz closed on <date>." after it, "This quiz is closed." when an instructor closes it.
+
+---
+
+## Assignments
+
+### TC-ASG-01 Student submits an assignment
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student5@mentora.test`, course IT101-A, unit "Introduction to Databases": reading "What Is a Database?", then assignment "Lab 1: Designing a Table" (20 points, due 1 day after seeding; text, link and file all allowed; one submission)
+- **Steps:**
+  1. Complete the reading "What Is a Database?" so the lab unlocks.
+  2. Open the lab and submit with nothing entered.
+  3. Enter the link `ftp://example.com/table` and submit.
+  4. Replace it with text, for example the column list for a Students table, and submit.
+  5. Try to submit again.
+- **Expected:**
+  - Step 2: "Add your work before submitting."
+  - Step 3: "Enter a full link starting with http:// or https://."
+  - Step 4: "Your work was submitted." The status is Submitted and the item counts as completed.
+  - Step 5: not allowed: "You've already submitted this assignment."
+  - (All wording to confirm.)
+- **Already automated:** `tests/database/AssignmentSubmissionServiceTest.php`: `testATextSubmissionIsRecordedAsSubmitted`,
+  `testOnlyWebLinksAreAccepted`, `testTheSubmissionLimitIsEnforcedAndNumbered`, `testOnlyEnrolledStudentsCanSubmit`
+- **Playwright:** planned (file upload variant: later)
+- **Basis:** `app/Services/Courses/Assessments/AssignmentSubmissionService.php` (messages, `blockingReason`)
+- **Review:** Draft
+
+### TC-ASG-02 A late submission is accepted and marked late
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student4@mentora.test`, course IT201-A, assignment "ER Diagram Draft" (25 points, due 1 day before seeding, late submissions allowed, nothing submitted by student4)
+- **Steps:** open the assignment and submit a text answer.
+- **Expected:** "Your work was submitted." The submission is recorded as **late**. (If the assignment did not allow late work, the page would instead say "The due date has passed and late submissions aren't allowed.")
+- **Already automated:** `AssignmentSubmissionServiceTest::testASubmissionAfterTheDueDateWhereLateIsAllowedIsMarkedLate`
+- **Playwright:** planned
+- **Basis:** `AssignmentSubmissionService.php`, `DemoContentSeeder.php` (`allow_late_submission`)
+- **Review:** Draft
+
+---
+
+## Grading and grades
+
+### TC-GRD-01 Instructor grades an assignment with a rubric
+
+- **Role:** Instructor, then Student. **Priority:** P1
+- **Data:** `instructor1@mentora.test`, course IT101-A, "Assignment 1: Grade Calculator" (30 points; rubric: Correctness 12, Code Readability 10, Testing and Output 8). student3's submission is in, late and ungraded. Afterwards `student3@mentora.test`.
+- **Steps:**
+  1. As the instructor open the assignment's Grade Work and choose student3.
+  2. Open it for grading, then enter 10 for Correctness, 8 for Code Readability and 6 for Testing and Output, plus a written comment.
+  3. Try entering 13 for Correctness first.
+  4. Submit the grade.
+  5. Sign in as student3 and open the assignment.
+- **Expected:**
+  - Step 3: refused or capped at the criterion's maximum, 12 (the score can never exceed the criterion's maximum).
+  - Step 4: "Grade submitted successfully." The score is **24 of 30** and the status is Graded.
+  - Step 5: student3 sees Graded, 24 of 30, and the comment (wording to confirm).
+- **Already automated:** `tests/database/GradeWorkServiceTest.php`: `testGradingByRubricSumsTheCriteriaEachLimitedToItsMaximum`,
+  `testOpeningSubmittedOrPartlyGradedWorkMovesItToGrading`, `testReopeningGradedWorkKeepsTheScoreButStopsItCounting`;
+  `tests/database/AssessmentFeedbackServiceTest.php`
+- **Playwright:** planned
+- **Basis:** `GradeWorkService.php`, `DemoContentSeeder.php` (rubric), `DemoActivitySeeder.php` (student3's submission)
+- **Review:** Draft
+
+### TC-GRD-02 Instructor grades a quiz's essay
+
+- **Role:** Instructor, then Student. **Priority:** P1
+- **Data:** `instructor1@mentora.test`, course IT101-A, Quiz 1. student2's attempt is Partially Graded: the auto-graded answers scored 9 of 13 (questions 1, 3 and 4 right, question 2 wrong), the 7-point essay waits. Afterwards `student2@mentora.test`.
+- **Steps:**
+  1. As the instructor open Quiz 1's Grade Work and choose student2.
+  2. Grade the essay: first try 8 points, then 5.
+  3. Finish grading (submit the grade).
+  4. Sign in as student2 and open Quiz 1's result.
+- **Expected:**
+  - Step 2: 8 is refused: "Points must be between 0 and 7." (wording to confirm); 5 is accepted and the total follows.
+  - Step 3: "Grade submitted successfully." The attempt is **Graded** with **14 of 20**.
+  - Step 4: student2 now sees the full score, 14 of 20.
+- **Already automated:** `tests/database/GradeWorkServiceTest.php`: `testAWrittenQuestionIsGivenPointsAndTheTotalFollows`,
+  `testPointsMustBeBetweenZeroAndTheQuestionsWorth`, `testAnAutoGradedQuestionIsCorrectedWithCorrectOrIncorrect`
+- **Playwright:** planned
+- **Basis:** `GradeWorkService.php`, `DemoActivitySeeder.php` (student2's Quiz 1 attempt)
+- **Review:** Draft
+
+### TC-GRD-03 Student sees their grades
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student1@mentora.test`, course IT101-A (all work graded except Lab 1, which is submitted and waiting; the grading scheme is published by default, to confirm on the seeded data)
+- **Steps:** open IT101-A and its Grades.
+- **Expected:**
+  - A final grade for the course is shown, with a breakdown by category and the score on each graded assessment.
+  - Draft assessments (such as "Quiz 2: Database Basics") do not appear.
+  - If the instructor had not published the grading scheme, the final grade would be hidden (not seeded; covered by the PHP tests).
+  - The numbers equal what the instructor's gradebook shows for student1 (cross-check with `instructor1`).
+- **Already automated:** `tests/database/GradeServiceTest.php`: `testAPublishedSchemeShowsTheCalculatedGradeAndBreakdown`,
+  `testTheFinalGradeIsHiddenUntilTheSchemeIsPublished`, `testAnInstructorOverrideWins`; `tests/database/GradingEngineServiceTest.php`
+- **Playwright:** planned
+- **Basis:** `app/Services/Courses/GradeService.php`
+- **Review:** Draft
+
+---
+
+## Gaps this draft found
+
+- **No automated test for a wrong password** (TC-AUTH-03): write one.
+- **Exact on-screen wording** is unconfirmed for every case marked so; the first run on staging should fix the text in the case, not the app.
+- **Missing from P1 on purpose:** discussions, the calendar, resources, video progress, file uploads and the instructor's content authoring (creating modules, units, quizzes). They are P2 and need cases written.
+- **No requirements to check against.** Expected results such as "a late submission is allowed only when the assignment says so", or "a quiz with an essay shows Partially Graded until the essay is marked", are what the code does. Whether they are what the product should do is for the product owner to confirm.

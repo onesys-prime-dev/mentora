@@ -106,7 +106,7 @@ Checklist, one pull request per domain, in this order:
 - [x] Dashboard and overview: `DashboardService` (32 tests), `OverviewService` (27 + 3 route tests), `ActivityFeedService` (16), and query-count budgets (6) that fail on an N+1; fixed the course Overview being readable by people outside the section
 - [x] Helpers: announcement (18 tests), icon (30), navigation (4 + 3), storage and vite (6); fixed stored XSS through a message block's alignment and crashes on malformed announcement content
 - [x] Frontend, Vitest: the shared SPA helpers (swap, load guard, busy button, error state, highlight row, skeleton rows), the header menus, assignment submission, and the reading/instructions editor JSON (119 tests; runs in CI)
-- [ ] Frontend, Playwright: the main user flows in a real browser
+- [ ] Frontend, Playwright: the main user flows in a real browser. The cases to automate are written first, in `docs/test-cases/` (17 draft P1 cases so far, awaiting review); each Playwright test names its case ID
 
 ## Handoff notes (where this stands, and what is still open)
 
