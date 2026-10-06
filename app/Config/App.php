@@ -199,4 +199,18 @@ class App extends BaseConfig
      * @see http://www.w3.org/TR/CSP/
      */
     public bool $CSPEnabled = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Browser end-to-end tests (tests/e2e) serve the app on their own
+        // address and say so in E2E_BASE_URL (no dots, like E2E_DATABASE in
+        // Database.php, so it works the same on Windows and Linux).
+        $e2eBaseUrl = (string) env('E2E_BASE_URL', '');
+
+        if ($e2eBaseUrl !== '') {
+            $this->baseURL = rtrim($e2eBaseUrl, '/') . '/';
+        }
+    }
 }

@@ -40,6 +40,16 @@ export default [
     },
 
     {
+        // Browser end-to-end tests and their start script run in Node.
+        files: ["tests/e2e/**/*.js"],
+        languageOptions: {
+            ecmaVersion: "latest",
+            sourceType: "module",
+            globals: { ...globals.node },
+        },
+    },
+
+    {
         files: ["*.config.js"],
         languageOptions: {
             ecmaVersion: "latest",

@@ -45,7 +45,7 @@ works on a fresh seed. A full run needs a fresh seed.
   - The sidebar offers Courses, Calendar and Schedule (wording to confirm).
 - **Already automated:** `tests/feature/AuthFlowTest.php`:
   `testALoggedOutVisitorOnTheHomePageGoesToLogin`, `testStudentsLandOnTheStudentDashboard`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `app/Controllers/Auth/RedirectController.php`, `app/Views/pages/auth/login.php`
 - **Review:** Draft
 

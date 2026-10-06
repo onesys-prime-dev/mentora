@@ -20,6 +20,7 @@ day-to-day workflow.
 | Static analysis (PHPStan) | `phpstan analyse` at level 5 over `app/` on PHP 8.2. Problems that existed when it was introduced are listed in `phpstan-baseline.neon`; any other fails | Catches undefined methods, wrong argument types and dead conditions before they reach a user, without blocking on old code |
 | Tests on MySQL (8.2, 8.5) | A MySQL 8.4 container, `php spark migrate --all` on the empty database (then checked: the history table must hold a row for every App migration), then PHPUnit. On 8.2 the build also fails if line coverage drops below `.github/coverage-floor`, and on a pull request if less than `.github/diff-coverage-threshold` percent of the executable lines the PR adds or changes under `app/` are covered (`.github/scripts/check-diff-coverage.php`; the uncovered lines are listed in the job log and summary) | Migrations work on a fresh install, the test suite passes on the minimum and the production PHP, and coverage can only go up |
 | Frontend build and audit | `npm ci`, `npm audit --omit=dev --audit-level=high`, ESLint (`npm run lint`), Vitest, `npm run build`, manifest exists. ESLint covers `resources/js`, `tests/js` and the config files; the 10 problems that existed when it was added are recorded in `eslint-suppressions.json` | The lockfile installs cleanly on Linux (where the server builds), no high-severity advisories, assets build |
+| End-to-end (Playwright) | Builds the frontend, starts a MySQL 8.4 container, then `npm run e2e`: the app is served on a freshly seeded database and Chromium runs the browser tests in `tests/e2e/` (see `testing.md`). A failed run uploads a report with screenshots and traces | The main journeys work in a real browser, which the PHP tests cannot see |
 | Secret scan | gitleaks over the full history | No leaked passwords or keys |
 | **CI passed** | Fails if any job above failed | The single check that branch protection requires |
 
@@ -75,6 +76,6 @@ force pushes and deletions.
 ## What is not here yet
 
 Tracked in the plan: a higher PHPStan level, stricter ESLint rules, release
-folders with automatic rollback, an external uptime service (the hourly check in `uptime.md` is the stopgap), end-to-end tests
-(Playwright), and the production environment with approval.
+folders with automatic rollback, an external uptime service (the hourly check in `uptime.md` is the stopgap), more end-to-end
+flows (one runs today), and the production environment with approval.
 The deploy itself is described in `docs/deploy.md`.
