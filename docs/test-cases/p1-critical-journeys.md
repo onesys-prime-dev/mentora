@@ -67,14 +67,23 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Steps:** open the login page, enter the email and the wrong password, press Login.
 - **Expected:**
   - You stay on the login page and are not signed in.
-  - An error says the sign-in failed, for example "Unable to log you in. Please
-    check your credentials." (wording to confirm; this is the sign-in library's
-    text and the page shows it in a banner above the form).
+  - A banner above the form says the sign-in failed: "Unable to log you in. Please check your
+    password." (the text comes from the sign-in library; confirmed by calling the real login route).
   - Opening `/student/dashboard` still sends you to login.
-- **Already automated:** **nothing.** This is a gap: add a PHPUnit test in `tests/feature/AuthFlowTest.php`.
+  - Also refused, none signs you in: an email with no account, a password that differs only in letter
+    case, has a trailing space or is one character short, and an empty password (the form asks for it).
+  - The right password still works straight after a failed attempt.
+- **Already automated:** `tests/feature/AuthFlowTest.php`: `testAWrongPasswordIsRefusedAndNobodyIsSignedIn`,
+  `testAnEmailWithNoAccountIsRefusedToo`, `testAnEmptyPasswordIsRefusedByTheForm`,
+  `testAPasswordThatIsAlmostRightIsRefused`, `testTheRightPasswordSignsInEvenAfterAFailedAttempt`
 - **Playwright:** planned
-- **Basis:** `vendor/codeigniter4/shield/src/Language/en/Auth.php` (`badAttempt`), `login.php` (error banner)
+- **Basis:** `vendor/codeigniter4/shield/src/Language/en/Auth.php` (`invalidPassword`, `badAttempt`), `login.php` (error banner)
 - **Review:** Draft
+- **Note (needs a decision): the page reveals which emails have accounts.** An email with no account gets
+  "Unable to log you in. Please check your **credentials**." while a real email with a wrong password gets
+  "...check your **password**." Anyone can try addresses and learn which are registered. Using one message for
+  both (overriding `Auth.invalidPassword` in `app/Language/en/Auth.php`) closes it; a test would then assert the
+  two messages are equal.
 
 ### TC-AUTH-04 Signing out ends the session
 
@@ -341,7 +350,7 @@ works on a fresh seed. A full run needs a fresh seed.
 
 ## Gaps this draft found
 
-- **No automated test for a wrong password** (TC-AUTH-03): write one.
+- **A wrong password had no automated test** (TC-AUTH-03): now covered by five tests in `AuthFlowTest`. Writing them showed that the login page tells a visitor whether an email has an account (see the note on TC-AUTH-03).
 - **Exact on-screen wording** is unconfirmed for every case marked so; the first run on staging should fix the text in the case, not the app.
 - **Missing from P1 on purpose:** discussions, the calendar, resources, video progress, file uploads and the instructor's content authoring (creating modules, units, quizzes). They are P2 and need cases written.
 - **No requirements to check against.** Expected results such as "a late submission is allowed only when the assignment says so", or "a quiz with an essay shows Partially Graded until the essay is marked", are what the code does. Whether they are what the product should do is for the product owner to confirm.
