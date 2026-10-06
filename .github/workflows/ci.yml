@@ -1,15 +1,12 @@
 name: CI
 
-# Runs on every pull request into staging/main and on pushes to main. It can
-# also be called from another workflow (workflow_call), which is how a deploy
-# gate would reuse it; deploy.yml does not do that yet. The job named
-# "CI passed" at the bottom is the single result to look at (and the one to
-# require in a branch ruleset if enforcement is ever turned on).
+# Runs on every pull request into main. A push to main is covered by
+# deploy.yml, which calls this workflow (workflow_call) and deploys only if it
+# passes. The job named "CI passed" at the bottom is the single result to look
+# at (and the one to require in a branch ruleset).
 
 on:
   pull_request:
-    branches: [staging, main]
-  push:
     branches: [main]
   workflow_call:
 
