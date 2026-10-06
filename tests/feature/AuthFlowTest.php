@@ -152,6 +152,24 @@ final class AuthFlowTest extends RouteTestCase
         $this->assertRefusedAndSignedOut($this->signIn(self::EMAIL, 'wrong-password'));
     }
 
+    public function testTheLoginPageDoesNotRevealWhichEmailsHaveAnAccount(): void
+    {
+        $this->studentWithAPassword();
+
+        // A real email with the wrong password, and an email nobody registered,
+        // must look exactly the same to the person typing: same banner, same
+        // redirect. Otherwise anyone can test addresses to learn who has an account.
+        $realEmailLocation = $this->signIn(self::EMAIL, 'wrong-password');
+        $realEmailMessage = (string) session('error');
+
+        $unknownEmailLocation = $this->signIn('nobody@example.com', 'wrong-password');
+        $unknownEmailMessage = (string) session('error');
+
+        $this->assertNotSame('', $realEmailMessage);
+        $this->assertSame($realEmailMessage, $unknownEmailMessage, 'the two refusals must read the same');
+        $this->assertSame($realEmailLocation, $unknownEmailLocation, 'and send the browser to the same place');
+    }
+
     public function testAnEmailWithNoAccountIsRefusedToo(): void
     {
         $this->studentWithAPassword();
