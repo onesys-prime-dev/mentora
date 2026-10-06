@@ -110,12 +110,13 @@ except Playwright.
   and as an instructor, post an announcement, take a quiz, submit an
   assignment. Chromium is preinstalled in the cloud sandbox; locally run
   `npx playwright install chromium`.
-- **The PHP coverage floor is stale.** `.github/coverage-floor` is still `17.5`;
-  the suite has grown from roughly 1,000 to about 1,750 tests since it was set,
-  so real coverage is far higher and the floor guards nothing. Read the
-  `Lines: NN.NN%` summary from the "Tests on MySQL (PHP 8.2)" job on a recent
-  run, set the floor just below it, and keep raising it with new tests. It could
-  not be measured while writing these tests (no PCOV or Xdebug in the sandbox).
+- ~~The PHP coverage floor is stale.~~ Done: measured at **86.92%** lines
+  (9424/10842, PHP 8.2 with PCOV, 1,735 tests, 2026-10-06) and the floor in
+  `.github/coverage-floor` is now `86.5`. Keep raising it with new tests, in the
+  same PR. Still open: a check on changed lines, so new code cannot hide behind
+  the overall number. The weakest areas at that baseline are the controllers
+  (assessment, question, rubric, course and quiz-attempt controllers are at
+  roughly 9-35% of lines) and `ModuleService` (77%).
 - **No static analysis or linting in CI** (only `php -l` syntax checks). The
   most useful first step is PHPStan with a baseline file, so CI fails only on
   new problems; ESLint would help most on the untested page scripts in
