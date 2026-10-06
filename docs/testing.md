@@ -47,6 +47,52 @@ refuses to run unless the configured database name contains `test`. If you
 point `database.tests.database` at a real database by mistake, the suite stops
 before changing anything.
 
+### Browser tests (Playwright)
+
+Real-browser tests of the main user journeys, in `tests/e2e/*.spec.js`. Each test
+name starts with its case ID from `docs/test-cases/` (for example `TC-AUTH-01`),
+so a failure points straight at the case.
+
+```bash
+npm run build                    # once: the pages load public/build
+npx playwright install chromium  # once: downloads the browser
+npm run e2e
+```
+
+It needs a MySQL or MariaDB server on `127.0.0.1` that `root` with no password can
+use (XAMPP's is). `npm run e2e` then does everything itself
+(`tests/e2e/support/serve.js`): it empties a database, runs the migrations and the
+demo seeder, starts the app on port 8089 as production would, and drives Chromium
+against it. The demo data is reseeded on every run, because the cases consume it
+and the seeded dates are relative to today. A run takes about 25 seconds.
+
+**It drops and recreates a database called `mentora_e2e` on every run.** It never
+uses the database named in your `.env`, and it has three guards: a name that does
+not contain `e2e` or `test` is refused (in `serve.js`, `reset-database.php` and
+`app/Config/Database.php`, which `tests/unit/E2EConfigTest.php` checks); and before
+anything is migrated or seeded, `serve.js` asks the app which database it will
+connect to and stops if it is not that one.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `E2E_DATABASE` | `mentora_e2e` | the database to reset and use |
+| `E2E_DB_HOST`, `E2E_DB_USER`, `E2E_DB_PASSWORD` | `127.0.0.1`, `root`, empty | how to reach the server |
+| `E2E_PORT` | `8089` | where the app is served |
+| `E2E_VERBOSE` | unset | `1` shows the web server's request log |
+
+These settings have no dots on purpose. The framework's own dotted settings
+(`database.default.database`, `app.baseURL`) cannot be overridden from the process
+environment on Windows, where `.env` silently wins, so a setup that relied on
+them could reset the wrong database.
+
+A failed test leaves a screenshot and a trace in `test-results/` and an HTML report
+in `playwright-report/` (`npx playwright show-report`); CI uploads them as the
+`playwright-report` artifact, with `writable/logs/`. Tests run one at a time.
+
+To add a test: take a case from `docs/test-cases/`, name the test with its ID, sign
+in through the form with a demo account, and set the case's Playwright field to the
+file.
+
 ## Writing a test
 
 - Put it in `tests/unit/` (no database), `tests/database/` (service and model
@@ -83,6 +129,10 @@ The **Tests on MySQL** job starts a throwaway MySQL 8.4 container, runs
 8.2 (with a coverage report, downloadable from the run as `coverage-report`)
 and PHP 8.5 (the version the staging site runs).
 
+The **End-to-end (Playwright)** job runs the browser tests above: it builds the
+frontend, starts a MySQL 8.4 container, and runs `npm run e2e` (most of its time is
+building and installing Chromium). It is part of **CI passed**.
+
 ## Coverage plan
 
 "Covered" here means every service, controller and helper has tests, with the
@@ -106,7 +156,7 @@ Checklist, one pull request per domain, in this order:
 - [x] Dashboard and overview: `DashboardService` (32 tests), `OverviewService` (27 + 3 route tests), `ActivityFeedService` (16), and query-count budgets (6) that fail on an N+1; fixed the course Overview being readable by people outside the section
 - [x] Helpers: announcement (18 tests), icon (30), navigation (4 + 3), storage and vite (6); fixed stored XSS through a message block's alignment and crashes on malformed announcement content
 - [x] Frontend, Vitest: the shared SPA helpers (swap, load guard, busy button, error state, highlight row, skeleton rows), the header menus, assignment submission, and the reading/instructions editor JSON (119 tests; runs in CI)
-- [ ] Frontend, Playwright: the main user flows in a real browser. The cases to automate are written first, in `docs/test-cases/` (17 draft P1 cases so far, awaiting review); each Playwright test names its case ID
+- [ ] Frontend, Playwright: the main user flows in a real browser. **Set up and running in CI** (config, a freshly seeded database, one test: TC-AUTH-01). The cases to automate are written first, in `docs/test-cases/` (draft, awaiting review); each Playwright test names its case ID. More flows come as their cases are confirmed
 
 ## Handoff notes (where this stands, and what is still open)
 
@@ -116,11 +166,12 @@ except Playwright.
 
 ### Open decisions (none of these are started)
 
-- **Playwright end-to-end tests.** Needs a running PHP app, a seeded database, a
-  login step and a CI job with MySQL. Suggested first set: log in as a student
-  and as an instructor, post an announcement, take a quiz, submit an
-  assignment. Chromium is preinstalled in the cloud sandbox; locally run
-  `npx playwright install chromium`.
+- ~~Playwright end-to-end tests.~~ The setup is done (see "Browser tests" above and
+  the checklist): config, a database that is reset and seeded on every run, the app
+  served as production would, a CI job with MySQL, and one test (TC-AUTH-01). Still
+  open: the other flows (see `docs/test-cases/`), once their expected results are
+  confirmed; instructor flows; file upload and video; and a decision on how long the
+  suite may grow before it is split across CI jobs.
 - ~~The PHP coverage floor is stale.~~ Done: measured at **86.92%** lines
   (9424/10842, PHP 8.2 with PCOV, 1,735 tests, 2026-10-06) and the floor in
   `.github/coverage-floor` is now `86.5`. Keep raising it with new tests, in the

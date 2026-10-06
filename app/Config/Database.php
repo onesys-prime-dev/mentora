@@ -206,5 +206,26 @@ class Database extends Config
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
         }
+
+        // Browser end-to-end tests (tests/e2e) run the app against a database
+        // of their own, named in E2E_DATABASE. The name has no dots on purpose:
+        // dotted variables (database.default.database) cannot be set from the
+        // process environment on Windows, where .env would silently win and
+        // the tests would reset the real database. A name that does not look
+        // like a test database is refused.
+        $e2eDatabase = (string) env('E2E_DATABASE', '');
+
+        if ($e2eDatabase !== '') {
+            if (! preg_match('/e2e|test/i', $e2eDatabase)) {
+                throw new \RuntimeException(
+                    "Refusing to use '{$e2eDatabase}' for end-to-end tests: the name must contain 'e2e' or 'test'."
+                );
+            }
+
+            $this->default['hostname'] = (string) env('E2E_DB_HOST', '127.0.0.1');
+            $this->default['username'] = (string) env('E2E_DB_USER', 'root');
+            $this->default['password'] = (string) env('E2E_DB_PASSWORD', '');
+            $this->default['database'] = $e2eDatabase;
+        }
     }
 }
