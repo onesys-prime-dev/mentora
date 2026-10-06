@@ -54,6 +54,8 @@ short branch ──PR──▶ main ──auto-deploy (after CI passes)──▶
 6. **Fix and push again if something is red.** The PR updates by itself; CI
    re-runs on the new commit. You do not open a new PR.
 7. **Get a review and read your own diff** under "Files changed" before merging.
+   `.github/CODEOWNERS` lists who GitHub asks to review (today only Paul; add
+   teammates there as they join).
 8. **Merge only when CI is green and someone else has looked at it.** Use
    "Squash and merge" so each PR becomes one clean commit on `main`.
 9. **Watch the deploy.** Merging into `main` starts the Deploy workflow

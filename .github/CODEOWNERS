@@ -1,0 +1,10 @@
+# Who is asked to review a pull request. GitHub requests a review from the
+# owner of every file the PR changes (the last matching line wins).
+#
+# For now Paul is the only owner. When more people take part, add them here,
+# for example:
+#   /tests/                @waway647 @<qa-username>
+#   /.github/              @waway647
+# Check each username exactly: GitHub silently ignores one that does not exist.
+
+* @waway647
