@@ -56,7 +56,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Steps:** as TC-AUTH-01.
 - **Expected:** you land on the instructor dashboard (`/instructor/dashboard`), not the student one.
 - **Already automated:** `AuthFlowTest::testInstructorsLandOnTheInstructorDashboard`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `RedirectController.php`
 - **Review:** Draft
 
@@ -80,7 +80,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testTheLoginPageDoesNotRevealWhichEmailsHaveAnAccount`, `testAnEmailWithNoAccountIsRefusedToo`,
   `testAnEmptyPasswordIsRefusedByTheForm`, `testAPasswordThatIsAlmostRightIsRefused`,
   `testTheRightPasswordSignsInEvenAfterAFailedAttempt`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `app/Language/en/Auth.php` (the override that makes both messages the same),
   `vendor/codeigniter4/shield/src/Language/en/Auth.php`, `login.php` (error banner)
 - **Review:** Draft
@@ -96,7 +96,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Steps:** sign out from the account menu; then open `/student/courses` directly.
 - **Expected:** you are on the login page after signing out, and `/student/courses` sends you back to login.
 - **Already automated:** `AuthFlowTest::testLoggingOutEndsTheSession`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `app/Config/Auth.php` (`logout` redirect to `login`)
 - **Review:** Draft
 

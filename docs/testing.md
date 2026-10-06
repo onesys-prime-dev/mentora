@@ -156,7 +156,7 @@ Checklist, one pull request per domain, in this order:
 - [x] Dashboard and overview: `DashboardService` (32 tests), `OverviewService` (27 + 3 route tests), `ActivityFeedService` (16), and query-count budgets (6) that fail on an N+1; fixed the course Overview being readable by people outside the section
 - [x] Helpers: announcement (18 tests), icon (30), navigation (4 + 3), storage and vite (6); fixed stored XSS through a message block's alignment and crashes on malformed announcement content
 - [x] Frontend, Vitest: the shared SPA helpers (swap, load guard, busy button, error state, highlight row, skeleton rows), the header menus, assignment submission, and the reading/instructions editor JSON (119 tests; runs in CI)
-- [ ] Frontend, Playwright: the main user flows in a real browser. **Set up and running in CI** (config, a freshly seeded database, one test: TC-AUTH-01). The cases to automate are written first, in `docs/test-cases/` (draft, awaiting review); each Playwright test names its case ID. More flows come as their cases are confirmed
+- [ ] Frontend, Playwright: the main user flows in a real browser. **Set up and running in CI** (config, a freshly seeded database, four sign-in tests: TC-AUTH-01 to 04). The cases to automate are written first, in `docs/test-cases/` (draft, awaiting review); each Playwright test names its case ID. More flows come as their cases are confirmed
 
 ## Handoff notes (where this stands, and what is still open)
 
@@ -168,7 +168,7 @@ except Playwright.
 
 - ~~Playwright end-to-end tests.~~ The setup is done (see "Browser tests" above and
   the checklist): config, a database that is reset and seeded on every run, the app
-  served as production would, a CI job with MySQL, and one test (TC-AUTH-01). Still
+  served as production would, a CI job with MySQL, and four sign-in tests (TC-AUTH-01 to 04). Still
   open: the other flows (see `docs/test-cases/`), once their expected results are
   confirmed; instructor flows; file upload and video; and a decision on how long the
   suite may grow before it is split across CI jobs.
