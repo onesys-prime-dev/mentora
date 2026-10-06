@@ -114,6 +114,99 @@ final class AuthFlowTest extends RouteTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Signing in with a password (the real login form route)
+    |--------------------------------------------------------------------------
+    */
+
+    private const EMAIL = 'sign.in@example.com';
+
+    private const PASSWORD = 'CorrectHorse!42';
+
+    /** A student who can really sign in: an email and a password hash, not just a session. */
+    private function studentWithAPassword(): User
+    {
+        $user = CourseFactory::user('student');
+        $user->createEmailIdentity(['email' => self::EMAIL, 'password' => self::PASSWORD]);
+
+        return $user;
+    }
+
+    /** Submits the login form and returns the address the browser is sent to. */
+    private function signIn(string $email, string $password): string
+    {
+        return $this->post('login', ['email' => $email, 'password' => $password])->response()->getHeaderLine('Location');
+    }
+
+    private function assertRefusedAndSignedOut(string $location): void
+    {
+        $this->assertStringEndsWith('/login', $location, 'a refused sign-in goes back to the login page');
+        $this->assertFalse(auth()->loggedIn(), 'nobody is signed in after a refused sign-in');
+        $this->assertStringStartsWith('Unable to log you in.', (string) session('error'), 'the page says the sign-in failed');
+        $this->assertStringEndsWith('/login', $this->location('GET', 'student/dashboard'), 'protected pages still need a login');
+    }
+
+    public function testAWrongPasswordIsRefusedAndNobodyIsSignedIn(): void
+    {
+        $this->studentWithAPassword();
+
+        $this->assertRefusedAndSignedOut($this->signIn(self::EMAIL, 'wrong-password'));
+    }
+
+    public function testAnEmailWithNoAccountIsRefusedToo(): void
+    {
+        $this->studentWithAPassword();
+
+        $this->assertRefusedAndSignedOut($this->signIn('nobody@example.com', self::PASSWORD));
+    }
+
+    public function testAnEmptyPasswordIsRefusedByTheForm(): void
+    {
+        $this->studentWithAPassword();
+
+        // Left blank, the form is rejected before any password is checked: the
+        // browser is sent back with a validation message (not the "Unable to
+        // log you in" banner) and nobody is signed in.
+        $this->signIn(self::EMAIL, '');
+
+        $this->assertFalse(auth()->loggedIn());
+        $this->assertNotEmpty(session('errors'), 'the form says the password is required');
+        $this->assertStringEndsWith('/login', $this->location('GET', 'student/dashboard'));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideAlmostRightPasswords(): iterable
+    {
+        yield 'other letter case' => [strtolower(self::PASSWORD)];
+        yield 'trailing space' => [self::PASSWORD . ' '];
+        yield 'one character short' => [substr(self::PASSWORD, 0, -1)];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('provideAlmostRightPasswords')]
+    public function testAPasswordThatIsAlmostRightIsRefused(string $password): void
+    {
+        $this->studentWithAPassword();
+
+        $this->assertRefusedAndSignedOut($this->signIn(self::EMAIL, $password));
+    }
+
+    public function testTheRightPasswordSignsInEvenAfterAFailedAttempt(): void
+    {
+        $this->studentWithAPassword();
+
+        $this->signIn(self::EMAIL, 'wrong-password');
+        $this->assertFalse(auth()->loggedIn());
+
+        $location = $this->signIn(self::EMAIL, self::PASSWORD);
+
+        $this->assertTrue(auth()->loggedIn(), 'the right password still works after a failed attempt');
+        $this->assertStringNotContainsString('/login', $location);
+        $this->assertStringEndsWith('/student/dashboard', $this->location('GET', '/'));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | The right role reaches the page
     |--------------------------------------------------------------------------
     */

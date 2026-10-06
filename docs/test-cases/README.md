@@ -101,7 +101,7 @@ a full run needs a fresh seed, and cases that depend on an earlier one say so.
    state, say what to set up first.
 3. Check **Already automated**: if a PHPUnit test already proves the rule, link
    it instead of duplicating it. Write a new PHPUnit test for gaps found
-   (the wrong-password check, TC-AUTH-03, is one).
+   (TC-AUTH-03's wrong-password check was one: see `AuthFlowTest`).
 4. A reviewer changes `Draft` to `Confirmed by <name>, <date>` only after
    running the case on staging and agreeing the expected result is right.
 5. When Playwright automates a case, the test names the case ID in its title,
