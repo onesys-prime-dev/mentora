@@ -60,7 +60,10 @@ short branch ──PR──▶ main ──auto-deploy (after CI passes)──▶
    "Squash and merge" so each PR becomes one clean commit on `main`.
 9. **Watch the deploy.** Merging into `main` starts the Deploy workflow
    (Actions tab). It runs CI again on the merged commit and then deploys. When it
-   is green the change is on the staging server, ready for QA.
+   is green the change is on the staging server, ready for QA. The last two
+   steps are a health check and a smoke test of the login page, its CSS and JS,
+   and the anonymous redirects; if either is red the new code is already live,
+   so tell the team and fix forward or revert.
 10. **Clean up.** Delete the branch (GitHub offers a button), then
     `git checkout main && git pull` locally.
 

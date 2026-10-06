@@ -29,6 +29,7 @@ CI re-checked and an approval before it deploys).
 5. **Fix `writable/` permissions.**
 6. **Run `php8.5 spark migrate --all`** so the database matches the code.
 7. **Health check**: `GET /health` must answer `{"status":"ok"}` (it only does when the app can reach its database). Retried for about a minute, then the deploy fails. The check skips certificate verification (`curl -k`) because staging uses a self-signed certificate; remove that once the site has a real one.
+8. **Smoke test** (`.github/scripts/smoke-test.php`, 11 checks): `/health` again, then what a visitor meets first. `/login` answers 200 and shows the email and password fields, with no debug toolbar or error output; the built stylesheet and script it links to load as CSS and JavaScript (not an HTML error page); and `/`, `/student/dashboard`, `/instructor/dashboard` and `/files/1` send an anonymous visitor to the login page. The same `--insecure` note applies. You can run it by hand against any copy of the site: `php .github/scripts/smoke-test.php https://host --insecure`.
 
 ## Secrets and settings it needs
 
@@ -62,6 +63,7 @@ deploy prints a warning and accepts the key on first contact.
 | Deploy application / permissions | File copy problem | Re-run the workflow. Safe to repeat. |
 | Run database migrations | A migration errored | The new code is already on the server. Read the error, fix the migration in a new PR, or restore the backup (below). Do not re-run blindly. |
 | Check the site is healthy | The site does not answer ok | Open the site and the logs (`writable/logs/`, `~/logs/php/error.log`). The backup from this deploy is on the server. |
+| Smoke test the site | The site is up and reaches its database, but something a visitor needs is broken. The FAIL lines say what: a login page that errors or shows the debug toolbar (wrong `CI_ENVIRONMENT`), no built assets or a 404 on them (the `public/build` folder did not deploy, or `app.baseURL` is wrong), or a protected page that no longer sends a visitor to login (**a security problem: treat it as urgent**) | The new code is already live. Fix forward in a new PR, or revert the merged PR (see "Rolling back code"). |
 
 ## Restoring a database backup
 
