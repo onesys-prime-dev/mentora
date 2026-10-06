@@ -16,6 +16,7 @@ day-to-day workflow.
 |---|---|---|
 | PHP syntax (8.2, 8.5) | `php -l` on every file in `app/`, `tests/`, `public/` and `spark` | 8.2 is the minimum in `composer.json` and the local version; 8.5 is the version the staging site runs |
 | Composer | `composer validate --strict`, `composer install`, `composer audit` | The manifest and lock agree, dependencies install, no known vulnerable packages |
+| Static analysis (PHPStan) | `phpstan analyse` at level 5 over `app/` on PHP 8.2. Problems that existed when it was introduced are listed in `phpstan-baseline.neon`; any other fails | Catches undefined methods, wrong argument types and dead conditions before they reach a user, without blocking on old code |
 | Tests on MySQL (8.2, 8.5) | A MySQL 8.4 container, `php spark migrate --all` on the empty database (then checked: the history table must hold a row for every App migration), then PHPUnit. On 8.2 the build also fails if line coverage drops below `.github/coverage-floor`, and on a pull request if less than `.github/diff-coverage-threshold` percent of the executable lines the PR adds or changes under `app/` are covered (`.github/scripts/check-diff-coverage.php`; the uncovered lines are listed in the job log and summary) | Migrations work on a fresh install, the test suite passes on the minimum and the production PHP, and coverage can only go up |
 | Frontend build and audit | `npm ci`, `npm audit --omit=dev --audit-level=high`, `npm run build`, manifest exists | The lockfile installs cleanly on Linux (where the server builds), no high-severity advisories, assets build |
 | Secret scan | gitleaks over the full history | No leaked passwords or keys |
@@ -23,6 +24,18 @@ day-to-day workflow.
 
 Dependabot opens weekly update PRs for Composer, npm and GitHub Actions
 against `main`; they run the same checks.
+
+### Working with the PHPStan baseline
+
+- Run it locally: `vendor/bin/phpstan analyse --memory-limit=1G`.
+- A new finding is yours to fix in the same PR. Do not add it to the baseline
+  and do not add `@phpstan-ignore` comments to get a build through.
+- When you fix code that has a baseline entry, PHPStan reports the entry as
+  unmatched and fails. Shrink the baseline with
+  `vendor/bin/phpstan analyse --generate-baseline phpstan-baseline.neon --memory-limit=1G`
+  and check in `git diff` that it only lost entries.
+- Raising the level (`phpstan.neon`) is a separate, deliberate PR: set the level,
+  regenerate the baseline, and say in the PR how many findings it records.
 
 ## What stops a bad change (and what does not)
 
@@ -40,7 +53,7 @@ force pushes and deletions.
 
 ## What is not here yet
 
-Tracked in the plan: static analysis (PHPStan, ESLint), release
+Tracked in the plan: ESLint for the browser code, a higher PHPStan level, release
 folders with automatic rollback, a post-deploy smoke test, end-to-end tests
 (Playwright), and the production environment with approval.
 The deploy itself is described in `docs/deploy.md`.

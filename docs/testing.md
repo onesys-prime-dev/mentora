@@ -133,11 +133,20 @@ except Playwright.
   areas at the 2026-10-06 baseline are the controllers (assessment, question,
   rubric, course and quiz-attempt controllers are at roughly 9-35% of lines)
   and `ModuleService` (77%).
-- **No static analysis or linting in CI** (only `php -l` syntax checks). The
-  most useful first step is PHPStan with a baseline file, so CI fails only on
-  new problems; ESLint would help most on the untested page scripts in
-  `resources/js/pages`. A code-style tool is lower value here: the code mixes
-  CRLF and LF line endings, so it would reformat many files at once.
+- **Static analysis.** PHPStan now runs in CI (level 5, `phpstan.neon`, with
+  the existing 13 findings recorded in `phpstan-baseline.neon`, so only new
+  problems fail the build). Still open: ESLint for the untested page scripts in
+  `resources/js/pages`, and raising the PHPStan level. Level 6 and up reports
+  about 700 to 1,500 findings, mostly missing array and return types and
+  null-safety (`argument.type`, `offsetAccess.nonOffsetAccessible`,
+  `method.nonObject`), which is the real value but needs a gradual clean-up.
+  A code-style tool is lower value here: the code mixes CRLF and LF line
+  endings, so it would reformat many files at once.
+  The baselined findings looked at on 2026-10-06 are not runtime bugs: the
+  `RosterRiskService::atRisk()` docblock leaves out the `student_id` key the
+  dashboard reads, a `match` in `GradeSheetExportService` has no default arm,
+  and the rest are PHPStan not seeing CodeIgniter's magic (a `Model` forwarding
+  `get()` to its builder, `UploadedFile` typed as `File`).
 - ~~`deploy.yml` does not wait for CI.~~ Done: it now calls `ci.yml` and the
   deploy job `needs: ci`; the trunk is `main` (the `staging` branch is retired).
 - **JavaScript coverage is partial.** Only the shared helpers and the editor
