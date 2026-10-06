@@ -1,0 +1,97 @@
+name: Uptime check
+
+# Checks the staging site on a schedule, the way an uptime monitor would, by
+# running the post-deploy smoke test (.github/scripts/smoke-test.php) against
+# it. When it fails it opens a GitHub issue assigned to the alert owner, and it
+# closes that issue again when the site recovers. See docs/uptime.md for what
+# to do when it fires, what it costs, and how to change the schedule.
+
+on:
+  schedule:
+    # Hourly, at minute 17 (GitHub's schedule is busiest at the top of the
+    # hour). Every run bills at least one Actions minute on a private
+    # repository, so tighten this only after reading "Cost" in docs/uptime.md.
+    - cron: "17 * * * *"
+  # Run it by hand from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+# Never two checks at once, and never cancel one that is reporting a problem.
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Staging is up
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    env:
+      SITE_URL: https://mentora.srv1404227.hstgr.cloud
+      # GitHub username assigned to the issue (and so notified) when it fails.
+      ALERT_USER: waway647
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+
+      # Three attempts, 30 seconds apart, so one network blip does not raise an
+      # alert. --insecure because staging uses a self-signed certificate;
+      # remove it once the site has a real one (see docs/deploy.md).
+      - name: Smoke test the site
+        run: |
+          for attempt in 1 2 3; do
+            echo "::group::Attempt $attempt of 3"
+            if php .github/scripts/smoke-test.php "$SITE_URL" --insecure; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            if [ "$attempt" -lt 3 ]; then
+              sleep "${RETRY_WAIT:-30}"
+            fi
+          done
+          echo "::error::Staging failed the smoke test three times in a row: $SITE_URL"
+          exit 1
+
+      # One open issue at a time: a new failure opens it, a repeat failure adds
+      # a comment, and recovery closes it. The failed run also emails whoever
+      # last edited this file's schedule, as a second signal.
+      - name: Open or update the issue when the site is down
+        if: failure()
+        run: |
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          gh label create uptime --color B60205 --description "Staging uptime check" 2>/dev/null || true
+          open=$(gh issue list --label uptime --state open --json number --jq '.[0].number // empty')
+          if [ -z "$open" ]; then
+            gh issue create \
+              --title "Staging is down or broken" \
+              --label uptime \
+              --assignee "$ALERT_USER" \
+              --body "@$ALERT_USER the scheduled check of $SITE_URL failed three times in a row.
+
+          Failed run (the FAIL lines say what is wrong): $run_url
+
+          What to do: docs/uptime.md. This issue closes itself when the site passes again."
+          else
+            gh issue comment "$open" --body "Still failing: $run_url"
+          fi
+
+      - name: Close the issue when the site is back
+        if: success()
+        run: |
+          for number in $(gh issue list --label uptime --state open --json number --jq '.[].number'); do
+            gh issue close "$number" --comment "The site passed the smoke test again, so this is closed. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          done

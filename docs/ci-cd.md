@@ -9,6 +9,7 @@ day-to-day workflow.
 |---|---|---|---|
 | CI | `.github/workflows/ci.yml` | PR into `main`; also called by Deploy | Prove the change is sound |
 | Deploy | `.github/workflows/deploy.yml` | push to `main`, or a manual run | Run CI first (`needs: ci`); only if it passes: build, back up the database, copy the app, migrate, health-check, smoke-test (see `deploy.md`) |
+| Uptime check | `.github/workflows/uptime.yml` | hourly, or a manual run | Smoke-test staging; open an issue assigned to the alert owner when it is down, close it on recovery (see `uptime.md`, including what it costs in Actions minutes) |
 
 ## CI jobs (all must pass)
 
@@ -74,6 +75,6 @@ force pushes and deletions.
 ## What is not here yet
 
 Tracked in the plan: a higher PHPStan level, stricter ESLint rules, release
-folders with automatic rollback, an uptime monitor, end-to-end tests
+folders with automatic rollback, an external uptime service (the hourly check in `uptime.md` is the stopgap), end-to-end tests
 (Playwright), and the production environment with approval.
 The deploy itself is described in `docs/deploy.md`.
