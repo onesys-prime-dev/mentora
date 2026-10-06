@@ -237,6 +237,12 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
+      # ESLint (eslint.config.js). Problems that already existed are recorded
+      # in eslint-suppressions.json and tolerated; anything new fails, and so
+      # does a suppression that no longer applies (shrink it: see ci-cd.md).
+      - name: Lint the browser code
+        run: npm run lint
+
       # Unit tests for the browser code in resources/js (jsdom; no PHP,
       # database or build needed).
       - name: Run frontend unit tests

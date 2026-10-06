@@ -18,7 +18,7 @@ day-to-day workflow.
 | Composer | `composer validate --strict`, `composer install`, `composer audit` | The manifest and lock agree, dependencies install, no known vulnerable packages |
 | Static analysis (PHPStan) | `phpstan analyse` at level 5 over `app/` on PHP 8.2. Problems that existed when it was introduced are listed in `phpstan-baseline.neon`; any other fails | Catches undefined methods, wrong argument types and dead conditions before they reach a user, without blocking on old code |
 | Tests on MySQL (8.2, 8.5) | A MySQL 8.4 container, `php spark migrate --all` on the empty database (then checked: the history table must hold a row for every App migration), then PHPUnit. On 8.2 the build also fails if line coverage drops below `.github/coverage-floor`, and on a pull request if less than `.github/diff-coverage-threshold` percent of the executable lines the PR adds or changes under `app/` are covered (`.github/scripts/check-diff-coverage.php`; the uncovered lines are listed in the job log and summary) | Migrations work on a fresh install, the test suite passes on the minimum and the production PHP, and coverage can only go up |
-| Frontend build and audit | `npm ci`, `npm audit --omit=dev --audit-level=high`, `npm run build`, manifest exists | The lockfile installs cleanly on Linux (where the server builds), no high-severity advisories, assets build |
+| Frontend build and audit | `npm ci`, `npm audit --omit=dev --audit-level=high`, ESLint (`npm run lint`), Vitest, `npm run build`, manifest exists. ESLint covers `resources/js`, `tests/js` and the config files; the 10 problems that existed when it was added are recorded in `eslint-suppressions.json` | The lockfile installs cleanly on Linux (where the server builds), no high-severity advisories, assets build |
 | Secret scan | gitleaks over the full history | No leaked passwords or keys |
 | **CI passed** | Fails if any job above failed | The single check that branch protection requires |
 
@@ -37,6 +37,26 @@ against `main`; they run the same checks.
 - Raising the level (`phpstan.neon`) is a separate, deliberate PR: set the level,
   regenerate the baseline, and say in the PR how many findings it records.
 
+### Working with the ESLint suppressions
+
+- Run it locally: `npm run lint`. It checks `resources/js`, `tests/js` and the
+  config files; `app/` (including CodeIgniter's own error-page script) and the
+  Python service are out of scope.
+- A new problem is yours to fix in the same PR. Do not add it to
+  `eslint-suppressions.json` and do not add `eslint-disable` comments to get a
+  build through.
+- When you fix code that has a suppression, ESLint fails with "There are
+  suppressions left that do not occur anymore". Remove it with
+  `npx eslint --prune-suppressions` and check in `git diff` that the file only
+  lost entries.
+- Adding a rule is a separate, deliberate PR: turn the rule on, record what it
+  finds with `npx eslint --suppress-all`, and say in the PR how many.
+- Adding or updating an npm package: run `npm ci --dry-run` before pushing.
+  On Windows, `npm install` can drop the optional `@emnapi/*` entries under
+  `node_modules/@tailwindcss/oxide-wasm32-wasi/` from `package-lock.json`,
+  which makes `npm ci` fail on the Linux runner. If it does, restore those two
+  entries from `main`'s lock file.
+
 ## What stops a bad change (and what does not)
 
 **The deploy is gated.** `deploy.yml` calls `ci.yml` and its `deploy` job
@@ -53,7 +73,7 @@ force pushes and deletions.
 
 ## What is not here yet
 
-Tracked in the plan: ESLint for the browser code, a higher PHPStan level, release
+Tracked in the plan: a higher PHPStan level, stricter ESLint rules, release
 folders with automatic rollback, a post-deploy smoke test, end-to-end tests
 (Playwright), and the production environment with approval.
 The deploy itself is described in `docs/deploy.md`.

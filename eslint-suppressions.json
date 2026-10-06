@@ -1,0 +1,42 @@
+{
+  "resources/js/pages/courses/features/assessments/index.js": {
+    "no-unused-vars": {
+      "count": 2
+    }
+  },
+  "resources/js/pages/courses/features/assessments/rubrics/rubrics.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "resources/js/pages/courses/features/modules/state.js": {
+    "no-dupe-keys": {
+      "count": 1
+    }
+  },
+  "resources/js/pages/courses/features/modules/video/video-autosave.js": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "resources/js/shared/app-menu.js": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "resources/js/shared/pdf/viewer.js": {
+    "no-fallthrough": {
+      "count": 1
+    }
+  },
+  "resources/js/shared/profile-menu.js": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "resources/js/shared/spa/skeleton-rows.js": {
+    "no-unused-vars": {
+      "count": 2
+    }
+  }
+}

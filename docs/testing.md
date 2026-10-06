@@ -135,8 +135,12 @@ except Playwright.
   and `ModuleService` (77%).
 - **Static analysis.** PHPStan now runs in CI (level 5, `phpstan.neon`, with
   the existing 13 findings recorded in `phpstan-baseline.neon`, so only new
-  problems fail the build). Still open: ESLint for the untested page scripts in
-  `resources/js/pages`, and raising the PHPStan level. Level 6 and up reports
+  problems fail the build). ESLint now runs in CI too (`eslint.config.js`,
+  recommended rules over `resources/js`, `tests/js` and the config files; the
+  10 findings it started with are in `eslint-suppressions.json`: unused
+  variables and parameters, one duplicated `null` key and one deliberate
+  grouped `case`, none a bug). Still open: raising the PHPStan level and
+  turning on stricter ESLint rules. PHPStan level 6 and up reports
   about 700 to 1,500 findings, mostly missing array and return types and
   null-safety (`argument.type`, `offsetAccess.nonOffsetAccessible`,
   `method.nonObject`), which is the real value but needs a gradual clean-up.
