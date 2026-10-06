@@ -64,26 +64,30 @@ works on a fresh seed. A full run needs a fresh seed.
 
 - **Role:** Anonymous. **Priority:** P1
 - **Data:** `student5@mentora.test` with the password `wrong-password`
-- **Steps:** open the login page, enter the email and the wrong password, press Login.
+- **Steps:** open the login page, enter the email and the wrong password, press Login. Then repeat with an
+  email that has no account (for example `nobody@mentora.test`).
 - **Expected:**
   - You stay on the login page and are not signed in.
-  - A banner above the form says the sign-in failed: "Unable to log you in. Please check your
-    password." (the text comes from the sign-in library; confirmed by calling the real login route).
+  - A banner above the form says: "Unable to log you in. Please check your credentials." (confirmed by
+    calling the real login route).
+  - **The banner is identical for an email with no account and for a real email with a wrong password**, so
+    the page never reveals which emails are registered.
   - Opening `/student/dashboard` still sends you to login.
-  - Also refused, none signs you in: an email with no account, a password that differs only in letter
-    case, has a trailing space or is one character short, and an empty password (the form asks for it).
+  - Also refused, none signs you in: a password that differs only in letter case, has a trailing space or is
+    one character short, and an empty password (the form asks for it).
   - The right password still works straight after a failed attempt.
 - **Already automated:** `tests/feature/AuthFlowTest.php`: `testAWrongPasswordIsRefusedAndNobodyIsSignedIn`,
-  `testAnEmailWithNoAccountIsRefusedToo`, `testAnEmptyPasswordIsRefusedByTheForm`,
-  `testAPasswordThatIsAlmostRightIsRefused`, `testTheRightPasswordSignsInEvenAfterAFailedAttempt`
+  `testTheLoginPageDoesNotRevealWhichEmailsHaveAnAccount`, `testAnEmailWithNoAccountIsRefusedToo`,
+  `testAnEmptyPasswordIsRefusedByTheForm`, `testAPasswordThatIsAlmostRightIsRefused`,
+  `testTheRightPasswordSignsInEvenAfterAFailedAttempt`
 - **Playwright:** planned
-- **Basis:** `vendor/codeigniter4/shield/src/Language/en/Auth.php` (`invalidPassword`, `badAttempt`), `login.php` (error banner)
+- **Basis:** `app/Language/en/Auth.php` (the override that makes both messages the same),
+  `vendor/codeigniter4/shield/src/Language/en/Auth.php`, `login.php` (error banner)
 - **Review:** Draft
-- **Note (needs a decision): the page reveals which emails have accounts.** An email with no account gets
-  "Unable to log you in. Please check your **credentials**." while a real email with a wrong password gets
-  "...check your **password**." Anyone can try addresses and learn which are registered. Using one message for
-  both (overriding `Auth.invalidPassword` in `app/Language/en/Auth.php`) closes it; a test would then assert the
-  two messages are equal.
+- **Note:** the two messages used to differ ("check your password" for a real email, "check your credentials"
+  for an unknown one), which revealed registered emails. Fixed by the language override above. Still open: how
+  long the refusal takes may differ between a real and an unknown email (a real email has a password hash to
+  check), which a determined person could measure. Not covered by any test.
 
 ### TC-AUTH-04 Signing out ends the session
 
@@ -350,7 +354,7 @@ works on a fresh seed. A full run needs a fresh seed.
 
 ## Gaps this draft found
 
-- **A wrong password had no automated test** (TC-AUTH-03): now covered by five tests in `AuthFlowTest`. Writing them showed that the login page tells a visitor whether an email has an account (see the note on TC-AUTH-03).
+- **A wrong password had no automated test** (TC-AUTH-03): now covered by six tests in `AuthFlowTest`. Writing them showed that the login page told a visitor whether an email has an account; that is fixed (see the note on TC-AUTH-03).
 - **Exact on-screen wording** is unconfirmed for every case marked so; the first run on staging should fix the text in the case, not the app.
 - **Missing from P1 on purpose:** discussions, the calendar, resources, video progress, file uploads and the instructor's content authoring (creating modules, units, quizzes). They are P2 and need cases written.
 - **No requirements to check against.** Expected results such as "a late submission is allowed only when the assignment says so", or "a quiz with an essay shows Partially Graded until the essay is marked", are what the code does. Whether they are what the product should do is for the product owner to confirm.
