@@ -352,6 +352,21 @@ function bindExpandToggle() {
                     panel.dataset.submissionId
                 );
 
+                // Whether a quiz's questions can be edited is decided when this view is
+                // drawn, and it was drawn before grading started. Draw it again for this
+                // student: it comes back in "Grading" with the panel open and the
+                // questions editable. (Relabelling the panel alone left a quiz's essay
+                // score box disabled until the student was selected again.)
+                const studentId = selectedStudentId();
+
+                if (studentId) {
+
+                    await loadStudent(studentId, panel.dataset.submissionId);
+
+                    return;
+
+                }
+
                 panel.dataset.submissionStatus = "Grading";
 
                 setStatusLabel("Grading In Progress", "bg-[#FFF1D6] text-[#946200]");

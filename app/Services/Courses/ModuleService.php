@@ -10,6 +10,7 @@ use App\Models\Learning\LearningItemModel;
 use App\Models\Learning\LearningCompletionModel;
 use App\Models\Learning\LearningResourceModel;
 use App\Models\Files\FileModel;
+use App\Models\Assessments\AssessmentFeedbackModel;
 use App\Models\Assessments\AssessmentModel;
 use App\Models\Assessments\AssessmentTypeModel;
 
@@ -605,6 +606,17 @@ class ModuleService
 
         }
 
+        // The attempt that counts (best quiz attempt / latest graded submission), falling
+        // back to the latest for "no score yet". It carries the instructor's feedback thread,
+        // as it does on the Assessments tab, so the shared score panel can show it.
+        $submission = $assessmentContext['state']['counted'] ?? $assessmentContext['state']['latest'] ?? null;
+
+        if ($submission) {
+
+            $submission['feedback_thread'] = (new AssessmentFeedbackModel())->listForSubmission((int) $submission['id']);
+
+        }
+
         return [
 
             'discussion' => $discussion,
@@ -640,9 +652,7 @@ class ModuleService
                 ? ($assessmentContext['state'] ?? null)
                 : null,
 
-            // The attempt that counts (best quiz attempt / latest graded
-            // submission), falling back to the latest for "no score yet".
-            'submission' => $assessmentContext['state']['counted'] ?? $assessmentContext['state']['latest'] ?? null,
+            'submission' => $submission,
 
             'scoreResult' => $assessmentContext['state']['result'] ?? null,
 
