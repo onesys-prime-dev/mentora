@@ -188,7 +188,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testEditingChangesOnlyWhatIsSent(): void
     {
-        $id = $this->create(['total_points' => 40, 'duration' => 20, 'description' => 'Keep'])['assessment'];
+        $id = $this->create(['total_points' => 40, 'duration' => 20, 'description' => 'Keep'], $this->assignmentType)['assessment'];
 
         $result = $this->service->updateAssessment($this->instructor, $id, ['title' => 'Renamed', 'weight_percentage' => 15]);
 
@@ -211,7 +211,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testThePassingScoreFollowsThePassingPercentageOfTheTotal(): void
     {
-        $id = $this->create(['total_points' => 40])['assessment'];
+        $id = $this->create(['total_points' => 40], $this->assignmentType)['assessment'];
 
         $this->service->updateAssessment($this->instructor, $id, ['passing_percentage' => 75]);
         $this->assertEquals(30, $this->row('assessments', $id)['passing_score']);
@@ -370,7 +370,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
     public function testPublishingAddsTheAssessmentToTheGradebook(): void
     {
         $scheme = GradeFactory::scheme($this->offering);
-        $ids = $this->create(['total_points' => 25]);
+        $ids = $this->create(['total_points' => 25], $this->assignmentType);
 
         $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => 'Published']);
 
@@ -404,7 +404,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
     public function testClearingAnOptionalFieldRemovesIt(): void
     {
         // The editor sends null for a number or date box that was emptied.
-        $id = $this->create(['total_points' => 40, 'duration' => 20, 'description' => 'Chapter 1'])['assessment'];
+        $id = $this->create(['total_points' => 40, 'duration' => 20, 'description' => 'Chapter 1'], $this->assignmentType)['assessment'];
         $this->service->updateAssessment($this->instructor, $id, ['available_until' => '2026-12-31 23:59:00', 'passing_percentage' => 60]);
         $this->assertSame('2026-12-31 23:59:00', $this->row('assessments', $id)['available_until']);
 
@@ -421,7 +421,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testFieldsThatMustHaveAValueKeepItWhenEmptied(): void
     {
-        $id = $this->create(['total_points' => 40, 'due_date' => '2026-11-01 12:00:00', 'available_from' => '2026-10-01 08:00:00'])['assessment'];
+        $id = $this->create(['total_points' => 40, 'due_date' => '2026-11-01 12:00:00', 'available_from' => '2026-10-01 08:00:00'], $this->assignmentType)['assessment'];
 
         $this->service->updateAssessment($this->instructor, $id, ['due_date' => null, 'available_from' => null, 'total_points' => null, 'title' => null, 'weight_percentage' => null]);
 
@@ -510,7 +510,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testADuplicateIsADraftCopyWithItsSettings(): void
     {
-        $id = $this->create(['total_points' => 20])['assessment'];
+        $id = $this->create(['total_points' => 20], $this->assignmentType)['assessment'];
         $this->service->updateAssessment($this->instructor, $id, ['status' => 'Published', 'allow_late_submission' => 1]);
 
         $result = $this->service->duplicateAssessment($this->instructor, $id);
@@ -836,6 +836,96 @@ final class AssessmentServiceTest extends DatabaseTestCase
         $id = $this->create()['assessment'];
 
         $this->assertIsString($this->service->viewAssessment($this->instructor, $id)['html']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Total points that are worked out, not typed
+    |--------------------------------------------------------------------------
+    */
+
+    private function editorHtml(int $id): string
+    {
+        return (string) $this->service->editAssessment($this->instructor, $id)['html'];
+    }
+
+    /** The Total Points input of the editor's settings panel, as written in the page. */
+    private function totalPointsInput(string $html): string
+    {
+        $this->assertSame(1, preg_match('/<input[^>]*data-inspector-total-points[^>]*>/s', $html, $match), 'the settings panel has a Total Points input');
+
+        return $match[0];
+    }
+
+    public function testAQuizsTotalIsWhatItsQuestionsAddUpToAndTheFieldIsLocked(): void
+    {
+        $id = $this->create()['assessment'];
+        AssessmentFactory::shortAnswer($id, $this->instructor, ['a'], 3);
+        AssessmentFactory::shortAnswer($id, $this->instructor, ['b'], 4.5);
+
+        $input = $this->totalPointsInput($this->editorHtml($id));
+
+        $this->assertStringContainsString('value="7.5"', $input);
+        $this->assertMatchesRegularExpression('/\sdisabled[\s>]/', $input);
+        $this->assertStringContainsString('data-inspector-total-points-source="quiz"', $input);
+    }
+
+    public function testAQuizsTotalIgnoresWhatTheFormSends(): void
+    {
+        $id = $this->create()['assessment'];
+        AssessmentFactory::shortAnswer($id, $this->instructor, ['a'], 6);
+
+        $this->service->updateAssessment($this->instructor, $id, ['total_points' => 99, 'passing_percentage' => 50]);
+
+        $row = $this->row('assessments', $id);
+        $this->assertEquals(6, $row['total_points'], 'the questions decide, not the request');
+        $this->assertEquals(3, $row['passing_score'], 'the passing score follows the questions');
+    }
+
+    public function testAQuizsTotalIgnoresRemovedQuestions(): void
+    {
+        $id = $this->create()['assessment'];
+        AssessmentFactory::shortAnswer($id, $this->instructor, ['a'], 5);
+        $removed = AssessmentFactory::shortAnswer($id, $this->instructor, ['b'], 8);
+        db_connect()->table('assessment_questions')->where('id', $removed)->update(['status' => 'Deleted']);
+
+        $this->service->updateAssessment($this->instructor, $id, ['title' => 'Renamed']);
+
+        $this->assertEquals(5, $this->row('assessments', $id)['total_points']);
+        $this->assertStringContainsString('value="5"', $this->totalPointsInput($this->editorHtml($id)));
+    }
+
+    public function testAnAssignmentWithARubricGetsItsTotalFromTheRubricAndTheFieldIsLocked(): void
+    {
+        $id = $this->create([], $this->assignmentType)['assessment'];
+        AssessmentFactory::rubric($id, $this->instructor, [10, 15]);
+
+        $input = $this->totalPointsInput($this->editorHtml($id));
+
+        $this->assertStringContainsString('value="25"', $input);
+        $this->assertMatchesRegularExpression('/\sdisabled[\s>]/', $input);
+        $this->assertStringContainsString('data-inspector-total-points-source="rubric"', $input);
+
+        $this->service->updateAssessment($this->instructor, $id, ['total_points' => 99, 'passing_percentage' => 40]);
+
+        $row = $this->row('assessments', $id);
+        $this->assertEquals(25, $row['total_points'], 'the rubric decides, not the request');
+        $this->assertEquals(10, $row['passing_score']);
+    }
+
+    public function testAnAssignmentWithoutARubricKeepsAnEditableTotal(): void
+    {
+        $id = $this->create(['total_points' => 40], $this->assignmentType)['assessment'];
+
+        $input = $this->totalPointsInput($this->editorHtml($id));
+
+        $this->assertStringContainsString('value="40"', $input);
+        $this->assertDoesNotMatchRegularExpression('/\sdisabled[\s>]/', $input);
+        $this->assertStringNotContainsString('data-inspector-total-points-source', $input);
+
+        $this->service->updateAssessment($this->instructor, $id, ['total_points' => 55]);
+
+        $this->assertEquals(55, $this->row('assessments', $id)['total_points']);
     }
 
     public function testMissingAssessmentsAreNotFoundOnEveryPage(): void

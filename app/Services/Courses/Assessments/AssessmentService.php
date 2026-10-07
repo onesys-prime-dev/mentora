@@ -203,6 +203,12 @@ class AssessmentService
         $currentQuestions = $this->questionModel
             ->listForAssessment($assessmentId);
 
+        $derivedTotal = $this->derivedTotalPoints($data['assessment']);
+
+        if ($derivedTotal) {
+            $data['assessment']['total_points'] = $derivedTotal['points'];
+        }
+
         return [
             'html' => view(
                 'pages/courses/features/assessments/editor',
@@ -215,9 +221,36 @@ class AssessmentService
                     'nextAssessment' => $data['nextAssessment'],
                     'currentRubric' => $currentRubric,
                     'currentQuestions' => $currentQuestions,
+                    'totalPointsSource' => $derivedTotal['source'] ?? null,
                 ]
             ),
         ];
+    }
+
+    /**
+     * Where an assessment's total points come from when they are not typed in:
+     * a quiz is worth its questions, an assignment with a rubric is worth the
+     * rubric. Null when the instructor sets the total themselves.
+     *
+     * @return array{source: string, points: float}|null
+     */
+    private function derivedTotalPoints(array $assessment): ?array
+    {
+        $type = strtolower((string) ($this->assessmentTypeModel->find($assessment['assessment_type_id'])['name'] ?? ''));
+
+        if ($type === 'quiz') {
+            return ['source' => 'quiz', 'points' => $this->questionModel->activeTotal((int) $assessment['id'])];
+        }
+
+        if ($type === 'assignment') {
+            $rubric = $this->rubricModel->findByAssessment((int) $assessment['id']);
+
+            if ($rubric) {
+                return ['source' => 'rubric', 'points' => (float) $rubric['total_points']];
+            }
+        }
+
+        return null;
     }
 
     public function quizBuilder(
@@ -1089,7 +1122,11 @@ class AssessmentService
             // clear it; one that must hold a value keeps its old one instead.
             $optional = static fn (string $key, array $current) => array_key_exists($key, $data) ? $data[$key] : $current[$key];
 
-            $totalPoints = $data['total_points'] ?? $assessment['total_points'];
+            // A quiz's total is its questions and a rubric-graded assignment's is its rubric:
+            // whatever the form sent for the total is ignored there.
+            $derivedTotal = $this->derivedTotalPoints($assessment);
+
+            $totalPoints = $derivedTotal['points'] ?? $data['total_points'] ?? $assessment['total_points'];
 
             $passingPercentage = $optional('passing_percentage', $assessment);
 
