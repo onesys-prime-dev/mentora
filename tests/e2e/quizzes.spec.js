@@ -67,16 +67,14 @@ test("TC-QUIZ-01 Student takes and submits a quiz", async ({ page }) => {
     // A second attempt can be started.
     await expect(page.getByRole("button", { name: "Retake Quiz" })).toBeVisible();
 
-    // 5. Back on the quiz item: one of two attempts used, and it can now be marked completed
-    // (completing is the student's own step; submitting does not do it).
+    // 5. Back on the quiz item: one of two attempts used, and handing it in completed the item
+    // without pressing anything.
     await openModule(page, "Programming Fundamentals");
-    await itemRow(page, "Quiz 1: Variables and Data Types").click();
+    await openItem(page, "Quiz 1: Variables and Data Types");
     await expect(page.getByText("1 of 2 attempts used")).toBeVisible();
     await expect(page.getByText("13/20 so far — the rest is being graded")).toBeVisible();
-    const complete = page.locator("[data-mark-complete]");
-    await expect(complete).toBeEnabled();
-    await complete.click();
-    await expect(complete).toHaveAttribute("data-completed", "1");
+    await expect(page.locator("[data-mark-complete]")).toHaveAttribute("data-completed", "1");
+    await expect(page.locator('[data-completion-badge="completed"]')).toBeVisible();
 });
 
 /**

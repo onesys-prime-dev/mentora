@@ -432,6 +432,9 @@ class QuizAttemptService
         // Fully auto-graded → it counts now (no-op while partly/un-graded).
         (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $user->id);
 
+        // Handing the quiz in completes its item in the module, whatever its grade state.
+        (new LearningProgressService())->completeOnSubmission((int) $user->id, (int) $submission['assessment_id']);
+
         return [
             'success' => true,
             'message' => 'Quiz submitted successfully.',

@@ -192,6 +192,9 @@ class AssignmentSubmissionService
             'status' => 'Submitted',
         ]);
 
+        // Handing the work in completes its item in the module.
+        (new LearningProgressService())->completeOnSubmission((int) $user->id, $assessmentId);
+
         return ['success' => true, 'message' => 'Your work was submitted.'];
     }
 

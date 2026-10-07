@@ -349,4 +349,91 @@ final class AssignmentSubmissionServiceTest extends DatabaseTestCase
         $this->assertFalse($state['canSubmit']);
         $this->assertSame('This assignment could not be found.', $state['reason']);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Handing the work in completes its item in the module
+    |--------------------------------------------------------------------------
+    */
+
+    /** The assignment's learning item, and the item after it that waits for it ("previous" mode). */
+    private function assignmentInAUnit(): array
+    {
+        [$item, $nextItem] = CourseFactory::items(CourseFactory::unit($this->moduleId), [['type' => 'assignment'], ['mode' => 'previous']]);
+        db_connect()->table('assessments')->where('id', $this->assignment)->update(['learning_item_id' => $item]);
+
+        return [$item, $nextItem];
+    }
+
+    private function completionsOf(int $item, ?User $student = null): array
+    {
+        return db_connect()->table('learning_completions')
+            ->where('learning_item_id', $item)->where('student_user_id', ($student ?? $this->ada)->id)
+            ->get()->getResultArray();
+    }
+
+    public function testHandingInAnAssignmentCompletesItsItem(): void
+    {
+        [$item] = $this->assignmentInAUnit();
+
+        $this->assertTrue($this->submit(['submission_text' => 'My answer'])['success']);
+
+        $completions = $this->completionsOf($item);
+        $this->assertCount(1, $completions);
+        $this->assertSame('completed', $completions[0]['status']);
+        $this->assertNotNull($completions[0]['completed_at']);
+    }
+
+    public function testALateSubmissionCompletesTheItemToo(): void
+    {
+        [$item] = $this->assignmentInAUnit();
+        db_connect()->table('assessments')->where('id', $this->assignment)->update(['due_date' => '2020-01-01 00:00:00']);
+        db_connect()->table('assessment_settings')->where('assessment_id', $this->assignment)->update(['allow_late_submission' => 1]);
+
+        $this->assertTrue($this->submit(['submission_text' => 'Late but here'])['success']);
+
+        $this->assertSame('completed', $this->completionsOf($item)[0]['status']);
+    }
+
+    public function testASubmissionThatIsRefusedDoesNotCompleteTheItem(): void
+    {
+        [$item] = $this->assignmentInAUnit();
+
+        $this->assertFalse($this->submit(['submission_text' => ''])['success']);
+
+        $this->assertSame([], $this->completionsOf($item));
+    }
+
+    public function testCompletingTheAssignmentUnlocksTheItemAfterIt(): void
+    {
+        [, $nextItem] = $this->assignmentInAUnit();
+        $progress = new App\Services\Courses\LearningProgressService();
+
+        $this->assertNotNull($progress->lockFor($this->ada, $nextItem), 'the next item waits for the assignment');
+
+        $this->submit(['submission_text' => 'My answer']);
+
+        $this->assertNull($progress->lockFor($this->ada, $nextItem), 'handing the work in unlocks it');
+    }
+
+    public function testAResubmissionKeepsASingleCompletion(): void
+    {
+        [$item] = $this->assignmentInAUnit();
+        db_connect()->table('assessments')->where('id', $this->assignment)->update(['attempt_limit' => 2]);
+        $this->submit(['submission_text' => 'First']);
+        $first = $this->completionsOf($item)[0];
+
+        $this->submit(['submission_text' => 'Second']);
+
+        $after = $this->completionsOf($item);
+        $this->assertCount(1, $after);
+        $this->assertSame($first['completed_at'], $after[0]['completed_at']);
+    }
+
+    public function testAnAssignmentWithNoLearningItemIsStillSubmitted(): void
+    {
+        $this->assertTrue($this->submit(['submission_text' => 'My answer'])['success']);
+        $this->assertSame(0, db_connect()->table('learning_completions')->countAllResults());
+    }
+
 }
