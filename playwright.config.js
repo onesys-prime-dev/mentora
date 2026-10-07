@@ -15,7 +15,9 @@ export default defineConfig({
     workers: 1,
     fullyParallel: false,
 
-    retries: process.env.CI ? 1 : 0,
+    // No retries: the tests use up demo data (completing an item, submitting work), so a
+    // retry would start from a changed database and fail for a different, confusing reason.
+    retries: 0,
     reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
 
     use: {
