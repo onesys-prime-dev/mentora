@@ -1,7 +1,12 @@
 // Demo accounts from `php spark db:seed DatabaseSeeder` (see docs/test-cases/README.md).
 export const accounts = {
+    // The clean-slate student and the main instructor most cases use.
     student: { email: "student5@mentora.test", password: "Student123!" },
     instructor: { email: "instructor1@mentora.test", password: "Instructor123!" },
+
+    // Named after their seed accounts, for cases that need a particular one.
+    student3: { email: "student3@mentora.test", password: "Student123!" },
+    instructor2: { email: "instructor2@mentora.test", password: "Instructor123!" },
 };
 
 /** Fills in and submits the login form. Does not check where it leads. */

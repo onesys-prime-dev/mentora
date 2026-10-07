@@ -78,7 +78,7 @@ case can pick the one that fits:
 | student4 | quiz in progress, assignment missing |
 | **student5** | **enrolled, nothing started** (the clean slate most cases use) |
 
-In IT102-A, student3 has no activity. In IT201-A all three students have
+In IT102-A, student3 has completed only the first item (the PDF). In IT201-A all three students have
 already taken the quiz.
 
 ### Two things to know before running a case

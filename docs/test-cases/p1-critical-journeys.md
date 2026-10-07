@@ -135,9 +135,10 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Already automated:** `tests/database/AnnouncementServiceTest.php`: `testTheInstructorPostsAnAnnouncement`,
   `testASubjectIsRequired`; `tests/feature/AnnouncementRoutesTest.php`: `testTheInstructorPostsEditsPinsAndDeletes`,
   `testStudentsReadReplyAndReactThroughTheirOwnRoutes`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/announcements.spec.js`
 - **Basis:** `app/Services/Courses/AnnouncementService.php`, `app/Config/Routes.php`
-- **Review:** Confirmed by Shuay, October 7, 2026
+- **Review:** Confirmed by Shuay, October 7, 2026. Screen wording clarified afterwards (see Clarification); the behavior is unchanged.
+- **Clarification (October 7, found while automating it in a browser):** on the page the Post button stays off until there is a subject, so step 2 cannot be sent at all: the refusal is a disabled button, not the message "Add a subject before posting." (that message is what the server answers if a post is sent some other way, and the PHP tests cover it). Step 3 shows no "Announcement posted." text on the page: the new announcement simply appears at the top of the list.
 
 ### TC-ANN-02 People outside the section cannot post or read
 
@@ -154,7 +155,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Already automated:** `AuthFlowTest::testAStudentCannotReadACourseTheyAreNotEnrolledIn`,
   `testAnInstructorCanOnlyOpenTheirOwnSection`; `AnnouncementRoutesTest::testAStudentCannotUseTheInstructorPostRoute`,
   `testAnotherSectionIsNotFoundForStudentsAndInstructors`; `AnnouncementServiceTest::testStudentsAndOtherCoursesInstructorsCannotPost`
-- **Playwright:** planned (the visible parts: not listed, no post control)
+- **Playwright:** `tests/e2e/announcements.spec.js`
 - **Basis:** `AnnouncementService.php`, the `assessmentscope` route filter
 - **Review:** Confirmed by Shuay, October 7, 2026
 
@@ -165,24 +166,26 @@ works on a fresh seed. A full run needs a fresh seed.
 ### TC-MOD-01 Items unlock in order
 
 - **Role:** Student. **Priority:** P1
-- **Data:** `student3@mentora.test`, course IT102-A, module "Setting Up PHP", unit "Your Development Environment" (items in order: PDF "XAMPP Installation Guide", reading "Your First PHP Script", quiz "Quiz: PHP Setup")
+- **Data:** `student3@mentora.test`, course IT102-A, module "Setting Up PHP", unit "Your Development Environment" (items in order: PDF "XAMPP Installation Guide", reading "Your First PHP Script", quiz "Quiz: PHP Setup"). In the seed student3 has already completed the PDF and nothing else there.
 - **Steps:**
-  1. Open the unit. The first item is open; the second and third show as locked.
-  2. Try to open or complete "Your First PHP Script".
-  3. Open "XAMPP Installation Guide" and press Mark as Completed.
-  4. Return to "Your First PHP Script".
+  1. Open the module. The PDF is done, the reading is open, and the quiz is locked.
+  2. Try to open the quiz: click its row, then open it by its address (the course page with `?item=` and the quiz's id, as the Overview links do).
+  3. Open "Your First PHP Script" and press Mark as Completed.
+  4. Press Continue.
 - **Expected:**
-  - Step 2: locked, with the reason "Complete “XAMPP Installation Guide” first." and Mark as Completed disabled, hint "Complete the required items first." (wording to confirm).
-  - Step 3: the PDF is completed right away (PDFs, readings and links complete immediately).
-  - Step 4: the reading is now open and can be completed.
-  - The lock is enforced by the server, not just the button.
+  - Step 1: the quiz row shows it is locked and says why: Complete "Your First PHP Script" first.
+  - Step 2: clicking a locked row does nothing. Opened by its address, the Modules tab shows a notice, "Complete “Your First PHP Script” to unlock “Quiz: PHP Setup”.", with a button to open "Your First PHP Script", and does not show the quiz or Mark as Completed. The server refuses the item itself (HTTP 403) with the same message.
+  - Step 3: the reading is completed right away (PDFs, readings and links complete immediately).
+  - Step 4: Continue opens the quiz; it is no longer locked.
+  - The lock is enforced by the server, not just the page.
 - **Already automated:** `tests/database/LearningProgressServiceTest.php`:
   `testPreviousModeLocksUntilThePreviousItemIsCompleted`, `testTheFirstItemIsNotLockedEvenInPreviousMode`,
   `testStartedButUnfinishedDoesNotUnlock`, `testOneStudentsProgressDoesNotUnlockForAnother`
-- **Playwright:** planned
-- **Basis:** `app/Services/Courses/LearningProgressService.php` (`lockMessage`, header comment)
-- **Review:** Confirmed by Shuay, October 7, 2026
-- **Note:** run this before TC-QUIZ-03, which needs "Quiz: PHP Setup" unlocked for student3.
+- **Playwright:** `tests/e2e/modules.spec.js`
+- **Basis:** `app/Services/Courses/LearningProgressService.php` (`lockMessage`, header comment), `ModuleService::lockedItemRefusal`
+- **Review:** Confirmed by Shuay, October 7, 2026. Data and screen wording were corrected afterwards (see Correction); the behavior is unchanged. Please re-check.
+- **Note:** this case completes the reading, which unlocks "Quiz: PHP Setup" for TC-QUIZ-03. Run it first.
+- **Correction (October 7, found while automating it in a browser):** the first version said student3 has no activity in IT102-A and used the PDF as the locked item. In the seed student3 has already completed the PDF, so the locked item is the quiz. It also described a locked item's page as "Mark as Completed disabled, hint 'Complete the required items first.'"; a locked item never shows that button at all, and the notice above is what a student sees.
 
 ### TC-MOD-02 Draft work is hidden from students
 
@@ -198,7 +201,7 @@ works on a fresh seed. A full run needs a fresh seed.
   - Step 3: not found, even through a direct link.
 - **Already automated:** `tests/database/AssessmentServiceTest.php`: `testStudentsSeePublishedAndClosedAssessmentsOnly`,
   `testStudentsGetANotFoundForDraftsEvenThroughADirectLink`; `GradeServiceTest::testDraftAssessmentsAreHiddenFromStudents`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/modules.spec.js`
 - **Basis:** `DemoContentSeeder.php` (the draft item), `AssessmentService.php`
 - **Review:** Confirmed by Shuay, October 7, 2026
 
@@ -357,4 +360,5 @@ works on a fresh seed. A full run needs a fresh seed.
 - **A wrong password had no automated test** (TC-AUTH-03): now covered by six tests in `AuthFlowTest`. Writing them showed that the login page told a visitor whether an email has an account; that is fixed (see the note on TC-AUTH-03).
 - **Exact on-screen wording** is unconfirmed for every case marked so; the first run on staging should fix the text in the case, not the app.
 - **Missing from P1 on purpose:** discussions, the calendar, resources, video progress, file uploads and the instructor's content authoring (creating modules, units, quizzes). They are P2 and need cases written.
+- **Two page routes crash.** Opening `/student/courses/<id>/<slug>/modules/items/<item id>` (and the instructor twin) answers with the error page: the route passes the controller three values but `ModuleController::viewLearningItem` takes two (found while automating TC-MOD-01). Nothing in the app links to that address (it uses `?item=` and the API), so only a typed or shared link hits it. Not fixed.
 - **No requirements to check against.** Expected results such as "a late submission is allowed only when the assignment says so", or "a quiz with an essay shows Partially Graded until the essay is marked", are what the code does. Whether they are what the product should do is for the product owner to confirm.
