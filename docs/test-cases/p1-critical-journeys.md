@@ -215,31 +215,33 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Data:** `student5@mentora.test`, course IT101-A, unit "Variables and Data Types". Quiz 1: Variables and Data Types: 20 points, 30 minutes, 2 attempts, open (due 3 days after seeding). Questions: (1) Which of these values is a string? [3 pts, correct answer `"42"`]; (2) Which two are valid variable names? [4 pts, correct: `total_score` and `firstName`]; (3) What data type holds only true or false? [3 pts, `boolean` or `bool`]; (4) A named value that cannot change once it is set is called a … [3 pts, `constant`]; (5) essay [7 pts, graded by the instructor].
 - **Steps:**
   1. Complete the two items before the quiz: reading "What Is a Variable?" and PDF "Data Types Cheat Sheet".
-  2. Open Quiz 1 and start it. The timer starts.
+  2. Open Quiz 1. It shows "0 of 2 attempts used", and Mark as Completed is off. Press Take Quiz.
   3. Answer questions 1 to 4 correctly and write a short essay. Each answer saves as you go.
-  4. Submit.
+  4. Press Submit Quiz and accept the confirmation ("Submit your answers? You won't be able to change them afterward.").
+  5. Return to the quiz item in Modules, and press Mark as Completed.
 - **Expected:**
   - Step 1: the quiz is locked until both are completed.
-  - Step 2: an attempt starts (attempt 1 of 2).
-  - Step 3: each answer is saved ("Answer saved." in the background).
-  - Step 4: "Quiz submitted successfully." The four auto-graded answers score 13 of 20 points; the essay is not scored, so the attempt shows as **Partially Graded** and the full score appears only once the instructor has graded the essay (wording to confirm).
-  - The quiz item counts as completed. A second attempt can be started (attempt 2 of 2).
+  - Step 2: "0 of 2 attempts used"; Mark as Completed is unavailable, with the hint "Submit the quiz to complete it."
+  - Step 3: each answer is saved (the page shows "All changes saved").
+  - Step 4: the four auto-graded answers score 13 of 20 points and the essay is not scored, so you land on the quiz with a score panel reading **13/20, "So far", "The rest is still being graded."**, the attempt is **Partially Graded**, and a Retake Quiz button is offered (a second attempt can be started). The full score appears only once the instructor has graded the essay.
+  - Step 5: the item shows "1 of 2 attempts used" and "13/20 so far — the rest is being graded"; Mark as Completed is now available and completes the item. Submitting does not complete the item by itself: completing is the student's own step.
 - **Already automated:** `tests/database/QuizAttemptServiceTest.php`: `testOnlyChoiceQuestionsAndKeyedShortAnswersGradeThemselves`,
   `testEachAutoGradedAnswerIsScoredAndMarked`, `testTheAttemptLimitStopsANewAttempt`, `testAnswersAreAcceptedWhileTimeRemains`;
   `tests/unit/ShortAnswerGraderTest.php` (case and spacing); `tests/feature/AssessmentSectionAccessTest.php::testAStudentCanTakeTheirOwnSectionsQuiz`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/quizzes.spec.js`
 - **Basis:** `DemoContentSeeder.php` (Quiz 1), `QuizAttemptService.php`
-- **Review:** Confirmed by Shuay, October 7, 2026
+- **Review:** Confirmed by Shuay, October 7, 2026. Screen behavior corrected afterwards (see Correction); the scoring and status are unchanged. Please re-check.
+- **Correction (October 7, found while automating it in a browser):** the first version said the quiz item "counts as completed" after submitting, and that the page shows "Quiz submitted successfully.". Neither is true: nothing completes a quiz item automatically (the server only allows it once the student has submitted at least once, and the student presses Mark as Completed), and "Quiz submitted successfully." is the server's reply, not text on the page. The page asks for a confirmation first and then shows the score panel described above.
 
 ### TC-QUIZ-02 The attempt limit stops another attempt
 
 - **Role:** Student. **Priority:** P1
 - **Data:** `student5@mentora.test`, course IT201-A, "Quiz: Keys and Relationships" (one attempt allowed, already taken and graded in the seed, still open)
 - **Steps:** open the quiz and try to start it again.
-- **Expected:** no new attempt starts. The page says "You've already taken this quiz." (for a quiz with more attempts the text is "You've used all N attempts."), and the earlier result stays viewable (wording to confirm).
+- **Expected:** no new attempt starts. The quiz item shows "1 of 1 attempt used" and, in place of a Take Quiz button, the page says "You've already taken this quiz." (for a quiz with more attempts the text is "You've used all N attempts."), and the earlier result stays viewable (wording to confirm). The server refuses too: asked to start the quiz it answers "No attempts remaining. You've used all 1 allowed attempt for this quiz." with no answer form, and no second attempt is recorded.
 - **Already automated:** `QuizAttemptServiceTest::testTheAttemptLimitStopsANewAttempt`, `testTheDefaultLimitIsOneAttempt`;
   `tests/database/AssessmentServiceTest.php::testAStudentWhoUsedAllAttemptsIsToldSo`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/quizzes.spec.js`
 - **Basis:** `AssessmentService.php` (the `$reason` match around line 610), `DemoActivitySeeder.php`
 - **Review:** Confirmed by Shuay, October 7, 2026
 
@@ -248,10 +250,10 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Role:** Student. **Priority:** P1
 - **Data:** `student3@mentora.test`, course IT102-A, "Quiz: PHP Setup" (due 1 day before seeding; late attempts not allowed; unlocked by TC-MOD-01, which you run first)
 - **Steps:** open the quiz and try to start it.
-- **Expected:** it does not start. The page says "The due date has passed and late attempts aren't allowed." (wording to confirm).
+- **Expected:** it does not start. The quiz item shows "0 of 1 attempt used", no Take Quiz button, and the page says "The due date has passed and late attempts aren't allowed." (wording to confirm).
 - **Already automated:** `QuizAttemptServiceTest::testAfterTheDueDateOnlyAQuizAllowingLateAttemptsStarts`,
   `testAQuizPastItsAvailabilityWindowDoesNotStart`, `testAClosedQuizDoesNotStartANewAttempt`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/quizzes.spec.js`
 - **Basis:** `AssessmentService.php::quizAvailabilityReason`
 - **Review:** Confirmed by Shuay, October 7, 2026
 - **Note:** other states of the same rule have their own wording: "This quiz opens <date>." before the window, "This quiz closed on <date>." after it, "This quiz is closed." when an instructor closes it.

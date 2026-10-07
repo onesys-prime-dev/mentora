@@ -45,3 +45,19 @@ export function itemRow(page, title) {
     // Exact title only: a locked row's hint ("Complete "X" first") names another item.
     return page.locator("[data-learning-item-wrapper]").filter({ has: page.getByText(title, { exact: true }) });
 }
+
+/**
+ * Opens a learning item from an open module, expanding its unit first if it is collapsed
+ * (the app only opens the unit a student should resume).
+ */
+export async function openItem(page, title) {
+    const row = itemRow(page, title);
+    const unit = page.locator("[data-learning-unit-wrapper]").filter({ has: row });
+    const panel = unit.locator("[data-learning-unit-content]").first();
+
+    if ((await panel.getAttribute("class"))?.includes("max-h-0")) {
+        await unit.locator("[data-learning-unit]").first().click();
+    }
+
+    await row.click();
+}
