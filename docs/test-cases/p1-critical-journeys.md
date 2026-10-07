@@ -47,7 +47,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testALoggedOutVisitorOnTheHomePageGoesToLogin`, `testStudentsLandOnTheStudentDashboard`
 - **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `app/Controllers/Auth/RedirectController.php`, `app/Views/pages/auth/login.php`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 6, 2026
 
 ### TC-AUTH-02 Instructor signs in
 
@@ -58,7 +58,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Already automated:** `AuthFlowTest::testInstructorsLandOnTheInstructorDashboard`
 - **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `RedirectController.php`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 6, 2026
 
 ### TC-AUTH-03 Wrong password is refused
 
@@ -83,7 +83,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `app/Language/en/Auth.php` (the override that makes both messages the same),
   `vendor/codeigniter4/shield/src/Language/en/Auth.php`, `login.php` (error banner)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 6, 2026
 - **Note:** the two messages used to differ ("check your password" for a real email, "check your credentials"
   for an unknown one), which revealed registered emails. Fixed by the language override above. Still open: how
   long the refusal takes may differ between a real and an unknown email (a real email has a password hash to
@@ -98,7 +98,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Already automated:** `AuthFlowTest::testLoggingOutEndsTheSession`
 - **Playwright:** `tests/e2e/auth-login.spec.js`
 - **Basis:** `app/Config/Auth.php` (`logout` redirect to `login`)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 6, 2026
 
 ### TC-AUTH-05 Protected pages need the right role
 
@@ -113,7 +113,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `/instructor` route both ways (336 checks); the post-deploy smoke test checks four of them on staging.
 - **Playwright:** no (fully covered by the PHP tests)
 - **Basis:** `app/Config/Routes.php` (`group:student`, `group:instructor` filters)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 6, 2026
 
 ---
 
@@ -137,7 +137,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testStudentsReadReplyAndReactThroughTheirOwnRoutes`
 - **Playwright:** planned
 - **Basis:** `app/Services/Courses/AnnouncementService.php`, `app/Config/Routes.php`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ### TC-ANN-02 People outside the section cannot post or read
 
@@ -156,7 +156,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testAnotherSectionIsNotFoundForStudentsAndInstructors`; `AnnouncementServiceTest::testStudentsAndOtherCoursesInstructorsCannotPost`
 - **Playwright:** planned (the visible parts: not listed, no post control)
 - **Basis:** `AnnouncementService.php`, the `assessmentscope` route filter
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ---
 
@@ -181,7 +181,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testStartedButUnfinishedDoesNotUnlock`, `testOneStudentsProgressDoesNotUnlockForAnother`
 - **Playwright:** planned
 - **Basis:** `app/Services/Courses/LearningProgressService.php` (`lockMessage`, header comment)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 - **Note:** run this before TC-QUIZ-03, which needs "Quiz: PHP Setup" unlocked for student3.
 
 ### TC-MOD-02 Draft work is hidden from students
@@ -200,7 +200,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testStudentsGetANotFoundForDraftsEvenThroughADirectLink`; `GradeServiceTest::testDraftAssessmentsAreHiddenFromStudents`
 - **Playwright:** planned
 - **Basis:** `DemoContentSeeder.php` (the draft item), `AssessmentService.php`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ---
 
@@ -226,7 +226,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `tests/unit/ShortAnswerGraderTest.php` (case and spacing); `tests/feature/AssessmentSectionAccessTest.php::testAStudentCanTakeTheirOwnSectionsQuiz`
 - **Playwright:** planned
 - **Basis:** `DemoContentSeeder.php` (Quiz 1), `QuizAttemptService.php`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ### TC-QUIZ-02 The attempt limit stops another attempt
 
@@ -238,7 +238,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `tests/database/AssessmentServiceTest.php::testAStudentWhoUsedAllAttemptsIsToldSo`
 - **Playwright:** planned
 - **Basis:** `AssessmentService.php` (the `$reason` match around line 610), `DemoActivitySeeder.php`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ### TC-QUIZ-03 A past-due quiz is closed
 
@@ -250,7 +250,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testAQuizPastItsAvailabilityWindowDoesNotStart`, `testAClosedQuizDoesNotStartANewAttempt`
 - **Playwright:** planned
 - **Basis:** `AssessmentService.php::quizAvailabilityReason`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 - **Note:** other states of the same rule have their own wording: "This quiz opens <date>." before the window, "This quiz closed on <date>." after it, "This quiz is closed." when an instructor closes it.
 
 ---
@@ -277,7 +277,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testOnlyWebLinksAreAccepted`, `testTheSubmissionLimitIsEnforcedAndNumbered`, `testOnlyEnrolledStudentsCanSubmit`
 - **Playwright:** planned (file upload variant: later)
 - **Basis:** `app/Services/Courses/Assessments/AssignmentSubmissionService.php` (messages, `blockingReason`)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ### TC-ASG-02 A late submission is accepted and marked late
 
@@ -288,7 +288,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Already automated:** `AssignmentSubmissionServiceTest::testASubmissionAfterTheDueDateWhereLateIsAllowedIsMarkedLate`
 - **Playwright:** planned
 - **Basis:** `AssignmentSubmissionService.php`, `DemoContentSeeder.php` (`allow_late_submission`)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ---
 
@@ -313,7 +313,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `tests/database/AssessmentFeedbackServiceTest.php`
 - **Playwright:** planned
 - **Basis:** `GradeWorkService.php`, `DemoContentSeeder.php` (rubric), `DemoActivitySeeder.php` (student3's submission)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ### TC-GRD-02 Instructor grades a quiz's essay
 
@@ -332,7 +332,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testPointsMustBeBetweenZeroAndTheQuestionsWorth`, `testAnAutoGradedQuestionIsCorrectedWithCorrectOrIncorrect`
 - **Playwright:** planned
 - **Basis:** `GradeWorkService.php`, `DemoActivitySeeder.php` (student2's Quiz 1 attempt)
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ### TC-GRD-03 Student sees their grades
 
@@ -348,7 +348,7 @@ works on a fresh seed. A full run needs a fresh seed.
   `testTheFinalGradeIsHiddenUntilTheSchemeIsPublished`, `testAnInstructorOverrideWins`; `tests/database/GradingEngineServiceTest.php`
 - **Playwright:** planned
 - **Basis:** `app/Services/Courses/GradeService.php`
-- **Review:** Draft
+- **Review:** Confirmed by Shuay, October 7, 2026
 
 ---
 
