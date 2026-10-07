@@ -43,11 +43,14 @@ export async function openModule(page, title) {
     // A click that lands before the page script has attached does nothing (a slow CI runner hits
     // this), so repeat the whole step until the module's items are showing.
     await expect(async () => {
-        const goTo = card.getByRole("button", { name: "Go to module" });
-        if (!(await goTo.isVisible())) {
+        // The button is "visible" even while its card is collapsed (the content is only clipped),
+        // so read the card's own open state: the app gives an open card's content max-h-[2000px].
+        const content = card.locator("[data-module-content]").first();
+        if (!((await content.getAttribute("class")) ?? "").includes("max-h-[2000px]")) {
             await card.locator("[data-module]").first().click(); // expands the card
+            await expect(content).toHaveClass(/max-h-\[2000px\]/, { timeout: 2_000 });
         }
-        await goTo.click({ timeout: 3_000 });
+        await card.getByRole("button", { name: "Go to module" }).click({ timeout: 3_000 });
         await expect(page.locator("[data-learning-item-wrapper]").first()).toBeVisible({ timeout: 3_000 });
     }).toPass({ timeout: 30_000 });
 }
