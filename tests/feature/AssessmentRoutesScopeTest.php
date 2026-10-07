@@ -64,7 +64,7 @@ final class AssessmentRoutesScopeTest extends RouteTestCase
         $quiz = CourseFactory::assessment($offering, $instructor, $module);
         AssessmentFactory::open($quiz, ['total_points' => 10]);
         $assignment = CourseFactory::assessment($offering, $instructor, $module, null, 'Assignment');
-        AssessmentFactory::open($assignment, ['total_points' => 20]);
+        AssessmentFactory::open($assignment, ['total_points' => 10]);
         $mc = AssessmentFactory::multipleChoice($quiz, $instructor, [true, false], 5);
         $essay = AssessmentFactory::question($quiz, $instructor, 'Essay', 5);
         $quizAttempt = AssessmentFactory::attempt($quiz, $student, 'Submitted');
@@ -235,9 +235,9 @@ final class AssessmentRoutesScopeTest extends RouteTestCase
         $this->assertSame(200, $edit->getStatusCode());
         $this->assertSame('Renamed', db_connect()->table('assessments')->where('id', $this->a['assignment'])->get()->getRowArray()['title']);
 
-        $grade = $this->send($this->me, 'patch', $this->path('{off}/submissions/{sub}/grade', $this->mine, $this->a), ['score' => 15]);
+        $grade = $this->send($this->me, 'patch', $this->path('{off}/submissions/{sub}/grade', $this->mine, $this->a), ['score' => 8]);
         $this->assertTrue(json_decode((string) $grade->getJSON(), true)['success']);
-        $this->assertEquals(15, db_connect()->table('assessment_submissions')->where('id', $this->a['submission'])->get()->getRowArray()['score']);
+        $this->assertEquals(8, db_connect()->table('assessment_submissions')->where('id', $this->a['submission'])->get()->getRowArray()['score']);
 
         $questions = $this->send($this->me, 'get', $this->path('{off}/assessments/{quiz}/questions', $this->mine, $this->a));
         $this->assertSame(200, $questions->response()->getStatusCode());

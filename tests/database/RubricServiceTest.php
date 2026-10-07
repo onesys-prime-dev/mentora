@@ -291,6 +291,52 @@ final class RubricServiceTest extends DatabaseTestCase
         $this->assertCount(2, $result['rubric']['criteria']);
     }
 
+    private function assignmentTotal(): float
+    {
+        return (float) $this->row('assessments', $this->assignment)['total_points'];
+    }
+
+    public function testTheAssignmentIsWorthWhatItsRubricIsWorthWhateverChangesTheRubric(): void
+    {
+        $rubric = (int) $this->service->createRubric($this->instructor, $this->assignment, ['title' => 'R', 'criteria' => [['title' => 'A', 'max_points' => 5], ['title' => 'B', 'max_points' => 5]]])['rubric']['id'];
+        $this->assertEquals(10, $this->assignmentTotal(), 'creating the rubric');
+
+        $criterion = (int) $this->service->createCriterion($rubric, ['title' => 'C', 'max_points' => 4])['criterion']['id'];
+        $this->assertEquals(14, $this->assignmentTotal(), 'adding a criterion');
+
+        $this->service->updateCriterion($criterion, ['max_points' => 6]);
+        $this->assertEquals(16, $this->assignmentTotal(), 'editing a criterion');
+
+        $this->service->deleteCriterion($criterion);
+        $this->assertEquals(10, $this->assignmentTotal(), 'deleting a criterion');
+    }
+
+    public function testSelectingARubricSetsTheAssignmentsTotalAndThePassingScore(): void
+    {
+        db_connect()->table('assessments')->where('id', $this->assignment)->update(['passing_percentage' => 50]);
+        $other = $this->assignment();
+        $source = (int) $this->service->createRubric($this->instructor, $other, ['title' => 'Shared', 'criteria' => [['title' => 'A', 'max_points' => 8], ['title' => 'B', 'max_points' => 12]]])['rubric']['id'];
+
+        $this->service->selectRubric($this->instructor, $this->assignment, $source);
+
+        $row = $this->row('assessments', $this->assignment);
+        $this->assertEquals(20, $row['total_points']);
+        $this->assertEquals(10, $row['passing_score']);
+        $this->assertEquals(20, $this->row('assessments', $other)['total_points'], 'the source assignment is untouched');
+    }
+
+    public function testChangingOneAssignmentsRubricLeavesOthersAlone(): void
+    {
+        $other = $this->assignment();
+        $this->service->createRubric($this->instructor, $other, ['title' => 'Theirs', 'criteria' => [['title' => 'A', 'max_points' => 7]]]);
+        $mine = (int) $this->service->createRubric($this->instructor, $this->assignment, ['title' => 'Mine', 'criteria' => [['title' => 'A', 'max_points' => 3]]])['rubric']['id'];
+
+        $this->service->createCriterion($mine, ['title' => 'B', 'max_points' => 2]);
+
+        $this->assertEquals(5, $this->assignmentTotal());
+        $this->assertEquals(7, $this->row('assessments', $other)['total_points']);
+    }
+
     public function testAddingToAMissingRubricIsRefused(): void
     {
         $this->assertSame(['success' => false, 'message' => 'Rubric not found.'], $this->service->createCriterion(999999, ['title' => 'X']));

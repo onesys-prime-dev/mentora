@@ -91,5 +91,41 @@ class AssessmentRubricModel extends Model
         $this->update($rubricId, [
             'total_points' => $total['max_points'] ?? 0,
         ]);
+
+        $rubric = $this->find($rubricId);
+
+        if ($rubric && $rubric['assessment_id']) {
+            $this->syncAssessmentTotal((int) $rubric['assessment_id']);
+        }
+    }
+
+    /**
+     * An assignment with a rubric is worth what the rubric is worth: copy the
+     * rubric's total onto the assessment (and the passing score that follows it).
+     */
+    public function syncAssessmentTotal(int $assessmentId): void
+    {
+        $rubric = $this->findByAssessment($assessmentId);
+
+        if (!$rubric) {
+            return;
+        }
+
+        $assessments = new AssessmentModel();
+        $assessment  = $assessments->find($assessmentId);
+
+        if (!$assessment) {
+            return;
+        }
+
+        $total = (float) $rubric['total_points'];
+
+        $changes = ['total_points' => $total];
+
+        if ($assessment['passing_percentage'] !== null) {
+            $changes['passing_score'] = round($total * (float) $assessment['passing_percentage'] / 100, 2);
+        }
+
+        $assessments->update($assessmentId, $changes);
     }
 }

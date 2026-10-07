@@ -13,6 +13,7 @@ $availableUntil = $currentAssessment['available_until']
     : '';
 
 $totalPoints = (float) ($currentAssessment['total_points'] ?? 0);
+$totalPointsSource = $totalPointsSource ?? null;
 $passingPercentage = $currentAssessment['passing_percentage'] ?? null;
 $passingScore = $currentAssessment['passing_score'] ?? null;
 
@@ -61,7 +62,16 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                 data-inspector-field="total_points"
                 data-inspector-total-points
                 value="<?= esc($totalPoints) ?>"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                <?= $totalPointsSource ? 'disabled data-inspector-total-points-source="' . esc($totalPointsSource) . '"' : '' ?>
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
+
+            <?php if ($totalPointsSource) : ?>
+                <p class="text-xs text-gray-500" data-inspector-total-points-hint>
+                    <?= $totalPointsSource === 'quiz'
+                        ? 'Worked out from the points of the questions in the quiz builder.'
+                        : 'Worked out from the grading rubric.' ?>
+                </p>
+            <?php endif; ?>
 
         </div>
 

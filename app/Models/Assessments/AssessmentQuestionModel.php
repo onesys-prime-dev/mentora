@@ -79,7 +79,8 @@ class AssessmentQuestionModel extends Model
         return $question;
     }
 
-    public function recalculateAssessmentTotal(int $assessmentId): void
+    /** What the quiz's active questions are worth together. */
+    public function activeTotal(int $assessmentId): float
     {
         $total = $this
             ->selectSum('points')
@@ -87,8 +88,13 @@ class AssessmentQuestionModel extends Model
             ->where('status', 'Active')
             ->first();
 
+        return (float) ($total['points'] ?? 0);
+    }
+
+    public function recalculateAssessmentTotal(int $assessmentId): void
+    {
         (new AssessmentModel())->update($assessmentId, [
-            'total_points' => $total['points'] ?? 0,
+            'total_points' => $this->activeTotal($assessmentId),
         ]);
     }
 }

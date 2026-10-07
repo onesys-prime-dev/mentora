@@ -124,6 +124,8 @@ class RubricService
 
         }
 
+        $this->rubricModel->syncAssessmentTotal($assessmentId);
+
         return [
             'success' => true,
             'message' => 'Rubric created successfully.',
@@ -180,6 +182,8 @@ class RubricService
             ]);
 
         }
+
+        $this->rubricModel->syncAssessmentTotal($assessmentId);
 
         return [
             'success' => true,
