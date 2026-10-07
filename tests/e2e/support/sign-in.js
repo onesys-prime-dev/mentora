@@ -5,7 +5,10 @@ export const accounts = {
     instructor: { email: "instructor1@mentora.test", password: "Instructor123!" },
 
     // Named after their seed accounts, for cases that need a particular one.
+    student1: { email: "student1@mentora.test", password: "Student123!" },
+    student2: { email: "student2@mentora.test", password: "Student123!" },
     student3: { email: "student3@mentora.test", password: "Student123!" },
+    student4: { email: "student4@mentora.test", password: "Student123!" },
     instructor2: { email: "instructor2@mentora.test", password: "Instructor123!" },
 };
 
