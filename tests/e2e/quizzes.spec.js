@@ -1,6 +1,4 @@
 // Cases: docs/test-cases/p1-critical-journeys.md (TC-QUIZ-01 to TC-QUIZ-03).
-// TC-QUIZ-03 needs TC-MOD-01 to have run first (it unlocks "Quiz: PHP Setup" for student3);
-// files run in alphabetical order, one test at a time, so modules.spec.js comes before this file.
 import { expect, test } from "@playwright/test";
 import { itemRow, openCourse, openItem, openModule, openTab, signInAs } from "./support/course.js";
 import { accounts } from "./support/sign-in.js";
@@ -121,12 +119,22 @@ test("TC-QUIZ-02 The attempt limit stops another attempt", async ({ page }) => {
 
 test("TC-QUIZ-03 A past-due quiz is closed", async ({ page }) => {
     // Data: IT102-A, "Quiz: PHP Setup" was due the day before the seed and does not allow late
-    // attempts. It is open to student3 because TC-MOD-01 completed the reading before it.
+    // attempts. It opens once student3 has completed the reading before it (TC-MOD-01 does that;
+    // done here too when it has not, so this case stands on its own).
     await signInAs(page, accounts.student3, "student");
     await openCourse(page, "student", "IT102", "A");
     await openModule(page, "Setting Up PHP");
     const quiz = itemRow(page, "Quiz: PHP Setup");
-    await expect(quiz, "run TC-MOD-01 first: it unlocks this quiz").not.toHaveAttribute("data-locked", "1");
+    if ((await quiz.getAttribute("data-locked")) === "1") {
+        await itemRow(page, "Your First PHP Script").click();
+        const complete = page.locator("[data-mark-complete]");
+        await expect(complete).toBeEnabled();
+        await complete.click();
+        await expect(complete).toHaveAttribute("data-completed", "1");
+        await openCourse(page, "student", "IT102", "A");
+        await openModule(page, "Setting Up PHP");
+    }
+    await expect(quiz).not.toHaveAttribute("data-locked", "1");
     await quiz.click();
 
     // The quiz item says it is closed, and offers no way to start.

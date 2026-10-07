@@ -2,8 +2,7 @@
 // Data: IT102-A, module "Setting Up PHP", unit "Your Development Environment":
 // PDF "XAMPP Installation Guide", reading "Your First PHP Script", quiz "Quiz: PHP Setup".
 // In the seed student3 has completed the PDF and nothing else there.
-// TC-MOD-01 completes the reading, which unlocks "Quiz: PHP Setup" for TC-QUIZ-03: it must run first
-// (files run in alphabetical order, one test at a time).
+// TC-MOD-01 completes the reading, which unlocks "Quiz: PHP Setup" (TC-QUIZ-03 does the same itself if needed).
 import { expect, test } from "@playwright/test";
 import { itemRow, openCourse, openModule, openTab, signInAs } from "./support/course.js";
 import { accounts } from "./support/sign-in.js";

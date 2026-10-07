@@ -321,6 +321,10 @@ jobs:
       - name: Run the browser tests
         run: npm run e2e
 
+      - name: Show the app's own errors
+        if: failure()
+        run: tail -n 80 writable/logs/log-*.log 2>/dev/null || echo "no app log written"
+
       # The report has screenshots and traces; writable/logs has the app's own errors.
       - name: Upload the report on failure
         if: failure()
