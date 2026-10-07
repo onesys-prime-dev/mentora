@@ -156,7 +156,7 @@ Checklist, one pull request per domain, in this order:
 - [x] Dashboard and overview: `DashboardService` (32 tests), `OverviewService` (27 + 3 route tests), `ActivityFeedService` (16), and query-count budgets (6) that fail on an N+1; fixed the course Overview being readable by people outside the section
 - [x] Helpers: announcement (18 tests), icon (30), navigation (4 + 3), storage and vite (6); fixed stored XSS through a message block's alignment and crashes on malformed announcement content
 - [x] Frontend, Vitest: the shared SPA helpers (swap, load guard, busy button, error state, highlight row, skeleton rows), the header menus, assignment submission, and the reading/instructions editor JSON (119 tests; runs in CI)
-- [ ] Frontend, Playwright: the main user flows in a real browser. **Set up and running in CI** (config, a freshly seeded database, eleven tests: TC-AUTH-01 to 04, TC-ANN-01 and 02, TC-MOD-01 and 02, TC-QUIZ-01 to 03). The cases to automate are written first, in `docs/test-cases/` (draft, awaiting review); each Playwright test names its case ID. More flows come as their cases are confirmed
+- [ ] Frontend, Playwright: the main user flows in a real browser. **Set up and running in CI** (config, a freshly seeded database, sixteen tests: TC-AUTH-01 to 04, TC-ANN-01 and 02, TC-MOD-01 and 02, TC-QUIZ-01 to 03, TC-ASG-01 and 02, TC-GRD-01 to 03). The cases to automate are written first, in `docs/test-cases/` (draft, awaiting review); each Playwright test names its case ID. More flows come as their cases are confirmed
 
 ## Handoff notes (where this stands, and what is still open)
 
@@ -166,12 +166,15 @@ except Playwright.
 
 ### Open decisions (none of these are started)
 
-- ~~Playwright end-to-end tests.~~ The setup is done (see "Browser tests" above and
-  the checklist): config, a database that is reset and seeded on every run, the app
-  served as production would, a CI job with MySQL, and eleven tests (TC-AUTH-01 to 04, TC-ANN-01 and 02, TC-MOD-01 and 02, TC-QUIZ-01 to 03). Still
-  open: the other flows (see `docs/test-cases/`), once their expected results are
-  confirmed; instructor flows; file upload and video; and a decision on how long the
-  suite may grow before it is split across CI jobs.
+- ~~Playwright end-to-end tests.~~ Done for the P1 cases: the setup (config, a database that
+  is reset and seeded on every run, the app served as production would, a CI job with
+  MySQL) and sixteen tests (TC-AUTH-01 to 04, TC-ANN-01 and 02, TC-MOD-01 and 02, TC-QUIZ-01 to 03, TC-ASG-01 and 02, TC-GRD-01 to 03) cover every confirmed P1 case except
+  TC-AUTH-05, which the PHP route tests cover better. Writing them found and fixed three
+  app bugs (a quiz or assignment was not completed when handed in; a student could not see
+  the instructor's feedback on the item page; a quiz's essay score box stayed disabled after
+  Grade Work). Still open: the P2 cases (content authoring, discussions, the calendar,
+  resources), which still need cases written and confirmed; file upload and video; and a decision on how long the suite may
+  grow before it is split across CI jobs.
 - ~~The PHP coverage floor is stale.~~ Done: measured at **86.92%** lines
   (9424/10842, PHP 8.2 with PCOV, 1,735 tests, 2026-10-06) and the floor in
   `.github/coverage-floor` is now `86.5`. Keep raising it with new tests, in the

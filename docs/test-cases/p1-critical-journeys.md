@@ -269,32 +269,34 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Data:** `student5@mentora.test`, course IT101-A, unit "Introduction to Databases": reading "What Is a Database?", then assignment "Lab 1: Designing a Table" (20 points, due 1 day after seeding; text, link and file all allowed; one submission)
 - **Steps:**
   1. Complete the reading "What Is a Database?" so the lab unlocks.
-  2. Open the lab and submit with nothing entered.
-  3. Enter the link `ftp://example.com/table` and submit.
-  4. Replace it with text, for example the column list for a Students table, and submit.
-  5. Try to submit again.
+  2. Open the lab. It says "Submit your work to complete it." and Mark as Completed is off. Press Submit with nothing entered.
+  3. Open the Link tab, enter `ftp://example.com/table` and press Submit.
+  4. Open the Text Entry tab (the form offers File Upload, Text Entry and Link, one at a time), clear the link, type the column list for a Students table and press Submit.
+  5. Look at the page again.
 - **Expected:**
   - Step 2: "Add your work before submitting."
   - Step 3: "Enter a full link starting with http:// or https://."
-  - Step 4: "Your work was submitted." The status is Submitted and the item counts as completed.
-  - Step 5: not allowed: "You've already submitted this assignment."
-  - (All wording to confirm.)
+  - Step 4: the page shows the status **Submitted** and "Attempt 1 of 1". ("Your work was submitted." is the server's reply, not text on the page.)
+  - Step 5: the form is gone and the page says "You've already submitted this assignment."
+  - Handing the work in completed the item: back in Modules it shows as completed, with nothing to press.
 - **Already automated:** `tests/database/AssignmentSubmissionServiceTest.php`: `testATextSubmissionIsRecordedAsSubmitted`,
-  `testOnlyWebLinksAreAccepted`, `testTheSubmissionLimitIsEnforcedAndNumbered`, `testOnlyEnrolledStudentsCanSubmit`
-- **Playwright:** planned (file upload variant: later)
+  `testOnlyWebLinksAreAccepted`, `testTheSubmissionLimitIsEnforcedAndNumbered`, `testOnlyEnrolledStudentsCanSubmit`;
+  completing on hand-in: `testHandingInAnAssignmentCompletesItsItem`, `testCompletingTheAssignmentUnlocksTheItemAfterIt`
+- **Playwright:** `tests/e2e/assignments.spec.js` (the file upload variant: later)
 - **Basis:** `app/Services/Courses/Assessments/AssignmentSubmissionService.php` (messages, `blockingReason`)
-- **Review:** Confirmed by Shuay, October 7, 2026
+- **Review:** Confirmed by Shuay, October 7, 2026. Page wording clarified afterwards (see Note); the expected behavior is unchanged.
+- **Note (October 7, found while automating it in a browser):** the page checks an empty submission and a link that is not a web address itself, with the messages above, and the server checks both again (the PHP tests cover that, which a browser test cannot tell apart). The item counting as completed was not true of the app until the fix that completes it on hand-in.
 
 ### TC-ASG-02 A late submission is accepted and marked late
 
 - **Role:** Student. **Priority:** P1
 - **Data:** `student4@mentora.test`, course IT201-A, assignment "ER Diagram Draft" (25 points, due 1 day before seeding, late submissions allowed, nothing submitted by student4)
-- **Steps:** open the assignment and submit a text answer.
-- **Expected:** "Your work was submitted." The submission is recorded as **late**. (If the assignment did not allow late work, the page would instead say "The due date has passed and late submissions aren't allowed.")
+- **Steps:** open the assignment, open the Text Entry tab, type an answer and press Submit.
+- **Expected:** the page shows the status **Submitted** with a **Late** marker, and the submission is recorded as late. ("Your work was submitted." is the server's reply, not text on the page.) If the assignment did not allow late work, the page would instead say "The due date has passed and late submissions aren't allowed." (not seeded; the PHP tests cover it.)
 - **Already automated:** `AssignmentSubmissionServiceTest::testASubmissionAfterTheDueDateWhereLateIsAllowedIsMarkedLate`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/assignments.spec.js`
 - **Basis:** `AssignmentSubmissionService.php`, `DemoContentSeeder.php` (`allow_late_submission`)
-- **Review:** Confirmed by Shuay, October 7, 2026
+- **Review:** Confirmed by Shuay, October 7, 2026. Page wording clarified afterwards; the expected behavior is unchanged.
 
 ---
 
@@ -305,40 +307,44 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Role:** Instructor, then Student. **Priority:** P1
 - **Data:** `instructor1@mentora.test`, course IT101-A, "Assignment 1: Grade Calculator" (30 points; rubric: Correctness 12, Code Readability 10, Testing and Output 8). student3's submission is in, late and ungraded. Afterwards `student3@mentora.test`.
 - **Steps:**
-  1. As the instructor open the assignment's Grade Work and choose student3.
-  2. Open it for grading, then enter 10 for Correctness, 8 for Code Readability and 6 for Testing and Output, plus a written comment.
-  3. Try entering 13 for Correctness first.
-  4. Submit the grade.
-  5. Sign in as student3 and open the assignment.
+  1. As the instructor open the assignment in Modules, press View Submissions and choose student3 (Maria Santos).
+  2. Press Grade Work, open the Rubric tab, and try 13 for Correctness first.
+  3. Enter 10 for Correctness, 8 for Code Readability and 6 for Testing and Output, and write a comment.
+  4. Press Submit Grade.
+  5. Sign in as student3 and open the assignment in Modules.
 - **Expected:**
-  - Step 3: refused or capped at the criterion's maximum, 12 (the score can never exceed the criterion's maximum).
-  - Step 4: "Grade submitted successfully." The score is **24 of 30** and the status is Graded.
-  - Step 5: student3 sees Graded, 24 of 30, and the comment (wording to confirm).
+  - Step 2: 13 is held at the criterion's maximum, 12, on the spot (no message); a score can never exceed the criterion's maximum.
+  - Step 3: the score preview reads **24/30**.
+  - Step 4: the student's row in the list now reads **Graded 24/30**. ("Grade submitted successfully." is the server's reply, not text on the page.)
+  - Step 5: student3 sees Graded, 24/30 and the comment, on the assignment's page in Modules.
 - **Already automated:** `tests/database/GradeWorkServiceTest.php`: `testGradingByRubricSumsTheCriteriaEachLimitedToItsMaximum`,
   `testOpeningSubmittedOrPartlyGradedWorkMovesItToGrading`, `testReopeningGradedWorkKeepsTheScoreButStopsItCounting`;
-  `tests/database/AssessmentFeedbackServiceTest.php`
-- **Playwright:** planned
+  `tests/database/AssessmentFeedbackServiceTest.php`; the comment on the item page:
+  `tests/database/ModuleServiceTest.php::testAStudentSeesTheFeedbackOnAGradedAssignmentOnItsItemPage`
+- **Playwright:** `tests/e2e/grading.spec.js`
 - **Basis:** `GradeWorkService.php`, `DemoContentSeeder.php` (rubric), `DemoActivitySeeder.php` (student3's submission)
-- **Review:** Confirmed by Shuay, October 7, 2026
+- **Review:** Confirmed by Shuay, October 7, 2026. Page wording clarified afterwards (see Note); the expected behavior is unchanged.
+- **Note (October 7, found while automating it in a browser):** step 5 did not work: the instructor's comment was saved but the student's page in Modules said "No Feedback Yet" (the Assessments tab showed it). That was a bug and is fixed; the comment now shows on both pages.
 
 ### TC-GRD-02 Instructor grades a quiz's essay
 
 - **Role:** Instructor, then Student. **Priority:** P1
 - **Data:** `instructor1@mentora.test`, course IT101-A, Quiz 1. student2's attempt is Partially Graded: the auto-graded answers scored 9 of 13 (questions 1, 3 and 4 right, question 2 wrong), the 7-point essay waits. Afterwards `student2@mentora.test`.
 - **Steps:**
-  1. As the instructor open Quiz 1's Grade Work and choose student2.
-  2. Grade the essay: first try 8 points, then 5.
-  3. Finish grading (submit the grade).
-  4. Sign in as student2 and open Quiz 1's result.
+  1. As the instructor open Quiz 1 in Modules, press View Submissions and choose student2 (Pedro Reyes).
+  2. Press Grade Work. Grade the essay: first try 8 points, then 5.
+  3. Press Submit Grade.
+  4. Sign in as student2 and open Quiz 1.
 - **Expected:**
-  - Step 2: 8 is refused: "Points must be between 0 and 7." (wording to confirm); 5 is accepted and the total follows.
-  - Step 3: "Grade submitted successfully." The attempt is **Graded** with **14 of 20**.
-  - Step 4: student2 now sees the full score, 14 of 20.
+  - Step 2: the essay's score box is editable as soon as grading starts, and the total so far is 9. Typing 8 shows the alert "Points must be between 0 and 7." and the total stays 9; typing 5 is accepted and the total follows: **14**.
+  - Step 3: the attempt is **Graded** with **14 of 20** (the list row reads Graded 14/20). ("Grade submitted successfully." is the server's reply, not text on the page.)
+  - Step 4: student2 now sees the full score: "Best score: 14/20".
 - **Already automated:** `tests/database/GradeWorkServiceTest.php`: `testAWrittenQuestionIsGivenPointsAndTheTotalFollows`,
   `testPointsMustBeBetweenZeroAndTheQuestionsWorth`, `testAnAutoGradedQuestionIsCorrectedWithCorrectOrIncorrect`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/grading.spec.js`
 - **Basis:** `GradeWorkService.php`, `DemoActivitySeeder.php` (student2's Quiz 1 attempt)
-- **Review:** Confirmed by Shuay, October 7, 2026
+- **Review:** Confirmed by Shuay, October 7, 2026. Page wording clarified afterwards (see Note); the expected behavior is unchanged.
+- **Note (October 7, found while automating it in a browser):** step 2 did not work as described: after pressing Grade Work the essay's score box stayed greyed out and could not be typed in until the instructor selected the student again. That was a bug and is fixed (the page now redraws the student when grading starts).
 
 ### TC-GRD-03 Student sees their grades
 
@@ -346,15 +352,17 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Data:** `student1@mentora.test`, course IT101-A (all work graded except Lab 1, which is submitted and waiting; the grading scheme is published by default, to confirm on the seeded data)
 - **Steps:** open IT101-A and its Grades.
 - **Expected:**
-  - A final grade for the course is shown, with a breakdown by category and the score on each graded assessment.
+  - The page shows the overall grade (**90.00%**), points earned (**63/70**, "3 of 4 graded") and the standing "On track: Passed".
+  - "How your grade is calculated" lists the categories, for example Quizzes 40%, 90.00%, 27 of 30 pts.
+  - Each graded assessment shows its own score (Course Pre-Test 8/10, Quiz 1 19/20, Assignment 1 27/30) and Lab 1 says "Waiting for grade".
   - Draft assessments (such as "Quiz 2: Database Basics") do not appear.
   - If the instructor had not published the grading scheme, the final grade would be hidden (not seeded; covered by the PHP tests).
-  - The numbers equal what the instructor's gradebook shows for student1 (cross-check with `instructor1`).
+  - The instructor's gradebook shows the same final grade for the same student (90% for Dela Cruz, Juan).
 - **Already automated:** `tests/database/GradeServiceTest.php`: `testAPublishedSchemeShowsTheCalculatedGradeAndBreakdown`,
   `testTheFinalGradeIsHiddenUntilTheSchemeIsPublished`, `testAnInstructorOverrideWins`; `tests/database/GradingEngineServiceTest.php`
-- **Playwright:** planned
+- **Playwright:** `tests/e2e/grading.spec.js`
 - **Basis:** `app/Services/Courses/GradeService.php`
-- **Review:** Confirmed by Shuay, October 7, 2026
+- **Review:** Confirmed by Shuay, October 7, 2026. Concrete numbers added afterwards from the seeded data; the expected behavior is unchanged.
 
 ---
 
@@ -364,5 +372,7 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Exact on-screen wording** is unconfirmed for every case marked so; the first run on staging should fix the text in the case, not the app.
 - **Missing from P1 on purpose:** discussions, the calendar, resources, video progress, file uploads and the instructor's content authoring (creating modules, units, quizzes). They are P2 and need cases written.
 - **A quiz or assignment was not completed when handed in** (TC-QUIZ-01, TC-ASG-01): the item stayed "Not Yet Completed" until the student pressed Mark as Completed. Found while automating TC-QUIZ-01 and fixed: handing it in now completes the item, and a migration (`CompleteItemsOfWorkAlreadyHandedIn`) completes the items of work handed in before the fix.
+- **A student could not see the instructor's feedback on the assignment's page in Modules** (TC-GRD-01): the comment was saved, but that page said "No Feedback Yet" (only the Assessments tab showed it). Found while automating TC-GRD-01 and fixed.
+- **A quiz's essay score box stayed disabled after pressing Grade Work** (TC-GRD-02): the instructor had to select the student again before typing the points. Found while automating TC-GRD-02 and fixed.
 - **Two page routes crash.** Opening `/student/courses/<id>/<slug>/modules/items/<item id>` (and the instructor twin) answers with the error page: the route passes the controller three values but `ModuleController::viewLearningItem` takes two (found while automating TC-MOD-01). Nothing in the app links to that address (it uses `?item=` and the API), so only a typed or shared link hits it. Not fixed.
 - **No requirements to check against.** Expected results such as "a late submission is allowed only when the assignment says so", or "a quiz with an essay shows Partially Graded until the essay is marked", are what the code does. Whether they are what the product should do is for the product owner to confirm.

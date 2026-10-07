@@ -813,4 +813,73 @@ final class ModuleServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('Chapter 1', $refusal['message']);
         $this->assertStringContainsString('Chapter 2', $refusal['message']);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The instructor's feedback shows on the student's item page
+    |--------------------------------------------------------------------------
+    */
+
+    /** A published assignment or quiz item with its assessment (settings included), as Modules builds them. @return array{int, int} item id, assessment id */
+    private function gradedWork(string $type): array
+    {
+        $module = CourseFactory::module($this->offeringId);
+        [$item] = CourseFactory::items(CourseFactory::unit($module), [['type' => $type]]);
+        $assessment = CourseFactory::assessment($this->offeringId, $this->instructor, $module, $item, ucfirst($type));
+        Tests\Support\AssessmentFactory::open($assessment, ['total_points' => 30]);
+        db_connect()->table('assessment_settings')->insert(['assessment_id' => $assessment, 'allow_text_entry' => 1, 'created_at' => date('Y-m-d H:i:s')]);
+
+        return [$item, $assessment];
+    }
+
+    /** Hands in work for a student, graded, with an instructor comment on it. */
+    private function gradedWithComment(int $assessment, User $student, string $comment): void
+    {
+        $submission = Tests\Support\AssessmentFactory::attempt($assessment, $student, 'Graded', 24.0);
+        (new App\Services\Courses\Assessments\AssessmentFeedbackService())->appendInstructorMessage($this->instructor, $submission, $comment);
+    }
+
+    public function testAStudentSeesTheFeedbackOnAGradedAssignmentOnItsItemPage(): void
+    {
+        [$item, $assessment] = $this->gradedWork('assignment');
+        $this->gradedWithComment($assessment, $this->student, 'Good logic. Add more test cases.');
+
+        $html = $this->service->viewLearningItem($this->student, $this->offeringId, $item)['html'];
+
+        $this->assertStringContainsString('Good logic. Add more test cases.', $html);
+        $this->assertStringNotContainsString('No Feedback Yet', $html);
+    }
+
+    public function testAStudentSeesTheFeedbackOnAGradedQuizOnItsItemPage(): void
+    {
+        [$item, $assessment] = $this->gradedWork('quiz');
+        $this->gradedWithComment($assessment, $this->student, 'Nice work on the essay.');
+
+        $html = $this->service->viewLearningItem($this->student, $this->offeringId, $item)['html'];
+
+        $this->assertStringContainsString('Nice work on the essay.', $html);
+    }
+
+    public function testAStudentOnlySeesFeedbackOnTheirOwnWork(): void
+    {
+        [$item, $assessment] = $this->gradedWork('assignment');
+        $other = CourseFactory::user('student');
+        CourseFactory::enroll($this->offeringId, $other);
+        $this->gradedWithComment($assessment, $other, 'Private note for the other student.');
+
+        $html = $this->service->viewLearningItem($this->student, $this->offeringId, $item)['html'];
+
+        $this->assertStringNotContainsString('Private note for the other student.', $html);
+    }
+
+    public function testWithoutAnyFeedbackThePageSaysSo(): void
+    {
+        [$item, $assessment] = $this->gradedWork('assignment');
+        Tests\Support\AssessmentFactory::attempt($assessment, $this->student, 'Graded', 24.0);
+
+        $html = $this->service->viewLearningItem($this->student, $this->offeringId, $item)['html'];
+
+        $this->assertStringContainsString('No Feedback Yet', $html);
+    }
+
 }
