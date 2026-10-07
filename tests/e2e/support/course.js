@@ -22,8 +22,12 @@ export async function openCourse(page, role, code, section) {
 /** Opens one of the course page's tabs (Announcements, Modules, ...). */
 export async function openTab(page, name) {
     const tab = page.getByRole("tab", { name, exact: true });
-    await tab.click();
-    await expect(tab).toHaveAttribute("aria-selected", "true");
+    // A click that lands before the page script has attached does nothing, so click again until it takes
+    // (a slow machine, such as a CI runner, hits this).
+    await expect(async () => {
+        await tab.click();
+        await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
 }
 
 /** The address of a course section, read from its card (for "open it directly" steps). */

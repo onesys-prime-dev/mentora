@@ -18,6 +18,9 @@ export default defineConfig({
     // No retries: the tests use up demo data (completing an item, submitting work), so a
     // retry would start from a changed database and fail for a different, confusing reason.
     retries: 0,
+
+    // Each case is a whole journey on a single-threaded PHP server; a CI runner is slower than a laptop.
+    timeout: process.env.CI ? 90_000 : 30_000,
     reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
 
     use: {
