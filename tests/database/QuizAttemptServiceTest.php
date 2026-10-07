@@ -739,4 +739,104 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
         $this->assertEquals(10, $this->gradebookScore($item, $this->ada)['raw_score']);
         $this->assertSame($second, (int) $this->gradebookScore($item, $this->ada)['assessment_submission_id']);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Handing the quiz in completes its item in the module
+    |--------------------------------------------------------------------------
+    */
+
+    /** The quiz's learning item, and the item after it that waits for it ("previous" mode). */
+    private function quizInAUnit(): array
+    {
+        [$quizItem, $nextItem] = CourseFactory::items(CourseFactory::unit($this->moduleId), [['type' => 'quiz'], ['mode' => 'previous']]);
+        db_connect()->table('assessments')->where('id', $this->quiz)->update(['learning_item_id' => $quizItem]);
+
+        return [$quizItem, $nextItem];
+    }
+
+    private function completions(int $item, User $student): array
+    {
+        return db_connect()->table('learning_completions')
+            ->where('learning_item_id', $item)->where('student_user_id', $student->id)
+            ->get()->getResultArray();
+    }
+
+    public function testHandingInAQuizCompletesItsItem(): void
+    {
+        [$quizItem] = $this->quizInAUnit();
+
+        $this->service->submitAttempt($this->ada, $this->fullyAutoGraded());
+
+        $completions = $this->completions($quizItem, $this->ada);
+        $this->assertCount(1, $completions);
+        $this->assertSame('completed', $completions[0]['status']);
+        $this->assertNotNull($completions[0]['completed_at']);
+    }
+
+    public function testAQuizStillWaitingForItsEssayIsCompletedToo(): void
+    {
+        [$quizItem] = $this->quizInAUnit();
+        $q = $this->running();
+
+        $this->service->submitAttempt($this->ada, $q['attempt']);
+
+        $this->assertSame('Partially Graded', $this->row('assessment_submissions', $q['attempt'])['status']);
+        $this->assertSame('completed', $this->completions($quizItem, $this->ada)[0]['status']);
+    }
+
+    public function testAnAttemptThatIsOnlyInProgressDoesNotCompleteTheItem(): void
+    {
+        [$quizItem] = $this->quizInAUnit();
+        $q = $this->running();
+
+        $this->service->saveAnswer($this->ada, $q['attempt'], $q['mc']['question'], ['selected_choice_id' => $q['mc']['choices'][1], 'selected_choice_ids' => null]);
+
+        $this->assertSame([], $this->completions($quizItem, $this->ada));
+    }
+
+    public function testOnlyTheStudentWhoHandedItInIsCompleted(): void
+    {
+        [$quizItem] = $this->quizInAUnit();
+
+        $this->service->submitAttempt($this->ada, $this->fullyAutoGraded());
+
+        $this->assertSame([], $this->completions($quizItem, $this->bob));
+    }
+
+    public function testCompletingTheQuizUnlocksTheItemAfterIt(): void
+    {
+        [, $nextItem] = $this->quizInAUnit();
+        $progress = new App\Services\Courses\LearningProgressService();
+
+        $this->assertNotNull($progress->lockFor($this->ada, $nextItem), 'the next item waits for the quiz');
+
+        $this->service->submitAttempt($this->ada, $this->fullyAutoGraded());
+
+        $this->assertNull($progress->lockFor($this->ada, $nextItem), 'handing the quiz in unlocks it');
+    }
+
+    public function testASecondAttemptKeepsASingleCompletion(): void
+    {
+        [$quizItem] = $this->quizInAUnit();
+        $this->service->submitAttempt($this->ada, $this->fullyAutoGraded());
+        $first = $this->completions($quizItem, $this->ada)[0];
+
+        $this->service->submitAttempt($this->ada, AssessmentFactory::attempt($this->quiz, $this->ada, 'In Progress'));
+
+        $after = $this->completions($quizItem, $this->ada);
+        $this->assertCount(1, $after);
+        $this->assertSame($first['completed_at'], $after[0]['completed_at'], 'the first completion is kept');
+    }
+
+    public function testAQuizWithNoLearningItemIsStillSubmitted(): void
+    {
+        $attempt = $this->fullyAutoGraded();
+
+        $result = $this->service->submitAttempt($this->ada, $attempt);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, db_connect()->table('learning_completions')->countAllResults());
+    }
+
 }

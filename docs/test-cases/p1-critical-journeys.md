@@ -218,20 +218,21 @@ works on a fresh seed. A full run needs a fresh seed.
   2. Open Quiz 1. It shows "0 of 2 attempts used", and Mark as Completed is off. Press Take Quiz.
   3. Answer questions 1 to 4 correctly and write a short essay. Each answer saves as you go.
   4. Press Submit Quiz and accept the confirmation ("Submit your answers? You won't be able to change them afterward.").
-  5. Return to the quiz item in Modules, and press Mark as Completed.
+  5. Return to the quiz item in Modules.
 - **Expected:**
   - Step 1: the quiz is locked until both are completed.
   - Step 2: "0 of 2 attempts used"; Mark as Completed is unavailable, with the hint "Submit the quiz to complete it."
   - Step 3: each answer is saved (the page shows "All changes saved").
   - Step 4: the four auto-graded answers score 13 of 20 points and the essay is not scored, so you land on the quiz with a score panel reading **13/20, "So far", "The rest is still being graded."**, the attempt is **Partially Graded**, and a Retake Quiz button is offered (a second attempt can be started). The full score appears only once the instructor has graded the essay.
-  - Step 5: the item shows "1 of 2 attempts used" and "13/20 so far — the rest is being graded"; Mark as Completed is now available and completes the item. Submitting does not complete the item by itself: completing is the student's own step.
+  - Step 5: the item shows "1 of 2 attempts used" and "13/20 so far — the rest is being graded", and it counts as **completed**: handing the quiz in completes the item, with nothing to press (even while the essay is still being graded). The next item in the unit unlocks.
 - **Already automated:** `tests/database/QuizAttemptServiceTest.php`: `testOnlyChoiceQuestionsAndKeyedShortAnswersGradeThemselves`,
   `testEachAutoGradedAnswerIsScoredAndMarked`, `testTheAttemptLimitStopsANewAttempt`, `testAnswersAreAcceptedWhileTimeRemains`;
-  `tests/unit/ShortAnswerGraderTest.php` (case and spacing); `tests/feature/AssessmentSectionAccessTest.php::testAStudentCanTakeTheirOwnSectionsQuiz`
+  `tests/unit/ShortAnswerGraderTest.php` (case and spacing); `tests/feature/AssessmentSectionAccessTest.php::testAStudentCanTakeTheirOwnSectionsQuiz`;
+  completing on submit: `QuizAttemptServiceTest::testHandingInAQuizCompletesItsItem`, `testAQuizStillWaitingForItsEssayIsCompletedToo`, `testCompletingTheQuizUnlocksTheItemAfterIt`
 - **Playwright:** `tests/e2e/quizzes.spec.js`
 - **Basis:** `DemoContentSeeder.php` (Quiz 1), `QuizAttemptService.php`
-- **Review:** Confirmed by Shuay, October 7, 2026. Screen behavior corrected afterwards (see Correction); the scoring and status are unchanged. Please re-check.
-- **Correction (October 7, found while automating it in a browser):** the first version said the quiz item "counts as completed" after submitting, and that the page shows "Quiz submitted successfully.". Neither is true: nothing completes a quiz item automatically (the server only allows it once the student has submitted at least once, and the student presses Mark as Completed), and "Quiz submitted successfully." is the server's reply, not text on the page. The page asks for a confirmation first and then shows the score panel described above.
+- **Review:** Confirmed by Shuay, October 7, 2026. Page wording was clarified afterwards (see Note); the expected behavior is unchanged.
+- **Note (October 7, found while automating it in a browser):** the expected behavior above is the intended one, but the app did not do it: after submitting, the quiz item stayed "Not Yet Completed" until the student pressed Mark as Completed. That was a bug; it is fixed (handing in a quiz or an assignment now completes its item, and a migration completed the items of work handed in earlier; Mark as Completed still works). Two wording details: "Quiz submitted successfully." is the server's reply, not text on the page; and the page asks for a confirmation first and then shows the score panel described above.
 
 ### TC-QUIZ-02 The attempt limit stops another attempt
 
@@ -362,5 +363,6 @@ works on a fresh seed. A full run needs a fresh seed.
 - **A wrong password had no automated test** (TC-AUTH-03): now covered by six tests in `AuthFlowTest`. Writing them showed that the login page told a visitor whether an email has an account; that is fixed (see the note on TC-AUTH-03).
 - **Exact on-screen wording** is unconfirmed for every case marked so; the first run on staging should fix the text in the case, not the app.
 - **Missing from P1 on purpose:** discussions, the calendar, resources, video progress, file uploads and the instructor's content authoring (creating modules, units, quizzes). They are P2 and need cases written.
+- **A quiz or assignment was not completed when handed in** (TC-QUIZ-01, TC-ASG-01): the item stayed "Not Yet Completed" until the student pressed Mark as Completed. Found while automating TC-QUIZ-01 and fixed: handing it in now completes the item, and a migration (`CompleteItemsOfWorkAlreadyHandedIn`) completes the items of work handed in before the fix.
 - **Two page routes crash.** Opening `/student/courses/<id>/<slug>/modules/items/<item id>` (and the instructor twin) answers with the error page: the route passes the controller three values but `ModuleController::viewLearningItem` takes two (found while automating TC-MOD-01). Nothing in the app links to that address (it uses `?item=` and the API), so only a typed or shared link hits it. Not fixed.
 - **No requirements to check against.** Expected results such as "a late submission is allowed only when the assignment says so", or "a quiz with an essay shows Partially Graded until the essay is marked", are what the code does. Whether they are what the product should do is for the product owner to confirm.

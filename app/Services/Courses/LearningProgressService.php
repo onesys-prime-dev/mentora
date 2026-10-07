@@ -17,7 +17,9 @@ use CodeIgniter\Shield\Entities\User;
  *
  * Completion. "Mark as Completed" is allowed once the item is unlocked and:
  *   - video: watched to 90% (uploaded or YouTube; other hosts can't be tracked)
- *   - quiz / assignment: the student has submitted it at least once
+ *   - quiz / assignment: the student has submitted it at least once. Handing
+ *     it in completes it automatically (completeOnSubmission); "Mark as
+ *     Completed" still works for work handed in before that existed
  *   - everything else: immediately
  * The server enforces this; the disabled button in the UI is only a hint.
  */
@@ -294,6 +296,46 @@ class LearningProgressService
             'module' => $this->moduleProgress((int) $user->id, (int) $item['module_id']),
             'unlockedItemIds' => $unlocked,
         ];
+    }
+
+    /**
+     * A quiz or assignment counts as completed the moment the student hands it
+     * in (any submission that is no longer in progress). The quiz and
+     * assignment services call this right after recording a submission.
+     *
+     * Does nothing for an assessment with no learning item, or one the student
+     * already completed. The submission itself was already checked (enrolled,
+     * open, not locked), so this only records the completion.
+     */
+    public function completeOnSubmission(int $studentId, int $assessmentId): void
+    {
+        $assessment = db_connect()->table('assessments')
+            ->select('learning_item_id')
+            ->where('id', $assessmentId)
+            ->get()
+            ->getRowArray();
+
+        $learningItemId = (int) ($assessment['learning_item_id'] ?? 0);
+
+        if ($learningItemId === 0) {
+            return;
+        }
+
+        $existing = db_connect()->table('learning_completions')
+            ->select('status')
+            ->where('learning_item_id', $learningItemId)
+            ->where('student_user_id', $studentId)
+            ->get()
+            ->getRowArray();
+
+        if (($existing['status'] ?? null) === 'completed') {
+            return;
+        }
+
+        $this->upsertCompletion($studentId, $learningItemId, [
+            'status' => 'completed',
+            'completed_at' => date('Y-m-d H:i:s'),
+        ]);
     }
 
     /**
