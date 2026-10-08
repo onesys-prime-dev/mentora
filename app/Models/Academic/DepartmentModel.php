@@ -73,4 +73,12 @@ class DepartmentModel extends Model
         ],
 
     ];
+
+    /** An institution's departments, by name. */
+    public function forInstitution(int $institutionId): array
+    {
+        return $this->where('institution_id', $institutionId)
+            ->orderBy('name')
+            ->findAll();
+    }
 }

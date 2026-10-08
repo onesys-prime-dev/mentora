@@ -50,6 +50,11 @@ class InstructorAssignmentModel extends Model
                 'academic_terms.name AS term_name',
                 'academic_terms.academic_year',
 
+                'sub_departments.id AS sub_department_id',
+                'sub_departments.name AS sub_department_name',
+                'departments.id AS department_id',
+                'departments.name AS department_name',
+
                 'institutions.id AS institution_id',
                 'institutions.name AS institution_name',
             ])
@@ -128,6 +133,11 @@ class InstructorAssignmentModel extends Model
                 'academic_terms.id AS term_id',
                 'academic_terms.name AS term_name',
                 'academic_terms.academic_year',
+
+                'sub_departments.id AS sub_department_id',
+                'sub_departments.name AS sub_department_name',
+                'departments.id AS department_id',
+                'departments.name AS department_name',
 
                 'institutions.id AS institution_id',
                 'institutions.name AS institution_name',

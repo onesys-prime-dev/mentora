@@ -4,11 +4,10 @@
  * lines: a student is identified by their number and programme, an
  * instructor by the department they sit in and the rank they hold.
  *
- * NOTE: user_profiles carries student_number and program_id but has no
- * department or academic_rank column yet, so the instructor lines fall back
- * to placeholders. Wiring them needs either two nullable columns on
- * user_profiles — mirroring how student_number is already role-specific —
- * or a departments table if departments become first-class.
+ * The instructor's department line is the sub-department that owns the first
+ * course they were assigned to teach (UserProfileModel works it out); it is
+ * left out for an instructor who teaches nothing yet. user_profiles still has
+ * no academic_rank column, so that line is a placeholder.
  */
 $userRole = esc($user->getGroups()[0]);
 
@@ -16,7 +15,7 @@ $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''))
 
 if ($userRole === 'instructor') {
     $primaryLine = $data['academic_rank'] ?? 'Associate Professor';
-    $secondaryLine = $data['department'] ?? 'Department of Information Technology';
+    $secondaryLine = $data['teaching_sub_department_name'] ?? null;
 } else {
     $primaryLine = $data['student_number'] ?? '';
 

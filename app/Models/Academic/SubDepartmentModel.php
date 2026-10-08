@@ -68,4 +68,16 @@ class SubDepartmentModel extends Model
         ],
 
     ];
+
+    /** A department's sub-departments, by name; inactive ones only when asked for. */
+    public function forDepartment(int $departmentId, bool $includeInactive = false): array
+    {
+        $builder = $this->where('department_id', $departmentId);
+
+        if (! $includeInactive) {
+            $builder->where('is_active', 1);
+        }
+
+        return $builder->orderBy('name')->findAll();
+    }
 }

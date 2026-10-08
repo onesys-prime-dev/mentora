@@ -68,4 +68,38 @@ class ProgramModel extends Model
         ],
 
     ];
+
+    /** A sub-department's programs, by name. */
+    public function forSubDepartment(int $subDepartmentId): array
+    {
+        return $this->where('sub_department_id', $subDepartmentId)
+            ->orderBy('name')
+            ->findAll();
+    }
+
+    /**
+     * A program with the sub-department, department and institution above it
+     * (null when there is no such program).
+     */
+    public function withHierarchy(int $programId): ?array
+    {
+        return $this->builder()
+            ->select([
+                'programs.*',
+                'sub_departments.id AS sub_department_id',
+                'sub_departments.name AS sub_department_name',
+                'sub_departments.code AS sub_department_code',
+                'departments.id AS department_id',
+                'departments.name AS department_name',
+                'departments.code AS department_code',
+                'institutions.id AS institution_id',
+                'institutions.name AS institution_name',
+            ])
+            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
+            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->join('institutions', 'institutions.id = departments.institution_id')
+            ->where('programs.id', $programId)
+            ->get()
+            ->getRowArray();
+    }
 }
