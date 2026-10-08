@@ -43,7 +43,7 @@ final class MigrationsTest extends DatabaseTestCase
             // Shield (auth)
             'users', 'auth_identities', 'auth_groups_users',
             // Institution and academic structure
-            'institutions', 'programs', 'courses', 'course_offerings', 'enrollments', 'instructor_assignments',
+            'institutions', 'departments', 'sub_departments', 'programs', 'courses', 'course_offerings', 'enrollments', 'instructor_assignments',
             // Learning content and progress
             'course_modules', 'learning_units', 'learning_items', 'learning_completions', 'learning_item_prerequisites',
             // Assessments and grades

@@ -26,7 +26,7 @@ class ProgramModel extends Model
 
     protected $allowedFields = [
 
-        'institution_id',
+        'sub_department_id',
         'name',
         'code',
         'status',
@@ -35,7 +35,7 @@ class ProgramModel extends Model
 
     protected $validationRules = [
 
-        'institution_id' => [
+        'sub_department_id' => [
             'rules' => 'required|is_natural_no_zero',
         ],
 
@@ -55,8 +55,8 @@ class ProgramModel extends Model
 
     protected $validationMessages = [
 
-        'institution_id' => [
-            'required' => 'Institution is required.',
+        'sub_department_id' => [
+            'required' => 'Sub-department is required.',
         ],
 
         'name' => [

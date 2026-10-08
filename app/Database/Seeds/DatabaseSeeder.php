@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
     {
         // People and places
         $this->call(InstitutionsSeeder::class);
+        $this->call(DepartmentsSeeder::class);
+        $this->call(SubDepartmentsSeeder::class);
         $this->call(ProgramsSeeder::class);
         $this->call(DemoUsersSeeder::class);
         $this->call(InstitutionUsersSeeder::class);
