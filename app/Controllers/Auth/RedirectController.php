@@ -16,6 +16,8 @@ class RedirectController extends BaseController
 
         $routes = [
 
+            'admin' => '/admin/dashboard',
+
             'student' => '/student/dashboard',
 
             'instructor' => '/instructor/dashboard',
