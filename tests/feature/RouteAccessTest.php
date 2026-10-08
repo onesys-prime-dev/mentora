@@ -18,8 +18,8 @@ final class RouteAccessTest extends RouteTestCase
 {
     private const VERBS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
-    /** Top-level route prefixes that may exist: public pages, Shield's auth pages, and the two role areas. */
-    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'files', 'student', 'instructor'];
+    /** Top-level route prefixes that may exist: public pages, Shield's auth pages, and the role areas. */
+    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'files', 'student', 'instructor', 'admin'];
 
     /**
      * Every registered route as [verb, example URL, role area].
@@ -35,7 +35,7 @@ final class RouteAccessTest extends RouteTestCase
             foreach (array_keys($routes->getRoutes($verb)) as $route) {
                 $prefix = explode('/', $route)[0];
 
-                if ($area !== null ? $prefix !== $area : ! in_array($prefix, ['student', 'instructor'], true)) {
+                if ($area !== null ? $prefix !== $area : ! in_array($prefix, ['student', 'instructor', 'admin'], true)) {
                     continue;
                 }
 
@@ -72,6 +72,7 @@ final class RouteAccessTest extends RouteTestCase
     {
         $this->assertGreaterThanOrEqual(40, count(self::routes('student')), 'student routes were not discovered');
         $this->assertGreaterThanOrEqual(100, count(self::routes('instructor')), 'instructor routes were not discovered');
+        $this->assertGreaterThanOrEqual(1, count(self::routes('admin')), 'admin routes were not discovered');
     }
 
     public function testEveryRouteIsPublicKnownOrBehindARoleArea(): void
@@ -90,7 +91,7 @@ final class RouteAccessTest extends RouteTestCase
         $this->assertSame(
             [],
             $unknown,
-            'A new top-level route appeared. Put it under student/ or instructor/, or add it to KNOWN_PREFIXES here once you have decided who may reach it.'
+            'A new top-level route appeared. Put it under student/, instructor/ or admin/, or add it to KNOWN_PREFIXES here once you have decided who may reach it.'
         );
     }
 

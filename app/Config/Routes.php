@@ -233,3 +233,8 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
 });
+// System administrator area: platform-wide, above every institution.
+$routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
+    $routes->get('/', 'Admin\HomeController::index');
+    $routes->get('dashboard', 'Admin\HomeController::index');
+});
