@@ -88,7 +88,13 @@ class UserProfileModel extends Model
 
                 'programs.name AS program_name',
                 'programs.code AS program_code',
+
+                'sub_departments.name AS sub_department_name',
+                'sub_departments.code AS sub_department_code',
+                'departments.name AS department_name',
+                'departments.code AS department_code',
             ])
+            ->select(self::teachingHomeColumns(), false)
             ->join(
                 'users',
                 'users.id = user_profiles.user_id'
@@ -106,8 +112,45 @@ class UserProfileModel extends Model
                 'programs.id = user_profiles.program_id',
                 'left'
             )
+            ->join(
+                'sub_departments',
+                'sub_departments.id = programs.sub_department_id',
+                'left'
+            )
+            ->join(
+                'departments',
+                'departments.id = sub_departments.department_id',
+                'left'
+            )
             ->where('user_profiles.user_id', $user->id)
             ->get()
             ->getRowArray();
+    }
+
+    /**
+     * An instructor has no program of their own: the department they belong to
+     * is the one that owns the program of the first course they were assigned
+     * to teach. Returned as extra columns (null for someone who teaches
+     * nothing yet) so the profile still costs a single query.
+     */
+    private static function teachingHomeColumns(): string
+    {
+        $firstTaught = static fn (string $column): string => "(SELECT {$column}
+                FROM instructor_assignments
+                JOIN course_offerings ON course_offerings.id = instructor_assignments.offering_id
+                JOIN courses ON courses.id = course_offerings.course_id
+                JOIN programs AS taught_programs ON taught_programs.id = courses.program_id
+                JOIN sub_departments AS taught_sub_departments ON taught_sub_departments.id = taught_programs.sub_department_id
+                JOIN departments AS taught_departments ON taught_departments.id = taught_sub_departments.department_id
+               WHERE instructor_assignments.instructor_user_id = users.id
+               ORDER BY instructor_assignments.assigned_at, instructor_assignments.id
+               LIMIT 1)";
+
+        return implode(', ', [
+            $firstTaught('taught_sub_departments.name') . ' AS teaching_sub_department_name',
+            $firstTaught('taught_sub_departments.code') . ' AS teaching_sub_department_code',
+            $firstTaught('taught_departments.name') . ' AS teaching_department_name',
+            $firstTaught('taught_departments.code') . ' AS teaching_department_code',
+        ]);
     }
 }
