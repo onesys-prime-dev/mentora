@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Config;
 
+use App\Auth\Actions\AdminEmail2FA;
 use CodeIgniter\Shield\Config\Auth as ShieldAuth;
 use CodeIgniter\Shield\Authentication\Actions\ActionInterface;
 use CodeIgniter\Shield\Authentication\AuthenticatorInterface;
@@ -104,7 +105,7 @@ class Auth extends ShieldAuth
      */
     public array $actions = [
         'register' => null,
-        'login'    => null,
+        'login'    => AdminEmail2FA::class,
     ];
 
     /**
