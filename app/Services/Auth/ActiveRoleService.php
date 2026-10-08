@@ -40,7 +40,7 @@ class ActiveRoleService
             return $sessionRole;
         }
 
-        $savedRole = $this->profileModel->find($user->id)['active_role'] ?? null;
+        $savedRole = ($this->profileModel->find($user->id) ?? [])['active_role'] ?? null;
 
         $role = (is_string($savedRole) && in_array($savedRole, $groups, true))
             ? $savedRole
