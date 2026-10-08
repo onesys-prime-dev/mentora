@@ -3,9 +3,20 @@
 namespace App\Controllers\Auth;
 
 use App\Controllers\BaseController;
+use App\Services\Auth\ActiveRoleService;
 
 class RedirectController extends BaseController
 {
+    // No route group exists yet for 'chairperson' — that lands with the
+    // dashboard branch of the chairperson plan. Until then a chairperson's
+    // active role correctly resolves, but there's nowhere to send them.
+    protected array $dashboards = [
+        'student'    => '/student/dashboard',
+        'instructor' => '/instructor/dashboard',
+        'registrar'  => '/registrar/dashboard',
+        'parent'     => '/parent/dashboard',
+    ];
+
     public function index()
     {
         if (! auth()->loggedIn()) {
@@ -14,31 +25,17 @@ class RedirectController extends BaseController
 
         $user = auth()->user();
 
-        $routes = [
+        $role = (new ActiveRoleService())->resolve($user);
 
-            'student' => '/student/dashboard',
+        if ($role === '' || ! isset($this->dashboards[$role])) {
 
-            'instructor' => '/instructor/dashboard',
-
-            'registrar' => '/registrar/dashboard',
-
-            'parent' => '/parent/dashboard',
-
-        ];
-
-        foreach ($routes as $group => $route) {
-
-            if ($user->inGroup($group)) {
-
-                return redirect()->to($route);
-
-            }
+            // Signed in, but in no usable group (abort() is not a CodeIgniter function).
+            return $this->response
+                ->setStatusCode(403)
+                ->setBody('Your account does not have a role that can use this site yet.');
 
         }
 
-        // Signed in, but in none of the groups above (abort() is not a CodeIgniter function).
-        return $this->response
-            ->setStatusCode(403)
-            ->setBody('Your account does not have a role that can use this site yet.');
+        return redirect()->to($this->dashboards[$role]);
     }
 }

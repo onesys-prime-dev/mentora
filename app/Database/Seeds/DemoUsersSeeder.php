@@ -134,6 +134,21 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => 1,
             ],
 
+            // Dual-role: chairs one sub-department, also teaches — exercises
+            // role-switching and the "defaults to chairperson" first-login rule.
+            [
+                'username'    => 'chairperson.demo2',
+                'email'       => 'chairperson2@mentora.test',
+                'password'    => 'Chairperson123!',
+                'group'       => ['chairperson', 'instructor'],
+                'first_name'  => 'Isabel',
+                'middle_name' => 'Torres',
+                'last_name'   => 'Mendoza',
+                'suffix'      => null,
+                'student_number' => null,
+                'program_id'  => 1,
+            ],
+
             // =====================================================
             // Parent
             // =====================================================
@@ -176,7 +191,9 @@ class DemoUsersSeeder extends Seeder
             /** @var User $user */
             $user = $userModel->findById($userModel->getInsertID());
 
-            $user->addGroup($account['group']);
+            foreach ((array) $account['group'] as $group) {
+                $user->addGroup($group);
+            }
 
             $profileModel->insert([
                 'user_id'     => $user->id,
@@ -188,7 +205,7 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => $account['program_id'],
             ]);
 
-            echo "[CREATED] {$account['group']} ({$account['email']})" . PHP_EOL;
+            echo '[CREATED] ' . implode('+', (array) $account['group']) . " ({$account['email']})" . PHP_EOL;
         }
     }
 }
