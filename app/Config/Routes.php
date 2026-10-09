@@ -241,4 +241,9 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     // Password confirmation in front of dangerous actions (the `reauth` filter).
     $routes->get('reauth', 'Admin\ReauthController::show');
     $routes->post('reauth', 'Admin\ReauthController::confirm');
+
+    // Audit log: list, CSV export, and the source-address display setting.
+    $routes->get('audit-log', 'Admin\AuditLogController::index');
+    $routes->get('audit-log/export', 'Admin\AuditLogController::export');
+    $routes->post('audit-log/settings', 'Admin\AuditLogController::updateSettings', ['filter' => 'reauth']);
 });

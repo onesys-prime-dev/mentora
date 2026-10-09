@@ -17,8 +17,8 @@ use InvalidArgumentException;
  * type and limits on the way in (and again on the way out), and an
  * institution may override only the keys marked for it.
  *
- * Every write goes through set() or forget(), so that is the one place the
- * audit log hooks in once it exists.
+ * Every write goes through set() or forget(), and each one that changes the
+ * value in force leaves an audit entry (settings.changed / settings.reset).
  */
 class PlatformSettings
 {
@@ -81,8 +81,14 @@ class PlatformSettings
     public function set(string $name, $value, ?int $institutionId = null): void
     {
         $definition = $this->definition($name, $institutionId);
+        $new        = self::coerce($definition, $value);
+        $old        = $this->get($name, $institutionId);
 
-        setting()->set($this->key($name), self::coerce($definition, $value), $this->context($institutionId));
+        setting()->set($this->key($name), $new, $this->context($institutionId));
+
+        if ($old !== $new) {
+            $this->audit('settings.changed', $name, $institutionId, $old, $new);
+        }
     }
 
     /** Removes a saved value so the next level down (global, then default) applies again. */
@@ -90,7 +96,15 @@ class PlatformSettings
     {
         $this->definition($name, $institutionId);
 
+        $old = $this->get($name, $institutionId);
+
         setting()->forget($this->key($name), $this->context($institutionId));
+
+        $new = $this->get($name, $institutionId);
+
+        if ($old !== $new) {
+            $this->audit('settings.reset', $name, $institutionId, $old, $new);
+        }
     }
 
     /** True when this institution holds its own value for the key (not merely the global one). */
@@ -192,6 +206,25 @@ class PlatformSettings
         }
 
         return $definition;
+    }
+
+    /**
+     * Every change to a setting is recorded with its old and new value, by
+     * whoever is signed in. A failure to record is allowed to stop the change:
+     * a setting must never change without a trace.
+     *
+     * @param bool|int|string $old
+     * @param bool|int|string $new
+     */
+    private function audit(string $action, string $name, ?int $institutionId, $old, $new): void
+    {
+        service('auditLogger')->log($action, auth()->user(), [
+            'target_type'    => 'setting',
+            'target_id'      => $name,
+            'institution_id' => $institutionId,
+            'old'            => [$name => $old],
+            'new'            => [$name => $new],
+        ]);
     }
 
     private function key(string $name): string
