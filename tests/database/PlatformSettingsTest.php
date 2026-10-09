@@ -190,4 +190,101 @@ final class PlatformSettingsTest extends DatabaseTestCase
 
         $this->settings->get('auditRetentionDays', 5);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The audit trail
+    |--------------------------------------------------------------------------
+    */
+
+    /** @return list<array<string, mixed>> */
+    private function auditEntries(string $action): array
+    {
+        return db_connect()->table('audit_logs')->where('action', $action)->orderBy('id')->get()->getResultArray();
+    }
+
+    public function testChangingASettingIsRecordedWithOldAndNewValue(): void
+    {
+        $this->settings->set('impersonationMinutes', 45);
+
+        $entries = $this->auditEntries('settings.changed');
+
+        $this->assertCount(1, $entries);
+        $this->assertSame('setting', $entries[0]['target_type']);
+        $this->assertSame('impersonationMinutes', $entries[0]['target_id']);
+        $this->assertSame(['impersonationMinutes' => 30], json_decode($entries[0]['old_values'], true));
+        $this->assertSame(['impersonationMinutes' => 45], json_decode($entries[0]['new_values'], true));
+    }
+
+    public function testTheSignedInPersonIsTheActor(): void
+    {
+        $admin = \Tests\Support\CourseFactory::user('admin');
+        auth()->login($admin);
+
+        $this->settings->set('backupAlertHours', 12);
+
+        auth()->logout();
+
+        $this->assertSame((string) $admin->id, (string) $this->auditEntries('settings.changed')[0]['actor_user_id']);
+    }
+
+    public function testSavingTheValueAlreadyInForceLeavesNoEntry(): void
+    {
+        $this->settings->set('impersonationMinutes', 30);
+
+        $this->assertSame([], $this->auditEntries('settings.changed'));
+    }
+
+    public function testASecondChangeShowsTheFirstAsItsOldValue(): void
+    {
+        $this->settings->set('impersonationMinutes', 45);
+        $this->settings->set('impersonationMinutes', 60);
+
+        $entries = $this->auditEntries('settings.changed');
+
+        $this->assertCount(2, $entries);
+        $this->assertSame(['impersonationMinutes' => 45], json_decode($entries[1]['old_values'], true));
+        $this->assertSame(['impersonationMinutes' => 60], json_decode($entries[1]['new_values'], true));
+    }
+
+    public function testAnInstitutionOverrideIsRecordedAgainstThatInstitution(): void
+    {
+        $this->settings->set('expiryGraceDays', 60, 5);
+
+        $entry = $this->auditEntries('settings.changed')[0];
+
+        $this->assertSame('5', (string) $entry['institution_id']);
+        $this->assertSame(['expiryGraceDays' => 14], json_decode($entry['old_values'], true));
+        $this->assertSame(['expiryGraceDays' => 60], json_decode($entry['new_values'], true));
+    }
+
+    public function testResettingASettingIsRecorded(): void
+    {
+        $this->settings->set('backupAlertHours', 48);
+        $this->settings->forget('backupAlertHours');
+
+        $entries = $this->auditEntries('settings.reset');
+
+        $this->assertCount(1, $entries);
+        $this->assertSame(['backupAlertHours' => 48], json_decode($entries[0]['old_values'], true));
+        $this->assertSame(['backupAlertHours' => 24], json_decode($entries[0]['new_values'], true));
+    }
+
+    public function testResettingASettingThatWasNeverSetLeavesNoEntry(): void
+    {
+        $this->settings->forget('backupAlertHours');
+
+        $this->assertSame([], $this->auditEntries('settings.reset'));
+    }
+
+    public function testARefusedValueLeavesNoEntry(): void
+    {
+        try {
+            $this->settings->set('impersonationMinutes', 1000);
+        } catch (InvalidArgumentException) {
+            // expected
+        }
+
+        $this->assertSame([], $this->auditEntries('settings.changed'));
+    }
 }
