@@ -7,6 +7,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Services\Institutions\InstitutionFilters;
 use App\Services\Institutions\InstitutionService;
+use App\Services\Subscriptions\PlanService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
 use InvalidArgumentException;
@@ -37,6 +38,7 @@ class InstitutionsController extends BaseController
             'institutionFilters' => $filters,
             'institutionRows'    => $result['rows'],
             'institutionTotal'   => $result['total'],
+            'institutionPlans'   => (new PlanService())->all(),
             'institutionPages'   => max(1, (int) ceil($result['total'] / $filters->perPage)),
         ]);
     }

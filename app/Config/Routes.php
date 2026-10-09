@@ -262,6 +262,12 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->post('institutions/(:num)/restore', 'Admin\InstitutionsController::restore/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
     $routes->post('institutions/(:num)/purge', 'Admin\InstitutionsController::purge/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
 
+    // An institution's subscription: look with subscriptions.view, change with subscriptions.manage.
+    $routes->get('institutions/(:num)/subscription', 'Admin\SubscriptionsController::show/$1', ['filter' => 'permission:subscriptions.view']);
+    $routes->post('institutions/(:num)/subscription', 'Admin\SubscriptionsController::start/$1', ['filter' => 'permission:subscriptions.manage']);
+    $routes->post('institutions/(:num)/subscription/renew', 'Admin\SubscriptionsController::renew/$1', ['filter' => 'permission:subscriptions.manage']);
+    $routes->post('institutions/(:num)/subscription/renewals/(:num)/correct', 'Admin\SubscriptionsController::correct/$1/$2', ['filter' => 'permission:subscriptions.manage']);
+
     // Archive: past and deleted institutions, with restore and purge.
     $routes->get('archive', 'Admin\ArchiveController::index', ['filter' => 'permission:institutions.view']);
 

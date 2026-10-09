@@ -26,6 +26,7 @@ final class InstitutionFilters
     public function __construct(
         public readonly ?string $q = null,
         public readonly ?string $status = null,
+        public readonly ?int $planId = null,
         public readonly string $sort = 'name',
         public readonly string $dir = 'asc',
         public readonly int $page = 1,
@@ -43,6 +44,7 @@ final class InstitutionFilters
         return new self(
             q: self::text($input['q'] ?? null),
             status: is_string($status) && in_array($status, self::STATUSES, true) ? $status : null,
+            planId: self::positiveInt($input['plan'] ?? null),
             sort: is_string($sort) && in_array($sort, self::SORTABLE, true) ? $sort : 'name',
             dir: is_string($dir) && strtolower($dir) === 'desc' ? 'desc' : 'asc',
             page: self::positiveInt($input['page'] ?? null) ?? 1,
@@ -63,6 +65,7 @@ final class InstitutionFilters
         $query = [
             'q'        => $this->q,
             'status'   => $this->status,
+            'plan'     => $this->planId,
             'sort'     => $this->sort !== 'name' ? $this->sort : null,
             'dir'      => $this->dir !== 'asc' ? $this->dir : null,
             'page'     => $this->page > 1 ? $this->page : null,
@@ -72,10 +75,10 @@ final class InstitutionFilters
         return array_filter(array_merge($query, $override), static fn ($value) => $value !== null && $value !== '');
     }
 
-    /** True when a search or status filter narrows the list (sort and paging do not). */
+    /** True when a search, status or plan filter narrows the list (sort and paging do not). */
     public function isFiltered(): bool
     {
-        return $this->q !== null || $this->status !== null;
+        return $this->q !== null || $this->status !== null || $this->planId !== null;
     }
 
     /** @param mixed $value */

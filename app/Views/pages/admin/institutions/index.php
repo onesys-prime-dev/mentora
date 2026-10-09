@@ -63,6 +63,14 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
             <?php endforeach; ?>
         </select>
     </label>
+    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Plan
+        <select class="<?= $input ?>" name="plan">
+            <option value="">Any plan</option>
+            <?php foreach ($institutionPlans as $plan): ?>
+                <option value="<?= esc((string) $plan['id']) ?>" <?= $f->planId === (int) $plan['id'] ? 'selected' : '' ?>><?= esc($plan['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </label>
     <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Apply</button>
     <?php if ($f->isFiltered()): ?>
         <a class="px-2 py-1.5 text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">Clear</a>
@@ -80,13 +88,14 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                 <th class="<?= $th ?>"><a href="<?= esc($sortLink('name')) ?>">Name<?= $arrow('name') ?></a></th>
                 <th class="<?= $th ?>"><a href="<?= esc($sortLink('code')) ?>">Code<?= $arrow('code') ?></a></th>
                 <th class="<?= $th ?>"><a href="<?= esc($sortLink('status')) ?>">Status<?= $arrow('status') ?></a></th>
+                <th class="<?= $th ?>">Plan</th>
                 <th class="<?= $th ?>"><a href="<?= esc($sortLink('created_at')) ?>">Added<?= $arrow('created_at') ?></a></th>
                 <th class="<?= $th ?>">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
             <?php if ($institutionRows === []): ?>
-                <tr><td class="px-3 py-8 text-center text-gray-500" colspan="5">No institutions<?= $f->isFiltered() ? ' match these filters' : ' yet' ?>.</td></tr>
+                <tr><td class="px-3 py-8 text-center text-gray-500" colspan="6">No institutions<?= $f->isFiltered() ? ' match these filters' : ' yet' ?>.</td></tr>
             <?php endif; ?>
 
             <?php foreach ($institutionRows as $row): ?>
@@ -101,6 +110,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                         <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $statusClass ?>"><?= esc($statusLabel) ?></span>
                         <?php if ($isDeleted): ?><span class="ml-1 rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Deleted</span><?php endif; ?>
                     </td>
+                    <td class="px-3 py-2"><?= esc($row['plan_name'] ?? '—') ?></td>
                     <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) $row['created_at'], 0, 10)) ?></td>
                     <td class="px-3 py-2">
                         <div class="flex flex-wrap items-start gap-2">
@@ -111,6 +121,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                                 </form>
                             <?php else: ?>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/edit') ?>">Edit</a>
+                                <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>">Subscription</a>
 
                                 <?php if (in_array($row['status'], ['active', 'read_only'], true)): ?>
                                     <form method="post" action="<?= site_url('admin/institutions/' . $row['id'] . '/suspend') ?>">
