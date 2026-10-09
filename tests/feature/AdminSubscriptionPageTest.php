@@ -304,6 +304,91 @@ final class AdminSubscriptionPageTest extends RouteTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Usage
+    |--------------------------------------------------------------------------
+    */
+
+    private function planLimits(?int $seats, ?int $storageMb, ?int $ai): void
+    {
+        db_connect()->table('plans')->where('id', $this->plan)->update(['seat_limit' => $seats, 'storage_limit_mb' => $storageMb, 'ai_generation_limit' => $ai]);
+    }
+
+    private function students(int $count): void
+    {
+        for ($i = 0; $i < $count; $i++) {
+            $student = CourseFactory::user('student');
+            db_connect()->table('institution_users')->insert(['institution_id' => $this->institution, 'user_id' => $student->id]);
+        }
+    }
+
+    public function testThereIsNoUsagePanelBeforeASubscriptionStarts(): void
+    {
+        $this->assertStringNotContainsString('data-usage', $this->body());
+    }
+
+    public function testTheUsagePanelShowsEachLimitAndHowFullItIs(): void
+    {
+        $this->planLimits(10, 100, 200);
+        $this->students(3);
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-usage', $body);
+        $this->assertStringContainsString('3 of 10 (30%)', $body);
+        $this->assertStringContainsString('0 MB of 100 MB (0%)', $body);
+        $this->assertStringContainsString('0 of 200 (0%)', $body);
+        $this->assertSame(3, substr_count($body, 'data-usage-line="ok"'));
+    }
+
+    public function testNoLimitShowsUnlimitedWithoutABar(): void
+    {
+        $this->planLimits(null, null, null);
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertSame(3, substr_count($body, 'data-usage-line="unlimited"'));
+        $this->assertStringContainsString('of unlimited', $body);
+        $this->assertStringNotContainsString('role="progressbar"', $body);
+    }
+
+    public function testFromNinetyPercentItIsAWarningAndAtOneHundredItIsFull(): void
+    {
+        $this->planLimits(10, null, null);
+        $this->students(9);
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-usage-line="warning"', $body);
+        $this->assertStringContainsString('Nearly full', $body);
+        $this->assertStringContainsString('9 of 10 (90%)', $body);
+
+        $this->students(1);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-usage-line="full"', $body);
+        $this->assertStringContainsString('>Full<', $body);
+        $this->assertStringContainsString('10 of 10 (100%)', $body);
+    }
+
+    public function testTheBarNeverGoesBeyondFullWidth(): void
+    {
+        $this->planLimits(2, null, null);
+        $this->students(5); // already over, e.g. the plan was lowered later
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('5 of 2 (250%)', $body);
+        $this->assertStringContainsString('style="width: 100%"', $body);
+        $this->assertStringContainsString('aria-valuenow="100"', $body);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Corrections
     |--------------------------------------------------------------------------
     */

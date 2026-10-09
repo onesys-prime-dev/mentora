@@ -7,6 +7,7 @@
  * @var list<array<string, mixed>> $subHistory     newest first
  * @var list<array<string, mixed>> $subPlans       plans to choose from (id, name)
  * @var bool                       $subRunning
+ * @var array<string, mixed>|null  $subUsage       plan limits and how much is used (null with no subscription)
  * @var string                     $subDefaultCurrency
  */
 $input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
@@ -32,6 +33,14 @@ $stateText = static fn ($status): string => match ($status->state) {
     'read_only' => 'Read-only until ' . $status->readOnlyEnds . ', then the institution becomes past. A renewal brings it back.',
     default     => 'Expired. The institution is past; a renewal brings it back.',
 };
+
+/** limit state => [badge text, badge colours, bar colour] */
+$usageStates = [
+    'unlimited' => ['Unlimited', 'bg-gray-100 text-gray-700', 'bg-gray-300'],
+    'ok'        => ['OK', 'bg-green-100 text-green-800', 'bg-green-500'],
+    'warning'   => ['Nearly full', 'bg-amber-100 text-amber-800', 'bg-amber-500'],
+    'full'      => ['Full', 'bg-red-100 text-red-800', 'bg-red-500'],
+];
 
 $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Correction'];
 
@@ -111,6 +120,33 @@ $termFields = static function (string $prefix, string $defaultCurrency, array $p
             From <strong><?= esc($subscription['start_date']) ?></strong> to <strong><?= esc($subscription['end_date']) ?></strong>.
         </p>
         <p class="mt-1 text-sm text-gray-600"><?= esc($stateText($subStatus)) ?></p>
+    </div>
+
+    <div class="mt-6 rounded-lg bg-white p-6 shadow" data-usage>
+        <h2 class="text-lg font-semibold text-[#0040A6]">Usage</h2>
+        <p class="mt-1 text-sm text-gray-600">How much of the plan's limits this institution has used. From 90% it is a warning; when a limit is used up, anything that would add to it is refused. Nothing is ever removed.</p>
+
+        <dl class="mt-4 grid gap-4 sm:grid-cols-3">
+            <?php foreach ([
+                ['Student seats', $subUsage['seats'], number_format($subUsage['seats']['used']), $subUsage['seats']['limit'] === null ? null : number_format($subUsage['seats']['limit'])],
+                ['Storage', $subUsage['storage'], number_format($subUsage['storage']['used_mb']) . ' MB', $subUsage['storage']['limit_mb'] === null ? null : number_format($subUsage['storage']['limit_mb']) . ' MB'],
+                ['AI generations this term', $subUsage['ai'], number_format($subUsage['ai']['used']), $subUsage['ai']['limit'] === null ? null : number_format($subUsage['ai']['limit'])],
+            ] as [$name, $line, $usedText, $limitText]): ?>
+                <?php [$stateLabel, $stateClass, $barClass] = $usageStates[$line['state']]; ?>
+                <div data-usage-line="<?= esc($line['state']) ?>">
+                    <dt class="flex items-center justify-between text-sm font-medium text-gray-700">
+                        <?= esc($name) ?>
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $stateClass ?>"><?= esc($stateLabel) ?></span>
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-600"><?= esc($usedText) ?> of <?= $limitText === null ? 'unlimited' : esc($limitText) ?><?= $line['percent'] === null ? '' : ' (' . esc((string) $line['percent']) . '%)' ?></dd>
+                    <?php if ($line['percent'] !== null): ?>
+                        <div class="mt-2 h-2 overflow-hidden rounded bg-gray-200" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= esc((string) min(100, $line['percent'])) ?>" aria-label="<?= esc($name) ?>">
+                            <div class="h-full <?= $barClass ?>" style="width: <?= esc((string) min(100, $line['percent'])) ?>%"></div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </dl>
     </div>
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow">
