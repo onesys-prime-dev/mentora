@@ -37,7 +37,6 @@ final class TableTestInventoryTest extends DatabaseTestCase
      */
     private const NOT_TOUCHED_BY_A_TEST = [
         'discussion_thread_reads' => 'Written and read only through DiscussionService (its unread tests); no test names the table or DiscussionReadModel.',
-        'chairperson_assignments' => 'Only the model and the seeder use it; no application code reads or writes it yet.',
     ];
 
     /**
