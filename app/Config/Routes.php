@@ -268,6 +268,12 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->post('institutions/(:num)/subscription/renew', 'Admin\SubscriptionsController::renew/$1', ['filter' => 'permission:subscriptions.manage']);
     $routes->post('institutions/(:num)/subscription/renewals/(:num)/correct', 'Admin\SubscriptionsController::correct/$1/$2', ['filter' => 'permission:subscriptions.manage']);
 
+    // Feature flags: look with flags.view, change with flags.manage. A change for everyone (including the kill switch) also needs the password.
+    $routes->get('flags', 'Admin\FlagsController::index', ['filter' => 'permission:flags.view']);
+    $routes->post('flags/(:segment)/global', 'Admin\FlagsController::setGlobal/$1', ['filter' => ['permission:flags.manage', 'reauth']]);
+    $routes->get('institutions/(:num)/flags', 'Admin\FlagsController::institution/$1', ['filter' => 'permission:flags.view']);
+    $routes->post('institutions/(:num)/flags/(:segment)', 'Admin\FlagsController::setForInstitution/$1/$2', ['filter' => 'permission:flags.manage']);
+
     // Archive: past and deleted institutions, with restore and purge.
     $routes->get('archive', 'Admin\ArchiveController::index', ['filter' => 'permission:institutions.view']);
 
