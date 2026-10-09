@@ -62,6 +62,18 @@ final class InstitutionFiltersTest extends CIUnitTestCase
         $this->assertSame('name', InstitutionFilters::fromInput(['sort' => ['code']])->sort);
     }
 
+    public function testThePlanFilterIsAPositiveWholeNumber(): void
+    {
+        $this->assertSame(7, InstitutionFilters::fromInput(['plan' => '7'])->planId);
+        $this->assertTrue(InstitutionFilters::fromInput(['plan' => '7'])->isFiltered());
+
+        foreach (['0', '-1', 'gold', '2.5', ['3'], ''] as $bad) {
+            $this->assertNull(InstitutionFilters::fromInput(['plan' => $bad])->planId);
+        }
+
+        $this->assertSame(['plan' => 7], InstitutionFilters::fromInput(['plan' => '7'])->toQuery());
+    }
+
     public function testAnythingButDescIsAscending(): void
     {
         $this->assertSame('asc', InstitutionFilters::fromInput(['dir' => 'sideways'])->dir);

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models\Audit;
 
+use App\Models\Concerns\AppendOnly;
 use CodeIgniter\Model;
-use LogicException;
 
 /**
  * The audit log is append-only: rows can be added and read, never changed or
@@ -15,6 +15,8 @@ use LogicException;
  */
 class AuditLogModel extends Model
 {
+    use AppendOnly;
+
     protected $table = 'audit_logs';
 
     protected $primaryKey = 'id';
@@ -43,38 +45,8 @@ class AuditLogModel extends Model
         'created_at',
     ];
 
-    /**
-     * @param array<string, mixed>|object|null $row
-     */
-    public function update($id = null, $row = null): bool
+    protected function appendOnlyName(): string
     {
-        throw $this->refuse('changed');
-    }
-
-    /** @param array<int, array<string, mixed>>|null $set */
-    public function updateBatch(?array $set = null, ?string $index = null, int $batchSize = 100, bool $returnSQL = false)
-    {
-        throw $this->refuse('changed');
-    }
-
-    public function delete($id = null, bool $purge = false)
-    {
-        throw $this->refuse('deleted');
-    }
-
-    public function purgeDeleted()
-    {
-        throw $this->refuse('deleted');
-    }
-
-    /** @param array<string, mixed>|object|null $row */
-    public function replace($row = null, bool $returnSQL = false)
-    {
-        throw $this->refuse('changed');
-    }
-
-    private function refuse(string $what): LogicException
-    {
-        return new LogicException("Audit log entries can never be {$what}.");
+        return 'Audit log entries';
     }
 }

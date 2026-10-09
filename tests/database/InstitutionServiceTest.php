@@ -169,6 +169,111 @@ final class InstitutionServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Plans and subscriptions
+    |--------------------------------------------------------------------------
+    */
+
+    private function plan(string $name): int
+    {
+        db_connect()->table('plans')->insert(['name' => $name, 'status' => 'active']);
+
+        return (int) db_connect()->insertID();
+    }
+
+    private function subscribe(int $institutionId, int $planId, string $start, string $end): void
+    {
+        db_connect()->table('subscriptions')->insert(['institution_id' => $institutionId, 'plan_id' => $planId, 'start_date' => $start, 'end_date' => $end]);
+    }
+
+    public function testTheListShowsEachInstitutionsPlan(): void
+    {
+        $gold = $this->plan('Gold');
+        $this->subscribe($this->seeded('A1', 'active', 'Alpha University'), $gold, '2026-01-01', '2026-12-31');
+        $this->seeded('B2', 'active', 'Beta University');
+
+        $rows = $this->service->search(InstitutionFilters::fromInput([]))['rows'];
+
+        $this->assertSame('Gold', $rows[0]['plan_name']);
+        $this->assertNull($rows[1]['plan_name'], 'no subscription, no plan');
+    }
+
+    public function testFilterByPlan(): void
+    {
+        $gold   = $this->plan('Gold');
+        $silver = $this->plan('Silver');
+        $this->subscribe($this->seeded('G1'), $gold, '2026-01-01', '2026-12-31');
+        $this->subscribe($this->seeded('G2'), $gold, '2026-01-01', '2026-12-31');
+        $this->subscribe($this->seeded('S1'), $silver, '2026-01-01', '2026-12-31');
+        $this->seeded('NONE');
+
+        $this->assertEqualsCanonicalizing(['G1', 'G2'], $this->codes(['plan' => (string) $gold]));
+        $this->assertSame(['S1'], $this->codes(['plan' => (string) $silver]));
+        $this->assertSame([], $this->codes(['plan' => '999999']));
+    }
+
+    public function testThePlanFilterCombinesWithStatusAndSearch(): void
+    {
+        $gold = $this->plan('Gold');
+        $this->subscribe($this->seeded('G1', 'active', 'Acme North'), $gold, '2026-01-01', '2026-12-31');
+        $this->subscribe($this->seeded('G2', 'past', 'Acme South'), $gold, '2026-01-01', '2026-12-31');
+        $this->subscribe($this->seeded('G3', 'past', 'Beta South'), $gold, '2026-01-01', '2026-12-31');
+
+        $this->assertSame(['G2'], $this->codes(['plan' => (string) $gold, 'status' => 'past', 'q' => 'acme']));
+    }
+
+    public function testPagingStillCountsOnceWhenJoinedToSubscriptions(): void
+    {
+        $gold = $this->plan('Gold');
+
+        for ($i = 1; $i <= 3; $i++) {
+            $this->subscribe($this->seeded("P{$i}"), $gold, '2026-01-01', '2026-12-31');
+        }
+
+        $page = $this->service->search(InstitutionFilters::fromInput(['per_page' => '2', 'page' => '2']));
+
+        $this->assertSame(3, $page['total']);
+        $this->assertCount(1, $page['rows']);
+    }
+
+    public function testAnInstitutionWithARunningSubscriptionCannotBeDeletedEvenWhenSuspended(): void
+    {
+        $id = $this->seeded('RUN', 'past', 'Running University');
+        $this->subscribe($id, $this->plan('Gold'), '2026-01-01', date('Y-m-d', strtotime('+30 days')));
+
+        try {
+            $this->service->delete($id, 'Running University', $this->admin);
+            $this->fail('expected a refusal');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('subscription that runs until', $e->getMessage());
+            $this->assertStringContainsString(date('Y-m-d', strtotime('+30 days')), $e->getMessage());
+        }
+
+        $this->assertNull($this->row($id)['deleted_at']);
+    }
+
+    public function testOnceTheSubscriptionHasEndedTheInstitutionCanBeDeleted(): void
+    {
+        $id = $this->seeded('ENDED', 'past', 'Ended University');
+        $this->subscribe($id, $this->plan('Gold'), '2025-01-01', date('Y-m-d', strtotime('-1 day')));
+
+        $this->service->delete($id, 'Ended University', $this->admin);
+
+        $this->assertNotNull($this->row($id)['deleted_at']);
+    }
+
+    public function testASubscriptionThatEndsTodayStillBlocksDeletion(): void
+    {
+        $id = $this->seeded('TODAY', 'past', 'Today University');
+        $this->subscribe($id, $this->plan('Gold'), '2025-01-01', date('Y-m-d'));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('subscription that runs until');
+
+        $this->service->delete($id, 'Today University', $this->admin);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Create
     |--------------------------------------------------------------------------
     */

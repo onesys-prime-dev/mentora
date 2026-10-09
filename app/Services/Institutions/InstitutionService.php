@@ -7,6 +7,7 @@ namespace App\Services\Institutions;
 use App\Models\Academic\InstitutionModel;
 use App\Services\Admin\PlatformSettings;
 use App\Services\Audit\RecordsAuditedChanges;
+use App\Services\Subscriptions\SubscriptionService;
 use CodeIgniter\Shield\Entities\User;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -37,7 +38,14 @@ class InstitutionService
      */
     public function search(InstitutionFilters $filters): array
     {
-        $model = new InstitutionModel();
+        $model = (new InstitutionModel())
+            ->select('institutions.*, plans.name AS plan_name')
+            ->join('subscriptions', 'subscriptions.institution_id = institutions.id', 'left')
+            ->join('plans', 'plans.id = subscriptions.plan_id', 'left');
+
+        if ($filters->planId !== null) {
+            $model->where('subscriptions.plan_id', $filters->planId);
+        }
 
         if ($filters->status === 'deleted') {
             $model->onlyDeleted();
@@ -181,6 +189,12 @@ class InstitutionService
 
         if ($institution['status'] === InstitutionModel::ACTIVE) {
             throw new InvalidArgumentException('This institution is active. Suspend it before deleting it.');
+        }
+
+        $subscription = (new SubscriptionService())->forInstitution($id);
+
+        if ($subscription !== null && (new SubscriptionService())->isRunning($id)) {
+            throw new InvalidArgumentException("This institution has a subscription that runs until {$subscription['end_date']}. It can be deleted once that has ended.");
         }
 
         if (trim($typedName) !== $institution['name']) {
