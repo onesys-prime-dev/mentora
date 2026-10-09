@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Flags\FeatureFlagOverrideModel;
 use CodeIgniter\Config\Factories;
 use CodeIgniter\Shield\Entities\User;
 use Config\FeatureFlags as FlagConfig;
@@ -65,7 +66,7 @@ final class FeatureFlagsPageTest extends RouteTestCase
     public function testThePageCarriesTheFlagsAsTheyAreForTheInstitution(): void
     {
         $institution = $this->institution();
-        db_connect()->table('feature_flag_overrides')->insert(['flag_key' => 'test.off', 'institution_id' => $institution, 'enabled' => 1]);
+        (new FeatureFlagOverrideModel())->insert(['flag_key' => 'test.off', 'institution_id' => $institution, 'enabled' => 1]);
 
         $this->loggedInAs($this->userIn('student', $institution));
         $this->withSession();
@@ -75,7 +76,7 @@ final class FeatureFlagsPageTest extends RouteTestCase
 
     public function testADifferentInstitutionSeesItsOwnAnswers(): void
     {
-        db_connect()->table('feature_flag_overrides')->insert(['flag_key' => 'test.on', 'institution_id' => $this->institution(), 'enabled' => 0]);
+        (new FeatureFlagOverrideModel())->insert(['flag_key' => 'test.on', 'institution_id' => $this->institution(), 'enabled' => 0]);
 
         $this->loggedInAs($this->userIn('instructor', $this->institution2()));
         $this->withSession();
@@ -85,7 +86,7 @@ final class FeatureFlagsPageTest extends RouteTestCase
 
     public function testTheKillSwitchShowsOnThePage(): void
     {
-        db_connect()->table('feature_flag_overrides')->insert(['flag_key' => 'test.on', 'institution_id' => null, 'enabled' => 0]);
+        (new FeatureFlagOverrideModel())->insert(['flag_key' => 'test.on', 'institution_id' => null, 'enabled' => 0]);
 
         $this->loggedInAs($this->userIn('student', $this->institution()));
         $this->withSession();

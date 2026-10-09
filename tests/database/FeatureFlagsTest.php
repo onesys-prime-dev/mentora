@@ -60,7 +60,7 @@ final class FeatureFlagsTest extends DatabaseTestCase
 
     private function change(string $key, ?int $institution, bool $enabled, ?string $endsOn = null): void
     {
-        db_connect()->table('feature_flag_overrides')->insert(['flag_key' => $key, 'institution_id' => $institution, 'enabled' => (int) $enabled, 'ends_on' => $endsOn]);
+        (new FeatureFlagOverrideModel())->insert(['flag_key' => $key, 'institution_id' => $institution, 'enabled' => (int) $enabled, 'ends_on' => $endsOn]);
     }
 
     /*
@@ -79,13 +79,7 @@ final class FeatureFlagsTest extends DatabaseTestCase
         $institution = $this->institution();
         $this->change('test.off', $institution, true);
 
-        try {
-            $stored = db_connect()->table('feature_flag_overrides')->insert(['flag_key' => 'test.off', 'institution_id' => $institution, 'enabled' => 0]);
-        } catch (CodeIgniter\Database\Exceptions\DatabaseException) {
-            $stored = false;
-        }
-
-        $this->assertFalse($stored);
+        $this->assertFalse($this->tryToStore('test.off', $institution, false));
         $this->assertSame(1, db_connect()->table('feature_flag_overrides')->where('institution_id', $institution)->countAllResults());
     }
 
@@ -93,13 +87,56 @@ final class FeatureFlagsTest extends DatabaseTestCase
     {
         $this->change('test.off', null, true);
 
-        try {
-            $stored = db_connect()->table('feature_flag_overrides')->insert(['flag_key' => 'test.off', 'institution_id' => null, 'enabled' => 0]);
-        } catch (CodeIgniter\Database\Exceptions\DatabaseException) {
-            $stored = false;
-        }
+        $this->assertFalse($this->tryToStore('test.off', null, false), 'a plain unique key alone would let NULL repeat');
+        $this->assertSame(1, db_connect()->table('feature_flag_overrides')->where('flag_key', 'test.off')->where('institution_id IS NULL', null, false)->countAllResults());
+    }
 
-        $this->assertFalse($stored, 'a unique key alone would let NULL repeat');
+    public function testAGlobalRowIsMarkedGlobalAndAnInstitutionsRowIsNot(): void
+    {
+        $institution = $this->institution();
+        $this->change('test.off', null, true);
+        $this->change('test.on', $institution, false);
+
+        $global = db_connect()->table('feature_flag_overrides')->where('flag_key', 'test.off')->get()->getRowArray();
+        $mine   = db_connect()->table('feature_flag_overrides')->where('flag_key', 'test.on')->get()->getRowArray();
+
+        $this->assertSame(1, (int) $global['is_global']);
+        $this->assertNull($mine['is_global']);
+    }
+
+    public function testTheMarkerCannotBeSetWrongThroughTheModel(): void
+    {
+        $institution = $this->institution();
+
+        (new FeatureFlagOverrideModel())->insert(['flag_key' => 'test.off', 'institution_id' => $institution, 'is_global' => 1, 'enabled' => 1]);
+        (new FeatureFlagOverrideModel())->insert(['flag_key' => 'test.on', 'institution_id' => null, 'is_global' => null, 'enabled' => 1]);
+
+        $this->assertNull(db_connect()->table('feature_flag_overrides')->where('flag_key', 'test.off')->get()->getRowArray()['is_global']);
+        $this->assertSame(1, (int) db_connect()->table('feature_flag_overrides')->where('flag_key', 'test.on')->get()->getRowArray()['is_global']);
+    }
+
+    public function testTheMarkerFollowsARowWhoseScopeChanges(): void
+    {
+        $institution = $this->institution();
+        $this->change('test.off', $institution, true);
+        $id = (int) db_connect()->table('feature_flag_overrides')->get()->getRowArray()['id'];
+
+        (new FeatureFlagOverrideModel())->update($id, ['institution_id' => null]);
+
+        $row = db_connect()->table('feature_flag_overrides')->where('id', $id)->get()->getRowArray();
+
+        $this->assertNull($row['institution_id']);
+        $this->assertSame(1, (int) $row['is_global']);
+    }
+
+    /** Tries to store a row; false when the database refuses it. */
+    private function tryToStore(string $key, ?int $institution, bool $enabled): bool
+    {
+        try {
+            return (new FeatureFlagOverrideModel())->insert(['flag_key' => $key, 'institution_id' => $institution, 'enabled' => (int) $enabled]) !== false;
+        } catch (CodeIgniter\Database\Exceptions\DatabaseException) {
+            return false;
+        }
     }
 
     public function testDifferentFlagsAndInstitutionsCanEachHaveTheirOwnRow(): void

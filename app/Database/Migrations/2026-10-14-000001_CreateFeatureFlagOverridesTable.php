@@ -17,9 +17,15 @@ use CodeIgniter\Database\Migration;
  *   institution_id set    that institution's own override, on or off.
  *
  * An override carries the reason it was made (note) and may end on a date
- * (ends_on, the last day it applies), after which it is ignored. The
- * institution_key column makes "one row per flag and institution" hold for
- * the global row too, since a unique key does not treat NULLs as equal.
+ * (ends_on, the last day it applies), after which it is ignored.
+ *
+ * "One row per flag and institution" must hold for the global row too, but a
+ * unique key treats NULLs as all different. So a global row also carries
+ * is_global = 1 (and an institution row leaves it NULL), and the pair
+ * (flag_key, is_global) is unique. Plain columns, so it behaves the same on
+ * MySQL and MariaDB, and the foreign key can cascade. (The two columns are kept
+ * in step by FeatureFlagOverrideModel, not by a CHECK: MySQL refuses a CHECK on a
+ * column that has a cascading foreign key.)
  */
 class CreateFeatureFlagOverridesTable extends Migration
 {
@@ -43,6 +49,13 @@ class CreateFeatureFlagOverridesTable extends Migration
                 'type'       => 'INT',
                 'constraint' => 20,
                 'unsigned'   => true,
+                'null'       => true,
+            ],
+
+            // 1 on a global row (institution_id NULL), NULL on an institution's row. See above.
+            'is_global' => [
+                'type'       => 'TINYINT',
+                'constraint' => 1,
                 'null'       => true,
             ],
 
@@ -83,14 +96,11 @@ class CreateFeatureFlagOverridesTable extends Migration
 
         $this->forge->addKey('id', true);
         $this->forge->addKey('flag_key');
-        $this->forge->addKey('institution_id');
+        $this->forge->addUniqueKey(['flag_key', 'institution_id']);
+        $this->forge->addUniqueKey(['flag_key', 'is_global']);
         $this->forge->addForeignKey('institution_id', 'institutions', 'id', 'CASCADE', 'CASCADE');
 
         $this->forge->createTable('feature_flag_overrides');
-
-        // 0 stands for "global" so the pair (flag, institution) is unique even when institution_id is NULL.
-        $this->db->query('ALTER TABLE feature_flag_overrides ADD COLUMN institution_key INT UNSIGNED AS (COALESCE(institution_id, 0)) PERSISTENT AFTER institution_id');
-        $this->db->query('ALTER TABLE feature_flag_overrides ADD UNIQUE KEY flag_scope (flag_key, institution_key)');
     }
 
     public function down()
