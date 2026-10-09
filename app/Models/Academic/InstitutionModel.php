@@ -118,6 +118,18 @@ class InstitutionModel extends Model
         return $this->where('institutions.status', self::PAST);
     }
 
+    /** Brings a deleted institution back, with the status it had. False when it was not deleted. */
+    public function restore(int $id): bool
+    {
+        $builder = $this->db->table($this->table)->where($this->primaryKey, $id)->where('deleted_at IS NOT NULL', null, false);
+
+        if ($builder->countAllResults(false) === 0) {
+            return false;
+        }
+
+        return (bool) $builder->update(['deleted_at' => null]);
+    }
+
     /**
      * The code's uniqueness rule skips the institution's own row by reading its
      * id from the data, and update($id, ...) does not put the id there. Adding

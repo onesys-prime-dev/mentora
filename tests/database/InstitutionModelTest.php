@@ -147,6 +147,28 @@ final class InstitutionModelTest extends DatabaseTestCase
         $this->assertFalse($this->model->insert(['name' => 'Impostor', 'code' => 'RESERVED']), 'the code is held until it is purged');
     }
 
+    public function testRestoringBringsADeletedInstitutionBackWithItsStatus(): void
+    {
+        $id = $this->create('BACK', 'past');
+        $this->model->delete($id);
+
+        $this->assertTrue($this->model->restore($id));
+
+        $row = (new InstitutionModel())->find($id);
+
+        $this->assertNotNull($row);
+        $this->assertNull($row['deleted_at']);
+        $this->assertSame('past', $row['status']);
+    }
+
+    public function testRestoringSomethingNotDeletedOrMissingChangesNothing(): void
+    {
+        $id = $this->create('LIVE');
+
+        $this->assertFalse($this->model->restore($id), 'it was never deleted');
+        $this->assertFalse($this->model->restore(999999), 'there is no such institution');
+    }
+
     public function testPurgingRemovesTheRowForGood(): void
     {
         $id = $this->create('PURGE1');
