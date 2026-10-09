@@ -237,4 +237,8 @@ $routes->group('instructor', ['filter' => 'group:instructor'], function ($routes
 $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('/', 'Admin\HomeController::index');
     $routes->get('dashboard', 'Admin\HomeController::index');
+
+    // Password confirmation in front of dangerous actions (the `reauth` filter).
+    $routes->get('reauth', 'Admin\ReauthController::show');
+    $routes->post('reauth', 'Admin\ReauthController::confirm');
 });

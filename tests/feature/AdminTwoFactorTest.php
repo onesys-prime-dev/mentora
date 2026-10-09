@@ -42,22 +42,6 @@ final class AdminTwoFactorTest extends RouteTestCase
         return 'root@mentora.test';
     }
 
-    /**
-     * One browser step. Each feature-test request starts with a blank session,
-     * so what the last step left in it is carried into the next one, the way
-     * a browser keeps its cookie.
-     *
-     * @param array<string, string> $data
-     */
-    private function step(string $verb, string $uri, array $data = []): \CodeIgniter\Test\TestResponse
-    {
-        $result = $this->call($verb, $uri, $data);
-
-        $this->withSession();
-
-        return $result;
-    }
-
     private function signIn(string $email, string $password = self::PASSWORD): string
     {
         return $this->step('POST', 'login', ['email' => $email, 'password' => $password])->response()->getHeaderLine('Location');
