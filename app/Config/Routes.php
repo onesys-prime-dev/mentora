@@ -246,4 +246,8 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('audit-log', 'Admin\AuditLogController::index');
     $routes->get('audit-log/export', 'Admin\AuditLogController::export');
     $routes->post('audit-log/settings', 'Admin\AuditLogController::updateSettings', ['filter' => 'reauth']);
+
+    // Roles and permissions: view the matrix, change one cell (permission first, then password).
+    $routes->get('roles', 'Admin\RolesController::index', ['filter' => 'permission:roles.view']);
+    $routes->post('roles/permissions', 'Admin\RolesController::toggle', ['filter' => ['permission:roles.manage', 'reauth']]);
 });
