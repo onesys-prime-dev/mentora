@@ -100,6 +100,15 @@ final class SystemAdminServiceTest extends DatabaseTestCase
         $this->assertTrue(model(UserModel::class)->findByCredentials(['email' => 'cli@mentora.test'])->inGroup('admin'));
     }
 
+    public function testTheSparkCommandSaysWhatToDoNext(): void
+    {
+        $output = $this->runCommand('admin:create next@mentora.test next.admin a-long-password-1');
+
+        $this->assertStringContainsString('mail:test next@mentora.test', $output);
+        $this->assertStringContainsString('6-digit code', $output);
+        $this->assertStringNotContainsString('a-long-password-1', $output, 'the password is never echoed back');
+    }
+
     public function testTheSparkCommandRefusesBadInputAndCreatesNothing(): void
     {
         $output = $this->runCommand('admin:create nope cli.admin a-long-password-1');

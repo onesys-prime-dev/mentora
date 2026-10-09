@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use CodeIgniter\Config\Services;
 use CodeIgniter\Email\Email;
+use Throwable;
 
 /**
  * Stands in for the mailer so tests never send mail. Every message that
@@ -20,6 +21,9 @@ final class FakeEmail extends Email
 
     /** Set to true to behave like a machine with no mail server: send() fails. */
     public bool $failToSend = false;
+
+    /** Set to make send() throw, like a mailer that cannot even open the connection. */
+    public ?Throwable $throwOnSend = null;
 
     private string $capturedTo = '';
 
@@ -59,6 +63,10 @@ final class FakeEmail extends Email
 
     public function send($autoClear = true)
     {
+        if ($this->throwOnSend !== null) {
+            throw $this->throwOnSend;
+        }
+
         if ($this->failToSend) {
             return false;
         }
