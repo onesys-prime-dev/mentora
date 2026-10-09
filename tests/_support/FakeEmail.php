@@ -18,6 +18,9 @@ final class FakeEmail extends Email
     /** @var list<array{to: string, subject: string, message: string}> */
     public array $sent = [];
 
+    /** Set to true to behave like a machine with no mail server: send() fails. */
+    public bool $failToSend = false;
+
     private string $capturedTo = '';
 
     private string $capturedSubject = '';
@@ -56,7 +59,11 @@ final class FakeEmail extends Email
 
     public function send($autoClear = true)
     {
-        $this->sent[] = ['to' => $this->capturedTo, 'subject' => $this->capturedSubject, 'message' => $this->capturedBody];
+        if ($this->failToSend) {
+            return false;
+        }
+
+        $this->sent[] =['to' => $this->capturedTo, 'subject' => $this->capturedSubject, 'message' => $this->capturedBody];
 
         return true;
     }
