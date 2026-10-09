@@ -7,15 +7,13 @@ use App\Services\Auth\ActiveRoleService;
 
 class RedirectController extends BaseController
 {
-    // No route group exists yet for 'chairperson' — that lands with the
-    // dashboard branch of the chairperson plan. Until then a chairperson's
-    // active role correctly resolves, but there's nowhere to send them.
     protected array $dashboards = [
-        'admin'      => '/admin/dashboard',
-        'student'    => '/student/dashboard',
-        'instructor' => '/instructor/dashboard',
-        'registrar'  => '/registrar/dashboard',
-        'parent'     => '/parent/dashboard',
+        'admin'       => '/admin/dashboard',
+        'student'     => '/student/dashboard',
+        'instructor'  => '/instructor/dashboard',
+        'chairperson' => '/chairperson/dashboard',
+        'registrar'   => '/registrar/dashboard',
+        'parent'      => '/parent/dashboard',
     ];
 
     public function index()
@@ -38,5 +36,26 @@ class RedirectController extends BaseController
         }
 
         return redirect()->to($this->dashboards[$role]);
+    }
+
+    public function switchRole()
+    {
+        if (! auth()->loggedIn()) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON(['error' => 'Authentication required.']);
+        }
+
+        $role = $this->request->getPost('role');
+
+        if (! is_string($role) || ! (new ActiveRoleService())->switchTo(auth()->user(), $role)) {
+            return $this->response
+                ->setStatusCode(422)
+                ->setJSON(['error' => 'You cannot switch to that role.']);
+        }
+
+        $redirect = $this->dashboards[$role] ?? '/';
+
+        return $this->response->setJSON(['redirect' => site_url($redirect)]);
     }
 }

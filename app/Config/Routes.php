@@ -4,6 +4,7 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 $routes->get('/', 'Auth\RedirectController::index');
+$routes->post('role/switch', 'Auth\RedirectController::switchRole');
 
 service('auth')->routes($routes);
 
@@ -14,7 +15,7 @@ $routes->get('health', 'HealthController::index');
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
 
-$routes->group('student', ['filter' => ['group:student', 'readonly']], function ($routes) {
+$routes->group('student', ['filter' => ['role:student', 'readonly']], function ($routes) {
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
@@ -78,7 +79,7 @@ $routes->group('student', ['filter' => ['group:student', 'readonly']], function 
     });
 });
 
-$routes->group('instructor', ['filter' => ['group:instructor', 'readonly']], function ($routes) {
+$routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], function ($routes) {
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
@@ -98,6 +99,7 @@ $routes->group('instructor', ['filter' => ['group:instructor', 'readonly']], fun
 
         $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar');
     });
+
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
     $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
@@ -233,6 +235,12 @@ $routes->group('instructor', ['filter' => ['group:instructor', 'readonly']], fun
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
 });
+
+$routes->group('chairperson', ['filter' => 'role:chairperson'], function ($routes) {
+    $routes->get('/', 'Dashboard\DashboardController::index');
+    $routes->get('dashboard', 'Dashboard\DashboardController::index');
+});
+
 // System administrator area: platform-wide, above every institution.
 $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('/', 'Admin\HomeController::index');

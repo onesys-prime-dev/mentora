@@ -5,6 +5,7 @@ namespace Config;
 use App\Filters\AssessmentScope;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
+use App\Filters\RoleFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -40,6 +41,7 @@ class Filters extends BaseFilters
         'assessmentscope' => AssessmentScope::class,
         'reauth'        => ReauthFilter::class,
         'readonly'      => ReadOnlyFilter::class,
+        'role'          => RoleFilter::class,
     ];
 
     /**

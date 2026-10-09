@@ -19,7 +19,7 @@ final class RouteAccessTest extends RouteTestCase
     private const VERBS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
     /** Top-level route prefixes that may exist: public pages, Shield's auth pages, and the role areas. */
-    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'files', 'student', 'instructor', 'admin'];
+    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'files', 'student', 'instructor', 'chairperson', 'admin', 'role'];
 
     /**
      * Every registered route as [verb, example URL, role area].
@@ -128,5 +128,17 @@ final class RouteAccessTest extends RouteTestCase
         $this->assertSame(302, $response->getStatusCode(), "a {$other} must not reach {$verb} {$uri}");
         $this->assertStringNotContainsString($uri, $response->getHeaderLine('Location'), 'they must be sent away, not onward');
         $this->assertStringNotContainsString('/login', $response->getHeaderLine('Location'), 'they are signed in, so this is a role refusal, not a login prompt');
+    }
+
+    public function testAUserWithBothRolesCanOnlyReachTheActiveRoleArea(): void
+    {
+        $user = CourseFactory::user('chairperson');
+        $user->addGroup('instructor');
+        $this->loggedInAs($user);
+
+        $response = $this->call('GET', '/instructor/dashboard?role=instructor')->response();
+
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertStringNotContainsString('/instructor/dashboard', $response->getHeaderLine('Location'));
     }
 }

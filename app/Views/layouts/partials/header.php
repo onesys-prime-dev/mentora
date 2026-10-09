@@ -1,5 +1,9 @@
 <?php
-$userRole = esc($user->getGroups()[0]);
+$userRoles = array_values(array_filter($user->getGroups(), 'is_string'));
+$activeRole = active_role();
+$userRole = $activeRole !== '' ? $activeRole : ($userRoles[0] ?? '');
+$userRole = esc($userRole);
+$canSwitchRole = count($userRoles) > 1;
 
 /*
 | Account menu identity. A student is identified by number and program; an
@@ -179,6 +183,35 @@ $accountLinks = [
                     </div>
 
                 </div>
+
+                <?php if ($canSwitchRole): ?>
+                    <div class="border-b border-gray-100 px-4 py-3">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                            Switch role
+                        </p>
+
+                        <div
+                            class="flex flex-col gap-1"
+                            data-role-switch
+                            data-role-switch-url="<?= esc(site_url('role/switch'), 'attr') ?>">
+                            <?php foreach ($userRoles as $role): ?>
+                                <button
+                                    type="button"
+                                    class="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[#F2F7FF] disabled:cursor-wait disabled:opacity-60"
+                                    data-role-switch-button
+                                    data-role="<?= esc($role, 'attr') ?>"
+                                    <?= $role === $activeRole ? 'aria-current="true" disabled' : '' ?>>
+                                    <span><?= esc(ucfirst($role)) ?></span>
+                                    <?php if ($role === $activeRole): ?>
+                                        <span class="text-xs font-semibold text-[#0040A6]">Active</span>
+                                    <?php endif; ?>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <p class="mt-2 hidden text-xs text-red-600" data-role-switch-error role="alert"></p>
+                    </div>
+                <?php endif; ?>
 
                 <!-- Links -->
                 <nav class="flex flex-col p-2" aria-label="Account">

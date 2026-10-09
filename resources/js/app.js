@@ -2,6 +2,7 @@ import "../css/app.css";
 
 import "./shared/profile-menu";
 import "./shared/app-menu";
+import "./shared/role-switch";
 
 const page = document.body.dataset.page;
 
