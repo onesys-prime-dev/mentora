@@ -15,7 +15,7 @@ $routes->get('health', 'HealthController::index');
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
 
-$routes->group('student', ['filter' => ['group:student', 'readonly']], function ($routes) {
+$routes->group('student', ['filter' => ['role:student', 'readonly']], function ($routes) {
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
@@ -79,7 +79,7 @@ $routes->group('student', ['filter' => ['group:student', 'readonly']], function 
     });
 });
 
-$routes->group('instructor', ['filter' => ['group:instructor', 'readonly']], function ($routes) {
+$routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], function ($routes) {
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 

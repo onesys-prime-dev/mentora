@@ -41,6 +41,7 @@ class Filters extends BaseFilters
         'assessmentscope' => AssessmentScope::class,
         'reauth'        => ReauthFilter::class,
         'readonly'      => ReadOnlyFilter::class,
+        'role'          => RoleFilter::class,
     ];
 
     /**
