@@ -143,7 +143,7 @@ class SubscriptionService
     {
         $term = SubscriptionInput::term($input);
 
-        $this->institution($institutionId);
+        $institution = $this->institution($institutionId);
 
         $subscription = $this->forInstitution($institutionId)
             ?? throw new InvalidArgumentException('This institution has no subscription yet. Start one first.');
@@ -164,19 +164,34 @@ class SubscriptionService
 
         $before = ['plan_id' => (int) $subscription['plan_id'], 'end_date' => $subscription['end_date']];
 
-        $rowId = $this->inTransaction(function () use ($subscription, $term, $actor): int {
+        // A renewal brings a read-only or past institution back, as far as the new end date allows.
+        $statusFrom = (string) $institution['status'];
+        $statusTo   = (new SubscriptionLifecycle())->statusAfterRenewal($institutionId, $statusFrom, $term['period_end'], new DateTimeImmutable());
+
+        $rowId = $this->inTransaction(function () use ($subscription, $term, $actor, $institutionId, $statusTo): int {
             $updated = (new SubscriptionModel())->update((int) $subscription['id'], ['plan_id' => $term['plan_id'], 'end_date' => $term['period_end']]);
 
             if (! $updated) {
                 throw new RuntimeException('The subscription could not be updated.');
             }
 
+            if ($statusTo !== null && ! (new InstitutionModel())->update($institutionId, ['status' => $statusTo])) {
+                throw new RuntimeException('The institution could not be reactivated.');
+            }
+
             return $this->addRow((int) $subscription['id'], SubscriptionRenewalModel::RENEWAL, null, $term, $actor);
         });
 
+        $statusChange = $statusTo === null ? [] : ['institution_status' => $statusFrom];
+
         $this->auditedChange(
-            function () use ($subscription, $before, $rowId): void {
+            function () use ($subscription, $before, $rowId, $institutionId, $statusTo, $statusFrom): void {
                 (new SubscriptionModel())->update((int) $subscription['id'], $before);
+
+                if ($statusTo !== null) {
+                    (new InstitutionModel())->update($institutionId, ['status' => $statusFrom]);
+                }
+
                 $this->removeRow($rowId);
             },
             'subscription.renewed',
@@ -185,8 +200,8 @@ class SubscriptionService
             (int) $subscription['id'],
             $institutionId,
             [
-                'old' => ['plan_id' => $before['plan_id'], 'end_date' => $before['end_date']],
-                'new' => ['plan' => $plan['name'], 'end_date' => $term['period_end']] + $term,
+                'old' => ['plan_id' => $before['plan_id'], 'end_date' => $before['end_date']] + $statusChange,
+                'new' => ['plan' => $plan['name'], 'end_date' => $term['period_end']] + $term + ($statusTo === null ? [] : ['institution_status' => $statusTo]),
             ],
         );
     }
