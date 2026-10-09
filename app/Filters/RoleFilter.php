@@ -11,6 +11,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 final class RoleFilter implements FilterInterface
 {
+    /** @return ResponseInterface|null */
     public function before(RequestInterface $request, $arguments = null)
     {
         if (! auth()->loggedIn()) {

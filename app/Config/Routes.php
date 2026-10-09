@@ -100,10 +100,6 @@ $routes->group('instructor', ['filter' => 'role:instructor'], function ($routes)
         $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar');
     });
 
-    $routes->group('chairperson', ['filter' => 'role:chairperson'], function ($routes) {
-        $routes->get('/', 'Dashboard\DashboardController::index');
-        $routes->get('dashboard', 'Dashboard\DashboardController::index');
-    });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
     $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
@@ -239,6 +235,12 @@ $routes->group('instructor', ['filter' => 'role:instructor'], function ($routes)
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
 });
+
+$routes->group('chairperson', ['filter' => 'role:chairperson'], function ($routes) {
+    $routes->get('/', 'Dashboard\DashboardController::index');
+    $routes->get('dashboard', 'Dashboard\DashboardController::index');
+});
+
 // System administrator area: platform-wide, above every institution.
 $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('/', 'Admin\HomeController::index');
