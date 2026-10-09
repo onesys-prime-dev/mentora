@@ -262,11 +262,44 @@ final class AdminSubscriptionPageTest extends RouteTestCase
     {
         $this->submit($this->uri(), $this->term(['period_start' => '2025-01-01', 'period_end' => '2025-12-31']));
 
-        $this->assertStringContainsString('>Ended<', $this->body());
+        $this->assertStringContainsString('>Expired<', $this->body());
 
         $this->submit($this->uri('/renew'), $this->term(['period_start' => '2026-01-01', 'period_end' => date('Y-m-d', strtotime('+1 year'))]));
 
         $this->assertStringContainsString('Running', $this->body());
+    }
+
+    /** @return iterable<string, array{string, string, string}> end date relative to today, badge, sentence */
+    public static function provideTimelineStates(): iterable
+    {
+        yield 'far from the end' => ['+200 days', '>Running<', 'days until the end date'];
+        yield 'close to the end' => ['+10 days', '>Expiring soon<', 'Ends in 10 days'];
+        yield 'ends today' => ['+0 days', '>Expiring soon<', 'Ends today'];
+        yield 'just ended' => ['-3 days', '>Grace period<', 'Full access continues until'];
+        yield 'after grace' => ['-30 days', '>Read-only<', 'Read-only until'];
+        yield 'long after' => ['-200 days', '>Expired<', 'a renewal brings it back'];
+    }
+
+    #[DataProvider('provideTimelineStates')]
+    public function testThePageShowsWhereTheSubscriptionIsOnItsTimeline(string $end, string $badge, string $sentence): void
+    {
+        $this->submit($this->uri(), $this->term(['period_start' => '2020-01-01', 'period_end' => date('Y-m-d', strtotime($end))]));
+
+        $body = $this->body();
+
+        $this->assertStringContainsString($badge, $body);
+        $this->assertStringContainsString($sentence, $body);
+    }
+
+    public function testRenewingAPastInstitutionShowsItActiveAgainInTheList(): void
+    {
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'past']);
+        $this->submit($this->uri(), $this->term(['period_start' => '2020-01-01', 'period_end' => '2020-12-31']));
+
+        $this->submit($this->uri('/renew'), $this->term(['period_start' => '2021-01-01', 'period_end' => date('Y-m-d', strtotime('+1 year'))]));
+
+        $this->assertSame('active', db_connect()->table('institutions')->where('id', $this->institution)->get()->getRowArray()['status']);
+        $this->assertStringContainsString('>Running<', $this->body());
     }
 
     /*

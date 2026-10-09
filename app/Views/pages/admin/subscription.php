@@ -16,6 +16,23 @@ $label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
 
 $money = static fn (?string $amount, string $currency): string => $amount === null ? '—' : esc($currency) . ' ' . number_format((float) $amount, 2);
 
+/** state => [badge text, badge colours] */
+$stateBadge = [
+    'active'    => ['Running', 'bg-green-100 text-green-800'],
+    'expiring'  => ['Expiring soon', 'bg-amber-100 text-amber-800'],
+    'grace'     => ['Grace period', 'bg-amber-100 text-amber-800'],
+    'read_only' => ['Read-only', 'bg-orange-100 text-orange-800'],
+    'expired'   => ['Expired', 'bg-red-100 text-red-800'],
+];
+
+$stateText = static fn ($status): string => match ($status->state) {
+    'active'    => $status->daysToEnd . ' days until the end date.',
+    'expiring'  => $status->daysToEnd === 0 ? 'Ends today.' : 'Ends in ' . $status->daysToEnd . ' day' . ($status->daysToEnd === 1 ? '' : 's') . '.',
+    'grace'     => 'Ended ' . $status->endDate . '. Full access continues until ' . $status->graceEnds . ', then the institution becomes read-only.',
+    'read_only' => 'Read-only until ' . $status->readOnlyEnds . ', then the institution becomes past. A renewal brings it back.',
+    default     => 'Expired. The institution is past; a renewal brings it back.',
+};
+
 $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Correction'];
 
 /** The term fields shared by the start and renew forms. */
@@ -87,12 +104,13 @@ $termFields = static function (string $prefix, string $defaultCurrency, array $p
     <div class="mt-6 rounded-lg bg-white p-6 shadow">
         <div class="flex flex-wrap items-center gap-3">
             <h2 class="text-lg font-semibold text-[#0040A6]"><?= esc($subscription['plan_name']) ?></h2>
-            <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $subRunning ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>"><?= $subRunning ? 'Running' : 'Ended' ?></span>
+            <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $stateBadge[$subStatus->state][1] ?>"><?= esc($stateBadge[$subStatus->state][0]) ?></span>
             <?php if ($subscription['plan_status'] === 'retired'): ?><span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">Plan retired</span><?php endif; ?>
         </div>
         <p class="mt-2 text-sm text-gray-700">
             From <strong><?= esc($subscription['start_date']) ?></strong> to <strong><?= esc($subscription['end_date']) ?></strong>.
         </p>
+        <p class="mt-1 text-sm text-gray-600"><?= esc($stateText($subStatus)) ?></p>
     </div>
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow">

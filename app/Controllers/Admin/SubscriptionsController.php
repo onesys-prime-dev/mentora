@@ -8,9 +8,11 @@ use App\Controllers\BaseController;
 use App\Models\Academic\InstitutionModel;
 use App\Services\Subscriptions\PlanService;
 use App\Services\Subscriptions\SubscriptionInput;
+use App\Services\Subscriptions\SubscriptionLifecycle;
 use App\Services\Subscriptions\SubscriptionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
+use DateTimeImmutable;
 use InvalidArgumentException;
 
 /**
@@ -50,6 +52,7 @@ class SubscriptionsController extends BaseController
             'subHistory'         => $subscription === null ? [] : $this->subscriptions->history((int) $subscription['id']),
             'subPlans'           => $plans,
             'subRunning'         => $subscription !== null && $this->subscriptions->isRunning($institutionId),
+            'subStatus'          => $subscription === null ? null : (new SubscriptionLifecycle())->statusOf((string) $subscription['end_date'], $institutionId, new DateTimeImmutable()),
             'subDefaultCurrency' => SubscriptionInput::DEFAULT_CURRENCY,
         ]);
     }

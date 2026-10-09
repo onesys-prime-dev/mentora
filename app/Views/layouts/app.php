@@ -43,6 +43,8 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 
         <?= $this->include('layouts/partials/header') ?>
 
+        <?= $this->include('layouts/partials/read-only-banner') ?>
+
         <main class="flex-1 <?= $mainGutter ?> <?= $mainSpacing ?>">
 
             <?= $this->renderSection('content') ?>
