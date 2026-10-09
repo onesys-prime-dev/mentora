@@ -5,6 +5,7 @@
  * @var string                    $formHeading
  * @var array<string, mixed>|null $plan       null when adding
  * @var array<string, mixed>      $formValues
+ * @var list<string>               $planFeatureKeys the feature flags that exist
  */
 $isEdit = $plan !== null;
 $action = $isEdit ? site_url('admin/plans/' . $plan['id']) : site_url('admin/plans');
@@ -45,7 +46,8 @@ $hint   = 'text-xs font-normal text-gray-500';
 
             <label class="flex flex-col gap-1 text-sm font-medium text-gray-700">Features granted
                 <textarea class="<?= $input ?> font-mono" name="features" rows="3" placeholder="one feature key per line"><?= esc((string) $formValues['features']) ?></textarea>
-                <span class="<?= $hint ?>">Feature keys, separated by new lines or commas. Lower-case letters, numbers, dots, dashes and underscores.</span>
+                <span class="<?= $hint ?>">Feature keys, one per line or separated by commas.
+                    <?php if ($planFeatureKeys === []): ?>There are no feature flags to choose from yet.<?php else: ?>Available: <span class="font-mono"><?= esc(implode(', ', $planFeatureKeys)) ?></span><?php endif; ?></span>
             </label>
 
             <fieldset class="flex flex-col gap-3">

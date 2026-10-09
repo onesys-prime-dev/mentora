@@ -122,6 +122,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                             <?php else: ?>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/edit') ?>">Edit</a>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>">Subscription</a>
+                                <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/flags') ?>">Features</a>
 
                                 <?php if (in_array($row['status'], ['active', 'read_only'], true)): ?>
                                     <form method="post" action="<?= site_url('admin/institutions/' . $row['id'] . '/suspend') ?>">

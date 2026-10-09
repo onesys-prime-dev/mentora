@@ -6,7 +6,9 @@ use App\Database\Seeds\PlansSeeder;
 use App\Models\Subscriptions\PlanModel;
 use App\Services\Audit\AuditLogger;
 use App\Services\Subscriptions\PlanService;
+use CodeIgniter\Config\Factories;
 use CodeIgniter\Config\Services;
+use Config\FeatureFlags as FlagConfig;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
@@ -32,12 +34,21 @@ final class PlanServiceTest extends DatabaseTestCase
 
         Services::resetSingle('auditLogger');
 
+        // The feature keys these tests give plans must be flags that exist.
+        config(FlagConfig::class)->flags = [
+            'sis.sync'    => ['description' => 'SIS', 'default' => false],
+            'ai.advanced' => ['description' => 'AI', 'default' => false],
+            'a.one'       => ['description' => 'One', 'default' => false],
+            'b.two'       => ['description' => 'Two', 'default' => false],
+        ];
+
         $this->service = new PlanService();
         $this->admin   = CourseFactory::user('admin');
     }
 
     protected function tearDown(): void
     {
+        Factories::reset('config');
         Services::resetSingle('auditLogger');
 
         parent::tearDown();
@@ -142,6 +153,62 @@ final class PlanServiceTest extends DatabaseTestCase
         $this->assertNull($row['storage_limit_mb']);
         $this->assertNull($row['ai_generation_limit']);
         $this->assertSame([], $this->service->find($id)['features']);
+    }
+
+    public function testAFeatureThatIsNotAFlagIsRefusedAndNothingIsCreated(): void
+    {
+        try {
+            $this->service->create($this->form(['name' => 'Typo', 'features' => 'sis.sync, sis.snyc']), $this->admin);
+            $this->fail('expected a refusal');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('"sis.snyc" is not a feature flag', $e->getMessage());
+            $this->assertStringContainsString('Choose from: sis.sync, ai.advanced, a.one, b.two', $e->getMessage());
+        }
+
+        $this->assertSame(0, db_connect()->table('plans')->countAllResults());
+    }
+
+    public function testSeveralUnknownFeaturesAreAllNamed(): void
+    {
+        try {
+            $this->service->create($this->form(['name' => 'Typos', 'features' => 'nope.one, nope.two']), $this->admin);
+            $this->fail('expected a refusal');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('"nope.one", "nope.two" are not feature flags', $e->getMessage());
+        }
+    }
+
+    public function testEditingCannotAddAFeatureThatIsNotAFlag(): void
+    {
+        $id = $this->service->create($this->form(['name' => 'Basic', 'features' => 'sis.sync']), $this->admin);
+
+        try {
+            $this->service->update($id, $this->form(['name' => 'Basic', 'features' => 'sis.sync, made.up']), $this->admin);
+            $this->fail('expected a refusal');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('"made.up"', $e->getMessage());
+        }
+
+        $this->assertSame(['sis.sync'], $this->service->find($id)['features']);
+    }
+
+    public function testAPlanKeepsAFeatureWhoseFlagWasRemovedAndCanStillBeEdited(): void
+    {
+        $id = $this->service->create($this->form(['name' => 'Basic', 'features' => 'a.one, b.two']), $this->admin);
+
+        // The flag "b.two" is later removed from the code.
+        config(FlagConfig::class)->flags = ['a.one' => ['description' => 'One', 'default' => false]];
+
+        $this->service->update($id, $this->form(['name' => 'Basic Renamed', 'features' => 'a.one, b.two']), $this->admin);
+
+        $plan = $this->service->find($id);
+
+        $this->assertSame('Basic Renamed', $plan['name']);
+        $this->assertSame(['a.one', 'b.two'], $plan['features'], 'the stale feature is still there');
+
+        $this->service->update($id, $this->form(['name' => 'Basic Renamed', 'features' => 'a.one']), $this->admin);
+
+        $this->assertSame(['a.one'], $this->service->find($id)['features'], 'and can be dropped');
     }
 
     public function testADuplicateNameIsRefusedWhateverItsCase(): void
