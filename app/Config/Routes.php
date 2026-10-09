@@ -4,6 +4,7 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 $routes->get('/', 'Auth\RedirectController::index');
+$routes->post('role/switch', 'Auth\RedirectController::switchRole');
 
 service('auth')->routes($routes);
 
@@ -97,6 +98,11 @@ $routes->group('instructor', ['filter' => 'role:instructor'], function ($routes)
         $routes->delete('reminders/(:num)', 'Calendar\ReminderController::destroy/$1');
 
         $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar');
+    });
+
+    $routes->group('chairperson', ['filter' => 'role:chairperson'], function ($routes) {
+        $routes->get('/', 'Dashboard\DashboardController::index');
+        $routes->get('dashboard', 'Dashboard\DashboardController::index');
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
