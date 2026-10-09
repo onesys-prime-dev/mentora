@@ -37,6 +37,7 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
     class="<?= $bodyHeight ?> bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
     style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
     data-page="<?= esc($page ?? '') ?>"
+    data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >
 
     <div class="flex flex-col <?= $shellHeight ?>">
