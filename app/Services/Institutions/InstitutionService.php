@@ -6,6 +6,7 @@ namespace App\Services\Institutions;
 
 use App\Models\Academic\InstitutionModel;
 use App\Services\Admin\PlatformSettings;
+use App\Services\Audit\RecordsAuditedChanges;
 use CodeIgniter\Shield\Entities\User;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -24,6 +25,8 @@ use Throwable;
  */
 class InstitutionService
 {
+    use RecordsAuditedChanges;
+
     /** Letters, numbers, dashes and underscores; 2 to 50 characters. */
     private const CODE_PATTERN = '/^[A-Z0-9][A-Z0-9_-]{1,49}$/';
 
@@ -397,27 +400,13 @@ class InstitutionService
     }
 
     /**
-     * Writes the audit entry for a change that has just been made. If that
-     * fails, $undo puts the change back and the failure is rethrown: nothing
-     * changes without a trace.
+     * Records an institution change in the audit log; see RecordsAuditedChanges.
      *
-     * @param callable(): mixed                            $undo
+     * @param callable(): mixed                                             $undo
      * @param array{old?: array<string, mixed>, new?: array<string, mixed>} $values
      */
     private function recorded(callable $undo, string $action, ?User $actor, int $institutionId, array $values): void
     {
-        try {
-            service('auditLogger')->log($action, $actor ?? auth()->user(), [
-                'target_type'    => 'institution',
-                'target_id'      => $institutionId,
-                'institution_id' => $institutionId,
-                'old'            => $values['old'] ?? null,
-                'new'            => $values['new'] ?? null,
-            ]);
-        } catch (Throwable $e) {
-            $undo();
-
-            throw $e;
-        }
+        $this->auditedChange($undo, $action, $actor, 'institution', $institutionId, $institutionId, $values);
     }
 }

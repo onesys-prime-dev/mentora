@@ -264,4 +264,13 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
 
     // Archive: past and deleted institutions, with restore and purge.
     $routes->get('archive', 'Admin\ArchiveController::index', ['filter' => 'permission:institutions.view']);
+
+    // Plans: look with subscriptions.view, change with subscriptions.manage; editing, retiring and reinstating also need the password.
+    $routes->get('plans', 'Admin\PlansController::index', ['filter' => 'permission:subscriptions.view']);
+    $routes->get('plans/new', 'Admin\PlansController::new', ['filter' => 'permission:subscriptions.manage']);
+    $routes->post('plans', 'Admin\PlansController::create', ['filter' => 'permission:subscriptions.manage']);
+    $routes->get('plans/(:num)/edit', 'Admin\PlansController::edit/$1', ['filter' => ['permission:subscriptions.manage', 'reauth']]);
+    $routes->post('plans/(:num)', 'Admin\PlansController::update/$1', ['filter' => ['permission:subscriptions.manage', 'reauth']]);
+    $routes->post('plans/(:num)/retire', 'Admin\PlansController::retire/$1', ['filter' => ['permission:subscriptions.manage', 'reauth']]);
+    $routes->post('plans/(:num)/reinstate', 'Admin\PlansController::reinstate/$1', ['filter' => ['permission:subscriptions.manage', 'reauth']]);
 });
