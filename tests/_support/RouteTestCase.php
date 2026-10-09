@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use CodeIgniter\Router\RouteCollection;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Test\AuthenticationTesting;
 use CodeIgniter\Test\FeatureTestTrait;
@@ -56,6 +57,13 @@ abstract class RouteTestCase extends DatabaseTestCase
     protected function tearDown(): void
     {
         auth()->logout();
+
+        // A test that mounted its own routes (withRoutes) added them to the shared
+        // route collection. Empty it, which also makes the next test load the real
+        // route table again, so nothing is left behind for the tests that read it.
+        if ($this->routes instanceof RouteCollection) {
+            service('routes')->resetRoutes();
+        }
 
         $this->removeStandInViteManifest();
 

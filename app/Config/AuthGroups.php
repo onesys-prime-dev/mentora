@@ -13,39 +13,30 @@ declare(strict_types=1);
 
 namespace Config;
 
+use App\Services\Admin\PermissionMatrix;
 use CodeIgniter\Shield\Config\AuthGroups as ShieldAuthGroups;
 
+/**
+ * Roles, permissions and which role has which permission.
+ *
+ * DEFAULT_MATRIX is what ships. A system administrator can change it from
+ * the roles page; those changes live in the role_permissions table and are
+ * applied on top of the defaults when this config is built, so every
+ * `$user->can()` and `permission:` route filter sees them on the next
+ * request. See PermissionMatrix.
+ *
+ * The `admin` role (system administrator) is locked: its row below is always
+ * used as it is.
+ */
 class AuthGroups extends ShieldAuthGroups
 {
-    /**
-     * --------------------------------------------------------------------
-     * Default Group
-     * --------------------------------------------------------------------
-     * The group that a newly registered user is added to.
-     */
     public string $defaultGroup = 'user';
 
-    /**
-     * --------------------------------------------------------------------
-     * Groups
-     * --------------------------------------------------------------------
-     * An associative array of the available groups in the system, where the keys
-     * are the group names and the values are arrays of the group info.
-     *
-     * Whatever value you assign as the key will be used to refer to the group
-     * when using functions such as:
-     *      $user->addGroup('superadmin');
-     *
-     * @var array<string, array<string, string>>
-     *
-     * @see https://codeigniter4.github.io/shield/quick_start_guide/using_authorization/#change-available-groups for more info
-     */
     public array $groups = [
         'student' => [
             'title'       => 'Student',
             'description' => 'Student Users',
         ],
-
         'instructor' => [
             'title'       => 'Instructor',
             'description' => 'Instructor Users',
@@ -69,54 +60,77 @@ class AuthGroups extends ShieldAuthGroups
     ];
 
     /**
-     * --------------------------------------------------------------------
-     * Permissions
-     * --------------------------------------------------------------------
-     * The available permissions in the system.
-     *
-     * If a permission is not listed here it cannot be used.
+     * Platform permissions come as view/manage pairs per area and belong to
+     * the system administrator; academic permissions belong to the roles that
+     * work inside an institution.
      */
     public array $permissions = [
-        'admin.access'        => 'Can access the sites admin area',
-        'admin.settings'      => 'Can access the main site settings',
-        'users.manage-admins' => 'Can manage other admins',
-        'users.create'        => 'Can create new non-admin users',
-        'users.edit'          => 'Can edit existing non-admin users',
-        'users.delete'        => 'Can delete existing non-admin users',
-        'beta.access'         => 'Can access beta-level features',
+        // Platform
+        'institutions.view'    => 'View institutions',
+        'institutions.manage'  => 'Create, edit, suspend, delete and restore institutions',
+        'subscriptions.view'   => 'View plans and subscriptions',
+        'subscriptions.manage' => 'Manage plans, subscriptions and renewals',
+        'users.view'           => 'View users across all institutions',
+        'users.manage'         => 'Create, edit, deactivate and sign out users',
+        'roles.view'           => 'View roles and permissions',
+        'roles.manage'         => 'Change which role has which permission',
+        'flags.view'           => 'View feature flags',
+        'flags.manage'         => 'Turn feature flags on or off',
+        'settings.view'        => 'View platform settings',
+        'settings.manage'      => 'Change platform settings',
+        'audit.view'           => 'View and export the audit log',
+        'audit.manage'         => 'Change audit log settings',
+        'monitoring.view'      => 'View system health and performance',
+        'monitoring.manage'    => 'Change monitoring settings',
+        'backup.view'          => 'View backup history',
+        'backup.manage'        => 'Start backups',
+        'integrations.view'    => 'View integrations',
+        'integrations.manage'  => 'Configure integrations',
+        'impersonation.start'  => 'View the platform as another user (view only)',
+
+        // Inside an institution
+        'courses.view'          => 'View courses',
+        'courses.manage'        => 'Edit course content and settings',
+        'grading.manage'        => 'Grade work and manage the gradebook',
+        'announcements.manage'  => 'Post and manage announcements',
+        'program.monitor'       => 'Monitor a whole program',
     ];
 
     /**
-     * --------------------------------------------------------------------
-     * Permissions Matrix
-     * --------------------------------------------------------------------
-     * Maps permissions to groups.
+     * What each role has before any customisation.
      *
-     * This defines group-level permissions.
+     * @var array<string, list<string>>
      */
-    public array $matrix = [
-        'superadmin' => [
-            'admin.*',
-            'users.*',
-            'beta.*',
-        ],
+    public const DEFAULT_MATRIX = [
+        // Platform-wide. No academic permissions: academic data is reached only
+        // by viewing as a user, never directly.
         'admin' => [
-            'admin.access',
-            'users.create',
-            'users.edit',
-            'users.delete',
-            'beta.access',
+            'institutions.view', 'institutions.manage',
+            'subscriptions.view', 'subscriptions.manage',
+            'users.view', 'users.manage',
+            'roles.view', 'roles.manage',
+            'flags.view', 'flags.manage',
+            'settings.view', 'settings.manage',
+            'audit.view', 'audit.manage',
+            'monitoring.view', 'monitoring.manage',
+            'backup.view', 'backup.manage',
+            'integrations.view', 'integrations.manage',
+            'impersonation.start',
         ],
-        'developer' => [
-            'admin.access',
-            'admin.settings',
-            'users.create',
-            'users.edit',
-            'beta.access',
-        ],
-        'user' => [],
-        'beta' => [
-            'beta.access',
-        ],
+        'institutional_admin' => ['courses.view', 'program.monitor'],
+        'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor'],
+        'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage'],
+        'student'             => ['courses.view'],
+        'parent'              => ['courses.view'],
     ];
+
+    /** @var array<string, list<string>> */
+    public array $matrix = self::DEFAULT_MATRIX;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->matrix = PermissionMatrix::apply(self::DEFAULT_MATRIX, PermissionMatrix::storedOverrides(), array_keys($this->permissions));
+    }
 }
