@@ -50,6 +50,8 @@ final class MigrationsTest extends DatabaseTestCase
             'assessments', 'assessment_submissions',
             // Course features
             'announcements', 'discussion_threads', 'discussion_replies',
+            // Platform
+            'audit_logs', 'settings',
         ];
 
         foreach ($tables as $table) {

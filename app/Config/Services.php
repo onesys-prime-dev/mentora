@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Services\Audit\AuditLogger;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -19,6 +20,16 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
+    /** The shared audit log writer; tests can replace it with injectMock('auditLogger', ...). */
+    public static function auditLogger(bool $getShared = true): AuditLogger
+    {
+        if ($getShared) {
+            return static::getSharedInstance('auditLogger');
+        }
+
+        return new AuditLogger();
+    }
+
     /*
      * public static function example($getShared = true)
      * {
