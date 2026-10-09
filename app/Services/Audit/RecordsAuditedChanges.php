@@ -20,13 +20,14 @@ trait RecordsAuditedChanges
      * @param callable(): mixed                                             $undo          puts the change back
      * @param array{old?: array<string, mixed>, new?: array<string, mixed>} $values        before and after, secrets are redacted by the logger
      * @param int|string                                                    $targetId
+     * @param array<string, mixed>                                          $extraDetails more for the log entry, e.g. an actor_label for a change made by the system
      *
      * @throws Throwable whatever stopped the entry from being written, after $undo has run
      */
-    protected function auditedChange(callable $undo, string $action, ?User $actor, string $targetType, $targetId, ?int $institutionId, array $values): void
+    protected function auditedChange(callable $undo, string $action, ?User $actor, string $targetType, $targetId, ?int $institutionId, array $values, array $extraDetails = []): void
     {
         try {
-            service('auditLogger')->log($action, $actor ?? auth()->user(), [
+            service('auditLogger')->log($action, $actor ?? auth()->user(), $extraDetails + [
                 'target_type'    => $targetType,
                 'target_id'      => $targetId,
                 'institution_id' => $institutionId,
