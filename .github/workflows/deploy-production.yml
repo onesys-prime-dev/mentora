@@ -52,6 +52,9 @@ jobs:
     name: CI
     needs: verify-tag
     uses: ./.github/workflows/ci.yml
+    # ci.yml reads GITLEAKS_LICENSE; a called workflow gets no secrets unless
+    # the caller passes them (pull_request runs get them directly).
+    secrets: inherit
 
   deploy:
     name: Production
