@@ -250,4 +250,14 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     // Roles and permissions: view the matrix, change one cell (permission first, then password).
     $routes->get('roles', 'Admin\RolesController::index', ['filter' => 'permission:roles.view']);
     $routes->post('roles/permissions', 'Admin\RolesController::toggle', ['filter' => ['permission:roles.manage', 'reauth']]);
+
+    // Institutions: look with institutions.view, change with institutions.manage; a restore also needs the password.
+    $routes->get('institutions', 'Admin\InstitutionsController::index', ['filter' => 'permission:institutions.view']);
+    $routes->get('institutions/new', 'Admin\InstitutionsController::new', ['filter' => 'permission:institutions.manage']);
+    $routes->post('institutions', 'Admin\InstitutionsController::create', ['filter' => 'permission:institutions.manage']);
+    $routes->get('institutions/(:num)/edit', 'Admin\InstitutionsController::edit/$1', ['filter' => 'permission:institutions.manage']);
+    $routes->post('institutions/(:num)', 'Admin\InstitutionsController::update/$1', ['filter' => 'permission:institutions.manage']);
+    $routes->post('institutions/(:num)/suspend', 'Admin\InstitutionsController::suspend/$1', ['filter' => 'permission:institutions.manage']);
+    $routes->post('institutions/(:num)/delete', 'Admin\InstitutionsController::delete/$1', ['filter' => 'permission:institutions.manage']);
+    $routes->post('institutions/(:num)/restore', 'Admin\InstitutionsController::restore/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
 });
