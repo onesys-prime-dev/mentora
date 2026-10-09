@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Institutions;
 
 use App\Models\Academic\InstitutionModel;
+use App\Services\Admin\PlatformSettings;
 use CodeIgniter\Shield\Entities\User;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use Throwable;
 
@@ -216,6 +218,172 @@ class InstitutionService
             $id,
             ['new' => ['name' => $institution['name'], 'status' => $institution['status']]],
         );
+    }
+
+    /**
+     * Permanently removes a deleted institution and everything under it
+     * (terms, departments, programs, courses, offerings, enrolments, work and
+     * grades: the database cascades from the institution row).
+     *
+     * User accounts are NOT removed: they are not part of an institution's
+     * tree. How many are left without any institution is written to the audit
+     * entry so they can be dealt with in user management.
+     *
+     * The audit entry is written first, so nothing irreversible happens
+     * without a trace; if the removal then fails, a second entry says so.
+     * The audit entry outlives the institution (it has no foreign keys).
+     *
+     * @param string|null $typedName when given (a person is purging), must be the institution's exact name
+     *
+     * @throws InvalidArgumentException
+     * @throws Throwable                whatever stopped the audit entry or the removal
+     */
+    public function purge(int $id, ?string $typedName = null, ?User $actor = null, string $actorLabel = ''): void
+    {
+        $institution = $this->find($id, true);
+
+        if ($institution === null || $institution['deleted_at'] === null) {
+            throw new InvalidArgumentException('Only a deleted institution can be purged.');
+        }
+
+        if ($typedName !== null && trim($typedName) !== $institution['name']) {
+            throw new InvalidArgumentException('Type the institution\'s exact name to confirm the purge.');
+        }
+
+        $details = [
+            'target_type'    => 'institution',
+            'target_id'      => $id,
+            'institution_id' => $id,
+            'old'            => array_merge(
+                ['name' => $institution['name'], 'code' => $institution['code'], 'status' => $institution['status'], 'deleted_at' => $institution['deleted_at']],
+                $this->contents($id),
+            ),
+        ];
+
+        if ($actorLabel !== '') {
+            $details['actor_label'] = $actorLabel;
+        }
+
+        $audit = service('auditLogger');
+        $who   = $actor ?? auth()->user();
+
+        $audit->log('institution.purged', $who, $details);
+
+        try {
+            (new InstitutionModel())->delete($id, true);
+        } catch (Throwable $e) {
+            $audit->log('institution.purge_failed', $who, array_merge($details, ['old' => null, 'new' => ['reason' => $e->getMessage()]]));
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Purges every deleted institution whose retention period is over.
+     *
+     * @return array{purged: list<int>, failed: array<int, string>} ids purged, and ids that failed with why
+     */
+    public function purgeExpired(DateTimeImmutable $now, bool $dryRun = false): array
+    {
+        $cutoff = PurgePolicy::cutoff($now, $this->retentionDays())->format('Y-m-d H:i:s');
+
+        $due = (new InstitutionModel())->onlyDeleted()->where('institutions.deleted_at <=', $cutoff)->orderBy('institutions.deleted_at')->findAll();
+
+        $result = ['purged' => [], 'failed' => []];
+
+        foreach ($due as $institution) {
+            $id = (int) $institution['id'];
+
+            if ($dryRun) {
+                $result['purged'][] = $id;
+
+                continue;
+            }
+
+            try {
+                $this->purge($id, null, null, 'system (scheduled purge)');
+                $result['purged'][] = $id;
+            } catch (Throwable $e) {
+                $result['failed'][$id] = $e->getMessage();
+            }
+        }
+
+        return $result;
+    }
+
+    /** How many days a deleted institution can be restored, from the platform setting. */
+    public function retentionDays(): int
+    {
+        return (int) (new PlatformSettings())->get('deletedInstitutionRetentionDays');
+    }
+
+    /**
+     * Past institutions (suspended or lapsed): kept, read-only, renewable.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function pastInstitutions(int $limit = 500): array
+    {
+        return (new InstitutionModel())->past()->orderBy('institutions.name')->findAll($limit);
+    }
+
+    /**
+     * Deleted institutions with the day each is purged, soonest first.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function deletedInstitutions(DateTimeImmutable $now, int $limit = 500): array
+    {
+        $days = $this->retentionDays();
+        $rows = (new InstitutionModel())->onlyDeleted()->orderBy('institutions.deleted_at')->findAll($limit);
+
+        foreach ($rows as &$row) {
+            $row['purge_on']  = PurgePolicy::dueAt($row['deleted_at'], $days)->format('Y-m-d');
+            $row['days_left'] = PurgePolicy::daysLeft($row['deleted_at'], $now, $days);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * What a purge removes, and what it leaves behind.
+     *
+     * @return array{departments: int, programs: int, courses: int, members: int, members_left_without_an_institution: int}
+     */
+    public function contents(int $institutionId): array
+    {
+        $db = db_connect();
+
+        $departments = $db->table('departments')->where('institution_id', $institutionId)->countAllResults();
+
+        $programs = $db->table('programs')
+            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
+            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->where('departments.institution_id', $institutionId)
+            ->countAllResults();
+
+        $courses = $db->table('courses')
+            ->join('programs', 'programs.id = courses.program_id')
+            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
+            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->where('departments.institution_id', $institutionId)
+            ->countAllResults();
+
+        $members = $db->table('institution_users')->where('institution_id', $institutionId)->countAllResults();
+
+        // Members who belong to no other institution: still there as accounts, but with nowhere to go.
+        $alone = $db->table('institution_users')
+            ->where('institution_id', $institutionId)
+            ->where('user_id NOT IN (SELECT user_id FROM institution_users WHERE institution_id <> ' . $institutionId . ')', null, false)
+            ->countAllResults();
+
+        return [
+            'departments'                         => $departments,
+            'programs'                            => $programs,
+            'courses'                             => $courses,
+            'members'                             => $members,
+            'members_left_without_an_institution' => $alone,
+        ];
     }
 
     /**

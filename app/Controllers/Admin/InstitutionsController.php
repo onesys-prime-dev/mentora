@@ -96,20 +96,32 @@ class InstitutionsController extends BaseController
         return $this->act(fn () => $this->institutions->restore($id), 'Institution restored.');
     }
 
+    /** Permanently removes a deleted institution. Needs the exact name typed and the password (see the routes). */
+    public function purge(int $id): RedirectResponse
+    {
+        return $this->act(
+            fn () => $this->institutions->purge($id, (string) $this->request->getPost('confirm_name')),
+            'Institution purged. It and everything in it has been permanently removed.',
+        );
+    }
+
     /**
-     * Runs an action and goes back to the list with its outcome.
+     * Runs an action and goes back with its outcome: to the archive when the
+     * request came from there, otherwise to the list.
      *
      * @param callable(): void $action
      */
     private function act(callable $action, string $success): RedirectResponse
     {
+        $back = $this->request->getPost('return') === 'archive' ? 'admin/archive' : 'admin/institutions';
+
         try {
             $action();
         } catch (InvalidArgumentException $e) {
-            return redirect()->to('admin/institutions')->with('error', $e->getMessage());
+            return redirect()->to($back)->with('error', $e->getMessage());
         }
 
-        return redirect()->to('admin/institutions')->with('message', $success);
+        return redirect()->to($back)->with('message', $success);
     }
 
     /**

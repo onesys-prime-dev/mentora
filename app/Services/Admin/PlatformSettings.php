@@ -31,6 +31,7 @@ class PlatformSettings
      */
     private const DEFINITIONS = [
         'auditRetentionDays'   => ['type' => 'int', 'label' => 'Audit log retention (days)', 'institution' => false, 'min' => 30, 'max' => 3650],
+        'deletedInstitutionRetentionDays' => ['type' => 'int', 'label' => 'Days a deleted institution can be restored', 'institution' => false, 'min' => 1, 'max' => 3650],
         'auditShowSourceIp'    => ['type' => 'bool', 'label' => 'Show source IP in the audit log', 'institution' => false],
         'impersonationMinutes' => ['type' => 'int', 'label' => 'Impersonation time limit (minutes)', 'institution' => false, 'min' => 5, 'max' => 240],
         'backupAlertHours'     => ['type' => 'int', 'label' => 'Backup alert age (hours)', 'institution' => false, 'min' => 1, 'max' => 720],
