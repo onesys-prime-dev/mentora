@@ -6,6 +6,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\Academic\InstitutionModel;
+use App\Services\Subscriptions\PlanLimits;
 use App\Services\Subscriptions\PlanService;
 use App\Services\Subscriptions\SubscriptionInput;
 use App\Services\Subscriptions\SubscriptionLifecycle;
@@ -51,6 +52,7 @@ class SubscriptionsController extends BaseController
             'subscription'       => $subscription,
             'subHistory'         => $subscription === null ? [] : $this->subscriptions->history((int) $subscription['id']),
             'subPlans'           => $plans,
+            'subUsage'           => $subscription === null ? null : (new PlanLimits())->report($institutionId),
             'subRunning'         => $subscription !== null && $this->subscriptions->isRunning($institutionId),
             'subStatus'          => $subscription === null ? null : (new SubscriptionLifecycle())->statusOf((string) $subscription['end_date'], $institutionId, new DateTimeImmutable()),
             'subDefaultCurrency' => SubscriptionInput::DEFAULT_CURRENCY,

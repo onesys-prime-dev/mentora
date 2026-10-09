@@ -5,6 +5,7 @@ namespace App\Services\Courses\Assessments;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\HTTP\Files\UploadedFile;
 
+use App\Services\Subscriptions\PlanLimits;
 use App\Models\Assessments\AiGenerationBatchModel;
 use App\Models\Assessments\AiGeneratedQuestionModel;
 use App\Models\Assessments\AssessmentModel;
@@ -66,6 +67,14 @@ class QuestionGenerationService
 
         if (!$assessment) {
             return ['success' => false, 'message' => 'Assessment not found.'];
+        }
+
+        // The institution's plan caps AI question generations per term. Checked before anything is
+        // uploaded or started, so a refused request leaves nothing behind.
+        $blocked = (new PlanLimits())->generationBlock($user, (int) ($data['count'] ?? 10));
+
+        if ($blocked !== null) {
+            return ['success' => false, 'message' => $blocked];
         }
 
         $sourceType = $data['source_type'] ?? 'topic';
