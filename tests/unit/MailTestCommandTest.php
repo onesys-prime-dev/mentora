@@ -90,6 +90,17 @@ final class MailTestCommandTest extends CIUnitTestCase
         $this->assertStringNotContainsString(self::PASSWORD, $output);
     }
 
+    public function testAMailerThatThrowsIsReportedWithThePasswordRemoved(): void
+    {
+        FakeEmail::install()->throwOnSend = new RuntimeException('login failed for ' . self::PASSWORD);
+
+        $output = $this->runCommand('mail:test you@provider.test');
+
+        $this->assertStringContainsString('Could not send', $output);
+        $this->assertStringContainsString('login failed for ********', $output);
+        $this->assertStringNotContainsString(self::PASSWORD, $output);
+    }
+
     public function testRefusesAnInvalidAddressWithoutSending(): void
     {
         $mail = FakeEmail::install();

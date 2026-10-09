@@ -30,7 +30,7 @@ class CreateSystemAdmin extends BaseCommand
 
     public function run(array $params)
     {
-        $policy = new AdminAccountPolicy();
+        $policy = $this->policy();
 
         $email    = $params[0] ?? CLI::prompt('Email (a real inbox, the sign-in code is sent there)');
         $username = $params[1] ?? CLI::prompt('Username');
@@ -71,6 +71,12 @@ class CreateSystemAdmin extends BaseCommand
         return EXIT_SUCCESS;
     }
 
+    /** Where this command runs decides which accounts it accepts; tests substitute it. */
+    protected function policy(): AdminAccountPolicy
+    {
+        return new AdminAccountPolicy();
+    }
+
     /**
      * Asks twice and returns the password, or null if the two entries differ.
      * The typing is hidden where the terminal supports it (Linux/macOS);
@@ -78,9 +84,7 @@ class CreateSystemAdmin extends BaseCommand
      */
     private function askPassword(): ?string
     {
-        $label = 'Password (at least ' . SystemAdminService::MIN_PASSWORD_LENGTH . ' characters)';
-
-        $first  = $this->promptHidden($label);
+        $first  = $this->promptHidden('Password (at least ' . SystemAdminService::MIN_PASSWORD_LENGTH . ' characters)');
         $second = $this->promptHidden('Repeat the password');
 
         return $first === $second ? $first : null;
@@ -88,22 +92,31 @@ class CreateSystemAdmin extends BaseCommand
 
     private function promptHidden(string $label): string
     {
-        $canHide = DIRECTORY_SEPARATOR === '/' && function_exists('posix_isatty') && posix_isatty(STDIN);
-
-        if (! $canHide) {
+        if (! $this->canHideInput()) {
             return CLI::prompt($label);
         }
 
         CLI::write($label . ': ', null, null);
+
+        return $this->readSecret();
+    }
+
+    /** Hiding needs a real Unix terminal; pipes and Windows consoles cannot. */
+    protected function canHideInput(): bool
+    {
+        return DIRECTORY_SEPARATOR === '/' && function_exists('posix_isatty') && posix_isatty(STDIN);
+    }
+
+    /** Reads one line with the terminal's echo switched off, and always switches it back on. */
+    protected function readSecret(): string
+    {
         shell_exec('stty -echo');
 
         try {
-            $value = trim((string) fgets(STDIN));
+            return trim((string) fgets(STDIN));
         } finally {
             shell_exec('stty echo');
             CLI::newLine();
         }
-
-        return $value;
     }
 }
