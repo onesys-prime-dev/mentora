@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
+use App\Services\Admin\AdminAccountPolicy;
 use App\Services\Admin\SystemAdminService;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -11,6 +12,9 @@ use InvalidArgumentException;
 
 /**
  * The only way (besides the seeder) to create a system administrator.
+ *
+ * Outside development and testing the email must be a real inbox: the
+ * administrator signs in with a code sent there (see AdminAccountPolicy).
  */
 class CreateSystemAdmin extends BaseCommand
 {
@@ -19,16 +23,31 @@ class CreateSystemAdmin extends BaseCommand
     protected $description = 'Creates a system administrator account.';
     protected $usage       = 'admin:create <email> <username> [password]';
     protected $arguments   = [
-        'email'    => 'Sign-in email address',
+        'email'    => 'Sign-in email address. On a server it must be a real inbox: the 2FA code is sent there.',
         'username' => 'Unique username',
-        'password' => 'Optional. Prompted for (not echoed to history) when left out.',
+        'password' => 'Optional. Prompted for (hidden where the terminal allows) when left out, which keeps it out of shell history.',
     ];
 
     public function run(array $params)
     {
-        $email    = $params[0] ?? CLI::prompt('Email');
+        $policy = new AdminAccountPolicy();
+
+        $email    = $params[0] ?? CLI::prompt('Email (a real inbox, the sign-in code is sent there)');
         $username = $params[1] ?? CLI::prompt('Username');
-        $password = $params[2] ?? CLI::prompt('Password (at least ' . SystemAdminService::MIN_PASSWORD_LENGTH . ' characters)');
+
+        if (($problem = $policy->emailProblem($email)) !== null) {
+            CLI::error($problem);
+
+            return EXIT_USER_INPUT;
+        }
+
+        $password = $params[2] ?? $this->askPassword();
+
+        if ($password === null) {
+            CLI::error('The two passwords did not match. Nothing was created.');
+
+            return EXIT_USER_INPUT;
+        }
 
         try {
             $user = (new SystemAdminService())->create($email, $username, $password);
@@ -38,8 +57,53 @@ class CreateSystemAdmin extends BaseCommand
             return EXIT_USER_INPUT;
         }
 
-        CLI::write("Created system administrator {$user->username} ({$email}).", 'green');
+        CLI::write("Created system administrator {$user->username} ({$user->email}).", 'green');
+        CLI::newLine();
+        CLI::write('Next:');
+        CLI::write('  1. Make sure mail works:  php spark mail:test ' . $user->email);
+
+        if (($mailProblem = $policy->mailProblem()) !== null) {
+            CLI::write('     ' . $mailProblem, 'yellow');
+        }
+
+        CLI::write('  2. Sign in at /login. A 6-digit code is emailed to ' . $user->email . '; enter it to finish.');
 
         return EXIT_SUCCESS;
+    }
+
+    /**
+     * Asks twice and returns the password, or null if the two entries differ.
+     * The typing is hidden where the terminal supports it (Linux/macOS);
+     * on Windows consoles it falls back to a visible prompt.
+     */
+    private function askPassword(): ?string
+    {
+        $label = 'Password (at least ' . SystemAdminService::MIN_PASSWORD_LENGTH . ' characters)';
+
+        $first  = $this->promptHidden($label);
+        $second = $this->promptHidden('Repeat the password');
+
+        return $first === $second ? $first : null;
+    }
+
+    private function promptHidden(string $label): string
+    {
+        $canHide = DIRECTORY_SEPARATOR === '/' && function_exists('posix_isatty') && posix_isatty(STDIN);
+
+        if (! $canHide) {
+            return CLI::prompt($label);
+        }
+
+        CLI::write($label . ': ', null, null);
+        shell_exec('stty -echo');
+
+        try {
+            $value = trim((string) fgets(STDIN));
+        } finally {
+            shell_exec('stty echo');
+            CLI::newLine();
+        }
+
+        return $value;
     }
 }
