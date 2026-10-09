@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Filters\AssessmentScope;
+use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
@@ -38,6 +39,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'assessmentscope' => AssessmentScope::class,
         'reauth'        => ReauthFilter::class,
+        'readonly'      => ReadOnlyFilter::class,
     ];
 
     /**
