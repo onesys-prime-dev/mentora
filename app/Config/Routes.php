@@ -260,4 +260,8 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->post('institutions/(:num)/suspend', 'Admin\InstitutionsController::suspend/$1', ['filter' => 'permission:institutions.manage']);
     $routes->post('institutions/(:num)/delete', 'Admin\InstitutionsController::delete/$1', ['filter' => 'permission:institutions.manage']);
     $routes->post('institutions/(:num)/restore', 'Admin\InstitutionsController::restore/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
+    $routes->post('institutions/(:num)/purge', 'Admin\InstitutionsController::purge/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
+
+    // Archive: past and deleted institutions, with restore and purge.
+    $routes->get('archive', 'Admin\ArchiveController::index', ['filter' => 'permission:institutions.view']);
 });

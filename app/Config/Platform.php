@@ -19,6 +19,9 @@ class Platform extends BaseConfig
     /** Audit entries older than this are archived (SA3). */
     public int $auditRetentionDays = 730;
 
+    /** A deleted institution can be restored for this long, then it is purged (SA4). */
+    public int $deletedInstitutionRetentionDays = 90;
+
     /** Whether administrators can see the source IP stored with audit entries (SA3). */
     public bool $auditShowSourceIp = false;
 
