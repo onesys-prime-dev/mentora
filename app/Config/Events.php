@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Auth\AuditAuthListener;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Exceptions\FrameworkException;
 use CodeIgniter\HotReloader\HotReloader;
@@ -55,3 +56,8 @@ Events::on('pre_system', static function (): void {
         }
     }
 });
+
+// Sign-in, failed sign-in and sign-out go into the audit log.
+Events::on('login', [AuditAuthListener::class, 'login']);
+Events::on('failedLogin', [AuditAuthListener::class, 'failedLogin']);
+Events::on('logout', [AuditAuthListener::class, 'logout']);
