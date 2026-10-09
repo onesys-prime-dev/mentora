@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Admin;
 
+use App\Models\Users\RolePermissionModel;
 use CodeIgniter\Config\Factories;
 use CodeIgniter\Shield\Authorization\PermissionMatcher;
+use CodeIgniter\Shield\Entities\User;
 use Config\AuthGroups;
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -16,6 +19,9 @@ use Throwable;
  * Changes are rows in role_permissions. They are applied when Config\AuthGroups
  * is built, which is what Shield's `can()` and `permission:` filter read, so a
  * change takes effect on the next request with no other plumbing.
+ *
+ * set() is the only way the roles page changes it, and it applies the same
+ * rules up front: a refused change throws and stores nothing.
  *
  * Three rules protect the matrix even if the table is edited by hand:
  *  - the `admin` role is locked: its rows in the table are ignored;
@@ -138,6 +144,87 @@ class PermissionMatrix
     public function effective(): array
     {
         return config(AuthGroups::class)->matrix;
+    }
+
+    /**
+     * Grants or takes away one permission for one role.
+     *
+     * Stores only the difference from the shipped defaults (setting a
+     * permission back to its default removes the row), records the change in
+     * the audit log, and rebuilds the matrix so the next permission check sees
+     * it. If the audit entry cannot be written the change is undone: a
+     * permission never changes without a trace.
+     *
+     * @return bool false when the role already had that answer (nothing done)
+     *
+     * @throws InvalidArgumentException when the change is not allowed
+     * @throws Throwable                whatever stopped the audit entry from being written, after the change was undone
+     */
+    public function set(string $role, string $permission, bool $granted, ?User $actor = null): bool
+    {
+        $permission = strtolower($permission);
+
+        if (! in_array($role, $this->roles(), true)) {
+            throw new InvalidArgumentException("Unknown role {$role}.");
+        }
+
+        if (! array_key_exists($permission, $this->permissions())) {
+            throw new InvalidArgumentException("Unknown permission {$permission}.");
+        }
+
+        if ($role === self::LOCKED_ROLE) {
+            throw new InvalidArgumentException('The system administrator role is locked; its permissions cannot be changed.');
+        }
+
+        $current = $this->effective()[$role];
+        $has     = in_array($permission, $current, true);
+
+        if ($has === $granted) {
+            return false;
+        }
+
+        if (! $granted && count($current) === 1) {
+            throw new InvalidArgumentException('A role must keep at least one permission.');
+        }
+
+        $model    = new RolePermissionModel();
+        $previous = $model->where('role', $role)->where('permission', $permission)->first();
+
+        // Only a difference from the defaults is worth a row.
+        $matchesDefault = in_array($permission, $this->defaults()[$role], true) === $granted;
+
+        $this->replaceRow($model, $role, $permission, $matchesDefault ? null : $granted);
+
+        try {
+            service('auditLogger')->log('roles.permission_changed', $actor ?? auth()->user(), [
+                'target_type' => 'role',
+                'target_id'   => $role,
+                'old'         => [$permission => $has],
+                'new'         => [$permission => $granted],
+            ]);
+        } catch (Throwable $e) {
+            $this->replaceRow($model, $role, $permission, $previous === null ? null : (bool) (int) $previous['granted']);
+
+            throw $e;
+        }
+
+        return true;
+    }
+
+    /**
+     * Makes the table hold exactly one row for the pair, or none, then rebuilds the matrix.
+     *
+     * @param bool|null $granted null for no row
+     */
+    private function replaceRow(RolePermissionModel $model, string $role, string $permission, ?bool $granted): void
+    {
+        $model->where('role', $role)->where('permission', $permission)->delete();
+
+        if ($granted !== null) {
+            $model->insert(['role' => $role, 'permission' => $permission, 'granted' => $granted ? 1 : 0]);
+        }
+
+        self::flush();
     }
 
     /** True when the role has the permission now. */

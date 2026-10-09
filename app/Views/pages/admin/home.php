@@ -7,6 +7,7 @@
 
 <ul class="mt-6 flex flex-col gap-2">
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/audit-log') ?>">Audit log</a></li>
+    <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/roles') ?>">Roles and permissions</a></li>
 </ul>
 
 <?= $this->endSection() ?>
