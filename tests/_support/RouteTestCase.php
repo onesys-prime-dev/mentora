@@ -7,6 +7,7 @@ namespace Tests\Support;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Test\AuthenticationTesting;
 use CodeIgniter\Test\FeatureTestTrait;
+use CodeIgniter\Test\TestResponse;
 
 /**
  * Base class for tests that call real routes through the whole filter and
@@ -34,6 +35,22 @@ abstract class RouteTestCase extends DatabaseTestCase
         $_SERVER['HTTPS'] = 'on';
 
         $this->ensureViteManifest();
+    }
+
+    /**
+     * One browser step. Each feature-test request starts with a blank session,
+     * so what the last step left in it is carried into the next one, the way
+     * a browser keeps its cookie.
+     *
+     * @param array<string, string> $data
+     */
+    protected function step(string $verb, string $uri, array $data = []): TestResponse
+    {
+        $result = $this->call($verb, $uri, $data);
+
+        $this->withSession();
+
+        return $result;
     }
 
     protected function tearDown(): void
