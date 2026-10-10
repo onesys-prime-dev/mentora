@@ -119,6 +119,21 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
     <?php endif; ?>
 </section>
 
+<section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="grades">
+    <h2 class="text-lg font-semibold text-[#0040A6]">Final grades to the SIS</h2>
+    <p class="mt-1 text-sm text-gray-600">Only final grades go out (course, student, percentage, remarks), and only the ones that are new or changed since they were last sent. Mentora is the source of truth: the SIS receives what is here. Sending the same grades again replaces the delivery, so nothing is duplicated.</p>
+    <div class="mt-4 flex flex-wrap gap-3">
+        <form method="post" action="<?= site_url($base . '/grades/preview') ?>">
+            <?= csrf_field() ?>
+            <button type="submit" class="rounded border border-[#0040A6] px-4 py-2 text-sm font-semibold text-[#0040A6] hover:bg-[#0040A6]/10" data-grades-preview>Preview what would be sent</button>
+        </form>
+        <form method="post" action="<?= site_url($base . '/grades/send') ?>">
+            <?= csrf_field() ?>
+            <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068] disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-grades-send>Send final grades now</button>
+        </form>
+    </div>
+</section>
+
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="runs">
     <h2 class="text-lg font-semibold text-[#0040A6]">Run history</h2>
     <div class="mt-3 overflow-x-auto">

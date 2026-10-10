@@ -141,3 +141,41 @@ Integrations tab: **Preview (dry run)** and **Import now** (needs your password)
 ## Tests
 
 `SisMapperTest` (unit: mapping and change detection), `SisImporterTest` (database: counts, matching, conflicts, seats, preconditions, lock, command), `SisImporterRollbackTest` (non-isolated: preview writes nothing and equals the real run; a failed run leaves nothing), `AdminSisImportTest` (feature), `UsernameGeneratorTest`.
+
+# Outbound final grades (branch 31)
+
+Final grades go from Mentora to the SIS. **Mentora wins**: the SIS receives what is here.
+
+## What is sent
+
+Only final grades, four columns: `course_external_id`, `student_external_id`, `percentage` (two decimals) and `remarks` (Passed, Failed, Incomplete, Withdrawn). Never assessment scores, feedback or anything else.
+
+- The final percentage is the instructor's override when there is one, otherwise the calculated percentage.
+- Nothing is sent for a student with no final percentage yet.
+- Only grades for courses and students the SIS knows (linked by the inbound import) are sent. A local course or student is left out.
+- Only what is **new or changed** since it was last sent. `sis_grade_exports` remembers what went out; a run with nothing new sends nothing.
+
+## Never duplicated
+
+- A delivery has a **key made from its content** (`g<institution id>-<24 hex>`): the same grades always give the same key, in any order. The connector replaces a delivery it already has under that key (the file connector writes `grades-<key>.csv`, and `.sig` when a signing key is set).
+- A failed delivery is **retried right away** (3 attempts). If it still fails, nothing is marked as sent, the run is recorded as failed and system administrators are notified (urgent, also by email). The next run sends the same batch again.
+- If Mentora crashes after the SIS has the grades but before recording them, nothing is marked as sent; the next run sends the same batch with the same key, and the SIS replaces it.
+
+## Running it
+
+| | |
+| --- | --- |
+| Integrations tab | **Preview what would be sent** and **Send final grades now** (needs your password). |
+| Schedule | `php spark sis:grades [--institution=ID] [--dry-run]`. Put it in the server's scheduler, after the nightly `sis:sync`. |
+
+A preview works out the counts and sends and records nothing. Sending needs the `sis.sync` feature on, the connection enabled and the institution active; a preview needs the feature and saved settings only.
+
+Counts in the run history: **created** = grades sent for the first time, **updated** = changed grades sent again, **skipped** = left out (unchanged, or not graded yet).
+
+## Audit
+
+`sis.grades_previewed`, `sis.grades_sent` (inside the recording transaction: if it cannot be written nothing is marked as sent), `sis.grades_failed`.
+
+## Tests
+
+`SisGradePayloadTest` (unit: payload, idempotency key), `SisGradeExporterTest` (database: what is sent, retry, repeat, failure, preconditions, command), `SisGradeExporterRollbackTest` (non-isolated: a crash after delivery never duplicates), plus the grade cases in `AdminSisImportTest`.

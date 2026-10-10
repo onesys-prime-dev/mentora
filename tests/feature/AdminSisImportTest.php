@@ -172,4 +172,64 @@ final class AdminSisImportTest extends RouteTestCase
         $this->assertStringNotContainsString('data-sis-managed', $page);
         $this->assertDoesNotMatchRegularExpression('/name="first_name"[^>]*readonly/', $page);
     }
+
+    public function testGradesCanBePreviewedAndTheCountsAreShown(): void
+    {
+        $course  = SisFixture::course($this->institution);
+        $student = SisFixture::student($this->institution, 'S1', 'ann@example.com');
+        SisFixture::grade($course['offering'], $student, 90.0);
+
+        $this->step('POST', $this->url('/grades/preview'));
+
+        $this->assertStringContainsString('Preview, nothing was sent: 1 new', $this->page());
+        $this->assertSame(0, db_connect()->table('sis_grade_exports')->countAllResults());
+    }
+
+    public function testSendingGradesNeedsThePasswordAndThenSendsThem(): void
+    {
+        $course  = SisFixture::course($this->institution);
+        $student = SisFixture::student($this->institution, 'S1', 'ann@example.com');
+        SisFixture::grade($course['offering'], $student, 90.0);
+
+        $noPassword = $this->step('POST', $this->url('/grades/send'));
+        $this->assertStringContainsString('admin/reauth', $noPassword->response()->getHeaderLine('Location'));
+        $this->assertSame(0, db_connect()->table('sis_grade_exports')->countAllResults());
+
+        $this->confirmedPassword();
+        $this->step('POST', $this->url('/grades/send'));
+
+        $this->assertStringContainsString('Grades sent: 1 new', $this->page());
+        $this->assertSame(1, db_connect()->table('sis_grade_exports')->countAllResults());
+        $this->assertStringContainsString('data-run="succeeded"', $this->page());
+    }
+
+    public function testSendingGradesIsRefusedWithAReasonWhenTheConnectionIsNotEnabled(): void
+    {
+        db_connect()->table('sis_connections')->where('institution_id', $this->institution)->update(['enabled' => 0]);
+        $this->confirmedPassword();
+
+        $this->step('POST', $this->url('/grades/send'));
+
+        $this->assertStringContainsString('not enabled', $this->page());
+    }
+
+    public function testAFailedGradeDeliveryIsShownAsAnError(): void
+    {
+        $course  = SisFixture::course($this->institution);
+        $student = SisFixture::student($this->institution, 'S1', 'ann@example.com');
+        SisFixture::grade($course['offering'], $student, 90.0);
+
+        $outbound = \App\Services\Sis\SisConnectors::folders($this->institution)['outbound'];
+        if (! is_dir(dirname($outbound))) {
+            mkdir(dirname($outbound), 0770, true);
+        }
+
+        file_put_contents($outbound, 'a file, not a folder');
+
+        $this->confirmedPassword();
+        $this->step('POST', $this->url('/grades/send'));
+
+        $this->assertStringContainsString('Sending grades failed.', $this->page());
+        $this->assertSame(0, db_connect()->table('sis_grade_exports')->countAllResults());
+    }
 }
