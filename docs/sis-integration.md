@@ -76,3 +76,68 @@ Institution page, **Integrations** tab (`/admin/institutions/{id}/integrations`)
 ## Tests
 
 `SisCsvParserTest` and `FileConnectorTest` (unit: contract, malformed rows, signatures, vault), `SisConnectionServiceTest` (database: sealing, flag rule, runs, audit), `AdminIntegrationsTest` (feature: access, credentials never returned).
+
+# Inbound import (branch 30)
+
+People, courses and enrolments flow from the SIS into one institution. **The SIS wins** on any difference.
+
+## What a run does
+
+1. Reads whichever of `students.csv`, `instructors.csv`, `courses.csv`, `enrollments.csv` the SIS provided (a missing file is left alone). A file that cannot be read at all (bad columns, bad signature, too big) fails the whole run before anything is written.
+2. In **one database transaction**, applies people, then courses, then enrolments.
+3. Records the run (counts per dataset, and the rows that were not imported with the reason, up to 200) in the run history.
+
+Counts per dataset:
+
+| Count | Meaning |
+| --- | --- |
+| created | a new person, course or enrolment |
+| updated | an existing one whose details differ from the SIS |
+| skipped | already identical, nothing to do |
+| failed | not imported: invalid row, a conflict, no seat left, an unknown course or student, no active term |
+
+### Guarantees
+
+- **All or nothing.** If anything unexpected goes wrong, the run is rolled back and recorded as failed; no partial data. System administrators are notified (urgent, also by email).
+- **Single bad rows do not stop the run.** They are counted as failed with their reason; the rest imports.
+- **Preview (dry run).** Does exactly the work of a real run inside the transaction, then rolls it back. Its counts are what the real run produces, and nothing is written.
+- **First real import needs a preview** (any earlier successful import or preview counts; a connection test does not).
+- A real import needs: the `sis.sync` feature on, the connection enabled, and the institution active. A preview needs the feature and saved settings only.
+
+## How records are matched
+
+`sis_links` remembers which Mentora person or course is which SIS id.
+
+- **People:** by link; otherwise by email, but only an account that already belongs to this institution with the same role. An account in another institution, with another role, or an administrator is never taken over: the row fails. One account cannot belong to two SIS records.
+- **Courses:** by link; otherwise by program and course code (an existing course is adopted, not duplicated). A new course needs a `program_code` that is a program of this institution. Units default to 3 when the SIS says none.
+- **Enrolments:** the course and the student must be known (listed in `courses.csv` / `students.csv`, in this run or an earlier one). They go into the institution's **active term** (the latest, if several), in the section the SIS names ("A" when none), with the status the SIS gives ("enrolled" when none).
+
+What the SIS leaves empty is not a change. Things the SIS stops listing are **never deleted**.
+
+## Accounts
+
+New people get an active account and **no password**. Send them a link from the Users page ("reset password"). Students take a seat; when the plan's seats are full, further students fail with the seat message.
+
+## Fields the SIS owns
+
+While the connection is enabled, a person the SIS supplied cannot have their **name or email** changed in Mentora (the Users page shows the fields read-only, and the server refuses). Switching the connection off releases them. Courses and enrolments are SIS-owned too, but nothing in Mentora edits them by hand today, so nothing is locked yet.
+
+## Schedule
+
+```
+php spark sis:sync [--institution=ID] [--dry-run]
+```
+
+Runs every institution with an enabled connection. One that cannot run now (feature off, not active, no preview yet) is reported and skipped; the rest continue. Exits non-zero if any run failed. Add it to the server's scheduler (nightly is typical), like `subscriptions:sync` and `backup:run`.
+
+## Admin page
+
+Integrations tab: **Preview (dry run)** and **Import now** (needs your password), the latest result with the list of rows that were not imported, and the run history with a details column per run.
+
+## Audit
+
+`sis.import_previewed`, `sis.import_run` (inside the transaction: if it cannot be written, the import is rolled back), `sis.import_failed`.
+
+## Tests
+
+`SisMapperTest` (unit: mapping and change detection), `SisImporterTest` (database: counts, matching, conflicts, seats, preconditions, lock, command), `SisImporterRollbackTest` (non-isolated: preview writes nothing and equals the real run; a failed run leaves nothing), `AdminSisImportTest` (feature), `UsernameGeneratorTest`.

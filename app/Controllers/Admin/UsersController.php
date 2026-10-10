@@ -6,6 +6,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\Academic\InstitutionModel;
+use App\Services\Sis\SisOwnership;
 use App\Services\Users\PasswordResetService;
 use App\Services\Users\UserAdminService;
 use App\Services\Users\UserDirectory;
@@ -129,6 +130,7 @@ class UsersController extends BaseController
             'personInstitutions'    => $this->institutions(),
             'personAssignableRoles' => UserAdminService::ASSIGNABLE_ROLES,
             'personIsSelf'          => (int) auth()->id() === $id,
+            'personSisManaged'      => (new SisOwnership())->managesPerson($id),
             'personValues'          => [
                 'first_name' => old('first_name', (string) ($person['first_name'] ?? '')),
                 'last_name'  => old('last_name', (string) ($person['last_name'] ?? '')),

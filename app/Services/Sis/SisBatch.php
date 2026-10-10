@@ -14,11 +14,13 @@ final class SisBatch
     /**
      * @param list<array<string, string>>      $records  keyed by column name
      * @param list<array{row: int, reason: string}> $rejected row 1 is the header
+     * @param list<int>                        $rows     the row number of each record, in the same order
      */
     public function __construct(
         public readonly string $dataset,
         public readonly array $records,
         public readonly array $rejected = [],
+        public readonly array $rows = [],
     ) {
     }
 

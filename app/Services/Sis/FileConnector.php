@@ -62,6 +62,11 @@ final class FileConnector implements SisConnector
         return new ConnectionResult(true, implode('; ', $found) . '.');
     }
 
+    public function has(string $dataset): bool
+    {
+        return in_array($dataset, SisCsvParser::datasets(), true) && is_file($this->path($dataset));
+    }
+
     public function read(string $dataset): SisBatch
     {
         SisCsvParser::spec($dataset);

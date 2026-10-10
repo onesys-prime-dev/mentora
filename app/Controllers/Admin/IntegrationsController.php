@@ -9,6 +9,7 @@ use App\Models\Academic\InstitutionModel;
 use App\Services\Sis\SisConnectionService;
 use App\Services\Sis\SisConnectors;
 use App\Services\Sis\SisException;
+use App\Services\Sis\SisImporter;
 use App\Services\Sis\SisRunLog;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -36,8 +37,66 @@ class IntegrationsController extends BaseController
             'sisInstitution'     => $institution,
             'sisConnection'      => $connection,
             'sisType'            => SisConnectors::types()[$connection['connector']],
-            'sisRuns'            => (new SisRunLog())->history($institutionId),
+            'sisRuns'            => $runs = (new SisRunLog())->history($institutionId),
+            'sisLatest'          => $this->latestImport($runs),
         ]);
+    }
+
+    /** A dry run: what an import would do, with nothing written. */
+    public function preview(int $institutionId): RedirectResponse
+    {
+        return $this->import($institutionId, true);
+    }
+
+    /** A real import now (it also runs on the schedule). */
+    public function run(int $institutionId): RedirectResponse
+    {
+        return $this->import($institutionId, false);
+    }
+
+    private function import(int $institutionId, bool $dryRun): RedirectResponse
+    {
+        $this->institution($institutionId);
+
+        $back = "admin/institutions/{$institutionId}/integrations";
+
+        try {
+            $result = (new SisImporter())->run($institutionId, auth()->user(), $dryRun, SisRunLog::MANUAL);
+        } catch (InvalidArgumentException $e) {
+            return redirect()->to($back)->with('error', $e->getMessage());
+        }
+
+        if (! $result->ok) {
+            return redirect()->to($back)->with('error', 'The import failed. ' . $result->message);
+        }
+
+        return redirect()->to($back)->with('message', ($dryRun ? 'Preview done: ' : 'Import done: ') . $result->message);
+    }
+
+    /**
+     * The newest import (preview or real) with its details, for the issues list.
+     *
+     * @param list<array<string, mixed>> $runs newest first
+     *
+     * @return array{run: array<string, mixed>, issues: list<array<string, string>>, truncated: bool}|null
+     */
+    private function latestImport(array $runs): ?array
+    {
+        foreach ($runs as $run) {
+            if ($run['trigger'] === 'test' || $run['status'] === 'running') {
+                continue;
+            }
+
+            $details = json_decode((string) $run['details'], true);
+
+            return [
+                'run'       => $run,
+                'issues'    => is_array($details) ? ($details['issues'] ?? []) : [],
+                'truncated' => is_array($details) && ($details['truncated'] ?? false) === true,
+            ];
+        }
+
+        return null;
     }
 
     public function save(int $institutionId): RedirectResponse

@@ -32,13 +32,14 @@ class SisConnectionService
      * What a page may show. The credentials themselves are not in here, only
      * whether they are set and when they were last changed.
      *
-     * @return array{connector: string, enabled: bool, hasCredentials: bool, credentialsSetAt: ?string, flagOn: bool, folders: array{inbound: string, outbound: string}}
+     * @return array{configured: bool, connector: string, enabled: bool, hasCredentials: bool, credentialsSetAt: ?string, flagOn: bool, folders: array{inbound: string, outbound: string}}
      */
     public function view(int $institutionId): array
     {
         $row = $this->row($institutionId);
 
         return [
+            'configured'       => $row !== null,
             'connector'        => (string) ($row['connector'] ?? SisConnectors::FILE),
             'enabled'          => (int) ($row['enabled'] ?? 0) === 1,
             'hasCredentials'   => ($row['credentials'] ?? null) !== null,
