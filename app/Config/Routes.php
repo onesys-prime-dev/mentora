@@ -472,6 +472,9 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('institutions/(:num)/integrations', 'Admin\IntegrationsController::show/$1', ['filter' => 'permission:integrations.view']);
     $routes->post('institutions/(:num)/integrations', 'Admin\IntegrationsController::save/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
     $routes->post('institutions/(:num)/integrations/test', 'Admin\IntegrationsController::test/$1', ['filter' => 'permission:integrations.manage']);
+    // A preview changes nothing; a real import writes people, courses and enrolments, so it needs the password.
+    $routes->post('institutions/(:num)/integrations/preview', 'Admin\IntegrationsController::preview/$1', ['filter' => 'permission:integrations.manage']);
+    $routes->post('institutions/(:num)/integrations/run', 'Admin\IntegrationsController::run/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
 
     // People across every institution: look and export with users.view, change with users.manage.
     // Changes that decide who can get in or who someone is (name and email, password reset, roles,

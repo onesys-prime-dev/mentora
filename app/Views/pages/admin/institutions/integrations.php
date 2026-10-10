@@ -7,6 +7,7 @@
  * @var array<string, mixed>       $sisConnection from SisConnectionService::view()
  * @var array<string, mixed>       $sisType       label and credential fields of the connector
  * @var list<array<string, mixed>> $sisRuns       newest first
+ * @var array<string, mixed>|null  $sisLatest     the newest preview or import, with its rejected rows
  */
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
 $input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
@@ -79,6 +80,43 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
         <?= csrf_field() ?>
         <button type="submit" class="rounded border border-[#0040A6] px-4 py-2 text-sm font-semibold text-[#0040A6] hover:bg-[#0040A6]/10">Test connection</button>
     </form>
+</section>
+
+<section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="import">
+    <h2 class="text-lg font-semibold text-[#0040A6]">Import from the SIS</h2>
+    <p class="mt-1 text-sm text-gray-600">People, courses and enrolments come in from the SIS, which wins on any difference. A preview does the whole job and then undoes it, so you see the counts and any rows that would be refused. Run one before the first real import.</p>
+    <div class="mt-4 flex flex-wrap gap-3">
+        <form method="post" action="<?= site_url($base . '/preview') ?>">
+            <?= csrf_field() ?>
+            <button type="submit" class="rounded border border-[#0040A6] px-4 py-2 text-sm font-semibold text-[#0040A6] hover:bg-[#0040A6]/10" data-sis-preview>Preview (dry run)</button>
+        </form>
+        <form method="post" action="<?= site_url($base . '/run') ?>">
+            <?= csrf_field() ?>
+            <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068] disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-sis-run>Import now</button>
+        </form>
+    </div>
+
+    <?php if ($sisLatest !== null): ?>
+        <h3 class="mt-5 text-sm font-semibold text-gray-800" data-latest-import>
+            Latest <?= (int) $sisLatest['run']['dry_run'] === 1 ? 'preview' : 'import' ?>:
+            <?= esc((string) $sisLatest['run']['message']) ?>
+        </h3>
+        <?php if ($sisLatest['issues'] !== []): ?>
+            <div class="mt-2 overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm" data-issues>
+                    <thead class="bg-gray-50"><tr><th class="<?= $th ?>">File</th><th class="<?= $th ?>">Record</th><th class="<?= $th ?>">Why it was not imported</th></tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <?php foreach ($sisLatest['issues'] as $issue): ?>
+                            <tr><td class="px-3 py-2"><?= esc($issue['dataset']) ?>.csv</td><td class="px-3 py-2 font-mono text-xs"><?= esc($issue['item']) ?></td><td class="px-3 py-2"><?= esc($issue['reason']) ?></td></tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php if ($sisLatest['truncated']): ?>
+                <p class="mt-2 text-xs text-gray-500">Only the first <?= esc((string) \App\Services\Sis\SisImporter::MAX_ISSUES) ?> are listed; the counts cover every row.</p>
+            <?php endif; ?>
+        <?php endif; ?>
+    <?php endif; ?>
 </section>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="runs">

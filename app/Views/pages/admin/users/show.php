@@ -8,6 +8,7 @@
  * @var list<string>               $personAssignableRoles roles that can be ticked
  * @var bool                       $personIsSelf
  * @var array<string, mixed>       $personValues          name and email as shown in the form
+ * @var bool                       $personSisManaged      the SIS decides their name and email
  */
 use App\Services\Users\UserFilters;
 
@@ -45,21 +46,26 @@ $memberOf    = array_column($person['institutions'], 'id');
 
     <section class="rounded-lg bg-white p-6 shadow" data-section="details">
         <h2 class="text-lg font-semibold text-[#0040A6]">Details</h2>
+        <?php if ($personSisManaged): ?>
+            <p class="mt-2 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800" data-sis-managed>This person comes from the school's student information system, which decides their name and email. Change them there; the next sync brings it here.</p>
+        <?php endif; ?>
         <form method="post" action="<?= site_url('admin/users/' . $person['id']) ?>" class="mt-3 grid gap-3 sm:grid-cols-2">
             <?= csrf_field() ?>
             <label class="<?= $label ?>">First name
-                <input class="<?= $input ?>" type="text" name="first_name" value="<?= esc((string) $personValues['first_name']) ?>" maxlength="100" required>
+                <input class="<?= $input ?>" type="text" name="first_name" value="<?= esc((string) $personValues['first_name']) ?>" maxlength="100" required <?= $personSisManaged ? 'readonly' : '' ?>>
             </label>
             <label class="<?= $label ?>">Last name
-                <input class="<?= $input ?>" type="text" name="last_name" value="<?= esc((string) $personValues['last_name']) ?>" maxlength="100" required>
+                <input class="<?= $input ?>" type="text" name="last_name" value="<?= esc((string) $personValues['last_name']) ?>" maxlength="100" required <?= $personSisManaged ? 'readonly' : '' ?>>
             </label>
             <label class="<?= $label ?> sm:col-span-2">Sign-in email
-                <input class="<?= $input ?>" type="email" name="email" value="<?= esc((string) $personValues['email']) ?>" maxlength="254" required>
+                <input class="<?= $input ?>" type="email" name="email" value="<?= esc((string) $personValues['email']) ?>" maxlength="254" required <?= $personSisManaged ? 'readonly' : '' ?>>
             </label>
-            <div class="sm:col-span-2">
-                <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Save</button>
-                <span class="ml-2 text-xs text-gray-500">Needs your password.</span>
-            </div>
+            <?php if (! $personSisManaged): ?>
+                <div class="sm:col-span-2">
+                    <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Save</button>
+                    <span class="ml-2 text-xs text-gray-500">Needs your password.</span>
+                </div>
+            <?php endif; ?>
         </form>
         <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <dt class="text-gray-500">Last active</dt><dd><?= esc(substr((string) ($person['last_active'] ?? ''), 0, 16) ?: '—') ?></dd>

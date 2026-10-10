@@ -20,6 +20,9 @@ interface SisConnector
     /** Whether the connection works, and what it found. Never throws. */
     public function testConnection(): ConnectionResult;
 
+    /** Whether the SIS offers this dataset right now (a missing file is not an error for a sync). */
+    public function has(string $dataset): bool;
+
     /**
      * One dataset from the SIS: students, instructors, courses or enrollments.
      * Rows that cannot be used are listed as rejected, with the reason, so

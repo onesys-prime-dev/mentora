@@ -43,8 +43,9 @@ class SisRunLog
 
     /**
      * @param array{created?: int, updated?: int, skipped?: int, failed?: int} $counts
+     * @param array<string, mixed>|null                                        $details per-dataset counts and the rows that were not imported
      */
-    public function finish(int $runId, bool $succeeded, array $counts = [], ?string $message = null, ?DateTimeImmutable $now = null): void
+    public function finish(int $runId, bool $succeeded, array $counts = [], ?string $message = null, ?DateTimeImmutable $now = null, ?array $details = null): void
     {
         db_connect()->table('sis_runs')->where('id', $runId)->update([
             'status'        => $succeeded ? 'succeeded' : 'failed',
@@ -53,6 +54,7 @@ class SisRunLog
             'skipped_count' => $counts['skipped'] ?? 0,
             'failed_count'  => $counts['failed'] ?? 0,
             'message'       => $message === null ? null : mb_substr($message, 0, 1000),
+            'details'       => $details === null ? null : json_encode($details, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR),
             'finished_at'   => ($now ?? new DateTimeImmutable())->format('Y-m-d H:i:s'),
         ]);
     }

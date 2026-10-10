@@ -12,6 +12,7 @@ use App\Services\Concerns\InTransaction;
 use App\Services\Security\PasswordPolicy;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UserFilters;
+use App\Services\Users\UsernameGenerator;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use Config\Email as EmailConfig;
@@ -497,22 +498,6 @@ class InvitationService
      */
     private function username(string $first, string $last): string
     {
-        $part = static function (string $name): string {
-            $plain = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name);
-
-            return strtolower(preg_replace('/[^A-Za-z0-9]+/', '', $plain === false ? $name : $plain) ?? '');
-        };
-
-        $base = substr(trim(($part($first) ?: 'admin') . '.' . ($part($last) ?: 'user'), '.'), 0, 26);
-
-        for ($n = 0; $n < 1000; $n++) {
-            $candidate = $n === 0 ? $base : $base . $n;
-
-            if (db_connect()->table('users')->where('username', $candidate)->countAllResults() === 0) {
-                return $candidate;
-            }
-        }
-
-        throw new RuntimeException('No free username could be found.');
+        return (new UsernameGenerator())->from($first, $last);
     }
 }

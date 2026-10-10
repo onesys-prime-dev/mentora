@@ -140,6 +140,17 @@ class NotificationTriggers
     }
 
     /**
+     * A real SIS import failed (urgent: also by email). One notification per
+     * failed run, so a retry that fails again is a new one.
+     */
+    public function syncFailed(int $institutionId, string $name, string $message, int $runId, DateTimeImmutable $now): int
+    {
+        $this->admins = $this->recipients->administrators();
+
+        return $this->tell($this->admins, 'sis.sync_failed', "SIS import failed for {$name}", $message, true, "sis:failed:{$runId}", $institutionId, "admin/institutions/{$institutionId}/integrations", $now);
+    }
+
+    /**
      * @param list<int> $audience
      */
     private function tell(array $audience, string $type, string $title, string $body, bool $urgent, string $key, ?int $institutionId, string $link, DateTimeImmutable $now): int

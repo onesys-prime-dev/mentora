@@ -9,6 +9,7 @@ use App\Models\Users\UserProfileModel;
 use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\InvitationInput;
 use App\Services\Institutions\InvitationService;
+use App\Services\Sis\SisOwnership;
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
@@ -131,6 +132,10 @@ class UserAdminService
 
         if ($old === $person) {
             return;
+        }
+
+        if ((new SisOwnership())->managesPerson($userId)) {
+            throw new InvalidArgumentException('This person is managed by the school\'s student information system. Change their name and email there; the next sync brings it here.');
         }
 
         $this->inTransaction(function () use ($userId, $person, $old, $actor, $user): void {

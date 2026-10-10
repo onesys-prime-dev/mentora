@@ -115,6 +115,15 @@ final class FileConnectorTest extends CIUnitTestCase
         $this->assertStringContainsString('missing the column', $result->message);
     }
 
+    public function testItSaysWhichDatasetsTheSisHasProvided(): void
+    {
+        $this->drop('students.csv', self::STUDENTS);
+
+        $this->assertTrue($this->connector()->has('students'));
+        $this->assertFalse($this->connector()->has('courses'));
+        $this->assertFalse($this->connector()->has('../students'));
+    }
+
     public function testReadingReturnsTheBatch(): void
     {
         $this->drop('students.csv', self::STUDENTS);
@@ -123,6 +132,8 @@ final class FileConnectorTest extends CIUnitTestCase
 
         $this->assertCount(1, $batch->records);
         $this->assertCount(1, $batch->rejected);
+        $this->assertSame([2], $batch->rows);
+        $this->assertSame(3, $batch->rejected[0]['row']);
     }
 
     public function testReadingAMissingFileIsRefused(): void

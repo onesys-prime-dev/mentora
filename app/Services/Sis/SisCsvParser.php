@@ -79,6 +79,7 @@ final class SisCsvParser
         $keep     = array_merge($spec['required'], $spec['optional']);
         $records  = [];
         $rejected = [];
+        $rowNos   = [];
         $seen     = [];
         $row      = 1;
 
@@ -132,11 +133,12 @@ final class SisCsvParser
             }
 
             $records[] = array_intersect_key($values, array_flip($keep));
+            $rowNos[]  = $row;
         }
 
         fclose($stream);
 
-        return new SisBatch($dataset, $records, $rejected);
+        return new SisBatch($dataset, $records, $rejected, $rowNos);
     }
 
     /**
