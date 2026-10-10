@@ -11,7 +11,7 @@
  * built from AssessmentOverviewService — the same source behind the
  * Assessments tab's "To Grade" metric, so the two can't disagree.
  */
-$userRole = esc($user->getGroups()[0]);
+$userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
 $queue = $data['queue'] ?? [];
 

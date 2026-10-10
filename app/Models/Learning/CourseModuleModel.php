@@ -244,4 +244,34 @@ class CourseModuleModel extends Model
             ->get()
             ->getResultArray();
     }
+
+    /**
+     * The most recent module edit per offering — a course's last sign of
+     * life, for flagging one that's gone quiet. An offering with no modules
+     * at all (never set up) just doesn't appear in the result; the caller
+     * treats that the same as "no activity yet".
+     *
+     * @return array<int, string> offering_id => datetime
+     */
+    public function retrieveLastActivityByOffering(array $offeringIds): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        $rows = $this->builder()
+            ->select(['offering_id', 'MAX(updated_at) AS last_activity'])
+            ->whereIn('offering_id', $offeringIds)
+            ->groupBy('offering_id')
+            ->get()
+            ->getResultArray();
+
+        $byOffering = [];
+
+        foreach ($rows as $row) {
+            $byOffering[(int) $row['offering_id']] = $row['last_activity'];
+        }
+
+        return $byOffering;
+    }
 }
