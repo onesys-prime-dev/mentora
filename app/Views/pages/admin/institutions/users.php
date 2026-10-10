@@ -58,6 +58,7 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="<?= $th ?>">Person</th>
+                        <th class="<?= $th ?>">Role</th>
                         <th class="<?= $th ?>">Status</th>
                         <th class="<?= $th ?>">Expires</th>
                         <th class="<?= $th ?>">Email</th>
@@ -70,16 +71,25 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
                         <?php [$badgeText, $badgeClass] = $invitationBadge[$invitation['status']] ?? [$invitation['status'], 'bg-gray-100 text-gray-700']; ?>
                         <tr data-invitation="<?= esc($invitation['status']) ?>">
                             <td class="px-3 py-2"><?= esc($invitation['first_name'] . ' ' . $invitation['last_name']) ?><span class="block text-xs text-gray-500"><?= esc($invitation['email']) ?></span></td>
+                            <td class="px-3 py-2"><?= esc($roleNames[$invitation['role']] ?? $invitation['role']) ?></td>
                             <td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $badgeClass ?>"><?= esc($badgeText) ?></span></td>
                             <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) $invitation['expires_at'], 0, 16)) ?></td>
                             <td class="px-3 py-2 text-xs text-gray-600"><?= $invitation['sent_at'] === null ? '<span class="font-semibold text-red-700">Not sent</span>' : 'Sent ' . esc(substr((string) $invitation['sent_at'], 0, 16)) ?></td>
                             <td class="px-3 py-2 text-xs text-gray-600"><?= esc($invitation['invited_by_label'] ?? '—') ?></td>
                             <td class="px-3 py-2">
                                 <?php if ($invitation['status'] !== 'accepted' && ! $isDeleted): ?>
-                                    <form method="post" action="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/invitations/' . $invitation['id'] . '/resend') ?>">
-                                        <?= csrf_field() ?>
-                                        <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Resend invitation</button>
-                                    </form>
+                                    <div class="flex flex-wrap gap-2">
+                                        <form method="post" action="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/invitations/' . $invitation['id'] . '/resend') ?>">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Resend invitation</button>
+                                        </form>
+                                        <?php if ($invitation['status'] === 'pending'): ?>
+                                            <form method="post" action="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/invitations/' . $invitation['id'] . '/revoke') ?>">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="<?= $btn ?> border-red-400 text-red-700 hover:bg-red-50">Cancel</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                         </tr>

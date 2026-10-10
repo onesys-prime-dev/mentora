@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\AccountStateFilter;
 use App\Filters\AssessmentScope;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
@@ -42,6 +43,7 @@ class Filters extends BaseFilters
         'reauth'        => ReauthFilter::class,
         'readonly'      => ReadOnlyFilter::class,
         'role'          => RoleFilter::class,
+        'accountstate'  => AccountStateFilter::class,
     ];
 
     /**
@@ -83,6 +85,9 @@ class Filters extends BaseFilters
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
+
+            // A deactivated account, or a session an administrator ended, is turned away here.
+            'accountstate',
         ],
         'after' => [
             // 'honeypot',

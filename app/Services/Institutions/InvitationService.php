@@ -9,6 +9,8 @@ use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
 use App\Services\Admin\PlatformSettings;
 use App\Services\Concerns\InTransaction;
+use App\Services\Subscriptions\PlanLimits;
+use App\Services\Users\UserFilters;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use Config\Email as EmailConfig;
@@ -43,27 +45,39 @@ class InvitationService
 
     public const LINK_USED = 'This invitation has already been used. If you set your password, sign in with it.';
 
-    public const LINK_REPLACED = 'This invitation was replaced by a newer one. Use the link in the most recent email.';
+    public const LINK_REPLACED = 'This invitation was cancelled, or replaced by a newer one. Use the link in the most recent email, or ask for a new one.';
 
     public const LINK_EXPIRED = 'This invitation has expired. Ask your Mentora contact to send a new one.';
 
     public const LINK_INSTITUTION_GONE = 'This institution is no longer available. Ask your Mentora contact for help.';
 
+    /** What each other role is called in a sentence ("as a student"). */
+    private const ROLE_NAMES = [
+        'chairperson' => 'a chairperson',
+        'instructor'  => 'an instructor',
+        'student'     => 'a student',
+        'parent'      => 'a parent',
+    ];
+
     public const SEND_FAILED = 'The invitation was saved, but the email could not be sent. Check the mail settings, then use "Resend invitation".';
 
     /**
      * An institution's invitations, newest first, each with its `status`.
+     * `$role` narrows them to one role (the administrator's, say).
      *
      * @return list<array<string, mixed>>
      */
-    public function forInstitution(int $institutionId, ?DateTimeImmutable $now = null, int $limit = 20): array
+    public function forInstitution(int $institutionId, ?DateTimeImmutable $now = null, int $limit = 20, ?string $role = null): array
     {
         $now ??= new DateTimeImmutable();
 
-        $rows = (new InstitutionInvitationModel())
-            ->where('institution_id', $institutionId)
-            ->orderBy('id', 'desc')
-            ->findAll($limit);
+        $model = (new InstitutionInvitationModel())->where('institution_id', $institutionId);
+
+        if ($role !== null) {
+            $model->where('role', $role);
+        }
+
+        $rows = $model->orderBy('id', 'desc')->findAll($limit);
 
         foreach ($rows as &$row) {
             $row['status'] = InvitationStatus::of($row, $now);
@@ -83,9 +97,13 @@ class InvitationService
      * @throws InvalidArgumentException
      * @throws Throwable                whatever stopped the audit entry from being written; nothing is saved then
      */
-    public function invite(int $institutionId, array $input, ?User $actor = null, ?DateTimeImmutable $now = null): array
+    public function invite(int $institutionId, array $input, ?User $actor = null, ?DateTimeImmutable $now = null, string $role = self::ROLE): array
     {
         $now ??= new DateTimeImmutable();
+
+        if ($role === 'admin' || ! in_array($role, UserFilters::ROLES, true)) {
+            throw new InvalidArgumentException('That role cannot be invited. System administrators are created with php spark admin:create.');
+        }
 
         $institution = (new InstitutionModel())->find($institutionId)
             ?? throw new InvalidArgumentException('That institution does not exist.');
@@ -96,9 +114,44 @@ class InvitationService
 
         $person = InvitationInput::person($input);
 
-        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.created'));
+        if ($role === 'student' && ($blocked = (new PlanLimits())->seatBlock($institutionId)) !== null) {
+            throw new InvalidArgumentException($blocked);
+        }
+
+        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.created', $role));
 
         return $this->delivered($issued, $person['email'], $now);
+    }
+
+    /**
+     * Cancels an invitation that has not been used: its link stops working.
+     *
+     * @throws InvalidArgumentException
+     * @throws Throwable                whatever stopped the audit entry from being written; nothing is changed then
+     */
+    public function revoke(int $institutionId, int $invitationId, ?User $actor = null, ?DateTimeImmutable $now = null): void
+    {
+        $now ??= new DateTimeImmutable();
+
+        $invitation = (new InstitutionInvitationModel())->where('institution_id', $institutionId)->find($invitationId)
+            ?? throw new InvalidArgumentException('That invitation does not exist.');
+
+        if (InvitationStatus::of($invitation, $now) !== InvitationStatus::PENDING) {
+            throw new InvalidArgumentException('That invitation is no longer open, so there is nothing to cancel.');
+        }
+
+        $this->inTransaction(function () use ($invitation, $actor, $now): void {
+            $stamp = $now->format('Y-m-d H:i:s');
+
+            db_connect()->table('institution_invitations')->where('id', $invitation['id'])->update(['revoked_at' => $stamp, 'updated_at' => $stamp]);
+
+            service('auditLogger')->log('invitation.revoked', $actor ?? auth()->user(), [
+                'target_type'    => 'invitation',
+                'target_id'      => (int) $invitation['id'],
+                'institution_id' => (int) $invitation['institution_id'],
+                'old'            => ['email' => $invitation['email'], 'role' => $invitation['role']],
+            ]);
+        });
     }
 
     /**
@@ -123,7 +176,7 @@ class InvitationService
 
         $person = ['first_name' => $old['first_name'], 'last_name' => $old['last_name'], 'email' => $old['email']];
 
-        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.resent'));
+        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.resent', (string) $old['role']));
 
         return $this->delivered($issued, $person['email'], $now);
     }
@@ -140,7 +193,7 @@ class InvitationService
      *
      * @throws InvalidArgumentException
      */
-    public function issue(int $institutionId, array $person, ?User $actor, DateTimeImmutable $now, string $auditAction = 'invitation.created'): array
+    public function issue(int $institutionId, array $person, ?User $actor, DateTimeImmutable $now, string $auditAction = 'invitation.created', string $role = self::ROLE): array
     {
         if (model(UserModel::class)->findByCredentials(['email' => $person['email']]) !== null) {
             throw new InvalidArgumentException("An account with {$person['email']} already exists. Invite a different address.");
@@ -152,17 +205,26 @@ class InvitationService
         $expires = $now->modify("+{$days} days")->format('Y-m-d H:i:s');
         $by      = $actor ?? auth()->user();
 
-        db_connect()->table('institution_invitations')
+        // Sending again to the same person replaces their open invitation. For the
+        // administrator's role only one invitation is open per institution, so a link
+        // mailed to a mistyped address cannot be used later.
+        $replaced = db_connect()->table('institution_invitations')
             ->where('institution_id', $institutionId)
-            ->where('role', self::ROLE)
             ->where('accepted_at IS NULL', null, false)
-            ->where('revoked_at IS NULL', null, false)
-            ->update(['revoked_at' => $stamp, 'updated_at' => $stamp]);
+            ->where('revoked_at IS NULL', null, false);
+
+        if ($role === self::ROLE) {
+            $replaced->where('role', self::ROLE);
+        } else {
+            $replaced->where('email', $person['email']);
+        }
+
+        $replaced->update(['revoked_at' => $stamp, 'updated_at' => $stamp]);
 
         $model = new InstitutionInvitationModel();
         $id    = $model->insert([
             'institution_id'     => $institutionId,
-            'role'               => self::ROLE,
+            'role'               => $role,
             'email'              => $person['email'],
             'first_name'         => $person['first_name'],
             'last_name'          => $person['last_name'],
@@ -180,7 +242,7 @@ class InvitationService
             'target_type'    => 'invitation',
             'target_id'      => (int) $id,
             'institution_id' => $institutionId,
-            'new'            => ['email' => $person['email'], 'role' => self::ROLE, 'expires_at' => $expires],
+            'new'            => ['email' => $person['email'], 'role' => $role, 'expires_at' => $expires],
         ]);
 
         return ['id' => (int) $id, 'token' => $secret['token'], 'expires_at' => $expires];
@@ -290,6 +352,11 @@ class InvitationService
 
         if (model(UserModel::class)->findByCredentials(['email' => $invitation['email']]) !== null) {
             throw new InvalidArgumentException("An account with {$invitation['email']} already exists. Ask your Mentora contact for help.");
+        }
+
+        // The seats may have filled up since the invitation was sent.
+        if ($invitation['role'] === 'student' && ($blocked = (new PlanLimits())->seatBlock((int) $invitation['institution_id'])) !== null) {
+            throw new InvalidArgumentException($blocked);
         }
 
         return $this->inTransaction(function () use ($invitation, $password, $now): User {
@@ -402,10 +469,24 @@ class InvitationService
     private function message(array $invitation, string $link): string
     {
         return "Hello {$invitation['first_name']},\n\n"
-            . "You have been invited to administer {$invitation['institution_name']} on Mentora.\n\n"
+            . "You have been invited to {$this->purpose($invitation)} on Mentora.\n\n"
             . "Set your password and finish setting up your account here:\n{$link}\n\n"
             . 'The link works once and expires on ' . substr((string) $invitation['expires_at'], 0, 16) . ".\n\n"
             . "If you were not expecting this, you can ignore this email: nothing happens unless the link is used.\n";
+    }
+
+    /**
+     * "administer Acme University" or "join Acme University as a student".
+     *
+     * @param array<string, mixed> $invitation
+     */
+    private function purpose(array $invitation): string
+    {
+        $role = self::ROLE_NAMES[$invitation['role']] ?? null;
+
+        return $invitation['role'] === self::ROLE || $role === null
+            ? "administer {$invitation['institution_name']}"
+            : "join {$invitation['institution_name']} as {$role}";
     }
 
     /**

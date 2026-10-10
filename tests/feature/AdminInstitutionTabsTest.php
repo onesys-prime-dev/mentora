@@ -303,6 +303,44 @@ final class AdminInstitutionTabsTest extends RouteTestCase
         $this->assertNull($statuses[1], 'the new one is open');
     }
 
+    public function testCancellingAnInvitationKillsItsLink(): void
+    {
+        $this->submit("admin/institutions/{$this->institution}/invitations", $this->person());
+        $invitation = (int) db_connect()->table('institution_invitations')->get()->getRowArray()['id'];
+        preg_match('#/invitation/([A-Za-z0-9_-]{43})#', $this->mailer->sent[0]['message'], $match);
+
+        $this->assertStringContainsString('Cancel', $this->body("admin/institutions/{$this->institution}/users"));
+
+        $this->submit("admin/institutions/{$this->institution}/invitations/{$invitation}/revoke");
+
+        $this->assertStringContainsString('invitation was cancelled', $this->body("admin/institutions/{$this->institution}/users"));
+        $this->assertSame(410, $this->step('GET', "invitation/{$match[1]}")->response()->getStatusCode());
+        $this->assertSame(1, $this->auditCount('invitation.revoked'));
+    }
+
+    public function testAnotherInstitutionsInvitationCannotBeCancelledFromHere(): void
+    {
+        $other = $this->seeded('OTHER', 'active');
+        (new InvitationService())->invite($other, $this->person(['email' => 'other@example.com']), $this->admin);
+        $theirs = (int) db_connect()->table('institution_invitations')->get()->getRowArray()['id'];
+
+        $this->submit("admin/institutions/{$this->institution}/invitations/{$theirs}/revoke");
+
+        $this->assertNull(db_connect()->table('institution_invitations')->where('id', $theirs)->get()->getRowArray()['revoked_at']);
+    }
+
+    public function testTheProfilesAdministratorBoxIgnoresInvitationsToOtherRoles(): void
+    {
+        (new InvitationService())->invite($this->institution, $this->person(['email' => 'student@example.com', 'first_name' => 'Stu', 'last_name' => 'Dent']), $this->admin, null, 'student');
+
+        $body = $this->body("admin/institutions/{$this->institution}");
+
+        $this->assertStringContainsString('No administrator has been invited yet', $body);
+        $this->assertStringNotContainsString('Stu Dent', $body);
+
+        $this->assertStringContainsString('>Student<', $this->body("admin/institutions/{$this->institution}/users"));
+    }
+
     public function testAnInvitationOfAnotherInstitutionCannotBeResentFromHere(): void
     {
         $other = $this->seeded('OTHER', 'active');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Auth;
 
+use App\Filters\AccountStateFilter;
 use App\Services\Audit\AuditLogger;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
@@ -21,6 +22,9 @@ class AuditAuthListener
 {
     public static function login(User $user): void
     {
+        // When this session began: "sign out everywhere" ends every session that began before it.
+        session()->set(AccountStateFilter::SIGNED_IN_AT, time());
+
         self::record(static fn (AuditLogger $audit) => $audit->log('auth.login', $user, [
             'target_type' => 'user',
             'target_id'   => $user->id,
