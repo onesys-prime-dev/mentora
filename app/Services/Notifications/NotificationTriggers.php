@@ -140,14 +140,16 @@ class NotificationTriggers
     }
 
     /**
-     * A real SIS import failed (urgent: also by email). One notification per
-     * failed run, so a retry that fails again is a new one.
+     * A real SIS import or grade export failed (urgent: also by email). One
+     * notification per failed run, so a retry that fails again is a new one.
+     *
+     * @param string $what "import" or "grade export"
      */
-    public function syncFailed(int $institutionId, string $name, string $message, int $runId, DateTimeImmutable $now): int
+    public function syncFailed(int $institutionId, string $name, string $message, int $runId, DateTimeImmutable $now, string $what = 'import'): int
     {
         $this->admins = $this->recipients->administrators();
 
-        return $this->tell($this->admins, 'sis.sync_failed', "SIS import failed for {$name}", $message, true, "sis:failed:{$runId}", $institutionId, "admin/institutions/{$institutionId}/integrations", $now);
+        return $this->tell($this->admins, 'sis.sync_failed', "SIS {$what} failed for {$name}", $message, true, "sis:failed:{$runId}", $institutionId, "admin/institutions/{$institutionId}/integrations", $now);
     }
 
     /**

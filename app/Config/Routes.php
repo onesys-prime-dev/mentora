@@ -475,6 +475,9 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     // A preview changes nothing; a real import writes people, courses and enrolments, so it needs the password.
     $routes->post('institutions/(:num)/integrations/preview', 'Admin\IntegrationsController::preview/$1', ['filter' => 'permission:integrations.manage']);
     $routes->post('institutions/(:num)/integrations/run', 'Admin\IntegrationsController::run/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
+    // Final grades out: a preview sends nothing; sending hands data to another system, so it needs the password.
+    $routes->post('institutions/(:num)/integrations/grades/preview', 'Admin\IntegrationsController::gradesPreview/$1', ['filter' => 'permission:integrations.manage']);
+    $routes->post('institutions/(:num)/integrations/grades/send', 'Admin\IntegrationsController::gradesSend/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
 
     // People across every institution: look and export with users.view, change with users.manage.
     // Changes that decide who can get in or who someone is (name and email, password reset, roles,

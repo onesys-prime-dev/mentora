@@ -105,6 +105,51 @@ final class SisFixture
         self::drop($institutionId, 'enrollments', self::ENROLLMENTS);
     }
 
+    /**
+     * A course the SIS knows (linked as $external) with an offering in the
+     * active term.
+     *
+     * @return array{course: int, offering: int}
+     */
+    public static function course(int $institutionId, string $external = 'C1', string $code = 'IT101'): array
+    {
+        $db      = db_connect();
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ? AND p.code = ?', [$institutionId, self::PROGRAM])->getRow()->id;
+        $term    = (int) $db->table('academic_terms')->where('institution_id', $institutionId)->get()->getRowArray()['id'];
+
+        $db->table('courses')->insert(['program_id' => $program, 'course_code' => $code, 'course_title' => "Course {$code}", 'units' => 3]);
+        $course = (int) $db->insertID();
+        $db->table('course_offerings')->insert(['course_id' => $course, 'term_id' => $term, 'section_code' => 'A']);
+        $offering = (int) $db->insertID();
+
+        $db->table('sis_links')->insert(['institution_id' => $institutionId, 'entity' => 'course', 'external_id' => $external, 'local_id' => $course, 'created_at' => date('Y-m-d H:i:s')]);
+
+        return ['course' => $course, 'offering' => $offering];
+    }
+
+    /** A student of the institution that the SIS knows (linked as $external). */
+    public static function student(int $institutionId, string $external, string $email): User
+    {
+        $user = PeopleFactory::person('student', 'Stu', $external, $email, $institutionId);
+
+        db_connect()->table('sis_links')->insert(['institution_id' => $institutionId, 'entity' => 'person', 'external_id' => $external, 'local_id' => $user->id, 'created_at' => date('Y-m-d H:i:s')]);
+
+        return $user;
+    }
+
+    /** A final grade record. */
+    public static function grade(int $offering, User $student, ?float $calculated, ?float $override = null, string $remarks = 'Passed'): void
+    {
+        db_connect()->table('gradebook_records')->insert([
+            'course_offering_id'    => $offering,
+            'student_id'            => $student->id,
+            'calculated_percentage' => $calculated,
+            'is_override'           => $override === null ? 0 : 1,
+            'overridden_percentage' => $override,
+            'remarks'               => $remarks,
+        ]);
+    }
+
     /** A successful earlier run, so a real import is allowed (a preview would otherwise be needed). */
     public static function priorSuccess(int $institutionId): void
     {

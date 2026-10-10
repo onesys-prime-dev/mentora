@@ -9,6 +9,7 @@ use App\Models\Academic\InstitutionModel;
 use App\Services\Sis\SisConnectionService;
 use App\Services\Sis\SisConnectors;
 use App\Services\Sis\SisException;
+use App\Services\Sis\SisGradeExporter;
 use App\Services\Sis\SisImporter;
 use App\Services\Sis\SisRunLog;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -52,6 +53,37 @@ class IntegrationsController extends BaseController
     public function run(int $institutionId): RedirectResponse
     {
         return $this->import($institutionId, false);
+    }
+
+    /** What sending final grades now would deliver, with nothing sent. */
+    public function gradesPreview(int $institutionId): RedirectResponse
+    {
+        return $this->sendGrades($institutionId, true);
+    }
+
+    /** Sends the new and changed final grades to the SIS now (it also runs on the schedule). */
+    public function gradesSend(int $institutionId): RedirectResponse
+    {
+        return $this->sendGrades($institutionId, false);
+    }
+
+    private function sendGrades(int $institutionId, bool $dryRun): RedirectResponse
+    {
+        $this->institution($institutionId);
+
+        $back = "admin/institutions/{$institutionId}/integrations";
+
+        try {
+            $result = (new SisGradeExporter())->run($institutionId, auth()->user(), $dryRun, SisRunLog::MANUAL);
+        } catch (InvalidArgumentException $e) {
+            return redirect()->to($back)->with('error', $e->getMessage());
+        }
+
+        if (! $result->ok) {
+            return redirect()->to($back)->with('error', 'Sending grades failed. ' . $result->message);
+        }
+
+        return redirect()->to($back)->with('message', $result->message);
     }
 
     private function import(int $institutionId, bool $dryRun): RedirectResponse
