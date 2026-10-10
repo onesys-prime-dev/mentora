@@ -264,6 +264,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
     $routes->get('courses', 'Courses\ChairpersonCoursesController::index');
+    $routes->get('monitor-program', 'Courses\MonitorProgramController::index');
 
     // Monitor Program's data layer (R5) — a separate URL space from
     // api/courses below, since these aren't scoped to one offering and

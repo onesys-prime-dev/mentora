@@ -245,13 +245,13 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testQuickAccessAddsAnInertMonitorProgramStub(): void
+    public function testQuickAccessAddsALinkToMonitorProgram(): void
     {
         $extra = $this->widgets()['quick-access']['extra'];
 
         $this->assertCount(1, $extra);
         $this->assertSame('Monitor Program', $extra[0]['label']);
-        $this->assertNull($extra[0]['url']);
+        $this->assertSame(site_url('chairperson/monitor-program'), $extra[0]['url']);
     }
 
     public function testQuickAccessAddsNothingForAnInstructor(): void

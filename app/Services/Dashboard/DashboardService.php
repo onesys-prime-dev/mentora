@@ -406,10 +406,7 @@ class DashboardService
 
         return [
             'extra' => [
-                // Monitor Program is a later branch of this plan; the tile
-                // exists now so the dashboard doesn't need a second pass
-                // once that page is built — url stays null (inert) until then.
-                ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'grades', 'url' => null],
+                ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url('chairperson/monitor-program')],
             ],
         ];
     }

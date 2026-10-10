@@ -11,19 +11,99 @@ use App\Services\Courses\MonitorProgramService;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Monitor Program's data layer (R5 of the chairperson plan, branch
- * feat/monitor-program-data): JSON endpoints the Monitor Program page reads
- * from. No page here yet — that's feat/monitor-program-page — so each
- * action returns only the slice of data its name promises, scoped to the
+ * Monitor Program (R5 of the chairperson plan): the page itself (index), plus
+ * the JSON endpoints it and its charts read from — everything scoped to the
  * signed-in chairperson's own program and never a course outside it.
  */
 class MonitorProgramController extends BaseController
 {
+    private const AUDIT_PER_PAGE = 10;
+
     protected MonitorProgramService $monitor;
 
     public function __construct()
     {
         $this->monitor = new MonitorProgramService();
+    }
+
+    /**
+     * The whole page, server-rendered: filters live in the address (GET),
+     * same convention as the Courses page, so a filtered view can be
+     * bookmarked. Every metric is computed once here and handed to the
+     * view — the only client JS on this page draws the two charts from
+     * data already on the page, it never re-fetches.
+     */
+    public function index(): string
+    {
+        $user = auth()->user();
+        $filters = MonitorProgramFilters::fromInput($this->request->getGet());
+
+        $sort = (string) ($this->request->getGet('sort') ?? 'course_code');
+        $dir = (string) ($this->request->getGet('dir') ?? 'asc');
+        $auditPage = max(1, (int) ($this->request->getGet('audit_page') ?? 1));
+
+        $loadError = false;
+        $terms = [];
+        $snapshot = ['courses' => 0, 'instructors' => 0, 'students' => 0];
+        $comparison = [];
+        $atRisk = [];
+        $audit = ['rows' => [], 'total' => 0];
+        $gradeDistribution = array_fill_keys(array_keys(MonitorProgramService::GRADE_BUCKETS), 0);
+
+        try {
+
+            $terms = (new ChairpersonCourseSearch())->terms($user);
+            $offeringRows = $this->monitor->offeringRows($user, $filters);
+            $offeringIds = $this->offeringIds($offeringRows);
+
+            $snapshot = $this->monitor->snapshot($offeringRows);
+            $comparison = $this->monitor->courseComparison($offeringRows, $filters, $sort, $dir);
+            $atRisk = $this->monitor->atRisk($offeringIds);
+            $audit = $this->monitor->auditLog($user, $offeringRows, $filters, $auditPage, self::AUDIT_PER_PAGE);
+
+            foreach ($this->monitor->grades($offeringIds) as $grade) {
+                foreach ($grade['distribution'] as $bucket => $count) {
+                    $gradeDistribution[$bucket] += $count;
+                }
+            }
+
+        } catch (\Throwable $e) {
+            log_message('error', 'Monitor Program page failed to load: ' . $e->getMessage());
+            $loadError = true;
+        }
+
+        foreach ($comparison as &$row) {
+            $row['slug'] = url_title((string) $row['course_title'], '-', true);
+        }
+        unset($row);
+
+        foreach ($atRisk as &$row) {
+            $offering = array_values(array_filter($comparison, static fn (array $c) => $c['offering_id'] === $row['offering_id']))[0] ?? null;
+            $row['course_code'] = $offering['course_code'] ?? null;
+            $row['section_code'] = $offering['section_code'] ?? null;
+            $row['slug'] = $offering['slug'] ?? null;
+        }
+        unset($row);
+
+        return view('pages/courses/monitor-program', [
+            'title' => 'Monitor Program',
+            'page' => 'monitor-program',
+            'user' => $user,
+            'loadError' => $loadError,
+            'filters' => $filters,
+            'terms' => $terms,
+            'snapshot' => $snapshot,
+            'comparison' => $comparison,
+            'atRisk' => $atRisk,
+            'audit' => $audit,
+            'auditPage' => $auditPage,
+            'auditPages' => max(1, (int) ceil($audit['total'] / self::AUDIT_PER_PAGE)),
+            'gradeDistribution' => $gradeDistribution,
+            'sort' => $sort,
+            'dir' => $dir,
+            'mainGutter' => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
+            'previousPage' => 'dashboard',
+        ]);
     }
 
     public function snapshot(): ResponseInterface

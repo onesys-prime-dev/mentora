@@ -32,6 +32,8 @@ if (! function_exists('global_apps')) {
             ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
             ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => null],
             ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
+            // Chairperson-only; an inert tile everywhere else, same as grades/announcements/inbox above.
+            ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => $role === 'chairperson' ? site_url($role . '/monitor-program') : null],
         ];
     }
 }
