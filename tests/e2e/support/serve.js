@@ -14,6 +14,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { adminAccount } from "./sign-in.js";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -30,6 +31,9 @@ const env = {
     E2E_DATABASE: database,
     E2E_DB_HOST: dbHost,
     E2E_BASE_URL: baseUrl,
+    // The app files every email it "sends" in writable/e2e-mail (app/Config/Email.php),
+    // where the cases read the administrator's sign-in code and invitation links.
+    E2E_MAIL_SINK: `${root}tests/e2e/support/mail-sink.php`,
 };
 
 const say = (message) => console.log(`[e2e] ${message}`);
@@ -90,6 +94,14 @@ say(`the app connects to '${connection.database}' on ${connection.hostname}: ok`
 // 4. Schema and demo data (dates in the seed are relative to today, so every run reseeds).
 run("migrating", [...php, "spark", "migrate", "--all"]);
 run("seeding the demo data", [...php, "spark", "db:seed", "DatabaseSeeder"]);
+
+// The system administrator the cases sign in as. The demo seeder refuses to run in
+// production (its password is published), so this creates the account the way a
+// real one is made, with the development rules (a placeholder address is fine here;
+// the code is "emailed" to the sink above).
+run("creating the end-to-end administrator", [...php, "spark", "admin:create", adminAccount.email, "admin.e2e", adminAccount.password], {
+    env: { ...env, CI_ENVIRONMENT: "development" },
+});
 
 // 5. Serve.
 say(`serving ${baseUrl}`);
