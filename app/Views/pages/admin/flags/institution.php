@@ -29,6 +29,8 @@ $reasons = [
 <h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Feature flags</h1>
 <p class="mt-1 text-sm text-gray-600"><?= esc($flagInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($flagInstitution['code']) ?>)</span></p>
 
+<?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $flagInstitution, 'tabActive' => 'flags']) ?>
+
 <?php if (session()->has('message')): ?>
     <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
 <?php endif; ?>

@@ -9,6 +9,7 @@ use App\Models\Subscriptions\PlanModel;
 use App\Models\Subscriptions\SubscriptionModel;
 use App\Models\Subscriptions\SubscriptionRenewalModel;
 use App\Services\Audit\RecordsAuditedChanges;
+use App\Services\Concerns\InTransaction;
 use CodeIgniter\Shield\Entities\User;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -29,6 +30,7 @@ use Throwable;
  */
 class SubscriptionService
 {
+    use InTransaction;
     use RecordsAuditedChanges;
 
     /**
@@ -72,16 +74,17 @@ class SubscriptionService
     }
 
     /**
-     * Starts an institution's first subscription.
+     * Checks that a first subscription could be started with this input, and
+     * writes nothing. start() does exactly these checks first; onboarding uses
+     * it to refuse a bad plan or date while the person is still on that step.
      *
      * @param array<string, mixed> $input a form post: plan_id, period_start, period_end, amount, currency, reference, notes
      *
-     * @return int the subscription's id
+     * @return array{term: array{plan_id: int, period_start: string, period_end: string, amount: ?string, currency: string, reference: ?string, notes: ?string}, plan: array<string, mixed>}
      *
      * @throws InvalidArgumentException
-     * @throws Throwable                whatever stopped the audit entry from being written, after the change was undone
      */
-    public function start(int $institutionId, array $input, ?User $actor = null): int
+    public function prepareStart(int $institutionId, array $input): array
     {
         $term = SubscriptionInput::term($input);
 
@@ -96,6 +99,23 @@ class SubscriptionService
         if ($plan['status'] !== PlanModel::ACTIVE) {
             throw new InvalidArgumentException("The plan \"{$plan['name']}\" is retired and cannot be chosen for a new subscription.");
         }
+
+        return ['term' => $term, 'plan' => $plan];
+    }
+
+    /**
+     * Starts an institution's first subscription.
+     *
+     * @param array<string, mixed> $input a form post: plan_id, period_start, period_end, amount, currency, reference, notes
+     *
+     * @return int the subscription's id
+     *
+     * @throws InvalidArgumentException
+     * @throws Throwable                whatever stopped the audit entry from being written, after the change was undone
+     */
+    public function start(int $institutionId, array $input, ?User $actor = null): int
+    {
+        ['term' => $term, 'plan' => $plan] = $this->prepareStart($institutionId, $input);
 
         $subscriptionId = $this->inTransaction(function () use ($institutionId, $term, $actor): int {
             $model = new SubscriptionModel();
@@ -324,34 +344,5 @@ class SubscriptionService
     private function removeRow(int $rowId): void
     {
         db_connect()->table('subscription_renewals')->where('id', $rowId)->delete();
-    }
-
-    /**
-     * Runs several writes as one: all happen or none do. Every write in $work
-     * checks its own result and throws, which rolls the whole lot back.
-     *
-     * @template T
-     *
-     * @param callable(): T $work
-     *
-     * @return T
-     */
-    private function inTransaction(callable $work)
-    {
-        $db = db_connect();
-
-        $db->transBegin();
-
-        try {
-            $result = $work();
-        } catch (Throwable $e) {
-            $db->transRollback();
-
-            throw $e;
-        }
-
-        $db->transCommit();
-
-        return $result;
     }
 }

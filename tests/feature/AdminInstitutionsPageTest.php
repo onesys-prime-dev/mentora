@@ -243,22 +243,36 @@ final class AdminInstitutionsPageTest extends RouteTestCase
         $this->assertStringContainsString('name="code"', $body);
     }
 
-    public function testAddingCreatesAPendingInstitutionAndShowsItInTheList(): void
+    public function testAddingCreatesAPendingInstitutionAndContinuesIntoOnboarding(): void
     {
         $response = $this->submit('admin/institutions', ['name' => 'Acme University', 'code' => 'acme']);
-
-        $this->assertStringEndsWith('admin/institutions', $this->location($response));
 
         $row = db_connect()->table('institutions')->where('code', 'ACME')->get()->getRowArray();
 
         $this->assertSame('Acme University', $row['name']);
         $this->assertSame('pending', $row['status']);
+        $this->assertStringEndsWith("admin/institutions/{$row['id']}/onboarding/subscription", $this->location($response));
+
+        $this->assertStringContainsString('Added Acme University', $this->body("admin/institutions/{$row['id']}/onboarding/subscription"));
+        $this->assertSame(1, $this->auditCount('institution.created'));
+    }
+
+    public function testAPendingInstitutionIsListedWithAWayToFinishOnboarding(): void
+    {
+        $id = $this->seeded('NEWCO', 'pending', 'New Company College');
 
         $body = $this->body();
 
-        $this->assertStringContainsString('Added Acme University', $body);
-        $this->assertStringContainsString('Acme University', $body);
-        $this->assertSame(1, $this->auditCount('institution.created'));
+        $this->assertStringContainsString('New Company College', $body);
+        $this->assertStringContainsString("admin/institutions/{$id}/onboarding", $body);
+        $this->assertStringContainsString("admin/institutions/{$id}\"", $body, 'the name links to the profile');
+    }
+
+    public function testAnActiveInstitutionOffersNoOnboarding(): void
+    {
+        $id = $this->seeded('DONE', 'active', 'Finished College');
+
+        $this->assertStringNotContainsString("admin/institutions/{$id}/onboarding", $this->body());
     }
 
     public function testAddingWithBadDetailsGoesBackToTheFormWithTheMessageAndTheInput(): void

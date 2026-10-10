@@ -61,6 +61,11 @@ class SubscriptionsController extends BaseController
 
     public function start(int $institutionId): RedirectResponse
     {
+        // A pending institution gets its first subscription as part of onboarding, which also invites its administrator.
+        if (($institution = (new InstitutionModel())->find($institutionId)) !== null && $institution['status'] === InstitutionModel::PENDING) {
+            return redirect()->to("admin/institutions/{$institutionId}/onboarding")->with('error', 'Start a pending institution\'s subscription by finishing its onboarding.');
+        }
+
         return $this->act(
             $institutionId,
             fn () => $this->subscriptions->start($institutionId, $this->request->getPost()),

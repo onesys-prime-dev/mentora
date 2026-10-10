@@ -104,7 +104,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                 [$statusLabel, $statusClass] = $statusLabels[$row['status']] ?? [$row['status'], 'bg-gray-100 text-gray-700'];
                 ?>
                 <tr>
-                    <td class="px-3 py-2 font-medium"><?= esc($row['name']) ?></td>
+                    <td class="px-3 py-2 font-medium"><?php if ($isDeleted): ?><?= esc($row['name']) ?><?php else: ?><a class="text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions/' . $row['id']) ?>"><?= esc($row['name']) ?></a><?php endif; ?></td>
                     <td class="px-3 py-2 font-mono text-xs"><?= esc($row['code']) ?></td>
                     <td class="px-3 py-2">
                         <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $statusClass ?>"><?= esc($statusLabel) ?></span>
@@ -120,6 +120,9 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                                     <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Restore</button>
                                 </form>
                             <?php else: ?>
+                                <?php if ($row['status'] === 'pending'): ?>
+                                    <a class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10" href="<?= site_url('admin/institutions/' . $row['id'] . '/onboarding') ?>">Finish onboarding</a>
+                                <?php endif; ?>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/edit') ?>">Edit</a>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>">Subscription</a>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/flags') ?>">Features</a>
