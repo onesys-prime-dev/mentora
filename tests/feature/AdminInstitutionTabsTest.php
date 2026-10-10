@@ -165,7 +165,9 @@ final class AdminInstitutionTabsTest extends RouteTestCase
         $body = $this->body("admin/institutions/{$this->institution}{$suffix}");
 
         $this->assertStringContainsString('data-institution-tabs', $body);
-        $this->assertSame(1, preg_match_all('/aria-current="page"/', $body), 'exactly one tab is current');
+        preg_match('#<nav[^>]*data-institution-tabs.*?</nav>#s', $body, $tabs);
+
+        $this->assertSame(1, preg_match_all('/aria-current="page"/', $tabs[0] ?? ''), 'exactly one tab is current');
         $this->assertMatchesRegularExpression('/data-tab="' . $tab . '"\s+aria-current="page"/', $body);
     }
 

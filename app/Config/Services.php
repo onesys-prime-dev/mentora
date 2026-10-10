@@ -5,6 +5,7 @@ namespace Config;
 use App\Services\Audit\AuditLogger;
 use App\Services\Backup\BackupRunner;
 use App\Services\Backup\MysqldumpRunner;
+use App\Services\Monitoring\AdminHome;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -30,6 +31,16 @@ class Services extends BaseService
         }
 
         return new AuditLogger();
+    }
+
+    /** What the admin home page works out; tests replace it with injectMock('adminHome', ...) to fix the health checks. */
+    public static function adminHome(bool $getShared = true): AdminHome
+    {
+        if ($getShared) {
+            return static::getSharedInstance('adminHome');
+        }
+
+        return new AdminHome();
     }
 
     /** Whatever makes database dumps; tests replace it with injectMock('backupRunner', ...). */
