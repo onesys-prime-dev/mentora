@@ -13,7 +13,7 @@ use Tests\Support\DatabaseTestCase;
  *
  * @internal
  */
-final class GeneralSettingsTest extends DatabaseTestCase
+final class GeneralSettingsServiceTest extends DatabaseTestCase
 {
     protected bool $isolateTests = true;
 
