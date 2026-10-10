@@ -3,7 +3,7 @@
  * The tabs along the top of an institution's pages. Each tab is its own page.
  *
  * @var array<string, mixed> $tabInstitution the institution (id)
- * @var string               $tabActive      profile | subscription | users | flags | audit
+ * @var string               $tabActive      profile | subscription | users | flags | integrations | audit
  */
 $tabBase = 'admin/institutions/' . $tabInstitution['id'];
 $tabs    = [
@@ -11,6 +11,7 @@ $tabs    = [
     'subscription' => ['Subscription', $tabBase . '/subscription'],
     'users'        => ['Users', $tabBase . '/users'],
     'flags'        => ['Features', $tabBase . '/flags'],
+    'integrations' => ['Integrations', $tabBase . '/integrations'],
     'audit'        => ['Audit', $tabBase . '/audit'],
 ];
 ?>

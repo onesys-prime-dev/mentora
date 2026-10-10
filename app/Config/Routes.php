@@ -467,6 +467,12 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('institutions/(:num)/flags', 'Admin\FlagsController::institution/$1', ['filter' => 'permission:flags.view']);
     $routes->post('institutions/(:num)/flags/(:segment)', 'Admin\FlagsController::setForInstitution/$1/$2', ['filter' => 'permission:flags.manage']);
 
+    // Student information system connection, per institution: look with integrations.view; saving
+    // (which can replace credentials) also needs the password; testing only reads.
+    $routes->get('institutions/(:num)/integrations', 'Admin\IntegrationsController::show/$1', ['filter' => 'permission:integrations.view']);
+    $routes->post('institutions/(:num)/integrations', 'Admin\IntegrationsController::save/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
+    $routes->post('institutions/(:num)/integrations/test', 'Admin\IntegrationsController::test/$1', ['filter' => 'permission:integrations.manage']);
+
     // People across every institution: look and export with users.view, change with users.manage.
     // Changes that decide who can get in or who someone is (name and email, password reset, roles,
     // institutions) also need the password.
