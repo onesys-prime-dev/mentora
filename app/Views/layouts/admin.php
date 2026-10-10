@@ -32,6 +32,8 @@ $email = $user->email ?? '';
             </div>
         </header>
 
+        <?= $this->include('layouts/partials/admin-menu') ?>
+
         <?= $this->include('layouts/partials/announcement') ?>
 
         <main class="flex-1 px-6 py-8 lg:px-12">
