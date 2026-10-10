@@ -8,6 +8,7 @@ use App\Models\Courses\EnrollmentModel;
 use App\Models\Courses\CourseScheduleModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Models\Assignments\InstructorAssignmentModel;
+use App\Models\Assignments\ChairpersonAssignmentModel;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -16,6 +17,8 @@ class CourseService
     protected EnrollmentModel $enrollmentModel;
 
     protected InstructorAssignmentModel $instructorAssignmentModel;
+
+    protected ChairpersonAssignmentModel $chairpersonAssignmentModel;
 
     protected CourseScheduleModel $courseScheduleModel;
 
@@ -26,6 +29,8 @@ class CourseService
         $this->enrollmentModel = new EnrollmentModel();
 
         $this->instructorAssignmentModel = new InstructorAssignmentModel();
+
+        $this->chairpersonAssignmentModel = new ChairpersonAssignmentModel();
 
         $this->courseScheduleModel = new CourseScheduleModel();
 
@@ -53,6 +58,14 @@ class CourseService
 
             return $this->withCardDetails(
                 $this->instructorAssignmentModel->retrieveInstructorCourseOfferings($user->id),
+                fn (array $courses) => $this->classProgress($courses)
+            );
+        }
+
+        if ($user->inGroup('chairperson')) {
+
+            return $this->withCardDetails(
+                $this->chairpersonAssignmentModel->retrieveChairedCourseOfferings($user->id),
                 fn (array $courses) => $this->classProgress($courses)
             );
         }
@@ -194,6 +207,14 @@ class CourseService
         if ($user->inGroup('instructor')) {
             return $this->instructorAssignmentModel
                 ->retrieveInstructorCourseOffering(
+                    $user->id,
+                    $offeringId
+                );
+        }
+
+        if ($user->inGroup('chairperson')) {
+            return $this->chairpersonAssignmentModel
+                ->retrieveChairedCourseOffering(
                     $user->id,
                     $offeringId
                 );

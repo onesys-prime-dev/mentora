@@ -4,6 +4,7 @@ namespace App\Services\Courses\Assessments;
 
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Courses\EnrollmentModel;
+use App\Services\Courses\ChairpersonAccessService;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -103,11 +104,15 @@ class AssessmentScopeService
         return true;
     }
 
-    /** May this user work inside the offering: its assigned instructor, or an enrolled student? */
+    /** May this user work inside the offering: its assigned instructor, an enrolled student, or the chairperson of its program? */
     public function canAccess(User $user, int $offeringId): bool
     {
         if ($user->inGroup('instructor')) {
             return (bool) (new InstructorAssignmentModel())->retrieveInstructorCourseOffering((int) $user->id, $offeringId);
+        }
+
+        if ($user->inGroup('chairperson')) {
+            return (new ChairpersonAccessService())->canAccess($user, $offeringId);
         }
 
         return (bool) (new EnrollmentModel())->retrieveStudentCourseOffering((int) $user->id, $offeringId);

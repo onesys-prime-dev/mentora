@@ -61,6 +61,27 @@ class ChairpersonAssignmentModel extends Model
      */
     public function retrieveChairedCourseOfferings(int $userId): array
     {
+        return $this->chairedOfferingsBuilder($userId)
+            ->orderBy('courses.course_code', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * One course offering, only if this user actively chairs the
+     * sub-department it belongs to. Same column shape and null-when-not-
+     * theirs contract as InstructorAssignmentModel::retrieveInstructorCourseOffering().
+     */
+    public function retrieveChairedCourseOffering(int $userId, int $offeringId): ?array
+    {
+        return $this->chairedOfferingsBuilder($userId)
+            ->where('course_offerings.id', $offeringId)
+            ->get()
+            ->getRowArray();
+    }
+
+    private function chairedOfferingsBuilder(int $userId): \CodeIgniter\Database\BaseBuilder
+    {
         return $this->builder()
             ->select([
                 'course_offerings.id AS offering_id',
@@ -109,9 +130,6 @@ class ChairpersonAssignmentModel extends Model
             )
             ->where('chairperson_assignments.chairperson_user_id', $userId)
             ->where('chairperson_assignments.status', 'active')
-            ->where('course_offerings.status', 'active')
-            ->orderBy('courses.course_code', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->where('course_offerings.status', 'active');
     }
 }

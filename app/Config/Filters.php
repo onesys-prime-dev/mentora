@@ -4,6 +4,7 @@ namespace Config;
 
 use App\Filters\AccountStateFilter;
 use App\Filters\AssessmentScope;
+use App\Filters\ChairpersonCourseAudit;
 use App\Filters\ImpersonationFilter;
 use App\Filters\LoginLockoutFilter;
 use App\Filters\MaintenanceFilter;
@@ -50,6 +51,7 @@ class Filters extends BaseFilters
         'impersonation' => ImpersonationFilter::class,
         'loginlockout'  => LoginLockoutFilter::class,
         'maintenance'   => MaintenanceFilter::class,
+        'chairpersoncourseaudit' => ChairpersonCourseAudit::class,
     ];
 
     /**
