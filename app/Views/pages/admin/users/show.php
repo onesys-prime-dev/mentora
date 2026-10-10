@@ -98,6 +98,20 @@ $memberOf    = array_column($person['institutions'], 'id');
         </div>
     </section>
 
+    <?php if (! $isAdmin && ! $personIsSelf && ! $deactivated): ?>
+        <section class="rounded-lg bg-white p-6 shadow lg:col-span-2" data-section="view-as">
+            <h2 class="text-lg font-semibold text-[#0040A6]">View as this person</h2>
+            <p class="mt-1 text-sm text-gray-600">See the platform exactly as they do. It is <strong>view only</strong>: nothing can be changed, it ends by itself after the time limit, and it is kept in the audit log with your reason. Needs your password.</p>
+            <form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/impersonate') ?>" class="mt-3 flex flex-wrap items-end gap-3">
+                <?= csrf_field() ?>
+                <label class="<?= $label ?> min-w-[18rem] flex-1">Why are you viewing as them?
+                    <input class="<?= $input ?>" type="text" name="reason" maxlength="500" minlength="5" required placeholder="For example: support ticket 1234, grades not showing">
+                </label>
+                <button type="submit" class="rounded bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-amber-700">View as <?= esc($name !== '' ? $name : (string) $person['username']) ?></button>
+            </form>
+        </section>
+    <?php endif; ?>
+
     <section class="rounded-lg bg-white p-6 shadow" data-section="roles">
         <h2 class="text-lg font-semibold text-[#0040A6]">Roles</h2>
 

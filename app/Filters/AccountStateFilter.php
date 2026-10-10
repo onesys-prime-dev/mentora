@@ -27,6 +27,12 @@ class AccountStateFilter implements FilterInterface
 
     public function before(RequestInterface $request, $arguments = null)
     {
+        // While an administrator views as someone the session is that person's, but it is the
+        // administrator who is signed in: ImpersonationFilter checks their account instead.
+        if (session('impersonator_id') !== null) {
+            return null;
+        }
+
         if (! auth()->loggedIn()) {
             return null;
         }
