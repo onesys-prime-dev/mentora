@@ -26,6 +26,7 @@ $email = $user->email ?? '';
             </a>
 
             <div class="flex items-center gap-4 text-sm text-gray-700">
+                <a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('notifications') ?>">Notifications<?php $unreadNotes = (new App\Services\Notifications\NotificationService())->unreadCount((int) auth()->id()); ?><?php if ($unreadNotes > 0): ?> <span class="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white" data-unread-count><?= esc((string) $unreadNotes) ?></span><?php endif; ?></a>
                 <span><?= esc($email) ?></span>
                 <a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('/logout') ?>">Log out</a>
             </div>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
+use App\Services\Notifications\NotificationTriggers;
 use App\Services\Subscriptions\SubscriptionLifecycle;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -49,6 +50,11 @@ class SyncSubscriptions extends BaseCommand
 
         foreach ($result['failed'] as $id => $reason) {
             CLI::error("Could not update #{$id}: {$reason}");
+        }
+
+        // Tell people what the timeline and the limits now say (safe to repeat: each is told once).
+        if (! $dryRun) {
+            CLI::write(sprintf('Created %d notification(s).', (new NotificationTriggers())->run(new DateTimeImmutable())));
         }
 
         return $result['failed'] === [] ? EXIT_SUCCESS : EXIT_ERROR;
