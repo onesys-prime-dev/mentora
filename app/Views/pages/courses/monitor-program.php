@@ -150,7 +150,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                             <?php foreach ($comparison as $row): ?>
                                 <tr class="border-b border-gray-50 hover:bg-gray-50">
                                     <td class="px-3 py-2">
-                                        <a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('chairperson/courses/' . $row['offering_id'] . '/' . $row['slug']) ?>">
+                                        <a data-course-comparison-link class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('chairperson/courses/' . $row['offering_id'] . '/' . $row['slug']) ?>">
                                             <?= esc($row['course_code']) ?> <?= esc($row['section_code']) ?>
                                         </a>
                                     </td>

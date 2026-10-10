@@ -356,6 +356,7 @@ class MonitorProgramService
         $total = $query->countAllResults(false);
 
         $rows = $query->orderBy('created_at', 'DESC')
+            ->orderBy('id', 'DESC')
             ->limit($perPage, max(0, $page - 1) * $perPage)
             ->find();
 

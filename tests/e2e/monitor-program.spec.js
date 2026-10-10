@@ -17,7 +17,7 @@ test("Monitor Program page loads with the chairperson's own program", async ({ p
     await page.goto("/chairperson/monitor-program");
 
     await expect(page.getByRole("heading", { name: "Monitor Program" })).toBeVisible();
-    await expect(page.getByText("IT101")).toBeVisible();
+    await expect(page.locator("[data-course-comparison-link]", { hasText: "IT101" }).first()).toBeVisible();
 });
 
 test("Filtering by an unrelated term empties the course comparison rather than erroring", async ({ page }) => {
@@ -40,7 +40,7 @@ test("A course comparison row's link drills into that course", async ({ page }) 
     await signInAsChairperson(page);
     await page.goto("/chairperson/monitor-program");
 
-    const row = page.getByRole("link", { name: /IT101/ }).first();
+    const row = page.locator("[data-course-comparison-link]").first();
     await expect(row).toBeVisible();
     await row.click();
 

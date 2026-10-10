@@ -453,6 +453,142 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
         $this->assertSame(['IT102', 'IT101'], array_column($rows, 'course_code'));
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | auditLog
+    |--------------------------------------------------------------------------
+    */
+
+    public function testAuditLogShowsOnlyThisChairsOwnChairpersonScopedActions(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $other = CourseFactory::user('chairperson');
+        $offering = CourseFactory::offering();
+
+        service('auditLogger')->log('course.chairperson_action', $chair, [
+            'target_type' => 'course_offering',
+            'target_id' => $offering,
+            'new' => ['method' => 'POST'],
+        ]);
+
+        // Not this chair's action.
+        service('auditLogger')->log('course.chairperson_action', $other, [
+            'target_type' => 'course_offering',
+            'target_id' => $offering,
+            'new' => ['method' => 'POST'],
+        ]);
+
+        // This chair's action, but not a chairperson-scoped one.
+        service('auditLogger')->log('course.announcement_created', $chair, [
+            'target_type' => 'course_offering',
+            'target_id' => $offering,
+        ]);
+
+        $result = $this->monitor->auditLog($chair, [], new MonitorProgramFilters());
+
+        $this->assertSame(1, $result['total']);
+        $this->assertSame('Created something', $result['rows'][0]['description']);
+    }
+
+    public function testAuditLogDescribesEachHttpMethod(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $offering = CourseFactory::offering();
+
+        foreach ([['POST'], ['PATCH'], ['DELETE'], [null]] as [$method]) {
+            service('auditLogger')->log('course.chairperson_action', $chair, [
+                'target_type' => 'course_offering',
+                'target_id' => $offering,
+                'new' => $method === null ? [] : ['method' => $method],
+            ]);
+        }
+
+        $descriptions = array_column($this->monitor->auditLog($chair, [], new MonitorProgramFilters(), perPage: 10)['rows'], 'description');
+
+        $this->assertSame(['Made a change', 'Deleted something', 'Updated something', 'Created something'], $descriptions);
+    }
+
+    public function testAuditLogAttachesTheCourseLabelFromTheGivenOfferingRows(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $offering = CourseFactory::offering();
+
+        service('auditLogger')->log('course.chairperson_action', $chair, [
+            'target_type' => 'course_offering',
+            'target_id' => $offering,
+            'new' => ['method' => 'POST'],
+        ]);
+
+        $offeringRows = [['offering_id' => $offering, 'course_code' => 'IT101', 'section_code' => 'A', 'course_title' => 'Course IT101']];
+
+        $row = $this->monitor->auditLog($chair, $offeringRows, new MonitorProgramFilters())['rows'][0];
+
+        $this->assertSame('IT101', $row['course_code']);
+        $this->assertSame('A', $row['section_code']);
+        $this->assertNotNull($row['slug']);
+    }
+
+    public function testAuditLogWithNoKnownOfferingLeavesTheCourseLabelNull(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $offering = CourseFactory::offering();
+
+        service('auditLogger')->log('course.chairperson_action', $chair, [
+            'target_type' => 'course_offering',
+            'target_id' => $offering,
+            'new' => ['method' => 'POST'],
+        ]);
+
+        $row = $this->monitor->auditLog($chair, [], new MonitorProgramFilters())['rows'][0];
+
+        $this->assertNull($row['course_code']);
+        $this->assertNull($row['slug']);
+    }
+
+    public function testAuditLogIsEmptyWithNoActivity(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+
+        $this->assertSame(['rows' => [], 'total' => 0], $this->monitor->auditLog($chair, [], new MonitorProgramFilters()));
+    }
+
+    public function testAuditLogPaginates(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $offering = CourseFactory::offering();
+
+        for ($i = 0; $i < 3; $i++) {
+            service('auditLogger')->log('course.chairperson_action', $chair, [
+                'target_type' => 'course_offering',
+                'target_id' => $offering,
+                'new' => ['method' => 'POST'],
+            ]);
+        }
+
+        $result = $this->monitor->auditLog($chair, [], new MonitorProgramFilters(), page: 1, perPage: 2);
+
+        $this->assertSame(3, $result['total']);
+        $this->assertCount(2, $result['rows']);
+    }
+
+    public function testAuditLogNarrowedByDateRangeExcludesOutsideActivity(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $offering = CourseFactory::offering();
+
+        $id = service('auditLogger')->log('course.chairperson_action', $chair, [
+            'target_type' => 'course_offering',
+            'target_id' => $offering,
+            'new' => ['method' => 'POST'],
+        ]);
+
+        db_connect()->table('audit_logs')->where('id', $id)->update(['created_at' => '2025-01-01 00:00:00']);
+
+        $result = $this->monitor->auditLog($chair, [], new MonitorProgramFilters(from: '2026-01-01', to: '2026-12-31'));
+
+        $this->assertSame(0, $result['total']);
+    }
+
     public function testCourseComparisonFallsBackToCourseCodeForAnUnknownSortColumn(): void
     {
         $chair = CourseFactory::user('chairperson');

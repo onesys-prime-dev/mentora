@@ -128,6 +128,25 @@ final class MonitorProgramPageTest extends RouteTestCase
         $result->assertSee('Nothing to monitor yet');
     }
 
+    public function testAnAtRiskStudentShowsWithTheirCourseLabel(): void
+    {
+        $module = CourseFactory::module($this->mine);
+        $unit = CourseFactory::unit($module);
+        CourseFactory::items($unit, array_fill(0, 4, []));
+
+        $student = CourseFactory::user('student');
+        db_connect()->table('user_profiles')->insert(['user_id' => $student->id, 'first_name' => 'Ada', 'last_name' => 'Lovelace']);
+        CourseFactory::enroll($this->mine, $student);
+
+        $this->loggedInAs($this->chair);
+
+        $result = $this->get('chairperson/monitor-program');
+
+        $result->assertStatus(200);
+        $result->assertSee('Ada Lovelace');
+        $result->assertSee('Never active');
+    }
+
     public function testThePublishedGradeAverageAppearsOnThePage(): void
     {
         $schemeId = GradeFactory::scheme($this->mine);
