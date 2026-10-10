@@ -274,4 +274,39 @@ class CourseModuleModel extends Model
 
         return $byOffering;
     }
+
+    /**
+     * How many modules were touched per offering within [$from, $until) when
+     * given — the "content updates" side of instructor activity.
+     *
+     * @return array<int, int>
+     */
+    public function retrieveUpdateCountsByOffering(array $offeringIds, ?string $from = null, ?string $until = null): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        $builder = $this->builder()
+            ->select(['offering_id', 'COUNT(*) AS update_count'])
+            ->whereIn('offering_id', $offeringIds);
+
+        if ($from !== null) {
+            $builder->where('updated_at >=', $from);
+        }
+
+        if ($until !== null) {
+            $builder->where('updated_at <', $until);
+        }
+
+        $rows = $builder->groupBy('offering_id')->get()->getResultArray();
+
+        $byOffering = [];
+
+        foreach ($rows as $row) {
+            $byOffering[(int) $row['offering_id']] = (int) $row['update_count'];
+        }
+
+        return $byOffering;
+    }
 }

@@ -264,6 +264,21 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
     $routes->get('courses', 'Courses\ChairpersonCoursesController::index');
+
+    // Monitor Program's data layer (R5) — a separate URL space from
+    // api/courses below, since these aren't scoped to one offering and
+    // have no numeric id segment for assessmentscope/chairpersoncourseaudit
+    // to key off; role:chairperson plus MonitorProgramService's own
+    // program-scoped join is this group's only access check.
+    $routes->group('api/monitor-program', function ($routes) {
+        $routes->get('snapshot', 'Courses\MonitorProgramController::snapshot');
+        $routes->get('enrollment', 'Courses\MonitorProgramController::enrollment');
+        $routes->get('grades', 'Courses\MonitorProgramController::grades');
+        $routes->get('instructor-activity', 'Courses\MonitorProgramController::instructorActivity');
+        $routes->get('at-risk', 'Courses\MonitorProgramController::atRisk');
+        $routes->get('course-comparison', 'Courses\MonitorProgramController::courseComparison');
+        $routes->get('terms', 'Courses\MonitorProgramController::terms');
+    });
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2');
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');

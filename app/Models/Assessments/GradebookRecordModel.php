@@ -42,6 +42,41 @@ class GradebookRecordModel extends Model
     }
 
     /**
+     * Every student's effective percentage, grouped by offering — the raw
+     * input for a class average or a grade distribution. A student with
+     * nothing calculated yet (no record at all) is simply absent, same as
+     * "Incomplete" everywhere else this model is read.
+     *
+     * @return array<int, list<float>>
+     */
+    public function retrievePercentagesByOffering(array $offeringIds): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        $rows = $this->select(['course_offering_id', 'calculated_percentage', 'overridden_percentage', 'is_override'])
+            ->whereIn('course_offering_id', $offeringIds)
+            ->findAll();
+
+        $byOffering = [];
+
+        foreach ($rows as $row) {
+
+            $percentage = self::effectivePercentage($row);
+
+            if ($percentage === null) {
+                continue;
+            }
+
+            $byOffering[(int) $row['course_offering_id']][] = $percentage;
+
+        }
+
+        return $byOffering;
+    }
+
+    /**
      * The percentage that counts: the override when set, else the calculated one.
      */
     public static function effectivePercentage(?array $record): ?float
