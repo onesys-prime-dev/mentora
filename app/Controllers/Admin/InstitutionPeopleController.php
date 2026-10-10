@@ -73,6 +73,19 @@ class InstitutionPeopleController extends BaseController
         return $this->outcome($back, $result);
     }
 
+    public function revoke(int $institutionId, int $invitationId): RedirectResponse
+    {
+        $back = redirect()->to("admin/institutions/{$institutionId}/users");
+
+        try {
+            $this->invitations->revoke($institutionId, $invitationId);
+        } catch (InvalidArgumentException $e) {
+            return $back->with('error', $e->getMessage());
+        }
+
+        return $back->with('message', 'The invitation was cancelled. Its link no longer works.');
+    }
+
     /**
      * @param array{email: string, expires_at: string, email_error: ?string} $result
      */

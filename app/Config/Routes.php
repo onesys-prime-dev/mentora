@@ -16,6 +16,11 @@ $routes->get('health', 'HealthController::index');
 $routes->get('invitation/(:segment)', 'InvitationController::show/$1');
 $routes->post('invitation/(:segment)', 'InvitationController::accept/$1');
 
+// A person who was sent a password reset link chooses a new password here. Public
+// on purpose (they are locked out); the secret in the link is the proof.
+$routes->get('reset-password/(:segment)', 'PasswordResetController::show/$1');
+$routes->post('reset-password/(:segment)', 'PasswordResetController::complete/$1');
+
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
@@ -281,6 +286,7 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('institutions/(:num)/users', 'Admin\InstitutionPeopleController::index/$1', ['filter' => 'permission:users.view']);
     $routes->post('institutions/(:num)/invitations', 'Admin\InstitutionPeopleController::invite/$1', ['filter' => 'permission:users.manage']);
     $routes->post('institutions/(:num)/invitations/(:num)/resend', 'Admin\InstitutionPeopleController::resend/$1/$2', ['filter' => 'permission:users.manage']);
+    $routes->post('institutions/(:num)/invitations/(:num)/revoke', 'Admin\InstitutionPeopleController::revoke/$1/$2', ['filter' => 'permission:users.manage']);
 
     // Onboarding a new institution: its plan and first subscription, then its first administrator. Nothing is saved until the last step.
     $routes->get('institutions/(:num)/onboarding', 'Admin\OnboardingController::index/$1', ['filter' => 'permission:institutions.manage']);
@@ -300,6 +306,25 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->post('flags/(:segment)/global', 'Admin\FlagsController::setGlobal/$1', ['filter' => ['permission:flags.manage', 'reauth']]);
     $routes->get('institutions/(:num)/flags', 'Admin\FlagsController::institution/$1', ['filter' => 'permission:flags.view']);
     $routes->post('institutions/(:num)/flags/(:segment)', 'Admin\FlagsController::setForInstitution/$1/$2', ['filter' => 'permission:flags.manage']);
+
+    // People across every institution: look and export with users.view, change with users.manage.
+    // Changes that decide who can get in or who someone is (name and email, password reset, roles,
+    // institutions) also need the password.
+    $routes->get('users', 'Admin\UsersController::index', ['filter' => 'permission:users.view']);
+    $routes->get('users/export', 'Admin\UsersController::export', ['filter' => 'permission:users.view']);
+    $routes->post('users/export', 'Admin\UsersController::exportSelected', ['filter' => 'permission:users.view']);
+    $routes->get('users/new', 'Admin\UsersController::new', ['filter' => 'permission:users.manage']);
+    $routes->post('users', 'Admin\UsersController::invite', ['filter' => 'permission:users.manage']);
+    $routes->post('users/bulk', 'Admin\UsersController::bulk', ['filter' => 'permission:users.manage']);
+    $routes->get('users/(:num)', 'Admin\UsersController::show/$1', ['filter' => 'permission:users.view']);
+    $routes->post('users/(:num)', 'Admin\UsersController::update/$1', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/(:num)/deactivate', 'Admin\UsersController::deactivate/$1', ['filter' => 'permission:users.manage']);
+    $routes->post('users/(:num)/reactivate', 'Admin\UsersController::reactivate/$1', ['filter' => 'permission:users.manage']);
+    $routes->post('users/(:num)/sign-out', 'Admin\UsersController::signOut/$1', ['filter' => 'permission:users.manage']);
+    $routes->post('users/(:num)/reset-password', 'Admin\UsersController::resetPassword/$1', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/(:num)/roles', 'Admin\UsersController::roles/$1', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/(:num)/memberships', 'Admin\UsersController::addMembership/$1', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/(:num)/memberships/(:num)/remove', 'Admin\UsersController::removeMembership/$1/$2', ['filter' => ['permission:users.manage', 'reauth']]);
 
     // Archive: past and deleted institutions, with restore and purge.
     $routes->get('archive', 'Admin\ArchiveController::index', ['filter' => 'permission:institutions.view']);

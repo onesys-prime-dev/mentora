@@ -240,6 +240,111 @@ final class InvitationServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Other roles, and cancelling
+    |--------------------------------------------------------------------------
+    */
+
+    public function testSeveralPeopleCanBeInvitedToDifferentRolesAtOnce(): void
+    {
+        $institution = $this->institution();
+
+        $this->service->invite($institution, $this->person('one@example.com'), $this->admin, $this->now, 'instructor');
+        $one = $this->lastToken();
+        $this->service->invite($institution, $this->person('two@example.com'), $this->admin, $this->now, 'student');
+        $two = $this->lastToken();
+
+        $this->assertSame('instructor', $this->service->open($one, $this->now)['role']);
+        $this->assertSame('student', $this->service->open($two, $this->now)['role']);
+    }
+
+    public function testInvitingTheSamePersonAgainReplacesTheirOpenInvitation(): void
+    {
+        $institution = $this->institution();
+
+        $this->service->invite($institution, $this->person('one@example.com'), $this->admin, $this->now, 'instructor');
+        $first = $this->lastToken();
+        $this->service->invite($institution, $this->person('one@example.com'), $this->admin, $this->now, 'chairperson');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(InvitationService::LINK_REPLACED);
+
+        $this->service->open($first, $this->now);
+    }
+
+    public function testAnotherRolesInvitationDoesNotReplaceTheAdministratorsAndTheOtherWayAround(): void
+    {
+        $institution = $this->institution();
+
+        $this->service->invite($institution, $this->person('boss@example.com'), $this->admin, $this->now);
+        $boss = $this->lastToken();
+        $this->service->invite($institution, $this->person('student@example.com'), $this->admin, $this->now, 'student');
+        $student = $this->lastToken();
+
+        $this->assertSame('boss@example.com', $this->service->open($boss, $this->now)['email']);
+        $this->assertSame('student@example.com', $this->service->open($student, $this->now)['email']);
+
+        $this->service->invite($institution, $this->person('newboss@example.com'), $this->admin, $this->now);
+
+        $this->assertSame('student@example.com', $this->service->open($student, $this->now)['email'], 'a new administrator invitation leaves the student alone');
+    }
+
+    public function testASystemAdministratorCannotBeInvited(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('php spark admin:create');
+
+        $this->service->invite($this->institution(), $this->person(), $this->admin, $this->now, 'admin');
+    }
+
+    public function testTheListCanBeNarrowedToOneRole(): void
+    {
+        $institution = $this->institution();
+        $this->service->invite($institution, $this->person('boss@example.com'), $this->admin, $this->now);
+        $this->service->invite($institution, $this->person('student@example.com'), $this->admin, $this->now, 'student');
+
+        $this->assertCount(2, $this->service->forInstitution($institution, $this->now));
+        $this->assertSame(['boss@example.com'], array_column($this->service->forInstitution($institution, $this->now, 20, InvitationService::ROLE), 'email'));
+    }
+
+    public function testCancellingKillsTheLinkAndIsRecorded(): void
+    {
+        $institution = $this->institution();
+        $result      = $this->service->invite($institution, $this->person(), $this->admin, $this->now);
+        $token       = $this->lastToken();
+
+        $this->service->revoke($institution, $result['invitation_id'], $this->admin, $this->now);
+
+        $this->assertSame(1, $this->auditCount('invitation.revoked'));
+        $this->assertSame(InvitationStatus::REVOKED, $this->service->forInstitution($institution, $this->now)[0]['status']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(InvitationService::LINK_REPLACED);
+
+        $this->service->open($token, $this->now);
+    }
+
+    public function testOnlyAnOpenInvitationCanBeCancelled(): void
+    {
+        $institution = $this->institution();
+        $other       = $this->institution('OTHER');
+
+        $open = $this->service->invite($institution, $this->person('open@example.com'), $this->admin, $this->now);
+        $this->service->accept($this->lastToken(), self::STRONG, $this->now);
+
+        $expired = $this->service->invite($other, $this->person('late@example.com'), $this->admin, $this->now);
+
+        foreach ([[$institution, $open['invitation_id'], $this->now, 'no longer open'], [$other, $expired['invitation_id'], $this->now->modify('+30 days'), 'no longer open'], [$institution, 999999, $this->now, 'does not exist'], [$other, $open['invitation_id'], $this->now, 'does not exist']] as [$inst, $id, $when, $says]) {
+            try {
+                $this->service->revoke($inst, $id, $this->admin, $when);
+                $this->fail('This should have been refused.');
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringContainsString($says, $e->getMessage());
+            }
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | When the email does not go
     |--------------------------------------------------------------------------
     */

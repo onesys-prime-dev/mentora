@@ -42,4 +42,7 @@ class Platform extends BaseConfig
 
     /** How long an invitation link works before a new one has to be sent (SA4). */
     public int $invitationValidityDays = 7;
+
+    /** How long a password reset link works (SA5). */
+    public int $passwordResetValidityHours = 24;
 }

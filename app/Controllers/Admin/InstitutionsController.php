@@ -84,7 +84,7 @@ class InstitutionsController extends BaseController
             'profInstitution'  => $institution,
             'profSubscription' => $subscription,
             'profStatus'       => $subscription === null ? null : (new SubscriptionLifecycle())->statusOf((string) $subscription['end_date'], $id, $now),
-            'profInvitations'  => (new InvitationService())->forInstitution($id, $now, 5),
+            'profInvitations'  => (new InvitationService())->forInstitution($id, $now, 5, InvitationService::ROLE),
             'profMembers'      => $this->institutions->members($id, 1),
         ]);
     }
