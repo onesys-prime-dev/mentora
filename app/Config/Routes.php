@@ -342,6 +342,10 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     // System status: health, platform counts, subscription watch and usage against plans (read-only).
     $routes->get('monitoring', 'Admin\MonitoringController::index', ['filter' => 'permission:monitoring.view']);
 
+    // Backups: history and alert with backup.view; asking for one needs backup.manage and the password.
+    $routes->get('backups', 'Admin\BackupController::index', ['filter' => 'permission:backup.view']);
+    $routes->post('backups', 'Admin\BackupController::request', ['filter' => ['permission:backup.manage', 'reauth']]);
+
     // Archive: past and deleted institutions, with restore and purge.
     $routes->get('archive', 'Admin\ArchiveController::index', ['filter' => 'permission:institutions.view']);
 

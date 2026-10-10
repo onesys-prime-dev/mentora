@@ -79,9 +79,9 @@ final class SystemHealthTest extends CIUnitTestCase
     {
         $ok = static fn (): array => ['status' => SystemHealth::UP, 'detail' => 'fine'];
 
-        $results = (new SystemHealth(['database' => $ok, 'storage' => $ok, 'disk' => $ok, 'ai' => $ok, 'jobs' => $ok]))->run();
+        $results = (new SystemHealth(['database' => $ok, 'storage' => $ok, 'disk' => $ok, 'ai' => $ok, 'jobs' => $ok, 'backups' => $ok]))->run();
 
-        $this->assertSame(['database', 'storage', 'disk', 'ai', 'jobs'], array_keys($results));
+        $this->assertSame(['database', 'storage', 'disk', 'ai', 'jobs', 'backups'], array_keys($results));
         $this->assertSame('fine', $results['ai']['detail']);
     }
 
@@ -93,7 +93,7 @@ final class SystemHealthTest extends CIUnitTestCase
             'database' => static function (): array {
                 throw new RuntimeException('secret detail that must not be shown');
             },
-            'storage' => $ok, 'disk' => $ok, 'ai' => $ok, 'jobs' => $ok,
+            'storage' => $ok, 'disk' => $ok, 'ai' => $ok, 'jobs' => $ok, 'backups' => $ok,
         ]))->run();
 
         $this->assertSame(SystemHealth::DOWN, $results['database']['status']);

@@ -3,6 +3,8 @@
 namespace Config;
 
 use App\Services\Audit\AuditLogger;
+use App\Services\Backup\BackupRunner;
+use App\Services\Backup\MysqldumpRunner;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -28,6 +30,16 @@ class Services extends BaseService
         }
 
         return new AuditLogger();
+    }
+
+    /** Whatever makes database dumps; tests replace it with injectMock('backupRunner', ...). */
+    public static function backupRunner(bool $getShared = true): BackupRunner
+    {
+        if ($getShared) {
+            return static::getSharedInstance('backupRunner');
+        }
+
+        return new MysqldumpRunner();
     }
 
     /*

@@ -41,6 +41,9 @@ final class NotificationsTest extends DatabaseTestCase
         $this->now    = new DateTimeImmutable('2026-10-10 08:00:00');
         $this->acme   = PeopleFactory::institution('ACME', 'active', 'Acme University');
         $this->admin  = (int) PeopleFactory::person('admin', 'Ada', 'Admin', 'ada@example.com')->id;
+
+        // A recent good backup, so these tests are about subscriptions and limits only.
+        db_connect()->table('backups')->insert(['status' => 'succeeded', 'trigger' => 'scheduled', 'created_at' => '2026-10-10 06:00:00', 'finished_at' => '2026-10-10 06:00:00']);
         $this->boss   = (int) PeopleFactory::person('institutional_admin', 'Bo', 'Boss', 'boss@acme.example', $this->acme)->id;
     }
 
