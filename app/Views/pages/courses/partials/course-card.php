@@ -54,7 +54,11 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
             <span class="text-sm font-medium text-[#1A1C1E]"><?= esc($course['schedule'] ?: 'No schedule set') ?></span>
             <span class="text-xs text-[#646464]"><?= esc($course['room'] ?? '--') ?></span>
             <?php if (!empty($course['instructor_name'])): ?>
-                <span class="text-xs text-[#646464]">Instr. <?= esc($course['instructor_name']) ?></span>
+                <span class="text-xs text-[#646464]">
+                    Instr. <?= esc($course['instructor_name']) ?><?php if ((int) ($course['instructor_count'] ?? 1) > 1): ?> +<?= (int) $course['instructor_count'] - 1 ?> more<?php endif; ?>
+                </span>
+            <?php elseif (array_key_exists('instructor_count', $course)): ?>
+                <span class="text-xs text-[#646464]">No instructor assigned</span>
             <?php endif; ?>
         </div>
 
