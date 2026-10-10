@@ -13,12 +13,17 @@ use RuntimeException;
  */
 class MysqldumpRunner implements BackupRunner
 {
+    /** @param string $binary the dump program (and anything it needs in front); replaced in tests */
+    public function __construct(private readonly string $binary = 'mysqldump')
+    {
+    }
+
     public function dump(string $path): void
     {
         $db = config('Database')->default;
 
         $command = sprintf(
-            'mysqldump --no-tablespaces --single-transaction --routines --triggers -h %s -P %d -u %s %s',
+            $this->binary . ' --no-tablespaces --single-transaction --routines --triggers -h %s -P %d -u %s %s',
             escapeshellarg((string) $db['hostname']),
             (int) ($db['port'] ?? 3306),
             escapeshellarg((string) $db['username']),
@@ -30,7 +35,7 @@ class MysqldumpRunner implements BackupRunner
             [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
             $pipes,
             null,
-            ['MYSQL_PWD' => (string) $db['password'], 'PATH' => (string) getenv('PATH')],
+            array_merge(getenv(), ['MYSQL_PWD' => (string) $db['password']]),
         );
 
         if (! is_resource($process)) {

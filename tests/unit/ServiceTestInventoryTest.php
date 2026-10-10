@@ -28,7 +28,6 @@ final class ServiceTestInventoryTest extends CIUnitTestCase
      */
     private const NOT_NAMED_IN_A_TEST = [
         'AssessmentScopeService' => 'Exercised through the assessmentscope route filter in tests/feature/AssessmentRoutesScopeTest.php.',
-        'MysqldumpRunner'        => 'Runs the real mysqldump binary. Tests replace it with FakeBackupRunner (see BackupServiceTest); the command line itself is exercised by a real backup on the server.',
         'SimilarityChecker'      => 'Exercised through QuestionGenerationService tests, which use a fake generator.',
         'LocalQuestionBuilderClient' => 'The real HTTP client for the Python question service. Tests never call it by design (see docs/testing.md, "The AI question-generation boundary").',
     ];
