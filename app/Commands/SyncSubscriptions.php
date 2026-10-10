@@ -40,6 +40,11 @@ class SyncSubscriptions extends BaseCommand
         $dryRun = array_key_exists('dry-run', $params) || CLI::getOption('dry-run') !== null;
         $result = (new SubscriptionLifecycle())->sync(new DateTimeImmutable(), $dryRun);
 
+        // The system status page watches for this job going quiet.
+        if (! $dryRun) {
+            setting()->set('Monitoring.subscriptionSyncAt', time());
+        }
+
         $verb = $dryRun ? 'Would change' : 'Changed';
 
         CLI::write(sprintf('%s %d institution(s).', $verb, count($result['changed'])), $result['changed'] === [] ? 'white' : 'green');
