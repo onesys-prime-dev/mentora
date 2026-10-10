@@ -25,6 +25,10 @@ $routes->post('reset-password/(:segment)', 'PasswordResetController::complete/$1
 // is the other person's and must not need the admin group to get out (the filter allows it).
 $routes->post('impersonation/stop', 'Admin\ImpersonationController::stop');
 
+// A signed-in person's own notifications, for every role.
+$routes->get('notifications', 'NotificationController::index', ['filter' => 'session']);
+$routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
+
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
