@@ -263,7 +263,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
-    $routes->get('courses', 'Courses\CourseController::index');
+    $routes->get('courses', 'Courses\ChairpersonCoursesController::index');
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2');
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
