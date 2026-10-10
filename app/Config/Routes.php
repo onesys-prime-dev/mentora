@@ -339,6 +339,9 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('settings/security', 'Admin\SecuritySettingsController::index', ['filter' => 'permission:settings.view']);
     $routes->post('settings/security', 'Admin\SecuritySettingsController::update', ['filter' => ['permission:settings.manage', 'reauth']]);
 
+    // System status: health, platform counts, subscription watch and usage against plans (read-only).
+    $routes->get('monitoring', 'Admin\MonitoringController::index', ['filter' => 'permission:monitoring.view']);
+
     // Archive: past and deleted institutions, with restore and purge.
     $routes->get('archive', 'Admin\ArchiveController::index', ['filter' => 'permission:institutions.view']);
 

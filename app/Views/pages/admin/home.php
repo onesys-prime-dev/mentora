@@ -10,6 +10,7 @@
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">Institutions</a></li>
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/users') ?>">Users</a></li>
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/archive') ?>">Archive</a></li>
+    <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/monitoring') ?>">System status</a></li>
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/plans') ?>">Plans</a></li>
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/flags') ?>">Feature flags</a></li>
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/roles') ?>">Roles and permissions</a></li>
