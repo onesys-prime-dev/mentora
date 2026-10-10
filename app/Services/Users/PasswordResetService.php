@@ -8,6 +8,7 @@ use App\Models\Academic\InstitutionModel;
 use App\Services\Admin\PlatformSettings;
 use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\InvitationStatus;
+use App\Services\Security\PasswordPolicy;
 use App\Services\Institutions\InvitationToken;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
@@ -171,10 +172,10 @@ class PasswordResetService
         /** @var User $user */
         $user = model(UserModel::class)->findById((int) $reset['user_id']);
 
-        $check = service('passwords')->check($password, $user);
+        $problem = (new PasswordPolicy())->problem($password, $user);
 
-        if (! $check->isOK()) {
-            throw new InvalidArgumentException($check->reason());
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
         }
 
         return $this->inTransaction(function () use ($reset, $user, $password, $now): User {

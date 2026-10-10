@@ -45,4 +45,19 @@ class Platform extends BaseConfig
 
     /** How long a password reset link works (SA5). */
     public int $passwordResetValidityHours = 24;
+
+    /** Shortest password accepted when someone sets one (SA8). */
+    public int $passwordMinLength = 8;
+
+    /** Minutes of inactivity after which a signed-in person is signed out (SA8). */
+    public int $sessionTimeoutMinutes = 120;
+
+    /** Failed sign-ins in a row that lock an account's sign-in; 0 turns the lockout off (SA8). */
+    public int $lockoutAttempts = 5;
+
+    /** Minutes a locked account's sign-in stays locked (SA8). */
+    public int $lockoutMinutes = 15;
+
+    /** Roles that must confirm a code sent by email when signing in, comma separated. `admin` is always included (SA8). */
+    public string $twoFactorRoles = 'admin';
 }

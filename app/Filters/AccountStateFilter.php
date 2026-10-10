@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filters;
 
+use App\Services\Admin\PlatformSettings;
 use App\Services\Users\AccountControl;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -24,6 +25,11 @@ class AccountStateFilter implements FilterInterface
 {
     /** The session key set when sign-in completes (see AuditAuthListener). */
     public const SIGNED_IN_AT = 'signed_in_at';
+
+    /** The session key holding the time of the person's last request. */
+    public const LAST_SEEN_AT = 'last_seen_at';
+
+    public const REASON_IDLE = 'idle';
 
     public function before(RequestInterface $request, $arguments = null)
     {
@@ -46,15 +52,23 @@ class AccountStateFilter implements FilterInterface
         $signedInAt = session(self::SIGNED_IN_AT);
         $reason     = (new AccountControl())->blockReason((int) $user->id, is_numeric($signedInAt) ? (int) $signedInAt : null);
 
+        if ($reason === null && self::idleFor() > (int) (new PlatformSettings())->get('sessionTimeoutMinutes') * 60) {
+            $reason = self::REASON_IDLE;
+        }
+
         if ($reason === null) {
+            session()->set(self::LAST_SEEN_AT, time());
+
             return null;
         }
 
         auth()->logout();
 
-        $message = $reason === AccountControl::REASON_DEACTIVATED
-            ? 'This account has been deactivated. Contact your administrator.'
-            : 'You were signed out by an administrator. Please sign in again.';
+        $message = match ($reason) {
+            AccountControl::REASON_DEACTIVATED => 'This account has been deactivated. Contact your administrator.',
+            self::REASON_IDLE                  => 'You were signed out because you were inactive for a while. Please sign in again.',
+            default                            => 'You were signed out by an administrator. Please sign in again.',
+        };
 
         /** @var IncomingRequest $request */
         if ($request->isAJAX() || str_contains($request->getHeaderLine('Accept'), 'application/json')) {
@@ -62,6 +76,14 @@ class AccountStateFilter implements FilterInterface
         }
 
         return redirect()->to('/login')->with('error', $message);
+    }
+
+    /** Seconds since the person's last request, or 0 when this session has not recorded one. */
+    private static function idleFor(): int
+    {
+        $seen = session(self::LAST_SEEN_AT);
+
+        return is_numeric($seen) ? max(0, time() - (int) $seen) : 0;
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)

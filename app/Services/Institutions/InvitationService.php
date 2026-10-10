@@ -9,6 +9,7 @@ use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
 use App\Services\Admin\PlatformSettings;
 use App\Services\Concerns\InTransaction;
+use App\Services\Security\PasswordPolicy;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UserFilters;
 use CodeIgniter\Shield\Entities\User;
@@ -344,10 +345,10 @@ class InvitationService
 
         $invitation = $this->open($token, $now);
 
-        $check = service('passwords')->check($password, new User(['username' => $this->username($invitation['first_name'], $invitation['last_name']), 'email' => $invitation['email']]));
+        $problem = (new PasswordPolicy())->problem($password, new User(['username' => $this->username($invitation['first_name'], $invitation['last_name']), 'email' => $invitation['email']]));
 
-        if (! $check->isOK()) {
-            throw new InvalidArgumentException($check->reason());
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
         }
 
         if (model(UserModel::class)->findByCredentials(['email' => $invitation['email']]) !== null) {
