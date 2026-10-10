@@ -144,7 +144,7 @@ final class AdminInstitutionTabsTest extends RouteTestCase
         $this->assertStringContainsString('ACME', $body);
         $this->assertStringContainsString('data-institution-status="active"', $body);
 
-        foreach (['', '/subscription', '/users', '/flags', '/audit'] as $suffix) {
+        foreach (['', '/subscription', '/users', '/flags', '/integrations', '/audit'] as $suffix) {
             $this->assertStringContainsString('href="' . site_url("admin/institutions/{$this->institution}{$suffix}") . '"', $body, "a tab to {$suffix}");
         }
     }
@@ -156,6 +156,7 @@ final class AdminInstitutionTabsTest extends RouteTestCase
         yield 'subscription' => ['/subscription', 'subscription'];
         yield 'users' => ['/users', 'users'];
         yield 'features' => ['/flags', 'flags'];
+        yield 'integrations' => ['/integrations', 'integrations'];
         yield 'audit' => ['/audit', 'audit'];
     }
 

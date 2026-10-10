@@ -6,6 +6,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Backup\BackupRunner;
 use App\Services\Backup\MysqldumpRunner;
 use App\Services\Monitoring\AdminHome;
+use App\Services\Sis\CredentialVault;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -51,6 +52,16 @@ class Services extends BaseService
         }
 
         return new MysqldumpRunner();
+    }
+
+    /** Seals integration credentials; tests give it their own key with injectMock('credentialVault', ...). */
+    public static function credentialVault(bool $getShared = true): CredentialVault
+    {
+        if ($getShared) {
+            return static::getSharedInstance('credentialVault');
+        }
+
+        return new CredentialVault();
     }
 
     /*
