@@ -56,9 +56,11 @@ class CourseController extends BaseController
     ) {
         $user = auth()->user();
 
-        $prefix = $user->inGroup('instructor')
-            ? 'instructor'
-            : 'student';
+        // A dual-role user (e.g. chairperson+instructor) is redirected as
+        // whichever role they're currently acting as, not just the first
+        // group they happen to hold — otherwise a chairperson's own course
+        // card would send them to the student section instead.
+        $prefix = active_role() ?: ($user->inGroup('instructor') ? 'instructor' : 'student');
 
         return redirect()->to(
             site_url(

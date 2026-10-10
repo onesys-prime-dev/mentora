@@ -7,6 +7,7 @@ namespace App\Services\Courses;
 use App\Models\Assignments\ChairpersonAssignmentModel;
 use App\Models\Assessments\AssessmentSubmissionModel;
 use App\Models\Assessments\GradebookRecordModel;
+use App\Models\Audit\AuditLogModel;
 use App\Models\Courses\AnnouncementModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Grades\GradingSchemeModel;
@@ -50,6 +51,8 @@ class MonitorProgramService
 
     protected AnnouncementModel $announcementModel;
 
+    protected AuditLogModel $auditLogModel;
+
     protected RosterRiskService $riskService;
 
     public function __construct()
@@ -61,6 +64,7 @@ class MonitorProgramService
         $this->gradebookRecordModel = new GradebookRecordModel();
         $this->submissionModel = new AssessmentSubmissionModel();
         $this->announcementModel = new AnnouncementModel();
+        $this->auditLogModel = new AuditLogModel();
         $this->riskService = new RosterRiskService();
     }
 
@@ -319,5 +323,81 @@ class MonitorProgramService
         });
 
         return $rows;
+    }
+
+    /**
+     * The audit log viewer: this chairperson's own chairperson-scoped
+     * actions, newest first, within the filtered date range. Only
+     * course.chairperson_action entries — the ones ChairpersonCourseAudit
+     * writes — so a chairperson's ordinary instructor-parity mutations show
+     * up here the same way they do on the dashboard's Audit Highlights
+     * widget, and nothing outside that acting-role context leaks in.
+     *
+     * @param  list<array<string, mixed>> $offeringRows the output of offeringRows(), for course labels
+     * @return array{rows: list<array<string, mixed>>, total: int}
+     */
+    public function auditLog(User $user, array $offeringRows, MonitorProgramFilters $filters, int $page = 1, int $perPage = 10): array
+    {
+        $query = $this->auditLogModel
+            ->where('actor_user_id', $user->id)
+            ->where('action', 'course.chairperson_action');
+
+        $from = $filters->fromTimestamp();
+        $until = $filters->untilTimestamp();
+
+        if ($from !== null) {
+            $query = $query->where('created_at >=', $from);
+        }
+
+        if ($until !== null) {
+            $query = $query->where('created_at <', $until);
+        }
+
+        $total = $query->countAllResults(false);
+
+        $rows = $query->orderBy('created_at', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->limit($perPage, max(0, $page - 1) * $perPage)
+            ->find();
+
+        $offeringsById = [];
+
+        foreach ($offeringRows as $row) {
+            $offeringsById[(int) $row['offering_id']] = $row;
+        }
+
+        $entries = array_map(function (array $row) use ($offeringsById) {
+
+            $offeringId = $row['target_id'] !== null ? (int) $row['target_id'] : null;
+            $offering = $offeringId !== null ? ($offeringsById[$offeringId] ?? null) : null;
+
+            $new = json_decode((string) ($row['new_values'] ?? ''), true);
+            $method = is_array($new) ? ($new['method'] ?? null) : null;
+
+            return [
+                'id' => (int) $row['id'],
+                'created_at' => $row['created_at'],
+                'acting_role' => $row['acting_role'],
+                'offering_id' => $offeringId,
+                'course_code' => $offering['course_code'] ?? null,
+                'section_code' => $offering['section_code'] ?? null,
+                'slug' => $offering !== null ? url_title((string) $offering['course_title'], '-', true) : null,
+                'description' => self::describeAuditMethod($method),
+            ];
+
+        }, $rows);
+
+        return ['rows' => $entries, 'total' => $total];
+    }
+
+    /** "Created something" / "Updated something" / "Deleted something" / "Made a change", from the HTTP method a mutation used. */
+    private static function describeAuditMethod(?string $method): string
+    {
+        return match ($method) {
+            'POST' => 'Created something',
+            'PATCH', 'PUT' => 'Updated something',
+            'DELETE' => 'Deleted something',
+            default => 'Made a change',
+        };
     }
 }
