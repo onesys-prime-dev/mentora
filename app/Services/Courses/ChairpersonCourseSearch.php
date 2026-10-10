@@ -87,7 +87,11 @@ class ChairpersonCourseSearch
             ->join('users', 'users.id = instructor_assignments.instructor_user_id')
             ->join('user_profiles', 'user_profiles.user_id = users.id')
             ->distinct()
-            ->orderBy('user_profiles.last_name', 'ASC')
+            // Ordering by a column not in the SELECT list (DISTINCT name
+            // only) is accepted by some MySQL configs and rejected by
+            // others — order by the selected alias instead, not the raw
+            // column, so this works everywhere.
+            ->orderBy('name', 'ASC')
             ->get()
             ->getResultArray();
     }
