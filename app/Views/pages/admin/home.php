@@ -13,6 +13,7 @@
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/plans') ?>">Plans</a></li>
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/flags') ?>">Feature flags</a></li>
     <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/roles') ?>">Roles and permissions</a></li>
+    <li><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/settings/security') ?>">Security settings</a></li>
 </ul>
 
 <?= $this->endSection() ?>

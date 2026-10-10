@@ -39,6 +39,11 @@ class PlatformSettings
         'expiryGraceDays'      => ['type' => 'int', 'label' => 'Grace period (days)', 'institution' => true, 'min' => 0, 'max' => 365],
         'expiryReadOnlyDays'   => ['type' => 'int', 'label' => 'Read-only period (days)', 'institution' => true, 'min' => 0, 'max' => 365],
         'invitationValidityDays' => ['type' => 'int', 'label' => 'Days an invitation link works', 'institution' => false, 'min' => 1, 'max' => 60],
+        'passwordMinLength'    => ['type' => 'int', 'label' => 'Shortest password (characters)', 'institution' => false, 'min' => 8, 'max' => 64],
+        'sessionTimeoutMinutes' => ['type' => 'int', 'label' => 'Sign out after inactivity (minutes)', 'institution' => false, 'min' => 5, 'max' => 120],
+        'lockoutAttempts'      => ['type' => 'int', 'label' => 'Failed sign-ins before a lockout (0 = never)', 'institution' => false, 'min' => 0, 'max' => 50],
+        'lockoutMinutes'       => ['type' => 'int', 'label' => 'Lockout length (minutes)', 'institution' => false, 'min' => 1, 'max' => 1440],
+        'twoFactorRoles'       => ['type' => 'string', 'label' => 'Roles that need an emailed sign-in code', 'institution' => false, 'maxLength' => 200],
         'passwordResetValidityHours' => ['type' => 'int', 'label' => 'Hours a password reset link works', 'institution' => false, 'min' => 1, 'max' => 168],
     ];
 
