@@ -402,6 +402,15 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     });
 });
 
+// Institutional administrator area. Deliberately not behind `readonly`: the
+// data export must keep working once the subscription has ended (SA13).
+$routes->group('institution', ['filter' => 'role:institutional_admin'], function ($routes) {
+    $routes->get('/', 'Institution\ExportController::index');
+    $routes->get('export', 'Institution\ExportController::index');
+    $routes->post('export', 'Institution\ExportController::create');
+    $routes->get('export/(:num)', 'Institution\ExportController::download/$1');
+});
+
 // System administrator area: platform-wide, above every institution.
 $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('/', 'Admin\HomeController::index');
