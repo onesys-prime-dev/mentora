@@ -48,6 +48,7 @@ class SystemHealth
             'disk'     => fn (): array => $this->disk(),
             'ai'       => fn (): array => $this->ai(),
             'jobs'     => fn (): array => $this->jobs(),
+            'backups'  => fn (): array => $this->backups(),
         ];
     }
 
@@ -57,6 +58,7 @@ class SystemHealth
         'disk'     => 'Disk space',
         'ai'       => 'Question-builder (AI) service',
         'jobs'     => 'Scheduled jobs',
+        'backups'  => 'Backups',
     ];
 
     /**
@@ -194,6 +196,16 @@ class SystemHealth
         return (new LocalQuestionBuilderClient())->isAvailable()
             ? ['status' => self::UP, 'detail' => 'The service answers.']
             : ['status' => self::DEGRADED, 'detail' => 'The service does not answer; question generation is unavailable.'];
+    }
+
+    /** @return array{status: string, detail: string} */
+    private function backups(): array
+    {
+        $alert = (new \App\Services\Backup\BackupService())->alert();
+
+        return $alert === null
+            ? ['status' => self::UP, 'detail' => 'A recent backup succeeded.']
+            : ['status' => self::DEGRADED, 'detail' => $alert['message']];
     }
 
     /** @return array{status: string, detail: string} */

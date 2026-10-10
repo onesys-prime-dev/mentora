@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Notifications;
 
 use App\Models\Academic\InstitutionModel;
+use App\Services\Backup\BackupService;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Subscriptions\SubscriptionLifecycle;
 use App\Services\Subscriptions\SubscriptionStatus;
@@ -37,7 +38,7 @@ class NotificationTriggers
     /** @return int how many notifications were newly created */
     public function run(DateTimeImmutable $now): int
     {
-        $created = 0;
+        $created = $this->backups($now);
 
         $rows = db_connect()->table('subscriptions')
             ->select('subscriptions.id, subscriptions.institution_id, subscriptions.end_date, institutions.name, institutions.status')
@@ -64,6 +65,21 @@ class NotificationTriggers
         }
 
         return $created;
+    }
+
+    /** A failed or stale backup is told to the system administrators once per problem (urgent). */
+    private function backups(DateTimeImmutable $now): int
+    {
+        $alert = (new BackupService())->alert($now);
+
+        if ($alert === null) {
+            return 0;
+        }
+
+        $latest = db_connect()->table('backups')->selectMax('finished_at')->where('status', $alert['kind'] === 'failed' ? 'failed' : 'succeeded')->get()->getRowArray()['finished_at'] ?? 'never';
+        $this->admins = $this->recipients->administrators();
+
+        return $this->tell($this->admins, 'backup.' . $alert['kind'], 'Backups need attention', $alert['message'], true, 'backup:' . $alert['kind'] . ':' . $latest, null, 'admin/backups', $now);
     }
 
     /**
@@ -126,7 +142,7 @@ class NotificationTriggers
     /**
      * @param list<int> $audience
      */
-    private function tell(array $audience, string $type, string $title, string $body, bool $urgent, string $key, int $institutionId, string $link, DateTimeImmutable $now): int
+    private function tell(array $audience, string $type, string $title, string $body, bool $urgent, string $key, ?int $institutionId, string $link, DateTimeImmutable $now): int
     {
         $created = 0;
 

@@ -51,7 +51,7 @@ final class MigrationsTest extends DatabaseTestCase
             // Course features
             'announcements', 'discussion_threads', 'discussion_replies',
             // Platform
-            'audit_logs', 'settings', 'role_permissions', 'plans', 'subscriptions', 'subscription_renewals', 'institution_invitations', 'user_account_controls', 'password_resets', 'notifications',
+            'audit_logs', 'settings', 'role_permissions', 'plans', 'subscriptions', 'subscription_renewals', 'institution_invitations', 'user_account_controls', 'password_resets', 'notifications', 'backups',
         ];
 
         foreach ($tables as $table) {
