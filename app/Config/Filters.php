@@ -6,6 +6,7 @@ use App\Filters\AccountStateFilter;
 use App\Filters\AssessmentScope;
 use App\Filters\ImpersonationFilter;
 use App\Filters\LoginLockoutFilter;
+use App\Filters\MaintenanceFilter;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
 use App\Filters\RoleFilter;
@@ -48,6 +49,7 @@ class Filters extends BaseFilters
         'accountstate'  => AccountStateFilter::class,
         'impersonation' => ImpersonationFilter::class,
         'loginlockout'  => LoginLockoutFilter::class,
+        'maintenance'   => MaintenanceFilter::class,
     ];
 
     /**
@@ -91,6 +93,7 @@ class Filters extends BaseFilters
             // 'invalidchars',
 
             // A deactivated account, or a session an administrator ended, is turned away here.
+            'maintenance',   // the platform's timezone, and only administrators in during maintenance
             'loginlockout',  // too many failed sign-ins: refuse the attempt
             'impersonation', // a system administrator viewing as someone: view-only, time-limited
             'accountstate',

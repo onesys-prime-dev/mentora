@@ -46,6 +46,24 @@ class Platform extends BaseConfig
     /** How long a password reset link works (SA5). */
     public int $passwordResetValidityHours = 24;
 
+    /** The platform's name, shown in the admin header and in emails (SA12). */
+    public string $systemName = 'Mentora';
+
+    /** Who people are told to contact for help: an email address or a line of text (SA12). */
+    public string $supportContact = '';
+
+    /** The timezone times are shown and calculated in, an IANA name such as Asia/Manila (SA12). */
+    public string $timezone = 'UTC';
+
+    /** While on, only system administrators can use the platform (SA12). */
+    public bool $maintenanceMode = false;
+
+    /** What people see while maintenance mode is on (SA12). */
+    public string $maintenanceMessage = 'Mentora is down for maintenance. Please try again shortly.';
+
+    /** A line shown at the top of every page for everyone; empty for none (SA12). */
+    public string $announcement = '';
+
     /** Shortest password accepted when someone sets one (SA8). */
     public int $passwordMinLength = 8;
 

@@ -335,6 +335,10 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->post('users/(:num)/memberships', 'Admin\UsersController::addMembership/$1', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/(:num)/memberships/(:num)/remove', 'Admin\UsersController::removeMembership/$1/$2', ['filter' => ['permission:users.manage', 'reauth']]);
 
+    // General settings: look with settings.view; saving needs settings.manage and the password.
+    $routes->get('settings/general', 'Admin\GeneralSettingsController::index', ['filter' => 'permission:settings.view']);
+    $routes->post('settings/general', 'Admin\GeneralSettingsController::update', ['filter' => ['permission:settings.manage', 'reauth']]);
+
     // Security settings: look with settings.view; saving needs settings.manage and the password.
     $routes->get('settings/security', 'Admin\SecuritySettingsController::index', ['filter' => 'permission:settings.view']);
     $routes->post('settings/security', 'Admin\SecuritySettingsController::update', ['filter' => ['permission:settings.manage', 'reauth']]);
