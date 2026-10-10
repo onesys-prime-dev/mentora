@@ -21,6 +21,10 @@ $routes->post('invitation/(:segment)', 'InvitationController::accept/$1');
 $routes->get('reset-password/(:segment)', 'PasswordResetController::show/$1');
 $routes->post('reset-password/(:segment)', 'PasswordResetController::complete/$1');
 
+// Leaving a "view as" session. Outside the role areas on purpose: while viewing, the session
+// is the other person's and must not need the admin group to get out (the filter allows it).
+$routes->post('impersonation/stop', 'Admin\ImpersonationController::stop');
+
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
@@ -318,6 +322,7 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->post('users/bulk', 'Admin\UsersController::bulk', ['filter' => 'permission:users.manage']);
     $routes->get('users/(:num)', 'Admin\UsersController::show/$1', ['filter' => 'permission:users.view']);
     $routes->post('users/(:num)', 'Admin\UsersController::update/$1', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/(:num)/impersonate', 'Admin\ImpersonationController::start/$1', ['filter' => ['permission:impersonation.start', 'reauth']]);
     $routes->post('users/(:num)/deactivate', 'Admin\UsersController::deactivate/$1', ['filter' => 'permission:users.manage']);
     $routes->post('users/(:num)/reactivate', 'Admin\UsersController::reactivate/$1', ['filter' => 'permission:users.manage']);
     $routes->post('users/(:num)/sign-out', 'Admin\UsersController::signOut/$1', ['filter' => 'permission:users.manage']);

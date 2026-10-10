@@ -104,9 +104,39 @@ run as a spreadsheet formula (starting with `=`, `+`, `-`, `@`) are defused. Eac
 export is itself in the audit log (`users.exported`, with how many and how it was
 narrowed).
 
+## Viewing as someone (impersonation)
+
+On a person's page, **View as this person** lets a system administrator see the
+platform exactly as that person does, for support. It needs the
+`impersonation.start` permission, the password again, and a **reason** (5 to
+500 characters, kept in the audit log).
+
+- **It is view only, enforced on the server.** While it lasts the session *is*
+  the other person's, and every request except GET, HEAD and OPTIONS is refused
+  (a script gets a 403 JSON error `impersonation_view_only`), so nothing can be
+  saved on their behalf. Their saved role is not touched either.
+- **It ends by itself** after the platform setting `impersonationMinutes`
+  (30 by default). It also ends when the person's account is deactivated, when
+  the administrator signs out (the administrator is put back, not signed out),
+  or when the administrator's own account is switched off.
+- **It cannot be missed:** an amber banner on every page shows who is being
+  viewed, the reason, the minutes left and an **Exit view** button.
+- **Limits:** you cannot view as yourself, as another system administrator, or
+  as a deactivated account. The admin area is not reachable while viewing.
+- **On the record:** `impersonation.started` and `impersonation.ended` (with how
+  it ended and how long), and every entry written during the view carries the
+  administrator as the *impersonator*.
+
+Leaving: the **Exit view** button (`POST /impersonation/stop`), the time limit,
+or signing out. The exit route sits outside the role areas on purpose, so that
+the person's role does not stand in the way.
+
+Known limit: the rule is by HTTP method, so a GET route that wrote something
+would not be blocked. Changes in this app use POST, PATCH and DELETE; a new
+route that writes on GET must not be added.
+
 ## Not here yet
 
-- **Impersonation** (view as a person, view-only) is the next branch.
 - A person cannot reset their own password from the login page ("forgot
   password"): only an administrator can start a reset today.
 - The password rules shown on the pages come from Shield's configuration

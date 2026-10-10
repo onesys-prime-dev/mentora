@@ -4,6 +4,7 @@ namespace Config;
 
 use App\Filters\AccountStateFilter;
 use App\Filters\AssessmentScope;
+use App\Filters\ImpersonationFilter;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
 use App\Filters\RoleFilter;
@@ -44,6 +45,7 @@ class Filters extends BaseFilters
         'readonly'      => ReadOnlyFilter::class,
         'role'          => RoleFilter::class,
         'accountstate'  => AccountStateFilter::class,
+        'impersonation' => ImpersonationFilter::class,
     ];
 
     /**
@@ -87,6 +89,7 @@ class Filters extends BaseFilters
             // 'invalidchars',
 
             // A deactivated account, or a session an administrator ended, is turned away here.
+            'impersonation', // a system administrator viewing as someone: view-only, time-limited
             'accountstate',
         ],
         'after' => [
