@@ -69,6 +69,12 @@ class ModuleService
      */
     private function ensureInstructorOwnsOffering(User $user, int $offeringId): ?array
     {
+        if ($user->inGroup('chairperson')) {
+            return (new ChairpersonAccessService())->canAccess($user, $offeringId)
+                ? null
+                : ['success' => false, 'message' => 'Not authorized.'];
+        }
+
         if (!$user->inGroup('instructor')) {
             return ['success' => false, 'message' => 'Not authorized.'];
         }
