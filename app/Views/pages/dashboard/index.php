@@ -17,7 +17,10 @@ $renderWidget = function (string $slug) use ($widgets) {
     return $this->include('pages/dashboard/partials/' . $slug);
 };
 
-$userRole = esc($user->getGroups()[0]);
+// A multi-role user's dashboard must match the role they're actually
+// acting as, not just whichever group happens to sort first — otherwise
+// a chairperson who also teaches would see the instructor layout.
+$userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
 /**
  * Per-role grid plan.
@@ -64,6 +67,28 @@ $layouts = [
             ['slug' => 'at-risk-students', 'span' => 'lg:col-span-4'],
             ['slug' => 'class-progress',   'span' => 'lg:col-span-3'],
             ['slug' => 'content-status',   'span' => 'lg:col-span-3'],
+            ['slug' => 'quick-access',     'span' => 'lg:col-span-3'],
+        ],
+    ],
+
+    /*
+     * Same row shape as instructor's (identity spans both rows), but
+     * grading-queue/at-risk-students are program-wide instead of one
+     * instructor's sections, and the third row-1 slot is the chair's own
+     * "needs attention" signal (inactive-courses) rather than instructor-
+     * only widgets.
+     */
+    'chairperson' => [
+        'identity' => [
+            'span'    => 'lg:col-span-3 lg:row-span-2',
+            'widgets' => ['profile-card', 'program-snapshot'],
+        ],
+        'cells' => [
+            ['slug' => 'grading-queue',    'span' => 'lg:col-span-5'],
+            ['slug' => 'at-risk-students', 'span' => 'lg:col-span-4'],
+            ['slug' => 'inactive-courses', 'span' => 'lg:col-span-3'],
+            ['slug' => 'announcements',    'span' => 'lg:col-span-5'],
+            ['slug' => 'audit-highlights', 'span' => 'lg:col-span-4'],
             ['slug' => 'quick-access',     'span' => 'lg:col-span-3'],
         ],
     ],

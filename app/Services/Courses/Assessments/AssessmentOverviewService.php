@@ -47,7 +47,12 @@ class AssessmentOverviewService
     {
         $assessments = $this->courseAssessments($courseId, $offeringId);
 
-        return $user->inGroup('instructor')
+        // forInstructor() is offering-scoped, not "my own sections" scoped —
+        // access to the offering itself is already decided at the route
+        // (AssessmentScope), so a chairperson viewing a course in their
+        // program gets the same instructor-shaped overview, not the
+        // student one.
+        return $user->inGroup('instructor') || $user->inGroup('chairperson')
             ? $this->forInstructor($offeringId, $assessments)
             : $this->forStudent($user, $assessments);
     }

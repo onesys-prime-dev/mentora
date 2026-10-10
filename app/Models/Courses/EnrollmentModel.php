@@ -204,6 +204,21 @@ class EnrollmentModel extends Model
             ->getRowArray();
     }
 
+    /** Distinct students enrolled across a set of offerings — one person counted once, even if enrolled in several. */
+    public function retrieveEnrolledCountForOfferings(array $offeringIds): int
+    {
+        if ($offeringIds === []) {
+            return 0;
+        }
+
+        return $this->builder()
+            ->select('student_user_id')
+            ->whereIn('offering_id', $offeringIds)
+            ->where('status', 'enrolled')
+            ->distinct()
+            ->countAllResults();
+    }
+
     public function retrieveTotalCoursesEnrolled(int $userId): int
     {
         return $this->builder()

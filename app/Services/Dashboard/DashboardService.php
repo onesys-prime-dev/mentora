@@ -10,9 +10,11 @@ use App\Models\Academic\InstitutionUserModel;
 use App\Models\Academic\AcademicTermModel;
 use App\Models\Courses\CourseScheduleModel;
 use App\Models\Assignments\InstructorAssignmentModel;
+use App\Models\Assignments\ChairpersonAssignmentModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Models\Learning\LearningUnitModel;
 use App\Models\Assessments\GradebookRecordModel;
+use App\Models\Audit\AuditLogModel;
 use App\Services\Courses\RosterRiskService;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Grades\GradingSchemeService;
@@ -33,12 +35,17 @@ class DashboardService
 
     protected InstitutionUserModel $institutionUserModel;
     protected AcademicTermModel $academicTermModel;
+    protected ChairpersonAssignmentModel $chairpersonAssignmentModel;
+    protected AuditLogModel $auditLogModel;
 
     /**
      * Four instructor widgets all start from the same "sections I teach"
      * join, so it is resolved once per request and reused.
      */
     protected ?array $instructorSections = null;
+
+    /** Same memoization as $instructorSections, for the chairperson's program-wide offerings. */
+    protected ?array $chairpersonSections = null;
 
     /**
      * Which widget slugs a role is allowed to SEE, and nothing more.
@@ -70,6 +77,25 @@ class DashboardService
             'content-status',
             'quick-access',
         ],
+
+        /*
+         * R3 of the chairperson plan: a program snapshot, "needs attention"
+         * (at-risk students and overdue grading reuse the exact same
+         * widgets/definitions as the instructor dashboard, scoped to every
+         * course in the chair's program instead of one instructor's
+         * sections; inactive-courses is new), recent announcements, and
+         * audit-log highlights.
+         */
+        'chairperson' => [
+            'profile-card',
+            'program-snapshot',
+            'grading-queue',
+            'at-risk-students',
+            'inactive-courses',
+            'announcements',
+            'audit-highlights',
+            'quick-access',
+        ],
     ];
 
     public function __construct()
@@ -86,6 +112,8 @@ class DashboardService
         $this->learningItemModel = new \App\Models\Learning\LearningItemModel();
         $this->rosterRiskService = new RosterRiskService();
         $this->gradebookRecordModel = new GradebookRecordModel();
+        $this->chairpersonAssignmentModel = new ChairpersonAssignmentModel();
+        $this->auditLogModel = new AuditLogModel();
     }
 
     /**
@@ -132,6 +160,9 @@ class DashboardService
             'teaching-load'    => $this->getTeachingLoadData($user),
             'class-progress'   => $this->getClassProgressData($user),
             'content-status'   => $this->getContentStatusData($user),
+            'program-snapshot' => $this->getProgramSnapshotData($user),
+            'inactive-courses' => $this->getInactiveCoursesData($user),
+            'audit-highlights' => $this->getAuditHighlightsData($user),
             default            => [],
         };
     }
@@ -302,7 +333,9 @@ class DashboardService
 
     protected function getAnnouncementsData(User $user): array
     {
-        $offerings = $this->enrollmentModel->retrieveStudentCourseOfferings($user->id);
+        $offerings = $user->inGroup('student')
+            ? $this->enrollmentModel->retrieveStudentCourseOfferings($user->id)
+            : $this->scopedSections($user);
 
         if ($offerings === []) {
             return ['announcements' => []];
@@ -358,9 +391,146 @@ class DashboardService
         ];
     }
 
+    /**
+     * Extra tiles the Quick Access widget adds on top of global_apps()'s
+     * shared set — for a destination that only makes sense from one
+     * role's dashboard, not the header app menu everyone sees.
+     * global_apps() stays untouched so a tile doesn't appear for every
+     * role just because one of them needs it.
+     */
     protected function getQuickAccessData(User $user): array
     {
-        return [];
+        if (! $user->inGroup('chairperson')) {
+            return [];
+        }
+
+        return [
+            'extra' => [
+                // Monitor Program is a later branch of this plan; the tile
+                // exists now so the dashboard doesn't need a second pass
+                // once that page is built — url stays null (inert) until then.
+                ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'grades', 'url' => null],
+            ],
+        ];
+    }
+
+    /**
+     * The chairperson's program snapshot (R3): how many courses, instructors
+     * and students sit under every sub-department they chair right now.
+     */
+    protected function getProgramSnapshotData(User $user): array
+    {
+        $sections = $this->chairpersonSections($user);
+
+        if ($sections === []) {
+            return ['courses' => 0, 'instructors' => 0, 'students' => 0];
+        }
+
+        $offeringIds = array_map(static fn (array $s) => (int) $s['offering_id'], $sections);
+
+        return [
+            'courses'     => count($sections),
+            'instructors' => count(array_unique(array_filter(array_column($sections, 'instructor_id')))),
+            'students'    => $this->enrollmentModel->retrieveEnrolledCountForOfferings($offeringIds),
+        ];
+    }
+
+    /**
+     * Courses in the chairperson's program with no module activity for a
+     * while — the plan's third "needs attention" signal. 14 days, same
+     * staleness window RosterRiskService uses for an inactive student, so
+     * the dashboard's definition of "stale" doesn't disagree with itself
+     * depending on which widget you're looking at.
+     */
+    protected function getInactiveCoursesData(User $user): array
+    {
+        $sections = $this->chairpersonSections($user);
+
+        if ($sections === []) {
+            return ['courses' => []];
+        }
+
+        $offeringIds = array_column($sections, 'offering_id');
+        $lastActivity = $this->courseModuleModel->retrieveLastActivityByOffering($offeringIds);
+        $cutoff = time() - (14 * 86400);
+
+        $courses = [];
+
+        foreach ($sections as $section) {
+            $offeringId = (int) $section['offering_id'];
+            $last = $lastActivity[$offeringId] ?? null;
+
+            if ($last !== null && strtotime($last) >= $cutoff) {
+                continue;
+            }
+
+            $courses[] = [
+                'offering_id'  => $offeringId,
+                'slug'         => url_title($section['course_title'], '-', true),
+                'course_code'  => $section['course_code'],
+                'section_code' => $section['section_code'],
+                'last_activity' => $last !== null ? $this->describeEditedAt($last) : 'No activity yet',
+            ];
+        }
+
+        usort($courses, static fn (array $a, array $b) => $a['last_activity'] <=> $b['last_activity']);
+
+        return ['courses' => $courses];
+    }
+
+    /**
+     * The chairperson's own recent actions in the program — same
+     * `course.chairperson_action` entries ChairpersonCourseAudit writes,
+     * read back through AuditLogger's own redaction-at-write-time
+     * guarantee (nothing to re-redact here).
+     */
+    protected function getAuditHighlightsData(User $user): array
+    {
+        $rows = $this->auditLogModel
+            ->where('actor_user_id', $user->id)
+            ->where('action', 'course.chairperson_action')
+            ->orderBy('created_at', 'DESC')
+            ->limit(8)
+            ->find();
+
+        $offerings = [];
+
+        foreach ($this->chairpersonSections($user) as $section) {
+            $offerings[(int) $section['offering_id']] = $section;
+        }
+
+        $entries = [];
+
+        foreach ($rows as $row) {
+            $offeringId = $row['target_id'] !== null ? (int) $row['target_id'] : null;
+            $offering = $offeringId !== null ? ($offerings[$offeringId] ?? null) : null;
+
+            $new = json_decode((string) ($row['new_values'] ?? ''), true);
+            $method = is_array($new) ? ($new['method'] ?? null) : null;
+
+            $entries[] = [
+                'id'          => (int) $row['id'],
+                'offering_id' => $offeringId,
+                'slug'        => $offering !== null ? url_title($offering['course_title'], '-', true) : null,
+                'course_code' => $offering['course_code'] ?? null,
+                'section_code' => $offering['section_code'] ?? null,
+                'action'      => self::describeAuditMethod($method),
+                'when'        => $this->describeEditedAt($row['created_at']),
+            ];
+        }
+
+        return ['entries' => $entries];
+    }
+
+    /** The HTTP verb ChairpersonCourseAudit recorded, as a plain-language verb for the widget. */
+    private static function describeAuditMethod(?string $method): string
+    {
+        return match ($method) {
+            'POST'  => 'Created something',
+            'PATCH', 'PUT' => 'Updated something',
+            'DELETE' => 'Deleted something',
+            default => 'Made a change',
+        };
     }
 
     /**
@@ -372,7 +542,7 @@ class DashboardService
      */
     protected function getGradingQueueData(User $user): array
     {
-        $sections = $this->instructorSections($user);
+        $sections = $this->scopedSections($user);
 
         if ($sections === []) {
             return ['queue' => []];
@@ -439,9 +609,35 @@ class DashboardService
             ->retrieveInstructorSections($user->id);
     }
 
+    /**
+     * Every active offering across every sub-department the chairperson
+     * chairs, resolved once and reused — the same "sections" shape
+     * instructorSections() returns, so widgets built for one role don't
+     * need their own copy for the other.
+     */
+    protected function chairpersonSections(User $user): array
+    {
+        return $this->chairpersonSections ??= $this->chairpersonAssignmentModel
+            ->retrieveChairedCourseOfferings($user->id);
+    }
+
+    /** Which "my courses" list a role-agnostic widget should scope itself to. */
+    protected function scopedSections(User $user): array
+    {
+        if ($user->inGroup('instructor')) {
+            return $this->instructorSections($user);
+        }
+
+        if ($user->inGroup('chairperson')) {
+            return $this->chairpersonSections($user);
+        }
+
+        return [];
+    }
+
     protected function getAtRiskStudentsData(User $user): array
     {
-        $sections = $this->instructorSections($user);
+        $sections = $this->scopedSections($user);
 
         if ($sections === []) {
             return ['students' => []];
