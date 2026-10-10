@@ -38,6 +38,7 @@ class PlatformSettings
         'expiryWarningDays'    => ['type' => 'int', 'label' => 'Expiry warning window (days)', 'institution' => true, 'min' => 0, 'max' => 365],
         'expiryGraceDays'      => ['type' => 'int', 'label' => 'Grace period (days)', 'institution' => true, 'min' => 0, 'max' => 365],
         'expiryReadOnlyDays'   => ['type' => 'int', 'label' => 'Read-only period (days)', 'institution' => true, 'min' => 0, 'max' => 365],
+        'invitationValidityDays' => ['type' => 'int', 'label' => 'Days an invitation link works', 'institution' => false, 'min' => 1, 'max' => 60],
     ];
 
     /** @return array<string, array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int}> */

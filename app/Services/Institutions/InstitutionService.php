@@ -404,6 +404,60 @@ class InstitutionService
     }
 
     /**
+     * The people who belong to an institution: how many of each role, and the
+     * first `$limit` of them with their name, email and roles.
+     *
+     * @return array{total: int, perRole: array<string, int>, rows: list<array<string, mixed>>}
+     */
+    public function members(int $institutionId, int $limit = 100): array
+    {
+        $db = db_connect();
+
+        $rows = $db->table('institution_users')
+            ->select('users.id, users.username, users.active, user_profiles.first_name, user_profiles.last_name')
+            ->select("(SELECT secret FROM auth_identities WHERE auth_identities.user_id = users.id AND auth_identities.type = 'email_password' LIMIT 1) AS email", false)
+            ->join('users', 'users.id = institution_users.user_id')
+            ->join('user_profiles', 'user_profiles.user_id = users.id', 'left')
+            ->where('institution_users.institution_id', $institutionId)
+            ->where('users.deleted_at IS NULL', null, false)
+            ->orderBy('user_profiles.last_name')
+            ->orderBy('users.id')
+            ->limit($limit)
+            ->get()->getResultArray();
+
+        $groups = [];
+
+        if ($rows !== []) {
+            foreach ($db->table('auth_groups_users')->select('user_id, group')->whereIn('user_id', array_column($rows, 'id'))->get()->getResultArray() as $link) {
+                $groups[(int) $link['user_id']][] = $link['group'];
+            }
+        }
+
+        foreach ($rows as &$row) {
+            $row['groups'] = $groups[(int) $row['id']] ?? [];
+        }
+
+        $perRole = [];
+
+        foreach ($db->table('institution_users')
+            ->select('auth_groups_users.group, COUNT(DISTINCT institution_users.user_id) AS people')
+            ->join('auth_groups_users', 'auth_groups_users.user_id = institution_users.user_id')
+            ->where('institution_users.institution_id', $institutionId)
+            ->groupBy('auth_groups_users.group')
+            ->get()->getResultArray() as $count) {
+            $perRole[$count['group']] = (int) $count['people'];
+        }
+
+        ksort($perRole);
+
+        return [
+            'total'   => $db->table('institution_users')->where('institution_id', $institutionId)->countAllResults(),
+            'perRole' => $perRole,
+            'rows'    => $rows,
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      *
      * @throws InvalidArgumentException when there is no such (undeleted) institution

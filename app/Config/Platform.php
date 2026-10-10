@@ -39,4 +39,7 @@ class Platform extends BaseConfig
 
     /** Days of read-only access after the grace period, before the institution becomes past (SA13). */
     public int $expiryReadOnlyDays = 30;
+
+    /** How long an invitation link works before a new one has to be sent (SA4). */
+    public int $invitationValidityDays = 7;
 }

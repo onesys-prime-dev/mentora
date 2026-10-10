@@ -5,11 +5,18 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Services\Admin\PlatformSettings;
+use App\Services\Audit\AuditLogFilters;
+use App\Services\Audit\AuditLogSearch;
 use App\Services\Institutions\InstitutionFilters;
 use App\Services\Institutions\InstitutionService;
+use App\Services\Institutions\InvitationService;
 use App\Services\Subscriptions\PlanService;
+use App\Services\Subscriptions\SubscriptionLifecycle;
+use App\Services\Subscriptions\SubscriptionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
+use DateTimeImmutable;
 use InvalidArgumentException;
 
 /**
@@ -54,12 +61,50 @@ class InstitutionsController extends BaseController
         $code = (string) $this->request->getPost('code');
 
         try {
-            $this->institutions->create($name, $code);
+            $id = $this->institutions->create($name, $code);
         } catch (InvalidArgumentException $e) {
             return redirect()->to('admin/institutions/new')->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect()->to('admin/institutions')->with('message', "Added {$name}. It stays pending until onboarding is finished.");
+        return redirect()->to("admin/institutions/{$id}/onboarding/subscription")->with('message', "Added {$name}. It stays pending and unusable until onboarding is finished: choose its plan next.");
+    }
+
+    /** The institution's profile: who and where it stands, with the tabs to its other pages. */
+    public function show(int $id): string
+    {
+        $institution = $this->institutions->find($id) ?? throw PageNotFoundException::forPageNotFound();
+        $now         = new DateTimeImmutable();
+
+        $subscription = (new SubscriptionService())->forInstitution($id);
+
+        return view('pages/admin/institutions/show', [
+            'title'            => $institution['name'],
+            'page'             => 'admin',
+            'user'             => auth()->user(),
+            'profInstitution'  => $institution,
+            'profSubscription' => $subscription,
+            'profStatus'       => $subscription === null ? null : (new SubscriptionLifecycle())->statusOf((string) $subscription['end_date'], $id, $now),
+            'profInvitations'  => (new InvitationService())->forInstitution($id, $now, 5),
+            'profMembers'      => $this->institutions->members($id, 1),
+        ]);
+    }
+
+    /** The latest audit entries for this institution, with a link to the full log. */
+    public function audit(int $id): string
+    {
+        $institution = $this->institutions->find($id, true) ?? throw PageNotFoundException::forPageNotFound();
+
+        $entries = (new AuditLogSearch((bool) (new PlatformSettings())->get('auditShowSourceIp')))
+            ->page(AuditLogFilters::fromInput(['institution' => (string) $id, 'per_page' => '25']));
+
+        return view('pages/admin/institutions/audit', [
+            'title'            => 'Audit: ' . $institution['name'],
+            'page'             => 'admin',
+            'user'             => auth()->user(),
+            'auditInstitution' => $institution,
+            'auditRows'        => $entries['rows'],
+            'auditTotal'       => $entries['total'],
+        ]);
     }
 
     public function edit(int $id): string

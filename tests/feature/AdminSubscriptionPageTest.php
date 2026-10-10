@@ -36,7 +36,7 @@ final class AdminSubscriptionPageTest extends RouteTestCase
         $this->loggedInAs($this->admin);
         $this->withSession();
 
-        db_connect()->table('institutions')->insert(['name' => 'Acme University', 'code' => 'ACME', 'status' => 'pending', 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('institutions')->insert(['name' => 'Acme University', 'code' => 'ACME', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
         $this->institution = (int) db_connect()->insertID();
 
         db_connect()->table('plans')->insert(['name' => 'Standard', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
@@ -429,7 +429,7 @@ final class AdminSubscriptionPageTest extends RouteTestCase
 
     public function testAnotherInstitutionsRecordCannotBeCorrectedThroughThisPage(): void
     {
-        db_connect()->table('institutions')->insert(['name' => 'Other University', 'code' => 'OTHER', 'status' => 'pending', 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('institutions')->insert(['name' => 'Other University', 'code' => 'OTHER', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
         $other = (int) db_connect()->insertID();
 
         $this->submit("admin/institutions/{$other}/subscription", $this->term(['amount' => '200']));
@@ -469,7 +469,7 @@ final class AdminSubscriptionPageTest extends RouteTestCase
 
     public function testTheListCanBeFilteredByPlan(): void
     {
-        db_connect()->table('institutions')->insert(['name' => 'Plain University', 'code' => 'PLAIN', 'status' => 'pending', 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('institutions')->insert(['name' => 'Plain University', 'code' => 'PLAIN', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
         $this->submit($this->uri(), $this->term());
 
         $body = $this->body('admin/institutions?plan=' . $this->plan);

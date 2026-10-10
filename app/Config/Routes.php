@@ -11,6 +11,11 @@ service('auth')->routes($routes);
 // Public liveness check for the deploy pipeline; see HealthController.
 $routes->get('health', 'HealthController::index');
 
+// An invited person sets their password here, from the emailed link. Public on
+// purpose: they have no account yet; the secret in the link is the proof.
+$routes->get('invitation/(:segment)', 'InvitationController::show/$1');
+$routes->post('invitation/(:segment)', 'InvitationController::accept/$1');
+
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
@@ -269,6 +274,20 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->post('institutions/(:num)/delete', 'Admin\InstitutionsController::delete/$1', ['filter' => 'permission:institutions.manage']);
     $routes->post('institutions/(:num)/restore', 'Admin\InstitutionsController::restore/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
     $routes->post('institutions/(:num)/purge', 'Admin\InstitutionsController::purge/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
+
+    // An institution's profile and its other tabs (subscription and features have their own routes).
+    $routes->get('institutions/(:num)', 'Admin\InstitutionsController::show/$1', ['filter' => 'permission:institutions.view']);
+    $routes->get('institutions/(:num)/audit', 'Admin\InstitutionsController::audit/$1', ['filter' => 'permission:audit.view']);
+    $routes->get('institutions/(:num)/users', 'Admin\InstitutionPeopleController::index/$1', ['filter' => 'permission:users.view']);
+    $routes->post('institutions/(:num)/invitations', 'Admin\InstitutionPeopleController::invite/$1', ['filter' => 'permission:users.manage']);
+    $routes->post('institutions/(:num)/invitations/(:num)/resend', 'Admin\InstitutionPeopleController::resend/$1/$2', ['filter' => 'permission:users.manage']);
+
+    // Onboarding a new institution: its plan and first subscription, then its first administrator. Nothing is saved until the last step.
+    $routes->get('institutions/(:num)/onboarding', 'Admin\OnboardingController::index/$1', ['filter' => 'permission:institutions.manage']);
+    $routes->get('institutions/(:num)/onboarding/subscription', 'Admin\OnboardingController::subscription/$1', ['filter' => 'permission:subscriptions.manage']);
+    $routes->post('institutions/(:num)/onboarding/subscription', 'Admin\OnboardingController::saveSubscription/$1', ['filter' => 'permission:subscriptions.manage']);
+    $routes->get('institutions/(:num)/onboarding/administrator', 'Admin\OnboardingController::administrator/$1', ['filter' => 'permission:institutions.manage']);
+    $routes->post('institutions/(:num)/onboarding/administrator', 'Admin\OnboardingController::finish/$1', ['filter' => 'permission:institutions.manage']);
 
     // An institution's subscription: look with subscriptions.view, change with subscriptions.manage.
     $routes->get('institutions/(:num)/subscription', 'Admin\SubscriptionsController::show/$1', ['filter' => 'permission:subscriptions.view']);
