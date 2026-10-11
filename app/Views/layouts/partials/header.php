@@ -55,22 +55,22 @@ $accountLinks = [
         <div class="flex items-end">
             <span class="text-2xl font-semibold text-[#0040A6] capitalize pb-px">
                 <?php if ($page !== null && $page !== 'dashboard'): ?>
-                    <?= esc($page ?? '') ?>
+                    <?= esc($pageTitle ?? ucwords(str_replace(['-', '_'], ' ', (string) $page))) ?>
                 <?php endif; ?>
             </span>
         </div>
     </div>
 
     <div class="flex gap-4 items-center">
-        <button
-            type="button"
+        <a
+            href="<?= site_url('notifications') ?>"
             aria-label="Notifications"
             class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
             <?= icon('bell', 'h-4 w-4 text-current') ?>
-        </button>
+        </a>
         <button
             type="button"
-            aria-label="Toggle dark mode"
+            aria-label="Toggle dark mode (coming soon)" aria-disabled="true" title="Coming soon"
             class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
             <?= icon('night', 'h-4 w-4 text-current') ?>
         </button>

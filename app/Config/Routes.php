@@ -418,6 +418,13 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     });
 });
 
+// A gallery of the shared interface components (app/Views/components), for the people
+// building and reviewing screens. Signed-in people only; not routed in production.
+if (ENVIRONMENT !== 'production') {
+    $routes->get('ui-kit', 'UiKitController::index', ['filter' => 'session']);
+    $routes->post('ui-kit', 'UiKitController::submit', ['filter' => 'session']);
+}
+
 // Institutional administrator area. Deliberately not behind `readonly`: the
 // data export must keep working once the subscription has ended (SA13).
 $routes->group('institution', ['filter' => 'role:institutional_admin'], function ($routes) {
