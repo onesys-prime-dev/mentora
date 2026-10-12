@@ -8,10 +8,11 @@ use CodeIgniter\Session\Session;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * Remembers that an administrator has just typed their password again.
+ * Remembers that a person in an administrative area (the system administrator,
+ * the institutional administrator) has just typed their password again.
  *
- * Dangerous actions (purge, restore, permission changes, ...) sit behind the
- * `reauth` route filter. The filter lets a request through only while the
+ * Dangerous actions (purge, restore, permission changes, closing a term, ...)
+ * sit behind the `reauth` route filter. The filter lets a request through only while the
  * password was confirmed within the last WINDOW_SECONDS, so a session left
  * open on an unattended machine cannot be used to do damage.
  *
@@ -84,34 +85,39 @@ class ReauthService
     /** Remembers the page to return to after the password is confirmed. */
     public function rememberReturn(string $path): void
     {
-        $this->session->set(self::RETURN_TO, self::safeReturn($path));
+        // An address outside the areas is stored as nothing, so pulling it falls back to the caller's own home.
+        $this->session->set(self::RETURN_TO, self::safeReturn($path, ''));
     }
 
-    /** The page to go back to (once), always inside the admin area. */
-    public function pullReturn(): string
+    /** The page to go back to (once), always inside an administrative area. */
+    public function pullReturn(string $fallback = 'admin/dashboard'): string
     {
         $path = (string) $this->session->get(self::RETURN_TO);
         $this->session->remove(self::RETURN_TO);
 
-        return self::safeReturn($path);
+        return self::safeReturn($path, $fallback);
     }
 
+    /** The areas that have guarded actions, and so may be returned to. */
+    public const AREAS = ['admin', 'institution'];
+
     /**
-     * Only a relative address inside the admin area may be returned to, so the
-     * confirm page can never be used to bounce someone to another site.
+     * Only a relative address inside an administrative area may be returned
+     * to, so the confirm page can never be used to bounce someone to another
+     * site. Anything else (and the confirm pages themselves) goes to $fallback.
      */
-    public static function safeReturn(string $path): string
+    public static function safeReturn(string $path, string $fallback = 'admin/dashboard'): string
     {
         $path = ltrim($path, '/');
 
-        $inAdmin = $path === 'admin' || str_starts_with($path, 'admin/');
+        $first = explode('/', $path)[0];
 
-        if (! $inAdmin || str_contains($path, '//') || str_contains($path, '\\') || preg_match('/[\x00-\x1f]/', $path) === 1) {
-            return 'admin/dashboard';
+        if (! in_array($first, self::AREAS, true) || str_contains($path, '//') || str_contains($path, '\\') || preg_match('/[\x00-\x1f]/', $path) === 1) {
+            return $fallback;
         }
 
-        if ($path === 'admin/reauth') {
-            return 'admin/dashboard';
+        if ($path === 'admin/reauth' || $path === 'institution/reauth') {
+            return $fallback;
         }
 
         return $path;

@@ -65,6 +65,10 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 
     </div>
 
+    <?php if ($reauthDialog ?? false): ?>
+        <?= $this->include('layouts/partials/reauth-dialog') ?>
+    <?php endif; ?>
+
     <?= $this->renderSection('scripts') ?>
 
 </body>
