@@ -18,7 +18,7 @@ $title = $title ?? '';
     'success' => ['border-[#2E7D4F]/30 bg-[#E8F5EC] text-[#1F5A38]', 'check', 'Done'],
     'warning' => ['border-[#946200]/30 bg-[#FFF1D6] text-[#6F4A00]', 'attention', 'Warning'],
     'danger'  => ['border-[#C33939]/30 bg-[#FDEDEC] text-[#8E2424]', 'warning', 'Problem'],
-    default   => ['border-[#0040A6]/20 bg-[#F2F7FF] text-[#002068]', 'info', 'Note'],
+    default   => ['border-brand/20 bg-brand-tint text-brand-dark', 'info', 'Note'],
 };
 ?>
 

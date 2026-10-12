@@ -50,7 +50,7 @@ function renderInlineEditor(array $nodes): string
 
         <select
             data-style-select
-            class="h-9 w-44 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 outline-none transition focus:border-[#0040A6]">
+            class="h-9 w-44 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 outline-none transition focus:border-brand">
 
             <option value="p">
                 Normal Text
@@ -73,7 +73,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="bold"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -95,7 +95,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="italic"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -118,7 +118,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="underline"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -148,7 +148,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="justifyLeft"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -168,7 +168,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="justifyCenter"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -188,7 +188,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="justifyRight"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -208,7 +208,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="justifyFull"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -230,7 +230,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="insertUnorderedList"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -253,7 +253,7 @@ function renderInlineEditor(array $nodes): string
         <button
             type="button"
             data-action="insertOrderedList"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -280,7 +280,7 @@ function renderInlineEditor(array $nodes): string
             <button
                 type="button"
                 data-editor-undo
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+                class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
                 <svg xmlns="http://www.w3.org/2000/svg"
                     class="h-5 w-5"
@@ -303,7 +303,7 @@ function renderInlineEditor(array $nodes): string
             <button
                 type="button"
                 data-editor-redo
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-[#0040A6] hover:text-white">
+                class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
 
                 <svg xmlns="http://www.w3.org/2000/svg"
                     class="h-5 w-5"

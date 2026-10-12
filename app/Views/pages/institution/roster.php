@@ -15,8 +15,8 @@
 $o       = $rosterOffering;
 $base    = 'institution/enrolments/offering/' . $o['id'];
 $label   = $o['course_code'] . ' ' . $o['section_code'];
-$primary = 'rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
-$link    = 'text-sm font-semibold text-[#0040A6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 rounded';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 
 $open     = $o['status'] === 'active';
 $canEdit  = $rosterCanEdit && $open;
@@ -151,7 +151,7 @@ $capacity = (int) $o['capacity'];
 
     $buttons = static fn (string $text): string => '<div class="flex flex-wrap items-center justify-end gap-3">'
         . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">' . esc($text) . '</button></div>';
+        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($text) . '</button></div>';
 
     $form = static fn (string $inside, string $text): string => '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
         . $inside . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>' . $buttons($text) . '</form>';

@@ -54,8 +54,8 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
     <div class="overflow-hidden rounded-2xl bg-white shadow-sm" data-table>
 
         <?php if ($selectable): ?>
-            <div class="flex flex-wrap items-center gap-3 border-b border-gray-100 bg-[#F2F7FF] px-4 py-3 text-sm" data-bulk-bar hidden>
-                <span class="font-semibold text-[#002068]" data-selected-count data-noun-one="<?= esc($nounOne) ?>" data-noun-many="<?= esc($nounMany) ?>" aria-live="polite"></span>
+            <div class="flex flex-wrap items-center gap-3 border-b border-gray-100 bg-brand-tint px-4 py-3 text-sm" data-bulk-bar hidden>
+                <span class="font-semibold text-brand-dark" data-selected-count data-noun-one="<?= esc($nounOne) ?>" data-noun-many="<?= esc($nounMany) ?>" aria-live="polite"></span>
                 <?= $bulk ?>
             </div>
         <?php endif; ?>
@@ -67,7 +67,7 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
                 <tr>
                     <?php if ($selectable): ?>
                         <th class="w-10 px-4 py-3" scope="col">
-                            <input type="checkbox" data-select-all class="h-4 w-4 rounded border-gray-300 text-[#0040A6] focus:ring-[#0040A6]/40" aria-label="Select every row on this page">
+                            <input type="checkbox" data-select-all class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" aria-label="Select every row on this page">
                         </th>
                     <?php endif; ?>
 
@@ -79,7 +79,7 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
                         ?>
                         <th class="<?= $th ?> <?= esc($column['class'] ?? '') ?>" scope="col" <?= ! empty($column['sortable']) ? 'aria-sort="' . $ariaSort . '"' : '' ?>>
                             <?php if (! empty($column['sortable']) && $sortUrl !== null): ?>
-                                <a class="inline-flex items-center gap-1 transition hover:text-[#0040A6] <?= $isSorted ? 'text-[#0040A6]' : '' ?>" href="<?= esc($sortUrl($column['key'], $next)) ?>">
+                                <a class="inline-flex items-center gap-1 transition hover:text-brand <?= $isSorted ? 'text-brand' : '' ?>" href="<?= esc($sortUrl($column['key'], $next)) ?>">
                                     <?= esc($column['label']) ?><span aria-hidden="true"><?= $isSorted ? ($dir === 'asc' ? '▲' : '▼') : '' ?></span>
                                 </a>
                             <?php else: ?>
@@ -96,11 +96,11 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
 
             <tbody class="divide-y divide-gray-100">
                 <?php foreach ($rows as $row): ?>
-                    <tr class="transition hover:bg-[#F2F7FF] max-md:block max-md:px-4 max-md:py-3">
+                    <tr class="transition hover:bg-brand-tint max-md:block max-md:px-4 max-md:py-3">
 
                         <?php if ($selectable): ?>
                             <td class="w-10 px-4 py-3 max-md:inline-block max-md:px-0">
-                                <input type="checkbox" data-row-select value="<?= esc((string) $row['id']) ?>" class="h-4 w-4 rounded border-gray-300 text-[#0040A6] focus:ring-[#0040A6]/40" aria-label="Select <?= esc((string) ($row['label'] ?? 'this row')) ?>">
+                                <input type="checkbox" data-row-select value="<?= esc((string) $row['id']) ?>" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" aria-label="Select <?= esc((string) ($row['label'] ?? 'this row')) ?>">
                             </td>
                         <?php endif; ?>
 

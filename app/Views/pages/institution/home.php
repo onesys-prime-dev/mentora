@@ -35,7 +35,7 @@ $canExport  = in_array($status, ['read_only', 'past'], true);
     <?php endif; ?>
 
     <section class="flex flex-col gap-4" aria-labelledby="home-snapshot" data-section="snapshot">
-        <h2 id="home-snapshot" class="text-lg font-bold text-[#0040A6]">Snapshot</h2>
+        <h2 id="home-snapshot" class="text-lg font-bold text-brand">Snapshot</h2>
 
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <?= view('components/metric-card', [
@@ -70,7 +70,7 @@ $canExport  = in_array($status, ['read_only', 'past'], true);
 
         <section class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm lg:col-span-2" aria-labelledby="home-plan" data-section="plan">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 id="home-plan" class="text-lg font-bold text-[#0040A6]">Plan and usage</h2>
+                <h2 id="home-plan" class="text-lg font-bold text-brand">Plan and usage</h2>
                 <span class="text-sm text-[#646464]" data-plan-name><?= $homeUsage['plan'] !== null ? esc((string) $homeUsage['plan']) : 'No plan yet' ?></span>
             </div>
 
@@ -80,7 +80,7 @@ $canExport  = in_array($status, ['read_only', 'past'], true);
         </section>
 
         <section class="flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="home-people" data-section="people">
-            <h2 id="home-people" class="text-lg font-bold text-[#0040A6]">People by role</h2>
+            <h2 id="home-people" class="text-lg font-bold text-brand">People by role</h2>
             <ul class="flex flex-col divide-y divide-gray-100 text-sm">
                 <?php foreach ($roleLabels as $role => $label): ?>
                     <li class="flex items-center justify-between py-2">
@@ -94,7 +94,7 @@ $canExport  = in_array($status, ['read_only', 'past'], true);
     </div>
 
     <section class="flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="home-next" data-section="next">
-        <h2 id="home-next" class="text-lg font-bold text-[#0040A6]">What you can do here</h2>
+        <h2 id="home-next" class="text-lg font-bold text-brand">What you can do here</h2>
         <p class="text-sm text-[#3D3D3D]">
             More tools arrive here as they are built: structure, terms, offerings, enrolment, people and reports.
             <?php if ($canExport): ?>
@@ -104,7 +104,7 @@ $canExport  = in_array($status, ['read_only', 'past'], true);
             <?php endif; ?>
         </p>
         <div>
-            <a class="inline-flex rounded-full border border-[#0040A6] px-5 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50" href="<?= site_url('institution/export') ?>">Data export</a>
+            <a class="inline-flex rounded-full border border-brand px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= site_url('institution/export') ?>">Data export</a>
         </div>
     </section>
 

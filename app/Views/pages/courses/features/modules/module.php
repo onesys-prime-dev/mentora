@@ -38,7 +38,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
             <div class="flex flex-col">
                 <div class="flex items-center gap-2">
-                    <span class="text-2xl font-bold text-[#0040A6]"><?= esc($module['title']) ?></span>
+                    <span class="text-2xl font-bold text-brand"><?= esc($module['title']) ?></span>
                     <?php if ($isDraft): ?>
                         <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                             Draft
@@ -76,11 +76,11 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
             <div class="flex items-center justify-between">
                 <span class="text-sm font-bold text-[#646464]"><?= $isInstructor ? 'Class progress' : 'Your progress' ?></span>
-                <span class="text-sm font-bold text-[#0040A6]"><?= esc($module['progress']) ?>%</span>
+                <span class="text-sm font-bold text-brand"><?= esc($module['progress']) ?>%</span>
             </div>
 
             <div class="h-2 w-full flex bg-[#E7E6E6] rounded-4xl">
-                <div class="h-full bg-[#0040A6] rounded-4xl transition-[width] duration-300" style="width: <?= esc($module['progress']) ?>%;"></div>
+                <div class="h-full bg-brand rounded-4xl transition-[width] duration-300" style="width: <?= esc($module['progress']) ?>%;"></div>
             </div>
 
         <?php endif; ?>
@@ -94,21 +94,21 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
     <?php if (!$isInstructor && $resume_item): ?>
 
         <div
-            class="flex items-center justify-between gap-5 rounded-2xl border border-[#0040A6]/20 bg-[#0040A6]/5 px-6 py-5 cursor-pointer hover:bg-[#0040A6]/10 transition"
+            class="flex items-center justify-between gap-5 rounded-2xl border border-brand/20 bg-brand/5 px-6 py-5 cursor-pointer hover:bg-brand/10 transition"
             data-learning-item="<?= esc($resume_item['id']) ?>">
 
             <div class="flex items-center gap-4">
-                <div class="h-10 w-10 flex items-center justify-center rounded-full bg-[#0040A6] text-white">
+                <div class="h-10 w-10 flex items-center justify-center rounded-full bg-brand text-white">
                     <?= icon('start', 'h-5 w-5 text-current') ?>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-xs font-bold uppercase text-[#0040A6]">Continue where you left off</span>
+                    <span class="text-xs font-bold uppercase text-brand">Continue where you left off</span>
                     <span class="text-lg font-semibold text-[#1A1C1E]"><?= esc($resume_item['title']) ?></span>
                     <span class="text-xs text-gray-500"><?= esc($resume_item['learning_unit_title']) ?></span>
                 </div>
             </div>
 
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#0040A6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
             </svg>
 
@@ -145,7 +145,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                 <?php endif; ?>
 
                 <div
-                    class="flex flex-col flex-1 rounded-2xl border <?= $isResumeUnit ? 'border-[#0040A6]/30 border-l-4 border-l-[#0040A6]' : ($unitIsDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10') ?> <?= $unitFullyLocked ? 'bg-gray-50' : 'bg-white' ?> transition-colors hover:border-[#0040A6]/30"
+                    class="flex flex-col flex-1 rounded-2xl border <?= $isResumeUnit ? 'border-brand/30 border-l-4 border-l-brand' : ($unitIsDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10') ?> <?= $unitFullyLocked ? 'bg-gray-50' : 'bg-white' ?> transition-colors hover:border-brand/30"
                     data-learning-unit-wrapper
                     data-learning-unit-id="<?= esc($learning_unit['id']) ?>">
 
@@ -173,7 +173,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                             <div class="h-9 w-9 flex items-center justify-center">
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
-                                    class="h-4 w-4 stroke-[#002068] transition-transform duration-300 <?= $startsOpen ? 'rotate-180' : '' ?>"
+                                    class="h-4 w-4 stroke-brand-dark transition-transform duration-300 <?= $startsOpen ? 'rotate-180' : '' ?>"
                                     fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                                     data-learning-unit-arrow="<?= esc($learning_unit['id']) ?>">
                                     <path d="M6 9l6 6 6-6"/>
@@ -205,7 +205,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                 <div class="flex items-center p-1" data-learning-item-row>
 
                                     <div
-                                        class="group w-full flex items-center gap-4 px-5 py-3.5 rounded-xl border border-transparent <?= $itemBlocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-[#0040A6]/15 hover:bg-[#F4F6FB]' ?>"
+                                        class="group w-full flex items-center gap-4 px-5 py-3.5 rounded-xl border border-transparent <?= $itemBlocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-brand/15 hover:bg-[#F4F6FB]' ?>"
                                         data-learning-item-wrapper
                                         data-learning-item="<?= esc($learning_item['id']) ?>"
                                         <?php if ($itemBlocked): ?>data-locked="1" aria-disabled="true"<?php endif; ?>>
@@ -265,8 +265,8 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                                             </span>
                                                         <?php endif; ?>
 
-                                                        <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium <?= $learning_item['status'] === 'published' ? 'bg-[#0040A6]/10 text-[#0040A6]' : 'bg-gray-100 text-gray-500' ?>">
-                                                            <span class="h-1.5 w-1.5 rounded-full <?= $learning_item['status'] === 'published' ? 'bg-[#0040A6]' : 'bg-gray-400' ?>"></span>
+                                                        <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium <?= $learning_item['status'] === 'published' ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-500' ?>">
+                                                            <span class="h-1.5 w-1.5 rounded-full <?= $learning_item['status'] === 'published' ? 'bg-brand' : 'bg-gray-400' ?>"></span>
                                                             <?= $learning_item['status'] === 'published' ? 'Published' : 'Draft' ?>
                                                         </span>
 
@@ -305,19 +305,19 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                     data-learning-unit-id="<?= esc($learning_unit['id']) ?>"
                                     class="group flex cursor-pointer items-center gap-3 px-2 py-5 transition-all duration-200">
 
-                                    <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-[#0040A6]/40"></div>
+                                    <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-brand/40"></div>
 
-                                    <div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:border-[#0040A6] group-hover:bg-[#0040A6]">
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:border-brand group-hover:bg-brand">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#767676] transition-all duration-200 group-hover:rotate-90 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
                                         </svg>
                                     </div>
 
-                                    <span class="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-[#0040A6] opacity-0 transition-all duration-200 group-hover:max-w-[180px] group-hover:opacity-100">
+                                    <span class="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-brand opacity-0 transition-all duration-200 group-hover:max-w-[180px] group-hover:opacity-100">
                                         Add Learning Item
                                     </span>
 
-                                    <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-[#0040A6]/40"></div>
+                                    <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-brand/40"></div>
 
                                 </div>
 
@@ -337,19 +337,19 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
             <div data-create-learning-unit-button data-module-id="<?= esc($module['id']) ?>" class="group flex cursor-pointer items-center gap-3 px-2 py-5 transition-all duration-200">
 
-                <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-[#0040A6]/40"></div>
+                <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-brand/40"></div>
 
-                <div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:border-[#0040A6] group-hover:bg-[#0040A6]">
+                <div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:border-brand group-hover:bg-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#767676] transition-all duration-200 group-hover:rotate-90 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
                     </svg>
                 </div>
 
-                <span class="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-[#0040A6] opacity-0 transition-all duration-200 group-hover:max-w-[180px] group-hover:opacity-100">
+                <span class="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-brand opacity-0 transition-all duration-200 group-hover:max-w-[180px] group-hover:opacity-100">
                     Add Unit
                 </span>
 
-                <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-[#0040A6]/40"></div>
+                <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-brand/40"></div>
 
             </div>
 

@@ -30,8 +30,8 @@ foreach ($people as $person) {
 
 $sortUrl = static fn (string $column, string $next): string => site_url('ui-kit') . '?' . http_build_query(['sort' => $column, 'dir' => $next]);
 
-$primary = 'rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
-$second  = 'rounded-full border border-[#0040A6] px-5 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$second  = 'rounded-full border border-brand px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A82E2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
 ?>
 
@@ -51,19 +51,19 @@ $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white
     ], ['saveData' => false]) ?>
 
     <section class="flex flex-col gap-3" data-kit="buttons">
-        <h2 class="text-lg font-bold text-[#0040A6]">Buttons</h2>
+        <h2 class="text-lg font-bold text-brand">Buttons</h2>
         <div class="flex flex-wrap items-center gap-3">
             <button type="button" class="<?= $primary ?>">Primary</button>
             <button type="button" class="<?= $second ?>">Secondary</button>
             <button type="button" class="<?= $danger ?>">Destructive</button>
             <button type="button" class="<?= $primary ?> opacity-50" disabled>Disabled</button>
-            <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="#">Text link</a>
+            <a class="text-sm font-semibold text-brand hover:underline" href="#">Text link</a>
         </div>
         <p class="text-xs text-[#646464]">One primary action per view. Destructive actions are confirmed first.</p>
     </section>
 
     <section class="flex flex-col gap-3" data-kit="alerts">
-        <h2 class="text-lg font-bold text-[#0040A6]">Alerts and toasts</h2>
+        <h2 class="text-lg font-bold text-brand">Alerts and toasts</h2>
         <?php foreach (['success' => 'Saved. Ann Lee was invited.', 'info' => 'Invitations expire after 7 days.', 'warning' => 'The term ends in 9 days.', 'danger' => 'The import could not be read. Nothing was changed.'] as $tone => $text): ?>
             <?= view('components/alert', ['tone' => $tone, 'text' => $text, 'title' => ucfirst($tone)], ['saveData' => false]) ?>
         <?php endforeach; ?>
@@ -74,7 +74,7 @@ $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white
     </section>
 
     <section class="flex flex-col gap-3" data-kit="status">
-        <h2 class="text-lg font-bold text-[#0040A6]">Status and numbers</h2>
+        <h2 class="text-lg font-bold text-brand">Status and numbers</h2>
         <div class="flex flex-wrap gap-2">
             <?php foreach (['success' => 'Active', 'warning' => 'Expiring', 'danger' => 'Read-only', 'info' => 'Invited', 'neutral' => 'Draft'] as $tone => $label): ?>
                 <?= view('components/status-badge', ['label' => $label, 'tone' => $tone], ['saveData' => false]) ?>
@@ -96,7 +96,7 @@ $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white
     </section>
 
     <section class="flex flex-col gap-4" data-kit="list">
-        <h2 class="text-lg font-bold text-[#0040A6]">A list: toolbar, table, bulk bar, pagination</h2>
+        <h2 class="text-lg font-bold text-brand">A list: toolbar, table, bulk bar, pagination</h2>
         <?= view('components/toolbar', [
             'action'   => site_url('ui-kit'),
             'filtered' => false,
@@ -128,7 +128,7 @@ $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white
     </section>
 
     <section class="flex flex-col gap-3" data-kit="states">
-        <h2 class="text-lg font-bold text-[#0040A6]">Loading, empty and error</h2>
+        <h2 class="text-lg font-bold text-brand">Loading, empty and error</h2>
         <?= view('components/skeleton', ['rows' => 3, 'label' => 'Loading people'], ['saveData' => false]) ?>
         <div class="rounded-2xl bg-white/70">
             <?= view('components/empty-state', ['icon' => 'user', 'title' => 'No people yet', 'text' => 'Invite the first person to get started.'], ['saveData' => false]) ?>
@@ -142,7 +142,7 @@ $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white
     </section>
 
     <section class="flex flex-col gap-4" data-kit="navigation">
-        <h2 class="text-lg font-bold text-[#0040A6]">Tabs and steps</h2>
+        <h2 class="text-lg font-bold text-brand">Tabs and steps</h2>
         <?= view('components/tabs', ['tabs' => [
             ['label' => 'Details', 'href' => '#details', 'active' => true],
             ['label' => 'Instructors', 'href' => '#instructors', 'count' => 2],
@@ -152,7 +152,7 @@ $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white
     </section>
 
     <section class="flex flex-col gap-3" data-kit="dialogs">
-        <h2 class="text-lg font-bold text-[#0040A6]">Dialogs</h2>
+        <h2 class="text-lg font-bold text-brand">Dialogs</h2>
         <div class="flex flex-wrap gap-3">
             <button type="button" class="<?= $primary ?>" data-dialog-open="kit-form">Open a form dialog</button>
             <button type="button" class="<?= $danger ?>" data-dialog-open="kit-confirm">Open a confirm</button>

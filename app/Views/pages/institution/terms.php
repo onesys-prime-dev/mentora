@@ -6,8 +6,8 @@
  * @var bool                       $termCanEdit
  */
 $base    = 'institution/terms';
-$primary = 'rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
-$link    = 'text-sm font-semibold text-[#0040A6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 rounded';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 
 $tones  = ['upcoming' => 'info', 'active' => 'success', 'completed' => 'neutral', 'archived' => 'neutral'];
 $labels = ['upcoming' => 'Upcoming', 'active' => 'Active', 'completed' => 'Completed', 'archived' => 'Archived'];
@@ -83,7 +83,7 @@ foreach ($termRows as $term) {
         'backUrl'     => site_url('institution/dashboard'),
         'backLabel'   => 'Back to home',
         'actions'     => $termCanEdit
-            ? '<a class="rounded-full border border-[#0040A6] bg-white px-5 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#F2F7FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50" href="' . esc(site_url($base . '/copy')) . '">Copy offerings</a> '
+            ? '<a class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc(site_url($base . '/copy')) . '">Copy offerings</a> '
                 . '<button type="button" class="' . $primary . '" data-dialog-open="term-form" data-dialog-title="Add a term" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add term">Add a term</button>'
             : '',
     ], ['saveData' => false]) ?>
@@ -138,7 +138,7 @@ foreach ($termRows as $term) {
         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
         . '<div class="flex flex-wrap items-center justify-end gap-3">'
         . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Save</button>'
+        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Save</button>'
         . '</div></form>';
     ?>
 

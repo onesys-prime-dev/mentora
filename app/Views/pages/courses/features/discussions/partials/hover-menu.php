@@ -21,7 +21,7 @@ $items = $items ?? [];
             title="<?= esc($label) ?>"
             aria-label="<?= esc($label) ?>"
             aria-pressed="<?= $own === $emoji ? 'true' : 'false' ?>"
-            class="flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:scale-110 hover:bg-gray-100 <?= $own === $emoji ? 'bg-[#0040A6]/10' : '' ?>">
+            class="flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:scale-110 hover:bg-gray-100 <?= $own === $emoji ? 'bg-brand/10' : '' ?>">
             <?= $emoji ?>
         </button>
     <?php endforeach; ?>

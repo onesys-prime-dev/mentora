@@ -22,7 +22,7 @@ $ariaLabel = $ariaLabel ?? 'Sections';
             <li>
                 <a
                     href="<?= esc($tab['href']) ?>"
-                    class="inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 <?= $active ? 'border-[#0040A6] text-[#0040A6]' : 'border-transparent text-[#646464] hover:border-gray-300 hover:text-[#1A1C1E]' ?>"
+                    class="inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 <?= $active ? 'border-brand text-brand' : 'border-transparent text-[#646464] hover:border-gray-300 hover:text-[#1A1C1E]' ?>"
                     <?= $active ? 'aria-current="page"' : '' ?>>
                     <?= esc($tab['label']) ?>
                     <?php if (isset($tab['count']) && $tab['count'] !== null): ?>

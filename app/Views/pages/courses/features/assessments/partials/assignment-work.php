@@ -42,7 +42,7 @@ $attemptsLeft = max(0, $attemptLimit - $attemptsUsed);
 $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
 
 $statusMeta = static fn (?string $status) => match ($status) {
-    'Submitted' => ['label' => 'Submitted', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]'],
+    'Submitted' => ['label' => 'Submitted', 'class' => 'bg-brand/10 text-brand'],
     'Grading' => ['label' => 'Being Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
     'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
     'Returned' => ['label' => 'Returned', 'class' => 'bg-gray-100 text-gray-500'],
@@ -61,7 +61,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
         <div class="flex items-center gap-3">
             <?= icon('work', 'h-5 w-5') ?>
 
-            <span class="font-bold text-lg text-[#0040A6]">
+            <span class="font-bold text-lg text-brand">
                 Your Work
             </span>
         </div>
@@ -100,7 +100,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
                 <div class="flex flex-wrap items-center justify-center gap-2">
                     <?php foreach ($enabledTypes as $type): ?>
-                        <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0040A6] ring-1 ring-[#0040A6]/20">
+                        <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand ring-1 ring-brand/20">
                             <?= esc($typeLabels[$type]) ?>
                         </span>
                     <?php endforeach; ?>
@@ -150,10 +150,10 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                 <?php foreach ($enabledTypes as $index => $type): ?>
 
                     <label
-                        class="cursor-pointer bg-[#F2F2F4] px-4 py-2 text-sm font-semibold text-[#8A8A8A] transition-colors hover:text-[#0040A6]
+                        class="cursor-pointer bg-[#F2F2F4] px-4 py-2 text-sm font-semibold text-[#8A8A8A] transition-colors hover:text-brand
                             <?= $index < count($enabledTypes) - 1 ? 'border-r border-[#DBDBDB]' : '' ?>
                             group-has-[#assignment-work-tab-<?= $type ?>:checked]/work-tabs:bg-white
-                            group-has-[#assignment-work-tab-<?= $type ?>:checked]/work-tabs:text-[#0040A6]">
+                            group-has-[#assignment-work-tab-<?= $type ?>:checked]/work-tabs:text-brand">
 
                         <input
                             type="radio"
@@ -175,7 +175,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                     data-assignment-dropzone
                     class="hidden min-h-60 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-b-2xl rounded-r-2xl border border-[#DBDBDB] bg-white p-10 text-center transition-colors
                         hover:bg-[#F9F9FC]
-                        data-dragging:border-[#0040A6] data-dragging:bg-[#0040A6]/5
+                        data-dragging:border-brand data-dragging:bg-brand/5
                         group-has-[#assignment-work-tab-file:checked]/work-tabs:flex">
 
                     <input
@@ -228,7 +228,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                         type="url"
                         name="submission_link"
                         placeholder="https://..."
-                        class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#646464] outline-none transition focus:border-[#0040A6]">
+                        class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#646464] outline-none transition focus:border-brand">
 
                     <span class="text-xs text-[#767676]">
                         Paste a link to your work (e.g. Google Docs, GitHub).
@@ -256,7 +256,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                     <button
                         type="submit"
                         data-assignment-submit
-                        class="inline-flex items-center gap-2 rounded-xl bg-[#0040A6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#002068] disabled:cursor-not-allowed disabled:opacity-60">
+                        class="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
                         <?= $attemptsUsed > 0 ? 'Resubmit' : 'Submit' ?>
                     </button>
 

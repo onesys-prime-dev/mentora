@@ -31,7 +31,7 @@ $submissionTypes = array_keys(array_filter([
                 <?php if ($submissionTypes): ?>
                     <div class="flex flex-wrap gap-1.5">
                         <?php foreach ($submissionTypes as $type): ?>
-                            <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-[#0040A6] ring-1 ring-[#0040A6]/20"><?= esc($type) ?></span>
+                            <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-brand ring-1 ring-brand/20"><?= esc($type) ?></span>
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
@@ -57,7 +57,7 @@ $submissionTypes = array_keys(array_filter([
                 <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Submissions</span>
 
                 <span class="text-sm text-[#646464]">
-                    <strong class="text-[#0040A6]"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
+                    <strong class="text-brand"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
                     · <strong class="text-[#946200]"><?= (int) ($assignmentCounts['toGrade'] ?? 0) ?></strong> to grade
                     · <strong class="text-emerald-700"><?= (int) ($assignmentCounts['graded'] ?? 0) ?></strong> graded
                 </span>
@@ -89,7 +89,7 @@ $submissionTypes = array_keys(array_filter([
                 type="button"
                 data-open-assessment="<?= esc($currentAssessment['id']) ?>"
                 data-assessment-mode="editor"
-                class="rounded-xl bg-[#0040A6] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
                 Edit Instructions & Submission
             </button>
 

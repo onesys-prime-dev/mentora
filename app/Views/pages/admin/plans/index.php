@@ -15,8 +15,8 @@ $cap = static fn ($value, string $unit = ''): string => $value === null ? 'Unlim
 <?= $this->section('content') ?>
 
 <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]">Plans</h1>
-    <a class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]" href="<?= site_url('admin/plans/new') ?>">Add a plan</a>
+    <h1 class="text-2xl font-bold text-brand">Plans</h1>
+    <a class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/plans/new') ?>">Add a plan</a>
 </div>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     A plan is what an institution subscribes to: the features it gets and the limits that apply. A retired plan can no longer be chosen
@@ -67,7 +67,7 @@ $cap = static fn ($value, string $unit = ''): string => $value === null ? 'Unlim
                             <?php if ($retired): ?>
                                 <form method="post" action="<?= site_url('admin/plans/' . $row['id'] . '/reinstate') ?>">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Reinstate</button>
+                                    <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Reinstate</button>
                                 </form>
                             <?php else: ?>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/plans/' . $row['id'] . '/edit') ?>">Edit</a>

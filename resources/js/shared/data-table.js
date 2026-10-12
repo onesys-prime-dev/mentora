@@ -29,7 +29,7 @@ export function bindDataTable(root) {
 
         for (const box of rows()) {
             box.checked = selection.has(box.value);
-            box.closest("tr")?.classList.toggle("bg-[#F2F7FF]", box.checked);
+            box.closest("tr")?.classList.toggle("bg-brand-tint", box.checked);
         }
 
         if (all) {

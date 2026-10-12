@@ -3,7 +3,7 @@
     <button
         type="button"
         class="assessment-nav-link inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium transition
-            <?= $previousAssessment ? 'text-gray-500 hover:border-[#0040A6] hover:bg-[#0040A6]/10 hover:text-[#6EA8FF]' : 'cursor-not-allowed opacity-50' ?>"
+            <?= $previousAssessment ? 'text-gray-500 hover:border-brand hover:bg-brand/10 hover:text-[#6EA8FF]' : 'cursor-not-allowed opacity-50' ?>"
         <?= $previousAssessment ? 'data-assessment="' . $previousAssessment['id'] . '"' : 'disabled' ?>
     >
         <svg
@@ -24,7 +24,7 @@
 
     <button
         type="button"
-        class="assessment-nav-link inline-flex items-center gap-2 rounded-lg bg-[#0040A6] px-5 py-2.5 text-sm font-semibold text-white transition
+        class="assessment-nav-link inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition
             <?= $nextAssessment ? 'hover:bg-[#0056E0]' : 'cursor-not-allowed opacity-50' ?>"
         <?= $nextAssessment ? 'data-assessment="' . $nextAssessment['id'] . '"' : 'disabled' ?>
     >

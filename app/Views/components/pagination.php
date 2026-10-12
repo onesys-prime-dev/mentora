@@ -28,10 +28,10 @@ $link = static fn (int $n): string => $baseUrl . '?' . http_build_query(array_me
 
     <span class="flex gap-2">
         <?php if ($page > 1): ?>
-            <a class="rounded-full border border-[#0040A6] px-4 py-1.5 font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/10" href="<?= esc($link($page - 1)) ?>" rel="prev">Previous</a>
+            <a class="rounded-full border border-brand px-4 py-1.5 font-semibold text-brand transition hover:bg-brand/10" href="<?= esc($link($page - 1)) ?>" rel="prev">Previous</a>
         <?php endif; ?>
         <?php if ($page < $pages): ?>
-            <a class="rounded-full border border-[#0040A6] px-4 py-1.5 font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/10" href="<?= esc($link($page + 1)) ?>" rel="next">Next</a>
+            <a class="rounded-full border border-brand px-4 py-1.5 font-semibold text-brand transition hover:bg-brand/10" href="<?= esc($link($page + 1)) ?>" rel="next">Next</a>
         <?php endif; ?>
     </span>
 

@@ -24,17 +24,17 @@ $square = $variant === 'menu'
     : 'w-full aspect-square rounded-3xl';
 
 $iconClass = $variant === 'menu'
-    ? 'h-6 w-6 text-[#0040A6]'
+    ? 'h-6 w-6 text-brand'
     : 'w-8 h-8 text-blue-800';
 
 $surface = match (true) {
-    $active => 'bg-[#0040A6]/10 border-[#0040A6]/30',
+    $active => 'bg-brand/10 border-brand/30',
     $variant === 'menu' => 'bg-white border-black/5',
     default => 'bg-white/30 border-black/5',
 };
 
 $hover = $isLive && !$active
-    ? ($variant === 'menu' ? 'group-hover:bg-[#F2F7FF]' : 'group-hover:bg-white/60')
+    ? ($variant === 'menu' ? 'group-hover:bg-brand-tint' : 'group-hover:bg-white/60')
     : '';
 ?>
 
@@ -53,7 +53,7 @@ $hover = $isLive && !$active
         <?= icon($app['icon'], $iconClass) ?>
     </span>
 
-    <span class="text-[11px] leading-tight text-center <?= $active ? 'font-semibold text-[#0040A6]' : 'text-gray-700' ?>">
+    <span class="text-[11px] leading-tight text-center <?= $active ? 'font-semibold text-brand' : 'text-gray-700' ?>">
         <?= esc($app['label']) ?>
     </span>
 

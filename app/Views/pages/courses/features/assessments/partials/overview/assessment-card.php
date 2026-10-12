@@ -25,12 +25,12 @@ $meta = array_filter([
 ]);
 
 $chipClasses = static fn (string $tone) => match ($tone) {
-    'info' => 'bg-[#0040A6]/10 text-[#0040A6]',
+    'info' => 'bg-brand/10 text-brand',
     'success' => 'bg-[#E8F5EC] text-[#2E7D4F]',
     'warning' => 'bg-[#FFF1D6] text-[#946200]',
     'danger' => 'bg-red-50 text-red-600',
     'muted' => 'bg-gray-100 text-gray-500',
-    default => 'bg-[#E0E5F2] text-[#002068]',
+    default => 'bg-[#E0E5F2] text-brand-dark',
 };
 
 if ($isInstructor) {
@@ -53,8 +53,8 @@ if ($isInstructor) {
 
 <div
     class="group flex cursor-pointer items-center justify-between gap-6 rounded-2xl border border-[#A9A9A9]/50 px-8 py-6 outline-none transition-all duration-200
-        hover:border-[#0040A6]/50 hover:bg-[#0040A6]/5 hover:shadow-sm
-        focus-visible:border-[#0040A6] focus-visible:ring-2 focus-visible:ring-[#0040A6]/20"
+        hover:border-brand/50 hover:bg-brand/5 hover:shadow-sm
+        focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
     role="link"
     tabindex="0"
     data-assessment-card
@@ -64,8 +64,8 @@ if ($isInstructor) {
 
     <div class="flex min-w-0 items-center gap-5">
 
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-3 border-[#0040A6]">
-            <?= learning_item_icon($a['assessment_type'], 'h-5 w-5 text-[#0040A6]') ?>
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-3 border-brand">
+            <?= learning_item_icon($a['assessment_type'], 'h-5 w-5 text-brand') ?>
         </div>
 
         <div class="flex min-w-0 flex-col">
@@ -129,7 +129,7 @@ if ($isInstructor) {
                 data-view-assessment-button
                 data-assessment="<?= esc($a['id']) ?>"
                 title="Preview assessment"
-                class="text-gray-500 transition hover:text-[#0040A6]">
+                class="text-gray-500 transition hover:text-brand">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200 hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -143,7 +143,7 @@ if ($isInstructor) {
                 data-edit-assessment-button
                 data-assessment="<?= esc($a['id']) ?>"
                 title="Edit assessment"
-                class="text-gray-500 transition hover:text-[#0040A6]">
+                class="text-gray-500 transition hover:text-brand">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200 hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" />
@@ -151,7 +151,7 @@ if ($isInstructor) {
 
             </button>
 
-            <?= icon('start', 'h-7 w-7 text-gray-500 transition duration-200 ease-out group-hover:text-[#0040A6] group-hover:translate-x-0.5 group-hover:scale-125 group-focus-visible:text-[#0040A6] group-focus-visible:scale-125') ?>
+            <?= icon('start', 'h-7 w-7 text-gray-500 transition duration-200 ease-out group-hover:text-brand group-hover:translate-x-0.5 group-hover:scale-125 group-focus-visible:text-brand group-focus-visible:scale-125') ?>
 
         <?php elseif ($student['key'] === 'graded' && $student['score'] !== null): ?>
 
@@ -185,7 +185,7 @@ if ($isInstructor) {
 
             <?= icon(
                 'start',
-                'h-7 w-7 text-gray-500 transition duration-200 ease-out group-hover:text-[#0040A6] group-hover:translate-x-0.5 group-hover:scale-125 group-focus-visible:text-[#0040A6] group-focus-visible:scale-125'
+                'h-7 w-7 text-gray-500 transition duration-200 ease-out group-hover:text-brand group-hover:translate-x-0.5 group-hover:scale-125 group-focus-visible:text-brand group-focus-visible:scale-125'
                 . ($student['actionable'] ? '' : ' opacity-40')
             ) ?>
 

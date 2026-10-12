@@ -10,7 +10,7 @@
  * @var array<string, mixed>|null  $subUsage       plan limits and how much is used (null with no subscription)
  * @var string                     $subDefaultCurrency
  */
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 $label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
@@ -49,9 +49,9 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
-<h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Subscription</h1>
+<h1 class="mt-2 text-2xl font-bold text-brand">Subscription</h1>
 <p class="mt-1 text-sm text-gray-600"><?= esc($subInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($subInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $subInstitution, 'tabActive' => 'subscription']) ?>
@@ -68,20 +68,20 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
     <div class="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-6" data-onboarding-pending>
         <h2 class="text-lg font-semibold text-amber-900">Onboarding is not finished</h2>
         <p class="mt-1 text-sm text-amber-900">A new institution gets its first subscription as part of onboarding, together with its first administrator.</p>
-        <a class="mt-3 inline-block rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]" href="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
+        <a class="mt-3 inline-block rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
     </div>
 
 <?php elseif ($subscription === null): ?>
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow">
-        <h2 class="text-lg font-semibold text-[#0040A6]">Start a subscription</h2>
+        <h2 class="text-lg font-semibold text-brand">Start a subscription</h2>
         <p class="mt-1 text-sm text-gray-600">This institution has no subscription yet. Pick its plan and the period it has paid for.</p>
 
         <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription') ?>" class="mt-4 grid gap-3 sm:grid-cols-2">
             <?= csrf_field() ?>
             <?= view('pages/admin/partials/term-fields', ['tfCurrency' => $subDefaultCurrency, 'tfPlans' => $subPlans, 'tfPlan' => null, 'tfValues' => []]) ?>
             <div class="sm:col-span-2">
-                <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]">Start subscription</button>
+                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Start subscription</button>
             </div>
         </form>
     </div>
@@ -90,7 +90,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow">
         <div class="flex flex-wrap items-center gap-3">
-            <h2 class="text-lg font-semibold text-[#0040A6]"><?= esc($subscription['plan_name']) ?></h2>
+            <h2 class="text-lg font-semibold text-brand"><?= esc($subscription['plan_name']) ?></h2>
             <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $stateBadge[$subStatus->state][1] ?>"><?= esc($stateBadge[$subStatus->state][0]) ?></span>
             <?php if ($subscription['plan_status'] === 'retired'): ?><span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">Plan retired</span><?php endif; ?>
         </div>
@@ -101,7 +101,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
     </div>
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow" data-usage>
-        <h2 class="text-lg font-semibold text-[#0040A6]">Usage</h2>
+        <h2 class="text-lg font-semibold text-brand">Usage</h2>
         <p class="mt-1 text-sm text-gray-600">How much of the plan's limits this institution has used. From 90% it is a warning; when a limit is used up, anything that would add to it is refused. Nothing is ever removed.</p>
 
         <dl class="mt-4 grid gap-4 sm:grid-cols-3">
@@ -128,19 +128,19 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
     </div>
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow">
-        <h2 class="text-lg font-semibold text-[#0040A6]">Record a renewal</h2>
+        <h2 class="text-lg font-semibold text-brand">Record a renewal</h2>
         <p class="mt-1 text-sm text-gray-600">A renewal adds a new term and moves the end date to the end of it. It must end after <?= esc($subscription['end_date']) ?>.</p>
 
         <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription/renew') ?>" class="mt-4 grid gap-3 sm:grid-cols-2">
             <?= csrf_field() ?>
             <?= view('pages/admin/partials/term-fields', ['tfCurrency' => $subDefaultCurrency, 'tfPlans' => $subPlans, 'tfPlan' => (int) $subscription['plan_id'], 'tfValues' => []]) ?>
             <div class="sm:col-span-2">
-                <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]">Record renewal</button>
+                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Record renewal</button>
             </div>
         </form>
     </div>
 
-    <h2 class="mt-8 text-lg font-semibold text-[#0040A6]">History</h2>
+    <h2 class="mt-8 text-lg font-semibold text-brand">History</h2>
     <p class="mt-1 text-sm text-gray-600">Every term, newest first. Records are never changed or removed; a mistake is put right with a correction.</p>
 
     <div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
@@ -190,7 +190,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
                                     <label class="<?= $label ?>">Notes
                                         <textarea class="<?= $input ?>" name="notes" rows="2" maxlength="1000"><?= esc((string) ($row['notes'] ?? '')) ?></textarea>
                                     </label>
-                                    <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Add correction</button>
+                                    <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Add correction</button>
                                 </form>
                             </details>
                         </td>

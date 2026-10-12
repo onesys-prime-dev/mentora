@@ -10,7 +10,7 @@
             <div class="flex flex-col">
 
                 <h2
-                    class="text-2xl font-bold text-[#0040A6]"
+                    class="text-2xl font-bold text-brand"
                     data-learning-unit-editor-title>
 
                     Add Learning Unit
@@ -81,7 +81,7 @@
                     name="title"
                     autocomplete="off"
                     placeholder="e.g. Introduction to Programming"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     required>
 
             </div>
@@ -100,7 +100,7 @@
                     autocomplete="off"
                     rows="5"
                     placeholder="Write a short description for this learning unit..."
-                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"></textarea>
+                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"></textarea>
 
             </div>
 
@@ -122,7 +122,7 @@
                 type="submit"
                 form="learning-unit-editor-form"
                 data-learning-unit-editor-submit
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
 
                 Create Learning Unit
 

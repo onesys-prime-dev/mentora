@@ -10,9 +10,9 @@
  * @var string                     $uploadToken
  */
 $base    = 'institution/people/upload';
-$primary = 'rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 disabled:cursor-not-allowed disabled:opacity-50';
-$second  = 'rounded-full border border-[#0040A6] bg-white px-5 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#F2F7FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
-$link    = 'text-sm font-semibold text-[#0040A6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 rounded';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50';
+$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 
 $labels = [
     'students'    => ['Students', 'external_id, email, first_name, last_name; student_number is optional.'],
@@ -62,7 +62,7 @@ $labels = [
                 <div class="flex flex-col gap-1" data-field="<?= esc($dataset) ?>">
                     <label class="text-sm font-semibold text-[#1A1C1E]" for="upload-<?= esc($dataset) ?>"><?= esc($labels[$dataset][0] ?? $dataset) ?> (<?= esc($dataset) ?>.csv)</label>
                     <input id="upload-<?= esc($dataset) ?>" name="<?= esc($dataset) ?>" type="file" accept=".csv,text/csv" aria-describedby="upload-<?= esc($dataset) ?>-help"
-                           class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[#F2F7FF] file:px-4 file:py-1.5 file:text-sm file:font-semibold file:text-[#0040A6]" <?= $uploadBlocked || ! $uploadCanEdit ? 'disabled' : '' ?>>
+                           class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-tint file:px-4 file:py-1.5 file:text-sm file:font-semibold file:text-brand" <?= $uploadBlocked || ! $uploadCanEdit ? 'disabled' : '' ?>>
                     <p id="upload-<?= esc($dataset) ?>-help" class="text-xs text-[#646464]">
                         Columns: <?= esc($labels[$dataset][1] ?? '') ?>
                         <a class="<?= $link ?> ml-1" href="<?= esc(site_url($base . '/template/' . $dataset)) ?>">Download a template</a>
@@ -92,7 +92,7 @@ $labels = [
         </div>
 
         <section class="rounded-2xl bg-white p-6 shadow-sm" aria-label="Files">
-            <h2 class="text-sm font-bold text-[#0040A6]">By file</h2>
+            <h2 class="text-sm font-bold text-brand">By file</h2>
             <ul class="mt-3 flex flex-col gap-2 text-sm">
                 <?php foreach ($uploadKept['datasets'] as $dataset => $counts): ?>
                     <li class="flex flex-wrap items-center justify-between gap-2" data-upload-file="<?= esc($dataset) ?>">
@@ -118,7 +118,7 @@ $labels = [
             </section>
         <?php endif; ?>
 
-        <p class="rounded-xl bg-[#F2F7FF] px-4 py-3 text-sm text-[#002068]" data-upload-nothing-saved>Nothing has been saved yet.</p>
+        <p class="rounded-xl bg-brand-tint px-4 py-3 text-sm text-brand-dark" data-upload-nothing-saved>Nothing has been saved yet.</p>
 
         <div class="flex flex-wrap items-center justify-end gap-3">
             <?php if ($uploadCanEdit && ! $uploadBlocked): ?>

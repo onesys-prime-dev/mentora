@@ -23,7 +23,7 @@ $totalPoints = (int) ($totalPoints ?? 0);
 
 $statusMeta = static fn (?string $status) => match ($status) {
     'In Progress' => ['label' => 'In Progress', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
-    'Submitted' => ['label' => 'Submitted', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]'],
+    'Submitted' => ['label' => 'Submitted', 'class' => 'bg-brand/10 text-brand'],
     'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
     'Grading' => ['label' => 'Being Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
     'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
@@ -50,7 +50,7 @@ $timeTaken = static function (array $attempt): ?string {
 
 <div class="flex flex-col gap-3">
 
-    <span class="font-bold text-md text-[#0040A6]">
+    <span class="font-bold text-md text-brand">
         <?= $isQuizHistory ? 'Attempt History' : 'Submission History' ?>
     </span>
 
@@ -114,13 +114,13 @@ $timeTaken = static function (array $attempt): ?string {
                             <div class="flex items-center gap-2">
 
                                 <?php if ($countedAttemptId > 0 && (int) $attempt['id'] === $countedAttemptId && count($historyAttempts) > 1): ?>
-                                    <span class="rounded-full bg-[#0040A6] px-2.5 py-0.5 text-[10px] font-bold text-white">
+                                    <span class="rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold text-white">
                                         Counts toward your grade
                                     </span>
                                 <?php endif; ?>
 
                                 <?php if (!empty($attempt['is_graded'])): ?>
-                                    <span class="text-xs font-bold text-[#0040A6]">
+                                    <span class="text-xs font-bold text-brand">
                                         <?= esc((int) $attempt['score']) ?>/<?= esc($totalPoints) ?>
                                     </span>
                                 <?php elseif (($attempt['status'] ?? '') === 'Partially Graded'): ?>

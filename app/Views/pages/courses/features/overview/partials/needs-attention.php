@@ -36,7 +36,7 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
 
 <div class="flex flex-col gap-6 p-6 pb-8 border border-[#A9A9A9]/50 rounded-2xl">
 
-    <span class="text-2xl font-bold text-[#0040A6]">
+    <span class="text-2xl font-bold text-brand">
         Needs Your Attention
     </span>
 
@@ -87,7 +87,7 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
                             <?php $clickable = $row['action'] !== 'none'; ?>
 
                             <div
-                                class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 <?= $clickable ? 'cursor-pointer hover:bg-[#0040A6]/5' : '' ?>"
+                                class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 <?= $clickable ? 'cursor-pointer hover:bg-brand/5' : '' ?>"
                                 <?= $attributes($row) ?>>
 
                                 <div class="w-10 h-10 shrink-0 flex justify-center items-center rounded-full <?= $bubble($row['tone']) ?>">
@@ -96,7 +96,7 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
 
                                 <div class="flex min-w-0 flex-1 flex-col">
 
-                                    <span class="truncate text-md font-bold text-black/70 <?= $clickable ? 'transition-colors duration-150 group-hover:text-[#0040A6]' : '' ?>">
+                                    <span class="truncate text-md font-bold text-black/70 <?= $clickable ? 'transition-colors duration-150 group-hover:text-brand' : '' ?>">
                                         <?= esc($row['title']) ?>
                                     </span>
 
@@ -109,7 +109,7 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
                                 <?php if ($clickable): ?>
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        class="h-5 w-5 shrink-0 text-[#A9A9A9] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#0040A6]"
+                                        class="h-5 w-5 shrink-0 text-[#A9A9A9] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"

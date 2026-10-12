@@ -58,9 +58,9 @@ function scrollToFocused(container, id) {
 
     card.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    card.classList.add("ring-2", "ring-[#0040A6]/40");
+    card.classList.add("ring-2", "ring-brand/40");
 
-    setTimeout(() => card.classList.remove("ring-2", "ring-[#0040A6]/40"), 2500);
+    setTimeout(() => card.classList.remove("ring-2", "ring-brand/40"), 2500);
 
 }
 

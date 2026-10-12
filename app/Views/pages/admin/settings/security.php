@@ -4,7 +4,7 @@
  * @var list<string>                          $secChoices
  * @var array<string, string>                 $secRoleLabels
  */
-$input = 'w-28 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'w-28 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $value = static fn (string $key): string => (string) old($key, (string) $secValues[$key]);
 $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
 ?>
@@ -14,9 +14,9 @@ $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-2xl">
-    <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/dashboard') ?>">&larr; Admin home</a>
+    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/dashboard') ?>">&larr; Admin home</a>
 
-    <h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Security settings</h1>
+    <h1 class="mt-2 text-2xl font-bold text-brand">Security settings</h1>
     <p class="mt-1 text-sm text-gray-600">Apply to the whole platform. Changing them needs your password and is recorded in the audit log.</p>
 
     <?php if (session()->has('message')): ?>
@@ -30,7 +30,7 @@ $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
         <?= csrf_field() ?>
 
         <fieldset>
-            <legend class="text-lg font-semibold text-[#0040A6]">Passwords</legend>
+            <legend class="text-lg font-semibold text-brand">Passwords</legend>
             <label class="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-700">Shortest password
                 <input class="<?= $input ?>" type="number" name="passwordMinLength" min="8" max="64" value="<?= esc($value('passwordMinLength')) ?>" required>
                 <span class="text-xs text-gray-500">characters (8 to 64). Common passwords and ones containing the person's name or email are always refused.</span>
@@ -38,7 +38,7 @@ $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
         </fieldset>
 
         <fieldset>
-            <legend class="text-lg font-semibold text-[#0040A6]">Sessions</legend>
+            <legend class="text-lg font-semibold text-brand">Sessions</legend>
             <label class="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-700">Sign out after
                 <input class="<?= $input ?>" type="number" name="sessionTimeoutMinutes" min="5" max="120" value="<?= esc($value('sessionTimeoutMinutes')) ?>" required>
                 <span class="text-xs text-gray-500">minutes of inactivity (5 to 120).</span>
@@ -46,7 +46,7 @@ $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
         </fieldset>
 
         <fieldset>
-            <legend class="text-lg font-semibold text-[#0040A6]">Lockout</legend>
+            <legend class="text-lg font-semibold text-brand">Lockout</legend>
             <label class="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-700">Lock sign-in after
                 <input class="<?= $input ?>" type="number" name="lockoutAttempts" min="0" max="50" value="<?= esc($value('lockoutAttempts')) ?>" required>
                 <span class="text-xs text-gray-500">failed attempts in a row. 0 turns the lockout off.</span>
@@ -58,7 +58,7 @@ $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
         </fieldset>
 
         <fieldset>
-            <legend class="text-lg font-semibold text-[#0040A6]">Emailed sign-in code</legend>
+            <legend class="text-lg font-semibold text-brand">Emailed sign-in code</legend>
             <p class="mt-1 text-xs text-gray-500">System administrators always need one. Turning it on for another role needs working email (<span class="font-mono">php spark mail:test</span>): without it those people cannot sign in.</p>
             <div class="mt-3 flex flex-col gap-2">
                 <label class="flex items-center gap-2 text-sm text-gray-500"><input type="checkbox" checked disabled> <?= esc($secRoleLabels['admin']) ?> (always)</label>
@@ -72,7 +72,7 @@ $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
         </fieldset>
 
         <div>
-            <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]">Save</button>
+            <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Save</button>
         </div>
     </form>
 </div>

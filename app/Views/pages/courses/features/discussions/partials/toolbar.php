@@ -13,7 +13,7 @@ $filterOptions = [
 
 <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between" data-discussions-toolbar>
 
-    <label class="flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 transition focus-within:border-[#0040A6]/60 lg:w-80">
+    <label class="flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 transition focus-within:border-brand/60 lg:w-80">
         <?= icon('search', 'h-4 w-4 shrink-0 opacity-60') ?>
         <input
             type="search"

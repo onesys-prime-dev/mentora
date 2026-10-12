@@ -40,13 +40,13 @@ $line = static function (array $l, bool $storage = false) use ($lineBadge): stri
 <?= $this->section('content') ?>
 
 <div class="flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]">System status</h1>
+    <h1 class="text-2xl font-bold text-brand">System status</h1>
     <span class="rounded-full px-3 py-1 text-sm font-semibold <?= $badge[$monOverall][1] ?>" data-overall="<?= esc($monOverall) ?>"><?= esc($badge[$monOverall][0]) ?></span>
 </div>
 <p class="mt-1 text-xs text-gray-500">Checked <?= esc($monRuntime['checkedAt']) ?>. This page refreshes itself every minute and changes nothing.</p>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="health">
-    <h2 class="text-lg font-semibold text-[#0040A6]">Health</h2>
+    <h2 class="text-lg font-semibold text-brand">Health</h2>
     <ul class="mt-3 divide-y divide-gray-100">
         <?php foreach ($monHealth as $name => $result): ?>
             <li class="flex flex-wrap items-center justify-between gap-2 py-2" data-check="<?= esc($name) ?>" data-status="<?= esc($result['status']) ?>">
@@ -60,7 +60,7 @@ $line = static function (array $l, bool $storage = false) use ($lineBadge): stri
 </section>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="platform">
-    <h2 class="text-lg font-semibold text-[#0040A6]">Platform</h2>
+    <h2 class="text-lg font-semibold text-brand">Platform</h2>
     <dl class="mt-3 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3 lg:grid-cols-6">
         <?php foreach (['institutions' => 'Institutions', 'users' => 'Active users', 'signedInToday' => 'Active today', 'sessions' => 'Live sessions', 'failedLogins24h' => 'Failed sign-ins (24 h)', 'failedLogins7d' => 'Failed sign-ins (7 d)'] as $key => $label): ?>
             <div><dt class="text-gray-500"><?= esc($label) ?></dt><dd class="text-xl font-semibold text-gray-900"><?= esc(number_format($monPlatform[$key])) ?></dd></div>
@@ -69,14 +69,14 @@ $line = static function (array $l, bool $storage = false) use ($lineBadge): stri
 </section>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="watch">
-    <h2 class="text-lg font-semibold text-[#0040A6]">Subscription watch</h2>
+    <h2 class="text-lg font-semibold text-brand">Subscription watch</h2>
     <?php if ($monWatch === []): ?>
         <p class="mt-3 text-sm text-gray-600">Nothing is expiring, in grace or read-only.</p>
     <?php else: ?>
         <ul class="mt-3 divide-y divide-gray-100 text-sm">
             <?php foreach ($monWatch as $row): ?>
                 <li class="flex flex-wrap justify-between gap-2 py-2" data-watch="<?= esc($row['state']) ?>">
-                    <a class="font-medium text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>"><?= esc($row['name']) ?></a>
+                    <a class="font-medium text-brand hover:underline" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>"><?= esc($row['name']) ?></a>
                     <span class="text-gray-600"><?= esc(str_replace('_', '-', $row['state'])) ?> · ends <?= esc($row['endDate']) ?></span>
                 </li>
             <?php endforeach; ?>
@@ -85,7 +85,7 @@ $line = static function (array $l, bool $storage = false) use ($lineBadge): stri
 </section>
 
 <section class="mt-6 overflow-x-auto rounded-lg bg-white shadow" data-section="usage">
-    <h2 class="px-6 pt-6 text-lg font-semibold text-[#0040A6]">Usage against plans</h2>
+    <h2 class="px-6 pt-6 text-lg font-semibold text-brand">Usage against plans</h2>
     <table class="mt-3 min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50">
             <tr>
@@ -103,7 +103,7 @@ $line = static function (array $l, bool $storage = false) use ($lineBadge): stri
             <?php endif; ?>
             <?php foreach ($monUsage as $row): ?>
                 <tr data-institution="<?= esc((string) $row['id']) ?>">
-                    <td class="px-3 py-2 font-medium"><a class="text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions/' . $row['id']) ?>"><?= esc($row['name']) ?></a></td>
+                    <td class="px-3 py-2 font-medium"><a class="text-brand hover:underline" href="<?= site_url('admin/institutions/' . $row['id']) ?>"><?= esc($row['name']) ?></a></td>
                     <td class="px-3 py-2"><?= esc($row['plan'] ?? '—') ?></td>
                     <td class="px-3 py-2"><?= esc((string) $row['activeUsers']) ?></td>
                     <td class="px-3 py-2"><?= $line($row['seats']) ?></td>

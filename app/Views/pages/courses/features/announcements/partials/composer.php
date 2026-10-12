@@ -27,7 +27,7 @@ $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?
             data-composer-subject
             placeholder="Add a subject"
             autocomplete="off"
-            class="w-full text-lg font-bold text-[#0040A6] placeholder:text-gray-300 placeholder:font-bold outline-none">
+            class="w-full text-lg font-bold text-brand placeholder:text-gray-300 placeholder:font-bold outline-none">
     </div>
 
     <div class="border-t border-gray-100 px-5 py-2 flex items-center gap-1" data-composer-toolbar>
@@ -67,7 +67,7 @@ $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?
         <button
             type="button"
             data-composer-submit
-            class="rounded-full bg-[#0040A6] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] disabled:opacity-50"
+            class="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50"
             disabled>
             Post
         </button>

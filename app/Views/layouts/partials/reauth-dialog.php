@@ -16,7 +16,7 @@ $reauthBody = '<form method="post" action="' . esc(site_url($reauthAction)) . '"
     . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
     . '<div class="flex flex-wrap items-center justify-end gap-3">'
     . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-    . '<button type="submit" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Confirm</button>'
+    . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Confirm</button>'
     . '</div></form>';
 ?>
 <?= view('components/dialog', ['id' => 'reauth-dialog', 'title' => 'Confirm your password', 'body' => $reauthBody, 'size' => 'sm'], ['saveData' => false]) ?>

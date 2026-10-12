@@ -16,7 +16,7 @@
         </div>
 
         <p class="text-sm text-[#374151] whitespace-pre-line" data-reply-message data-collapsed="1"><?= esc($reply['message']) ?></p>
-        <button type="button" data-see-more class="hidden self-start text-xs font-semibold text-[#0040A6] hover:underline">See more</button>
+        <button type="button" data-see-more class="hidden self-start text-xs font-semibold text-brand hover:underline">See more</button>
 
     </div>
 
