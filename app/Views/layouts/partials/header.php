@@ -46,7 +46,7 @@ $accountLinks = [
     <div class="flex gap-2 items-stretch font-lao">
         <a
             class="flex gap-1 items-center self-center"
-            href="<?= site_url($userRole . '/dashboard') ?>">
+            href="<?= site_url(role_home($userRole) . '/dashboard') ?>">
             <img
                 class="h-11 w-auto"
                 src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="">

@@ -425,13 +425,19 @@ if (ENVIRONMENT !== 'production') {
     $routes->post('ui-kit', 'UiKitController::submit', ['filter' => 'session']);
 }
 
-// Institutional administrator area. Deliberately not behind `readonly`: the
-// data export must keep working once the subscription has ended (SA13).
+// Institutional administrator area. Everyone in it is the institutional administrator
+// of one institution, which the server decides from who is signed in (InstitutionScope).
+// The data export is deliberately NOT behind `readonly`: it must keep working once the
+// subscription has ended (SA13). Everything that writes goes in the second group.
 $routes->group('institution', ['filter' => 'role:institutional_admin'], function ($routes) {
-    $routes->get('/', 'Institution\ExportController::index');
     $routes->get('export', 'Institution\ExportController::index');
     $routes->post('export', 'Institution\ExportController::create');
     $routes->get('export/(:num)', 'Institution\ExportController::download/$1');
+
+    $routes->group('', ['filter' => 'readonly'], function ($routes) {
+        $routes->get('/', 'Institution\HomeController::index');
+        $routes->get('dashboard', 'Institution\HomeController::index');
+    });
 });
 
 // System administrator area: platform-wide, above every institution.
