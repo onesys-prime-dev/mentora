@@ -463,6 +463,19 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('programs/(:num)/deactivate', 'Institution\StructureController::deactivateProgram/$1');
             $routes->post('programs/(:num)/archive', 'Institution\StructureController::archiveProgram/$1');
             $routes->post('programs/(:num)/reactivate', 'Institution\StructureController::reactivateProgram/$1');
+
+            $routes->post('sub-departments/(:num)/chairpersons', 'Institution\StructureController::assignChairperson/$1');
+            $routes->post('chairpersons/(:num)/remove', 'Institution\StructureController::revokeChairperson/$1');
+        });
+
+        // The course catalog (structure.manage).
+        $routes->group('courses', ['filter' => 'permission:structure.manage'], function ($routes) {
+            $routes->get('/', 'Institution\CoursesController::index');
+            $routes->post('/', 'Institution\CoursesController::create');
+            $routes->post('(:num)', 'Institution\CoursesController::update/$1');
+            $routes->post('(:num)/deactivate', 'Institution\CoursesController::deactivate/$1');
+            $routes->post('(:num)/archive', 'Institution\CoursesController::archive/$1');
+            $routes->post('(:num)/reactivate', 'Institution\CoursesController::reactivate/$1');
         });
     });
 });

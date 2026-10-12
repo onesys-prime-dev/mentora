@@ -56,3 +56,21 @@ To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', '
 ## Demo account
 
 `institution.admin@mentora.test` / `Institution123!` (institutional administrator of institution 1), from `DemoUsersSeeder`.
+
+## Courses
+
+`/institution/courses` (permission `structure.manage`; read-only while the institution is read-only). The Structure and Courses pages are tabs of the same "Academics" area.
+
+- **Catalog:** every course of the institution with search (code or title), program and status filters, sortable columns, 25 per page. Filters live in the address.
+- **Rules:** code unique within its program (capitals, numbers, spaces, dots, dashes, underscores); title 3 to 255 characters; units above 0 and at most 99.9; a course is filed under an *active* program and is never deleted (inactive, archived). It cannot be switched off while it has offerings in an active term, and not reactivated under an inactive program.
+- **SIS lock:** while the connection is enabled, a course the SIS supplied cannot have its code, title or units changed by hand (`SisOwnership::managesCourse`). The edit dialog shows them read-only with a note; the description stays editable. The server refuses it too (422 with the field).
+- **Audit:** `structure.course_created|updated|deactivated|archived|reactivated`.
+
+## Chairpersons
+
+On the Structure page, each sub-department lists its chairpersons with **Assign chairperson** and **Remove** (`ChairAssignmentService`).
+
+- A sub-department can have several chairpersons and a person can chair several sub-departments. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active sub-department.
+- Removing keeps the row (`revoked`); assigning again reuses it. A chairperson's reach is derived live from these rows, so it follows on their next request.
+- Audit: `structure.chairperson_assigned|revoked`.
+- Giving someone the chairperson role is done on the People page (a later branch).

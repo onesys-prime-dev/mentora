@@ -431,6 +431,37 @@ export function fillDialog(dialogEl, trigger) {
         applyFieldErrors(form, {});
     }
 
+    // Fields a source of truth outside Mentora decides (the SIS): shown, not editable, with the note.
+    for (const el of form.elements) {
+        if ("readOnly" in el && el.dataset.wasLocked === "1") {
+            el.readOnly = false;
+            delete el.dataset.wasLocked;
+        }
+    }
+
+    let locked;
+
+    try {
+        locked = data.dialogLocked ? JSON.parse(data.dialogLocked) : [];
+    } catch {
+        locked = [];
+    }
+
+    for (const name of locked) {
+        const field = form.elements.namedItem(name);
+
+        if (field && "readOnly" in field) {
+            field.readOnly = true;
+            field.dataset.wasLocked = "1";
+        }
+    }
+
+    const note = dialogEl.querySelector("[data-dialog-lock]");
+
+    if (note) {
+        note.hidden = locked.length === 0;
+    }
+
     const match = dialogEl.querySelector("[data-confirm-match]");
 
     if (match) {
