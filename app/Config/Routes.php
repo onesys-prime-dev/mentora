@@ -495,6 +495,26 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/status', 'Institution\EnrolmentsController::setStatus/$1');
         });
 
+        // The institution's people (people.view to look, people.manage to change; the
+        // dangerous ones also need the password).
+        $routes->group('people', function ($routes) {
+            $routes->get('/', 'Institution\PeopleController::index', ['filter' => 'permission:people.view']);
+            $routes->get('export', 'Institution\PeopleController::export', ['filter' => 'permission:people.view']);
+            $routes->post('export', 'Institution\PeopleController::exportSelected', ['filter' => 'permission:people.view']);
+            $routes->post('/', 'Institution\PeopleController::invite', ['filter' => 'permission:people.manage']);
+            $routes->post('bulk/deactivate', 'Institution\PeopleController::bulkDeactivate', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('bulk/reactivate', 'Institution\PeopleController::bulkReactivate', ['filter' => 'permission:people.manage']);
+            $routes->post('invitations/(:num)/resend', 'Institution\PeopleController::resend/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('invitations/(:num)/revoke', 'Institution\PeopleController::revoke/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)', 'Institution\PeopleController::update/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/deactivate', 'Institution\PeopleController::deactivate/$1', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('(:num)/reactivate', 'Institution\PeopleController::reactivate/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/sign-out', 'Institution\PeopleController::signOut/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/reset-password', 'Institution\PeopleController::resetPassword/$1', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('(:num)/roles', 'Institution\PeopleController::roles/$1', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('(:num)/remove', 'Institution\PeopleController::remove/$1', ['filter' => 'permission:people.manage']);
+        });
+
         // The course catalog (structure.manage).
         $routes->group('courses', ['filter' => 'permission:structure.manage'], function ($routes) {
             $routes->get('/', 'Institution\CoursesController::index');
