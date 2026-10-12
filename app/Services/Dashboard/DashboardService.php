@@ -400,15 +400,11 @@ class DashboardService
      */
     protected function getQuickAccessData(User $user): array
     {
-        if (! $user->inGroup('chairperson')) {
-            return [];
-        }
-
-        return [
-            'extra' => [
-                ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url('chairperson/monitor-program')],
-            ],
-        ];
+        // Monitor Program used to live here as a chairperson-only extra
+        // before global_apps() carried it for every role (inert outside
+        // chairperson) — nothing currently needs this hook, but it stays
+        // available for the next tile that's too one-off for global_apps().
+        return [];
     }
 
     /**

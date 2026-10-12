@@ -245,13 +245,13 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testQuickAccessAddsALinkToMonitorProgram(): void
+    public function testQuickAccessAddsNoExtraTilesForAChairperson(): void
     {
-        $extra = $this->widgets()['quick-access']['extra'];
-
-        $this->assertCount(1, $extra);
-        $this->assertSame('Monitor Program', $extra[0]['label']);
-        $this->assertSame(site_url('chairperson/monitor-program'), $extra[0]['url']);
+        // Monitor Program is now carried by global_apps() (see
+        // NavigationHelperTest) like every other role's tiles, not added
+        // here a second time — this hook stays empty until something needs
+        // a tile too one-off for global_apps().
+        $this->assertSame([], $this->widgets()['quick-access']);
     }
 
     public function testQuickAccessAddsNothingForAnInstructor(): void
