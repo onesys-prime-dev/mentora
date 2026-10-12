@@ -8,4 +8,13 @@
 
 <?= vite('resources/js/app.js') ?>
 
+<?php
+// An institution's own colours (never for the vendor's area): custom properties on :root,
+// which every brand utility reads. Validated hex only, written by BrandColours::css().
+$instituteBranding = (new \App\Services\Institutions\InstitutionBranding())->forUser(auth()->user());
+?>
+<?php if ($instituteBranding !== null && $instituteBranding['css'] !== ''): ?>
+    <style data-institution-branding><?= $instituteBranding['css'] ?></style>
+<?php endif; ?>
+
 <?= $this->renderSection('head') ?>

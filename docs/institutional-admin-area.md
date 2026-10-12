@@ -190,3 +190,14 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 - **Rule:** views, helpers and scripts use the utilities, never `[#0040A6]`, `[#002068]` or `[#F2F7FF]`. (Other greys, status tones and the icon colours are unchanged.)
 - **JavaScript:** `resources/js/shared/brand-tokens.js` reads (`readBrandTokens`), sets (`applyBrandTokens`, six-digit hex only) and clears (`clearBrandTokens`) them, for a live preview or a chart that needs the value.
 - **No visual change** from the switch: the defaults are the same colours as before.
+
+## Institution settings: profile and branding
+
+`/institution/settings` (permission `institution.settings`; read-only while the institution is read-only). The Apps tile "Settings". Two tabs for now: Profile and Branding.
+
+- **Profile:** display name (2 to 150 characters), contact email, contact phone (digits, spaces and + - ( ) only) and address, all optional but the name. The code is shown and cannot be changed. Audited as `institution.profile_updated`.
+- **Colours:** a primary and an accent colour, typed as hex or picked. They are refused, beside the field, when they are not readable: the primary must reach 4.5:1 (WCAG AA) against the pale tint derived from it (white text on it, and it as text on white, both follow), the accent against white. The message gives the contrast it would have. The page says so as the colour is typed, and a live preview takes it at once. Choosing the Mentora colours stores nothing, so the institution follows the platform if it changes. "Reset to the Mentora colours" clears both. Audited as `institution.branding_updated`.
+- **Applied** by custom properties on `:root` in the head of every page the institution's people see (`--color-brand`, `--color-brand-dark` and `--color-brand-tint` derived from the primary, `--color-accent`), so every brand utility changes with them. Only validated colours are ever written. System administrators belong to no institution, so the vendor's area keeps the platform colours; someone of another institution is unaffected.
+- **Accent:** the `--color-accent` token and `bg-accent`/`text-accent` utilities exist and the preview uses them, but no screen uses the accent colour yet.
+- **Logo:** PNG, JPEG or WebP, up to 1 MB and between 32 and 2000 pixels a side (SVG is refused: it can carry script). It is a file of the institution, so it counts towards its storage and is refused when the plan has no room. Replacing or removing it frees the old file. It is shown in the header beside Mentora's, and is served to the institution's people only (`FileAccessService`). Audited as `institution.logo_changed`.
+- **Columns:** `institutions.contact_email`, `contact_phone`, `address`, `logo_file_id`, `brand_primary`, `brand_accent` (all null until set).

@@ -1,9 +1,57 @@
 // Cases: the institutional administrator's academic structure (IA3).
 // Data: the demo institutional administrator of institution 1 (DemoUsersSeeder).
+import { deflateSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 import { accounts, submitLoginForm } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
+
+/** A solid-colour PNG of the given size, built here so the case needs no fixture file. */
+function solidPng(size, [r, g, b]) {
+    const crcTable = Array.from({ length: 256 }, (_, n) => {
+        let c = n;
+
+        for (let k = 0; k < 8; k++) {
+            c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        }
+
+        return c >>> 0;
+    });
+    const crc = (buf) => {
+        let c = 0xffffffff;
+
+        for (const byte of buf) {
+            c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8);
+        }
+
+        return (c ^ 0xffffffff) >>> 0;
+    };
+    const chunk = (type, data) => {
+        const body = Buffer.concat([Buffer.from(type), data]);
+        const out = Buffer.alloc(8 + data.length + 4);
+        out.writeUInt32BE(data.length, 0);
+        body.copy(out, 4);
+        out.writeUInt32BE(crc(body), 8 + data.length);
+
+        return out;
+    };
+
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(size, 0);
+    header.writeUInt32BE(size, 4);
+    header[8] = 8;
+    header[9] = 2;
+
+    const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array.from({ length: size }, () => [r, g, b]).flat())]);
+    const raw = Buffer.concat(Array.from({ length: size }, () => row));
+
+    return Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        chunk("IHDR", header),
+        chunk("IDAT", deflateSync(raw)),
+        chunk("IEND", Buffer.alloc(0)),
+    ]);
+}
 
 async function openStructure(page) {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
@@ -546,4 +594,66 @@ test("TC-CPY-01 Offerings are copied into a new term from a preview that says wh
 
     await expect(page.getByText(/^Copied \d+ offering/)).toBeVisible();
     await expect(page.getByText("No students, work or grades were copied.")).toBeVisible();
+});
+
+test("TC-BRD-01 Colours are checked as they are typed, refused when unreadable, and applied to the whole interface", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/settings/branding");
+    await expect(page.getByRole("heading", { name: "Institution settings", level: 1 })).toBeVisible();
+
+    const primary = page.locator("[data-brand-input='primary']");
+
+    // Too light: said before saving, and refused beside the field if saved anyway.
+    await primary.fill("#7FB2FF");
+    await expect(page.locator("[data-brand-note='primary']")).toContainText("Too light");
+
+    await page.getByRole("button", { name: "Save colours" }).click();
+    await expect(page.locator("[data-field='primary'] [data-field-error]")).toContainText("too light");
+
+    // A readable colour: the preview takes it at once.
+    await primary.fill("#8B1E3F");
+    await expect(page.locator("[data-brand-note='primary']")).toContainText("passes AA");
+    await expect(page.locator("[data-brand-preview] button").first()).toHaveCSS("background-color", "rgb(139, 30, 63)");
+
+    await page.getByRole("button", { name: "Save colours" }).click();
+    await expect(page.getByText("The colours were saved.")).toBeVisible();
+
+    // The whole interface now carries it.
+    await page.goto("/institution/people");
+    await expect(page.getByRole("button", { name: "Invite a person" })).toHaveCSS("background-color", "rgb(139, 30, 63)");
+});
+
+test("TC-BRD-02 A logo is uploaded, shown in the header, and removed again; the colours reset", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/settings/branding");
+
+    await page.locator("#logo-file").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: solidPng(48, [0, 64, 166]) });
+    await page.getByRole("button", { name: "Upload logo" }).click();
+
+    await expect(page.getByText("The logo was saved.")).toBeVisible();
+    await expect(page.locator("[data-current-logo]")).toBeVisible();
+    await expect(page.locator("[data-institution-logo]")).toBeVisible();
+
+    await page.getByRole("button", { name: "Remove logo" }).click();
+    await expect(page.getByText("The logo was removed.")).toBeVisible();
+    await expect(page.locator("[data-institution-logo]")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Reset to the Mentora colours" }).click();
+    await expect(page.getByText("The colours are back to the Mentora colours.")).toBeVisible();
+    await expect(page.locator("[data-brand-input='primary']")).toHaveValue("#0040A6");
+});
+
+test("TC-BRD-03 The profile is saved and the code stays as it was", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/settings");
+
+    const code = await page.locator("[data-institution-code]").innerText();
+
+    await page.getByLabel("Contact email").fill("registrar@mentora.test");
+    await page.getByLabel("Contact phone").fill("+63 2 8123 4567");
+    await page.getByRole("button", { name: "Save profile" }).click();
+
+    await expect(page.getByText("The profile was saved.")).toBeVisible();
+    await expect(page.getByLabel("Contact email")).toHaveValue("registrar@mentora.test");
+    await expect(page.locator("[data-institution-code]")).toHaveText(code);
 });
