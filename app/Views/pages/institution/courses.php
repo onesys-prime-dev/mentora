@@ -178,7 +178,8 @@ foreach ($courseRows as $course) {
         . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
         . '<button type="submit" data-dialog-label class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Save</button></div>';
 
-    $common = $field(['name' => 'course_code', 'label' => 'Code', 'required' => true, 'maxlength' => 50, 'attrs' => 'autocomplete="off"', 'help' => 'For example IT101. Shown in capitals.'])
+    // Built per dialog: each needs its own field ids.
+    $common = static fn (): string => $field(['name' => 'course_code', 'label' => 'Code', 'required' => true, 'maxlength' => 50, 'attrs' => 'autocomplete="off"', 'help' => 'For example IT101. Shown in capitals.'])
         . $field(['name' => 'course_title', 'label' => 'Title', 'required' => true, 'maxlength' => 255, 'attrs' => 'autocomplete="off"'])
         . $field(['name' => 'units', 'label' => 'Units', 'required' => true, 'type' => 'number', 'attrs' => 'step="0.5" min="0.5" max="99.9" inputmode="decimal"'])
         . $field(['name' => 'description', 'label' => 'Description', 'type' => 'textarea', 'maxlength' => 5000, 'help' => 'Optional.']);
@@ -195,11 +196,11 @@ foreach ($courseRows as $course) {
 
     $addBody = '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
         . $field(['name' => 'program_id', 'label' => 'Program', 'type' => 'select', 'options' => $programSelect, 'required' => true])
-        . $common
+        . $common()
         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>' . $buttons . '</form>';
 
     $editBody = '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
-        . $lockNote . $common
+        . $lockNote . $common()
         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>' . $buttons . '</form>';
     ?>
 

@@ -488,6 +488,13 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('instructors/(:num)/remove', 'Institution\OfferingsController::unassignInstructor/$1');
         });
 
+        // Who is enrolled in an offering (enrolments.manage).
+        $routes->group('enrolments', ['filter' => 'permission:enrolments.manage'], function ($routes) {
+            $routes->get('offering/(:num)', 'Institution\EnrolmentsController::roster/$1');
+            $routes->post('offering/(:num)', 'Institution\EnrolmentsController::add/$1');
+            $routes->post('(:num)/status', 'Institution\EnrolmentsController::setStatus/$1');
+        });
+
         // The course catalog (structure.manage).
         $routes->group('courses', ['filter' => 'permission:structure.manage'], function ($routes) {
             $routes->get('/', 'Institution\CoursesController::index');

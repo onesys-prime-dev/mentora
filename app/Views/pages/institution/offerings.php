@@ -92,7 +92,7 @@ foreach ($offeringRows as $o) {
             'section'     => (string) $o['section_code'],
             'term'        => $o['term_name'] . ' ' . $o['academic_year'],
             'instructors' => ['html' => $chips],
-            'capacity'    => ['html' => esc((string) $o['enrolled_count']) . ' / ' . esc((string) $o['capacity'])],
+            'capacity'    => ['html' => '<a class="' . $link . '" href="' . esc(site_url('institution/enrolments/offering/' . $o['id'])) . '" aria-label="Roster of ' . esc($o['course_code'] . ' ' . $o['section_code']) . '">' . esc((string) $o['enrolled_count']) . ' / ' . esc((string) $o['capacity']) . '</a>'],
             'status'      => ['html' => view('components/status-badge', ['label' => ucfirst((string) $o['status']), 'tone' => $tones[$o['status']] ?? 'neutral'], ['saveData' => false])],
         ],
         'actions' => $actions,
@@ -221,7 +221,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
         $termSelect[(string) $t['id']] = $t['name'] . ' ' . $t['year'] . ($t['status'] === 'active' ? ' (active)' : '');
     }
 
-    $details = $field(['name' => 'section_code', 'label' => 'Section', 'required' => true, 'maxlength' => 50, 'attrs' => 'autocomplete="off"', 'help' => 'For example A, or 1A. Shown in capitals.'])
+    // Built per dialog: each needs its own field ids.
+    $details = static fn (): string => $field(['name' => 'section_code', 'label' => 'Section', 'required' => true, 'maxlength' => 50, 'attrs' => 'autocomplete="off"', 'help' => 'For example A, or 1A. Shown in capitals.'])
         . $field(['name' => 'capacity', 'label' => 'Capacity', 'required' => true, 'type' => 'number', 'value' => '40', 'attrs' => 'min="1" max="1000" inputmode="numeric"', 'help' => 'How many students the section takes.'])
         . $field(['name' => 'description', 'label' => 'Description', 'type' => 'textarea', 'maxlength' => 5000, 'help' => 'Optional.']);
 
@@ -236,12 +237,12 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
     <?= view('components/dialog', ['id' => 'offering-add', 'title' => 'Add an offering', 'body' => $form(
         $field(['name' => 'course_id', 'label' => 'Course', 'type' => 'select', 'options' => $courseSelect, 'required' => true])
         . $field(['name' => 'term_id', 'label' => 'Term', 'type' => 'select', 'options' => $termSelect, 'required' => true])
-        . $details,
+        . $details(),
         'Add offering',
     )], ['saveData' => false]) ?>
     <?php endif; ?>
 
-    <?= view('components/dialog', ['id' => 'offering-edit', 'title' => 'Edit offering', 'body' => $form($details, 'Save')], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'offering-edit', 'title' => 'Edit offering', 'body' => $form($details(), 'Save')], ['saveData' => false]) ?>
 
     <?= view('components/dialog', ['id' => 'offering-instructor', 'title' => 'Assign an instructor', 'body' => $form(
         $field(['name' => 'user_id', 'label' => 'Instructor', 'type' => 'select', 'options' => $candidateSelect, 'required' => true, 'help' => 'People who hold the instructor role in your institution.']),

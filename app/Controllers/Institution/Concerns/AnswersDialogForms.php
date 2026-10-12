@@ -28,7 +28,7 @@ trait AnswersDialogForms
     /**
      * @param callable(int): mixed $change given the administrator's institution id
      */
-    private function run(callable $change, string $success, string $backTo): ResponseInterface|RedirectResponse
+    private function run(callable $change, string|\Closure $success, string $backTo): ResponseInterface|RedirectResponse
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
         $wantsJson     = $this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json');
@@ -52,7 +52,8 @@ trait AnswersDialogForms
             $warnings  = array_values(array_filter(is_array($candidate) ? $candidate : [], 'is_string'));
         }
 
-        $message = trim($success . ' ' . implode(' ', $warnings));
+        // A closure builds the message from what the change returned (a count, say).
+        $message = trim(($success instanceof \Closure ? $success($result) : $success) . ' ' . implode(' ', $warnings));
 
         if ($wantsJson) {
             // The dialog's script goes to the list next; the message is waiting there.
