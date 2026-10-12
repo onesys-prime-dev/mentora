@@ -428,3 +428,52 @@ test("TC-PAR-01 A parent is linked to a student from the Parents tab and unlinke
     await expect(page.getByText("The link was removed.")).toBeVisible();
     await expect(page.getByRole("row", { name: /parent1@mentora.test/ })).toContainText("No student linked");
 });
+
+test("TC-UPL-01 Files are previewed first, and applying them (after the password) creates the people", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/people");
+    await page.getByRole("link", { name: "Upload CSV" }).click();
+    await expect(page.getByRole("heading", { name: "Upload from CSV", level: 1 })).toBeVisible();
+
+    await page.locator("#upload-students").setInputFiles({
+        name: "students.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(
+            "external_id,email,first_name,last_name,student_number\n" +
+                "UP1,e2e.upload1@mentora.test,Una,Upload,2026-9001\n" +
+                "UP2,e2e.upload2@mentora.test,Uri,Upload,2026-9002\n" +
+                "UP3,not-an-email,Uma,Upload,2026-9003\n",
+        ),
+    });
+    await page.getByRole("button", { name: "Preview the changes" }).click();
+
+    // Step 2: what would happen, and that nothing is saved yet.
+    await expect(page.getByText("Nothing has been saved yet.")).toBeVisible();
+    await expect(page.locator("[data-upload-file='students']")).toContainText("2 to create");
+    await expect(page.locator("[data-upload-issues]")).toContainText("students.csv");
+
+    await page.getByRole("button", { name: /^Apply 2 changes$/ }).click();
+
+    // The password comes first; then back to the preview to apply.
+    await expect(page.getByRole("heading", { name: "Confirm your password" })).toBeVisible();
+    await page.getByLabel("Password").fill(accounts.institutionAdmin.password);
+    await page.getByRole("button", { name: "Confirm" }).click();
+
+    await page.getByRole("button", { name: /^Apply 2 changes$/ }).click();
+
+    await expect(page.getByText(/The upload was applied: 2 created/)).toBeVisible();
+
+    await page.goto("/institution/people?q=e2e.upload1");
+    await expect(page.getByRole("row", { name: /e2e.upload1@mentora.test/ })).toContainText("Student");
+});
+
+test("TC-UPL-02 A file with the wrong columns is refused and nothing is kept", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/people/upload");
+
+    await page.locator("#upload-students").setInputFiles({ name: "students.csv", mimeType: "text/csv", buffer: Buffer.from("email,name\nx@y.test,X\n") });
+    await page.getByRole("button", { name: "Preview the changes" }).click();
+
+    await expect(page.getByText(/students.csv is missing the column\(s\)/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Upload from CSV", level: 1 })).toBeVisible();
+});
