@@ -45,6 +45,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         ['label' => 'Structure', 'href' => site_url('institution/structure'), 'active' => true],
         ['label' => 'Courses', 'href' => site_url('institution/courses')],
         ['label' => 'Terms', 'href' => site_url('institution/terms')],
+        ['label' => 'Offerings', 'href' => site_url('institution/offerings')],
     ]], ['saveData' => false]) ?>
 
     <?php if (! $structureCanEdit): ?>

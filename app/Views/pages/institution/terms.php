@@ -78,6 +78,7 @@ foreach ($termRows as $term) {
         ['label' => 'Structure', 'href' => site_url('institution/structure')],
         ['label' => 'Courses', 'href' => site_url('institution/courses')],
         ['label' => 'Terms', 'href' => site_url($base), 'active' => true],
+        ['label' => 'Offerings', 'href' => site_url('institution/offerings')],
     ]], ['saveData' => false]) ?>
 
     <?php if (! $termCanEdit): ?>
