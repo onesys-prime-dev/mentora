@@ -44,7 +44,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
-    $routes->group('api/calendar', function ($routes) {
+    $routes->group('api/calendar', ['filter' => 'closedoffering'], function ($routes) {
         $routes->get('events', 'Calendar\CalendarController::events');
 
         $routes->post('reminders', 'Calendar\ReminderController::store');
@@ -53,7 +53,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -108,7 +108,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
-    $routes->group('api/calendar', function ($routes) {
+    $routes->group('api/calendar', ['filter' => 'closedoffering'], function ($routes) {
         $routes->get('events', 'Calendar\CalendarController::events');
 
         $routes->post('reminders', 'Calendar\ReminderController::store');
@@ -120,7 +120,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -284,7 +284,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
 
-    $routes->group('api/courses', ['filter' => ['assessmentscope', 'chairpersoncourseaudit']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering', 'chairpersoncourseaudit']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -475,6 +475,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)', 'Institution\TermsController::update/$1');
             $routes->post('(:num)/start', 'Institution\TermsController::start/$1');
             $routes->post('(:num)/upcoming', 'Institution\TermsController::unstart/$1');
+            $routes->get('(:num)/close', 'Institution\TermCloseController::confirm/$1');
+            $routes->post('(:num)/close', 'Institution\TermCloseController::close/$1', ['filter' => 'reauth']);
+            $routes->post('(:num)/reopen', 'Institution\TermCloseController::reopen/$1', ['filter' => 'reauth']);
         });
 
         // Course offerings and their instructors (offerings.manage).

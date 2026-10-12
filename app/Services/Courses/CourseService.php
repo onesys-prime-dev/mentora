@@ -43,12 +43,16 @@ class CourseService
     |--------------------------------------------------------------------------
     */
 
-    public function getCourseOfferings(User $user): array
+    /**
+     * The cards for a person's courses: the current ones, or with $past the ones
+     * whose term has been closed (they can be looked at, not changed).
+     */
+    public function getCourseOfferings(User $user, bool $past = false): array
     {
         if ($user->inGroup('student')) {
 
             return $this->withCardDetails(
-                $this->enrollmentModel->retrieveStudentCourseOfferings($user->id),
+                $this->enrollmentModel->retrieveStudentCourseOfferings($user->id, $past),
                 fn (array $courses) => $this->studentProgress($user, array_column($courses, 'offering_id'))
             );
 
@@ -57,7 +61,7 @@ class CourseService
         if ($user->inGroup('instructor')) {
 
             return $this->withCardDetails(
-                $this->instructorAssignmentModel->retrieveInstructorCourseOfferings($user->id),
+                $this->instructorAssignmentModel->retrieveInstructorCourseOfferings($user->id, $past),
                 fn (array $courses) => $this->classProgress($courses)
             );
         }
@@ -65,7 +69,7 @@ class CourseService
         if ($user->inGroup('chairperson')) {
 
             return $this->withCardDetails(
-                $this->chairpersonAssignmentModel->retrieveChairedCourseOfferings($user->id),
+                $this->chairpersonAssignmentModel->retrieveChairedCourseOfferings($user->id, $past),
                 fn (array $courses) => $this->classProgress($courses)
             );
         }

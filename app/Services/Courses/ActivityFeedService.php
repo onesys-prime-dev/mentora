@@ -168,7 +168,7 @@ class ActivityFeedService
             ->join('course_modules cm', 'cm.id = a.module_id')
             ->join(
                 'enrollments e',
-                "e.student_user_id = s.student_id AND e.offering_id = {$offeringId} AND e.status = 'enrolled'"
+                "e.student_user_id = s.student_id AND e.offering_id = {$offeringId} AND e.status IN ('enrolled', 'completed')"
             )
             ->join('user_profiles up', 'up.user_id = s.student_id')
             ->where('cm.offering_id', $offeringId)
@@ -196,7 +196,7 @@ class ActivityFeedService
             ->select(['e.enrolled_at', "CONCAT(up.first_name, ' ', up.last_name) AS student_name"])
             ->join('user_profiles up', 'up.user_id = e.student_user_id')
             ->where('e.offering_id', $offeringId)
-            ->where('e.status', 'enrolled')
+            ->whereIn('e.status', ['enrolled', 'completed'])
             ->where('e.enrolled_at >=', $since)
             ->where('e.enrolled_at <=', date('Y-m-d H:i:s', $now))
             ->orderBy('e.enrolled_at', 'DESC')
