@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers\Institution;
 
 use App\Controllers\BaseController;
+use App\Controllers\Institution\Concerns\AnswersDialogForms;
+use App\Services\Institutions\ChairAssignmentService;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
-use App\Services\Institutions\StructureException;
 use App\Services\Institutions\StructureService;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -25,6 +26,10 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class StructureController extends BaseController
 {
+    use AnswersDialogForms;
+
+    private const BACK = 'institution/structure';
+
     private StructureService $structure;
 
     public function __construct()
@@ -56,6 +61,8 @@ class StructureController extends BaseController
             'structureTree'    => $departments,
             'structureCounts'  => ['departments' => count($departments), 'subDepartments' => $subs, 'programs' => $programs],
             'structureCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
+            'structureChairs'  => (new ChairAssignmentService())->bySubDepartment($institutionId),
+            'structureCandidates' => (new ChairAssignmentService())->candidates($institutionId),
         ]);
     }
 
@@ -67,22 +74,22 @@ class StructureController extends BaseController
 
     public function createDepartment(): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->createDepartment($inst, $this->input(), auth()->user()), 'The department was added.');
+        return $this->run(fn (int $inst) => $this->structure->createDepartment($inst, $this->input(), auth()->user()), 'The department was added.', self::BACK);
     }
 
     public function updateDepartment(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->updateDepartment($inst, $id, $this->input(), auth()->user()), 'The department was saved.');
+        return $this->run(fn (int $inst) => $this->structure->updateDepartment($inst, $id, $this->input(), auth()->user()), 'The department was saved.', self::BACK);
     }
 
     public function deactivateDepartment(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->setDepartmentActive($inst, $id, false, auth()->user()), 'The department was deactivated.');
+        return $this->run(fn (int $inst) => $this->structure->setDepartmentActive($inst, $id, false, auth()->user()), 'The department was deactivated.', self::BACK);
     }
 
     public function reactivateDepartment(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->setDepartmentActive($inst, $id, true, auth()->user()), 'The department is active again.');
+        return $this->run(fn (int $inst) => $this->structure->setDepartmentActive($inst, $id, true, auth()->user()), 'The department is active again.', self::BACK);
     }
 
     /*
@@ -93,22 +100,22 @@ class StructureController extends BaseController
 
     public function createSubDepartment(int $departmentId): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->createSubDepartment($inst, $departmentId, $this->input(), auth()->user()), 'The sub-department was added.');
+        return $this->run(fn (int $inst) => $this->structure->createSubDepartment($inst, $departmentId, $this->input(), auth()->user()), 'The sub-department was added.', self::BACK);
     }
 
     public function updateSubDepartment(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->updateSubDepartment($inst, $id, $this->input(), auth()->user()), 'The sub-department was saved.');
+        return $this->run(fn (int $inst) => $this->structure->updateSubDepartment($inst, $id, $this->input(), auth()->user()), 'The sub-department was saved.', self::BACK);
     }
 
     public function deactivateSubDepartment(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->setSubDepartmentActive($inst, $id, false, auth()->user()), 'The sub-department was deactivated.');
+        return $this->run(fn (int $inst) => $this->structure->setSubDepartmentActive($inst, $id, false, auth()->user()), 'The sub-department was deactivated.', self::BACK);
     }
 
     public function reactivateSubDepartment(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->setSubDepartmentActive($inst, $id, true, auth()->user()), 'The sub-department is active again.');
+        return $this->run(fn (int $inst) => $this->structure->setSubDepartmentActive($inst, $id, true, auth()->user()), 'The sub-department is active again.', self::BACK);
     }
 
     /*
@@ -119,72 +126,46 @@ class StructureController extends BaseController
 
     public function createProgram(int $subDepartmentId): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->createProgram($inst, $subDepartmentId, $this->input(), auth()->user()), 'The program was added.');
+        return $this->run(fn (int $inst) => $this->structure->createProgram($inst, $subDepartmentId, $this->input(), auth()->user()), 'The program was added.', self::BACK);
     }
 
     public function updateProgram(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->updateProgram($inst, $id, $this->input(), auth()->user()), 'The program was saved.');
+        return $this->run(fn (int $inst) => $this->structure->updateProgram($inst, $id, $this->input(), auth()->user()), 'The program was saved.', self::BACK);
     }
 
     public function deactivateProgram(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->setProgramStatus($inst, $id, 'inactive', auth()->user()), 'The program was deactivated.');
+        return $this->run(fn (int $inst) => $this->structure->setProgramStatus($inst, $id, 'inactive', auth()->user()), 'The program was deactivated.', self::BACK);
     }
 
     public function archiveProgram(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->setProgramStatus($inst, $id, 'archived', auth()->user()), 'The program was archived.');
+        return $this->run(fn (int $inst) => $this->structure->setProgramStatus($inst, $id, 'archived', auth()->user()), 'The program was archived.', self::BACK);
     }
 
     public function reactivateProgram(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->setProgramStatus($inst, $id, 'active', auth()->user()), 'The program is active again.');
+        return $this->run(fn (int $inst) => $this->structure->setProgramStatus($inst, $id, 'active', auth()->user()), 'The program is active again.', self::BACK);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Internals
+    | Chairpersons (per sub-department)
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Runs a change for the administrator's institution and answers it in the
-     * way the caller asked for.
-     *
-     * @param callable(int): mixed $change
-     */
-    private function run(callable $change, string $success): ResponseInterface|RedirectResponse
+    public function assignChairperson(int $subDepartmentId): ResponseInterface|RedirectResponse
     {
-        $institutionId = (new InstitutionScope())->requireInstitutionId();
-        $wantsJson     = $this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json');
-        $back          = site_url('institution/structure');
-
-        try {
-            $change($institutionId);
-        } catch (StructureException $e) {
-            if ($wantsJson) {
-                return $this->response->setStatusCode(422)->setJSON(['errors' => $e->errors(), 'message' => $e->errors() === [] ? $e->getMessage() : 'Nothing was saved.']);
-            }
-
-            return redirect()->to($back)->withInput()->with('error', $e->getMessage());
-        }
-
-        if ($wantsJson) {
-            // The dialog's script goes to the list next; the message is waiting there.
-            session()->setFlashdata('message', $success);
-
-            return $this->response->setJSON(['message' => $success, 'redirect' => $back]);
-        }
-
-        return redirect()->to($back)->with('message', $success);
+        return $this->run(
+            fn (int $inst) => (new ChairAssignmentService())->assign($inst, $subDepartmentId, (int) ($this->input()['user_id'] ?? 0), auth()->user()),
+            'The chairperson was assigned.',
+            self::BACK,
+        );
     }
 
-    /** @return array<string, mixed> */
-    private function input(): array
+    public function revokeChairperson(int $assignmentId): ResponseInterface|RedirectResponse
     {
-        $post = $this->request->getPost();
-
-        return is_array($post) ? $post : [];
+        return $this->run(fn (int $inst) => (new ChairAssignmentService())->revoke($inst, $assignmentId, auth()->user()), 'The chairperson was removed from the sub-department.', self::BACK);
     }
 }

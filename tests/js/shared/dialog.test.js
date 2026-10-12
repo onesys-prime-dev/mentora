@@ -457,3 +457,51 @@ describe("a dialog shared by many rows", () => {
         expect(() => fillDialog(document.getElementById("d"), null)).not.toThrow();
     });
 });
+
+describe("fields an outside system decides", () => {
+    const PAGE = `
+        <button id="managed" data-dialog-open="d" data-dialog-values='{"code":"IT101","title":"Intro","note":"x"}' data-dialog-locked='["code","title"]'>Managed</button>
+        <button id="own" data-dialog-open="d" data-dialog-values='{"code":"IT102","title":"Ours","note":""}'>Own</button>
+        <div id="d" data-dialog hidden class="hidden">
+            <p data-dialog-lock hidden>Managed elsewhere.</p>
+            <form data-dialog-form method="post" action="">
+                <input name="code"><input name="title"><input name="note">
+            </form>
+        </div>`;
+
+    it("makes the locked fields read-only and shows the note", () => {
+        page(PAGE);
+        bindDialogs();
+
+        document.getElementById("managed").click();
+
+        const form = document.querySelector("#d form");
+        expect(form.elements.namedItem("code").readOnly).toBe(true);
+        expect(form.elements.namedItem("title").readOnly).toBe(true);
+        expect(form.elements.namedItem("note").readOnly).toBe(false);
+        expect(form.elements.namedItem("code").value).toBe("IT101");
+        expect(document.querySelector("#d [data-dialog-lock]").hidden).toBe(false);
+    });
+
+    it("unlocks them again for a row that is not managed, and hides the note", () => {
+        page(PAGE);
+        bindDialogs();
+        document.getElementById("managed").click();
+        document.getElementById("d").click(); // close
+
+        document.getElementById("own").click();
+
+        const form = document.querySelector("#d form");
+        expect(form.elements.namedItem("code").readOnly).toBe(false);
+        expect(form.elements.namedItem("title").readOnly).toBe(false);
+        expect(document.querySelector("#d [data-dialog-lock]").hidden).toBe(true);
+    });
+
+    it("ignores a locked list that is not JSON", () => {
+        page(`<button id="b" data-dialog-open="d" data-dialog-locked="{nope">Open</button><div id="d" data-dialog hidden><form data-dialog-form><input name="code"></form></div>`);
+        bindDialogs();
+
+        expect(() => document.getElementById("b").click()).not.toThrow();
+        expect(document.querySelector("#d input").readOnly).toBe(false);
+    });
+});

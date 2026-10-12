@@ -5,6 +5,8 @@
  * @var list<array<string, mixed>> $structureTree
  * @var array<string, int>         $structureCounts
  * @var bool                       $structureCanEdit
+ * @var array<int, list<array<string, mixed>>> $structureChairs     active chairpersons by sub-department id
+ * @var list<array<string, mixed>> $structureCandidates people who can be assigned
  */
 $base    = 'institution/structure';
 $primary = 'rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
@@ -38,6 +40,11 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
             ? '<button type="button" class="' . $primary . '" data-dialog-open="structure-department" data-dialog-title="Add a department" data-dialog-action="' . esc(site_url($base . '/departments')) . '" data-dialog-label="Add department">Add a department</button>'
             : '',
     ], ['saveData' => false]) ?>
+
+    <?= view('components/tabs', ['ariaLabel' => 'Academics', 'tabs' => [
+        ['label' => 'Structure', 'href' => site_url('institution/structure'), 'active' => true],
+        ['label' => 'Courses', 'href' => site_url('institution/courses')],
+    ]], ['saveData' => false]) ?>
 
     <?php if (! $structureCanEdit): ?>
         <?= view('components/lock-note', ['kind' => 'read_only'], ['saveData' => false]) ?>
@@ -167,6 +174,35 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                             </div>
                         <?php endif; ?>
 
+                        <?php $chairs = $structureChairs[(int) $sub['id']] ?? []; ?>
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" data-chairs>
+                            <span class="font-semibold text-[#3D3D3D]">Chairperson<?= count($chairs) === 1 ? '' : 's' ?>:</span>
+                            <?php if ($chairs === []): ?>
+                                <span class="text-[#646464]" data-chairs-empty>None assigned yet.</span>
+                            <?php endif; ?>
+                            <?php foreach ($chairs as $chair): ?>
+                                <span class="inline-flex items-center gap-2 rounded-full bg-[#F2F7FF] px-3 py-1" data-chair="<?= esc((string) $chair['id']) ?>">
+                                    <?= esc($chair['name']) ?>
+                                    <?php if ($structureCanEdit): ?>
+                                        <button type="button" class="rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
+                                            aria-label="Remove <?= esc($chair['name']) ?> as chairperson"
+                                            data-dialog-open="structure-confirm"
+                                            data-dialog-title="Remove <?= esc($chair['name']) ?> as chairperson?"
+                                            data-dialog-text="They keep their account and their other roles. They lose access to this sub-department's courses on their next request."
+                                            data-dialog-label="Remove"
+                                            data-dialog-action="<?= esc(site_url($base . '/chairpersons/' . $chair['id'] . '/remove')) ?>">Remove</button>
+                                    <?php endif; ?>
+                                </span>
+                            <?php endforeach; ?>
+                            <?php if ($structureCanEdit && $subActive): ?>
+                                <button type="button" class="<?= $link ?>"
+                                    data-dialog-open="structure-chair"
+                                    data-dialog-title="Assign a chairperson to <?= esc($sub['name']) ?>"
+                                    data-dialog-label="Assign"
+                                    data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/chairpersons')) ?>">Assign chairperson</button>
+                            <?php endif; ?>
+                        </div>
+
                         <?php if ($sub['programs'] === []): ?>
                             <p class="text-sm text-[#646464]" data-program-empty>No programs yet.</p>
                         <?php else: ?>
@@ -249,12 +285,24 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         . view('components/form-field', ['name' => 'location', 'label' => 'Location', 'maxlength' => 255, 'help' => 'Optional. A building or campus.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'established_year', 'label' => 'Year established', 'type' => 'number', 'attrs' => 'min="1800" inputmode="numeric"', 'help' => 'Optional.'], ['saveData' => false]));
 
+    $candidateOptions = ['' => $structureCandidates === [] ? 'No one holds the chairperson role yet' : 'Choose a person'];
+
+    foreach ($structureCandidates as $candidate) {
+        $candidateOptions[(string) $candidate['id']] = $candidate['name'] . ' (' . $candidate['email'] . ')';
+    }
+
+    [$chairBody, $chairFooter] = $form('structure-chair', view('components/form-field', [
+        'name' => 'user_id', 'label' => 'Chairperson', 'type' => 'select', 'options' => $candidateOptions, 'required' => true,
+        'help' => 'People who hold the chairperson role in your institution. Give someone the role on the People page.',
+    ], ['saveData' => false]));
+
     [$subBody, $subFooter]   = $form('structure-sub', $code . $name);
     [$progBody, $progFooter] = $form('structure-program', $code . $name);
     ?>
 
     <?= view('components/dialog', ['id' => 'structure-department', 'title' => 'Department', 'body' => $deptBody, 'footer' => $deptFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-sub', 'title' => 'Sub-department', 'body' => $subBody, 'footer' => $subFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-chair', 'title' => 'Assign a chairperson', 'body' => $chairBody, 'footer' => $chairFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-program', 'title' => 'Program', 'body' => $progBody, 'footer' => $progFooter], ['saveData' => false]) ?>
 
     <?= view('components/confirm', [
