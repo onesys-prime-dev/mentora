@@ -477,6 +477,17 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/upcoming', 'Institution\TermsController::unstart/$1');
         });
 
+        // Course offerings and their instructors (offerings.manage).
+        $routes->group('offerings', ['filter' => 'permission:offerings.manage'], function ($routes) {
+            $routes->get('/', 'Institution\OfferingsController::index');
+            $routes->post('/', 'Institution\OfferingsController::create');
+            $routes->post('(:num)', 'Institution\OfferingsController::update/$1');
+            $routes->post('(:num)/archive', 'Institution\OfferingsController::archive/$1');
+            $routes->post('(:num)/reactivate', 'Institution\OfferingsController::reactivate/$1');
+            $routes->post('(:num)/instructors', 'Institution\OfferingsController::assignInstructor/$1');
+            $routes->post('instructors/(:num)/remove', 'Institution\OfferingsController::unassignInstructor/$1');
+        });
+
         // The course catalog (structure.manage).
         $routes->group('courses', ['filter' => 'permission:structure.manage'], function ($routes) {
             $routes->get('/', 'Institution\CoursesController::index');

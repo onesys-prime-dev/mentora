@@ -216,3 +216,56 @@ test("TC-TRM-02 A term that ends before it starts is refused beside the date", a
     await expect(dialog.getByLabel("Starts")).toHaveValue("2027-09-01");
 });
 
+
+test("TC-OFF-01 Adding an offering opens a course in a term and lists it with no instructor yet", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings");
+    await expect(page.getByRole("heading", { name: "Offerings", level: 1 })).toBeVisible();
+
+    await page.getByRole("button", { name: "Add an offering" }).first().click();
+
+    const dialog = page.getByRole("dialog", { name: "Add an offering" });
+    await dialog.getByLabel("Course").selectOption({ index: 1 });
+    await dialog.getByLabel("Term").selectOption({ index: 1 });
+    await dialog.getByLabel("Section").fill("e2e-a");
+    await dialog.getByLabel("Capacity").fill("30");
+    await dialog.getByRole("button", { name: "Add offering" }).click();
+
+    await expect(page.getByText("The offering was added.")).toBeVisible();
+    await expect(page.getByRole("row", { name: /E2E-A/ })).toContainText("No instructor");
+});
+
+test("TC-OFF-02 The same section twice is refused beside the field, keeping what was typed", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings?q=E2E-A");
+
+    const first = page.getByRole("row", { name: /E2E-A/ });
+    await expect(first).toBeVisible();
+
+    await page.getByRole("button", { name: "Add an offering" }).first().click();
+
+    const dialog = page.getByRole("dialog", { name: "Add an offering" });
+    await dialog.getByLabel("Course").selectOption({ index: 1 });
+    await dialog.getByLabel("Term").selectOption({ index: 1 });
+    await dialog.getByLabel("Section").fill("E2E-A");
+    await dialog.getByRole("button", { name: "Add offering" }).click();
+
+    // Only refuses when the first course and term chosen are the same pair.
+    await expect(dialog.getByText(/already has a section/)).toBeVisible();
+    await expect(dialog.getByLabel("Section")).toHaveValue("E2E-A");
+});
+
+test("TC-OFF-03 An offering with no students can be archived and brought back", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings?q=E2E-A");
+
+    await page.getByRole("row", { name: /E2E-A/ }).getByRole("button", { name: "Archive" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /Archive/ }).click();
+
+    await expect(page.getByText("The offering was archived.")).toBeVisible();
+
+    await page.getByRole("row", { name: /E2E-A/ }).getByRole("button", { name: "Reactivate" }).click();
+
+    await expect(page.getByText("The offering is active again.")).toBeVisible();
+    await expect(page.getByRole("row", { name: /E2E-A/ })).toContainText("Active");
+});

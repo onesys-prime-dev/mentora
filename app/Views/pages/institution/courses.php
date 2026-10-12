@@ -109,6 +109,7 @@ foreach ($courseRows as $course) {
         ['label' => 'Structure', 'href' => site_url('institution/structure')],
         ['label' => 'Courses', 'href' => site_url($base), 'active' => true],
         ['label' => 'Terms', 'href' => site_url('institution/terms')],
+        ['label' => 'Offerings', 'href' => site_url('institution/offerings')],
     ]], ['saveData' => false]) ?>
 
     <?php if (! $courseCanEdit): ?>
