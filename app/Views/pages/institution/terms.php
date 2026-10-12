@@ -38,9 +38,15 @@ foreach ($termRows as $term) {
         $actions .= ' <a class="ml-3 ' . $link . '" href="' . esc(site_url($base . '/' . $term['id'] . '/close')) . '">Close term</a>';
     }
 
-    if ($termCanEdit && $term['status'] === 'completed' && $term['close_snapshot'] !== null) {
-        $actions .= '<form class="inline" method="post" action="' . esc(site_url($base . '/' . $term['id'] . '/reopen')) . '">' . csrf_field()
-            . '<button type="submit" class="' . $link . '">Reopen</button></form>';
+    if ($termCanEdit && $term['status'] === 'completed') {
+        $actions .= '<a class="' . $link . '" href="' . esc(site_url($base . '/copy') . '?source=' . $term['id']) . '">Copy offerings</a>';
+
+        if ($term['close_snapshot'] !== null && (int) $term['copied_count'] === 0) {
+            $actions .= ' <form class="ml-3 inline" method="post" action="' . esc(site_url($base . '/' . $term['id'] . '/reopen')) . '">' . csrf_field()
+                . '<button type="submit" class="' . $link . '">Reopen</button></form>';
+        } elseif ($term['close_snapshot'] !== null) {
+            $actions .= ' <span class="ml-3 text-xs text-[#646464]" data-copied-note>Copied into another term, so it stays closed.</span>';
+        }
     }
 
     $overlap = $term['overlaps'] === []
@@ -77,7 +83,8 @@ foreach ($termRows as $term) {
         'backUrl'     => site_url('institution/dashboard'),
         'backLabel'   => 'Back to home',
         'actions'     => $termCanEdit
-            ? '<button type="button" class="' . $primary . '" data-dialog-open="term-form" data-dialog-title="Add a term" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add term">Add a term</button>'
+            ? '<a class="rounded-full border border-[#0040A6] bg-white px-5 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#F2F7FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50" href="' . esc(site_url($base . '/copy')) . '">Copy offerings</a> '
+                . '<button type="button" class="' . $primary . '" data-dialog-open="term-form" data-dialog-title="Add a term" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add term">Add a term</button>'
             : '',
     ], ['saveData' => false]) ?>
 

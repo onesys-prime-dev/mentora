@@ -161,3 +161,17 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Past courses:** completed offerings are no longer in the current course list but appear under "Past courses" on the Courses page (student, instructor, chairperson). A completed place still counts as part of the class everywhere a roster, gradebook, grade sheet, progress or file access looks (`enrolled` or `completed`). Archived offerings stay unreachable.
 - **Reopening** puts back exactly what the close changed: the term keeps who closed it, when, and the ids of the offerings and places it completed (`close_snapshot`). A place or offering changed since is left as it is. A term that became completed any other way has no snapshot and cannot be reopened here. Audited as `structure.term_reopened`.
 - **Not yet:** dean sign-off before closing (the dean handout), and refusing a reopen once offerings were copied from the term (offering copy, the next branch).
+
+## Copying offerings into another term
+
+`/institution/terms/copy` (permission `terms.manage`; read-only while the institution is read-only). "Copy offerings" on the Terms page, and on a closed term's row. A page with steps: choose the terms, choose the offerings, copy.
+
+- **Terms:** copy from any of the institution's terms into a different upcoming or active one.
+- **Choose:** the source term's offerings (archived ones are not offered) with what each holds (modules, items, assessments, instructors) and whether the target already has that section. All are ticked except clashes; "Also assign the same instructors" is optional.
+- **Copied** (a new active offering in the target, same course and section): capacity and description, weekly schedule, modules, units, items, their prerequisites and resources, assessments with settings, questions and choices, rubrics and criteria, and the grading scheme with its periods, categories and gradebook items (flagged for recalculation). Item and assessment statuses are kept as they are.
+- **Not copied:** enrolments, submissions and answers, scores and grades, announcements, discussions, progress, reminders, AI generation history.
+- **Dates:** assessment dates move by the difference between the two terms' start dates (said on the page).
+- **Files** are referenced, not duplicated: the copy's resources point at the same stored file, so no extra storage is used. Deleting a resource from one side keeps the file while the other still uses it.
+- **All or nothing:** a run is one transaction. A section that already exists in the target is a clash and refuses the whole run until it is unticked. If anything fails part-way nothing is changed.
+- **Reopening:** each copy remembers its source (`course_offerings.copied_from_offering_id`). A term that offerings were copied from stays closed ("Copied into another term, so it stays closed").
+- **Audit:** `structure.offerings_copied` with the counts, the source term, the date shift and whether instructors were copied.

@@ -149,6 +149,15 @@ class TermCloseService
             return "{$term['name']} was completed without being closed here, so there is no record of what to put back.";
         }
 
+        $copied = db_connect()->table('course_offerings o')
+            ->join('course_offerings src', 'src.id = o.copied_from_offering_id')
+            ->where('src.term_id', (int) $term['id'])
+            ->countAllResults();
+
+        if ($copied > 0) {
+            return "Offerings were copied from {$term['name']} into another term, so it stays closed.";
+        }
+
         return null;
     }
 
