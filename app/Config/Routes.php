@@ -509,6 +509,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('branding/reset', 'Institution\InstitutionSettingsController::resetBranding');
             $routes->post('logo', 'Institution\InstitutionSettingsController::uploadLogo');
             $routes->post('logo/remove', 'Institution\InstitutionSettingsController::removeLogo');
+            $routes->get('academic', 'Institution\InstitutionSettingsController::academic');
+            $routes->post('academic', 'Institution\InstitutionSettingsController::saveAcademic');
+            $routes->post('academic/reset', 'Institution\InstitutionSettingsController::resetAcademic');
         });
 
         // The institution's people (people.view to look, people.manage to change; the

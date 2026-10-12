@@ -45,6 +45,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
     <?= view('components/tabs', ['ariaLabel' => 'Institution settings', 'tabs' => [
         ['label' => 'Profile', 'href' => site_url($base), 'active' => $settingsTab === 'profile'],
         ['label' => 'Branding', 'href' => site_url($base . '/branding'), 'active' => $settingsTab === 'branding'],
+        ['label' => 'Academic', 'href' => site_url($base . '/academic'), 'active' => $settingsTab === 'academic'],
     ]], ['saveData' => false]) ?>
 
     <?php if ($settingsTab === 'profile'): ?>
@@ -73,6 +74,80 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <div class="flex justify-end"><button type="submit" class="<?= $primary ?>">Save profile</button></div>
             <?php endif; ?>
         </form>
+
+    <?php elseif ($settingsTab === 'academic'): ?>
+
+        <?php
+        $a       = $settingsAcademic;
+        $source  = static fn (bool $own): string => $own ? 'Set by your institution.' : 'Using the platform value.';
+        $weights = array_pad($a['categories'], 6, ['name' => '', 'weight' => '']);
+        $off     = $settingsCanEdit ? '' : ' disabled';
+
+        $scaleOptions = [];
+
+        foreach ($a['scales'] as $scale) {
+            $scaleOptions[(string) $scale['id']] = $scale['name'];
+        }
+        ?>
+
+        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm" data-academic-form>
+            <?= csrf_field() ?>
+
+            <section class="flex flex-col gap-4" aria-labelledby="new-offerings">
+                <div>
+                    <h2 id="new-offerings" class="text-sm font-bold text-brand">New offerings start with</h2>
+                    <p class="text-xs text-[#646464]">Offerings that already have a grading scheme keep it.</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <?= $field(['name' => 'passing_percentage', 'label' => 'Passing mark (%)', 'type' => 'number', 'value' => (string) $a['passing'], 'attrs' => 'min="1" max="100" step="0.01" inputmode="decimal"' . $off, 'help' => $source($a['passingFromInstitution'])]) ?>
+                    <?= $field(['name' => 'grade_scale_id', 'label' => 'Grade scale', 'type' => 'select', 'options' => ['' => 'Platform default'] + $scaleOptions, 'value' => $a['scaleFromInstitution'] ? (string) $a['scaleId'] : '', 'attrs' => trim($off), 'help' => $source($a['scaleFromInstitution'])]) ?>
+                </div>
+
+                <div class="flex flex-col gap-2" data-field="categories">
+                    <span class="text-xs font-medium text-gray-600">Default grading categories</span>
+                    <p class="text-xs text-[#646464]"><?= $a['categoriesFromInstitution'] ? 'Set by your institution.' : 'Using the platform categories.' ?> The weights add up to 100%. Leave every row empty to use the platform categories.</p>
+
+                    <div class="grid grid-cols-[1fr_7rem] gap-2" role="group" aria-label="Categories and their weights">
+                        <?php foreach ($weights as $i => $row): ?>
+                            <input type="text" name="category_name[]" value="<?= esc((string) $row['name']) ?>" maxlength="100" aria-label="Category <?= $i + 1 ?> name" placeholder="Category name"
+                                   class="<?= $input ?>" <?= $disabled ?>>
+                            <input type="text" name="category_weight[]" value="<?= $row['weight'] === '' ? '' : esc((string) $row['weight']) ?>" inputmode="decimal" aria-label="Category <?= $i + 1 ?> weight" placeholder="%"
+                                   class="<?= $input ?>" <?= $disabled ?>>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
+                </div>
+            </section>
+
+            <section class="flex flex-col gap-4" aria-labelledby="thresholds">
+                <div>
+                    <h2 id="thresholds" class="text-sm font-bold text-brand">What counts as needing attention</h2>
+                    <p class="text-xs text-[#646464]">Used by reports and by the chairperson and instructor dashboards, so everyone reads the same numbers.</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <?= $field(['name' => 'inactive_days', 'label' => 'No recent activity (days)', 'type' => 'number', 'value' => (string) $a['inactiveDays'], 'attrs' => 'min="1" max="365" inputmode="numeric"' . $off, 'help' => 'A student or course silent for this long. ' . $source($a['inactiveFromInstitution'])]) ?>
+                    <?= $field(['name' => 'behind_below_percent', 'label' => 'Behind below (%)', 'type' => 'number', 'value' => (string) $a['behindBelow'], 'attrs' => 'min="1" max="100" inputmode="numeric"' . $off, 'help' => 'Progress through the published items. ' . $source($a['behindFromInstitution'])]) ?>
+                    <?= $field(['name' => 'overdue_grading_days', 'label' => 'Overdue grading (days)', 'type' => 'number', 'value' => (string) $a['overdueGradingDays'], 'attrs' => 'min="1" max="90" inputmode="numeric"' . $off, 'help' => 'Work waiting this long to be graded. ' . $source($a['overdueFromInstitution'])]) ?>
+                </div>
+            </section>
+
+            <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
+
+            <?php if ($settingsCanEdit): ?>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                    <button type="submit" class="<?= $primary ?>">Save academic defaults</button>
+                </div>
+            <?php endif; ?>
+        </form>
+
+        <?php if ($settingsCanEdit && ($a['passingFromInstitution'] || $a['scaleFromInstitution'] || $a['categoriesFromInstitution'] || $a['inactiveFromInstitution'] || $a['behindFromInstitution'] || $a['overdueFromInstitution'])): ?>
+            <form method="post" action="<?= esc(site_url($base . '/academic/reset')) ?>" data-dialog-form class="max-w-3xl">
+                <?= csrf_field() ?>
+                <button type="submit" class="text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded">Go back to the platform values</button>
+            </form>
+        <?php endif; ?>
 
     <?php else: ?>
 

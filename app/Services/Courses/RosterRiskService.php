@@ -13,10 +13,12 @@ use App\Models\Learning\CourseModuleModel;
  * can't disagree about who counts as at risk.
  *
  * Two ways to be at risk, worst first:
- *   - inactive: no learning activity for INACTIVE_DAYS, or none ever. Silence
+ *   - inactive: no learning activity for the institution's number of days
+ *               (INACTIVE_DAYS unless it set its own), or none ever. Silence
  *               outranks a low percentage — a student still working is not
  *               the one who needs chasing.
- *   - behind:   active, but under BEHIND_BELOW percent of the published items.
+ *   - behind:   active, but under the institution's percent (BEHIND_BELOW
+ *               unless it set its own) of the published items.
  */
 class RosterRiskService
 {
@@ -59,6 +61,9 @@ class RosterRiskService
 
         }
 
+        // "Silent" and "behind" are the institution's to define (its academic defaults).
+        $thresholds = (new \App\Services\Institutions\AcademicDefaults())->thresholdsForOfferings($offeringIds);
+
         $students = [];
 
         foreach ($this->enrollmentModel->retrieveRosterProgress($offeringIds) as $row) {
@@ -78,9 +83,12 @@ class RosterRiskService
                 ? (int) ((time() - strtotime($row['last_active'])) / 86400)
                 : null;
 
-            if ($daysSince === null || $daysSince >= self::INACTIVE_DAYS) {
+            $inactiveDays = $thresholds[$offeringId]['inactiveDays'] ?? self::INACTIVE_DAYS;
+            $behindBelow  = $thresholds[$offeringId]['behindBelow'] ?? self::BEHIND_BELOW;
+
+            if ($daysSince === null || $daysSince >= $inactiveDays) {
                 $reason = 'inactive';
-            } elseif ($progress < self::BEHIND_BELOW) {
+            } elseif ($progress < $behindBelow) {
                 $reason = 'behind';
             } else {
                 continue;

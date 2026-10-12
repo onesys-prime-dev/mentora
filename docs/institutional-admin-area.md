@@ -201,3 +201,15 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 - **Accent:** the `--color-accent` token and `bg-accent`/`text-accent` utilities exist and the preview uses them, but no screen uses the accent colour yet.
 - **Logo:** PNG, JPEG or WebP, up to 1 MB and between 32 and 2000 pixels a side (SVG is refused: it can carry script). It is a file of the institution, so it counts towards its storage and is refused when the plan has no room. Replacing or removing it frees the old file. It is shown in the header beside Mentora's, and is served to the institution's people only (`FileAccessService`). Audited as `institution.logo_changed`.
 - **Columns:** `institutions.contact_email`, `contact_phone`, `address`, `logo_file_id`, `brand_primary`, `brand_accent` (all null until set).
+
+## Academic defaults
+
+`/institution/settings/academic` (the third tab of Institution settings; `institution.settings`; read-only while the institution is read-only).
+
+- **What new offerings start with:** the passing mark, the grade scale and the default grading categories (names and weights that add up to 100%). An offering's grading scheme is made the first time it is needed, from these; **offerings that already have a scheme keep it**.
+- **What counts as needing attention:** days without activity (default 14; a student or a course is silent), "behind" below a percentage of the published items (50), and days of ungraded work before it is overdue (7). They replace the constants the at-risk list, the Monitor Program, the inactive-courses widget and the grading queue used, so the chairperson, the instructor and the reports read the same numbers. The grading queue's amber "soon" colour comes at about half of the overdue days.
+- **Resolution:** for each value, the institution's own setting, else the platform's (the system default grading scheme for the passing mark, scale and categories; the built-in values above for the thresholds). Each field says which it is using. An institution that sets nothing behaves exactly as before.
+- **Stored in:** `institution_academic_defaults` (one row per institution, every column optional) and, for the categories, a scheme row with `grading_schemes.institution_id` set (no offering, not the system default, so the platform template is never mistaken for it).
+- **Refusals** are shown beside the field: a passing mark or percentage outside 1 to 100, days outside their range, a scale that does not exist, a category with no name or a repeated one, and weights that do not add up (the message says what they add up to). Nothing is saved when anything is wrong.
+- **Reset** ("Go back to the platform values") removes everything the institution set.
+- **Audit:** `institution.academic_defaults_updated` with the values before and after.
