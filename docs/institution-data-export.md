@@ -7,7 +7,7 @@ When a subscription ends, the institution's administrator can take a full copy o
 - Only an **institutional administrator**, and only for **their own institution**.
 - Only while the institution is **read-only** or **past**. An active or pending institution is refused with an explanation.
 - The `institution` route group is deliberately **not** behind the `readonly` filter, so the export keeps working after the subscription lapses.
-- An institutional administrator now lands on `/institution/export` after sign-in (previously they had no landing page).
+- An institutional administrator lands on their home, `/institution/dashboard`, after sign-in; the Apps menu has a "Data export" tile for this page.
 
 ## What is in the ZIP
 
@@ -33,7 +33,7 @@ Everything is scoped through the institution's departments. Not included: upload
 
 | Verb | Path | Does |
 | --- | --- | --- |
-| GET | `/institution`, `/institution/export` | page: create button, history |
+| GET | `/institution/export` | page: create button, history |
 | POST | `/institution/export` | build an export now |
 | GET | `/institution/export/(:num)` | download one of your institution's exports |
 

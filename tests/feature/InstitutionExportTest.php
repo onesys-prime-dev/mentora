@@ -104,11 +104,11 @@ final class InstitutionExportTest extends RouteTestCase
         $this->assertStringContainsString('/login', $response->getHeaderLine('Location'));
     }
 
-    public function testTheAdministratorLandsOnTheExportPageAfterSigningIn(): void
+    public function testTheAdministratorLandsOnTheirHomeAfterSigningIn(): void
     {
         $response = $this->step('GET', '/')->response();
 
-        $this->assertStringContainsString('institution/export', $response->getHeaderLine('Location'));
+        $this->assertStringContainsString('institution/dashboard', $response->getHeaderLine('Location'));
     }
 
     public function testTheAdministratorOfAReadOnlyInstitutionCanCreateAndDownloadAnExport(): void

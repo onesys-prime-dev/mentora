@@ -9,7 +9,7 @@ class RedirectController extends BaseController
 {
     protected array $dashboards = [
         'admin'       => '/admin/dashboard',
-        'institutional_admin' => '/institution/export',
+        'institutional_admin' => '/institution/dashboard',
         'student'     => '/student/dashboard',
         'instructor'  => '/instructor/dashboard',
         'chairperson' => '/chairperson/dashboard',

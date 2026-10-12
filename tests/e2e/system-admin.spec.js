@@ -151,8 +151,12 @@ test("TC-SA-05 The invited administrator sets a password, signs in, and cannot e
 
     await submitLoginForm(page, principal.email, principal.password);
 
-    // They land on their own page, and the export is not open while the subscription runs.
-    await expect(page).toHaveURL(/\/institution\/export$/);
+    // They land on their own home, and the export is not open while the subscription runs.
+    await expect(page).toHaveURL(/\/institution\/dashboard$/);
+    await expect(page.getByRole("heading", { name: college.name })).toBeVisible();
+    await expect(page.locator("[data-read-only-banner]")).toHaveCount(0);
+
+    await page.goto("/institution/export");
     await expect(page.getByRole("heading", { name: "Data export" })).toBeVisible();
     await expect(page.locator("[data-export-unavailable]")).toBeVisible();
     await expect(page.locator("[data-read-only-banner]")).toHaveCount(0);
@@ -172,19 +176,20 @@ test("TC-SA-06 A lapsed subscription makes the institution read-only, and its ad
     spark("subscriptions:sync");
 
     await submitLoginForm(page, principal.email, principal.password);
-    await expect(page).toHaveURL(/\/institution\/export$/);
-
+    await expect(page).toHaveURL(/\/institution\/dashboard$/);
     await expect(page.locator("[data-read-only-banner]")).toContainText("Read-only");
+
+    await page.goto("/institution/export");
     await expect(page.locator("[data-export-unavailable]")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Create an export" }).click();
 
     await expect(page.getByRole("status").filter({ hasText: "Your export is ready" })).toBeVisible();
-    const row = page.locator('[data-export="ready"]').first();
-    await expect(row).toBeVisible();
+    const link = page.locator('[data-export="ready"]').first();
+    await expect(link).toBeVisible();
 
     // The download is a ZIP.
-    const [download] = await Promise.all([page.waitForEvent("download"), row.getByRole("link", { name: "Download" }).click()]);
+    const [download] = await Promise.all([page.waitForEvent("download"), link.click()]);
     expect(download.suggestedFilename()).toMatch(/^e2ecol-.*\.zip$/);
 });
 
@@ -216,7 +221,7 @@ test("TC-SA-07 Recording a renewal brings a read-only institution back", async (
     const context = await browser.newContext({ baseURL });
     const theirs = await context.newPage();
     await submitLoginForm(theirs, principal.email, principal.password);
-    await expect(theirs).toHaveURL(/\/institution\/export$/);
+    await expect(theirs).toHaveURL(/\/institution\/dashboard$/);
     await expect(theirs.locator("[data-read-only-banner]")).toHaveCount(0);
     await context.close();
 });

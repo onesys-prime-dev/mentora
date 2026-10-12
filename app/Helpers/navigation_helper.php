@@ -15,6 +15,18 @@ use CodeIgniter\Shield\Entities\User;
 |
 */
 
+if (! function_exists('role_home')) {
+
+    /**
+     * The first address segment of a role's own area (`student` -> "student",
+     * `institutional_admin` -> "institution"): where its dashboard lives.
+     */
+    function role_home(string $role): string
+    {
+        return $role === 'institutional_admin' ? 'institution' : $role;
+    }
+}
+
 if (! function_exists('global_apps')) {
 
     /**
@@ -25,6 +37,19 @@ if (! function_exists('global_apps')) {
      */
     function global_apps(string $role): array
     {
+        // The institutional administrator has no courses, calendar or schedule of their own:
+        // their tools are the institution's. Tiles without a url are built in later branches.
+        if ($role === 'institutional_admin') {
+            return [
+                ['key' => 'dashboard',   'label' => 'Home',        'icon' => 'apps',     'url' => site_url('institution/dashboard')],
+                ['key' => 'academics',   'label' => 'Academics',   'icon' => 'hat',      'url' => null],
+                ['key' => 'terms',       'label' => 'Terms',       'icon' => 'calendar', 'url' => null],
+                ['key' => 'people',      'label' => 'People',      'icon' => 'user',     'url' => null],
+                ['key' => 'reports',     'label' => 'Reports',     'icon' => 'score',    'url' => null],
+                ['key' => 'institution', 'label' => 'Data export', 'icon' => 'folder',   'url' => site_url('institution/export')],
+            ];
+        }
+
         return [
             ['key' => 'courses',       'label' => 'Courses',       'icon' => 'hat',          'url' => site_url($role . '/courses')],
             ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],
