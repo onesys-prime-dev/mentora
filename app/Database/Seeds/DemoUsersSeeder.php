@@ -166,6 +166,24 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => null,
             ],
 
+            // =====================================================
+            // Institutional administrator (of institution 1)
+            // =====================================================
+
+            [
+                'username'       => 'institution.admin',
+                'email'          => 'institution.admin@mentora.test',
+                'password'       => 'Institution123!',
+                'group'          => 'institutional_admin',
+                'first_name'     => 'Ines',
+                'middle_name'    => null,
+                'last_name'      => 'Administrador',
+                'suffix'         => null,
+                'student_number' => null,
+                'program_id'     => null,
+                'institution_id' => 1,
+            ],
+
         ];
 
         foreach ($accounts as $account) {
@@ -204,6 +222,19 @@ class DemoUsersSeeder extends Seeder
                 'student_number' => $account['student_number'],
                 'program_id'  => $account['program_id'],
             ]);
+
+            // Accounts that belong to an institution straight away (the others are linked by
+            // InstitutionUsersSeeder, by id).
+            if (isset($account['institution_id'])) {
+                $now = date('Y-m-d H:i:s');
+
+                $this->db->table('institution_users')->insert([
+                    'institution_id' => $account['institution_id'],
+                    'user_id'        => $user->id,
+                    'created_at'     => $now,
+                    'updated_at'     => $now,
+                ]);
+            }
 
             echo '[CREATED] ' . implode('+', (array) $account['group']) . " ({$account['email']})" . PHP_EOL;
         }

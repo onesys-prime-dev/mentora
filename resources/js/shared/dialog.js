@@ -350,6 +350,95 @@ function bindDialogForm(form) {
     });
 }
 
+/**
+ * Fills a shared dialog from the button that opens it, so one "edit" dialog
+ * serves every row of a list:
+ *
+ *   data-dialog-action="/x/5"        the form's address
+ *   data-dialog-title="Edit person"  the heading
+ *   data-dialog-text="..."           the [data-dialog-text] sentence (confirm)
+ *   data-dialog-label="Save"         the [data-dialog-label] button's text
+ *   data-dialog-values='{"name":..}' the form's fields (no values: the form is emptied)
+ *
+ * Earlier errors are cleared so a reopened dialog starts clean.
+ *
+ * @param {HTMLElement} dialogEl
+ * @param {HTMLElement | null} trigger
+ */
+export function fillDialog(dialogEl, trigger) {
+    if (!trigger) {
+        return;
+    }
+
+    const data = trigger.dataset;
+    const form = dialogEl.querySelector("form");
+
+    if (data.dialogTitle) {
+        const title = dialogEl.querySelector("[data-dialog-title]");
+
+        if (title) {
+            title.textContent = data.dialogTitle;
+        }
+    }
+
+    if (data.dialogText) {
+        const text = dialogEl.querySelector("[data-dialog-text]");
+
+        if (text) {
+            text.textContent = data.dialogText;
+        }
+    }
+
+    if (data.dialogLabel) {
+        const label = dialogEl.querySelector("[data-dialog-label]");
+
+        if (label) {
+            label.textContent = data.dialogLabel;
+        }
+    }
+
+    if (!form) {
+        return;
+    }
+
+    if (data.dialogAction) {
+        form.setAttribute("action", data.dialogAction);
+    }
+
+    if ("dialogValues" in data || form.matches("[data-dialog-form]")) {
+        form.reset();
+
+        let values;
+
+        try {
+            values = data.dialogValues ? JSON.parse(data.dialogValues) : {};
+        } catch {
+            values = {};
+        }
+
+        for (const [name, value] of Object.entries(values)) {
+            const field = form.elements.namedItem(name);
+
+            if (field && "value" in field) {
+                if (field.type === "checkbox") {
+                    field.checked = Boolean(value);
+                } else {
+                    field.value = String(value ?? "");
+                }
+            }
+        }
+
+        applyFieldErrors(form, {});
+    }
+
+    const match = dialogEl.querySelector("[data-confirm-match]");
+
+    if (match) {
+        match.value = "";
+        match.dispatchEvent(new Event("input"));
+    }
+}
+
 /** Wires every dialog, opener, confirm box and dialog form under `root`. */
 export function bindDialogs(root = document) {
     const dialogs = new Map();
@@ -362,7 +451,16 @@ export function bindDialogs(root = document) {
     }
 
     for (const trigger of root.querySelectorAll("[data-dialog-open]")) {
-        trigger.addEventListener("click", () => dialogs.get(trigger.dataset.dialogOpen)?.open(trigger));
+        trigger.addEventListener("click", () => {
+            const id = trigger.dataset.dialogOpen;
+            const el = id ? document.getElementById(id) : null;
+
+            if (el) {
+                fillDialog(el, trigger);
+            }
+
+            dialogs.get(id)?.open(trigger);
+        });
     }
 
     for (const input of root.querySelectorAll("[data-confirm-match]")) {
