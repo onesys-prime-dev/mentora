@@ -589,7 +589,7 @@ class AssessmentOverviewService
                 db_connect()->table('enrollments')
                     ->select('student_user_id')
                     ->where('offering_id', $offeringId)
-                    ->where('status', 'enrolled')
+                    ->whereIn('status', ['enrolled', 'completed'])
                     ->get()
                     ->getResultArray(),
                 'student_user_id'

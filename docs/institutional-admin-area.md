@@ -150,3 +150,14 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Refused while a SIS connection is enabled:** one source of truth at a time (a connection that is configured but switched off does not block it).
 - **Records linked by an upload** are not SIS-owned and stay editable while no connection is enabled; if one is enabled later, matching external ids become SIS-owned as usual.
 - **History:** preview and apply appear in the run history like any import (trigger "manual"); applying is audited as `sis.import_run`.
+
+## Closing a term
+
+`/institution/terms/{id}/close` (permission `terms.manage`; the password; read-only while the institution is read-only). "Close term" on an upcoming or active term; "Reopen" on one closed here.
+
+- **The confirm page** says exactly what will change before anything does: how many offerings and enrolments become completed, how many are left as they are (archived offerings), and a table of the offerings with their enrolled students.
+- **Closing** (one transaction): the term, its active offerings and the places still `enrolled` in them become `completed`. Archived offerings and places that were dropped, withdrawn or completed are left alone. Nothing is deleted. Audited as `structure.term_closed` with the counts.
+- **What "closed" means for people:** an offering that is not active is read-only for instructors and students. Writes under `.../api/courses/{offering}/...` (and a calendar announcement naming one) are refused with 403 `offering_closed` by `ClosedOfferingFilter`; reads, downloads and exports go through. Their course page carries a "This course is closed" note.
+- **Past courses:** completed offerings are no longer in the current course list but appear under "Past courses" on the Courses page (student, instructor, chairperson). A completed place still counts as part of the class everywhere a roster, gradebook, grade sheet, progress or file access looks (`enrolled` or `completed`). Archived offerings stay unreachable.
+- **Reopening** puts back exactly what the close changed: the term keeps who closed it, when, and the ids of the offerings and places it completed (`close_snapshot`). A place or offering changed since is left as it is. A term that became completed any other way has no snapshot and cannot be reopened here. Audited as `structure.term_reopened`.
+- **Not yet:** dean sign-off before closing (the dean handout), and refusing a reopen once offerings were copied from the term (offering copy, the next branch).

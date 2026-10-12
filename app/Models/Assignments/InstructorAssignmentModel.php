@@ -26,7 +26,8 @@ class InstructorAssignmentModel extends Model
         'assigned_at',
     ];
 
-    public function retrieveInstructorCourseOfferings(int $userId): array
+    /** The courses taught now, or with $past the ones whose term was closed. */
+    public function retrieveInstructorCourseOfferings(int $userId, bool $past = false): array
     {
         $builder = $this->builder();
 
@@ -62,7 +63,7 @@ class InstructorAssignmentModel extends Model
                 "(SELECT COUNT(*)
                     FROM enrollments
                    WHERE enrollments.offering_id = course_offerings.id
-                     AND enrollments.status = 'enrolled') AS enrolled",
+                     AND enrollments.status IN ('enrolled', 'completed')) AS enrolled",
                 false
             )
             ->join(
@@ -104,7 +105,7 @@ class InstructorAssignmentModel extends Model
                 AND auth_identities.type = 'email_password'"
             )
             ->where('instructor_assignments.instructor_user_id', $userId)
-            ->where('course_offerings.status', 'active')
+            ->where('course_offerings.status', $past ? 'completed' : 'active')
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getResultArray();
@@ -167,7 +168,7 @@ class InstructorAssignmentModel extends Model
             )
             ->where('instructor_assignments.instructor_user_id', $userId)
             ->where('course_offerings.id', $offeringId)
-            ->where('course_offerings.status', 'active')
+            ->whereIn('course_offerings.status', ['active', 'completed'])
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getRowArray();
@@ -202,7 +203,7 @@ class InstructorAssignmentModel extends Model
                 "(SELECT COUNT(*)
                     FROM enrollments
                    WHERE enrollments.offering_id = course_offerings.id
-                     AND enrollments.status = 'enrolled') AS enrolled",
+                     AND enrollments.status IN ('enrolled', 'completed')) AS enrolled",
                 false
             )
             ->join(

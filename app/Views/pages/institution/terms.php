@@ -34,6 +34,13 @@ foreach ($termRows as $term) {
             $actions .= ' <form class="ml-3 inline" method="post" action="' . esc(site_url($base . '/' . $term['id'] . '/upcoming')) . '">' . csrf_field()
                 . '<button type="submit" class="' . $link . '">Back to upcoming</button></form>';
         }
+
+        $actions .= ' <a class="ml-3 ' . $link . '" href="' . esc(site_url($base . '/' . $term['id'] . '/close')) . '">Close term</a>';
+    }
+
+    if ($termCanEdit && $term['status'] === 'completed' && $term['close_snapshot'] !== null) {
+        $actions .= '<form class="inline" method="post" action="' . esc(site_url($base . '/' . $term['id'] . '/reopen')) . '">' . csrf_field()
+            . '<button type="submit" class="' . $link . '">Reopen</button></form>';
     }
 
     $overlap = $term['overlaps'] === []

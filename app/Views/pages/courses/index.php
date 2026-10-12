@@ -63,6 +63,27 @@ $loadError = $loadError ?? false;
 
     <?php endif; ?>
 
+    <?php if (! $loadError && ! empty($pastCourses)): ?>
+
+        <section class="flex flex-col gap-3" aria-labelledby="past-courses" data-past-courses>
+            <h2 id="past-courses" class="text-lg font-bold text-[#0040A6]">Past courses</h2>
+            <p class="text-sm text-[#3D3D3D]">Courses whose term has ended. You can still look at them and download what is there, but nothing in them can be changed.</p>
+
+            <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Past courses">
+                <?php foreach ($pastCourses as $course): ?>
+                    <li>
+                        <?= view('pages/courses/partials/course-card', [
+                            'course' => $course,
+                            'userRole' => $userRole,
+                            'isInstructor' => $isInstructor,
+                        ], ['saveData' => false]) ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
+
+    <?php endif; ?>
+
 </div>
 
 <?= $this->endSection() ?>

@@ -315,7 +315,7 @@ class GradingSchemeService
         $enrolled = db_connect()->table('enrollments')
             ->where('offering_id', $offeringId)
             ->where('student_user_id', $studentId)
-            ->where('status', 'enrolled')
+            ->whereIn('status', ['enrolled', 'completed'])
             ->countAllResults() > 0;
 
         if (!$enrolled) {

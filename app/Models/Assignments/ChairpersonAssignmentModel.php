@@ -59,9 +59,9 @@ class ChairpersonAssignmentModel extends Model
      * InstructorAssignmentModel::retrieveInstructorCourseOfferings(), so a
      * view built for one can read the other.
      */
-    public function retrieveChairedCourseOfferings(int $userId): array
+    public function retrieveChairedCourseOfferings(int $userId, bool $past = false): array
     {
-        return $this->chairedOfferingsBuilder($userId)
+        return $this->chairedOfferingsBuilder($userId, $past ? 'completed' : 'active')
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getResultArray();
@@ -122,7 +122,7 @@ class ChairpersonAssignmentModel extends Model
                 "(SELECT COUNT(*)
                     FROM enrollments
                    WHERE enrollments.offering_id = course_offerings.id
-                     AND enrollments.status = 'enrolled') AS enrolled",
+                     AND enrollments.status IN ('enrolled', 'completed')) AS enrolled",
                 false
             )
             // The card shows one instructor (the first assigned), same

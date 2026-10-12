@@ -65,6 +65,12 @@ $features = [
 
     </div>
 
+    <?php if (! empty($offeringClosed)): ?>
+        <div class="px-4 sm:px-10" data-offering-closed>
+            <?= view('components/lock-note', ['kind' => 'closed', 'text' => 'This course is closed. You can still look at it and download what is there, but nothing in it can be changed.'], ['saveData' => false]) ?>
+        </div>
+    <?php endif; ?>
+
     <div class="flex flex-col">
 
         <div class="flex gap-2 ml-4 overflow-x-auto sm:ml-10" role="tablist" aria-label="Course sections">

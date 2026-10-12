@@ -247,7 +247,7 @@ class AssignmentSubmissionService
         return db_connect()->table('enrollments')
             ->join('course_offerings', 'course_offerings.id = enrollments.offering_id')
             ->where('enrollments.student_user_id', $studentId)
-            ->where('enrollments.status', 'enrolled')
+            ->whereIn('enrollments.status', ['enrolled', 'completed'])
             ->where('course_offerings.course_id', $courseId)
             ->countAllResults() > 0;
     }

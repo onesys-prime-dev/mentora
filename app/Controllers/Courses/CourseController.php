@@ -29,21 +29,34 @@ class CourseController extends BaseController
             $loadError = true;
         }
 
-        foreach ($courses as &$course) {
-            $course['slug'] = url_title(
-                $course['course_title'],
-                '-',
-                true
-            );
+        // Courses whose term was closed: still there to look at.
+        try {
+            $past = $this->courseService->getCourseOfferings($user, true);
+        } catch (\Throwable $e) {
+            log_message('error', 'Past courses failed to load: ' . $e->getMessage());
+            $past = [];
         }
 
-        unset($course);
+        foreach ([&$courses, &$past] as &$list) {
+            foreach ($list as &$course) {
+                $course['slug'] = url_title(
+                    $course['course_title'],
+                    '-',
+                    true
+                );
+            }
+
+            unset($course);
+        }
+
+        unset($list);
 
         return view('pages/courses/index', [
             'title'   => 'Courses',
             'page'    => 'courses',
             'user'    => $user,
             'courses' => $courses,
+            'pastCourses' => $past,
             'loadError' => $loadError,
             'mainGutter' => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
             'previousPage' => 'dashboard'
@@ -108,6 +121,9 @@ class CourseController extends BaseController
                 'course' => $course,
 
                 'activeFeature' => $activeFeature,
+
+                // A completed or archived offering can be looked at, not changed.
+                'offeringClosed' => db_connect()->table('course_offerings')->where('id', $offeringId)->where('status !=', 'active')->countAllResults() > 0,
 
                 'previousPage' => 'courses',
 

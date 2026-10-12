@@ -477,3 +477,39 @@ test("TC-UPL-02 A file with the wrong columns is refused and nothing is kept", a
     await expect(page.getByText(/students.csv is missing the column\(s\)/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Upload from CSV", level: 1 })).toBeVisible();
 });
+
+test("TC-TRM-03 Closing a term says what changes first, asks for the password, and can be undone", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/terms");
+
+    // A fresh term of its own, so the demo semester is not touched.
+    await page.getByRole("button", { name: "Add a term" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a term" });
+    await dialog.getByLabel("Name").fill("E2E Closing Term");
+    await dialog.getByLabel("Academic year").fill("2031-2032");
+    await dialog.getByLabel("Starts").fill("2031-08-01");
+    await dialog.getByLabel("Ends").fill("2031-12-20");
+    await dialog.getByRole("button", { name: "Add term" }).click();
+    await expect(page.getByText("The term was added.")).toBeVisible();
+
+    await page.getByRole("row", { name: /E2E Closing Term/ }).getByRole("link", { name: "Close term" }).click();
+
+    await expect(page.getByRole("heading", { name: "Close E2E Closing Term", level: 1 })).toBeVisible();
+    await expect(page.locator("[data-close-totals]")).toContainText("Offerings completed");
+    await expect(page.getByText("cannot change anything")).toBeVisible();
+
+    await page.getByRole("button", { name: "Close E2E Closing Term" }).click();
+
+    await expect(page.getByRole("heading", { name: "Confirm your password" })).toBeVisible();
+    await page.getByLabel("Password").fill(accounts.institutionAdmin.password);
+    await page.getByRole("button", { name: "Confirm" }).click();
+
+    await page.getByRole("button", { name: "Close E2E Closing Term" }).click();
+
+    await expect(page.getByText(/The term was closed:/)).toBeVisible();
+    await expect(page.getByRole("row", { name: /E2E Closing Term/ })).toContainText("Completed");
+
+    await page.getByRole("row", { name: /E2E Closing Term/ }).getByRole("button", { name: "Reopen" }).click();
+    await expect(page.getByText(/The term is open again/)).toBeVisible();
+    await expect(page.getByRole("row", { name: /E2E Closing Term/ })).toContainText("Active");
+});
