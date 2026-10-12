@@ -164,6 +164,7 @@ class DemoUsersSeeder extends Seeder
                 'suffix'      => null,
                 'student_number' => null,
                 'program_id'  => null,
+                'institution_id' => 1,
             ],
 
             // =====================================================

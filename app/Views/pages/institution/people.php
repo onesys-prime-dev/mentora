@@ -192,6 +192,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
     <?= view('components/tabs', ['ariaLabel' => 'People', 'tabs' => [
         ['label' => 'People', 'href' => site_url($base), 'active' => $peopleView === 'people'],
         ['label' => 'Invitations', 'href' => site_url($base) . '?view=invitations', 'active' => $peopleView === 'invitations', 'count' => $peopleOpen],
+        ['label' => 'Parents', 'href' => site_url($base . '/parents')],
     ]], ['saveData' => false]) ?>
 
     <?php if ($peopleView === 'people'): ?>
