@@ -15,8 +15,10 @@ use CodeIgniter\HTTP\ResponseInterface;
  * script, a redirect with a message otherwise, so every page also works
  * without JavaScript.
  *
- * - success: JSON {message, redirect} (the message is also flashed for the
- *   page the script goes to) or a redirect with the message;
+ * - success: JSON {message, warnings, redirect} (the message is also flashed
+ *   for the page the script goes to) or a redirect with the message. A change
+ *   that returns warnings (a list of strings, or ['warnings' => [...]]) has
+ *   them added to the message;
  * - refusal (StructureException): 422 {errors, message} with the field to
  *   highlight, or a redirect with the reason;
  * - a foreign id is the service's 404, and is not caught here.
@@ -33,7 +35,7 @@ trait AnswersDialogForms
         $back          = site_url($backTo);
 
         try {
-            $change($institutionId);
+            $result = $change($institutionId);
         } catch (StructureException $e) {
             if ($wantsJson) {
                 return $this->response->setStatusCode(422)->setJSON(['errors' => $e->errors(), 'message' => $e->errors() === [] ? $e->getMessage() : 'Nothing was saved.']);
@@ -42,14 +44,24 @@ trait AnswersDialogForms
             return redirect()->to($back)->withInput()->with('error', $e->getMessage());
         }
 
-        if ($wantsJson) {
-            // The dialog's script goes to the list next; the message is waiting there.
-            session()->setFlashdata('message', $success);
+        // A change may hand back warnings (it went through, but the person should know something).
+        $warnings = [];
 
-            return $this->response->setJSON(['message' => $success, 'redirect' => $back]);
+        if (is_array($result)) {
+            $candidate = $result['warnings'] ?? $result;
+            $warnings  = array_values(array_filter(is_array($candidate) ? $candidate : [], 'is_string'));
         }
 
-        return redirect()->to($back)->with('message', $success);
+        $message = trim($success . ' ' . implode(' ', $warnings));
+
+        if ($wantsJson) {
+            // The dialog's script goes to the list next; the message is waiting there.
+            session()->setFlashdata('message', $message);
+
+            return $this->response->setJSON(['message' => $message, 'warnings' => $warnings, 'redirect' => $back]);
+        }
+
+        return redirect()->to($back)->with('message', $message);
     }
 
     /** @return array<string, mixed> */

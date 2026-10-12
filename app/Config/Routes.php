@@ -468,6 +468,15 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('chairpersons/(:num)/remove', 'Institution\StructureController::revokeChairperson/$1');
         });
 
+        // Academic terms (terms.manage).
+        $routes->group('terms', ['filter' => 'permission:terms.manage'], function ($routes) {
+            $routes->get('/', 'Institution\TermsController::index');
+            $routes->post('/', 'Institution\TermsController::create');
+            $routes->post('(:num)', 'Institution\TermsController::update/$1');
+            $routes->post('(:num)/start', 'Institution\TermsController::start/$1');
+            $routes->post('(:num)/upcoming', 'Institution\TermsController::unstart/$1');
+        });
+
         // The course catalog (structure.manage).
         $routes->group('courses', ['filter' => 'permission:structure.manage'], function ($routes) {
             $routes->get('/', 'Institution\CoursesController::index');

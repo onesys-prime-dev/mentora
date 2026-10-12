@@ -44,6 +44,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     <?= view('components/tabs', ['ariaLabel' => 'Academics', 'tabs' => [
         ['label' => 'Structure', 'href' => site_url('institution/structure'), 'active' => true],
         ['label' => 'Courses', 'href' => site_url('institution/courses')],
+        ['label' => 'Terms', 'href' => site_url('institution/terms')],
     ]], ['saveData' => false]) ?>
 
     <?php if (! $structureCanEdit): ?>
