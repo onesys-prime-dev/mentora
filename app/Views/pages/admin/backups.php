@@ -19,10 +19,10 @@ $busy = array_filter($backupRows, static fn (array $row): bool => in_array($row[
 <?= $this->section('content') ?>
 
 <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]">Backups</h1>
+    <h1 class="text-2xl font-bold text-brand">Backups</h1>
     <form method="post" action="<?= site_url('admin/backups') ?>">
         <?= csrf_field() ?>
-        <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068] disabled:opacity-50" <?= $busy ? 'disabled' : '' ?>>Back up now</button>
+        <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" <?= $busy ? 'disabled' : '' ?>>Back up now</button>
     </form>
 </div>
 <p class="mt-1 text-sm text-gray-600">The server takes the backups (<span class="font-mono">php spark backup:run</span>); this page shows what it did. Restoring is a manual procedure: see <span class="font-mono">docs/backup.md</span>.</p>

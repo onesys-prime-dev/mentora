@@ -32,10 +32,10 @@ $features = [
     ?>
 
     <div
-        class="relative overflow-hidden rounded-3xl bg-[#002068] bg-cover bg-center bg-no-repeat text-white"
+        class="relative overflow-hidden rounded-3xl bg-brand-dark bg-cover bg-center bg-no-repeat text-white"
         style="background-image: url('<?= esc($bannerImage, 'attr') ?>');">
 
-        <div class="absolute inset-0 bg-linear-to-r from-[#002068]/90 via-[#002068]/65 to-[#002068]/20" aria-hidden="true"></div>
+        <div class="absolute inset-0 bg-linear-to-r from-brand-dark/90 via-brand-dark/65 to-brand-dark/20" aria-hidden="true"></div>
 
         <div class="relative flex items-center gap-4 px-5 py-5 sm:gap-5 sm:px-10 sm:py-6">
 

@@ -4,7 +4,7 @@
 
         <?php $isImage = str_starts_with((string) $file['mime_type'], 'image/'); ?>
 
-        <a href="<?= esc($file['url']) ?>" target="_blank" rel="noopener" class="flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-2 text-center transition hover:border-[#0040A6]/40">
+        <a href="<?= esc($file['url']) ?>" target="_blank" rel="noopener" class="flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-2 text-center transition hover:border-brand/40">
 
             <?php if ($isImage): ?>
                 <img src="<?= esc($file['url']) ?>" class="h-14 w-full rounded-lg object-cover" alt="">

@@ -16,7 +16,7 @@
 <?php if ($reauthAdmin): ?>
 
     <div class="mx-auto max-w-md rounded-lg bg-white p-6 shadow">
-        <h1 class="text-xl font-bold text-[#0040A6]">Confirm your password</h1>
+        <h1 class="text-xl font-bold text-brand">Confirm your password</h1>
         <p class="mt-2 text-sm text-gray-600">This action needs your password again. It stays confirmed for a few minutes.</p>
 
         <?php if (session()->has('error')): ?>
@@ -33,8 +33,8 @@
                 autocomplete="current-password"
                 required
                 autofocus
-                class="rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55">
-            <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 font-semibold text-white hover:bg-[#002068]">Confirm</button>
+                class="rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/55">
+            <button type="submit" class="rounded bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark">Confirm</button>
         </form>
     </div>
 
@@ -62,7 +62,7 @@
                 'attrs'    => 'autocomplete="current-password" autofocus',
             ], ['saveData' => false]) ?>
             <div>
-                <button type="submit" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50">Confirm</button>
+                <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Confirm</button>
             </div>
         </form>
 

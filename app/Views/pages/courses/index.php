@@ -15,8 +15,8 @@ $loadError = $loadError ?? false;
 <div class="flex flex-col gap-6 py-3">
 
     <div class="flex flex-col gap-1">
-        <h1 class="flex items-center gap-4 text-2xl font-bold text-[#0040A6]">
-            <?= icon('hat', 'h-6 w-6 shrink-0 text-[#0040A6]') ?>
+        <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
+            <?= icon('hat', 'h-6 w-6 shrink-0 text-brand') ?>
             Courses
         </h1>
         <p class="text-sm text-[#3D3D3D]">
@@ -30,7 +30,7 @@ $loadError = $loadError ?? false;
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your courses</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Your courses have not gone anywhere.</span>
-            <a href="<?= site_url($userRole . '/courses') ?>" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= site_url($userRole . '/courses') ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php elseif ($courses === []): ?>
@@ -66,7 +66,7 @@ $loadError = $loadError ?? false;
     <?php if (! $loadError && ! empty($pastCourses)): ?>
 
         <section class="flex flex-col gap-3" aria-labelledby="past-courses" data-past-courses>
-            <h2 id="past-courses" class="text-lg font-bold text-[#0040A6]">Past courses</h2>
+            <h2 id="past-courses" class="text-lg font-bold text-brand">Past courses</h2>
             <p class="text-sm text-[#3D3D3D]">Courses whose term has ended. You can still look at them and download what is there, but nothing in them can be changed.</p>
 
             <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Past courses">

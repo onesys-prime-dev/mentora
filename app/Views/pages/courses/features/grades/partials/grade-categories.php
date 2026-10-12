@@ -24,7 +24,7 @@ $categoryCard = static function (array $category) use ($points): string {
             </span>
         </div>
 
-        <span class="font-bold text-lg text-[#0040A6]">
+        <span class="font-bold text-lg text-brand">
             <?= $category['percentage'] !== null ? esc(number_format($category['percentage'], 2)) . '%' : '—' ?>
         </span>
 
@@ -54,7 +54,7 @@ $categoryCard = static function (array $category) use ($points): string {
                 <div class="flex items-center gap-3">
                     <span class="font-bold text-[#646464]"><?= esc($period['name']) ?></span>
                     <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600"><?= esc($points($period['weight'])) ?>%</span>
-                    <span class="ml-auto font-bold text-[#0040A6]">
+                    <span class="ml-auto font-bold text-brand">
                         <?= $period['percentage'] !== null ? esc(number_format($period['percentage'], 2)) . '%' : '—' ?>
                     </span>
                 </div>

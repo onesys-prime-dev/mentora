@@ -10,7 +10,7 @@ if ($unreadCount === 0) {
     return;
 }
 ?>
-<div class="bg-blue-50 px-6 py-2 text-sm text-[#0040A6]" data-notifications-strip>
+<div class="bg-blue-50 px-6 py-2 text-sm text-brand" data-notifications-strip>
     You have <strong><?= esc((string) $unreadCount) ?></strong> unread <?= $unreadCount === 1 ? 'notification' : 'notifications' ?>.
     <a class="font-semibold underline" href="<?= site_url('notifications') ?>">Read them</a>
 </div>

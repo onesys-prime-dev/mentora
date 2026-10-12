@@ -33,7 +33,7 @@ $id       = 'f-' . preg_replace('/[^a-z0-9_-]/i', '-', $name) . '-' . $GLOBALS['
 $describe = trim(($help !== '' ? $id . '-help ' : '') . $id . '-error');
 
 $control = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-[#1A1C1E] placeholder:text-gray-400 '
-    . 'focus:border-[#0040A6]/60 focus:outline-none focus:ring-2 focus:ring-[#0040A6]/40 disabled:bg-gray-50 disabled:text-gray-500 '
+    . 'focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:bg-gray-50 disabled:text-gray-500 '
     . 'aria-[invalid=true]:border-[#C33939] aria-[invalid=true]:ring-[#C33939]/30';
 
 $common = 'id="' . esc($id) . '" name="' . esc($name) . '" aria-describedby="' . esc($describe) . '"'
@@ -49,7 +49,7 @@ $common = 'id="' . esc($id) . '" name="' . esc($name) . '" aria-describedby="' .
     <?php if ($type === 'checkbox'): ?>
 
         <label class="flex items-center gap-2 text-sm text-[#1A1C1E]" for="<?= esc($id) ?>">
-            <input type="checkbox" value="1" class="h-4 w-4 rounded border-gray-300 text-[#0040A6] focus:ring-[#0040A6]/40" <?= $common ?> <?= $value ? 'checked' : '' ?>>
+            <input type="checkbox" value="1" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" <?= $common ?> <?= $value ? 'checked' : '' ?>>
             <?= esc($label) ?>
         </label>
 

@@ -82,8 +82,8 @@ describe("data table selection", () => {
 
         tick(rows[1]);
 
-        expect(rows[1].closest("tr").classList.contains("bg-[#F2F7FF]")).toBe(true);
-        expect(rows[0].closest("tr").classList.contains("bg-[#F2F7FF]")).toBe(false);
+        expect(rows[1].closest("tr").classList.contains("bg-brand-tint")).toBe(true);
+        expect(rows[0].closest("tr").classList.contains("bg-brand-tint")).toBe(false);
     });
 
     it("sends the ticked ids with the bulk form, once each time", () => {

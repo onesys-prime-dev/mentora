@@ -9,9 +9,9 @@
  * @var list<array<string, mixed>> $structureCandidates people who can be assigned
  */
 $base    = 'institution/structure';
-$primary = 'rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
-$second  = 'rounded-full border border-[#0040A6] px-4 py-1.5 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
-$link    = 'text-sm font-semibold text-[#0040A6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 rounded';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$second  = 'rounded-full border border-brand px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 $warn    = 'text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded';
 
 $badge = static fn (bool $active, string $label = ''): string => view('components/status-badge', [
@@ -84,8 +84,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="flex min-w-0 flex-col gap-1">
-                    <h2 id="dept-<?= esc((string) $department['id']) ?>" class="flex flex-wrap items-center gap-3 text-lg font-bold text-[#0040A6]">
-                        <span class="rounded bg-[#F2F7FF] px-2 py-0.5 font-mono text-xs text-[#002068]"><?= esc($department['code']) ?></span>
+                    <h2 id="dept-<?= esc((string) $department['id']) ?>" class="flex flex-wrap items-center gap-3 text-lg font-bold text-brand">
+                        <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs text-brand-dark"><?= esc($department['code']) ?></span>
                         <?= esc($department['name']) ?>
                         <?= $badge($deptActive) ?>
                     </h2>
@@ -135,7 +135,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                 <?php $subActive = (int) $sub['is_active'] === 1; ?>
 
                 <details class="group rounded-xl border border-gray-200" data-sub-department="<?= esc((string) $sub['id']) ?>" <?= $subActive ? 'open' : '' ?>>
-                    <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm marker:content-none hover:bg-[#F2F7FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50">
+                    <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm marker:content-none hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
                         <span class="flex flex-wrap items-center gap-3 font-semibold text-[#1A1C1E]">
                             <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-[#3D3D3D]"><?= esc($sub['code']) ?></span>
                             <?= esc($sub['name']) ?>
@@ -183,7 +183,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                 <span class="text-[#646464]" data-chairs-empty>None assigned yet.</span>
                             <?php endif; ?>
                             <?php foreach ($chairs as $chair): ?>
-                                <span class="inline-flex items-center gap-2 rounded-full bg-[#F2F7FF] px-3 py-1" data-chair="<?= esc((string) $chair['id']) ?>">
+                                <span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1" data-chair="<?= esc((string) $chair['id']) ?>">
                                     <?= esc($chair['name']) ?>
                                     <?php if ($structureCanEdit): ?>
                                         <button type="button" class="rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
@@ -274,7 +274,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
             . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
             . '<div class="flex flex-wrap items-center justify-end gap-3">'
             . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-            . '<button type="submit" data-dialog-label class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Save</button>'
+            . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Save</button>'
             . '</div></form>';
 
         return [$body, ''];

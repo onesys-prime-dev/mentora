@@ -10,7 +10,7 @@
  * @var array<string, mixed>|null  $sisLatest     the newest preview or import, with its rejected rows
  */
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $badge = ['running' => 'bg-blue-100 text-blue-800', 'succeeded' => 'bg-green-100 text-green-800', 'failed' => 'bg-red-100 text-red-800'];
 $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 ?>
@@ -19,9 +19,9 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
-<h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Integrations</h1>
+<h1 class="mt-2 text-2xl font-bold text-brand">Integrations</h1>
 <p class="mt-1 text-sm text-gray-600"><?= esc($sisInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($sisInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $sisInstitution, 'tabActive' => 'integrations']) ?>
@@ -36,12 +36,12 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 <?php if (! $sisConnection['flagOn']): ?>
     <p class="mt-4 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800" data-sis-flag="off">
         The <span class="font-mono">sis.sync</span> feature is off for this institution, so the connection cannot be enabled.
-        <a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions/' . $sisInstitution['id'] . '/flags') ?>">Open its features</a>
+        <a class="font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions/' . $sisInstitution['id'] . '/flags') ?>">Open its features</a>
     </p>
 <?php endif; ?>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="connection">
-    <h2 class="text-lg font-semibold text-[#0040A6]">Student information system</h2>
+    <h2 class="text-lg font-semibold text-brand">Student information system</h2>
     <p class="mt-1 text-sm text-gray-600">Connector: <?= esc($sisType['label']) ?>.</p>
     <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
         <div><dt class="text-xs text-gray-500">Inbound folder</dt><dd class="break-all font-mono text-xs"><?= esc($sisConnection['folders']['inbound']) ?></dd></div>
@@ -73,26 +73,26 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
             <p class="text-xs text-gray-500" data-credentials="none">No credentials saved.</p>
         <?php endif; ?>
 
-        <div><button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]">Save (asks for your password)</button></div>
+        <div><button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Save (asks for your password)</button></div>
     </form>
 
     <form class="mt-4" method="post" action="<?= site_url($base . '/test') ?>">
         <?= csrf_field() ?>
-        <button type="submit" class="rounded border border-[#0040A6] px-4 py-2 text-sm font-semibold text-[#0040A6] hover:bg-[#0040A6]/10">Test connection</button>
+        <button type="submit" class="rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10">Test connection</button>
     </form>
 </section>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="import">
-    <h2 class="text-lg font-semibold text-[#0040A6]">Import from the SIS</h2>
+    <h2 class="text-lg font-semibold text-brand">Import from the SIS</h2>
     <p class="mt-1 text-sm text-gray-600">People, courses and enrolments come in from the SIS, which wins on any difference. A preview does the whole job and then undoes it, so you see the counts and any rows that would be refused. Run one before the first real import.</p>
     <div class="mt-4 flex flex-wrap gap-3">
         <form method="post" action="<?= site_url($base . '/preview') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded border border-[#0040A6] px-4 py-2 text-sm font-semibold text-[#0040A6] hover:bg-[#0040A6]/10" data-sis-preview>Preview (dry run)</button>
+            <button type="submit" class="rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10" data-sis-preview>Preview (dry run)</button>
         </form>
         <form method="post" action="<?= site_url($base . '/run') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068] disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-sis-run>Import now</button>
+            <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-sis-run>Import now</button>
         </form>
     </div>
 
@@ -120,22 +120,22 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 </section>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="grades">
-    <h2 class="text-lg font-semibold text-[#0040A6]">Final grades to the SIS</h2>
+    <h2 class="text-lg font-semibold text-brand">Final grades to the SIS</h2>
     <p class="mt-1 text-sm text-gray-600">Only final grades go out (course, student, percentage, remarks), and only the ones that are new or changed since they were last sent. Mentora is the source of truth: the SIS receives what is here. Sending the same grades again replaces the delivery, so nothing is duplicated.</p>
     <div class="mt-4 flex flex-wrap gap-3">
         <form method="post" action="<?= site_url($base . '/grades/preview') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded border border-[#0040A6] px-4 py-2 text-sm font-semibold text-[#0040A6] hover:bg-[#0040A6]/10" data-grades-preview>Preview what would be sent</button>
+            <button type="submit" class="rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10" data-grades-preview>Preview what would be sent</button>
         </form>
         <form method="post" action="<?= site_url($base . '/grades/send') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068] disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-grades-send>Send final grades now</button>
+            <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-grades-send>Send final grades now</button>
         </form>
     </div>
 </section>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="runs">
-    <h2 class="text-lg font-semibold text-[#0040A6]">Run history</h2>
+    <h2 class="text-lg font-semibold text-brand">Run history</h2>
     <div class="mt-3 overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50">

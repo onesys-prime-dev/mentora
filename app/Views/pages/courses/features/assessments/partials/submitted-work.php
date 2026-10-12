@@ -29,7 +29,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
 
         <div class="flex items-center gap-3 rounded-xl border border-gray-100 bg-[#F9F9FC] p-3">
 
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0040A6]/10 text-[#0040A6]">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
@@ -46,7 +46,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
 
             <a
                 href="<?= esc(file_url((int) $submissionFile['id'], true)) ?>"
-                class="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
+                class="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/5">
                 Download
             </a>
 
@@ -58,7 +58,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
 
         <div class="flex items-center gap-3 rounded-xl border border-gray-100 bg-[#F9F9FC] p-3">
 
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0040A6]/10 text-[#0040A6]">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
@@ -70,7 +70,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
                     href="<?= esc($submissionLink) ?>"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="min-w-0 flex-1 truncate text-sm font-semibold text-[#0040A6] hover:underline">
+                    class="min-w-0 flex-1 truncate text-sm font-semibold text-brand hover:underline">
                     <?= esc($submissionLink) ?>
                 </a>
 

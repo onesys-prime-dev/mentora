@@ -178,7 +178,7 @@ async function applyReaction(card, announcementId, emoji) {
         const ownReaction = result.emoji ?? null;
 
         card.querySelectorAll("[data-react]").forEach((button) => {
-            button.classList.toggle("bg-[#0040A6]/10", button.dataset.react === ownReaction);
+            button.classList.toggle("bg-brand/10", button.dataset.react === ownReaction);
         });
 
         renderReactionSummary(card, result.reaction_counts ?? {});
@@ -222,7 +222,7 @@ function applyPinState(card, isPinned) {
 
     card.querySelector("[data-pinned-banner]")?.classList.toggle("hidden", !isPinned);
 
-    card.classList.toggle("border-[#0040A6]/30", isPinned);
+    card.classList.toggle("border-brand/30", isPinned);
     card.classList.toggle("border-gray-200", !isPinned);
 
     const pinLabel = card.querySelector("[data-toggle-pin-label]");
@@ -260,7 +260,7 @@ function updateSidebarPinned(card, isPinned) {
         const button = document.createElement("button");
         button.type = "button";
         button.dataset.scrollToAnnouncement = announcementId;
-        button.className = "flex items-start gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-[#0040A6]/5";
+        button.className = "flex items-start gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-brand/5";
         button.innerHTML = `
             <span class="mt-0.5 shrink-0 text-sm">📌</span>
             <span class="truncate text-sm text-[#1A1C1E]"></span>

@@ -16,7 +16,7 @@ const TONES = {
     success: "border-[#2E7D4F]/40 bg-[#E8F5EC] text-[#1F5A38]",
     warning: "border-[#946200]/40 bg-[#FFF1D6] text-[#6F4A00]",
     danger: "border-[#C33939]/40 bg-[#FDEDEC] text-[#8E2424]",
-    info: "border-[#0040A6]/30 bg-white text-[#1A1C1E]",
+    info: "border-brand/30 bg-white text-[#1A1C1E]",
 };
 
 const LABELS = { success: "Done", warning: "Warning", danger: "Problem", info: "Note" };
@@ -63,7 +63,7 @@ export function showToast(message, options = {}) {
     const close = document.createElement("button");
     close.type = "button";
     close.setAttribute("aria-label", "Dismiss");
-    close.className = "shrink-0 rounded px-1 text-lg leading-none opacity-70 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50";
+    close.className = "shrink-0 rounded px-1 text-lg leading-none opacity-70 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
     close.textContent = "×";
     close.addEventListener("click", () => toast.remove());
 

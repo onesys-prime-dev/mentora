@@ -12,11 +12,11 @@ $unread = count(array_filter($noteRows, static fn (array $row): bool => $row['re
 
 <div class="mx-auto max-w-3xl">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-bold text-[#0040A6]">Notifications</h1>
+        <h1 class="text-2xl font-bold text-brand">Notifications</h1>
         <?php if ($unread > 0): ?>
             <form method="post" action="<?= site_url('notifications/read') ?>">
                 <?= csrf_field() ?>
-                <button type="submit" class="rounded border border-[#0040A6] px-3 py-1 text-xs font-semibold text-[#0040A6] hover:bg-[#0040A6]/10">Mark all as read</button>
+                <button type="submit" class="rounded border border-brand px-3 py-1 text-xs font-semibold text-brand hover:bg-brand/10">Mark all as read</button>
             </form>
         <?php endif; ?>
     </div>
@@ -27,7 +27,7 @@ $unread = count(array_filter($noteRows, static fn (array $row): bool => $row['re
 
     <ul class="mt-6 flex flex-col gap-3">
         <?php foreach ($noteRows as $row): ?>
-            <li class="rounded-lg bg-white p-4 shadow <?= $row['read_at'] === null ? 'border-l-4 border-[#0040A6]' : '' ?>" data-notification="<?= $row['read_at'] === null ? 'unread' : 'read' ?>">
+            <li class="rounded-lg bg-white p-4 shadow <?= $row['read_at'] === null ? 'border-l-4 border-brand' : '' ?>" data-notification="<?= $row['read_at'] === null ? 'unread' : 'read' ?>">
                 <div class="flex flex-wrap items-start justify-between gap-2">
                     <h2 class="text-sm font-semibold text-gray-900">
                         <?= esc($row['title']) ?>
@@ -37,7 +37,7 @@ $unread = count(array_filter($noteRows, static fn (array $row): bool => $row['re
                 </div>
                 <p class="mt-1 text-sm text-gray-700"><?= esc((string) $row['body']) ?></p>
                 <div class="mt-2 flex items-center gap-3 text-xs">
-                    <?php if ($row['link'] !== null): ?><a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url((string) $row['link']) ?>">Open</a><?php endif; ?>
+                    <?php if ($row['link'] !== null): ?><a class="font-semibold text-brand hover:underline" href="<?= site_url((string) $row['link']) ?>">Open</a><?php endif; ?>
                     <?php if ($row['read_at'] === null): ?>
                         <form method="post" action="<?= site_url('notifications/read') ?>">
                             <?= csrf_field() ?>

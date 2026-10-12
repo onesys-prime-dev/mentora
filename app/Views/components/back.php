@@ -5,7 +5,7 @@ $userRole = esc($user->getGroups()[0]);
 <div class="flex gap-4 items-center mb-5 uppercase font-heading text-xs text-[#3D3D3D]">
 
     <a 
-        class="-ml-1 flex min-h-10 items-center gap-2 rounded px-1 text-[#3D3D3D] transition hover:text-[#0040A6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50"
+        class="-ml-1 flex min-h-10 items-center gap-2 rounded px-1 text-[#3D3D3D] transition hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
         href="<?= site_url($userRole . '/' . $previousPage) ?>">
 
         <svg

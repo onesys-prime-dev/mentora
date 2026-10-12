@@ -30,7 +30,7 @@ $statusLabels = [
     'past'      => ['Past', 'bg-red-100 text-red-800'],
 ];
 
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 ?>
@@ -40,8 +40,8 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 <?= $this->section('content') ?>
 
 <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]">Institutions</h1>
-    <a class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]" href="<?= site_url('admin/institutions/new') ?>">Add an institution</a>
+    <h1 class="text-2xl font-bold text-brand">Institutions</h1>
+    <a class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/institutions/new') ?>">Add an institution</a>
 </div>
 
 <?php if (session()->has('message')): ?>
@@ -71,9 +71,9 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
             <?php endforeach; ?>
         </select>
     </label>
-    <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Apply</button>
+    <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Apply</button>
     <?php if ($f->isFiltered()): ?>
-        <a class="px-2 py-1.5 text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">Clear</a>
+        <a class="px-2 py-1.5 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">Clear</a>
     <?php endif; ?>
 </form>
 
@@ -104,7 +104,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                 [$statusLabel, $statusClass] = $statusLabels[$row['status']] ?? [$row['status'], 'bg-gray-100 text-gray-700'];
                 ?>
                 <tr>
-                    <td class="px-3 py-2 font-medium"><?php if ($isDeleted): ?><?= esc($row['name']) ?><?php else: ?><a class="text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions/' . $row['id']) ?>"><?= esc($row['name']) ?></a><?php endif; ?></td>
+                    <td class="px-3 py-2 font-medium"><?php if ($isDeleted): ?><?= esc($row['name']) ?><?php else: ?><a class="text-brand hover:underline" href="<?= site_url('admin/institutions/' . $row['id']) ?>"><?= esc($row['name']) ?></a><?php endif; ?></td>
                     <td class="px-3 py-2 font-mono text-xs"><?= esc($row['code']) ?></td>
                     <td class="px-3 py-2">
                         <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $statusClass ?>"><?= esc($statusLabel) ?></span>
@@ -117,11 +117,11 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                             <?php if ($isDeleted): ?>
                                 <form method="post" action="<?= site_url('admin/institutions/' . $row['id'] . '/restore') ?>">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Restore</button>
+                                    <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Restore</button>
                                 </form>
                             <?php else: ?>
                                 <?php if ($row['status'] === 'pending'): ?>
-                                    <a class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10" href="<?= site_url('admin/institutions/' . $row['id'] . '/onboarding') ?>">Finish onboarding</a>
+                                    <a class="<?= $btn ?> border-brand text-brand hover:bg-brand/10" href="<?= site_url('admin/institutions/' . $row['id'] . '/onboarding') ?>">Finish onboarding</a>
                                 <?php endif; ?>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/edit') ?>">Edit</a>
                                 <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>">Subscription</a>
@@ -158,10 +158,10 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
     <span class="text-gray-600">Page <?= esc((string) $f->page) ?> of <?= esc((string) $institutionPages) ?></span>
     <span class="flex gap-3">
         <?php if ($f->page > 1): ?>
-            <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $f->page - 1])) ?>">Previous</a>
+            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $f->page - 1])) ?>">Previous</a>
         <?php endif; ?>
         <?php if ($f->page < $institutionPages): ?>
-            <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $f->page + 1])) ?>">Next</a>
+            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $f->page + 1])) ?>">Next</a>
         <?php endif; ?>
     </span>
 </nav>

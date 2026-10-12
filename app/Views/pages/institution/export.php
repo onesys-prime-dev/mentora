@@ -22,7 +22,7 @@ foreach ($exportRows as $row) {
             'state'   => ['html' => view('components/status-badge', ['label' => $live ? 'Ready' : 'Expired', 'tone' => $live ? 'success' : 'neutral'], ['saveData' => false])],
         ],
         'actions' => $live
-            ? '<a class="font-semibold text-[#0040A6] hover:underline" data-export="ready" href="' . esc(site_url('institution/export/' . $row['id'])) . '">Download</a>'
+            ? '<a class="font-semibold text-brand hover:underline" data-export="ready" href="' . esc(site_url('institution/export/' . $row['id'])) . '">Download</a>'
             : '<span class="text-xs text-[#646464]" data-export="expired">Expired</span>',
     ];
 }
@@ -52,7 +52,7 @@ foreach ($exportRows as $row) {
     <?php if ($exportAllowed): ?>
         <form class="flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm" method="post" action="<?= site_url('institution/export') ?>" data-export-form>
             <?= csrf_field() ?>
-            <button type="submit" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50">Create an export</button>
+            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Create an export</button>
             <span class="text-xs text-[#646464]">Each export can be downloaded for <?= esc((string) $exportDays) ?> days.</span>
         </form>
     <?php else: ?>

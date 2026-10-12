@@ -10,8 +10,8 @@
  * @var bool                      $copyCanEdit
  */
 $base    = 'institution/terms/copy';
-$primary = 'rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 disabled:cursor-not-allowed disabled:opacity-50';
-$second  = 'rounded-full border border-[#0040A6] bg-white px-5 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#F2F7FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50';
+$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $sourceOptions = ['' => 'Choose a term'];
 
@@ -88,7 +88,7 @@ $shift = $copyPlan['shiftDays'] ?? 0;
     <?php if ($copyPlan !== null): ?>
 
         <section class="rounded-2xl bg-white p-6 shadow-sm" aria-label="What will be copied" data-copy-summary>
-            <h2 class="text-sm font-bold text-[#0040A6]">From <?= esc($copyPlan['source']['name']) ?> into <?= esc($copyPlan['target']['name']) ?></h2>
+            <h2 class="text-sm font-bold text-brand">From <?= esc($copyPlan['source']['name']) ?> into <?= esc($copyPlan['target']['name']) ?></h2>
             <ul class="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-[#3D3D3D]">
                 <li><strong>Copied:</strong> sections and weekly schedules, modules, units, items and resources, assessments with their questions and rubrics, and the grading scheme.</li>
                 <li><strong>Not copied:</strong> students, enrolments, submissions, scores and grades, announcements, discussions and progress.</li>
@@ -126,9 +126,9 @@ $shift = $copyPlan['shiftDays'] ?? 0;
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             <?php foreach ($copyPlan['offerings'] as $i => $o): ?>
-                                <tr class="transition hover:bg-[#F2F7FF]">
+                                <tr class="transition hover:bg-brand-tint">
                                     <td class="w-10 px-4 py-3">
-                                        <input type="checkbox" name="offerings[]" value="<?= esc((string) $o['id']) ?>" class="h-4 w-4 rounded border-gray-300 text-[#0040A6] focus:ring-[#0040A6]/40"
+                                        <input type="checkbox" name="offerings[]" value="<?= esc((string) $o['id']) ?>" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"
                                                aria-label="Copy <?= esc($o['course_code'] . ' ' . $o['section_code']) ?>" <?= $o['conflict'] || ! $copyCanEdit ? 'disabled' : 'checked' ?>>
                                     </td>
                                     <td class="px-4 py-3"><?= $rows[$i]['cells']['course']['html'] ?></td>
@@ -143,7 +143,7 @@ $shift = $copyPlan['shiftDays'] ?? 0;
                 </div>
 
                 <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
-                    <input type="checkbox" name="with_instructors" value="1" class="h-4 w-4 rounded border-gray-300 text-[#0040A6] focus:ring-[#0040A6]/40" <?= $copyCanEdit ? '' : 'disabled' ?>>
+                    <input type="checkbox" name="with_instructors" value="1" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" <?= $copyCanEdit ? '' : 'disabled' ?>>
                     Also assign the same instructors
                 </label>
 

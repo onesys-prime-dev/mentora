@@ -42,7 +42,7 @@ $source = !empty($resource['file'])
                     data-video-source
                     <?= $source === 'upload' ? 'checked' : '' ?>
 
-                    class="h-4 w-4 border-gray-300 text-[#0040A6] focus:ring-[#0040A6]">
+                    class="h-4 w-4 border-gray-300 text-brand focus:ring-brand">
 
                 <span class="font-medium text-gray-700">
                     Upload Video
@@ -59,7 +59,7 @@ $source = !empty($resource['file'])
                     data-video-source
                     <?= $source === 'link' ? 'checked' : '' ?>
 
-                    class="h-4 w-4 border-gray-300 text-[#0040A6] focus:ring-[#0040A6]">
+                    class="h-4 w-4 border-gray-300 text-brand focus:ring-brand">
 
                 <span class="font-medium text-gray-700">
                     External Link
@@ -90,7 +90,7 @@ $source = !empty($resource['file'])
         <div class="p-6">
 
             <label
-                class="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-[#0040A6] hover:bg-[#0040A6]/5">
+                class="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-brand hover:bg-brand/5">
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -164,7 +164,7 @@ $source = !empty($resource['file'])
                 data-video-url
                 value="<?= esc($resource['resource_url'] ?? '') ?>"
                 placeholder="https://youtube.com/watch?v=..."
-                class="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]">
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand">
 
             <p class="text-sm text-gray-500">
                 Supports YouTube and Vimeo links.
@@ -226,7 +226,7 @@ $source = !empty($resource['file'])
                     data-video-autoplay
                     <?= !empty($content['autoplay']) ? 'checked' : '' ?>
 
-                    class="h-4 w-4 rounded border-gray-300 text-[#0040A6] focus:ring-[#0040A6]">
+                    class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand">
 
                 <span>Autoplay</span>
 
@@ -239,7 +239,7 @@ $source = !empty($resource['file'])
                     data-video-controls
                     <?= !empty($content['show_controls']) ? 'checked' : '' ?>
 
-                    class="h-4 w-4 rounded border-gray-300 text-[#0040A6] focus:ring-[#0040A6]">
+                    class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand">
 
                 <span>Show Controls</span>
 

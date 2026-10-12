@@ -425,7 +425,7 @@ function updateButtons(editor) {
             }
 
             button.classList.toggle(
-                "bg-[#0040A6]",
+                "bg-brand",
                 active
             );
 

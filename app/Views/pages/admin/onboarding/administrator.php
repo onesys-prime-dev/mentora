@@ -9,7 +9,7 @@
  * @var int                  $onbValidityDays  how long the emailed link works
  * @var array<string, mixed> $onbValues        first_name, last_name, email as typed
  */
-$input = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
 ?>
 
@@ -18,9 +18,9 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-3xl">
-    <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
-    <h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Onboard <?= esc($onbInstitution['name']) ?></h1>
+    <h1 class="mt-2 text-2xl font-bold text-brand">Onboard <?= esc($onbInstitution['name']) ?></h1>
     <p class="mt-1 text-sm text-gray-600"><span class="font-mono text-xs"><?= esc($onbInstitution['code']) ?></span> &middot; pending: nothing here can be used until onboarding is finished.</p>
 
     <?= view('pages/admin/partials/onboarding-steps', ['obStep' => 3]) ?>
@@ -31,8 +31,8 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow" data-onboarding-summary>
         <div class="flex items-start justify-between gap-3">
-            <h2 class="text-lg font-semibold text-[#0040A6]">Subscription to be started</h2>
-            <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions/' . $onbInstitution['id'] . '/onboarding/subscription') ?>">Change</a>
+            <h2 class="text-lg font-semibold text-brand">Subscription to be started</h2>
+            <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions/' . $onbInstitution['id'] . '/onboarding/subscription') ?>">Change</a>
         </div>
         <p class="mt-2 text-sm text-gray-700">
             <strong><?= esc($onbPlanName) ?></strong>, from <strong><?= esc($onbTerm['period_start']) ?></strong> to <strong><?= esc($onbTerm['period_end']) ?></strong>.
@@ -40,7 +40,7 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
     </div>
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow">
-        <h2 class="text-lg font-semibold text-[#0040A6]">First institutional administrator</h2>
+        <h2 class="text-lg font-semibold text-brand">First institutional administrator</h2>
         <p class="mt-1 text-sm text-gray-600">
             They are emailed a link to set their own password. The link works once and expires after <?= esc((string) $onbValidityDays) ?> days; you can send a new one later.
             The subscription starts and the institution becomes usable when you finish.
@@ -61,7 +61,7 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
             </label>
 
             <div class="flex items-center gap-3 sm:col-span-2">
-                <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]">Finish onboarding</button>
+                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Finish onboarding</button>
                 <a class="text-sm font-semibold text-gray-600 hover:underline" href="<?= site_url('admin/institutions') ?>">Finish later</a>
             </div>
         </form>

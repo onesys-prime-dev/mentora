@@ -9,7 +9,7 @@
  */
 $isEdit = $plan !== null;
 $action = $isEdit ? site_url('admin/plans/' . $plan['id']) : site_url('admin/plans');
-$input  = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input  = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $hint   = 'text-xs font-normal text-gray-500';
 ?>
 
@@ -18,10 +18,10 @@ $hint   = 'text-xs font-normal text-gray-500';
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-xl">
-    <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/plans') ?>">&larr; Plans</a>
+    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/plans') ?>">&larr; Plans</a>
 
     <div class="mt-3 rounded-lg bg-white p-6 shadow">
-        <h1 class="text-xl font-bold text-[#0040A6]"><?= esc($formHeading) ?></h1>
+        <h1 class="text-xl font-bold text-brand"><?= esc($formHeading) ?></h1>
 
         <?php if ($isEdit): ?>
             <p class="mt-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -65,7 +65,7 @@ $hint   = 'text-xs font-normal text-gray-500';
             </fieldset>
 
             <div class="flex gap-3">
-                <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]"><?= $isEdit ? 'Save' : 'Add plan' ?></button>
+                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"><?= $isEdit ? 'Save' : 'Add plan' ?></button>
                 <a class="px-3 py-2 text-sm font-semibold text-gray-600 hover:underline" href="<?= site_url('admin/plans') ?>">Cancel</a>
             </div>
         </form>

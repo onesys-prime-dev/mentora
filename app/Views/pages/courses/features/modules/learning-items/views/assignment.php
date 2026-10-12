@@ -25,7 +25,7 @@ $assignmentCounts = $assessmentContext['counts'] ?? null;
                 <div class="flex items-center gap-3">
 
                     <span class="text-xs text-[#646464]">
-                        <strong class="text-[#0040A6]"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
+                        <strong class="text-brand"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
                         · <strong class="text-[#946200]"><?= (int) ($assignmentCounts['toGrade'] ?? 0) ?></strong> to grade
                     </span>
 

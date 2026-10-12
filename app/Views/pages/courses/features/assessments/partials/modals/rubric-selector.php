@@ -9,7 +9,7 @@
 
             <div class="flex flex-col">
 
-                <h2 class="text-2xl font-bold text-[#0040A6]">
+                <h2 class="text-2xl font-bold text-brand">
                     Use Existing Rubric
                 </h2>
 
@@ -75,7 +75,7 @@
 
             <button
                 type="button"
-                class="text-sm font-semibold text-[#0040A6] transition hover:underline"
+                class="text-sm font-semibold text-brand transition hover:underline"
                 data-create-new-rubric>
 
                 + Create a new rubric instead

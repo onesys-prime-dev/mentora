@@ -16,7 +16,7 @@ $weightOk = abs($total_weight - 100) < 0.001;
 
 $typeBadge = static fn (array $item) => match (true) {
     $item['is_manual'] => ['Manual', 'bg-gray-100 text-gray-600'],
-    strtolower((string) $item['assessment_type']) === 'quiz' => ['Quiz', 'bg-[#0040A6]/10 text-[#0040A6]'],
+    strtolower((string) $item['assessment_type']) === 'quiz' => ['Quiz', 'bg-brand/10 text-brand'],
     default => ['Assignment', 'bg-emerald-50 text-emerald-700'],
 };
 
@@ -68,10 +68,10 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
 
         <?php if ($item['is_manual']): ?>
             <input type="text" value="<?= esc($item['name'], 'attr') ?>" data-grade-item-name
-                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-sm font-semibold text-[#646464] outline-none transition hover:border-gray-200 focus:border-[#0040A6]">
+                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-sm font-semibold text-[#646464] outline-none transition hover:border-gray-200 focus:border-brand">
             <label class="flex items-center gap-1 text-xs text-gray-500">
                 <input type="number" min="0.01" step="0.5" value="<?= $points($item['max_points']) ?>" data-grade-item-max
-                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-[#0040A6]">
+                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-brand">
                 pts
             </label>
         <?php else: ?>
@@ -85,7 +85,7 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
             <?php endif; ?>
         <?php endif; ?>
 
-        <select data-grade-item-category class="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-[#0040A6]" title="Category">
+        <select data-grade-item-category class="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-brand" title="Category">
             <?= $categoryOptions($item['category_id'] !== null ? (int) $item['category_id'] : null) ?>
         </select>
 
@@ -109,17 +109,17 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         <div class="flex flex-wrap items-center gap-3">
 
             <input type="text" value="<?= esc($category['name'], 'attr') ?>" data-grade-category-name
-                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 font-bold text-[#646464] outline-none transition hover:border-gray-200 focus:border-[#0040A6]">
+                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 font-bold text-[#646464] outline-none transition hover:border-gray-200 focus:border-brand">
 
             <label class="flex items-center gap-1 text-sm text-gray-500">
                 Weight
                 <input type="number" min="0" max="100" step="0.5" value="<?= $points($category['weight_percentage']) ?>" data-grade-category-weight
-                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-[#0040A6]">
+                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-brand">
                 %
             </label>
 
             <?php if ($usesPeriods): ?>
-                <select data-grade-category-period class="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-[#0040A6]" title="Period">
+                <select data-grade-category-period class="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-brand" title="Period">
                     <?= $periodOptions($category['period_id'] !== null ? (int) $category['period_id'] : null) ?>
                 </select>
             <?php endif; ?>
@@ -141,7 +141,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         </div>
 
         <button type="button" data-add-grade-item data-category-id="<?= (int) $category['id'] ?>"
-            class="self-start text-xs font-semibold text-[#0040A6] transition hover:underline">
+            class="self-start text-xs font-semibold text-brand transition hover:underline">
             + Add manual item (Attendance, Participation…)
         </button>
 
@@ -163,7 +163,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
             <?= icon('settings', 'h-6 w-6') ?>
 
-            <span class="text-xl font-bold text-[#0040A6]">Grading Scheme</span>
+            <span class="text-xl font-bold text-brand">Grading Scheme</span>
 
             <span class="rounded-full px-3 py-1 text-xs font-bold <?= $isPublished ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-gray-100 text-gray-500' ?>" data-scheme-status-chip>
                 <?= $isPublished ? 'Published' : 'Draft' ?>
@@ -182,7 +182,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
                 data-target-status="<?= $isPublished ? 'Draft' : 'Published' ?>"
                 class="rounded-xl px-5 py-2.5 text-sm font-semibold transition <?= $isPublished
                     ? 'border border-gray-300 text-gray-600 hover:bg-gray-100'
-                    : 'bg-[#0040A6] text-white hover:bg-[#002068]' ?>">
+                    : 'bg-brand text-white hover:bg-brand-dark' ?>">
                 <?= $isPublished ? 'Unpublish' : 'Publish' ?>
             </button>
 
@@ -208,18 +208,18 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         <label class="flex flex-col gap-1.5">
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Scheme name</span>
             <input type="text" value="<?= esc($scheme['name'], 'attr') ?>" data-scheme-name
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
         </label>
 
         <label class="flex flex-col gap-1.5">
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Passing mark (%)</span>
             <input type="number" min="0" max="100" step="0.5" value="<?= $points($scheme['passing_percentage']) ?>" data-scheme-passing
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
         </label>
 
         <label class="flex flex-col gap-1.5">
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Grade scale</span>
-            <select data-scheme-scale class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+            <select data-scheme-scale class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
                 <option value="">None (percentage only)</option>
                 <?php foreach ($scales as $scale): ?>
                     <option value="<?= (int) $scale['id'] ?>" <?= (int) $scale['id'] === (int) ($scheme['grade_scale_id'] ?? 0) ? 'selected' : '' ?>><?= esc($scale['name']) ?></option>
@@ -248,7 +248,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
         <label class="relative inline-flex shrink-0 cursor-pointer items-center">
             <input type="checkbox" class="peer sr-only" data-scheme-uses-periods <?= $usesPeriods ? 'checked' : '' ?>>
-            <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+            <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
             <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
         </label>
 
@@ -260,7 +260,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         <div class="flex flex-col gap-4" data-grading-periods>
 
             <div class="flex items-center justify-between">
-                <span class="text-lg font-bold text-[#0040A6]">Grading Periods</span>
+                <span class="text-lg font-bold text-brand">Grading Periods</span>
                 <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-scheme-weight-total>
                     Total: <?= esc($points($total_weight)) ?>%<?= $weightOk ? '' : ' — must be 100%' ?>
                 </span>
@@ -270,17 +270,17 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
                 <?php $periodWeightOk = abs((float) $period['weight_total'] - 100) < 0.001; ?>
 
-                <div class="flex flex-col gap-4 rounded-2xl border-2 border-[#0040A6]/20 p-5" data-grading-period="<?= (int) $period['id'] ?>">
+                <div class="flex flex-col gap-4 rounded-2xl border-2 border-brand/20 p-5" data-grading-period="<?= (int) $period['id'] ?>">
 
                     <div class="flex flex-wrap items-center gap-3">
 
                         <input type="text" value="<?= esc($period['name'], 'attr') ?>" data-grading-period-name
-                            class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-lg font-bold text-[#0040A6] outline-none transition hover:border-gray-200 focus:border-[#0040A6]">
+                            class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-lg font-bold text-brand outline-none transition hover:border-gray-200 focus:border-brand">
 
                         <label class="flex items-center gap-1 text-sm text-gray-500">
                             Weight
                             <input type="number" min="0" max="100" step="0.5" value="<?= $points($period['weight_percentage']) ?>" data-grading-period-weight
-                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-[#0040A6]">
+                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-brand">
                             %
                         </label>
 
@@ -305,7 +305,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
                     </div>
 
                     <button type="button" data-add-grade-category data-period-id="<?= (int) $period['id'] ?>"
-                        class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
+                        class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
                         + Add category
                     </button>
 
@@ -314,7 +314,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
             <?php endforeach; ?>
 
             <button type="button" data-add-grading-period
-                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
+                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
                 + Add grading period
             </button>
 
@@ -336,7 +336,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         <div class="flex flex-col gap-4">
 
             <div class="flex items-center justify-between">
-                <span class="text-lg font-bold text-[#0040A6]">Categories</span>
+                <span class="text-lg font-bold text-brand">Categories</span>
                 <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-scheme-weight-total>
                     Total: <?= esc($points($total_weight)) ?>%<?= $weightOk ? '' : ' — must be 100%' ?>
                 </span>
@@ -347,7 +347,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
             <?php endforeach; ?>
 
             <button type="button" data-add-grade-category
-                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/5">
+                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
                 + Add category
             </button>
 

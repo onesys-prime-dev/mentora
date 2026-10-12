@@ -175,3 +175,18 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **All or nothing:** a run is one transaction. A section that already exists in the target is a clash and refuses the whole run until it is unticked. If anything fails part-way nothing is changed.
 - **Reopening:** each copy remembers its source (`course_offerings.copied_from_offering_id`). A term that offerings were copied from stays closed ("Copied into another term, so it stays closed").
 - **Audit:** `structure.offerings_copied` with the counts, the source term, the date shift and whether instructors were copied.
+
+## Brand colour tokens
+
+The three brand colours are tokens, not hex values, so one place decides them (and, with the branding branch, one institution can override them).
+
+| Token | Default | Utilities |
+| --- | --- | --- |
+| `--color-brand` | `#0040A6` | `bg-brand`, `text-brand`, `border-brand`, `ring-brand/50`, `accent-brand` ... |
+| `--color-brand-dark` | `#002068` | `bg-brand-dark`, `text-brand-dark`, `from-brand-dark/90` ... |
+| `--color-brand-tint` | `#F2F7FF` | `bg-brand-tint`, `hover:bg-brand-tint` ... |
+
+- **Defined** in `resources/css/app.css` (`@theme`). Utilities read them at runtime, so setting the property on `:root` or on any element restyles everything inside it.
+- **Rule:** views, helpers and scripts use the utilities, never `[#0040A6]`, `[#002068]` or `[#F2F7FF]`. (Other greys, status tones and the icon colours are unchanged.)
+- **JavaScript:** `resources/js/shared/brand-tokens.js` reads (`readBrandTokens`), sets (`applyBrandTokens`, six-digit hex only) and clears (`clearBrandTokens`) them, for a live preview or a chart that needs the value.
+- **No visual change** from the switch: the defaults are the same colours as before.

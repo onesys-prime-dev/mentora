@@ -6,6 +6,17 @@
 @import "tailwindcss";
 
 @theme {
+    /*
+     * The brand colours, as tokens. Every page uses them through the utilities
+     * they generate (bg-brand, text-brand, ring-brand/50, bg-brand-dark,
+     * bg-brand-tint ...) and never as a hex, so one place decides them: here
+     * for everyone, or overridden on :root for one institution (see
+     * resources/js/shared/brand-tokens.js and the app layout).
+     */
+    --color-brand: #0040A6;
+    --color-brand-dark: #002068;
+    --color-brand-tint: #F2F7FF;
+
     --font-sans:
         "Poppins",
         system-ui,
@@ -41,7 +52,7 @@
  */
 @layer base {
     :where(#course-content, [role="tablist"]) :where(button, a, input, select, textarea, summary, [role="link"], [tabindex="0"]):focus-visible {
-        outline: 2px solid rgb(0 64 166 / 0.55);
+        outline: 2px solid color-mix(in srgb, var(--color-brand) 55%, transparent);
         outline-offset: 2px;
     }
 }
@@ -175,7 +186,7 @@
         height: 3px;
         width: 0;
         border-radius: 0 9999px 9999px 0;
-        background-color: #0040A6;
+        background-color: var(--color-brand);
         opacity: 0;
         pointer-events: none;
         transition: opacity 200ms ease;

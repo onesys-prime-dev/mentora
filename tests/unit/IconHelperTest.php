@@ -99,7 +99,7 @@ final class IconHelperTest extends CIUnitTestCase
         $this->assertStringEndsWith('</svg>', $svg);
         $this->assertStringContainsString('viewBox="0 0 24 24"', $svg);
         $this->assertStringContainsString('stroke="currentColor"', $svg);
-        $this->assertStringContainsString('class="shrink-0 h-5 w-5 text-[#0040A6]"', $svg);
+        $this->assertStringContainsString('class="shrink-0 h-5 w-5 text-brand"', $svg);
     }
 
     public function testASolidIconIsFilledNotStroked(): void
@@ -117,13 +117,13 @@ final class IconHelperTest extends CIUnitTestCase
         $this->assertStringNotContainsString('text-[#5C9F72]', icon('check', 'h-3 w-3 text-white'));
         $this->assertStringContainsString('text-red-500', icon('info', 'text-red-500'));
         $this->assertStringContainsString('text-[#abc]', icon('info', 'text-[#abc]'));
-        $this->assertStringNotContainsString('text-[#0040A6]', icon('info', 'text-[#abc]'));
+        $this->assertStringNotContainsString('text-brand', icon('info', 'text-[#abc]'));
     }
 
     public function testTextSizeAndAlignmentClassesAreNotMistakenForAColour(): void
     {
         foreach (['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-left', 'text-center', 'text-right', 'text-justify', 'text-[14px]'] as $class) {
-            $this->assertStringContainsString('text-[#0040A6]', icon('info', "h-4 {$class}"), $class);
+            $this->assertStringContainsString('text-brand', icon('info', "h-4 {$class}"), $class);
         }
     }
 

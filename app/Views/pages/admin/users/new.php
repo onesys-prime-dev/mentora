@@ -9,7 +9,7 @@
  */
 use App\Services\Users\UserFilters;
 
-$input = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
 ?>
 
@@ -18,10 +18,10 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-lg">
-    <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/users') ?>">&larr; Users</a>
+    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/users') ?>">&larr; Users</a>
 
     <div class="mt-3 rounded-lg bg-white p-6 shadow">
-        <h1 class="text-xl font-bold text-[#0040A6]">Invite a person</h1>
+        <h1 class="text-xl font-bold text-brand">Invite a person</h1>
         <p class="mt-1 text-sm text-gray-600">They get an emailed link, valid for a limited time and usable once, and choose their own password on it. The account is made then.</p>
         <p class="mt-1 text-xs text-gray-500">System administrators are not made here: they are created with <span class="font-mono">php spark admin:create</span>.</p>
 
@@ -65,7 +65,7 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
             </label>
 
             <div class="flex gap-3">
-                <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]">Send invitation</button>
+                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Send invitation</button>
                 <a class="px-3 py-2 text-sm font-semibold text-gray-600 hover:underline" href="<?= site_url('admin/users') ?>">Cancel</a>
             </div>
         </form>

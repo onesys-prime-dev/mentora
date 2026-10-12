@@ -16,7 +16,7 @@
 */
 
 $modeTone = static fn (string $mode) => match ($mode) {
-    'Online' => 'bg-[#E0E5F2] text-[#002068] border-[#A7B4D9]',
+    'Online' => 'bg-[#E0E5F2] text-brand-dark border-[#A7B4D9]',
     'Hybrid' => 'bg-[#FFF1D6] text-[#946200] border-[#E8C778]',
     default  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
@@ -41,7 +41,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
             <div class="flex items-center gap-4">
                 <?= icon('clock', 'h-6 w-6') ?>
-                <span class="text-2xl font-bold text-[#0040A6]">
+                <span class="text-2xl font-bold text-brand">
                     My Schedule
                 </span>
             </div>
@@ -84,10 +84,10 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
                         <div></div>
 
                         <?php foreach ($days as $day): ?>
-                            <div class="flex flex-col items-center gap-0.5 border-b border-[#A9A9A9]/30 pb-3 <?= $day === $today ? 'text-[#0040A6]' : 'text-[#646464]' ?>">
+                            <div class="flex flex-col items-center gap-0.5 border-b border-[#A9A9A9]/30 pb-3 <?= $day === $today ? 'text-brand' : 'text-[#646464]' ?>">
                                 <span class="text-xs font-bold uppercase tracking-wide"><?= esc(substr($dayLabels[$day], 0, 3)) ?></span>
                                 <?php if ($day === $today): ?>
-                                    <span class="h-1.5 w-1.5 rounded-full bg-[#0040A6]"></span>
+                                    <span class="h-1.5 w-1.5 rounded-full bg-brand"></span>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
@@ -112,7 +112,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
                         <?php for ($row = 1; $row <= $totalRows; $row++): ?>
                             <?php foreach ($days as $i => $day): ?>
                                 <div
-                                    class="<?= $row % 2 === 1 ? 'border-t border-[#A9A9A9]/20' : '' ?> <?= $day === $today ? 'bg-[#0040A6]/5' : '' ?>"
+                                    class="<?= $row % 2 === 1 ? 'border-t border-[#A9A9A9]/20' : '' ?> <?= $day === $today ? 'bg-brand/5' : '' ?>"
                                     style="grid-column: <?= $i + 2 ?>; grid-row: <?= $row ?>;"></div>
                             <?php endforeach; ?>
                         <?php endfor; ?>

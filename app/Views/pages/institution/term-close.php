@@ -9,7 +9,7 @@ $plan    = $closePlan;
 $term    = $plan['term'];
 $base    = 'institution/terms';
 $primary = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A82E2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
-$second  = 'rounded-full border border-[#0040A6] bg-white px-5 py-2 text-sm font-semibold text-[#0040A6] transition hover:bg-[#F2F7FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50';
+$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $rows = [];
 
@@ -57,7 +57,7 @@ foreach ($plan['offerings'] as $o) {
         </div>
 
         <section class="rounded-2xl bg-white p-6 shadow-sm" aria-label="What will change">
-            <h2 class="text-sm font-bold text-[#0040A6]">What happens</h2>
+            <h2 class="text-sm font-bold text-brand">What happens</h2>
             <ul class="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-[#3D3D3D]">
                 <li>The term and its offerings become <strong>completed</strong>.</li>
                 <li>Students still enrolled become <strong>completed</strong> in them.</li>

@@ -23,7 +23,7 @@ $arrow = static fn (string $column): string => $filters->sort === $column ? ($fi
 
 $exportUrl = $url('admin/audit-log/export', $filters->toQuery(['page' => null]));
 
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
 ?>
 
@@ -32,8 +32,8 @@ $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text
 <?= $this->section('content') ?>
 
 <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]">Audit log</h1>
-    <a class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]" href="<?= esc($exportUrl) ?>">Export CSV</a>
+    <h1 class="text-2xl font-bold text-brand">Audit log</h1>
+    <a class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= esc($exportUrl) ?>">Export CSV</a>
 </div>
 
 <?php if (session()->has('message')): ?>
@@ -71,9 +71,9 @@ $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text
         <input class="<?= $input ?>" type="number" min="1" name="institution" value="<?= esc((string) ($filters->institutionId ?? '')) ?>">
     </label>
     <div class="flex items-end gap-2">
-        <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Apply</button>
+        <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Apply</button>
         <?php if ($filters->isFiltered()): ?>
-            <a class="px-2 py-1.5 text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/audit-log') ?>">Clear</a>
+            <a class="px-2 py-1.5 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log') ?>">Clear</a>
         <?php endif; ?>
     </div>
 </form>
@@ -117,7 +117,7 @@ $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text
                     <td class="px-3 py-2">
                         <?php if ($row['old_values'] !== null || $row['new_values'] !== null): ?>
                             <details>
-                                <summary class="cursor-pointer text-[#0040A6]">View</summary>
+                                <summary class="cursor-pointer text-brand">View</summary>
                                 <?php if ($row['old_values'] !== null): ?><pre class="mt-1 whitespace-pre-wrap text-xs text-gray-600">Before: <?= esc($row['old_values']) ?></pre><?php endif; ?>
                                 <?php if ($row['new_values'] !== null): ?><pre class="mt-1 whitespace-pre-wrap text-xs text-gray-600">After: <?= esc($row['new_values']) ?></pre><?php endif; ?>
                             </details>
@@ -133,10 +133,10 @@ $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text
     <span class="text-gray-600">Page <?= esc((string) $filters->page) ?> of <?= esc((string) $pages) ?></span>
     <span class="flex gap-3">
         <?php if ($filters->page > 1): ?>
-            <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $filters->page - 1])) ?>">Previous</a>
+            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page - 1])) ?>">Previous</a>
         <?php endif; ?>
         <?php if ($filters->page < $pages): ?>
-            <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $filters->page + 1])) ?>">Next</a>
+            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page + 1])) ?>">Next</a>
         <?php endif; ?>
     </span>
 </nav>
@@ -148,7 +148,7 @@ $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text
         <input type="checkbox" name="show_ip" value="1" <?= $showIp ? 'checked' : '' ?>>
         Show the source IP of each entry (addresses are always recorded; this only controls whether they are shown and exported)
     </label>
-    <button type="submit" class="rounded border border-[#0040A6] px-3 py-1.5 text-sm font-semibold text-[#0040A6] hover:bg-[#0040A6]/10">Save</button>
+    <button type="submit" class="rounded border border-brand px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand/10">Save</button>
 </form>
 
 <?= $this->endSection() ?>

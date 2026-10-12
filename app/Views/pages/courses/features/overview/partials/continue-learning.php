@@ -12,12 +12,12 @@
 
 $state = $resume['state'];
 
-$button = 'inline-flex items-center gap-2 self-start rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]';
+$button = 'inline-flex items-center gap-2 self-start rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark';
 
 $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>';
 ?>
 
-<div class="flex flex-col gap-5 p-6 border border-[#0040A6]/30 bg-[#0040A6]/5 rounded-2xl">
+<div class="flex flex-col gap-5 p-6 border border-brand/30 bg-brand/5 rounded-2xl">
 
     <div class="flex items-center justify-between gap-3">
 
@@ -26,7 +26,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
         </span>
 
         <?php if (in_array($state, ['resume', 'next'], true)): ?>
-            <span class="rounded-full bg-[#E0E5F2] px-3 py-1 text-xs font-black text-[#002068]">
+            <span class="rounded-full bg-[#E0E5F2] px-3 py-1 text-xs font-black text-brand-dark">
                 <?= esc($resume['kind']) ?>
             </span>
         <?php endif; ?>
@@ -41,7 +41,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
                 <?= esc($resume['module']) ?> › <?= esc($resume['unit']) ?>
             </span>
 
-            <span class="text-2xl font-bold text-[#0040A6]">
+            <span class="text-2xl font-bold text-brand">
                 <?= esc($resume['title']) ?>
             </span>
 
@@ -53,7 +53,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
 
                 <div class="h-2 flex-1 bg-black/10 rounded-full overflow-clip">
                     <div
-                        class="h-full bg-[#0040A6] rounded-full"
+                        class="h-full bg-brand rounded-full"
                         style="width: <?= esc($resume['progress']) ?>%;"></div>
                 </div>
 
@@ -80,7 +80,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
 
         <div class="flex flex-col gap-1">
 
-            <span class="text-2xl font-bold text-[#0040A6]">
+            <span class="text-2xl font-bold text-brand">
                 You've finished every lesson
             </span>
 
@@ -94,7 +94,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
 
         <div class="flex flex-col gap-1">
 
-            <span class="text-2xl font-bold text-[#0040A6]">
+            <span class="text-2xl font-bold text-brand">
                 No lessons yet
             </span>
 

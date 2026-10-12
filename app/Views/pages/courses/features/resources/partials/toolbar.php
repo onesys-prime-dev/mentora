@@ -2,7 +2,7 @@
 
 <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between" data-resources-toolbar>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 lg:max-w-sm focus-within:border-[#0040A6]/50">
+    <label class="flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 lg:max-w-sm focus-within:border-brand/50">
         <svg class="h-4 w-4 shrink-0 text-[#767676]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
         </svg>
@@ -42,13 +42,13 @@
                 <button
                     type="button"
                     data-view="list"
-                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition <?= $view === 'list' ? 'bg-[#0040A6] text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
+                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition <?= $view === 'list' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
                     List
                 </button>
                 <button
                     type="button"
                     data-view="grid"
-                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition <?= $view === 'grid' ? 'bg-[#0040A6] text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
+                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition <?= $view === 'grid' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
                     Grid
                 </button>
             </div>

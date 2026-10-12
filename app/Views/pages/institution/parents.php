@@ -11,7 +11,7 @@
  * @var bool                       $parentCanEdit
  */
 $base    = 'institution/people/parents';
-$link    = 'text-sm font-semibold text-[#0040A6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50 rounded';
+$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 $filtered = $parentFilters['q'] !== '';
 $query    = array_filter(['q' => $parentFilters['q']], static fn ($v): bool => $v !== '');
 $url      = static fn (string $path): string => esc(site_url($base . $path));
@@ -22,7 +22,7 @@ foreach ($parentRows as $p) {
     $chips = '';
 
     foreach ($p['students'] as $s) {
-        $chips .= '<span class="inline-flex items-center gap-2 rounded-full bg-[#F2F7FF] px-3 py-1 text-xs" data-linked-student="' . esc((string) $s['link_id']) . '">' . esc($s['name']);
+        $chips .= '<span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1 text-xs" data-linked-student="' . esc((string) $s['link_id']) . '">' . esc($s['name']);
 
         if ($parentCanEdit) {
             $chips .= ' <button type="button" class="rounded font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
@@ -118,7 +118,7 @@ foreach ($parentRows as $p) {
     <?php
     $buttons = '<div class="flex flex-wrap items-center justify-end gap-3">'
         . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Link students</button></div>';
+        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Link students</button></div>';
 
     $form = '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
         . view('components/form-field', ['name' => 'students', 'label' => 'Student numbers or email addresses', 'type' => 'textarea', 'required' => true, 'help' => 'One per line, or separated by commas. They must be students of your institution.'], ['saveData' => false])

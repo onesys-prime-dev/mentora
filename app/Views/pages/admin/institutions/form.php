@@ -9,7 +9,7 @@
  */
 $isEdit = $institution !== null;
 $action = $isEdit ? site_url('admin/institutions/' . $institution['id']) : site_url('admin/institutions');
-$input  = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input  = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -17,14 +17,14 @@ $input  = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-lg">
-    <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
     <?php if (! $isEdit): ?>
         <?= view('pages/admin/partials/onboarding-steps', ['obStep' => 1]) ?>
     <?php endif; ?>
 
     <div class="mt-3 rounded-lg bg-white p-6 shadow">
-        <h1 class="text-xl font-bold text-[#0040A6]"><?= esc($formHeading) ?></h1>
+        <h1 class="text-xl font-bold text-brand"><?= esc($formHeading) ?></h1>
 
         <?php if (session()->has('error')): ?>
             <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
@@ -48,7 +48,7 @@ $input  = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
             </label>
 
             <div class="flex gap-3">
-                <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]"><?= $isEdit ? 'Save' : 'Add institution and continue' ?></button>
+                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"><?= $isEdit ? 'Save' : 'Add institution and continue' ?></button>
                 <a class="px-3 py-2 text-sm font-semibold text-gray-600 hover:underline" href="<?= site_url('admin/institutions') ?>">Cancel</a>
             </div>
         </form>

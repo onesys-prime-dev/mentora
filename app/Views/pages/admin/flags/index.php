@@ -6,7 +6,7 @@
  * @var array<string, array<string, mixed>>                       $flagGlobal   from FeatureFlags::inspect(null)
  * @var array<string, array{on: int, total: int, overrides: int}> $flagAdoption
  */
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 ?>
@@ -15,7 +15,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 
 <?= $this->section('content') ?>
 
-<h1 class="text-2xl font-bold text-[#0040A6]">Feature flags</h1>
+<h1 class="text-2xl font-bold text-brand">Feature flags</h1>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     A flag decides whether a feature is on. Here you set it for everyone. <strong>Off is a kill switch</strong>: the feature is off for every
     institution, whatever else says. <strong>On</strong> makes it on by default for everyone. To change a flag for one institution, open
@@ -50,7 +50,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
         <section class="rounded-lg bg-white p-5 shadow" data-flag="<?= esc($key) ?>" data-flag-state="<?= esc($state) ?>">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="font-mono text-base font-semibold text-[#0040A6]"><?= esc($key) ?></h2>
+                    <h2 class="font-mono text-base font-semibold text-brand"><?= esc($key) ?></h2>
                     <p class="mt-1 max-w-2xl text-sm text-gray-700"><?= esc($definition['description']) ?></p>
                 </div>
                 <div class="text-right text-sm text-gray-600">
@@ -80,7 +80,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
                         <input class="<?= $input ?>" type="text" name="note" maxlength="500" value="<?= esc((string) ($global['note'] ?? '')) ?>">
                     </label>
                     <div class="sm:col-span-2">
-                        <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Save</button>
+                        <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Save</button>
                     </div>
                 </form>
             </details>

@@ -22,10 +22,10 @@ $actions = $actions ?? '';
         <div class="flex items-center gap-4">
 
             <?php if ($icon !== null): ?>
-                <?= icon($icon, 'h-6 w-6 shrink-0 text-[#0040A6]') ?>
+                <?= icon($icon, 'h-6 w-6 shrink-0 text-brand') ?>
             <?php endif; ?>
 
-            <h2 class="text-2xl font-bold text-[#0040A6]"><?= esc($title) ?></h2>
+            <h2 class="text-2xl font-bold text-brand"><?= esc($title) ?></h2>
 
         </div>
 

@@ -19,7 +19,7 @@
 $filtered = $filtered ?? false;
 $clearUrl = $clearUrl ?? $action;
 
-$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[#0040A6]/60 focus:outline-none focus:ring-2 focus:ring-[#0040A6]/40';
+$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 ?>
 
 <form method="get" action="<?= esc($action) ?>" role="search" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4" data-toolbar>
@@ -40,9 +40,9 @@ $input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm fo
     <?php endforeach; ?>
 
     <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-4">
-        <button type="submit" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50">Apply</button>
+        <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Apply</button>
         <?php if ($filtered): ?>
-            <a class="px-2 py-2 text-sm font-semibold text-[#0040A6] hover:underline" href="<?= esc($clearUrl) ?>">Clear</a>
+            <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= esc($clearUrl) ?>">Clear</a>
         <?php endif; ?>
     </div>
 

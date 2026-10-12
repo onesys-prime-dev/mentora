@@ -10,7 +10,7 @@
             <div class="flex flex-col">
 
                 <h2
-                    class="text-2xl font-bold text-[#0040A6]"
+                    class="text-2xl font-bold text-brand"
                     data-learning-item-create-title>
 
                     Add Learning item
@@ -80,7 +80,7 @@
                     name="title"
                     autocomplete="off"
                     placeholder="e.g. Introduction to Programming"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     required>
 
             </div>
@@ -104,7 +104,7 @@
                             class="peer hidden"
                             checked>
 
-                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                             Reading
                         </div>
                     </label>
@@ -116,7 +116,7 @@
                             value="video"
                             class="peer hidden">
 
-                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                             Video
                         </div>
                     </label>
@@ -128,7 +128,7 @@
                             value="pdf"
                             class="peer hidden">
 
-                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                             PDF
                         </div>
                     </label>
@@ -140,7 +140,7 @@
                             value="link"
                             class="peer hidden">
 
-                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                             Link
                         </div>
                     </label>
@@ -152,7 +152,7 @@
                             value="assignment"
                             class="peer hidden">
 
-                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                             Assignment
                         </div>
                     </label>
@@ -164,7 +164,7 @@
                             value="quiz"
                             class="peer hidden">
 
-                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                             Quiz
                         </div>
                     </label>
@@ -176,7 +176,7 @@
                             value="discussion"
                             class="peer hidden">
 
-                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                        <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                             Discussion
                         </div>
                     </label>
@@ -203,7 +203,7 @@
                 type="submit"
                 form="learning-item-create-form"
                 data-learning-item-create-submit
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
 
                 Create Learning item
 
