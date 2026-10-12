@@ -74,3 +74,14 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - Removing keeps the row (`revoked`); assigning again reuses it. A chairperson's reach is derived live from these rows, so it follows on their next request.
 - Audit: `structure.chairperson_assigned|revoked`.
 - Giving someone the chairperson role is done on the People page (a later branch).
+
+## Terms
+
+`/institution/terms` (permission `terms.manage`; read-only while the institution is read-only). Academics tab next to Structure and Courses.
+
+- **Fields:** name (2 to 100 characters), academic year (`2026-2027`, the second year following the first, or just `2026`), start and end dates. Name and year together are unique within the institution.
+- **Dates:** real dates, the end after the start, and no longer than about two years (a typo guard).
+- **Overlaps are allowed, with a warning.** Schools do run overlapping terms: the page marks them with an "Overlaps" badge and the save message says which term. Starting a term while another is active warns the same way.
+- **Status here is upcoming <-> active.** An active term with students enrolled cannot go back to upcoming. **Completing a term is the "close a term" step** (a later branch), which also completes its offerings and enrolments; a completed term cannot be edited or reopened from here.
+- **Audit:** `structure.term_created|updated|started|set_upcoming`.
+- **Warnings:** a change that goes through but deserves a second look hands back warnings; `AnswersDialogForms` adds them to the message and the JSON (`warnings`).

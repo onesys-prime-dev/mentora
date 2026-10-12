@@ -108,6 +108,7 @@ foreach ($courseRows as $course) {
     <?= view('components/tabs', ['ariaLabel' => 'Academics', 'tabs' => [
         ['label' => 'Structure', 'href' => site_url('institution/structure')],
         ['label' => 'Courses', 'href' => site_url($base), 'active' => true],
+        ['label' => 'Terms', 'href' => site_url('institution/terms')],
     ]], ['saveData' => false]) ?>
 
     <?php if (! $courseCanEdit): ?>

@@ -170,3 +170,49 @@ test("TC-CRS-03 A chairperson is assigned to a sub-department and removed again"
 
     await expect(page.getByText("The chairperson was removed from the sub-department.")).toBeVisible();
 });
+
+test("TC-TRM-01 Adding an overlapping term goes through with a warning, and starting it warns again", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/terms");
+    await expect(page.getByRole("heading", { name: "Terms", level: 1 })).toBeVisible();
+
+    await page.getByRole("button", { name: "Add a term" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Add a term" });
+    await dialog.getByLabel("Name").fill("E2E Summer Term");
+    await dialog.getByLabel("Academic year").fill("2026-2027");
+    await dialog.getByLabel("Starts").fill("2026-10-01");
+    await dialog.getByLabel("Ends").fill("2026-11-30");
+    await dialog.getByRole("button", { name: "Add term" }).click();
+
+    // It overlaps the demo semester: allowed, but said.
+    await expect(page.getByText("The term was added.")).toBeVisible();
+    await expect(page.getByText(/overlaps .*That is allowed/)).toBeVisible();
+    await expect(page.locator("[data-overlap]").first()).toBeVisible();
+
+    const row = page.getByRole("row", { name: /E2E Summer Term/ });
+    await expect(row).toContainText("Upcoming");
+
+    await row.getByRole("button", { name: "Start term" }).click();
+
+    await expect(page.getByText(/Another term is also active/)).toBeVisible();
+    await expect(page.getByRole("row", { name: /E2E Summer Term/ })).toContainText("Active");
+});
+
+test("TC-TRM-02 A term that ends before it starts is refused beside the date", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/terms");
+
+    await page.getByRole("button", { name: "Add a term" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Add a term" });
+    await dialog.getByLabel("Name").fill("E2E Backwards Term");
+    await dialog.getByLabel("Academic year").fill("2027-2028");
+    await dialog.getByLabel("Starts").fill("2027-09-01");
+    await dialog.getByLabel("Ends").fill("2027-08-01");
+    await dialog.getByRole("button", { name: "Add term" }).click();
+
+    await expect(dialog.getByText("The term must end after it starts.")).toBeVisible();
+    await expect(dialog.getByLabel("Starts")).toHaveValue("2027-09-01");
+});
+
