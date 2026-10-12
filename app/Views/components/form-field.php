@@ -25,7 +25,11 @@ $maxlength   = $maxlength ?? null;
 $attrs       = $attrs ?? '';
 $span        = $span ?? '';
 
-$id       = 'f-' . preg_replace('/[^a-z0-9_-]/i', '-', $name) . '-' . substr(md5($name . $label), 0, 4);
+// A page can hold the same field twice (an add and an edit dialog): each needs its own id,
+// or the label of the second would point at the first.
+$GLOBALS['mentoraFormFieldSeq'] = ((int) ($GLOBALS['mentoraFormFieldSeq'] ?? 0)) + 1;
+
+$id       = 'f-' . preg_replace('/[^a-z0-9_-]/i', '-', $name) . '-' . $GLOBALS['mentoraFormFieldSeq'];
 $describe = trim(($help !== '' ? $id . '-help ' : '') . $id . '-error');
 
 $control = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-[#1A1C1E] placeholder:text-gray-400 '

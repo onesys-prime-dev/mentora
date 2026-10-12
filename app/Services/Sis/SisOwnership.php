@@ -10,8 +10,8 @@ namespace App\Services\Sis;
  * email (people), and code, title and units (courses), are not editable in
  * Mentora, because the next sync would put them back.
  *
- * (Enrolments are SIS-owned in the same way, but nothing in Mentora edits
- * them by hand yet, so there is nothing to lock there.)
+ * Enrolments are the SIS's too, when it knows both the course and the
+ * student: the next sync would undo a hand change.
  */
 class SisOwnership
 {
@@ -41,5 +41,11 @@ class SisOwnership
             ->where('sis_links.local_id', $userId)
             ->where('sis_connections.enabled', 1)
             ->countAllResults() > 0;
+    }
+
+    /** Whether the SIS owns this student's place in this course (it knows both). */
+    public function managesEnrolment(int $courseId, int $studentId): bool
+    {
+        return $this->managesCourse($courseId) && $this->managesPerson($studentId);
     }
 }

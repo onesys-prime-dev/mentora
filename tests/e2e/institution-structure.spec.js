@@ -269,3 +269,72 @@ test("TC-OFF-03 An offering with no students can be archived and brought back", 
     await expect(page.getByText("The offering is active again.")).toBeVisible();
     await expect(page.getByRole("row", { name: /E2E-A/ })).toContainText("Active");
 });
+
+test("TC-ENR-01 Students are enrolled by email from the roster, and listed with their place", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings?q=E2E-A");
+
+    await page.getByRole("row", { name: /E2E-A/ }).getByRole("link", { name: /Roster of/ }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("roster");
+    await expect(page.getByText("No students enrolled yet")).toBeVisible();
+
+    await page.getByRole("button", { name: "Add students" }).first().click();
+
+    const dialog = page.getByRole("dialog", { name: /Add students/ });
+    await dialog.getByLabel("Student numbers or email addresses").fill(`${accounts.student.email}\nnobody@mentora.test`);
+    await dialog.getByRole("button", { name: "Enrol students" }).click();
+
+    await expect(page.getByText(/1 student was enrolled/)).toBeVisible();
+    await expect(page.getByText(/nobody@mentora.test is not a student number or email/)).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(accounts.student.email) })).toContainText("Enrolled");
+});
+
+test("TC-ENR-02 A student can be dropped and the row stays with its new status", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings?q=E2E-A");
+    await page.getByRole("row", { name: /E2E-A/ }).getByRole("link", { name: /Roster of/ }).click();
+
+    await page.getByRole("row", { name: new RegExp(accounts.student.email) }).getByRole("button", { name: "Change status" }).click();
+
+    const dialog = page.getByRole("dialog", { name: /Change the place of/ });
+    await dialog.getByLabel("Status").selectOption("dropped");
+    await dialog.getByRole("button", { name: "Save" }).click();
+
+    await expect(page.getByText("The enrolment was changed to dropped.")).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(accounts.student.email) })).toContainText("Dropped");
+});
+
+test("TC-ENR-03 Going over capacity is refused until the box is ticked", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings?q=E2E-A");
+
+    // Shrink the section to nothing free: capacity 1 with one place taken needs a second student.
+    await page.getByRole("row", { name: /E2E-A/ }).getByRole("button", { name: "Edit" }).click();
+    const edit = page.locator("#offering-edit");
+    await edit.getByLabel("Capacity").fill("1");
+    await edit.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("The offering was saved.")).toBeVisible();
+
+    await page.getByRole("row", { name: /E2E-A/ }).getByRole("link", { name: /Roster of/ }).click();
+
+    // Re-enrol the dropped student (fills the one place), then try a second one.
+    await page.getByRole("button", { name: "Add students" }).first().click();
+    let dialog = page.getByRole("dialog", { name: /Add students/ });
+    await dialog.getByLabel("Student numbers or email addresses").fill(accounts.student.email);
+    await dialog.getByRole("button", { name: "Enrol students" }).click();
+    await expect(page.getByText(/earlier place was reinstated/)).toBeVisible();
+
+    await page.getByRole("button", { name: "Add students" }).first().click();
+    dialog = page.getByRole("dialog", { name: /Add students/ });
+    await dialog.getByLabel("Student numbers or email addresses").fill(accounts.student1.email);
+    await dialog.getByRole("button", { name: "Enrol students" }).click();
+
+    await expect(dialog.getByText(/over capacity by 1/)).toBeVisible();
+    await expect(dialog.getByLabel("Student numbers or email addresses")).toHaveValue(accounts.student1.email);
+
+    await dialog.getByLabel(/Enrol even if the section goes over capacity/).check();
+    await dialog.getByRole("button", { name: "Enrol students" }).click();
+
+    await expect(page.getByText(/1 student was enrolled/)).toBeVisible();
+    await expect(page.locator("[data-over-capacity]")).toContainText("Over capacity by 1");
+});

@@ -96,3 +96,16 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Archive, never delete.** An offering with enrolled students cannot be archived (the message gives the count). Reactivating needs an upcoming or active term.
 - **Instructors:** chosen from active people of the institution who hold the instructor role. Assigning and removing works on active offerings only; removing keeps past grades and the audit trail.
 - **Audit:** `structure.offering_created|updated|archived|reactivated|instructor_assigned|instructor_unassigned`.
+
+## Enrolment
+
+`/institution/enrolments/offering/{id}` (permission `enrolments.manage`; read-only while the institution is read-only). Reached from the "enrolled / capacity" figure on the Offerings list.
+
+- **Roster:** students of one offering with status (enrolled, dropped, withdrawn, completed), student number, email and since-date; search (name, number, email), status filter, sort, 25 per page, and a places bar that says "over capacity by N" when it is.
+- **Add students:** paste student numbers or email addresses, one per line or separated by commas (up to 500). They must be active people of the institution holding the student role. Anyone who cannot be enrolled is skipped and named with the reason ("is already enrolled", "has an inactive account", "does not hold the student role", "is managed by your student information system"); the rest go in together. If nobody can be enrolled the dialog says why, beside the field. A student with a dropped or withdrawn place is reinstated on the same row.
+- **Capacity:** a guide with a deliberate override. Going over it is refused with "over capacity by N" until the box "Enrol even if the section goes over capacity" is ticked; the same applies to bringing someone back. Nothing is partly added.
+- **Status:** change one place at a time. Dropping or withdrawing never deletes anything: the student's work and grades stay and the place can be reinstated.
+- **Only an active offering** takes changes; an archived or completed one shows its roster with a closed note.
+- **SIS:** while the connection is enabled, the place of a student the SIS knows in a course the SIS knows is the SIS's (`SisOwnership::managesEnrolment`): skipped on add, refused on status change, and marked "Managed by the SIS" on the roster. Students the SIS does not know can still be enrolled by hand.
+- **Seats** count student accounts, not places, so enrolling an existing student never uses one.
+- **Audit:** `enrolment.added|status_changed` (target type `enrollment`).
