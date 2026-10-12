@@ -338,3 +338,67 @@ test("TC-ENR-03 Going over capacity is refused until the box is ticked", async (
     await expect(page.getByText(/1 student was enrolled/)).toBeVisible();
     await expect(page.locator("[data-over-capacity]")).toContainText("Over capacity by 1");
 });
+
+test("TC-PPL-01 A person is invited from a dialog and waits on the Invitations tab", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/people");
+    await expect(page.getByRole("heading", { name: "People", level: 1 })).toBeVisible();
+
+    await page.getByRole("button", { name: "Invite a person" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Invite a person" });
+    await dialog.getByLabel("First name").fill("Pat");
+    await dialog.getByLabel("Last name").fill("Invitee");
+    await dialog.getByLabel("Email").fill("pat.invitee@mentora.test");
+    await dialog.getByLabel("Role").selectOption("instructor");
+    await dialog.getByRole("button", { name: "Send invitation" }).click();
+
+    await expect(page.getByText(/An invitation was emailed to pat.invitee@mentora.test/)).toBeVisible();
+
+    await page.getByRole("link", { name: /Invitations/ }).click();
+    await expect(page.getByRole("row", { name: /Pat Invitee/ })).toContainText("Waiting");
+});
+
+test("TC-PPL-02 An address that already has an account is refused in the dialog and what was typed stays", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/people");
+
+    await page.getByRole("button", { name: "Invite a person" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Invite a person" });
+    await dialog.getByLabel("First name").fill("Quinn");
+    await dialog.getByLabel("Last name").fill("Typo");
+    await dialog.getByLabel("Email").fill(accounts.student1.email);
+    await dialog.getByLabel("Role").selectOption("student");
+    await dialog.getByRole("button", { name: "Send invitation" }).click();
+
+    await expect(dialog.getByText(/already exists/)).toBeVisible();
+    await expect(dialog.getByLabel("First name")).toHaveValue("Quinn");
+});
+
+test("TC-PPL-03 Deactivating asks for the password in a dialog, then switches the account off", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto(`/institution/people?q=${encodeURIComponent(accounts.student4.email)}`);
+
+    const row = page.getByRole("row", { name: new RegExp(accounts.student4.email) });
+    await row.getByText("Actions").click();
+    await row.getByRole("button", { name: "Deactivate" }).click();
+    await page.getByRole("dialog", { name: /^Deactivate / }).getByRole("button", { name: "Deactivate" }).click();
+
+    const password = page.getByRole("dialog", { name: "Confirm your password" });
+    await password.getByLabel("Password").fill(accounts.institutionAdmin.password);
+    await password.getByRole("button", { name: "Confirm" }).click();
+
+    await expect(page.getByText(/The account was deactivated/)).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(accounts.student4.email) })).toContainText("Deactivated");
+});
+
+test("TC-PPL-04 The last administrator has no Deactivate action", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto(`/institution/people?q=${encodeURIComponent(accounts.institutionAdmin.email)}`);
+
+    const row = page.getByRole("row", { name: new RegExp(accounts.institutionAdmin.email) });
+    await expect(row).toContainText("(you)");
+    await row.getByText("Actions").click();
+    await expect(row.getByRole("button", { name: "Deactivate" })).toHaveCount(0);
+});

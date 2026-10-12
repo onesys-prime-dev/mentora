@@ -109,3 +109,21 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **SIS:** while the connection is enabled, the place of a student the SIS knows in a course the SIS knows is the SIS's (`SisOwnership::managesEnrolment`): skipped on add, refused on status change, and marked "Managed by the SIS" on the roster. Students the SIS does not know can still be enrolled by hand.
 - **Seats** count student accounts, not places, so enrolling an existing student never uses one.
 - **Audit:** `enrolment.added|status_changed` (target type `enrollment`).
+
+## People
+
+`/institution/people` (permission `people.view` to look and export, `people.manage` to change; read-only while the institution is read-only). The Apps tile "People".
+
+- **List:** people of the institution (never system administrators, never another institution), searchable by name or email, filterable by role and status, sortable, 25 per page, with a CSV export of the current filters or only the ticked rows. A person who also belongs to another institution is marked, and the other institution is never named.
+- **Invitations tab:** invitations still waiting or expired. Send again (the earlier link stops working) or cancel. The account is made when the person chooses a password. A student invitation takes a seat and is refused when none is left.
+- **Edit details:** name and email. Locked while the SIS manages the person.
+- **Roles:** student, instructor, chairperson, parent, institutional administrator; at least one. Never system administrator.
+- **Deactivate / reactivate / sign out everywhere / password link:** one at a time or (deactivate, reactivate) in bulk, reporting "8 done, 2 skipped" with the reasons. Reactivating a student needs a free seat.
+- **The password is asked for** (the same dialog as elsewhere) before changing roles, deactivating (single or bulk) and sending a password link.
+- **Protected:**
+  - The last active institutional administrator cannot be deactivated, demoted or removed, and nobody takes the administrator role from themselves.
+  - Nobody deactivates their own account.
+  - A person who also belongs to another institution has an account that is not this administrator's: only "Remove from my institution" is offered. Someone who belongs only here is deactivated instead.
+- **Chairperson assignments** end when the role is taken away, the person is deactivated or removed (history kept).
+- **Audit:** `user.updated|deactivated|reactivated|signed_out|roles_changed|password_reset_sent|membership_removed`, `invitation.created|resent|revoked`, `users.exported`.
+- **Not yet:** deans (their role arrives with the dean handout) and parent-student links (a later branch).
