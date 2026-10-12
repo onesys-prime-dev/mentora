@@ -41,3 +41,18 @@ Dangerous actions sit behind the `reauth` route filter, the same one the system 
 - Five wrong passwords in a row end the session.
 
 To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', 'reauth']]`.
+
+## Academic structure
+
+`/institution/structure` (permission `structure.manage`; the page is read-only while the institution is read-only).
+
+- **Levels:** departments -> sub-departments -> programs. Created, renamed, switched off and back on; nothing is deleted.
+- **Codes:** capital letters, numbers, dots, dashes, underscores (up to 50). Unique where the database says: departments within the institution, sub-departments within their department, programs within their sub-department.
+- **Switching off:** a node cannot be switched off while it has active children (sub-departments, programs, courses) or offerings in an active term; the message says which. Nothing is created under an inactive parent, and nothing is reactivated under one. Programs can also be archived.
+- **Departments** gained an `is_active` flag for this (existing ones stay active).
+- **Audit:** `structure.<level>_created|updated|deactivated|reactivated` (programs also `archived`), with old and new values.
+- **Forms:** short forms are one shared dialog per level, filled from the row's button (`data-dialog-*` attributes, see `resources/js/shared/dialog.js`). The server answers a dialog form with JSON (`422 {errors}` shown beside the field, or `{message, redirect}`) and a plain post with a redirect and a message, so it also works without JavaScript.
+
+## Demo account
+
+`institution.admin@mentora.test` / `Institution123!` (institutional administrator of institution 1), from `DemoUsersSeeder`.

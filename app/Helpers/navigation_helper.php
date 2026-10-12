@@ -42,7 +42,7 @@ if (! function_exists('global_apps')) {
         if ($role === 'institutional_admin') {
             return [
                 ['key' => 'dashboard',   'label' => 'Home',        'icon' => 'apps',     'url' => site_url('institution/dashboard')],
-                ['key' => 'academics',   'label' => 'Academics',   'icon' => 'hat',      'url' => null],
+                ['key' => 'academics',   'label' => 'Academics',   'icon' => 'hat',      'url' => site_url('institution/structure')],
                 ['key' => 'terms',       'label' => 'Terms',       'icon' => 'calendar', 'url' => null],
                 ['key' => 'people',      'label' => 'People',      'icon' => 'user',     'url' => null],
                 ['key' => 'reports',     'label' => 'Reports',     'icon' => 'score',    'url' => null],

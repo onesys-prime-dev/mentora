@@ -30,7 +30,7 @@ $width = match ($size) {
     <div class="flex max-h-full w-full flex-col gap-5 overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl <?= $width ?>" tabindex="-1">
 
         <div class="flex items-start justify-between gap-4">
-            <h2 id="<?= esc($id) ?>-title" class="text-lg font-bold text-[#0040A6]"><?= esc($title) ?></h2>
+            <h2 id="<?= esc($id) ?>-title" data-dialog-title class="text-lg font-bold text-[#0040A6]"><?= esc($title) ?></h2>
 
             <button type="button" data-dialog-close class="rounded p-1 text-[#A9A9A9] transition hover:text-[#646464] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50" aria-label="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">

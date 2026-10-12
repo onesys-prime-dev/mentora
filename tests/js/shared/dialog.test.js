@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyFieldErrors, askForPassword, bindDialogs, createDialog, focusableIn, nextFocus } from "../../../resources/js/shared/dialog.js";
+import { applyFieldErrors, askForPassword, bindDialogs, createDialog, fillDialog, focusableIn, nextFocus } from "../../../resources/js/shared/dialog.js";
 
 function page(html) {
     document.body.innerHTML = html;
@@ -376,5 +376,84 @@ describe("a guarded action", () => {
         bindDialogs();
 
         await expect(askForPassword()).resolves.toBe(false);
+    });
+});
+
+describe("a dialog shared by many rows", () => {
+    const SHARED = `
+        <button id="edit1" data-dialog-open="d" data-dialog-title="Edit Ann" data-dialog-label="Save"
+            data-dialog-action="/people/1" data-dialog-values='{"name":"Ann Lee","active":1,"note":null}'>Edit Ann</button>
+        <button id="add" data-dialog-open="d" data-dialog-title="Add a person" data-dialog-action="/people">Add</button>
+        <button id="ask" data-dialog-open="d" data-dialog-title="Deactivate Ann?" data-dialog-text="She is signed out." data-dialog-action="/people/1/off">Ask</button>
+        <div id="d" data-dialog hidden class="hidden">
+            <h2 data-dialog-title>Person</h2>
+            <p data-dialog-text>Default text.</p>
+            <form id="f" method="post" action="" data-dialog-form>
+                <div data-field="name"><input name="name"><p data-field-error hidden></p></div>
+                <input name="active" type="checkbox" value="1">
+                <input name="note">
+                <p data-form-error hidden></p>
+                <button type="submit" data-dialog-label>Create</button>
+            </form>
+        </div>`;
+
+    it("fills the form, title, label and address from the button that opened it", () => {
+        page(SHARED);
+        bindDialogs();
+
+        document.getElementById("edit1").click();
+
+        const form = document.getElementById("f");
+        expect(document.querySelector("#d [data-dialog-title]").textContent).toBe("Edit Ann");
+        expect(document.querySelector("#d [data-dialog-label]").textContent).toBe("Save");
+        expect(form.getAttribute("action")).toBe("/people/1");
+        expect(form.elements.namedItem("name").value).toBe("Ann Lee");
+        expect(form.elements.namedItem("active").checked).toBe(true);
+        expect(form.elements.namedItem("note").value).toBe("");
+        expect(document.getElementById("d").hidden).toBe(false);
+    });
+
+    it("empties the form when the next button has no values, and clears old errors", () => {
+        page(SHARED);
+        bindDialogs();
+        document.getElementById("edit1").click();
+        applyFieldErrors(document.getElementById("f"), { name: "Enter a name." }, "Nothing was saved.");
+
+        document.getElementById("d").click(); // close on the backdrop
+        document.getElementById("add").click();
+
+        const form = document.getElementById("f");
+        expect(form.elements.namedItem("name").value).toBe("");
+        expect(form.elements.namedItem("active").checked).toBe(false);
+        expect(form.getAttribute("action")).toBe("/people");
+        expect(form.querySelector("[data-field-error]").hidden).toBe(true);
+        expect(form.querySelector("[data-form-error]").hidden).toBe(true);
+    });
+
+    it("sets the sentence of a confirm", () => {
+        page(SHARED);
+        bindDialogs();
+
+        document.getElementById("ask").click();
+
+        expect(document.querySelector("#d [data-dialog-text]").textContent).toBe("She is signed out.");
+        expect(document.getElementById("f").getAttribute("action")).toBe("/people/1/off");
+    });
+
+    it("ignores values that are not JSON instead of failing", () => {
+        page(`
+            <button id="b" data-dialog-open="d" data-dialog-values="{broken">Open</button>
+            <div id="d" data-dialog hidden><form data-dialog-form><input name="name"></form></div>`);
+        bindDialogs();
+        document.querySelector("#d input").value = "typed earlier";
+
+        expect(() => document.getElementById("b").click()).not.toThrow();
+        expect(document.querySelector("#d input").value).toBe("");
+    });
+
+    it("does nothing without a trigger", () => {
+        page(SHARED);
+
+        expect(() => fillDialog(document.getElementById("d"), null)).not.toThrow();
     });
 });

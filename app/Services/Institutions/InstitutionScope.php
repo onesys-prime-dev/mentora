@@ -30,6 +30,21 @@ class InstitutionScope
     {
     }
 
+    /**
+     * A scope for an institution that is already known (a service that was
+     * handed the institution id by its controller, or a command), rather than
+     * one worked out from whoever is signed in.
+     */
+    public static function forInstitution(int $institutionId): self
+    {
+        $scope = new self();
+
+        $scope->institutionId = $institutionId;
+        $scope->resolved      = true;
+
+        return $scope;
+    }
+
     /** The administrator's institution, or null when they belong to none. */
     public function institutionId(): ?int
     {

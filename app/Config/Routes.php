@@ -443,6 +443,27 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
     $routes->group('', ['filter' => 'readonly'], function ($routes) {
         $routes->get('/', 'Institution\HomeController::index');
         $routes->get('dashboard', 'Institution\HomeController::index');
+
+        // Academic structure: departments, sub-departments, programs (structure.manage).
+        $routes->group('structure', ['filter' => 'permission:structure.manage'], function ($routes) {
+            $routes->get('/', 'Institution\StructureController::index');
+
+            $routes->post('departments', 'Institution\StructureController::createDepartment');
+            $routes->post('departments/(:num)', 'Institution\StructureController::updateDepartment/$1');
+            $routes->post('departments/(:num)/deactivate', 'Institution\StructureController::deactivateDepartment/$1');
+            $routes->post('departments/(:num)/reactivate', 'Institution\StructureController::reactivateDepartment/$1');
+            $routes->post('departments/(:num)/sub-departments', 'Institution\StructureController::createSubDepartment/$1');
+
+            $routes->post('sub-departments/(:num)', 'Institution\StructureController::updateSubDepartment/$1');
+            $routes->post('sub-departments/(:num)/deactivate', 'Institution\StructureController::deactivateSubDepartment/$1');
+            $routes->post('sub-departments/(:num)/reactivate', 'Institution\StructureController::reactivateSubDepartment/$1');
+            $routes->post('sub-departments/(:num)/programs', 'Institution\StructureController::createProgram/$1');
+
+            $routes->post('programs/(:num)', 'Institution\StructureController::updateProgram/$1');
+            $routes->post('programs/(:num)/deactivate', 'Institution\StructureController::deactivateProgram/$1');
+            $routes->post('programs/(:num)/archive', 'Institution\StructureController::archiveProgram/$1');
+            $routes->post('programs/(:num)/reactivate', 'Institution\StructureController::reactivateProgram/$1');
+        });
     });
 });
 
