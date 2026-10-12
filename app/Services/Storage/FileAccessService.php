@@ -59,6 +59,17 @@ class FileAccessService
 
         $db = db_connect();
 
+        // An institution's logo is shown to everyone who belongs to it.
+        $logo = $db->table('institutions')
+            ->join('institution_users', 'institution_users.institution_id = institutions.id')
+            ->where('institutions.logo_file_id', $fileId)
+            ->where('institution_users.user_id', $userId)
+            ->countAllResults();
+
+        if ($logo > 0) {
+            return true;
+        }
+
         $isInstructor = $user->inGroup('instructor');
 
         /*

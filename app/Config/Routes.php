@@ -500,6 +500,17 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/status', 'Institution\EnrolmentsController::setStatus/$1');
         });
 
+        // The institution's own settings: profile and branding (institution.settings).
+        $routes->group('settings', ['filter' => 'permission:institution.settings'], function ($routes) {
+            $routes->get('/', 'Institution\InstitutionSettingsController::profile');
+            $routes->post('/', 'Institution\InstitutionSettingsController::saveProfile');
+            $routes->get('branding', 'Institution\InstitutionSettingsController::branding');
+            $routes->post('branding', 'Institution\InstitutionSettingsController::saveBranding');
+            $routes->post('branding/reset', 'Institution\InstitutionSettingsController::resetBranding');
+            $routes->post('logo', 'Institution\InstitutionSettingsController::uploadLogo');
+            $routes->post('logo/remove', 'Institution\InstitutionSettingsController::removeLogo');
+        });
+
         // The institution's people (people.view to look, people.manage to change; the
         // dangerous ones also need the password).
         $routes->group('people', function ($routes) {

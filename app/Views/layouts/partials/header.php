@@ -52,6 +52,12 @@ $accountLinks = [
                 src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="">
         </a>
 
+        <?php $headerBranding = (new \App\Services\Institutions\InstitutionBranding())->forUser(auth()->user()); ?>
+        <?php if ($headerBranding !== null && $headerBranding['logoUrl'] !== null): ?>
+            <span class="mx-1 h-8 w-px self-center bg-black/10" aria-hidden="true"></span>
+            <img class="h-9 w-auto max-w-[10rem] self-center object-contain" src="<?= esc($headerBranding['logoUrl']) ?>" alt="<?= esc($headerBranding['name']) ?>" data-institution-logo>
+        <?php endif; ?>
+
         <div class="flex items-end">
             <span class="text-2xl font-semibold text-brand capitalize pb-px">
                 <?php if ($page !== null && $page !== 'dashboard'): ?>

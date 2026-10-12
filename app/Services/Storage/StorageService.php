@@ -28,6 +28,7 @@ class StorageService
         'ai_generation_batches' => 'source_file_id',
         'announcement_attachments' => 'file_id',
         'discussion_attachments' => 'file_id',
+        'institutions' => 'logo_file_id',
     ];
 
     /*

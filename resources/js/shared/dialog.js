@@ -520,6 +520,7 @@ export function bindDialogs(root = document) {
     return dialogs;
 }
 
-if (typeof document !== "undefined" && document.querySelector("[data-dialog]")) {
+// A page with a form that answers in place (no dialog around it) needs the binding too.
+if (typeof document !== "undefined" && document.querySelector("[data-dialog], form[data-dialog-form], form[data-reauth-form]")) {
     bindDialogs();
 }
