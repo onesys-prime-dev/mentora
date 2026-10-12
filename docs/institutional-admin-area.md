@@ -127,3 +127,14 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Chairperson assignments** end when the role is taken away, the person is deactivated or removed (history kept).
 - **Audit:** `user.updated|deactivated|reactivated|signed_out|roles_changed|password_reset_sent|membership_removed`, `invitation.created|resent|revoked`, `users.exported`.
 - **Not yet:** deans (their role arrives with the dean handout) and parent-student links (a later branch).
+
+## Parents
+
+`/institution/people/parents` (the third tab of People; `people.view` to look, `people.manage` to change; read-only while the institution is read-only).
+
+- **Table:** `parent_student_links` (institution, parent, student, who made it, when). One row per pair per institution, removed with the institution. A link is made or removed, never edited.
+- **Page:** the institution's accounts with the parent role, with their linked students as chips, searchable, 25 per page.
+- **Link students:** paste student numbers or email addresses (one per line or comma-separated). They must be students of the institution; anyone who cannot be linked is skipped and named with the reason, the rest are linked together. The same student can have several parents.
+- **Unlink:** from the chip, with a confirm that says nothing else about either person changes.
+- **Audit:** `parent.linked|unlinked` (target type `parent_link`).
+- **What a linked parent sees** is not decided yet; for now the link is the record that a later parent area will rely on.
