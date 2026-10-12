@@ -67,8 +67,11 @@ class GradingSchemeModel extends Model
 
     public function findSystemDefault(): ?array
     {
+        // The platform's template: an institution's own default scheme has no offering either,
+        // but belongs to an institution, so it is never mistaken for this one.
         return $this->where('is_system_default', 1)
             ->where('course_offering_id', null)
+            ->where('institution_id', null)
             ->first();
     }
 

@@ -657,3 +657,35 @@ test("TC-BRD-03 The profile is saved and the code stays as it was", async ({ pag
     await expect(page.getByLabel("Contact email")).toHaveValue("registrar@mentora.test");
     await expect(page.locator("[data-institution-code]")).toHaveText(code);
 });
+
+test("TC-ACD-01 Academic defaults are saved, weights that do not add up are refused, and they can be reset", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/settings/academic");
+    await expect(page.getByRole("heading", { name: "Institution settings", level: 1 })).toBeVisible();
+    await expect(page.getByText("Using the platform categories.")).toBeVisible();
+
+    await page.getByLabel("Passing mark (%)").fill("70");
+    await page.getByLabel("Category 1 name").fill("Projects");
+    await page.getByLabel("Category 1 weight").fill("60");
+    await page.getByLabel("Category 2 name").fill("Finals");
+    await page.getByLabel("Category 2 weight").fill("30");
+    await page.getByRole("button", { name: "Save academic defaults" }).click();
+
+    await expect(page.locator("[data-field='categories'] [data-field-error]")).toContainText("add up to 90");
+
+    await page.getByLabel("Category 2 weight").fill("40");
+    await page.getByLabel("No recent activity (days)").fill("21");
+    await page.getByLabel("Overdue grading (days)").fill("5");
+    await page.getByRole("button", { name: "Save academic defaults" }).click();
+
+    await expect(page.getByText("The academic defaults were saved.")).toBeVisible();
+    await expect(page.getByLabel("Passing mark (%)")).toHaveValue("70");
+    await expect(page.getByLabel("Category 1 name")).toHaveValue("Projects");
+    await expect(page.getByLabel("No recent activity (days)")).toHaveValue("21");
+
+    await page.getByRole("button", { name: "Go back to the platform values" }).click();
+
+    await expect(page.getByText("The academic defaults are back to the platform values.")).toBeVisible();
+    await expect(page.getByLabel("Category 1 name")).not.toHaveValue("Projects");
+    await expect(page.getByLabel("No recent activity (days)")).toHaveValue("14");
+});

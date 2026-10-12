@@ -76,7 +76,8 @@ class GradingSchemeService
 
     private function copyTemplate(int $offeringId): array
     {
-        $template = $this->schemeModel->findSystemDefault();
+        // The institution's own defaults where it set them, else the platform's template.
+        $template = (new \App\Services\Institutions\AcademicDefaults())->templateForOffering($offeringId);
 
         $now = date('Y-m-d H:i:s');
 
@@ -86,8 +87,8 @@ class GradingSchemeService
                 'course_offering_id' => $offeringId,
                 'name' => 'Grading Scheme',
                 'is_system_default' => 0,
-                'passing_percentage' => $template['passing_percentage'] ?? 75,
-                'grade_scale_id' => $template['grade_scale_id'] ?? null,
+                'passing_percentage' => $template['passing'],
+                'grade_scale_id' => $template['scaleId'],
                 // The template is valid as-is, so the copy is live straight away.
                 'status' => 'Published',
                 'needs_recalculation' => 0,
@@ -110,12 +111,12 @@ class GradingSchemeService
 
         $schemeId = (int) $this->schemeModel->getInsertID();
 
-        foreach ($template ? $this->categoryModel->listForScheme((int) $template['id']) : [] as $category) {
+        foreach ($template['categories'] as $category) {
             $this->categoryModel->insert([
                 'grading_scheme_id' => $schemeId,
                 'name' => $category['name'],
-                'weight_percentage' => $category['weight_percentage'],
-                'sort_order' => $category['sort_order'],
+                'weight_percentage' => $category['weight'],
+                'sort_order' => $category['sort'],
                 'created_at' => $now,
                 'updated_at' => $now,
                 'status' => 'Active',

@@ -6,6 +6,7 @@ namespace App\Controllers\Institution;
 
 use App\Controllers\BaseController;
 use App\Controllers\Institution\Concerns\AnswersDialogForms;
+use App\Services\Institutions\AcademicDefaults;
 use App\Services\Institutions\BrandColours;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionProfileService;
@@ -26,6 +27,8 @@ class InstitutionSettingsController extends BaseController
 
     private const BRANDING = 'institution/settings/branding';
 
+    private const ACADEMIC = 'institution/settings/academic';
+
     private InstitutionProfileService $profiles;
 
     public function __construct()
@@ -41,6 +44,21 @@ class InstitutionSettingsController extends BaseController
     public function branding(): string
     {
         return $this->show('branding');
+    }
+
+    public function academic(): string
+    {
+        return $this->show('academic');
+    }
+
+    public function saveAcademic(): ResponseInterface|RedirectResponse
+    {
+        return $this->run(fn (int $inst) => (new AcademicDefaults())->save($inst, $this->input(), auth()->user()), 'The academic defaults were saved.', self::ACADEMIC);
+    }
+
+    public function resetAcademic(): ResponseInterface|RedirectResponse
+    {
+        return $this->run(fn (int $inst) => (new AcademicDefaults())->reset($inst, auth()->user()), 'The academic defaults are back to the platform values.', self::ACADEMIC);
     }
 
     public function saveProfile(): ResponseInterface|RedirectResponse
@@ -79,7 +97,7 @@ class InstitutionSettingsController extends BaseController
             'user'          => auth()->user(),
             'settingsTab'   => $tab,
             'settingsData'  => $this->profiles->get($institutionId),
-            'settingsLogo'  => null,
+            'settingsAcademic' => $tab === 'academic' ? (new AcademicDefaults())->forInstitution($institutionId) : null,
             'settingsCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'settingsDefaults' => ['primary' => BrandColours::DEFAULT_PRIMARY, 'accent' => BrandColours::DEFAULT_ACCENT],
         ]);
