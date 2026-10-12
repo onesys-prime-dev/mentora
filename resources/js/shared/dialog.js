@@ -182,9 +182,103 @@ export function createDialog(el) {
         }
 
         opener = null;
+        el.dispatchEvent(new CustomEvent("dialog:close"));
     }
 
     return { open: openDialog, close, isOpen: () => open };
+}
+
+const REAUTH_ID = "reauth-dialog";
+
+/** Dialogs created by bindDialogs(), by id, so a script can open one. */
+const registry = new Map();
+
+/**
+ * Asks for the person's password in the page's confirm dialog
+ * (layouts/partials/reauth-dialog.php) and resolves true once it was
+ * confirmed, false if they closed it or there is no such dialog. This is how
+ * a guarded action resumes without losing what was typed.
+ *
+ * @returns {Promise<boolean>}
+ */
+export function askForPassword() {
+    const el = document.getElementById(REAUTH_ID);
+    const dialog = registry.get(REAUTH_ID);
+
+    if (!el || !dialog) {
+        return Promise.resolve(false);
+    }
+
+    return new Promise((resolve) => {
+        el.dataset.confirmed = "";
+
+        el.addEventListener(
+            "dialog:close",
+            () => {
+                const confirmed = el.dataset.confirmed === "1";
+                el.dataset.confirmed = "";
+                resolve(confirmed);
+            },
+            { once: true },
+        );
+
+        dialog.open();
+    });
+}
+
+/** @param {HTMLFormElement} form the password form inside the confirm dialog */
+function bindReauthForm(form) {
+    form.addEventListener("submit", async (event) => {
+        if (typeof fetch !== "function") {
+            return;
+        }
+
+        event.preventDefault();
+
+        const button = form.querySelector('button[type="submit"]');
+
+        if (button) {
+            button.disabled = true;
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+                credentials: "same-origin",
+            });
+
+            const body = await response.json().catch(() => ({}));
+
+            if (response.status === 401) {
+                window.location.assign("/login");
+
+                return;
+            }
+
+            if (response.ok) {
+                const el = form.closest("[data-dialog]");
+                form.reset();
+                applyFieldErrors(form, {});
+
+                if (el) {
+                    el.dataset.confirmed = "1";
+                    registry.get(el.id)?.close();
+                }
+
+                return;
+            }
+
+            applyFieldErrors(form, body.errors ?? {}, body.message ?? "");
+        } catch {
+            applyFieldErrors(form, {}, "We could not reach the server. Check your connection and try again.");
+        } finally {
+            if (button) {
+                button.disabled = false;
+            }
+        }
+    });
 }
 
 /** @param {HTMLFormElement} form */
@@ -201,7 +295,7 @@ function bindDialogForm(form) {
         buttons.forEach((b) => (b.disabled = true));
         form.setAttribute("aria-busy", "true");
 
-        try {
+        const send = async () => {
             const response = await fetch(form.action, {
                 method: (form.method || "post").toUpperCase(),
                 body: new FormData(form),
@@ -209,7 +303,22 @@ function bindDialogForm(form) {
                 credentials: "same-origin",
             });
 
-            const body = await response.json().catch(() => ({}));
+            return { response, body: await response.json().catch(() => ({})) };
+        };
+
+        try {
+            let { response, body } = await send();
+
+            // A guarded action: ask for the password, then do the same thing again, once.
+            if (response.status === 403 && body.error === "reauth_required" && (await askForPassword())) {
+                ({ response, body } = await send());
+            }
+
+            if (response.status === 403 && body.error === "reauth_required") {
+                applyFieldErrors(form, {}, "Confirm your password to continue. Nothing was saved.");
+
+                return;
+            }
 
             if (response.ok) {
                 if (body.message) {
@@ -246,7 +355,10 @@ export function bindDialogs(root = document) {
     const dialogs = new Map();
 
     for (const el of root.querySelectorAll("[data-dialog]")) {
-        dialogs.set(el.id, createDialog(el));
+        const dialog = createDialog(el);
+
+        dialogs.set(el.id, dialog);
+        registry.set(el.id, dialog);
     }
 
     for (const trigger of root.querySelectorAll("[data-dialog-open]")) {
@@ -270,6 +382,10 @@ export function bindDialogs(root = document) {
 
     for (const form of root.querySelectorAll("form[data-dialog-form]")) {
         bindDialogForm(form);
+    }
+
+    for (const form of root.querySelectorAll("form[data-reauth-form]")) {
+        bindReauthForm(form);
     }
 
     return dialogs;

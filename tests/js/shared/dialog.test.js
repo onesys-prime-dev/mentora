@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyFieldErrors, bindDialogs, createDialog, focusableIn, nextFocus } from "../../../resources/js/shared/dialog.js";
+import { applyFieldErrors, askForPassword, bindDialogs, createDialog, focusableIn, nextFocus } from "../../../resources/js/shared/dialog.js";
 
 function page(html) {
     document.body.innerHTML = html;
@@ -266,5 +266,115 @@ describe("a dialog form", () => {
         await submit();
 
         expect(assign).toHaveBeenCalledWith("/people");
+    });
+});
+
+describe("a guarded action", () => {
+    const PAGE = `
+        <form id="f" action="/guarded" method="post" data-dialog-form>
+            <div data-field="name"><input name="name" value="kept"><p data-field-error hidden></p></div>
+            <p data-form-error hidden></p>
+            <button type="submit" id="go">Save</button>
+        </form>
+        <div id="reauth-dialog" data-dialog hidden class="hidden">
+            <form id="rf" action="/reauth" method="post" data-reauth-form>
+                <div data-field="password"><input name="password" type="password" value="secret"><p data-field-error hidden></p></div>
+                <p data-form-error hidden></p>
+                <button type="button" data-dialog-close id="cancel">Cancel</button>
+                <button type="submit" id="confirm">Confirm</button>
+            </form>
+        </div>`;
+
+    const reply = (status, body) => ({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) });
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    const submit = async (id) => {
+        document.getElementById(id).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await tick();
+        await tick();
+    };
+
+    it("asks for the password, then repeats the action once it is confirmed", async () => {
+        page(PAGE);
+        bindDialogs();
+        const assign = vi.fn();
+        vi.stubGlobal("location", { assign, reload: vi.fn() });
+
+        const calls = [];
+        vi.stubGlobal("fetch", vi.fn(async (url) => {
+            calls.push(url);
+
+            if (url.includes("/guarded")) {
+                // Locked the first time, open after the password.
+                return calls.filter((u) => u.includes("/guarded")).length === 1
+                    ? reply(403, { error: "reauth_required" })
+                    : reply(200, { redirect: "/people", message: "Saved." });
+            }
+
+            return reply(200, { ok: true });
+        }));
+
+        await submit("f");
+
+        expect(document.getElementById("reauth-dialog").hidden).toBe(false);
+        expect(document.querySelector('#f input[name="name"]').value).toBe("kept");
+
+        await submit("rf");
+        await tick();
+
+        expect(calls.filter((u) => u.includes("/guarded"))).toHaveLength(2);
+        expect(document.getElementById("reauth-dialog").hidden).toBe(true);
+        expect(assign).toHaveBeenCalledWith("/people");
+    });
+
+    it("keeps the dialog open and shows the error for a wrong password", async () => {
+        page(PAGE);
+        bindDialogs();
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(reply(422, { errors: { password: "That password is not correct." } })));
+
+        const asked = askForPassword();
+        await submit("rf");
+
+        expect(document.getElementById("reauth-dialog").hidden).toBe(false);
+        expect(document.querySelector("#rf [data-field-error]").textContent).toBe("That password is not correct.");
+
+        document.getElementById("cancel").click();
+        await expect(asked).resolves.toBe(false);
+    });
+
+    it("does not repeat the action when the dialog is closed, and says nothing was saved", async () => {
+        page(PAGE);
+        bindDialogs();
+        const fetchMock = vi.fn().mockResolvedValue(reply(403, { error: "reauth_required" }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        const pending = submit("f");
+        await tick();
+        document.getElementById("cancel").click();
+        await pending;
+        await tick();
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(document.querySelector("#f [data-form-error]").textContent).toContain("Nothing was saved");
+    });
+
+    it("sends the person to sign in when the session was ended", async () => {
+        page(PAGE);
+        bindDialogs();
+        const assign = vi.fn();
+        vi.stubGlobal("location", { assign, reload: vi.fn() });
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(reply(401, { error: "signed_out" })));
+
+        askForPassword();
+        await submit("rf");
+
+        expect(assign).toHaveBeenCalledWith("/login");
+    });
+
+    it("resolves false when the page has no confirm dialog", async () => {
+        page(`<form id="f"></form>`);
+        bindDialogs();
+
+        await expect(askForPassword()).resolves.toBe(false);
     });
 });

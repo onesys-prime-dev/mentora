@@ -30,3 +30,14 @@ Added to `Config\AuthGroups`, granted to `institutional_admin` by default, edita
 ## Home
 
 Snapshot (people by role, courses, this term's offerings and enrolments) from `InstitutionSnapshot`, and plan usage from `PlanLimits::report()`.
+
+## Confirming the password
+
+Dangerous actions sit behind the `reauth` route filter, the same one the system administrator uses.
+
+- It lets a request through only while the person typed their password within the last 5 minutes (`ReauthService::WINDOW_SECONDS`).
+- Otherwise a normal request is sent to the confirm page (`/reauth`; the system administrator's stays `/admin/reauth`) and, once confirmed, returns to the page it came from. The return address can only be inside an administrative area (`admin/`, `institution/`), never another site.
+- A script (the on-page dialog) gets `403 {"error":"reauth_required"}` instead. `resources/js/shared/dialog.js` then opens the page's confirm dialog (`layouts/partials/reauth-dialog.php`, opt in with `'reauthDialog' => true`), posts the password as JSON, and repeats the original action with what was typed still in place. A closed dialog repeats nothing and says nothing was saved.
+- Five wrong passwords in a row end the session.
+
+To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', 'reauth']]`.

@@ -418,6 +418,12 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     });
 });
 
+// "Confirm your password" in front of dangerous actions, for every administrative area
+// except the system administrator's own address (admin/reauth, below). The ReauthFilter
+// sends people here.
+$routes->get('reauth', 'ReauthController::show', ['filter' => 'role:institutional_admin']);
+$routes->post('reauth', 'ReauthController::confirm', ['filter' => 'role:institutional_admin']);
+
 // A gallery of the shared interface components (app/Views/components), for the people
 // building and reviewing screens. Signed-in people only; not routed in production.
 if (ENVIRONMENT !== 'production') {
@@ -446,6 +452,7 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('dashboard', 'Admin\HomeController::index');
 
     // Password confirmation in front of dangerous actions (the `reauth` filter).
+    // Everyone else confirms at /reauth (above); the behaviour is shared.
     $routes->get('reauth', 'Admin\ReauthController::show');
     $routes->post('reauth', 'Admin\ReauthController::confirm');
 
