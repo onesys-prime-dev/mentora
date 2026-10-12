@@ -475,6 +475,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)', 'Institution\TermsController::update/$1');
             $routes->post('(:num)/start', 'Institution\TermsController::start/$1');
             $routes->post('(:num)/upcoming', 'Institution\TermsController::unstart/$1');
+            $routes->get('copy', 'Institution\OfferingCopyController::index');
+            $routes->post('copy', 'Institution\OfferingCopyController::copy');
             $routes->get('(:num)/close', 'Institution\TermCloseController::confirm/$1');
             $routes->post('(:num)/close', 'Institution\TermCloseController::close/$1', ['filter' => 'reauth']);
             $routes->post('(:num)/reopen', 'Institution\TermCloseController::reopen/$1', ['filter' => 'reauth']);

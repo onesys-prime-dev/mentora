@@ -513,3 +513,37 @@ test("TC-TRM-03 Closing a term says what changes first, asks for the password, a
     await expect(page.getByText(/The term is open again/)).toBeVisible();
     await expect(page.getByRole("row", { name: /E2E Closing Term/ })).toContainText("Active");
 });
+
+test("TC-CPY-01 Offerings are copied into a new term from a preview that says what comes across", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/terms");
+
+    await page.getByRole("button", { name: "Add a term" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a term" });
+    await dialog.getByLabel("Name").fill("E2E Copy Target");
+    await dialog.getByLabel("Academic year").fill("2032-2033");
+    await dialog.getByLabel("Starts").fill("2032-08-01");
+    await dialog.getByLabel("Ends").fill("2032-12-20");
+    await dialog.getByRole("button", { name: "Add term" }).click();
+    await expect(page.getByText("The term was added.")).toBeVisible();
+
+    await page.getByRole("link", { name: "Copy offerings" }).first().click();
+    await expect(page.getByRole("heading", { name: "Copy offerings", level: 1 })).toBeVisible();
+
+    const from = await page.locator("select[name='source'] option", { hasText: "Semester" }).first().getAttribute("value");
+    const into = await page.locator("select[name='target'] option", { hasText: "E2E Copy Target" }).first().getAttribute("value");
+
+    await page.getByLabel("Copy from").selectOption(from);
+    await page.getByLabel("Copy into").selectOption(into);
+    await page.getByRole("button", { name: "Show the offerings" }).click();
+
+    await expect(page.locator("[data-copy-summary]")).toContainText("Not copied:");
+    await expect(page.locator("[data-copy-summary]")).toContainText("students, enrolments, submissions");
+    await expect(page.locator("[data-copy-form] input[name='offerings[]']:checked").first()).toBeVisible();
+
+    await page.getByLabel("Also assign the same instructors").check();
+    await page.getByRole("button", { name: "Copy the ticked offerings" }).click();
+
+    await expect(page.getByText(/^Copied \d+ offering/)).toBeVisible();
+    await expect(page.getByText("No students, work or grades were copied.")).toBeVisible();
+});

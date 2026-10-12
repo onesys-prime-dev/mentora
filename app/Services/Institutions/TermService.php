@@ -40,6 +40,7 @@ class TermService
             ->select('t.*')
             ->select('(SELECT COUNT(*) FROM course_offerings o WHERE o.term_id = t.id AND o.status != \'archived\') AS offering_count', false)
             ->select('(SELECT COUNT(*) FROM enrollments e JOIN course_offerings o2 ON o2.id = e.offering_id WHERE o2.term_id = t.id AND e.status = \'enrolled\') AS enrolment_count', false)
+            ->select('(SELECT COUNT(*) FROM course_offerings o4 WHERE o4.copied_from_offering_id IN (SELECT o5.id FROM course_offerings o5 WHERE o5.term_id = t.id)) AS copied_count', false)
             ->where('t.institution_id', $institutionId)
             ->orderBy('t.start_date', 'DESC')
             ->orderBy('t.id', 'DESC')
