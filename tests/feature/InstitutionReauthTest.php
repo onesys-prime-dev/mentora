@@ -121,6 +121,22 @@ final class InstitutionReauthTest extends RouteTestCase
         $this->assertTrue($this->step('GET', 'institution/guarded')->isOK());
     }
 
+    public function testAGuardedPostReturnsToThePageItCameFromEvenWhenTheAddressShowsIndexPhp(): void
+    {
+        foreach ([site_url('institution/people/upload/abc'), base_url('institution/people/upload/abc')] as $referer) {
+            $this->withHeaders(['Referer' => $referer]);
+            $this->step('POST', 'institution/guarded', ['x' => '1']);
+
+            $location = $this->location('POST', 'reauth', ['password' => self::PASSWORD]);
+
+            $this->assertStringEndsWith('institution/people/upload/abc', $location, $referer);
+            $this->assertStringNotContainsString('index.php/index.php', $location);
+
+            unset($_SESSION['reauth']);
+            $this->withSession();
+        }
+    }
+
     public function testWithNothingPendingTheRightPasswordGoesToTheInstitutionHome(): void
     {
         $this->assertStringEndsWith('institution/dashboard', $this->location('POST', 'reauth', ['password' => self::PASSWORD]));

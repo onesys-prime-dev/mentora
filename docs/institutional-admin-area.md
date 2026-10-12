@@ -138,3 +138,15 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Unlink:** from the chip, with a confirm that says nothing else about either person changes.
 - **Audit:** `parent.linked|unlinked` (target type `parent_link`).
 - **What a linked parent sees** is not decided yet; for now the link is the record that a later parent area will rely on.
+
+## Uploading from CSV
+
+`/institution/people/upload` (People page, "Upload CSV"; `people.manage`; applying also needs the password; read-only while the institution is read-only). A three-step page: Upload, Preview, Apply.
+
+- **It is the SIS import with a different source.** `UploadConnections` stands in for a SIS connection and points `SisImporter` at the uploaded files, so the importer runs unchanged and gives the same guarantees: a preview that writes nothing and reports exactly what applying does, one transaction (all or nothing), and a bad row refused with its reason while the rest still go in. Same columns as the SIS files (`docs/sis-integration.md`); a header-only template of each file can be downloaded.
+- **Upload:** any of students, instructors, courses and enrolments (at least one). A file that cannot be used as a whole (missing column, empty, over 10 MB) is refused and nothing is kept.
+- **Preview:** counts to create, to update, unchanged and refused (as a whole and per file), the refused rows with their reason, and "Nothing has been saved yet". The files are kept for an hour under a random token inside the institution's own folder (`writable/csv-uploads/<institution>/<token>`, or `upload.csvPath`); another institution's token is a 404.
+- **Apply:** behind the password, uses the kept files, removes them, and says how many were created, updated and refused. If the run fails part-way nothing is changed and the files are kept for another try. Starting over removes them.
+- **Refused while a SIS connection is enabled:** one source of truth at a time (a connection that is configured but switched off does not block it).
+- **Records linked by an upload** are not SIS-owned and stay editable while no connection is enabled; if one is enabled later, matching external ids become SIS-owned as usual.
+- **History:** preview and apply appear in the run history like any import (trigger "manual"); applying is audited as `sis.import_run`.

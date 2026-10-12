@@ -175,6 +175,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         'backUrl'     => site_url('institution/dashboard'),
         'backLabel'   => 'Back to home',
         'actions'     => '<a class="' . $second . '" href="' . esc(site_url($base . '/export') . ($query === [] ? '' : '?' . http_build_query($query))) . '">Export CSV</a>'
+            . ($peopleCanEdit ? ' <a class="' . $second . '" href="' . esc(site_url($base . '/upload')) . '">Upload CSV</a>' : '')
             . ($peopleCanEdit ? ' <button type="button" class="' . $primary . '" data-dialog-open="person-invite" data-dialog-title="Invite a person" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Send invitation">Invite a person</button>' : ''),
     ], ['saveData' => false]) ?>
 

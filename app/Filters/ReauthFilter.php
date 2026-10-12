@@ -64,8 +64,15 @@ class ReauthFilter implements FilterInterface
     private function refererPath(IncomingRequest $request): string
     {
         $referer = $request->getHeaderLine('Referer');
-        $base    = base_url();
 
-        return str_starts_with($referer, $base) ? substr($referer, strlen($base)) : '';
+        // The address with the front controller in it (where the server shows index.php) first,
+        // then without: both are this site.
+        foreach ([site_url('/'), base_url()] as $base) {
+            if (str_starts_with($referer, $base)) {
+                return substr($referer, strlen($base));
+            }
+        }
+
+        return '';
     }
 }
