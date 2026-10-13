@@ -2,6 +2,8 @@
 
 The institutional administrator runs one institution inside Mentora. This page covers the foundation; each later branch adds its own section.
 
+How its screens are built (tokens, components, patterns and the acceptance list) is in [ui-guide.md](ui-guide.md).
+
 ## Scope
 
 - The institution is **decided on the server** from the signed-in person (`InstitutionScope`, built on `PlanLimits::institutionOf`), never from an id in the address or a form.
