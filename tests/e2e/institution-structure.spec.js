@@ -731,3 +731,37 @@ test("TC-SEC-01 An announcement reaches the whole institution, and stricter secu
     await page.getByRole("button", { name: "Save announcement" }).click();
     await expect(page.getByText("The announcement was removed.")).toBeVisible();
 });
+
+test("TC-RPT-01 Reports show the institution's courses, narrow by department, open a course and export CSV", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/reports");
+    await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
+
+    await expect(page.locator("[data-report-totals]")).toBeVisible();
+    await expect(page.locator("[data-report-distribution]")).toBeVisible();
+
+    const rows = page.getByRole("table", { name: "Courses compared" }).getByRole("row");
+    const all = await rows.count();
+    expect(all).toBeGreaterThan(1);
+
+    // The program list follows the department, and applying narrows the table.
+    const department = page.getByLabel("Department");
+    const options = await department.locator("option").count();
+    expect(options).toBeGreaterThan(1);
+
+    await department.selectOption({ index: 1 });
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/department=\d+/);
+
+    // A course opens with its own numbers and a way back that keeps the filters.
+    await page.getByRole("table", { name: "Courses compared" }).locator("tbody a").first().click();
+    await expect(page.locator("[data-report-totals]")).toBeVisible();
+    await expect(page.locator("[data-report-activity]")).toBeVisible();
+    await page.getByRole("link", { name: "Back to reports" }).click();
+    await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
+
+    // The CSV is a download, named for the report.
+    const download = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Course comparison (CSV)" }).click();
+    expect((await download).suggestedFilename()).toMatch(/^report-courses-\d{4}-\d{2}-\d{2}\.csv$/);
+});
