@@ -268,3 +268,13 @@ Any offering of the institution can be opened and looked at, as its instructor s
 - **Scope** is the institution's own: an offering of another institution is a 404 on the page and on every API address (`InstitutionCourseFilter`), and the files a course shares (its resources and announcement attachments) open only for its own institution's administrator. A student's submitted work never does.
 - **One rule in one place:** `CourseViewer` says who sees the instructor's view; the services that used to ask "is this the instructor?" for what to show now ask it, and `InstitutionCourseAccess` decides reach. Writes keep their own checks (the assigned instructor, the program's chairperson).
 - **Read-only institutions** can still be looked at; viewing was never a write.
+
+## Subscription
+
+`/institution/subscription` (permission `institution.settings`) shows the plan, its period, where it is on the timeline (running, expiring, grace, read-only, expired), usage against the plan's limits (seats, storage, AI generations) and the renewal history. It has no forms: plans and renewals belong to the system administrator. History rows never show who recorded them.
+
+## Integrations
+
+`/institution/integrations` (permission `sis.run`) shows the SIS connection's state and the run history, and lets the administrator preview or run an import and preview or send final grades. It calls the same services as the system administrator's page, so every rule holds (feature flag, enabled connection, read-only institution). A real import and a grade delivery ask for the password.
+
+What is never shown: the connection's settings, credentials, folder names (taken out of run messages and row issues) and connection tests.
