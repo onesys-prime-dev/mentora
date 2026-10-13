@@ -38,9 +38,9 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
     $routes->get('courses', 'Courses\CourseController::index');
-    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2');
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
-    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:student']);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:student']);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => 'coursemember:student']);
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
@@ -53,7 +53,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['coursemember:student', 'assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -102,9 +102,9 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
     $routes->get('courses', 'Courses\CourseController::index');
-    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2');
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
-    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:instructor']);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:instructor']);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => 'coursemember:instructor']);
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
@@ -120,7 +120,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['coursemember:instructor', 'assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -280,11 +280,11 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('course-comparison', 'Courses\MonitorProgramController::courseComparison');
         $routes->get('terms', 'Courses\MonitorProgramController::terms');
     });
-    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2');
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
-    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:chairperson']);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:chairperson']);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => 'coursemember:chairperson']);
 
-    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering', 'chairpersoncourseaudit']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['coursemember:chairperson', 'assessmentscope', 'closedoffering', 'chairpersoncourseaudit']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');

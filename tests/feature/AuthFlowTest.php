@@ -292,16 +292,17 @@ final class AuthFlowTest extends RouteTestCase
 
         $this->loggedInAs($stranger);
 
-        $body = json_decode(
+        // Not in the section: the course address itself is not found (CourseMembershipFilter).
+        try {
             $this->withBody(json_encode(['title' => 'Let me in']))
                 ->withHeaders(['Content-Type' => 'application/json'])
-                ->post("student/api/courses/{$offering}/discussions")
-                ->getJSON(),
-            true
-        );
+                ->post("student/api/courses/{$offering}/discussions");
 
-        $this->assertFalse($body['success']);
-        $this->assertSame('Not authorized.', $body['message']);
+            $this->fail('A student outside the section reached the course.');
+        } catch (CodeIgniter\Exceptions\PageNotFoundException) {
+            $this->addToAssertionCount(1);
+        }
+
         $this->assertSame(0, db_connect()->table('discussion_threads')->countAllResults());
     }
 

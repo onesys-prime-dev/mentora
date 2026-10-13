@@ -10,6 +10,7 @@ use App\Filters\ImpersonationFilter;
 use App\Filters\LoginLockoutFilter;
 use App\Filters\MaintenanceFilter;
 use App\Filters\ClosedOfferingFilter;
+use App\Filters\CourseMembershipFilter;
 use App\Filters\InstitutionCourseFilter;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
@@ -48,6 +49,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'assessmentscope' => AssessmentScope::class,
         'reauth'        => ReauthFilter::class,
+        'coursemember'  => CourseMembershipFilter::class,
         'ajaxredirect'  => AjaxRedirectFilter::class,
         'readonly'      => ReadOnlyFilter::class,
         'closedoffering' => ClosedOfferingFilter::class,
