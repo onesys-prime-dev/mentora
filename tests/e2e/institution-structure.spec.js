@@ -845,3 +845,17 @@ test("TC-VAS-01 An administrator views as a student with a reason and the passwo
     await expect(page).toHaveURL(/institution\/people/);
     await expect(page.getByRole("heading", { name: "People", level: 1 })).toBeVisible();
 });
+
+test("TC-HOM-01 Home lists what needs attention with a way to each, recent activity, and quick access", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/dashboard");
+
+    await expect(page.getByRole("heading", { name: "Needs attention", level: 2 })).toBeVisible();
+    await expect(page.locator("[data-section='attention']")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Recent activity", level: 2 })).toBeVisible();
+    await expect(page.locator("[data-section='activity'] [data-activity]").first()).toBeVisible();
+
+    // Quick access goes where it says.
+    await page.getByRole("link", { name: "See reports" }).click();
+    await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
+});

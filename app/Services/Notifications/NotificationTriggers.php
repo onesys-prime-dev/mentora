@@ -6,6 +6,7 @@ namespace App\Services\Notifications;
 
 use App\Models\Academic\InstitutionModel;
 use App\Services\Backup\BackupService;
+use App\Services\Institutions\InstitutionAttention;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Subscriptions\SubscriptionLifecycle;
 use App\Services\Subscriptions\SubscriptionStatus;
@@ -21,6 +22,11 @@ use DateTimeImmutable;
  * started and expired (urgent: also by email). Limits: 90% (in-app) and
  * 100% (urgent). System administrators hear about every institution; an
  * institution's own administrators hear about theirs.
+ *
+ * Only an institution's own administrators are told about its academic
+ * calendar (IA13): a term ending soon, offerings with no instructor once the
+ * term has started, and invitations about to lapse. A failed SIS run goes to
+ * them as well as to the system administrators.
  */
 class NotificationTriggers
 {
@@ -62,6 +68,7 @@ class NotificationTriggers
 
             $created += $this->subscription($status, (int) $row['id'], $institutionId, $name, $audience, $now);
             $created += $this->limits($limits->report($institutionId, $now), (string) $row['end_date'], $institutionId, $name, $audience, $now);
+            $created += $this->calendar($institutionId, $now);
         }
 
         return $created;
@@ -140,27 +147,79 @@ class NotificationTriggers
     }
 
     /**
+     * What the institution's administrators should know about its calendar and
+     * invitations: each once, so running again changes nothing.
+     */
+    private function calendar(int $institutionId, DateTimeImmutable $now): int
+    {
+        $audience     = $this->recipients->institutionAdministrators($institutionId);
+        $this->admins = [];
+
+        if ($audience === []) {
+            return 0;
+        }
+
+        $attention = new InstitutionAttention();
+        $created   = 0;
+        $term      = $attention->activeTerm($institutionId);
+        $today     = $now->format('Y-m-d');
+
+        if ($term !== null) {
+            $days = (int) (new DateTimeImmutable($today))->diff(new DateTimeImmutable($term['end_date']))->format('%r%a');
+
+            if ($days >= 0 && $days <= InstitutionAttention::TERM_DAYS) {
+                $when = $days === 0 ? 'today' : ($days === 1 ? 'tomorrow' : "in {$days} days");
+
+                $created += $this->tell($audience, 'term.ending', "{$term['name']} ends {$when}", 'Closing a term makes its offerings read-only and completes the enrolments still open. Do it when the grades are in.', false, "term-ending:{$term['id']}:{$term['end_date']}", $institutionId, '', $now, 'institution/terms');
+            }
+
+            // Once the term has started, whoever is still without an instructor is a problem to fix now.
+            if ($term['start_date'] <= $today) {
+                $unstaffed = $attention->offeringsWithoutInstructor($institutionId, $term['id']);
+
+                if ($unstaffed > 0) {
+                    $created += $this->tell($audience, 'term.no_instructor', $unstaffed === 1 ? '1 offering has no instructor' : "{$unstaffed} offerings have no instructor", "{$term['name']} has started. Nobody can teach or grade these offerings until an instructor is assigned.", false, "no-instructor:{$term['id']}", $institutionId, '', $now, 'institution/offerings?instructor=none&term=' . $term['id']);
+                }
+            }
+        }
+
+        $expiring = $attention->expiringInvitations($institutionId, $now);
+
+        if ($expiring !== []) {
+            $count = count($expiring);
+            $key   = md5(implode(',', array_column($expiring, 'id')));
+
+            $created += $this->tell($audience, 'invitation.expiring', $count === 1 ? '1 invitation is about to expire' : "{$count} invitations are about to expire", 'Their links stop working within ' . InstitutionAttention::INVITATION_DAYS . ' days. Send them again to give people more time.', false, "invites-expiring:{$institutionId}:{$key}", $institutionId, '', $now, 'institution/people?view=invitations');
+        }
+
+        return $created;
+    }
+
+    /**
      * A real SIS import or grade export failed (urgent: also by email). One
      * notification per failed run, so a retry that fails again is a new one.
+     * The institution's own administrators are told as well as ours.
      *
      * @param string $what "import" or "grade export"
      */
     public function syncFailed(int $institutionId, string $name, string $message, int $runId, DateTimeImmutable $now, string $what = 'import'): int
     {
         $this->admins = $this->recipients->administrators();
+        $audience     = array_values(array_unique(array_merge($this->admins, $this->recipients->institutionAdministrators($institutionId))));
 
-        return $this->tell($this->admins, 'sis.sync_failed', "SIS {$what} failed for {$name}", $message, true, "sis:failed:{$runId}", $institutionId, "admin/institutions/{$institutionId}/integrations", $now);
+        return $this->tell($audience, 'sis.sync_failed', "SIS {$what} failed for {$name}", $message, true, "sis:failed:{$runId}", $institutionId, "admin/institutions/{$institutionId}/integrations", $now, 'institution/integrations');
     }
 
     /**
      * @param list<int> $audience
      */
-    private function tell(array $audience, string $type, string $title, string $body, bool $urgent, string $key, ?int $institutionId, string $link, DateTimeImmutable $now): int
+    private function tell(array $audience, string $type, string $title, string $body, bool $urgent, string $key, ?int $institutionId, string $link, DateTimeImmutable $now, ?string $institutionLink = null): int
     {
         $created = 0;
 
         foreach ($audience as $userId) {
-            $to = in_array($userId, $this->admins, true) ? $link : null;
+            // The vendor's staff are sent into the admin area; an institution's people into their own.
+            $to = in_array($userId, $this->admins, true) ? $link : $institutionLink;
 
             if ($this->notifications->send($userId, $type, $title, $body, $urgent, $key, $institutionId, $to, $now)) {
                 $created++;
