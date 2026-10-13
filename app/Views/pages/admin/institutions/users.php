@@ -7,8 +7,6 @@
  * @var list<array<string, mixed>> $peopleInvitations newest first, each with `status`
  * @var array<string, mixed>       $peopleValues      first_name, last_name, email as typed
  */
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
-$label = 'flex flex-col gap-1 text-xs font-medium text-[#646464]';
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
 $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
@@ -98,21 +96,18 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
     <?php endif; ?>
 
     <?php if ($isPending): ?>
-        <p class="mt-4 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">The administrator is invited as the last step of onboarding. <a class="font-semibold underline" href="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/onboarding') ?>">Continue onboarding</a></p>
+        <div class="mt-4">
+            <?= view('components/alert', ['tone' => 'warning', 'text' => 'The administrator is invited as the last step of onboarding.'], ['saveData' => false]) ?>
+            <p class="mt-2 text-sm"><a class="font-semibold text-brand underline" href="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/onboarding') ?>">Continue onboarding</a></p>
+        </div>
     <?php elseif (! $isDeleted): ?>
         <details class="mt-4">
             <summary class="<?= $btn ?> inline-block cursor-pointer border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50">Invite an administrator</summary>
             <form method="post" action="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/invitations') ?>" class="mt-3 grid max-w-2xl gap-3 sm:grid-cols-2">
                 <?= csrf_field() ?>
-                <label class="<?= $label ?>">First name
-                    <input class="<?= $input ?>" type="text" name="first_name" value="<?= esc((string) $peopleValues['first_name']) ?>" maxlength="100" required>
-                </label>
-                <label class="<?= $label ?>">Last name
-                    <input class="<?= $input ?>" type="text" name="last_name" value="<?= esc((string) $peopleValues['last_name']) ?>" maxlength="100" required>
-                </label>
-                <label class="<?= $label ?> sm:col-span-2">Email address
-                    <input class="<?= $input ?>" type="email" name="email" value="<?= esc((string) $peopleValues['email']) ?>" maxlength="254" required>
-                </label>
+                <?= view('components/form-field', ['name' => 'first_name', 'label' => 'First name', 'value' => (string) $peopleValues['first_name'], 'maxlength' => 100, 'required' => true], ['saveData' => false]) ?>
+                <?= view('components/form-field', ['name' => 'last_name', 'label' => 'Last name', 'value' => (string) $peopleValues['last_name'], 'maxlength' => 100, 'required' => true], ['saveData' => false]) ?>
+                <?= view('components/form-field', ['name' => 'email', 'label' => 'Email address', 'type' => 'email', 'value' => (string) $peopleValues['email'], 'maxlength' => 254, 'required' => true, 'span' => 'sm:col-span-2'], ['saveData' => false]) ?>
                 <div class="sm:col-span-2">
                     <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Send invitation</button>
                 </div>

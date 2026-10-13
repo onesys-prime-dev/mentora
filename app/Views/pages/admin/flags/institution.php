@@ -6,8 +6,6 @@
  * @var array<string, array{description: string, default: bool}> $flagDefs
  * @var array<string, array<string, mixed>>                       $flagDetail   from FeatureFlags::inspect($id)
  */
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
-$label = 'flex flex-col gap-1 text-xs font-medium text-[#646464]';
 $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $reasons = [
@@ -83,19 +81,9 @@ $reasons = [
                 <summary class="<?= $btn ?> inline-block cursor-pointer border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50">Override for this institution</summary>
                 <form method="post" action="<?= site_url('admin/institutions/' . $flagInstitution['id'] . '/flags/' . $key) ?>" class="mt-3 grid max-w-2xl gap-3 sm:grid-cols-2">
                     <?= csrf_field() ?>
-                    <label class="<?= $label ?>">For this institution
-                        <select class="<?= $input ?>" name="state">
-                            <option value="default" <?= $state === 'default' ? 'selected' : '' ?>>No override (follow plan and default)</option>
-                            <option value="on" <?= $state === 'on' ? 'selected' : '' ?>>On</option>
-                            <option value="off" <?= $state === 'off' ? 'selected' : '' ?>>Off</option>
-                        </select>
-                    </label>
-                    <label class="<?= $label ?>">Last day <span class="font-normal text-[#646464]">(optional)</span>
-                        <input class="<?= $input ?>" type="date" name="ends_on" value="<?= esc((string) ($override['ends_on'] ?? '')) ?>">
-                    </label>
-                    <label class="<?= $label ?> sm:col-span-2">Note <span class="font-normal text-[#646464]">(required when turning it on or off)</span>
-                        <input class="<?= $input ?>" type="text" name="note" maxlength="500" value="<?= esc((string) ($override['note'] ?? '')) ?>">
-                    </label>
+                    <?= view('components/form-field', ['name' => 'state', 'label' => 'For this institution', 'type' => 'select', 'options' => ['default' => 'No override (follow plan and default)', 'on' => 'On', 'off' => 'Off'], 'value' => (string) $state], ['saveData' => false]) ?>
+                    <?= view('components/form-field', ['name' => 'ends_on', 'label' => 'Last day (optional)', 'type' => 'date', 'value' => (string) ($override['ends_on'] ?? '')], ['saveData' => false]) ?>
+                    <?= view('components/form-field', ['name' => 'note', 'label' => 'Note', 'value' => (string) ($override['note'] ?? ''), 'maxlength' => 500, 'span' => 'sm:col-span-2', 'help' => 'Required when turning it on or off.'], ['saveData' => false]) ?>
                     <div class="sm:col-span-2">
                         <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
                     </div>
