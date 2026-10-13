@@ -440,6 +440,10 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
     $routes->post('export', 'Institution\ExportController::create');
     $routes->get('export/(:num)', 'Institution\ExportController::download/$1');
 
+    // Viewing as one of the institution's people (view only). Not behind `readonly`: it changes
+    // nothing, so it works in a read-only institution too. The password is asked first.
+    $routes->post('view-as/(:num)', 'Institution\ViewAsController::start/$1', ['filter' => ['permission:institution.impersonate', 'reauth']]);
+
     $routes->group('', ['filter' => 'readonly'], function ($routes) {
         $routes->get('/', 'Institution\HomeController::index');
         $routes->get('dashboard', 'Institution\HomeController::index');

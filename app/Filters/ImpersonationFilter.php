@@ -14,7 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 /**
  * Runs before every request (Config\Filters, globals, ahead of accountstate).
  *
- * While a system administrator is viewing as someone it makes the view
+ * While an administrator is viewing as someone it makes the view
  * strictly read-only and time-limited, on the server, whatever the page or a
  * script sends:
  *  - anything but GET, HEAD and OPTIONS is refused, except leaving the view;
@@ -47,7 +47,7 @@ class ImpersonationFilter implements FilterInterface
             return null; // the account check that follows deals with the administrator
         }
 
-        $back = 'admin/users/' . $state['target_id'];
+        $back = Impersonation::returnPath($state);
 
         if ((new AccountControl())->isDeactivated($state['target_id'])) {
             $impersonation->stop('account deactivated');

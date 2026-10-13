@@ -26,9 +26,10 @@ use CodeIgniter\HTTP\ResponseInterface;
 trait AnswersDialogForms
 {
     /**
-     * @param callable(int): mixed $change given the administrator's institution id
+     * @param callable(int): mixed $change    given the administrator's institution id
+     * @param ?string              $successTo where to go once it worked, when that is not where to go back to
      */
-    private function run(callable $change, string|\Closure $success, string $backTo): ResponseInterface|RedirectResponse
+    private function run(callable $change, string|\Closure $success, string $backTo, ?string $successTo = null): ResponseInterface|RedirectResponse
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
         $wantsJson     = $this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json');
@@ -43,6 +44,8 @@ trait AnswersDialogForms
 
             return redirect()->to($back)->withInput()->with('error', $e->getMessage());
         }
+
+        $next = $successTo === null ? $back : site_url($successTo);
 
         // A change may hand back warnings (it went through, but the person should know something).
         $warnings = [];
@@ -59,10 +62,10 @@ trait AnswersDialogForms
             // The dialog's script goes to the list next; the message is waiting there.
             session()->setFlashdata('message', $message);
 
-            return $this->response->setJSON(['message' => $message, 'warnings' => $warnings, 'redirect' => $back]);
+            return $this->response->setJSON(['message' => $message, 'warnings' => $warnings, 'redirect' => $next]);
         }
 
-        return redirect()->to($back)->with('message', $message);
+        return redirect()->to($next)->with('message', $message);
     }
 
     /** @return array<string, mixed> */

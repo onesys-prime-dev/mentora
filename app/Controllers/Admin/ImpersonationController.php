@@ -30,12 +30,15 @@ class ImpersonationController extends BaseController
 
     public function stop(): RedirectResponse
     {
-        $target = (new Impersonation())->stop('stopped');
+        $state = Impersonation::current();
+        $back  = $state === null ? null : Impersonation::returnPath($state);
 
-        if ($target === null) {
+        (new Impersonation())->stop('stopped');
+
+        if ($back === null) {
             return redirect()->to('/');
         }
 
-        return redirect()->to("admin/users/{$target}")->with('message', 'You are back as yourself.');
+        return redirect()->to($back)->with('message', 'You are back as yourself.');
     }
 }

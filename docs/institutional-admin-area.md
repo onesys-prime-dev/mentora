@@ -289,3 +289,15 @@ What it holds and what it never shows:
 - What the vendor's staff did about the institution is listed under the name "Mentora support", not their accounts; a view-as by them shows the same name.
 - Before and after values of changes to the SIS connection's settings and of backups are kept by the vendor ("Kept by Mentora"), as the integrations page keeps folders and credentials out.
 - Cells that start with `=`, `+`, `-` or `@` are defused in the CSV.
+
+## Viewing as one of the institution's people
+
+On the People page, `Actions` has `View as this person` (permission `institution.impersonate`). It asks for a reason (5 to 500 characters, kept in the audit log) and the administrator's password, then shows the site as that person sees it.
+
+- **View only.** Every request that would change something is refused on the server, whatever the page or a script sends; reading works. A banner on every page names the person, the minutes left and the reason, with `Exit view`. Signing out also just ends the view.
+- **Time limited** by the platform's `impersonationMinutes` setting. When it passes, the next request ends the view and returns to People.
+- **Who can be viewed:** a live account of this institution: student, instructor, chairperson or parent. Never an administrator of any kind, never oneself, never a person who is also at another institution (the view would show that institution's data), and a person of another institution is answered as one who does not exist.
+- **Works in a read-only institution**, since it changes nothing.
+- **Recorded:** start and end are audit entries (reason, time watched), and every entry made in between carries the administrator as impersonator, which the audit page shows as "viewing as, by ...".
+
+The service is the system administrator's own (`Impersonation`), extended with the institution rules; the system administrator's behaviour is unchanged.
