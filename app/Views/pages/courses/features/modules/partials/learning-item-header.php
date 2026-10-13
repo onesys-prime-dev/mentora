@@ -5,7 +5,7 @@ $userRole = esc($user->getGroups()[0]);
 <!-- header -->
 <header class="flex flex-col gap-2 py-2">
     
-    <span class="text-3xl font-bold text-[#0040A6]">
+    <span class="text-3xl font-bold text-brand">
         <?= esc($currentItem['title']) ?>
     </span>
 
@@ -35,7 +35,7 @@ $userRole = esc($user->getGroups()[0]);
 
             <span
                 data-completion-badge="pending"
-                class="px-3 py-1 rounded-full bg-[#E0E5F2] text-[#002068] text-xs font-black <?= $isCompleted ? 'hidden' : '' ?>">
+                class="px-3 py-1 rounded-full bg-[#E0E5F2] text-brand-dark text-xs font-black <?= $isCompleted ? 'hidden' : '' ?>">
                 <?= !empty($currentLock) ? 'Locked' : 'Not Yet Completed' ?>
             </span>
         
@@ -44,7 +44,7 @@ $userRole = esc($user->getGroups()[0]);
             <span
                 class="capitalize rounded-full px-3 py-1 text-xs font-black
                     <?= $currentItem['status'] === 'published'
-                        ? 'bg-[#E0E5F2] text-[#002068]'
+                        ? 'bg-[#E0E5F2] text-brand-dark'
                         : 'bg-gray-100 text-gray-600' ?>">
                 <?= esc($currentItem['status']) ?>
             </span>

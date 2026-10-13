@@ -101,6 +101,8 @@ final class AddDepartmentsAndSubDepartmentsMigrationTest extends DatabaseTestCas
 
                 $migration->up();
             }
+
+            $this->restoreLaterColumns();
         }
     }
 
@@ -234,6 +236,20 @@ final class AddDepartmentsAndSubDepartmentsMigrationTest extends DatabaseTestCas
             $this->assertFalse($this->tableExistsNow('departments'));
         } finally {
             $migration->up();
+            $this->restoreLaterColumns();
+        }
+    }
+
+    /**
+     * Re-creating `departments` from this older migration leaves out what later migrations
+     * added to it; put that back so the tests that run after this one see the real schema.
+     */
+    private function restoreLaterColumns(): void
+    {
+        $db = db_connect();
+
+        if ($db->query("SHOW COLUMNS FROM departments LIKE 'is_active'")->getNumRows() === 0) {
+            $db->query('ALTER TABLE departments ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER established_year');
         }
     }
 }

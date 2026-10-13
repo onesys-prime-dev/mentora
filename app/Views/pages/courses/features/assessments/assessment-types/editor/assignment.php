@@ -6,7 +6,7 @@
         <div class="flex items-center gap-3">
             <?= icon('info', 'h-5 w-5') ?>
 
-            <span class="font-bold text-lg text-[#0040A6]">
+            <span class="font-bold text-lg text-brand">
                 Instructions
             </span>
         </div>
@@ -21,8 +21,8 @@
 
                 <button
                     type="button"
-                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#0040A6] transition-colors
-                        hover:bg-[#0040A6]/10"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors
+                        hover:bg-brand/10"
                     data-edit-instructions>
 
                     <svg
@@ -64,7 +64,7 @@
         <div class="flex items-center gap-3">
             <?= icon('info', 'h-5 w-5') ?>
 
-            <span class="font-bold text-lg text-[#0040A6]">
+            <span class="font-bold text-lg text-brand">
                 Grading Rubrics
             </span>
         </div>
@@ -82,7 +82,7 @@
                     type="button"
                     class="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-[#DBDBDB] bg-[#F9F9FC]
                            text-sm font-semibold text-[#646464] transition-colors
-                        hover:border-[#0040A6] hover:bg-[#0040A6]/5 hover:text-[#0040A6]"
+                        hover:border-brand hover:bg-brand/5 hover:text-brand"
                     data-use-existing-rubric>
 
                     <svg
@@ -108,7 +108,7 @@
                     type="button"
                     class="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-[#DBDBDB] bg-[#F9F9FC]
                            text-sm font-semibold text-[#646464] transition-colors
-                        hover:border-[#0040A6] hover:bg-[#0040A6]/5 hover:text-[#0040A6]"
+                        hover:border-brand hover:bg-brand/5 hover:text-brand"
                     data-create-new-rubric>
 
                     <svg
@@ -140,7 +140,7 @@
                     type="button"
                     title="Remove rubric" aria-label="Remove rubric"
                     class="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-[#DBDBDB] bg-white text-[#646464] shadow-sm transition-colors
-                        hover:bg-[#0040A6] hover:text-white hover:border-[#0040A6]"
+                        hover:bg-brand hover:text-white hover:border-brand"
                     data-unselect-rubric
                     data-rubric-id="<?= esc($currentRubric['id'] ?? '') ?>">
 
@@ -169,7 +169,7 @@
 
                         <div class="flex flex-col gap-2 rounded-xl bg-[#F2F2F2] p-4">
 
-                            <span class="font-bold text-md text-[#0040A6]">
+                            <span class="font-bold text-md text-brand">
                                 <?= esc((int) $criterion['max_points']) ?> pts
                             </span>
 
@@ -191,8 +191,8 @@
 
                     <button
                         type="button"
-                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#0040A6] transition-colors
-                            hover:bg-[#0040A6]/10"
+                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors
+                            hover:bg-brand/10"
                         data-edit-rubric
                         data-rubric-id="<?= esc($currentRubric['id'] ?? '') ?>">
 
@@ -247,7 +247,7 @@
             <div class="flex items-center gap-3">
                 <?= icon('work', 'h-5 w-5') ?>
 
-                <span class="font-bold text-lg text-[#0040A6]">
+                <span class="font-bold text-lg text-brand">
                     Your Work
                 </span>
             </div>
@@ -255,8 +255,8 @@
             <button
                 type="button"
                 title="Configure submission types" aria-label="Configure submission types"
-                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#0040A6] transition-colors
-                    hover:bg-[#0040A6]/10"
+                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors
+                    hover:bg-brand/10"
                 data-configure-submission-type>
 
                 <svg
@@ -311,9 +311,9 @@
 
                         <label
                             class="cursor-pointer border-r border-[#DBDBDB] px-4 py-2 text-sm font-semibold text-[#8A8A8A] bg-[#F2F2F4] transition-colors
-                                hover:text-[#0040A6]
+                                hover:text-brand
                                 group-has-[#work-tab-upload:checked]/work-tabs:bg-white
-                                group-has-[#work-tab-upload:checked]/work-tabs:text-[#0040A6]">
+                                group-has-[#work-tab-upload:checked]/work-tabs:text-brand">
 
                             <input
                                 type="radio"
@@ -333,9 +333,9 @@
 
                         <label
                             class="cursor-pointer border-r border-[#DBDBDB] px-4 py-2 text-sm font-semibold text-[#8A8A8A] bg-[#F2F2F4] transition-colors
-                                hover:text-[#0040A6]
+                                hover:text-brand
                                 group-has-[#work-tab-text:checked]/work-tabs:bg-white
-                                group-has-[#work-tab-text:checked]/work-tabs:text-[#0040A6]">
+                                group-has-[#work-tab-text:checked]/work-tabs:text-brand">
 
                             <input
                                 type="radio"
@@ -355,9 +355,9 @@
 
                         <label
                             class="cursor-pointer px-4 py-2 text-sm font-semibold text-[#8A8A8A] bg-[#F2F2F4] transition-colors
-                                hover:text-[#0040A6]
+                                hover:text-brand
                                 group-has-[#work-tab-link:checked]/work-tabs:bg-white
-                                group-has-[#work-tab-link:checked]/work-tabs:text-[#0040A6]">
+                                group-has-[#work-tab-link:checked]/work-tabs:text-brand">
 
                             <input
                                 type="radio"
@@ -420,7 +420,7 @@
                         <input
                             type="url"
                             placeholder="https://..."
-                            class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#646464] outline-none transition focus:border-[#0040A6]">
+                            class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#646464] outline-none transition focus:border-brand">
 
                         <span class="text-xs text-[#767676]">
                             Paste a link to your work (e.g. Google Docs, GitHub).

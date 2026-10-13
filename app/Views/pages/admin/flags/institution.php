@@ -6,7 +6,7 @@
  * @var array<string, array{description: string, default: bool}> $flagDefs
  * @var array<string, array<string, mixed>>                       $flagDetail   from FeatureFlags::inspect($id)
  */
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 
@@ -24,9 +24,9 @@ $reasons = [
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
-<h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Feature flags</h1>
+<h1 class="mt-2 text-2xl font-bold text-brand">Feature flags</h1>
 <p class="mt-1 text-sm text-gray-600"><?= esc($flagInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($flagInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $flagInstitution, 'tabActive' => 'flags']) ?>
@@ -57,7 +57,7 @@ $reasons = [
         <section class="rounded-lg bg-white p-5 shadow" data-flag="<?= esc($key) ?>" data-flag-enabled="<?= $detail['enabled'] ? '1' : '0' ?>" data-flag-reason="<?= esc($detail['reason']) ?>">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="font-mono text-base font-semibold text-[#0040A6]"><?= esc($key) ?></h2>
+                    <h2 class="font-mono text-base font-semibold text-brand"><?= esc($key) ?></h2>
                     <p class="mt-1 max-w-2xl text-sm text-gray-700"><?= esc($definition['description']) ?></p>
                 </div>
                 <div class="text-right">
@@ -99,7 +99,7 @@ $reasons = [
                         <input class="<?= $input ?>" type="text" name="note" maxlength="500" value="<?= esc((string) ($override['note'] ?? '')) ?>">
                     </label>
                     <div class="sm:col-span-2">
-                        <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Save</button>
+                        <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Save</button>
                     </div>
                 </form>
             </details>

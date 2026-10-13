@@ -352,17 +352,40 @@ final class CourseServiceTest extends DatabaseTestCase
         $this->assertNull($this->service->getCourseOffering($student, 999999));
     }
 
-    public function testADroppedOrFinishedCourseCannotBeOpened(): void
+    public function testADroppedOrArchivedCourseCannotBeOpened(): void
     {
         $student = $this->person('student');
         $dropped = $this->offering('A', 'ART 100');
-        $done = $this->offering('A', 'BIO 200');
+        $archived = $this->offering('A', 'BIO 200');
         CourseFactory::enroll($dropped['id'], $student, 'dropped');
-        CourseFactory::enroll($done['id'], $student);
-        db_connect()->table('course_offerings')->where('id', $done['id'])->update(['status' => 'completed']);
+        CourseFactory::enroll($archived['id'], $student);
+        db_connect()->table('course_offerings')->where('id', $archived['id'])->update(['status' => 'archived']);
 
         $this->assertNull($this->service->getCourseOffering($student, $dropped['id']));
-        $this->assertNull($this->service->getCourseOffering($student, $done['id']));
+        $this->assertNull($this->service->getCourseOffering($student, $archived['id']));
+    }
+
+    public function testACourseWhoseTermWasClosedCanStillBeOpenedAndIsListedAsPast(): void
+    {
+        $student = $this->person('student');
+        $done    = $this->offering('A', 'BIO 200');
+        CourseFactory::enroll($done['id'], $student, 'completed');
+        db_connect()->table('course_offerings')->where('id', $done['id'])->update(['status' => 'completed']);
+
+        $this->assertSame($done['id'], (int) $this->service->getCourseOffering($student, $done['id'])['offering_id']);
+        $this->assertSame([], $this->service->getCourseOfferings($student), 'not among the current courses');
+        $this->assertSame([$done['id']], array_map('intval', array_column($this->service->getCourseOfferings($student, true), 'offering_id')));
+    }
+
+    public function testAnInstructorCanStillOpenACompletedOfferingAndSeesItAsPast(): void
+    {
+        $teacher = $this->person('instructor');
+        $done    = $this->offering('A', 'ART 100', $teacher);
+        db_connect()->table('course_offerings')->where('id', $done['id'])->update(['status' => 'completed']);
+
+        $this->assertNotNull($this->service->getCourseOffering($teacher, $done['id']));
+        $this->assertSame([], $this->service->getCourseOfferings($teacher));
+        $this->assertCount(1, $this->service->getCourseOfferings($teacher, true));
     }
 
     public function testAnInstructorCanOpenOnlyTheirOwnOfferings(): void

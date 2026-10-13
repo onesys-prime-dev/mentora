@@ -3,7 +3,7 @@
 $readonly = $readonly ?? false;
 
 $typeBadgeColors = match ($question['question_type']) {
-    'Multiple Choice' => 'bg-[#E0E5F2] text-[#002068]',
+    'Multiple Choice' => 'bg-[#E0E5F2] text-brand-dark',
     'Essay' => 'bg-[#FFF1D6] text-[#946200]',
     'Short Answer' => 'bg-[#E6F4EA] text-[#1E7B34]',
     'Discussion' => 'bg-[#F3E8FF] text-[#6B21A8]',
@@ -49,7 +49,7 @@ $typeBadgeColors = match ($question['question_type']) {
                     type="button"
                     data-edit-question
                     data-question-id="<?= esc($question['id']) ?>"
-                    class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-[#0040A6]">
+                    class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
 
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" />
@@ -87,7 +87,7 @@ $typeBadgeColors = match ($question['question_type']) {
 
                 <div class="flex items-center gap-2 text-sm">
 
-                    <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border <?= !empty($choice['is_correct']) ? 'border-[#0040A6] bg-[#0040A6]' : 'border-gray-300' ?>">
+                    <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border <?= !empty($choice['is_correct']) ? 'border-brand bg-brand' : 'border-gray-300' ?>">
                         <?php if (!empty($choice['is_correct'])): ?>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -95,7 +95,7 @@ $typeBadgeColors = match ($question['question_type']) {
                         <?php endif; ?>
                     </span>
 
-                    <span class="<?= !empty($choice['is_correct']) ? 'font-semibold text-[#0040A6]' : 'text-[#646464]' ?>">
+                    <span class="<?= !empty($choice['is_correct']) ? 'font-semibold text-brand' : 'text-[#646464]' ?>">
                         <?= esc($choice['choice_text']) ?>
                     </span>
 

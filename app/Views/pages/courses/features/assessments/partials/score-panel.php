@@ -86,7 +86,7 @@ if ($isGraded && $scoreResult !== null) {
             <div class="flex items-center gap-3">
                 <?= icon('score', 'h-5 w-5') ?>
 
-                <span class="font-bold text-lg text-[#0040A6]">
+                <span class="font-bold text-lg text-brand">
                     <?= $scoreHeading ?>
                 </span>
             </div>
@@ -95,7 +95,7 @@ if ($isGraded && $scoreResult !== null) {
 
                 <div class="w-full aspect-square p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
 
-                    <span class="font-bold text-4xl text-[#0040A6]">
+                    <span class="font-bold text-4xl text-brand">
                         <?= esc((int) $scored['score']) ?>/<?= esc((int) $totalPoints) ?>
                     </span>
 
@@ -158,7 +158,7 @@ if ($isGraded && $scoreResult !== null) {
             <div class="flex items-center gap-3">
                 <?= icon('feedbacks', 'h-5 w-5') ?>
 
-                <span class="font-bold text-lg text-[#0040A6]">
+                <span class="font-bold text-lg text-brand">
                     <?= $feedbackHeading ?>
                 </span>
             </div>
@@ -174,9 +174,9 @@ if ($isGraded && $scoreResult !== null) {
                         $authorLabel = $isOwnMessage ? 'You' : (trim((string) ($entry['author_name'] ?? '')) ?: ucfirst($entry['author_role']));
                         ?>
 
-                        <div class="flex flex-col gap-1 rounded-2xl p-3 <?= $isOwnMessage ? 'bg-[#0040A6]/10 items-end text-right' : 'bg-[#F9F9FC] border border-[#DBDBDB] items-start' ?>">
+                        <div class="flex flex-col gap-1 rounded-2xl p-3 <?= $isOwnMessage ? 'bg-brand/10 items-end text-right' : 'bg-[#F9F9FC] border border-[#DBDBDB] items-start' ?>">
 
-                            <span class="text-xs font-bold <?= $isOwnMessage ? 'text-[#0040A6]' : 'text-[#646464]' ?>">
+                            <span class="text-xs font-bold <?= $isOwnMessage ? 'text-brand' : 'text-[#646464]' ?>">
                                 <?= esc($authorLabel) ?>
                             </span>
 
@@ -238,12 +238,12 @@ if ($isGraded && $scoreResult !== null) {
                         rows="2"
                         data-feedback-message
                         placeholder="<?= $isInstructor ? 'Add a message...' : 'Reply to your instructor...' ?>"
-                        class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"></textarea>
+                        class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-brand"></textarea>
 
                     <button
                         type="button"
                         data-feedback-send
-                        class="self-end rounded-xl bg-[#0040A6] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#002068]">
+                        class="self-end rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white transition hover:bg-brand-dark">
                         Send
                     </button>
 

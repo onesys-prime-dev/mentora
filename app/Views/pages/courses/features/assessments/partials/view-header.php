@@ -5,7 +5,7 @@ $userRole = esc($user->getGroups()[0]);
 <!-- header -->
 <header class="flex flex-col gap-2 py-2">
     
-    <span class="text-3xl font-bold text-[#0040A6]">
+    <span class="text-3xl font-bold text-brand">
         <?= esc($currentAssessment['title']) ?>
     </span>
 
@@ -48,7 +48,7 @@ $userRole = esc($user->getGroups()[0]);
             <span
                 class="capitalize rounded-full px-3 py-1 text-xs font-black
                     <?= strtolower($currentAssessment['status']) === 'published'
-                        ? 'bg-[#E0E5F2] text-[#002068]'
+                        ? 'bg-[#E0E5F2] text-brand-dark'
                         : 'bg-gray-100 text-gray-600' ?>">
                 <?= esc($currentAssessment['status']) ?>
             </span>

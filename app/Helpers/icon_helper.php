@@ -29,7 +29,7 @@ if (! function_exists('icon_registry')) {
             return $icons;
         }
 
-        $blue = 'text-[#0040A6]';
+        $blue = 'text-brand';
         $gray = 'text-[#8A8A8A]';
         $dark = 'text-[#2F2F2F]';
 

@@ -142,7 +142,7 @@ class ModuleService
         $rosterSize = $isInstructor
             ? (int) db_connect()->table('enrollments')
                 ->where('offering_id', $offeringId)
-                ->where('status', 'enrolled')
+                ->whereIn('status', ['enrolled', 'completed'])
                 ->countAllResults()
             : 0;
 
@@ -273,7 +273,7 @@ class ModuleService
 
             $rosterSize = (int) db_connect()->table('enrollments')
                 ->where('offering_id', $offeringId)
-                ->where('status', 'enrolled')
+                ->whereIn('status', ['enrolled', 'completed'])
                 ->countAllResults();
 
             $classProgress = $this->courseModuleModel->retrieveModuleProgress([$offeringId]);

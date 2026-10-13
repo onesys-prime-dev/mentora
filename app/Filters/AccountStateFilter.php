@@ -52,7 +52,7 @@ class AccountStateFilter implements FilterInterface
         $signedInAt = session(self::SIGNED_IN_AT);
         $reason     = (new AccountControl())->blockReason((int) $user->id, is_numeric($signedInAt) ? (int) $signedInAt : null);
 
-        if ($reason === null && self::idleFor() > (int) (new PlatformSettings())->get('sessionTimeoutMinutes') * 60) {
+        if ($reason === null && self::idleFor() > (int) (new \App\Services\Institutions\InstitutionSecurity())->forUser($user)['sessionTimeoutMinutes'] * 60) {
             $reason = self::REASON_IDLE;
         }
 

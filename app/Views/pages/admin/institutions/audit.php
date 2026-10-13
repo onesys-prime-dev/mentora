@@ -13,16 +13,16 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gr
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
-<h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Audit</h1>
+<h1 class="mt-2 text-2xl font-bold text-brand">Audit</h1>
 <p class="mt-1 text-sm text-gray-600"><?= esc($auditInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($auditInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $auditInstitution, 'tabActive' => 'audit']) ?>
 
 <p class="mt-4 text-sm text-gray-600">
     The latest <?= esc((string) count($auditRows)) ?> of <?= esc(number_format($auditTotal)) ?> entries.
-    <a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/audit-log?institution=' . $auditInstitution['id']) ?>">Open all of them in the audit log</a>
+    <a class="font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log?institution=' . $auditInstitution['id']) ?>">Open all of them in the audit log</a>
 </p>
 
 <div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">

@@ -28,7 +28,7 @@ export function showLoadError(target, what, retry = null) {
             <svg class="h-10 w-10 text-[#C33939]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
             <span class="text-sm font-semibold text-[#1A1C1E]">We couldn't load ${escapeHtml(what)}</span>
             <span class="text-xs text-[#646464]">Check your connection and try again.</span>
-            ${retry ? "<button type=\"button\" data-retry class=\"rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2\">Try again</button>" : ""}
+            ${retry ? "<button type=\"button\" data-retry class=\"rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2\">Try again</button>" : ""}
         </div>`;
 
     if (retry) {

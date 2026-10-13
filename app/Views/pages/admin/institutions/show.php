@@ -32,10 +32,10 @@ $btn       = 'rounded border px-2.5 py-1 text-xs font-semibold';
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
 <div class="mt-2 flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]"><?= esc($profInstitution['name']) ?></h1>
+    <h1 class="text-2xl font-bold text-brand"><?= esc($profInstitution['name']) ?></h1>
     <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $statusClass ?>" data-institution-status="<?= esc($profInstitution['status']) ?>"><?= esc($statusLabel) ?></span>
     <?php if ($isDeleted): ?><span class="rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Deleted</span><?php endif; ?>
 </div>
@@ -54,13 +54,13 @@ $btn       = 'rounded border px-2.5 py-1 text-xs font-semibold';
     <div class="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-5" data-onboarding-pending>
         <h2 class="text-lg font-semibold text-amber-900">Onboarding is not finished</h2>
         <p class="mt-1 text-sm text-amber-900">This institution has no subscription and no administrator yet, so nothing in it can be used. Choose its plan and invite its first administrator to finish.</p>
-        <a class="mt-3 inline-block rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]" href="<?= site_url('admin/institutions/' . $profInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
+        <a class="mt-3 inline-block rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/institutions/' . $profInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
     </div>
 <?php endif; ?>
 
 <div class="mt-6 grid gap-6 lg:grid-cols-2">
     <section class="rounded-lg bg-white p-6 shadow" data-profile-details>
-        <h2 class="text-lg font-semibold text-[#0040A6]">Details</h2>
+        <h2 class="text-lg font-semibold text-brand">Details</h2>
         <dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
             <dt class="text-gray-500">Name</dt><dd><?= esc($profInstitution['name']) ?></dd>
             <dt class="text-gray-500">Code</dt><dd class="font-mono text-xs"><?= esc($profInstitution['code']) ?></dd>
@@ -74,7 +74,7 @@ $btn       = 'rounded border px-2.5 py-1 text-xs font-semibold';
     </section>
 
     <section class="rounded-lg bg-white p-6 shadow" data-profile-subscription>
-        <h2 class="text-lg font-semibold text-[#0040A6]">Subscription</h2>
+        <h2 class="text-lg font-semibold text-brand">Subscription</h2>
         <?php if ($profSubscription === null): ?>
             <p class="mt-3 text-sm text-gray-600">None yet.</p>
         <?php else: ?>
@@ -85,7 +85,7 @@ $btn       = 'rounded border px-2.5 py-1 text-xs font-semibold';
     </section>
 
     <section class="rounded-lg bg-white p-6 shadow lg:col-span-2" data-profile-administrator>
-        <h2 class="text-lg font-semibold text-[#0040A6]">Administrator</h2>
+        <h2 class="text-lg font-semibold text-brand">Administrator</h2>
         <?php if ($latest === null): ?>
             <p class="mt-3 text-sm text-gray-600">No administrator has been invited yet.</p>
         <?php else: ?>

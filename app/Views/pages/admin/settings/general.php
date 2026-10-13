@@ -3,8 +3,8 @@
  * @var array<string, bool|int|string> $genValues
  * @var list<string>                   $genZones
  */
-$input = 'w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
-$short = 'w-28 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
+$short = 'w-28 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $value = static fn (string $key): string => (string) old($key, (string) $genValues[$key]);
 $label = 'flex flex-col gap-1 text-sm text-gray-700';
 ?>
@@ -14,9 +14,9 @@ $label = 'flex flex-col gap-1 text-sm text-gray-700';
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-2xl">
-    <a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/dashboard') ?>">&larr; Admin home</a>
+    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/dashboard') ?>">&larr; Admin home</a>
 
-    <h1 class="mt-2 text-2xl font-bold text-[#0040A6]">General settings</h1>
+    <h1 class="mt-2 text-2xl font-bold text-brand">General settings</h1>
     <p class="mt-1 text-sm text-gray-600">Apply to the whole platform. Changing them needs your password and is recorded in the audit log.</p>
 
     <?php if (session()->has('message')): ?>
@@ -30,7 +30,7 @@ $label = 'flex flex-col gap-1 text-sm text-gray-700';
         <?= csrf_field() ?>
 
         <fieldset class="flex flex-col gap-3">
-            <legend class="text-lg font-semibold text-[#0040A6]">Identity</legend>
+            <legend class="text-lg font-semibold text-brand">Identity</legend>
             <label class="<?= $label ?>">System name
                 <input class="<?= $input ?>" type="text" name="systemName" maxlength="80" value="<?= esc($value('systemName')) ?>" required>
             </label>
@@ -47,7 +47,7 @@ $label = 'flex flex-col gap-1 text-sm text-gray-700';
         </fieldset>
 
         <fieldset class="flex flex-col gap-3">
-            <legend class="text-lg font-semibold text-[#0040A6]">Maintenance</legend>
+            <legend class="text-lg font-semibold text-brand">Maintenance</legend>
             <label class="flex items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox" name="maintenanceMode" value="1" <?= old('maintenanceMode', $genValues['maintenanceMode'] ? '1' : '') === '1' ? 'checked' : '' ?>>
                 Maintenance mode: everyone except system administrators is turned away
@@ -58,14 +58,14 @@ $label = 'flex flex-col gap-1 text-sm text-gray-700';
         </fieldset>
 
         <fieldset class="flex flex-col gap-3">
-            <legend class="text-lg font-semibold text-[#0040A6]">Announcement</legend>
+            <legend class="text-lg font-semibold text-brand">Announcement</legend>
             <label class="<?= $label ?>">A line shown at the top of every page <span class="text-xs text-gray-500">(leave empty for none; people can hide it for themselves)</span>
                 <input class="<?= $input ?>" type="text" name="announcement" maxlength="500" value="<?= esc($value('announcement')) ?>">
             </label>
         </fieldset>
 
         <fieldset class="flex flex-col gap-3">
-            <legend class="text-lg font-semibold text-[#0040A6]">Subscriptions and backups</legend>
+            <legend class="text-lg font-semibold text-brand">Subscriptions and backups</legend>
             <p class="text-xs text-gray-500">The default timeline for every institution that has no timeline of its own, in days after the end date, and how old the last good backup may get before an alert.</p>
             <label class="flex flex-wrap items-center gap-3 text-sm text-gray-700">Warn this many days before the end
                 <input class="<?= $short ?>" type="number" name="expiryWarningDays" min="0" max="365" value="<?= esc($value('expiryWarningDays')) ?>" required>
@@ -82,7 +82,7 @@ $label = 'flex flex-col gap-1 text-sm text-gray-700';
         </fieldset>
 
         <div>
-            <button type="submit" class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]">Save</button>
+            <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Save</button>
         </div>
     </form>
 </div>

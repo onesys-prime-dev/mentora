@@ -62,7 +62,7 @@ if (!function_exists('renderInstructionsInline')) {
                 <?php $level = (int) ($block['level'] ?? 2); ?>
 
                 <p
-                    class="<?= $level === 1 ? 'text-lg' : 'text-base' ?> font-bold text-[#0040A6]"
+                    class="<?= $level === 1 ? 'text-lg' : 'text-base' ?> font-bold text-brand"
                     style="text-align: <?= esc($align) ?>">
 
                     <?= renderInstructionsInline($block['content'] ?? []) ?>

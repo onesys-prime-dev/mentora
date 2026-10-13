@@ -449,7 +449,8 @@ class DashboardService
 
         $offeringIds = array_column($sections, 'offering_id');
         $lastActivity = $this->courseModuleModel->retrieveLastActivityByOffering($offeringIds);
-        $cutoff = time() - (14 * 86400);
+        // The same silence the institution counts for a student (its academic defaults).
+        $cutoff = time() - ((new \App\Services\Institutions\AcademicDefaults())->thresholdsForUser($user)['inactiveDays'] * 86400);
 
         $courses = [];
 
@@ -541,8 +542,10 @@ class DashboardService
     {
         $sections = $this->scopedSections($user);
 
+        $overdueAfter = (new \App\Services\Institutions\AcademicDefaults())->thresholdsForUser($user)['overdueGradingDays'];
+
         if ($sections === []) {
-            return ['queue' => []];
+            return ['queue' => [], 'overdue_after' => $overdueAfter];
         }
 
         $overviewService = new AssessmentOverviewService();
@@ -584,7 +587,7 @@ class DashboardService
 
         usort($queue, static fn (array $a, array $b) => $b['waiting_days'] <=> $a['waiting_days']);
 
-        return ['queue' => $queue];
+        return ['queue' => $queue, 'overdue_after' => $overdueAfter];
     }
 
     public function getAcademicTerm(User $user): array

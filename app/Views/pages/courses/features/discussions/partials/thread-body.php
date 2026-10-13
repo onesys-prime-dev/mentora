@@ -24,7 +24,7 @@ $replyCount = count($replies);
     data-thread-attachments="<?= esc(json_encode(array_map(static fn ($f) => ['file_id' => $f['id'], 'original_filename' => $f['original_filename']], $thread['attachments'])), 'attr') ?>">
 
     <!-- opening post -->
-    <article class="group relative flex flex-col gap-4 rounded-2xl border bg-white px-6 py-6 <?= $thread['is_pinned'] ? 'border-[#0040A6]/30' : 'border-gray-200' ?>" data-reactions>
+    <article class="group relative flex flex-col gap-4 rounded-2xl border bg-white px-6 py-6 <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>" data-reactions>
 
         <?php
         $menuItems = [];
@@ -96,7 +96,7 @@ $replyCount = count($replies);
     <!-- replies -->
     <section class="flex flex-col gap-3" aria-label="Replies">
 
-        <h3 class="text-lg font-bold text-[#0040A6]">
+        <h3 class="text-lg font-bold text-brand">
             <span data-reply-count><?= $replyCount ?></span> <span data-reply-count-label><?= $replyCount === 1 ? 'Reply' : 'Replies' ?></span>
         </h3>
 
@@ -135,7 +135,7 @@ $replyCount = count($replies);
                     data-reply-input
                     aria-label="Write a reply"
                     placeholder="Write a reply"
-                    class="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition placeholder:text-gray-500 focus:border-[#0040A6]/60"></textarea>
+                    class="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition placeholder:text-gray-500 focus:border-brand/60"></textarea>
     
                 <div class="flex flex-wrap gap-2" data-reply-attachments></div>
     
@@ -148,7 +148,7 @@ $replyCount = count($replies);
                         <input type="file" data-reply-file-input class="hidden" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
                     </div>
     
-                    <button type="button" data-reply-send disabled class="rounded-full bg-[#0040A6] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] disabled:opacity-50">
+                    <button type="button" data-reply-send disabled class="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">
                         Reply
                     </button>
     

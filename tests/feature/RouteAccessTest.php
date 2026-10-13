@@ -19,7 +19,7 @@ final class RouteAccessTest extends RouteTestCase
     private const VERBS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
     /** Top-level route prefixes that may exist: public pages, Shield's auth pages, and the role areas. */
-    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'invitation', 'reset-password', 'impersonation', 'notifications', 'files', 'student', 'instructor', 'chairperson', 'institution', 'admin', 'role'];
+    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'invitation', 'reset-password', 'impersonation', 'notifications', 'files', 'student', 'instructor', 'chairperson', 'institution', 'reauth', 'ui-kit', 'admin', 'role'];
 
     /**
      * Every registered route as [verb, example URL, role area].
@@ -35,7 +35,7 @@ final class RouteAccessTest extends RouteTestCase
             foreach (array_keys($routes->getRoutes($verb)) as $route) {
                 $prefix = explode('/', $route)[0];
 
-                if ($area !== null ? $prefix !== $area : ! in_array($prefix, ['student', 'instructor', 'admin'], true)) {
+                if ($area !== null ? $prefix !== $area : ! in_array($prefix, ['student', 'instructor', 'admin', 'institution'], true)) {
                     continue;
                 }
 
@@ -73,6 +73,7 @@ final class RouteAccessTest extends RouteTestCase
         $this->assertGreaterThanOrEqual(40, count(self::routes('student')), 'student routes were not discovered');
         $this->assertGreaterThanOrEqual(100, count(self::routes('instructor')), 'instructor routes were not discovered');
         $this->assertGreaterThanOrEqual(1, count(self::routes('admin')), 'admin routes were not discovered');
+        $this->assertGreaterThanOrEqual(3, count(self::routes('institution')), 'institution routes were not discovered');
     }
 
     public function testEveryRouteIsPublicKnownOrBehindARoleArea(): void

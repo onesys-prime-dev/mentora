@@ -10,6 +10,7 @@ use App\Models\Assessments\GradebookRecordModel;
 use App\Models\Audit\AuditLogModel;
 use App\Models\Courses\AnnouncementModel;
 use App\Models\Courses\EnrollmentModel;
+use App\Models\Courses\OfferingDetail;
 use App\Models\Grades\GradingSchemeModel;
 use App\Models\Learning\CourseModuleModel;
 use CodeIgniter\Shield\Entities\User;
@@ -77,13 +78,71 @@ class MonitorProgramService
      */
     public function offeringRows(User $user, MonitorProgramFilters $filters): array
     {
-        $builder = $this->assignmentModel->chairedOfferingsBuilder($user->id, null);
+        return $this->offeringRowsForPrograms($this->chairedProgramIds($user), $filters);
+    }
+
+    /**
+     * The programs under every sub-department this user actively chairs. A
+     * program added later is covered at once: it is read live, never stored.
+     *
+     * @return list<int>
+     */
+    public function chairedProgramIds(User $user): array
+    {
+        $rows = db_connect()->table('chairperson_assignments')
+            ->select('programs.id')
+            ->join('programs', 'programs.sub_department_id = chairperson_assignments.sub_department_id')
+            ->where('chairperson_assignments.chairperson_user_id', $user->id)
+            ->where('chairperson_assignments.status', 'active')
+            ->distinct()
+            ->get()->getResultArray();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
+
+    /**
+     * Every offering in a set of programs (any status), narrowed to one term
+     * when the filter asks for it, in the row shape the Courses page reads.
+     * This is what makes Monitor Program scope-free: a chairperson's programs,
+     * a department's, or an institution's all go through the same metrics.
+     *
+     * @param list<int> $programIds
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function offeringRowsForPrograms(array $programIds, MonitorProgramFilters $filters): array
+    {
+        $builder = OfferingDetail::inPrograms($programIds);
 
         if ($filters->termId !== null) {
             $builder->where('academic_terms.id', $filters->termId);
         }
 
-        return $builder->orderBy('courses.course_code', 'ASC')->get()->getResultArray();
+        return $builder->orderBy('courses.course_code', 'ASC')->orderBy('course_offerings.section_code', 'ASC')->get()->getResultArray();
+    }
+
+    /**
+     * The terms that have offerings in these programs, newest first, for the
+     * term filter.
+     *
+     * @param list<int> $programIds
+     *
+     * @return list<array{id: int, name: string, academic_year: string, start_date: string}>
+     */
+    public function termsForPrograms(array $programIds): array
+    {
+        if ($programIds === []) {
+            return [];
+        }
+
+        return db_connect()->table('course_offerings')
+            ->select(['academic_terms.id', 'academic_terms.name', 'academic_terms.academic_year', 'academic_terms.start_date'])
+            ->join('courses', 'courses.id = course_offerings.course_id')
+            ->join('academic_terms', 'academic_terms.id = course_offerings.term_id')
+            ->whereIn('courses.program_id', $programIds)
+            ->distinct()
+            ->orderBy('academic_terms.start_date', 'DESC')
+            ->get()->getResultArray();
     }
 
     /**
@@ -338,9 +397,34 @@ class MonitorProgramService
      */
     public function auditLog(User $user, array $offeringRows, MonitorProgramFilters $filters, int $page = 1, int $perPage = 10): array
     {
-        $query = $this->auditLogModel
-            ->where('actor_user_id', $user->id)
-            ->where('action', 'course.chairperson_action');
+        return $this->auditEntries($user->id, $offeringRows, $filters, $page, $perPage);
+    }
+
+    /**
+     * The same viewer for a scope that is not one chairperson: with no actor,
+     * every chairperson action on these offerings, whoever took it (what an
+     * institution's or a department's overseer reads). With an actor it is
+     * that person's own, which is the chairperson's page.
+     *
+     * @param  list<array<string, mixed>> $offeringRows the output of offeringRowsForPrograms(), for course labels
+     * @return array{rows: list<array<string, mixed>>, total: int}
+     */
+    public function auditEntries(?int $actorUserId, array $offeringRows, MonitorProgramFilters $filters, int $page = 1, int $perPage = 10): array
+    {
+        $query = $this->auditLogModel->where('action', 'course.chairperson_action');
+
+        if ($actorUserId !== null) {
+            $query = $query->where('actor_user_id', $actorUserId);
+        } else {
+            // No actor to narrow by: the offerings in scope are the boundary.
+            $ids = array_map(static fn (array $row): int => (int) $row['offering_id'], $offeringRows);
+
+            if ($ids === []) {
+                return ['rows' => [], 'total' => 0];
+            }
+
+            $query = $query->whereIn('target_id', $ids);
+        }
 
         $from = $filters->fromTimestamp();
         $until = $filters->untilTimestamp();

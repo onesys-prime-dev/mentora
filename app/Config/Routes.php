@@ -44,7 +44,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
-    $routes->group('api/calendar', function ($routes) {
+    $routes->group('api/calendar', ['filter' => 'closedoffering'], function ($routes) {
         $routes->get('events', 'Calendar\CalendarController::events');
 
         $routes->post('reminders', 'Calendar\ReminderController::store');
@@ -53,7 +53,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -108,7 +108,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
-    $routes->group('api/calendar', function ($routes) {
+    $routes->group('api/calendar', ['filter' => 'closedoffering'], function ($routes) {
         $routes->get('events', 'Calendar\CalendarController::events');
 
         $routes->post('reminders', 'Calendar\ReminderController::store');
@@ -120,7 +120,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => 'assessmentscope'], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -284,7 +284,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3');
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3');
 
-    $routes->group('api/courses', ['filter' => ['assessmentscope', 'chairpersoncourseaudit']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['assessmentscope', 'closedoffering', 'chairpersoncourseaudit']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -418,13 +418,155 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     });
 });
 
-// Institutional administrator area. Deliberately not behind `readonly`: the
-// data export must keep working once the subscription has ended (SA13).
+// "Confirm your password" in front of dangerous actions, for every administrative area
+// except the system administrator's own address (admin/reauth, below). The ReauthFilter
+// sends people here.
+$routes->get('reauth', 'ReauthController::show', ['filter' => 'role:institutional_admin']);
+$routes->post('reauth', 'ReauthController::confirm', ['filter' => 'role:institutional_admin']);
+
+// A gallery of the shared interface components (app/Views/components), for the people
+// building and reviewing screens. Signed-in people only; not routed in production.
+if (ENVIRONMENT !== 'production') {
+    $routes->get('ui-kit', 'UiKitController::index', ['filter' => 'session']);
+    $routes->post('ui-kit', 'UiKitController::submit', ['filter' => 'session']);
+}
+
+// Institutional administrator area. Everyone in it is the institutional administrator
+// of one institution, which the server decides from who is signed in (InstitutionScope).
+// The data export is deliberately NOT behind `readonly`: it must keep working once the
+// subscription has ended (SA13). Everything that writes goes in the second group.
 $routes->group('institution', ['filter' => 'role:institutional_admin'], function ($routes) {
-    $routes->get('/', 'Institution\ExportController::index');
     $routes->get('export', 'Institution\ExportController::index');
     $routes->post('export', 'Institution\ExportController::create');
     $routes->get('export/(:num)', 'Institution\ExportController::download/$1');
+
+    $routes->group('', ['filter' => 'readonly'], function ($routes) {
+        $routes->get('/', 'Institution\HomeController::index');
+        $routes->get('dashboard', 'Institution\HomeController::index');
+
+        // Academic structure: departments, sub-departments, programs (structure.manage).
+        $routes->group('structure', ['filter' => 'permission:structure.manage'], function ($routes) {
+            $routes->get('/', 'Institution\StructureController::index');
+
+            $routes->post('departments', 'Institution\StructureController::createDepartment');
+            $routes->post('departments/(:num)', 'Institution\StructureController::updateDepartment/$1');
+            $routes->post('departments/(:num)/deactivate', 'Institution\StructureController::deactivateDepartment/$1');
+            $routes->post('departments/(:num)/reactivate', 'Institution\StructureController::reactivateDepartment/$1');
+            $routes->post('departments/(:num)/sub-departments', 'Institution\StructureController::createSubDepartment/$1');
+
+            $routes->post('sub-departments/(:num)', 'Institution\StructureController::updateSubDepartment/$1');
+            $routes->post('sub-departments/(:num)/deactivate', 'Institution\StructureController::deactivateSubDepartment/$1');
+            $routes->post('sub-departments/(:num)/reactivate', 'Institution\StructureController::reactivateSubDepartment/$1');
+            $routes->post('sub-departments/(:num)/programs', 'Institution\StructureController::createProgram/$1');
+
+            $routes->post('programs/(:num)', 'Institution\StructureController::updateProgram/$1');
+            $routes->post('programs/(:num)/deactivate', 'Institution\StructureController::deactivateProgram/$1');
+            $routes->post('programs/(:num)/archive', 'Institution\StructureController::archiveProgram/$1');
+            $routes->post('programs/(:num)/reactivate', 'Institution\StructureController::reactivateProgram/$1');
+
+            $routes->post('sub-departments/(:num)/chairpersons', 'Institution\StructureController::assignChairperson/$1');
+            $routes->post('chairpersons/(:num)/remove', 'Institution\StructureController::revokeChairperson/$1');
+        });
+
+        // Academic terms (terms.manage).
+        $routes->group('terms', ['filter' => 'permission:terms.manage'], function ($routes) {
+            $routes->get('/', 'Institution\TermsController::index');
+            $routes->post('/', 'Institution\TermsController::create');
+            $routes->post('(:num)', 'Institution\TermsController::update/$1');
+            $routes->post('(:num)/start', 'Institution\TermsController::start/$1');
+            $routes->post('(:num)/upcoming', 'Institution\TermsController::unstart/$1');
+            $routes->get('copy', 'Institution\OfferingCopyController::index');
+            $routes->post('copy', 'Institution\OfferingCopyController::copy');
+            $routes->get('(:num)/close', 'Institution\TermCloseController::confirm/$1');
+            $routes->post('(:num)/close', 'Institution\TermCloseController::close/$1', ['filter' => 'reauth']);
+            $routes->post('(:num)/reopen', 'Institution\TermCloseController::reopen/$1', ['filter' => 'reauth']);
+        });
+
+        // Course offerings and their instructors (offerings.manage).
+        $routes->group('offerings', ['filter' => 'permission:offerings.manage'], function ($routes) {
+            $routes->get('/', 'Institution\OfferingsController::index');
+            $routes->post('/', 'Institution\OfferingsController::create');
+            $routes->post('(:num)', 'Institution\OfferingsController::update/$1');
+            $routes->post('(:num)/archive', 'Institution\OfferingsController::archive/$1');
+            $routes->post('(:num)/reactivate', 'Institution\OfferingsController::reactivate/$1');
+            $routes->post('(:num)/instructors', 'Institution\OfferingsController::assignInstructor/$1');
+            $routes->post('instructors/(:num)/remove', 'Institution\OfferingsController::unassignInstructor/$1');
+        });
+
+        // Who is enrolled in an offering (enrolments.manage).
+        $routes->group('enrolments', ['filter' => 'permission:enrolments.manage'], function ($routes) {
+            $routes->get('offering/(:num)', 'Institution\EnrolmentsController::roster/$1');
+            $routes->post('offering/(:num)', 'Institution\EnrolmentsController::add/$1');
+            $routes->post('(:num)/status', 'Institution\EnrolmentsController::setStatus/$1');
+        });
+
+        // Reports across the institution (reports.view): the page, a course, and CSV.
+        $routes->group('reports', ['filter' => 'permission:reports.view'], function ($routes) {
+            $routes->get('/', 'Institution\ReportsController::index');
+            $routes->get('export/(:segment)', 'Institution\ReportsController::export/$1');
+            $routes->get('offerings/(:num)', 'Institution\ReportsController::offering/$1');
+        });
+
+        // The institution's own settings: profile and branding (institution.settings).
+        $routes->group('settings', ['filter' => 'permission:institution.settings'], function ($routes) {
+            $routes->get('/', 'Institution\InstitutionSettingsController::profile');
+            $routes->post('/', 'Institution\InstitutionSettingsController::saveProfile');
+            $routes->get('branding', 'Institution\InstitutionSettingsController::branding');
+            $routes->post('branding', 'Institution\InstitutionSettingsController::saveBranding');
+            $routes->post('branding/reset', 'Institution\InstitutionSettingsController::resetBranding');
+            $routes->post('logo', 'Institution\InstitutionSettingsController::uploadLogo');
+            $routes->post('logo/remove', 'Institution\InstitutionSettingsController::removeLogo');
+            $routes->get('academic', 'Institution\InstitutionSettingsController::academic');
+            $routes->post('academic', 'Institution\InstitutionSettingsController::saveAcademic');
+            $routes->post('academic/reset', 'Institution\InstitutionSettingsController::resetAcademic');
+            $routes->get('announcement', 'Institution\InstitutionSettingsController::announcement');
+            $routes->post('announcement', 'Institution\InstitutionSettingsController::saveAnnouncement');
+            $routes->post('announcement/remove', 'Institution\InstitutionSettingsController::removeAnnouncement');
+            // Security settings need the password (IA1): a loosened rule is refused, but a tightened one locks people out.
+            $routes->get('security', 'Institution\InstitutionSettingsController::security');
+            $routes->post('security', 'Institution\InstitutionSettingsController::saveSecurity', ['filter' => 'reauth']);
+            $routes->post('security/reset', 'Institution\InstitutionSettingsController::resetSecurity', ['filter' => 'reauth']);
+        });
+
+        // The institution's people (people.view to look, people.manage to change; the
+        // dangerous ones also need the password).
+        $routes->group('people', function ($routes) {
+            $routes->get('/', 'Institution\PeopleController::index', ['filter' => 'permission:people.view']);
+            $routes->get('export', 'Institution\PeopleController::export', ['filter' => 'permission:people.view']);
+            $routes->post('export', 'Institution\PeopleController::exportSelected', ['filter' => 'permission:people.view']);
+            $routes->post('/', 'Institution\PeopleController::invite', ['filter' => 'permission:people.manage']);
+            $routes->post('bulk/deactivate', 'Institution\PeopleController::bulkDeactivate', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('bulk/reactivate', 'Institution\PeopleController::bulkReactivate', ['filter' => 'permission:people.manage']);
+            $routes->post('invitations/(:num)/resend', 'Institution\PeopleController::resend/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('invitations/(:num)/revoke', 'Institution\PeopleController::revoke/$1', ['filter' => 'permission:people.manage']);
+            $routes->get('upload', 'Institution\CsvUploadController::index', ['filter' => 'permission:people.manage']);
+            $routes->post('upload', 'Institution\CsvUploadController::store', ['filter' => 'permission:people.manage']);
+            $routes->get('upload/template/(:segment)', 'Institution\CsvUploadController::template/$1', ['filter' => 'permission:people.manage']);
+            $routes->get('upload/(:segment)', 'Institution\CsvUploadController::show/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('upload/(:segment)/apply', 'Institution\CsvUploadController::apply/$1', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('upload/(:segment)/discard', 'Institution\CsvUploadController::discard/$1', ['filter' => 'permission:people.manage']);
+            $routes->get('parents', 'Institution\ParentLinksController::index', ['filter' => 'permission:people.view']);
+            $routes->post('parents/(:num)/students', 'Institution\ParentLinksController::link/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('parents/links/(:num)/remove', 'Institution\ParentLinksController::unlink/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)', 'Institution\PeopleController::update/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/deactivate', 'Institution\PeopleController::deactivate/$1', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('(:num)/reactivate', 'Institution\PeopleController::reactivate/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/sign-out', 'Institution\PeopleController::signOut/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/reset-password', 'Institution\PeopleController::resetPassword/$1', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('(:num)/roles', 'Institution\PeopleController::roles/$1', ['filter' => ['permission:people.manage', 'reauth']]);
+            $routes->post('(:num)/remove', 'Institution\PeopleController::remove/$1', ['filter' => 'permission:people.manage']);
+        });
+
+        // The course catalog (structure.manage).
+        $routes->group('courses', ['filter' => 'permission:structure.manage'], function ($routes) {
+            $routes->get('/', 'Institution\CoursesController::index');
+            $routes->post('/', 'Institution\CoursesController::create');
+            $routes->post('(:num)', 'Institution\CoursesController::update/$1');
+            $routes->post('(:num)/deactivate', 'Institution\CoursesController::deactivate/$1');
+            $routes->post('(:num)/archive', 'Institution\CoursesController::archive/$1');
+            $routes->post('(:num)/reactivate', 'Institution\CoursesController::reactivate/$1');
+        });
+    });
 });
 
 // System administrator area: platform-wide, above every institution.
@@ -433,6 +575,7 @@ $routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
     $routes->get('dashboard', 'Admin\HomeController::index');
 
     // Password confirmation in front of dangerous actions (the `reauth` filter).
+    // Everyone else confirms at /reauth (above); the behaviour is shared.
     $routes->get('reauth', 'Admin\ReauthController::show');
     $routes->post('reauth', 'Admin\ReauthController::confirm');
 

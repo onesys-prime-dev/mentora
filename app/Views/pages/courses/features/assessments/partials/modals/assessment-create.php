@@ -10,7 +10,7 @@
             <div class="flex flex-col">
 
                 <h2
-                    class="text-2xl font-bold text-[#0040A6]"
+                    class="text-2xl font-bold text-brand"
                     data-assessment-create-title>
 
                     Add Assessment
@@ -72,7 +72,7 @@
                     <select
                         name="module_id"
                         data-assessment-module-select
-                        class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                        class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                         required>
 
                         <option value="" disabled selected>Select a module</option>
@@ -101,7 +101,7 @@
                     <select
                         name="learning_unit_id"
                         data-assessment-learning-unit-select
-                        class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                        class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                         required
                         disabled>
 
@@ -140,7 +140,7 @@
                     name="title"
                     autocomplete="off"
                     placeholder="e.g. Introduction to Programming"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     required>
 
             </div>
@@ -159,7 +159,7 @@
                     autocomplete="off"
                     rows="5"
                     placeholder="Write a short description for this assessment..."
-                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"></textarea>
+                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"></textarea>
 
             </div>
 
@@ -185,7 +185,7 @@
                                 <?= $index === 0 ? 'checked' : '' ?>
                                 required>
 
-                            <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-[#0040A6] peer-checked:bg-[#0040A6] peer-checked:text-white">
+                            <div class="rounded-xl border border-gray-300 px-4 py-3 text-center transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white">
                                 <?= esc($assessmentType['name']) ?>
                             </div>
                         </label>
@@ -214,7 +214,7 @@
                 type="submit"
                 form="assessment-create-form"
                 data-assessment-create-submit
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
 
                 Create Assessment
 
