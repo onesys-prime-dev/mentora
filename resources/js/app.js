@@ -5,6 +5,7 @@ import "./shared/app-menu";
 import "./shared/role-switch";
 import "./shared/announcement";
 import "./shared/toast";
+import "./shared/theme";
 import "./shared/dialog";
 import "./shared/data-table";
 
