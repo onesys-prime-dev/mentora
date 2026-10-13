@@ -35,12 +35,12 @@ foreach ($deletedRows as $row) {
         . ($c['members_left_without_an_institution'] > 0 ? ', ' . esc((string) $c['members_left_without_an_institution']) . ' of them with no institution left' : '');
 
     $actions = '<div class="flex flex-wrap items-start justify-end gap-2 max-md:justify-start">'
-        . '<form method="post" action="' . site_url('admin/institutions/' . $id . '/restore') . '">' . csrf_field()
+        . '<form data-dialog-form method="post" action="' . site_url('admin/institutions/' . $id . '/restore') . '">' . csrf_field()
         . '<input type="hidden" name="return" value="archive">'
         . '<button type="submit" class="' . $btn . ' border-brand bg-white text-brand hover:bg-brand-tint">Restore</button></form>'
         . '<details class="text-left">'
         . '<summary class="' . $btn . ' cursor-pointer border-[#C33939] bg-white text-[#C33939] hover:bg-[#FDEDEC]">Purge now</summary>'
-        . '<form method="post" action="' . site_url('admin/institutions/' . $id . '/purge') . '" class="mt-2 flex w-72 flex-col gap-2">' . csrf_field()
+        . '<form data-dialog-form method="post" action="' . site_url('admin/institutions/' . $id . '/purge') . '" class="mt-2 flex w-72 flex-col gap-2">' . csrf_field()
         . '<input type="hidden" name="return" value="archive">'
         . '<p class="text-xs text-[#8E2424]">This cannot be undone. It permanently removes the institution and everything in it: '
         . esc((string) $c['departments']) . ' department(s), ' . esc((string) $c['programs']) . ' program(s), '
@@ -69,7 +69,7 @@ foreach ($deletedRows as $row) {
 <?= $this->section('content') ?>
 
 <?= view('components/page-head', ['title' => 'Archive', 'icon' => 'drafts'], ['saveData' => false]) ?>
-<p class="mt-2 max-w-3xl text-sm text-gray-600">
+<p class="mt-2 max-w-3xl text-sm text-[#646464]">
     Institutions that are no longer running. Past institutions keep all their data, read-only, until they are renewed.
     A deleted institution can be restored for <?= esc((string) $retentionDays) ?> days; after that it is purged for good.
 </p>

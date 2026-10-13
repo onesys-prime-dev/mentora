@@ -37,8 +37,8 @@ foreach ($backupRows as $row) {
 
 <?= $this->section('content') ?>
 
-<?= view('components/page-head', ['title' => 'Backups', 'icon' => 'folder', 'actions' => '<form method="post" action="' . site_url('admin/backups') . '">' . csrf_field() . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50" ' . ($busy ? 'disabled' : '') . '>Back up now</button></form>'], ['saveData' => false]) ?>
-<p class="mt-1 text-sm text-gray-600">The server takes the backups (<span class="font-mono">php spark backup:run</span>); this page shows what it did. Restoring is a manual procedure: see <span class="font-mono">docs/backup.md</span>.</p>
+<?= view('components/page-head', ['title' => 'Backups', 'icon' => 'folder', 'actions' => '<form data-dialog-form method="post" action="' . site_url('admin/backups') . '">' . csrf_field() . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50" ' . ($busy ? 'disabled' : '') . '>Back up now</button></form>'], ['saveData' => false]) ?>
+<p class="mt-1 text-sm text-[#646464]">The server takes the backups (<span class="font-mono">php spark backup:run</span>); this page shows what it did. Restoring is a manual procedure: see <span class="font-mono">docs/backup.md</span>.</p>
 
 <?php if ($backupAlert !== null): ?>
     <div class="mt-4" data-backup-alert="<?= esc($backupAlert['kind']) ?>"><?= view('components/alert', ['tone' => 'danger', 'text' => $backupAlert['message']], ['saveData' => false]) ?></div>

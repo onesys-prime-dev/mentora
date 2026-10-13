@@ -292,6 +292,9 @@ function bindDialogForm(form) {
 
         const buttons = Array.from(form.querySelectorAll('button[type="submit"]'));
 
+        // Where focus returns to when the password dialog closes: the button that was pressed.
+        const returnTo = event.submitter ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+
         buttons.forEach((b) => (b.disabled = true));
         form.setAttribute("aria-busy", "true");
 
@@ -310,8 +313,18 @@ function bindDialogForm(form) {
             let { response, body } = await send();
 
             // A guarded action: ask for the password, then do the same thing again, once.
-            if (response.status === 403 && body.error === "reauth_required" && (await askForPassword())) {
-                ({ response, body } = await send());
+            if (response.status === 403 && body.error === "reauth_required") {
+                // A disabled button cannot hold focus, so give it back before the dialog opens: that is
+                // where focus returns to when the dialog closes, confirmed or not.
+                buttons.forEach((b) => (b.disabled = false));
+                returnTo?.focus();
+
+                const confirmed = await askForPassword();
+
+                if (confirmed) {
+                    buttons.forEach((b) => (b.disabled = true));
+                    ({ response, body } = await send());
+                }
             }
 
             if (response.status === 403 && body.error === "reauth_required") {

@@ -116,7 +116,7 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 
 </div>
 
-<form method="post" action="<?= site_url('admin/audit-log/settings') ?>" class="mt-8 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+<form data-dialog-form method="post" action="<?= site_url('admin/audit-log/settings') ?>" class="mt-8 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
     <?= csrf_field() ?>
     <input type="hidden" name="show_ip" value="0">
     <label class="flex items-center gap-2 text-sm text-[#3D3D3D]">

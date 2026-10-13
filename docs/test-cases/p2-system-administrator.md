@@ -1,6 +1,6 @@
 # P2 test cases: the system administrator
 
-11 cases, automated in `tests/e2e/system-admin.spec.js`. Read [README.md](README.md)
+12 cases, automated in `tests/e2e/system-admin.spec.js`. Read [README.md](README.md)
 first. **All are `Draft`** (see the README).
 
 The administrator signs in with a 6-digit code the app emails. In the browser
@@ -26,6 +26,7 @@ and run in order.
 | TC-SA-09 | What happened is in the audit log | System administrator |
 | TC-SA-10 | The main administration screens pass an automated accessibility check | System administrator |
 | TC-SA-11 | The users list narrows by search, and ticking people shows how many are chosen | System administrator |
+| TC-SA-12 | A guarded action asks for the password in a dialog over the page, and carries on with the keyboard alone | System administrator |
 
 ## TC-SA-01 The administrator needs the emailed code
 
@@ -93,3 +94,9 @@ and run in order.
 - **Steps:** open Users. Search for `student5@mentora.test`. Tick the one row.
 - **Expected:** one row remains; before ticking there is no bulk bar; after, it says "1 person selected" and offers Deactivate, Reactivate and Export selected.
 - **Already automated:** `tests/feature/AdminUsersPageTest.php`, `tests/js/shared/data-table.test.js`.
+
+## TC-SA-12 The password in a dialog
+
+- **Steps:** on Backups, focus *Back up now* with the keyboard and press Enter. Press Escape. Press Enter again, type the password and press Enter.
+- **Expected:** the first time a dialog "Confirm your password" opens over the page (the address does not change); Escape closes it, nothing is requested and focus is back on the button; the second time the backup is requested and its message and a *requested* row are on the page.
+- **Already automated:** `tests/feature/AdminAjaxRedirectTest.php`, `tests/js/shared/dialog.test.js`.

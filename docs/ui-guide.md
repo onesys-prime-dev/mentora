@@ -117,6 +117,8 @@ Use `confirm`, which says what will happen in plain words and names the thing
 `'reauthDialog' => true` so the dialog is there. The password is asked in a
 dialog over the page and the action resumes; nothing typed is lost.
 
+The system administrator's pages work the same way: a form with `data-dialog-form` is posted by the script, and the `ajaxredirect` route filter hands a redirect back as JSON (`{ redirect }`) so the message set for the next page is still there when the script goes to it. Without the script the form posts normally and the confirm page opens instead.
+
 ### A multi-step job
 
 A page with a `stepper` (Upload → Preview → Apply), not a dialog. A preview
@@ -176,7 +178,7 @@ A pull request that adds or changes a screen is not done until:
 
 ## 8. Known gaps
 
-- The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists (institutions, users, plans, audit log, archive, backups) use `data-table`, `toolbar` and `pagination`; its forms still use their own fields and buttons and move onto `form-field`, `dialog` and `confirm` in the next restyle branch.
+- The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists, forms, onboarding (a `stepper`) and password confirmation use the shared components. A few forms of the institution's own pages (the subscription, the flag overrides, the integration connection and the user's page) still use plain labels with the shared button and input styles.
 - Dark mode: the header button exists and does nothing yet.
 - The header prints the page title beside the logo and the page's `<h1>` repeats it; the header text is decorative and should be removed once every page has a head.
 - A few literal greens (`#2E7D4F`) remain where a token would be better (`bg-accent`); new code should use the token.

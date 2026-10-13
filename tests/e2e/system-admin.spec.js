@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
 import { confirmPassword, dateIn, emailedCode, signInAsAdmin, startAdminSignIn } from "./support/admin.js";
 import { runSql } from "./support/database.js";
 import { waitForMailMatch } from "./support/mail.js";
-import { accounts, submitLoginForm } from "./support/sign-in.js";
+import { accounts, adminAccount, submitLoginForm } from "./support/sign-in.js";
 import { spark } from "./support/spark.js";
 
 test.describe.configure({ mode: "serial" });
@@ -304,4 +304,33 @@ test("TC-SA-11 The users list narrows by search, and ticking people shows how ma
     await page.locator("[data-row-select]").first().check();
     await expect(page.locator("[data-selected-count]")).toContainText("1 person selected");
     await expect(page.getByRole("button", { name: "Export selected (CSV)" })).toBeVisible();
+});
+
+test("TC-SA-12 A guarded action asks for the password in a dialog over the page, and carries on with the keyboard alone", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/backups");
+
+    // Reach the action with the keyboard: focus the button and press Enter.
+    const backUp = page.getByRole("button", { name: "Back up now" });
+    await backUp.focus();
+    await page.keyboard.press("Enter");
+
+    // The password is asked for over the page: the address does not change.
+    const dialog = page.getByRole("dialog", { name: "Confirm your password" });
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/backups$/);
+
+    // Escape leaves nothing done and gives focus back.
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page.locator("[data-backup]")).toHaveCount(0);
+    await expect(backUp).toBeFocused();
+
+    // Ask again, type the password, and confirm: the action runs and its message is on the page.
+    await page.keyboard.press("Enter");
+    await dialog.getByLabel("Password").fill(adminAccount.password);
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("status").filter({ hasText: "Backup requested" })).toBeVisible();
+    await expect(page.locator('[data-backup="requested"]').first()).toBeVisible();
 });

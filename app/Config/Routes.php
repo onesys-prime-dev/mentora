@@ -621,7 +621,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
 });
 
 // System administrator area: platform-wide, above every institution.
-$routes->group('admin', ['filter' => 'group:admin'], function ($routes) {
+// A form posted from a script (the password dialog) gets its redirect as JSON, so the message set for
+// the next page is still there when the script goes to it (ajaxredirect).
+$routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function ($routes) {
     $routes->get('/', 'Admin\HomeController::index');
     $routes->get('dashboard', 'Admin\HomeController::index');
 
