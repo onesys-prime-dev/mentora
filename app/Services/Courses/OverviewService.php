@@ -78,7 +78,7 @@ class OverviewService
         $assessments = $this->assessmentOverviewService
             ->build($user, $offeringId, (int) $offering['course_id']);
 
-        $isInstructor = $user->inGroup('instructor');
+        $isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
         $viewData = [
             'user'     => $user,
@@ -89,7 +89,7 @@ class OverviewService
 
         // Same slug the course page URL uses (see CourseController).
         $modulesUrl = site_url(
-            $viewData['role'] . '/courses/' . $offeringId . '/'
+            CourseViewer::urlPrefix($user, $viewData['role']) . '/courses/' . $offeringId . '/'
             . url_title((string) ($info['course_title'] ?? ''), '-', true) . '/modules'
         );
 

@@ -765,3 +765,21 @@ test("TC-RPT-01 Reports show the institution's courses, narrow by department, op
     await page.getByRole("link", { name: "Course comparison (CSV)" }).click();
     expect((await download).suggestedFilename()).toMatch(/^report-courses-\d{4}-\d{2}-\d{2}\.csv$/);
 });
+
+test("TC-VCV-01 A course opens view only from the offerings list, shows its content, and offers nothing to change", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings");
+
+    await page.locator("[data-view-course]").first().click();
+
+    await expect(page.locator("[data-view-only]")).toContainText("View only");
+    await expect(page.locator("#course-content")).not.toBeEmpty({ timeout: 15000 });
+
+    // Every tab of the workspace loads for the administrator, and none offers an authoring control.
+    for (const tab of ["Announcements", "Modules", "Resources", "Discussions", "Assessments", "Grades"]) {
+        await page.getByRole("tab", { name: tab }).click();
+        await expect(page.locator("#course-content")).not.toContainText("Something went wrong", { timeout: 15000 });
+    }
+
+    await expect(page.getByRole("button", { name: /^(Add|New|Create) /i })).toHaveCount(0);
+});

@@ -256,3 +256,15 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 - **A course:** each course links to its own page: enrolment, completion, grades and distribution, grading time, instructor activity and its students who need attention. (The read-only view of its content is a later branch.)
 - **CSV, one per report:** course comparison, at-risk students, grades and grading, instructor activity. Each is for the same filters as the page, with a name or title that could be read as a spreadsheet formula defused, and each export is itself audited as `institution.report_exported` with the filters and the row count.
 - **Empty:** an institution with nothing to report says so instead of showing zeros.
+
+## Read-only course view
+
+Any offering of the institution can be opened and looked at, as its instructor sees it, by the institutional administrator (permission `courses.view`). "View course" on the Offerings list, and "Open the course (view only)" on a course's report page.
+
+- **Addresses:** `institution/courses/{offering}/{slug}/{feature}` for the page and `institution/api/courses/{offering}/...` for what it loads. They are the same controllers and views as the instructor's and chairperson's, not copies; the workspace takes its address prefix from the page (`courseUrlPrefix`).
+- **A view marker** ("View only. You are looking at IT101 A as an administrator of this institution...") sits above the tabs. A completed or archived course carries its own closed note as well.
+- **What is shown:** overview, announcements, modules (drafts included, like the instructor's), resources, discussions, assessments (with their questions and rubrics), and the gradebook (scheme, roster, and the offline grade sheet download). The grading screens, the editors and the question tools are not offered.
+- **Nothing can be changed.** Only reading routes exist under these addresses: there is no route to post, patch or delete anything in a course, and a test walks every write route of the course area and checks none of them exists here. The instructor-only controls are not drawn either, because the page does not treat the viewer as an instructor.
+- **Scope** is the institution's own: an offering of another institution is a 404 on the page and on every API address (`InstitutionCourseFilter`), and the files a course shares (its resources and announcement attachments) open only for its own institution's administrator. A student's submitted work never does.
+- **One rule in one place:** `CourseViewer` says who sees the instructor's view; the services that used to ask "is this the instructor?" for what to show now ask it, and `InstitutionCourseAccess` decides reach. Writes keep their own checks (the assigned instructor, the program's chairperson).
+- **Read-only institutions** can still be looked at; viewing was never a write.
