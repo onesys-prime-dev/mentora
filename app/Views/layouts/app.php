@@ -24,6 +24,14 @@ $shellHeight = $fullHeight ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen
 // narrows below it, so pages work on a laptop, a tablet and a phone.
 $mainGutter  = $mainGutter ?? 'px-4 sm:px-8 lg:px-16 xl:px-40';
 $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
+
+// The page is rendered first, so the header can tell whether the page already names itself:
+// a page with its own <h1> does not need the same words repeated beside the logo.
+ob_start();
+echo $this->renderSection('content');
+$pageContent = (string) ob_get_clean();
+
+$this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -61,7 +69,7 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 
         <main class="flex-1 <?= $mainGutter ?> <?= $mainSpacing ?>">
 
-            <?= $this->renderSection('content') ?>
+            <?= $pageContent ?>
 
         </main>
 
