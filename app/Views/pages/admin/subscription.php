@@ -10,10 +10,8 @@
  * @var array<string, mixed>|null  $subUsage       plan limits and how much is used (null with no subscription)
  * @var string                     $subDefaultCurrency
  */
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
 $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$label = 'flex flex-col gap-1 text-xs font-medium text-[#646464]';
 
 $money = static fn (?string $amount, string $currency): string => $amount === null ? '—' : esc($currency) . ' ' . number_format((float) $amount, 2);
 
@@ -174,20 +172,12 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
                         <td class="px-3 py-2">
                             <details>
                                 <summary class="<?= $btn ?> cursor-pointer border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50">Correct</summary>
-                                <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription/renewals/' . $row['id'] . '/correct') ?>" class="mt-2 flex w-56 flex-col gap-2">
+                                <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription/renewals/' . $row['id'] . '/correct') ?>" class="mt-2 flex w-64 flex-col gap-3">
                                     <?= csrf_field() ?>
-                                    <label class="<?= $label ?>">Amount
-                                        <input class="<?= $input ?>" type="text" inputmode="decimal" name="amount" value="<?= esc((string) ($row['amount'] ?? '')) ?>">
-                                    </label>
-                                    <label class="<?= $label ?>">Currency
-                                        <input class="<?= $input ?> uppercase" type="text" name="currency" maxlength="3" value="<?= esc((string) $row['currency']) ?>">
-                                    </label>
-                                    <label class="<?= $label ?>">Reference
-                                        <input class="<?= $input ?>" type="text" name="reference" maxlength="100" value="<?= esc((string) ($row['reference'] ?? '')) ?>">
-                                    </label>
-                                    <label class="<?= $label ?>">Notes
-                                        <textarea class="<?= $input ?>" name="notes" rows="2" maxlength="1000"><?= esc((string) ($row['notes'] ?? '')) ?></textarea>
-                                    </label>
+                                    <?= view('components/form-field', ['name' => 'amount', 'label' => 'Amount', 'value' => (string) ($row['amount'] ?? ''), 'attrs' => 'inputmode="decimal"'], ['saveData' => false]) ?>
+                                    <?= view('components/form-field', ['name' => 'currency', 'label' => 'Currency', 'value' => (string) $row['currency'], 'maxlength' => 3, 'attrs' => 'autocapitalize="characters"'], ['saveData' => false]) ?>
+                                    <?= view('components/form-field', ['name' => 'reference', 'label' => 'Reference', 'value' => (string) ($row['reference'] ?? ''), 'maxlength' => 100], ['saveData' => false]) ?>
+                                    <?= view('components/form-field', ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'value' => (string) ($row['notes'] ?? ''), 'maxlength' => 1000], ['saveData' => false]) ?>
                                     <button type="submit" class="<?= $btn ?> border-brand bg-white text-brand hover:bg-brand-tint">Add correction</button>
                                 </form>
                             </details>

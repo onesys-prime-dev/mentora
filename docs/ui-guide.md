@@ -178,6 +178,6 @@ A pull request that adds or changes a screen is not done until:
 
 ## 8. Known gaps
 
-- The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists, forms, onboarding (a `stepper`) and password confirmation use the shared components. A few forms of the institution's own pages (the subscription, the flag overrides, the integration connection and the user's page) still use plain labels with the shared button and input styles.
+- The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists, forms, onboarding (a `stepper`) and password confirmation use the shared components. Every field of every form uses `form-field`; the only plain inputs left are the typed-name confirmations in the lists, which are part of a `details` confirm, and checkbox groups with several values (a person's roles, the roles that need a sign-in code).
 - Dark mode: the header button exists and does nothing yet.
 - A few literal greens (`#2E7D4F`) remain where a token would be better (`bg-accent`); new code should use the token.

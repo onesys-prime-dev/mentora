@@ -10,7 +10,6 @@
  * @var array<string, mixed>|null  $sisLatest     the newest preview or import, with its rejected rows
  */
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 $badge = ['running' => 'bg-[#E0E5F2] text-brand-dark', 'succeeded' => 'bg-[#E8F5EC] text-[#2B7549]', 'failed' => 'bg-[#FDEDEC] text-[#C33939]'];
 $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 ?>
@@ -49,24 +48,23 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
     <form data-dialog-form class="mt-5 flex flex-col gap-4" method="post" action="<?= site_url($base) ?>" autocomplete="off" data-sis-form>
         <?= csrf_field() ?>
 
-        <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="enabled" value="1" <?= $sisConnection['enabled'] ? 'checked' : '' ?>>
-            <span>Connection enabled</span>
-        </label>
+        <?= view('components/form-field', ['name' => 'enabled', 'label' => 'Connection enabled', 'type' => 'checkbox', 'value' => (bool) $sisConnection['enabled']], ['saveData' => false]) ?>
 
         <?php foreach ($sisType['fields'] as $name => $field): ?>
-            <label class="flex max-w-md flex-col gap-1 text-xs font-medium text-[#646464]">
-                <?= esc($field['label']) ?>
-                <input class="<?= $input ?>" type="password" name="<?= esc($name) ?>" value="" autocomplete="new-password" placeholder="<?= $sisConnection['hasCredentials'] ? 'Saved. Type to replace.' : 'Not set' ?>" data-secret="<?= esc($name) ?>">
-                <span class="font-normal text-[#646464]"><?= esc($field['help']) ?></span>
-            </label>
+            <?= view('components/form-field', [
+                'name'        => (string) $name,
+                'label'       => (string) $field['label'],
+                'type'        => 'password',
+                'help'        => (string) $field['help'],
+                'placeholder' => $sisConnection['hasCredentials'] ? 'Saved. Type to replace.' : 'Not set',
+                'attrs'       => 'autocomplete="new-password" data-secret="' . esc((string) $name) . '"',
+                'span'        => 'max-w-md',
+            ], ['saveData' => false]) ?>
         <?php endforeach; ?>
 
         <?php if ($sisConnection['hasCredentials']): ?>
             <p class="text-xs text-[#646464]" data-credentials="set">Credentials are saved (last changed <?= esc(substr((string) $sisConnection['credentialsSetAt'], 0, 16)) ?>). They cannot be shown again.</p>
-            <label class="flex items-center gap-2 text-xs text-[#646464]">
-                <input type="checkbox" name="clear_credentials" value="1"> Remove the saved credentials
-            </label>
+            <?= view('components/form-field', ['name' => 'clear_credentials', 'label' => 'Remove the saved credentials', 'type' => 'checkbox'], ['saveData' => false]) ?>
         <?php else: ?>
             <p class="text-xs text-[#646464]" data-credentials="none">No credentials saved.</p>
         <?php endif; ?>

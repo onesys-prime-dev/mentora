@@ -12,8 +12,6 @@
  */
 use App\Services\Users\UserFilters;
 
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
-$label = 'flex flex-col gap-1 text-xs font-medium text-[#646464]';
 $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $isAdmin     = in_array('admin', $person['roles'], true);
@@ -48,19 +46,13 @@ $memberOf    = array_column($person['institutions'], 'id');
     <section class="rounded-2xl bg-white p-6 shadow-sm" data-section="details">
         <h2 class="text-lg font-semibold text-brand">Details</h2>
         <?php if ($personSisManaged): ?>
-            <p class="mt-2 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800" data-sis-managed>This person comes from the school's student information system, which decides their name and email. Change them there; the next sync brings it here.</p>
+            <div class="mt-2" data-sis-managed><?= view('components/alert', ['tone' => 'warning', 'text' => "This person comes from the school's student information system, which decides their name and email. Change them there; the next sync brings it here."], ['saveData' => false]) ?></div>
         <?php endif; ?>
         <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id']) ?>" class="mt-3 grid gap-3 sm:grid-cols-2">
             <?= csrf_field() ?>
-            <label class="<?= $label ?>">First name
-                <input class="<?= $input ?>" type="text" name="first_name" value="<?= esc((string) $personValues['first_name']) ?>" maxlength="100" required <?= $personSisManaged ? 'readonly' : '' ?>>
-            </label>
-            <label class="<?= $label ?>">Last name
-                <input class="<?= $input ?>" type="text" name="last_name" value="<?= esc((string) $personValues['last_name']) ?>" maxlength="100" required <?= $personSisManaged ? 'readonly' : '' ?>>
-            </label>
-            <label class="<?= $label ?> sm:col-span-2">Sign-in email
-                <input class="<?= $input ?>" type="email" name="email" value="<?= esc((string) $personValues['email']) ?>" maxlength="254" required <?= $personSisManaged ? 'readonly' : '' ?>>
-            </label>
+            <?= view('components/form-field', ['name' => 'first_name', 'label' => 'First name', 'value' => (string) $personValues['first_name'], 'maxlength' => 100, 'required' => true, 'attrs' => $personSisManaged ? 'readonly' : ''], ['saveData' => false]) ?>
+            <?= view('components/form-field', ['name' => 'last_name', 'label' => 'Last name', 'value' => (string) $personValues['last_name'], 'maxlength' => 100, 'required' => true, 'attrs' => $personSisManaged ? 'readonly' : ''], ['saveData' => false]) ?>
+            <?= view('components/form-field', ['name' => 'email', 'label' => 'Sign-in email', 'type' => 'email', 'value' => (string) $personValues['email'], 'maxlength' => 254, 'required' => true, 'span' => 'sm:col-span-2', 'attrs' => $personSisManaged ? 'readonly' : ''], ['saveData' => false]) ?>
             <?php if (! $personSisManaged): ?>
                 <div class="sm:col-span-2">
                     <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
@@ -111,9 +103,7 @@ $memberOf    = array_column($person['institutions'], 'id');
             <p class="mt-1 text-sm text-[#646464]">See the platform exactly as they do. It is <strong>view only</strong>: nothing can be changed, it ends by itself after the time limit, and it is kept in the audit log with your reason. Needs your password.</p>
             <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/impersonate') ?>" class="mt-3 flex flex-wrap items-end gap-3">
                 <?= csrf_field() ?>
-                <label class="<?= $label ?> min-w-[18rem] flex-1">Why are you viewing as them?
-                    <input class="<?= $input ?>" type="text" name="reason" maxlength="500" minlength="5" required placeholder="For example: support ticket 1234, grades not showing">
-                </label>
+                <?= view('components/form-field', ['name' => 'reason', 'label' => 'Why are you viewing as them?', 'maxlength' => 500, 'required' => true, 'placeholder' => 'For example: support ticket 1234, grades not showing', 'span' => 'min-w-[18rem] flex-1', 'attrs' => 'minlength="5"'], ['saveData' => false]) ?>
                 <button type="submit" class="rounded-full bg-[#946200] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#6F4A00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#946200]/50">View as <?= esc($name !== '' ? $name : (string) $person['username']) ?></button>
             </form>
         </section>
@@ -163,16 +153,16 @@ $memberOf    = array_column($person['institutions'], 'id');
         <?php if (! $isAdmin): ?>
             <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/memberships') ?>" class="mt-4 flex flex-wrap items-end gap-3">
                 <?= csrf_field() ?>
-                <label class="<?= $label ?>">Add to an institution
-                    <select class="<?= $input ?>" name="institution_id" required>
-                        <option value="">Choose an institution</option>
-                        <?php foreach ($personInstitutions as $institution): ?>
-                            <?php if (! in_array((int) $institution['id'], array_map('intval', $memberOf), true) && $institution['status'] !== 'pending'): ?>
-                                <option value="<?= esc((string) $institution['id']) ?>"><?= esc($institution['name']) ?></option>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
+                <?php
+                $addable = ['' => 'Choose an institution'];
+
+                foreach ($personInstitutions as $institution) {
+                    if (! in_array((int) $institution['id'], array_map('intval', $memberOf), true) && $institution['status'] !== 'pending') {
+                        $addable[(string) $institution['id']] = (string) $institution['name'];
+                    }
+                }
+                ?>
+                <?= view('components/form-field', ['name' => 'institution_id', 'label' => 'Add to an institution', 'type' => 'select', 'options' => $addable, 'required' => true], ['saveData' => false]) ?>
                 <button type="submit" class="<?= $btn ?> border-brand bg-white text-brand hover:bg-brand-tint">Add</button>
             </form>
             <p class="mt-1 text-xs text-[#646464]">Changing institutions needs your password.</p>
