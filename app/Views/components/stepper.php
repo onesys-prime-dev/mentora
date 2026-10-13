@@ -4,20 +4,22 @@
 |--------------------------------------------------------------------------
 | Stepper — where you are in a multi-step flow
 |--------------------------------------------------------------------------
-| Params: steps (required, list of labels), current (required, 1-based).
+| Params: steps (required, list of labels), current (required, 1-based),
+| ariaLabel (default "Steps"), attrs (extra, already-escaped attributes for the list).
+| Every step carries data-step (its number) and data-state (done, current, todo).
 | Done steps show a tick, the current one is marked aria-current="step".
 |--------------------------------------------------------------------------
 */
 ?>
 
-<ol class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm" aria-label="Steps" data-stepper>
+<ol class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm" aria-label="<?= esc($ariaLabel ?? 'Steps') ?>" data-stepper <?= $attrs ?? '' ?>>
     <?php foreach ($steps as $index => $label): ?>
         <?php
         $number = $index + 1;
         $done   = $number < $current;
         $now    = $number === $current;
         ?>
-        <li class="flex items-center gap-2" <?= $now ? 'aria-current="step"' : '' ?>>
+        <li class="flex items-center gap-2" data-step="<?= $number ?>" data-state="<?= $done ? 'done' : ($now ? 'current' : 'todo') ?>" <?= $now ? 'aria-current="step"' : '' ?>>
             <span class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold <?= $done ? 'bg-[#2E7D4F] text-white' : ($now ? 'bg-brand text-white' : 'bg-gray-100 text-[#646464]') ?>">
                 <?php if ($done): ?><?= icon('check', 'h-3.5 w-3.5 text-white') ?><span class="sr-only">Done: </span><?php else: ?><?= esc((string) $number) ?><?php endif; ?>
             </span>

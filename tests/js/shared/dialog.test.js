@@ -327,6 +327,27 @@ describe("a guarded action", () => {
         expect(assign).toHaveBeenCalledWith("/people");
     });
 
+    it("gives focus back to the button that was pressed when the password dialog is left", async () => {
+        page(PAGE);
+        bindDialogs();
+        vi.stubGlobal("location", { assign: vi.fn(), reload: vi.fn() });
+        vi.stubGlobal("fetch", vi.fn(async () => reply(403, { error: "reauth_required" })));
+
+        const go = document.getElementById("go");
+        go.focus();
+
+        await submit("f");
+
+        expect(document.getElementById("reauth-dialog").hidden).toBe(false);
+
+        document.getElementById("cancel").click();
+        await tick();
+
+        expect(document.getElementById("reauth-dialog").hidden).toBe(true);
+        expect(go.disabled).toBe(false);
+        expect(document.activeElement).toBe(go);
+    });
+
     it("keeps the dialog open and shows the error for a wrong password", async () => {
         page(PAGE);
         bindDialogs();

@@ -16,7 +16,7 @@ $sections = [
     'Inside an institution' => $academicPerms,
 ];
 
-$th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600';
+$th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[#646464]';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -24,7 +24,7 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
 <?= $this->section('content') ?>
 
 <?= view('components/page-head', ['title' => 'Roles and permissions', 'icon' => 'lock'], ['saveData' => false]) ?>
-<p class="mt-2 max-w-3xl text-sm text-gray-600">
+<p class="mt-2 max-w-3xl text-sm text-[#646464]">
     What each role may do. Changes apply on the next request and need your password. The system administrator role is locked,
     and every role keeps at least one permission. <span class="font-semibold text-amber-700">Edited</span> marks a cell that differs from the default.
 </p>
@@ -40,11 +40,11 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
     <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50">
             <tr>
-                <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Permission</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]">Permission</th>
                 <?php foreach ($roleTitles as $role => $roleTitle): ?>
                     <th class="<?= $th ?>">
                         <?= esc($roleTitle) ?>
-                        <?php if ($role === $lockedRole): ?><span class="block text-[10px] font-normal normal-case text-gray-500">locked</span><?php endif; ?>
+                        <?php if ($role === $lockedRole): ?><span class="block text-[10px] font-normal normal-case text-[#646464]">locked</span><?php endif; ?>
                     </th>
                 <?php endforeach; ?>
             </tr>
@@ -58,7 +58,7 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
                     <tr>
                         <td class="px-3 py-2">
                             <span class="font-mono text-xs"><?= esc($permission) ?></span>
-                            <span class="block text-xs text-gray-500"><?= esc($description) ?></span>
+                            <span class="block text-xs text-[#646464]"><?= esc($description) ?></span>
                         </td>
 
                         <?php foreach ($roleTitles as $role => $roleTitle): ?>
@@ -72,7 +72,7 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
                                 <?php if ($isLocked): ?>
                                     <span class="<?= $has ? 'text-gray-700' : 'text-gray-300' ?>" title="Locked"><?= $has ? '✓' : '—' ?></span>
                                 <?php else: ?>
-                                    <form method="post" action="<?= site_url('admin/roles/permissions') ?>">
+                                    <form data-dialog-form method="post" action="<?= site_url('admin/roles/permissions') ?>">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="role" value="<?= esc($role) ?>">
                                         <input type="hidden" name="permission" value="<?= esc($permission) ?>">

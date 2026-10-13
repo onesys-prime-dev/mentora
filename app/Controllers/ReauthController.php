@@ -27,6 +27,8 @@ class ReauthController extends BaseController
             'page'        => $this->isAdmin() ? 'admin' : 'institution',
             'pageTitle'   => 'Confirm your password',
             'user'        => $user,
+            // The page is the confirmation: it does not also carry the dialog for it.
+            'reauthDialog' => false,
             'reauthAdmin' => $this->isAdmin(),
             'reauthPost'  => site_url($this->path()),
         ]);

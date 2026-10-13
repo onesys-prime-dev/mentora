@@ -6,7 +6,7 @@
  * @var list<array<string, mixed>> $auditRows  newest first
  * @var int                        $auditTotal
  */
-$th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
+$th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -14,11 +14,11 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gr
 <?= $this->section('content') ?>
 
 <?= view('components/page-head', ['title' => 'Audit', 'icon' => 'tasks', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
-<p class="mt-1 text-sm text-gray-600"><?= esc($auditInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($auditInstitution['code']) ?>)</span></p>
+<p class="mt-1 text-sm text-[#646464]"><?= esc($auditInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($auditInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $auditInstitution, 'tabActive' => 'audit']) ?>
 
-<p class="mt-4 text-sm text-gray-600">
+<p class="mt-4 text-sm text-[#646464]">
     The latest <?= esc((string) count($auditRows)) ?> of <?= esc(number_format($auditTotal)) ?> entries.
     <a class="font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log?institution=' . $auditInstitution['id']) ?>">Open all of them in the audit log</a>
 </p>
@@ -36,7 +36,7 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gr
         </thead>
         <tbody class="divide-y divide-gray-100">
             <?php if ($auditRows === []): ?>
-                <tr><td class="px-3 py-8 text-center text-gray-500" colspan="5">Nothing has been recorded for this institution yet.</td></tr>
+                <tr><td class="px-3 py-8 text-center text-[#646464]" colspan="5">Nothing has been recorded for this institution yet.</td></tr>
             <?php endif; ?>
             <?php foreach ($auditRows as $row): ?>
                 <tr>

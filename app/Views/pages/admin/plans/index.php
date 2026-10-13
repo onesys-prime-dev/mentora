@@ -18,11 +18,11 @@ foreach ($planRows as $row) {
     $actions = '<div class="flex flex-wrap items-start justify-end gap-2 max-md:justify-start">';
 
     if ($retired) {
-        $actions .= '<form method="post" action="' . site_url('admin/plans/' . $id . '/reinstate') . '">' . csrf_field()
+        $actions .= '<form data-dialog-form method="post" action="' . site_url('admin/plans/' . $id . '/reinstate') . '">' . csrf_field()
             . '<button type="submit" class="' . $btn . ' border-brand bg-white text-brand hover:bg-brand-tint">Reinstate</button></form>';
     } else {
         $actions .= '<a class="' . $btn . ' ' . $plain . '" href="' . site_url('admin/plans/' . $id . '/edit') . '">Edit</a>'
-            . '<form method="post" action="' . site_url('admin/plans/' . $id . '/retire') . '">' . csrf_field()
+            . '<form data-dialog-form method="post" action="' . site_url('admin/plans/' . $id . '/retire') . '">' . csrf_field()
             . '<button type="submit" class="' . $btn . ' border-[#946200] bg-white text-[#946200] hover:bg-[#FFF1D6]">Retire</button></form>';
     }
 
@@ -52,7 +52,7 @@ foreach ($planRows as $row) {
 <?= $this->section('content') ?>
 
 <?= view('components/page-head', ['title' => 'Plans', 'icon' => 'points', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/plans/new') . '">Add a plan</a>'], ['saveData' => false]) ?>
-<p class="mt-2 max-w-3xl text-sm text-gray-600">
+<p class="mt-2 max-w-3xl text-sm text-[#646464]">
     A plan is what an institution subscribes to: the features it gets and the limits that apply. A retired plan can no longer be chosen
     for new subscriptions, but institutions already on it keep it.
 </p>

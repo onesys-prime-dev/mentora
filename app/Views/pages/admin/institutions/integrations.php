@@ -9,9 +9,9 @@
  * @var list<array<string, mixed>> $sisRuns       newest first
  * @var array<string, mixed>|null  $sisLatest     the newest preview or import, with its rejected rows
  */
-$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
-$badge = ['running' => 'bg-blue-100 text-blue-800', 'succeeded' => 'bg-green-100 text-green-800', 'failed' => 'bg-red-100 text-red-800'];
+$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
+$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+$badge = ['running' => 'bg-[#E0E5F2] text-brand-dark', 'succeeded' => 'bg-[#E8F5EC] text-[#2B7549]', 'failed' => 'bg-[#FDEDEC] text-[#C33939]'];
 $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 ?>
 
@@ -20,7 +20,7 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 <?= $this->section('content') ?>
 
 <?= view('components/page-head', ['title' => 'Integrations', 'icon' => 'link', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
-<p class="mt-1 text-sm text-gray-600"><?= esc($sisInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($sisInstitution['code']) ?>)</span></p>
+<p class="mt-1 text-sm text-[#646464]"><?= esc($sisInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($sisInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $sisInstitution, 'tabActive' => 'integrations']) ?>
 
@@ -38,15 +38,15 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
     </p>
 <?php endif; ?>
 
-<section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="connection">
+<section class="mt-6 rounded-2xl bg-white p-6 shadow-sm" data-section="connection">
     <h2 class="text-lg font-semibold text-brand">Student information system</h2>
-    <p class="mt-1 text-sm text-gray-600">Connector: <?= esc($sisType['label']) ?>.</p>
+    <p class="mt-1 text-sm text-[#646464]">Connector: <?= esc($sisType['label']) ?>.</p>
     <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-        <div><dt class="text-xs text-gray-500">Inbound folder</dt><dd class="break-all font-mono text-xs"><?= esc($sisConnection['folders']['inbound']) ?></dd></div>
-        <div><dt class="text-xs text-gray-500">Outbound folder</dt><dd class="break-all font-mono text-xs"><?= esc($sisConnection['folders']['outbound']) ?></dd></div>
+        <div><dt class="text-xs text-[#646464]">Inbound folder</dt><dd class="break-all font-mono text-xs"><?= esc($sisConnection['folders']['inbound']) ?></dd></div>
+        <div><dt class="text-xs text-[#646464]">Outbound folder</dt><dd class="break-all font-mono text-xs"><?= esc($sisConnection['folders']['outbound']) ?></dd></div>
     </dl>
 
-    <form class="mt-5 flex flex-col gap-4" method="post" action="<?= site_url($base) ?>" autocomplete="off" data-sis-form>
+    <form data-dialog-form class="mt-5 flex flex-col gap-4" method="post" action="<?= site_url($base) ?>" autocomplete="off" data-sis-form>
         <?= csrf_field() ?>
 
         <label class="flex items-center gap-2 text-sm">
@@ -55,42 +55,42 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
         </label>
 
         <?php foreach ($sisType['fields'] as $name => $field): ?>
-            <label class="flex max-w-md flex-col gap-1 text-xs font-medium text-gray-600">
+            <label class="flex max-w-md flex-col gap-1 text-xs font-medium text-[#646464]">
                 <?= esc($field['label']) ?>
                 <input class="<?= $input ?>" type="password" name="<?= esc($name) ?>" value="" autocomplete="new-password" placeholder="<?= $sisConnection['hasCredentials'] ? 'Saved. Type to replace.' : 'Not set' ?>" data-secret="<?= esc($name) ?>">
-                <span class="font-normal text-gray-500"><?= esc($field['help']) ?></span>
+                <span class="font-normal text-[#646464]"><?= esc($field['help']) ?></span>
             </label>
         <?php endforeach; ?>
 
         <?php if ($sisConnection['hasCredentials']): ?>
-            <p class="text-xs text-gray-500" data-credentials="set">Credentials are saved (last changed <?= esc(substr((string) $sisConnection['credentialsSetAt'], 0, 16)) ?>). They cannot be shown again.</p>
-            <label class="flex items-center gap-2 text-xs text-gray-600">
+            <p class="text-xs text-[#646464]" data-credentials="set">Credentials are saved (last changed <?= esc(substr((string) $sisConnection['credentialsSetAt'], 0, 16)) ?>). They cannot be shown again.</p>
+            <label class="flex items-center gap-2 text-xs text-[#646464]">
                 <input type="checkbox" name="clear_credentials" value="1"> Remove the saved credentials
             </label>
         <?php else: ?>
-            <p class="text-xs text-gray-500" data-credentials="none">No credentials saved.</p>
+            <p class="text-xs text-[#646464]" data-credentials="none">No credentials saved.</p>
         <?php endif; ?>
 
-        <div><button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Save (asks for your password)</button></div>
+        <div><button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save (asks for your password)</button></div>
     </form>
 
     <form class="mt-4" method="post" action="<?= site_url($base . '/test') ?>">
         <?= csrf_field() ?>
-        <button type="submit" class="rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10">Test connection</button>
+        <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Test connection</button>
     </form>
 </section>
 
-<section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="import">
+<section class="mt-6 rounded-2xl bg-white p-6 shadow-sm" data-section="import">
     <h2 class="text-lg font-semibold text-brand">Import from the SIS</h2>
-    <p class="mt-1 text-sm text-gray-600">People, courses and enrolments come in from the SIS, which wins on any difference. A preview does the whole job and then undoes it, so you see the counts and any rows that would be refused. Run one before the first real import.</p>
+    <p class="mt-1 text-sm text-[#646464]">People, courses and enrolments come in from the SIS, which wins on any difference. A preview does the whole job and then undoes it, so you see the counts and any rows that would be refused. Run one before the first real import.</p>
     <div class="mt-4 flex flex-wrap gap-3">
         <form method="post" action="<?= site_url($base . '/preview') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10" data-sis-preview>Preview (dry run)</button>
+            <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-sis-preview>Preview (dry run)</button>
         </form>
-        <form method="post" action="<?= site_url($base . '/run') ?>">
+        <form data-dialog-form method="post" action="<?= site_url($base . '/run') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-sis-run>Import now</button>
+            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-sis-run>Import now</button>
         </form>
     </div>
 
@@ -111,28 +111,28 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
                 </table>
             </div>
             <?php if ($sisLatest['truncated']): ?>
-                <p class="mt-2 text-xs text-gray-500">Only the first <?= esc((string) \App\Services\Sis\SisImporter::MAX_ISSUES) ?> are listed; the counts cover every row.</p>
+                <p class="mt-2 text-xs text-[#646464]">Only the first <?= esc((string) \App\Services\Sis\SisImporter::MAX_ISSUES) ?> are listed; the counts cover every row.</p>
             <?php endif; ?>
         <?php endif; ?>
     <?php endif; ?>
 </section>
 
-<section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="grades">
+<section class="mt-6 rounded-2xl bg-white p-6 shadow-sm" data-section="grades">
     <h2 class="text-lg font-semibold text-brand">Final grades to the SIS</h2>
-    <p class="mt-1 text-sm text-gray-600">Only final grades go out (course, student, percentage, remarks), and only the ones that are new or changed since they were last sent. Mentora is the source of truth: the SIS receives what is here. Sending the same grades again replaces the delivery, so nothing is duplicated.</p>
+    <p class="mt-1 text-sm text-[#646464]">Only final grades go out (course, student, percentage, remarks), and only the ones that are new or changed since they were last sent. Mentora is the source of truth: the SIS receives what is here. Sending the same grades again replaces the delivery, so nothing is duplicated.</p>
     <div class="mt-4 flex flex-wrap gap-3">
         <form method="post" action="<?= site_url($base . '/grades/preview') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10" data-grades-preview>Preview what would be sent</button>
+            <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-grades-preview>Preview what would be sent</button>
         </form>
-        <form method="post" action="<?= site_url($base . '/grades/send') ?>">
+        <form data-dialog-form method="post" action="<?= site_url($base . '/grades/send') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-grades-send>Send final grades now</button>
+            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-grades-send>Send final grades now</button>
         </form>
     </div>
 </section>
 
-<section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="runs">
+<section class="mt-6 rounded-2xl bg-white p-6 shadow-sm" data-section="runs">
     <h2 class="text-lg font-semibold text-brand">Run history</h2>
     <div class="mt-3 overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -144,7 +144,7 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
             </thead>
             <tbody class="divide-y divide-gray-100">
                 <?php if ($sisRuns === []): ?>
-                    <tr><td colspan="9" class="px-3 py-6 text-center text-gray-500" data-runs-empty>Nothing has run yet.</td></tr>
+                    <tr><td colspan="9" class="px-3 py-6 text-center text-[#646464]" data-runs-empty>Nothing has run yet.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($sisRuns as $run): ?>
                     <tr data-run="<?= esc($run['status']) ?>">
@@ -156,7 +156,7 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
                         <td class="px-3 py-2"><?= esc((string) $run['updated_count']) ?></td>
                         <td class="px-3 py-2"><?= esc((string) $run['skipped_count']) ?></td>
                         <td class="px-3 py-2"><?= esc((string) $run['failed_count']) ?></td>
-                        <td class="px-3 py-2 text-xs text-gray-600"><?= esc((string) $run['message']) ?></td>
+                        <td class="px-3 py-2 text-xs text-[#646464]"><?= esc((string) $run['message']) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

@@ -10,20 +10,20 @@
  * @var array<string, mixed>|null  $subUsage       plan limits and how much is used (null with no subscription)
  * @var string                     $subDefaultCurrency
  */
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
-$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
-$btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
-$label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
+$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
+$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$label = 'flex flex-col gap-1 text-xs font-medium text-[#646464]';
 
 $money = static fn (?string $amount, string $currency): string => $amount === null ? '—' : esc($currency) . ' ' . number_format((float) $amount, 2);
 
 /** state => [badge text, badge colours] */
 $stateBadge = [
-    'active'    => ['Running', 'bg-green-100 text-green-800'],
-    'expiring'  => ['Expiring soon', 'bg-amber-100 text-amber-800'],
-    'grace'     => ['Grace period', 'bg-amber-100 text-amber-800'],
+    'active'    => ['Running', 'bg-[#E8F5EC] text-[#2B7549]'],
+    'expiring'  => ['Expiring soon', 'bg-[#FFF1D6] text-[#946200]'],
+    'grace'     => ['Grace period', 'bg-[#FFF1D6] text-[#946200]'],
     'read_only' => ['Read-only', 'bg-orange-100 text-orange-800'],
-    'expired'   => ['Expired', 'bg-red-100 text-red-800'],
+    'expired'   => ['Expired', 'bg-[#FDEDEC] text-[#C33939]'],
 ];
 
 $stateText = static fn ($status): string => match ($status->state) {
@@ -37,9 +37,9 @@ $stateText = static fn ($status): string => match ($status->state) {
 /** limit state => [badge text, badge colours, bar colour] */
 $usageStates = [
     'unlimited' => ['Unlimited', 'bg-gray-100 text-gray-700', 'bg-gray-300'],
-    'ok'        => ['OK', 'bg-green-100 text-green-800', 'bg-green-500'],
-    'warning'   => ['Nearly full', 'bg-amber-100 text-amber-800', 'bg-amber-500'],
-    'full'      => ['Full', 'bg-red-100 text-red-800', 'bg-red-500'],
+    'ok'        => ['OK', 'bg-[#E8F5EC] text-[#2B7549]', 'bg-[#2E7D4F]'],
+    'warning'   => ['Nearly full', 'bg-[#FFF1D6] text-[#946200]', 'bg-[#946200]'],
+    'full'      => ['Full', 'bg-[#FDEDEC] text-[#C33939]', 'bg-[#C33939]'],
 ];
 
 $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Correction'];
@@ -50,7 +50,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
 <?= $this->section('content') ?>
 
 <?= view('components/page-head', ['title' => 'Subscription', 'icon' => 'points', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
-<p class="mt-1 text-sm text-gray-600"><?= esc($subInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($subInstitution['code']) ?>)</span></p>
+<p class="mt-1 text-sm text-[#646464]"><?= esc($subInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($subInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $subInstitution, 'tabActive' => 'subscription']) ?>
 
@@ -63,30 +63,30 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
 
 <?php if ($subscription === null && $subInstitution['status'] === 'pending'): ?>
 
-    <div class="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-6" data-onboarding-pending>
+    <div class="mt-6 rounded-2xl border border-[#946200]/30 bg-[#FFF1D6] p-6" data-onboarding-pending>
         <h2 class="text-lg font-semibold text-amber-900">Onboarding is not finished</h2>
         <p class="mt-1 text-sm text-amber-900">A new institution gets its first subscription as part of onboarding, together with its first administrator.</p>
-        <a class="mt-3 inline-block rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
+        <a class="mt-3 inline-block rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
     </div>
 
 <?php elseif ($subscription === null): ?>
 
-    <div class="mt-6 rounded-lg bg-white p-6 shadow">
+    <div class="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <h2 class="text-lg font-semibold text-brand">Start a subscription</h2>
-        <p class="mt-1 text-sm text-gray-600">This institution has no subscription yet. Pick its plan and the period it has paid for.</p>
+        <p class="mt-1 text-sm text-[#646464]">This institution has no subscription yet. Pick its plan and the period it has paid for.</p>
 
         <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription') ?>" class="mt-4 grid gap-3 sm:grid-cols-2">
             <?= csrf_field() ?>
             <?= view('pages/admin/partials/term-fields', ['tfCurrency' => $subDefaultCurrency, 'tfPlans' => $subPlans, 'tfPlan' => null, 'tfValues' => []]) ?>
             <div class="sm:col-span-2">
-                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Start subscription</button>
+                <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Start subscription</button>
             </div>
         </form>
     </div>
 
 <?php else: ?>
 
-    <div class="mt-6 rounded-lg bg-white p-6 shadow">
+    <div class="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <div class="flex flex-wrap items-center gap-3">
             <h2 class="text-lg font-semibold text-brand"><?= esc($subscription['plan_name']) ?></h2>
             <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $stateBadge[$subStatus->state][1] ?>"><?= esc($stateBadge[$subStatus->state][0]) ?></span>
@@ -95,12 +95,12 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
         <p class="mt-2 text-sm text-gray-700">
             From <strong><?= esc($subscription['start_date']) ?></strong> to <strong><?= esc($subscription['end_date']) ?></strong>.
         </p>
-        <p class="mt-1 text-sm text-gray-600"><?= esc($stateText($subStatus)) ?></p>
+        <p class="mt-1 text-sm text-[#646464]"><?= esc($stateText($subStatus)) ?></p>
     </div>
 
-    <div class="mt-6 rounded-lg bg-white p-6 shadow" data-usage>
+    <div class="mt-6 rounded-2xl bg-white p-6 shadow-sm" data-usage>
         <h2 class="text-lg font-semibold text-brand">Usage</h2>
-        <p class="mt-1 text-sm text-gray-600">How much of the plan's limits this institution has used. From 90% it is a warning; when a limit is used up, anything that would add to it is refused. Nothing is ever removed.</p>
+        <p class="mt-1 text-sm text-[#646464]">How much of the plan's limits this institution has used. From 90% it is a warning; when a limit is used up, anything that would add to it is refused. Nothing is ever removed.</p>
 
         <dl class="mt-4 grid gap-4 sm:grid-cols-3">
             <?php foreach ([
@@ -114,7 +114,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
                         <?= esc($name) ?>
                         <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $stateClass ?>"><?= esc($stateLabel) ?></span>
                     </dt>
-                    <dd class="mt-1 text-sm text-gray-600"><?= esc($usedText) ?> of <?= $limitText === null ? 'unlimited' : esc($limitText) ?><?= $line['percent'] === null ? '' : ' (' . esc((string) $line['percent']) . '%)' ?></dd>
+                    <dd class="mt-1 text-sm text-[#646464]"><?= esc($usedText) ?> of <?= $limitText === null ? 'unlimited' : esc($limitText) ?><?= $line['percent'] === null ? '' : ' (' . esc((string) $line['percent']) . '%)' ?></dd>
                     <?php if ($line['percent'] !== null): ?>
                         <div class="mt-2 h-2 overflow-hidden rounded bg-gray-200" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= esc((string) min(100, $line['percent'])) ?>" aria-label="<?= esc($name) ?>">
                             <div class="h-full <?= $barClass ?>" style="width: <?= esc((string) min(100, $line['percent'])) ?>%"></div>
@@ -125,21 +125,21 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
         </dl>
     </div>
 
-    <div class="mt-6 rounded-lg bg-white p-6 shadow">
+    <div class="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <h2 class="text-lg font-semibold text-brand">Record a renewal</h2>
-        <p class="mt-1 text-sm text-gray-600">A renewal adds a new term and moves the end date to the end of it. It must end after <?= esc($subscription['end_date']) ?>.</p>
+        <p class="mt-1 text-sm text-[#646464]">A renewal adds a new term and moves the end date to the end of it. It must end after <?= esc($subscription['end_date']) ?>.</p>
 
         <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription/renew') ?>" class="mt-4 grid gap-3 sm:grid-cols-2">
             <?= csrf_field() ?>
             <?= view('pages/admin/partials/term-fields', ['tfCurrency' => $subDefaultCurrency, 'tfPlans' => $subPlans, 'tfPlan' => (int) $subscription['plan_id'], 'tfValues' => []]) ?>
             <div class="sm:col-span-2">
-                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Record renewal</button>
+                <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Record renewal</button>
             </div>
         </form>
     </div>
 
     <h2 class="mt-8 text-lg font-semibold text-brand">History</h2>
-    <p class="mt-1 text-sm text-gray-600">Every term, newest first. Records are never changed or removed; a mistake is put right with a correction.</p>
+    <p class="mt-1 text-sm text-[#646464]">Every term, newest first. Records are never changed or removed; a mistake is put right with a correction.</p>
 
     <div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -158,22 +158,22 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
             <tbody class="divide-y divide-gray-100">
                 <?php foreach ($subHistory as $row): ?>
                     <tr>
-                        <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) $row['recorded_at'], 0, 16)) ?></td>
+                        <td class="whitespace-nowrap px-3 py-2 text-[#646464]"><?= esc(substr((string) $row['recorded_at'], 0, 16)) ?></td>
                         <td class="px-3 py-2">
                             <?= esc($kindLabels[$row['kind']] ?? $row['kind']) ?>
-                            <?php if ($row['corrects_renewal_id'] !== null): ?><span class="block text-xs text-gray-500">of record #<?= esc((string) $row['corrects_renewal_id']) ?></span><?php endif; ?>
+                            <?php if ($row['corrects_renewal_id'] !== null): ?><span class="block text-xs text-[#646464]">of record #<?= esc((string) $row['corrects_renewal_id']) ?></span><?php endif; ?>
                         </td>
                         <td class="px-3 py-2"><?= esc($row['plan_name']) ?></td>
                         <td class="whitespace-nowrap px-3 py-2"><?= esc($row['period_start']) ?> &rarr; <?= esc($row['period_end']) ?></td>
                         <td class="whitespace-nowrap px-3 py-2"><?= $money($row['amount'], (string) $row['currency']) ?></td>
                         <td class="px-3 py-2">
                             <?= esc($row['reference'] ?? '—') ?>
-                            <?php if ($row['notes'] !== null): ?><span class="block max-w-xs text-xs text-gray-500"><?= esc($row['notes']) ?></span><?php endif; ?>
+                            <?php if ($row['notes'] !== null): ?><span class="block max-w-xs text-xs text-[#646464]"><?= esc($row['notes']) ?></span><?php endif; ?>
                         </td>
-                        <td class="px-3 py-2 text-xs text-gray-600"><?= esc($row['recorded_by_label'] ?? '—') ?></td>
+                        <td class="px-3 py-2 text-xs text-[#646464]"><?= esc($row['recorded_by_label'] ?? '—') ?></td>
                         <td class="px-3 py-2">
                             <details>
-                                <summary class="<?= $btn ?> cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50">Correct</summary>
+                                <summary class="<?= $btn ?> cursor-pointer border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50">Correct</summary>
                                 <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription/renewals/' . $row['id'] . '/correct') ?>" class="mt-2 flex w-56 flex-col gap-2">
                                     <?= csrf_field() ?>
                                     <label class="<?= $label ?>">Amount
@@ -188,7 +188,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
                                     <label class="<?= $label ?>">Notes
                                         <textarea class="<?= $input ?>" name="notes" rows="2" maxlength="1000"><?= esc((string) ($row['notes'] ?? '')) ?></textarea>
                                     </label>
-                                    <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Add correction</button>
+                                    <button type="submit" class="<?= $btn ?> border-brand bg-white text-brand hover:bg-brand-tint">Add correction</button>
                                 </form>
                             </details>
                         </td>

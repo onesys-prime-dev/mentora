@@ -9,8 +9,20 @@
  */
 use App\Services\Users\UserFilters;
 
-$input = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
-$label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$cancel  = 'rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+
+$institutionOptions = ['' => 'Choose an institution'];
+
+foreach ($newInstitutions as $institution) {
+    $institutionOptions[(string) $institution['id']] = (string) $institution['name'];
+}
+
+$roleOptions = ['' => 'Choose a role'];
+
+foreach ($newRoles as $role) {
+    $roleOptions[$role] = UserFilters::ROLE_LABELS[$role] ?? $role;
+}
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -18,58 +30,39 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-lg">
-    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/users') ?>">&larr; Users</a>
 
-    <div class="mt-3 rounded-lg bg-white p-6 shadow">
-        <h1 class="text-xl font-bold text-brand">Invite a person</h1>
-        <p class="mt-1 text-sm text-gray-600">They get an emailed link, valid for a limited time and usable once, and choose their own password on it. The account is made then.</p>
-        <p class="mt-1 text-xs text-gray-500">System administrators are not made here: they are created with <span class="font-mono">php spark admin:create</span>.</p>
+    <?= view('components/page-head', [
+        'title'       => 'Invite a person',
+        'icon'        => 'user',
+        'description' => 'They get an emailed link, valid for a limited time and usable once, and choose their own password on it. The account is made then.',
+        'backUrl'     => site_url('admin/users'),
+        'backLabel'   => 'Users',
+    ], ['saveData' => false]) ?>
 
-        <?php if (session()->has('error')): ?>
-            <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
-        <?php endif; ?>
+    <p class="mt-2 text-xs text-[#646464]">System administrators are not made here: they are created with <span class="font-mono">php spark admin:create</span>.</p>
 
-        <form method="post" action="<?= site_url('admin/users') ?>" class="mt-4 flex flex-col gap-4">
-            <?= csrf_field() ?>
+    <?php if (session()->has('error')): ?>
+        <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
+    <?php endif; ?>
 
-            <label class="<?= $label ?>">Institution
-                <select class="<?= $input ?>" name="institution_id" required>
-                    <option value="">Choose an institution</option>
-                    <?php foreach ($newInstitutions as $institution): ?>
-                        <option value="<?= esc((string) $institution['id']) ?>" <?= (string) $newValues['institution_id'] === (string) $institution['id'] ? 'selected' : '' ?>><?= esc($institution['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
+    <form method="post" action="<?= site_url('admin/users') ?>" class="mt-5 flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
+        <?= csrf_field() ?>
 
-            <label class="<?= $label ?>">Role
-                <select class="<?= $input ?>" name="role" required>
-                    <option value="">Choose a role</option>
-                    <?php foreach ($newRoles as $role): ?>
-                        <option value="<?= esc($role) ?>" <?= $newValues['role'] === $role ? 'selected' : '' ?>><?= esc(UserFilters::ROLE_LABELS[$role] ?? $role) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <span class="text-xs font-normal text-gray-500">A student takes one of the plan's seats.</span>
-            </label>
+        <?= view('components/form-field', ['name' => 'institution_id', 'label' => 'Institution', 'type' => 'select', 'options' => $institutionOptions, 'value' => (string) $newValues['institution_id'], 'required' => true], ['saveData' => false]) ?>
+        <?= view('components/form-field', ['name' => 'role', 'label' => 'Role', 'type' => 'select', 'options' => $roleOptions, 'value' => (string) $newValues['role'], 'required' => true, 'help' => 'A student takes one of the plan\'s seats.'], ['saveData' => false]) ?>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-                <label class="<?= $label ?>">First name
-                    <input class="<?= $input ?>" type="text" name="first_name" value="<?= esc((string) $newValues['first_name']) ?>" maxlength="100" required>
-                </label>
-                <label class="<?= $label ?>">Last name
-                    <input class="<?= $input ?>" type="text" name="last_name" value="<?= esc((string) $newValues['last_name']) ?>" maxlength="100" required>
-                </label>
-            </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <?= view('components/form-field', ['name' => 'first_name', 'label' => 'First name', 'value' => (string) $newValues['first_name'], 'maxlength' => 100, 'required' => true], ['saveData' => false]) ?>
+            <?= view('components/form-field', ['name' => 'last_name', 'label' => 'Last name', 'value' => (string) $newValues['last_name'], 'maxlength' => 100, 'required' => true], ['saveData' => false]) ?>
+        </div>
 
-            <label class="<?= $label ?>">Email address
-                <input class="<?= $input ?>" type="email" name="email" value="<?= esc((string) $newValues['email']) ?>" maxlength="254" required>
-            </label>
+        <?= view('components/form-field', ['name' => 'email', 'label' => 'Email address', 'type' => 'email', 'value' => (string) $newValues['email'], 'maxlength' => 254, 'required' => true], ['saveData' => false]) ?>
 
-            <div class="flex gap-3">
-                <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Send invitation</button>
-                <a class="px-3 py-2 text-sm font-semibold text-gray-600 hover:underline" href="<?= site_url('admin/users') ?>">Cancel</a>
-            </div>
-        </form>
-    </div>
+        <div class="flex flex-wrap items-center justify-end gap-3">
+            <a class="<?= $cancel ?>" href="<?= site_url('admin/users') ?>">Cancel</a>
+            <button type="submit" class="<?= $primary ?>">Send invitation</button>
+        </div>
+    </form>
 </div>
 
 <?= $this->endSection() ?>

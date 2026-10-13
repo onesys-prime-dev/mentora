@@ -53,7 +53,7 @@ foreach ($institutionRows as $row) {
     $actions = '<div class="flex flex-wrap items-start justify-end gap-2 max-md:justify-start">';
 
     if ($isDeleted) {
-        $actions .= '<form method="post" action="' . site_url('admin/institutions/' . $id . '/restore') . '">' . csrf_field()
+        $actions .= '<form data-dialog-form method="post" action="' . site_url('admin/institutions/' . $id . '/restore') . '">' . csrf_field()
             . '<button type="submit" class="' . $btn . ' ' . $brand . '">Restore</button></form>';
     } else {
         if ($row['status'] === 'pending') {

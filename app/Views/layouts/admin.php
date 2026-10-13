@@ -54,6 +54,11 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
 
     </div>
 
+    <?php // Guarded actions ask for the password here, over the page, and carry on (shared/dialog.js). ?>
+    <?php if ($reauthDialog ?? true): ?>
+        <?= $this->include('layouts/partials/reauth-dialog') ?>
+    <?php endif; ?>
+
     <?= $this->renderSection('scripts') ?>
 
 </body>

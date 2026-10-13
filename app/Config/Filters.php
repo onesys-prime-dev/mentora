@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Filters\AccountStateFilter;
+use App\Filters\AjaxRedirectFilter;
 use App\Filters\AssessmentScope;
 use App\Filters\ChairpersonCourseAudit;
 use App\Filters\ImpersonationFilter;
@@ -47,6 +48,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'assessmentscope' => AssessmentScope::class,
         'reauth'        => ReauthFilter::class,
+        'ajaxredirect'  => AjaxRedirectFilter::class,
         'readonly'      => ReadOnlyFilter::class,
         'closedoffering' => ClosedOfferingFilter::class,
         'institutioncourse' => InstitutionCourseFilter::class,
