@@ -301,3 +301,31 @@ On the People page, `Actions` has `View as this person` (permission `institution
 - **Recorded:** start and end are audit entries (reason, time watched), and every entry made in between carries the administrator as impersonator, which the audit page shows as "viewing as, by ...".
 
 The service is the system administrator's own (`Impersonation`), extended with the institution rules; the system administrator's behaviour is unchanged.
+
+## Home: what needs attention, recent activity, quick access
+
+`/institution/dashboard` starts with **Needs attention**, most urgent first (red, then amber, then blue), each with a button to where it is dealt with. It says so in words when there is nothing, rather than showing an empty list. The questions are `InstitutionAttention`, with the day passed in, so the page and the notifications agree:
+
+| Item | When |
+|---|---|
+| Subscription ending, in grace, read-only, ended | By the plan's timeline (not repeated under the read-only banner) |
+| A limit at 90% or 100% | Seats, storage, AI generations |
+| A failed SIS run | A real run (not a test or preview) failed in the last 7 days and no good run in the same direction has followed |
+| No term is active | No term has the status active |
+| The active term ends within 14 days | Today counts; after it ended it does not |
+| Offerings with no instructor | Active offerings of the active term that nobody teaches; links to the offerings list already filtered |
+| Courses with no offering this term | Active courses not offered in the active term |
+| Invitations expired / about to expire | Still open, and lapsed or lapsing within 3 days |
+
+**Recent activity** is the latest six audit entries of the institution (no source addresses), with a link to the full log; without `institution.audit` the card says so. **Quick access** offers only what this administrator may do right now: inviting, uploading and adding offerings need their permission and a writable institution; reports need `reports.view`; the data export is always there.
+
+### Notifications for the institution's administrators
+
+Sent by `subscriptions:sync` with the others, each once (running again tells nobody twice), in the app only unless urgent:
+
+- A failed SIS import or grade delivery (urgent: also by email), now to the institution's administrators as well as the system administrators.
+- The active term ends within 14 days.
+- Offerings still have no instructor once the term has started (once per term).
+- Invitations are about to expire (told again only if the set of lapsing invitations changes).
+
+The system administrators are not told about an institution's calendar.
