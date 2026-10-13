@@ -13,9 +13,7 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gr
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
-
-<h1 class="mt-2 text-2xl font-bold text-brand">Audit</h1>
+<?= view('components/page-head', ['title' => 'Audit', 'icon' => 'tasks', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-gray-600"><?= esc($auditInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($auditInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $auditInstitution, 'tabActive' => 'audit']) ?>

@@ -14,20 +14,17 @@ $cap = static fn ($value, string $unit = ''): string => $value === null ? 'Unlim
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-brand">Plans</h1>
-    <a class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/plans/new') ?>">Add a plan</a>
-</div>
+<?= view('components/page-head', ['title' => 'Plans', 'icon' => 'points', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/plans/new') . '">Add a plan</a>'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     A plan is what an institution subscribes to: the features it gets and the limits that apply. A retired plan can no longer be chosen
     for new subscriptions, but institutions already on it keep it.
 </p>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <div class="mt-6 overflow-x-auto rounded-lg bg-white shadow">

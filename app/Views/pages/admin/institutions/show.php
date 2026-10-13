@@ -32,22 +32,16 @@ $btn       = 'rounded border px-2.5 py-1 text-xs font-semibold';
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
-
-<div class="mt-2 flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-brand"><?= esc($profInstitution['name']) ?></h1>
-    <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $statusClass ?>" data-institution-status="<?= esc($profInstitution['status']) ?>"><?= esc($statusLabel) ?></span>
-    <?php if ($isDeleted): ?><span class="rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Deleted</span><?php endif; ?>
-</div>
+<?= view('components/page-head', ['title' => $profInstitution['name'], 'icon' => 'hat', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions', 'actions' => '<span class="rounded-full px-2 py-0.5 text-xs font-semibold ' . $statusClass . '" data-institution-status="' . esc($profInstitution['status']) . '">' . esc($statusLabel) . '</span>' . ($isDeleted ? '<span class="rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Deleted</span>' : '')], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-gray-600"><span class="font-mono text-xs"><?= esc($profInstitution['code']) ?></span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $profInstitution, 'tabActive' => 'profile']) ?>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <?php if ($profInstitution['status'] === 'pending' && ! $isDeleted): ?>

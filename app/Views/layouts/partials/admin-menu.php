@@ -1,7 +1,7 @@
 <?php
 /**
- * The system administrator menu, in four groups (SA14). The current page's
- * link is marked.
+ * The system administrator's navigation, in four groups (SA14), under the
+ * header on every admin page. The current page's link is marked.
  */
 $menuPath = trim((string) service('request')->getUri()->getPath(), '/');
 
@@ -13,15 +13,23 @@ $menu = [
 ];
 
 $isCurrent = static fn (string $path): bool => preg_match('#(^|/)' . preg_quote($path, '#') . '(/|$)#', $menuPath) === 1;
+
+$link    = 'rounded-full px-2.5 py-1 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$current = 'bg-brand font-semibold text-white';
+$idle    = 'text-brand hover:bg-brand-tint';
+$home    = $isCurrent('admin/dashboard') || $menuPath === 'admin';
 ?>
-<nav class="flex flex-wrap items-start gap-x-8 gap-y-2 border-b border-b-black/10 bg-white px-6 py-2 text-sm" aria-label="Administration" data-admin-menu>
-    <a class="py-1 font-semibold <?= $isCurrent('admin/dashboard') || $menuPath === 'admin' ? 'text-gray-900' : 'text-brand hover:underline' ?>" href="<?= site_url('admin/dashboard') ?>">Home</a>
+<nav class="flex flex-wrap items-start gap-x-4 gap-y-3 border-b border-b-black/10 bg-white/75 px-4 py-2 backdrop-blur-xl sm:px-8 lg:px-12" aria-label="Administration" data-admin-menu>
+    <div class="flex items-end self-stretch">
+        <a class="<?= $link ?> <?= $home ? $current : $idle ?> font-semibold" href="<?= site_url('admin/dashboard') ?>" <?= $home ? 'aria-current="page"' : '' ?>>Home</a>
+    </div>
+
     <?php foreach ($menu as $group => $links): ?>
         <div data-menu-group="<?= esc($group) ?>">
-            <span class="block text-xs font-semibold uppercase tracking-wide text-gray-500"><?= esc($group) ?></span>
-            <ul class="flex flex-wrap gap-x-4">
+            <span class="block px-3 font-heading text-[11px] font-semibold uppercase tracking-wide text-[#646464]"><?= esc($group) ?></span>
+            <ul class="flex flex-wrap gap-x-1">
                 <?php foreach ($links as [$label, $path]): ?>
-                    <li><a class="<?= $isCurrent($path) ? 'font-semibold text-gray-900' : 'text-brand hover:underline' ?>" href="<?= site_url($path) ?>" <?= $isCurrent($path) ? 'aria-current="page"' : '' ?>><?= esc($label) ?></a></li>
+                    <li><a class="<?= $link ?> <?= $isCurrent($path) ? $current : $idle ?>" href="<?= site_url($path) ?>" <?= $isCurrent($path) ? 'aria-current="page"' : '' ?>><?= esc($label) ?></a></li>
                 <?php endforeach; ?>
             </ul>
         </div>

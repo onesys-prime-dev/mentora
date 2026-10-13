@@ -23,17 +23,17 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
 
 <?= $this->section('content') ?>
 
-<h1 class="text-2xl font-bold text-brand">Roles and permissions</h1>
+<?= view('components/page-head', ['title' => 'Roles and permissions', 'icon' => 'lock'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     What each role may do. Changes apply on the next request and need your password. The system administrator role is locked,
     and every role keeps at least one permission. <span class="font-semibold text-amber-700">Edited</span> marks a cell that differs from the default.
 </p>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <div class="mt-6 overflow-x-auto rounded-lg bg-white shadow">

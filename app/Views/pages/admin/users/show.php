@@ -26,20 +26,21 @@ $memberOf    = array_column($person['institutions'], 'id');
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/users') ?>">&larr; Users</a>
-
-<div class="mt-2 flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-brand"><?= esc($name !== '' ? $name : (string) $person['username']) ?></h1>
-    <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $deactivated ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' ?>" data-account-status="<?= $deactivated ? 'deactivated' : 'active' ?>"><?= $deactivated ? 'Deactivated' : 'Active' ?></span>
-    <?php if ($personIsSelf): ?><span class="text-sm text-gray-500">(this is you)</span><?php endif; ?>
-</div>
+<?= view('components/page-head', [
+    'title'     => $name !== '' ? $name : (string) $person['username'],
+    'icon'      => 'user',
+    'backUrl'   => site_url('admin/users'),
+    'backLabel' => 'Users',
+    'actions'   => '<span class="rounded-full px-2 py-0.5 text-xs font-semibold ' . ($deactivated ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800') . '" data-account-status="' . ($deactivated ? 'deactivated' : 'active') . '">' . ($deactivated ? 'Deactivated' : 'Active') . '</span>'
+        . ($personIsSelf ? '<span class="text-sm text-gray-500">(this is you)</span>' : ''),
+], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-gray-600"><?= esc((string) ($person['email'] ?? '')) ?> &middot; <span class="font-mono text-xs"><?= esc((string) $person['username']) ?></span></p>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <div class="mt-6 grid gap-6 lg:grid-cols-2">

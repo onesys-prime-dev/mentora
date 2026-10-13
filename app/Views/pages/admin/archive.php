@@ -15,17 +15,17 @@ $input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outl
 
 <?= $this->section('content') ?>
 
-<h1 class="text-2xl font-bold text-brand">Archive</h1>
+<?= view('components/page-head', ['title' => 'Archive', 'icon' => 'drafts'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     Institutions that are no longer running. Past institutions keep all their data, read-only, until they are renewed.
     A deleted institution can be restored for <?= esc((string) $retentionDays) ?> days; after that it is purged for good.
 </p>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <h2 class="mt-8 text-lg font-semibold text-brand">Past institutions</h2>

@@ -33,17 +33,18 @@ $line = static function (array $l, bool $storage = false) use ($lineBadge): stri
 
 <?= $this->extend('layouts/admin') ?>
 
-<?= $this->section('head') ?>
-<meta http-equiv="refresh" content="60">
-<?= $this->endSection() ?>
-
 <?= $this->section('content') ?>
 
-<div class="flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-brand">System status</h1>
-    <span class="rounded-full px-3 py-1 text-sm font-semibold <?= $badge[$monOverall][1] ?>" data-overall="<?= esc($monOverall) ?>"><?= esc($badge[$monOverall][0]) ?></span>
-</div>
-<p class="mt-1 text-xs text-gray-500">Checked <?= esc($monRuntime['checkedAt']) ?>. This page refreshes itself every minute and changes nothing.</p>
+<?= view('components/page-head', ['title' => 'System status', 'icon' => 'score', 'actions' => '<span class="rounded-full px-3 py-1 text-sm font-semibold ' . $badge[$monOverall][1] . '" data-overall="' . esc($monOverall) . '">' . esc($badge[$monOverall][0]) . '</span>'], ['saveData' => false]) ?>
+<?php /* Without scripts the browser's own refresh does it; with them the person can stop it (WCAG 2.2.1). */ ?>
+<noscript><meta http-equiv="refresh" content="60"></noscript>
+<p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#646464]">
+    <span>Checked <?= esc($monRuntime['checkedAt']) ?>. This page changes nothing.</span>
+    <label class="flex items-center gap-2">
+        <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" checked data-auto-refresh>
+        Refresh every minute
+    </label>
+</p>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-section="health">
     <h2 class="text-lg font-semibold text-brand">Health</h2>
@@ -115,4 +116,27 @@ $line = static function (array $l, bool $storage = false) use ($lineBadge): stri
     </table>
 </section>
 
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+    (function () {
+        var box = document.querySelector('[data-auto-refresh]');
+        var timer = null;
+
+        function arm() {
+            window.clearTimeout(timer);
+
+            if (box && box.checked) {
+                timer = window.setTimeout(function () { window.location.reload(); }, 60000);
+            }
+        }
+
+        if (box) {
+            box.addEventListener('change', arm);
+        }
+
+        arm();
+    })();
+</script>
 <?= $this->endSection() ?>
