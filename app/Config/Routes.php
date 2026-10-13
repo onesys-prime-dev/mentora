@@ -535,6 +535,10 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
         // The subscription, to read (institution.settings), and the SIS connection's runs (sis.run):
         // the connection's own settings and credentials stay with the system administrator.
         $routes->get('subscription', 'Institution\SubscriptionController::index', ['filter' => 'permission:institution.settings']);
+
+        // The institution's own audit log, to read and export (institution.audit); no source addresses.
+        $routes->get('audit', 'Institution\AuditController::index', ['filter' => 'permission:institution.audit']);
+        $routes->get('audit/export', 'Institution\AuditController::export', ['filter' => 'permission:institution.audit']);
         $routes->group('integrations', ['filter' => 'permission:sis.run'], function ($routes) {
             $routes->get('/', 'Institution\IntegrationsController::index');
             $routes->post('preview', 'Institution\IntegrationsController::preview');
