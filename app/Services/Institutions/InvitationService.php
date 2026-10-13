@@ -346,7 +346,7 @@ class InvitationService
 
         $invitation = $this->open($token, $now);
 
-        $problem = (new PasswordPolicy())->problem($password, new User(['username' => $this->username($invitation['first_name'], $invitation['last_name']), 'email' => $invitation['email']]));
+        $problem = (new PasswordPolicy())->problem($password, new User(['username' => $this->username($invitation['first_name'], $invitation['last_name']), 'email' => $invitation['email']]), (int) $invitation['institution_id']);
 
         if ($problem !== null) {
             throw new InvalidArgumentException($problem);

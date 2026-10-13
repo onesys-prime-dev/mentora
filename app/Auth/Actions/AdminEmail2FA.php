@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Auth\Actions;
 
-use App\Services\Security\SecuritySettings;
+use App\Services\Institutions\InstitutionSecurity;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\Shield\Authentication\Actions\ConditionalActionInterface;
 use CodeIgniter\Shield\Authentication\Actions\Email2FA;
@@ -30,7 +30,8 @@ class AdminEmail2FA extends Email2FA implements ConditionalActionInterface
 {
     public function appliesTo(User $user): bool
     {
-        return $user->inGroup(...(new SecuritySettings())->twoFactorRoles());
+        // The platform's roles, and any the person's institution asked for as well.
+        return $user->inGroup(...(new InstitutionSecurity())->forUser($user)['twoFactorRoles']);
     }
 
     public function handle(IncomingRequest $request)

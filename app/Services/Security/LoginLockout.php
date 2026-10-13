@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Security;
 
-use App\Services\Admin\PlatformSettings;
+use App\Services\Institutions\InstitutionSecurity;
 use DateTimeImmutable;
 
 /**
@@ -26,8 +26,9 @@ class LoginLockout
         $now ??= new DateTimeImmutable();
         $email = strtolower(trim($email));
 
-        $settings = new PlatformSettings();
-        $attempts = (int) $settings->get('lockoutAttempts');
+        // The stricter of the platform's and the account's institution's.
+        $rules    = (new InstitutionSecurity())->forEmail($email);
+        $attempts = (int) $rules['lockoutAttempts'];
 
         if ($attempts <= 0 || $email === '') {
             return null;
@@ -51,7 +52,7 @@ class LoginLockout
             return null;
         }
 
-        $until = (new DateTimeImmutable($rows[0]['date']))->modify('+' . (int) $settings->get('lockoutMinutes') . ' minutes');
+        $until = (new DateTimeImmutable($rows[0]['date']))->modify('+' . (int) $rules['lockoutMinutes'] . ' minutes');
 
         return $until > $now ? $until : null;
     }

@@ -76,3 +76,16 @@ function bind(root) {
 }
 
 document.querySelectorAll("[data-brand-form]").forEach((form) => bind(form.closest("main") ?? document));
+
+// "Remove announcement": saving it empty is what takes it down (the help text says so too).
+document.querySelectorAll("[data-announcement-clear]").forEach((button) => {
+    button.addEventListener("click", () => {
+        const form = button.closest("form");
+        const text = form?.querySelector("textarea[name='text']");
+
+        if (form && text) {
+            text.value = "";
+            form.requestSubmit();
+        }
+    });
+});

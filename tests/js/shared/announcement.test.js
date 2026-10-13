@@ -104,4 +104,41 @@ describe("initAnnouncement", () => {
 
         expect(banner.hidden).toBe(false);
     });
+    it("binds every announcement line: the platform's and the institution's dismiss on their own", () => {
+        document.body.innerHTML = `
+            <div data-announcement id="platform">
+                <span data-announcement-text>Maintenance tonight.</span>
+                <button type="button" data-announcement-dismiss>Dismiss</button>
+            </div>
+            <div data-announcement data-institution-announcement id="school">
+                <span data-announcement-text>Enrolment closes Friday.</span>
+                <button type="button" data-announcement-dismiss>Dismiss</button>
+            </div>`;
+
+        const storage = memoryStorage();
+        const first = initAnnouncement(document, storage);
+
+        expect(first?.id).toBe("platform");
+
+        document.querySelector("#school [data-announcement-dismiss]").click();
+
+        expect(document.querySelector("#school").hidden).toBe(true);
+        expect(document.querySelector("#platform").hidden).toBe(false);
+        expect(isDismissed(storage, announcementKey("Enrolment closes Friday."))).toBe(true);
+        expect(isDismissed(storage, announcementKey("Maintenance tonight."))).toBe(false);
+    });
+
+    it("hides only the one already dismissed when two are present", () => {
+        const storage = memoryStorage();
+        dismiss(storage, announcementKey("Maintenance tonight."));
+
+        document.body.innerHTML = `
+            <div data-announcement id="platform"><span data-announcement-text>Maintenance tonight.</span><button type="button" data-announcement-dismiss>x</button></div>
+            <div data-announcement id="school"><span data-announcement-text>Enrolment closes Friday.</span><button type="button" data-announcement-dismiss>x</button></div>`;
+
+        initAnnouncement(document, storage);
+
+        expect(document.querySelector("#platform").hidden).toBe(true);
+        expect(document.querySelector("#school").hidden).toBe(false);
+    });
 });

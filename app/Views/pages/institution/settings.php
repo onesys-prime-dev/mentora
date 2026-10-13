@@ -46,6 +46,8 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         ['label' => 'Profile', 'href' => site_url($base), 'active' => $settingsTab === 'profile'],
         ['label' => 'Branding', 'href' => site_url($base . '/branding'), 'active' => $settingsTab === 'branding'],
         ['label' => 'Academic', 'href' => site_url($base . '/academic'), 'active' => $settingsTab === 'academic'],
+        ['label' => 'Announcement', 'href' => site_url($base . '/announcement'), 'active' => $settingsTab === 'announcement'],
+        ['label' => 'Security', 'href' => site_url($base . '/security'), 'active' => $settingsTab === 'security'],
     ]], ['saveData' => false]) ?>
 
     <?php if ($settingsTab === 'profile'): ?>
@@ -74,6 +76,138 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <div class="flex justify-end"><button type="submit" class="<?= $primary ?>">Save profile</button></div>
             <?php endif; ?>
         </form>
+
+    <?php elseif ($settingsTab === 'announcement'): ?>
+
+        <?php $n = $settingsAnnouncement; ?>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+            <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" data-announcement-form>
+                <?= csrf_field() ?>
+
+                <p class="text-sm text-[#3D3D3D]">One line for everyone in your institution, shown at the top of their pages under the Mentora announcement. People can hide it for themselves.</p>
+
+                <?= $field(['name' => 'text', 'label' => 'Announcement', 'type' => 'textarea', 'value' => (string) $n['text'], 'maxlength' => 300, 'help' => 'Plain text, up to 300 characters. Leave it empty and save to take it down.']) ?>
+                <?= $field(['name' => 'until', 'label' => 'Show until (optional)', 'type' => 'date', 'value' => (string) $n['until'], 'help' => 'The last day it is shown. Empty keeps it up until you remove it.']) ?>
+
+                <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
+
+                <?php if ($settingsCanEdit): ?>
+                    <div class="flex justify-end"><button type="submit" class="<?= $primary ?>">Save announcement</button></div>
+                <?php endif; ?>
+
+                <?php if ($settingsCanEdit && $n['text'] !== ''): ?>
+                    <?php // Its own form: the script posts to a form's action, not to a button's formaction. ?>
+                    <button type="button" class="self-start text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded" data-announcement-clear>Remove announcement</button>
+                <?php endif; ?>
+            </form>
+
+            <section class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="announcement-preview">
+                <h2 id="announcement-preview" class="text-sm font-bold text-brand">As your people will see it</h2>
+
+                <?php if ($n['text'] === ''): ?>
+                    <p class="text-sm text-[#646464]" data-no-announcement>No announcement is set.</p>
+                <?php else: ?>
+                    <div class="flex items-center justify-between gap-3 rounded-lg border border-brand/20 bg-brand-tint px-4 py-2 text-sm text-brand-dark" data-announcement-preview>
+                        <span><?= esc((string) $n['text']) ?></span>
+                        <span class="rounded px-2 py-0.5 text-xs font-semibold">Dismiss</span>
+                    </div>
+                    <p class="text-xs <?= $n['showing'] ? 'text-[#2E7D4F]' : 'text-[#946200]' ?>" data-announcement-state>
+                        <?php if ($n['showing']): ?>
+                            It is showing now<?= $n['until'] !== '' ? ', until ' . esc(date('j M Y', strtotime((string) $n['until']))) : '' ?>.
+                        <?php else: ?>
+                            It ended on <?= esc(date('j M Y', strtotime((string) $n['until']))) ?> and is no longer shown.
+                        <?php endif; ?>
+                    </p>
+                <?php endif; ?>
+            </section>
+
+        </div>
+
+    <?php elseif ($settingsTab === 'security'): ?>
+
+        <?php
+        $s      = $settingsSecurity;
+        $rows   = [
+            'passwordMinLength'     => ['Shortest password', 'characters', 'More than the platform asks for.'],
+            'sessionTimeoutMinutes' => ['Sign out after inactivity', 'minutes', 'Fewer minutes than the platform.'],
+            'lockoutAttempts'       => ['Failed sign-ins before a lockout', 'attempts', 'Fewer attempts than the platform.'],
+            'lockoutMinutes'        => ['Lockout length', 'minutes', 'Longer than the platform.'],
+        ];
+        $roleNames = ['institutional_admin' => 'Institutional administrators', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
+        ?>
+
+        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm" data-security-form>
+            <?= csrf_field() ?>
+
+            <p class="text-sm text-[#3D3D3D]">Your institution can be <strong>stricter</strong> than the platform, never looser. Leave a box empty to follow the platform. Changing these asks for your password.</p>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <caption class="sr-only">Security settings: the platform's value, your institution's, and the one in force</caption>
+                    <thead>
+                        <tr class="border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]">
+                            <th scope="col" class="py-2 pr-4">Setting</th>
+                            <th scope="col" class="py-2 pr-4">Platform</th>
+                            <th scope="col" class="py-2 pr-4">Your institution</th>
+                            <th scope="col" class="py-2">In force</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <?php foreach ($rows as $key => [$label, $unit, $hint]): ?>
+                            <tr data-field="<?= esc($key) ?>">
+                                <th scope="row" class="py-3 pr-4 text-left font-medium text-[#1A1C1E]">
+                                    <label for="sec-<?= esc($key) ?>"><?= esc($label) ?></label>
+                                    <span class="block text-xs font-normal text-[#646464]"><?= esc($hint) ?></span>
+                                    <p class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
+                                </th>
+                                <td class="py-3 pr-4 text-[#3D3D3D]" data-platform-value>
+                                    <?= esc((string) $s['platform'][$key]) ?> <?= esc($unit) ?><?= $key === 'lockoutAttempts' && (int) $s['platform'][$key] === 0 ? ' (never)' : '' ?>
+                                </td>
+                                <td class="py-3 pr-4">
+                                    <input id="sec-<?= esc($key) ?>" name="<?= esc($key) ?>" type="number" inputmode="numeric" min="0" value="<?= $s['own'][$key] === null ? '' : esc((string) $s['own'][$key]) ?>" placeholder="Platform"
+                                           class="<?= $input ?> max-w-[8rem]" <?= $disabled ?>>
+                                </td>
+                                <td class="py-3 font-semibold text-brand" data-in-force><?= esc((string) $s['effective'][$key]) ?> <?= esc($unit) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <fieldset class="flex flex-col gap-2" data-field="twoFactorRoles">
+                <legend class="text-sm font-bold text-brand">Emailed sign-in code</legend>
+                <p class="text-xs text-[#646464]">Roles that must confirm a code sent to their email when they sign in. The platform's roles stay on; you can add more.</p>
+
+                <?php foreach ($roleNames as $role => $name): ?>
+                    <?php $byPlatform = in_array($role, (array) $s['platform']['twoFactorRoles'], true); ?>
+                    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                        <input type="checkbox" name="twoFactorRoles[]" value="<?= esc($role) ?>" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"
+                               <?= $byPlatform || in_array($role, $s['ownRoles'], true) ? 'checked' : '' ?> <?= $byPlatform || ! $settingsCanEdit ? 'disabled' : '' ?>>
+                        <?= esc($name) ?><?= $byPlatform ? ' <span class="text-xs text-[#646464]">(required by the platform)</span>' : '' ?>
+                    </label>
+                <?php endforeach; ?>
+
+                <p class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
+            </fieldset>
+
+            <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
+
+            <?php if ($settingsCanEdit): ?>
+                <div class="flex justify-end"><button type="submit" class="<?= $primary ?>">Save security settings</button></div>
+            <?php endif; ?>
+        </form>
+
+        <?php
+        $hasOwn = $s['ownRoles'] !== [] || count(array_filter($s['own'], static fn ($v): bool => $v !== null)) > 0;
+        ?>
+        <?php if ($settingsCanEdit && $hasOwn): ?>
+            <form method="post" action="<?= esc(site_url($base . '/security/reset')) ?>" data-dialog-form class="max-w-3xl">
+                <?= csrf_field() ?>
+                <button type="submit" class="text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded">Go back to the platform values</button>
+            </form>
+        <?php endif; ?>
 
     <?php elseif ($settingsTab === 'academic'): ?>
 
