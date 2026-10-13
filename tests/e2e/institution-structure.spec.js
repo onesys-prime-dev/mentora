@@ -797,3 +797,24 @@ test("TC-SUB-01 Subscription is read only; Integrations shows no folders", async
     await expect(page.locator("[data-connection]")).toBeVisible();
     await expect(page.locator("main")).not.toContainText(/writable|csv-uploads|sis-inbound/i);
 });
+
+test("TC-AUD-01 The audit log lists the institution's own entries, narrows by what was done, and exports without addresses", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/audit");
+
+    await expect(page.getByRole("heading", { name: "Audit log", level: 1 })).toBeVisible();
+    await expect(page.getByRole("table", { name: "Audit log" })).toBeVisible();
+    await expect(page.locator("main")).not.toContainText("Source IP");
+
+    // Narrowing by what was done keeps only those entries.
+    await page.getByLabel("What").selectOption({ index: 1 });
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/action=/);
+    await expect(page.locator("[data-audit-total]")).toContainText("match");
+
+    // The CSV is a download, and has no address column.
+    const download = page.waitForEvent("download");
+    await page.locator("[data-audit-export]").click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/^audit-log-\d{8}-\d{6}\.csv$/);
+});

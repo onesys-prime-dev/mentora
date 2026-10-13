@@ -278,3 +278,14 @@ Any offering of the institution can be opened and looked at, as its instructor s
 `/institution/integrations` (permission `sis.run`) shows the SIS connection's state and the run history, and lets the administrator preview or run an import and preview or send final grades. It calls the same services as the system administrator's page, so every rule holds (feature flag, enabled connection, read-only institution). A real import and a grade delivery ask for the password.
 
 What is never shown: the connection's settings, credentials, folder names (taken out of run messages and row issues) and connection tests.
+
+## Audit log
+
+`/institution/audit` (permission `institution.audit`) lists what happened in the institution, newest first: when, who, the role they acted as, what, what it was about, and the before and after values of a change. Filters are a search, a date range, who (part of an email), what and what about; the columns sort; 25 per page. `Export CSV` downloads the same filtered list (itself recorded as `institution.audit_exported`) and stays open while the institution is read-only.
+
+What it holds and what it never shows:
+- Only the institution's own entries. The search is bound to the institution on the server, so a filter, a search, a choice list or an export cannot name another one.
+- No source addresses: never selected, searched or exported, whatever the vendor's own display setting says.
+- What the vendor's staff did about the institution is listed under the name "Mentora support", not their accounts; a view-as by them shows the same name.
+- Before and after values of changes to the SIS connection's settings and of backups are kept by the vendor ("Kept by Mentora"), as the integrations page keeps folders and credentials out.
+- Cells that start with `=`, `+`, `-` or `@` are defused in the CSV.
