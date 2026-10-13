@@ -285,3 +285,23 @@ test("TC-SA-10 The main administration screens pass an automated accessibility c
         expect(serious.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`), `${path} has serious accessibility problems`).toEqual([]);
     }
 });
+
+test("TC-SA-11 The users list narrows by search, and ticking people shows how many are chosen", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/users");
+
+    await expect(page.getByRole("table", { name: "People across every institution" })).toBeVisible();
+
+    // Nothing is chosen, so there is no bulk bar yet.
+    await expect(page.locator("[data-bulk-bar]")).toBeHidden();
+
+    // Search by a demo account's address.
+    await page.getByLabel("Search").fill(accounts.student.email);
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page.locator("tbody tr")).toHaveCount(1);
+
+    // Ticking the row shows the count and the actions.
+    await page.locator("[data-row-select]").first().check();
+    await expect(page.locator("[data-selected-count]")).toContainText("1 person selected");
+    await expect(page.getByRole("button", { name: "Export selected (CSV)" })).toBeVisible();
+});

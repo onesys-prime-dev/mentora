@@ -5,26 +5,66 @@
  *
  * @var App\Services\Audit\AuditLogFilters $filters
  */
-$url = static function (string $path, array $query): string {
-    $string = http_build_query($query);
+$query = static fn (array $override = []): string => http_build_query($filters->toQuery($override));
 
-    return site_url($path) . ($string === '' ? '' : '?' . $string);
-};
+$sortUrl = static fn (string $column, string $next): string => site_url('admin/audit-log') . '?' . $query(['sort' => $column, 'dir' => $next, 'page' => null]);
 
-$link = static fn (array $override = []): string => $url('admin/audit-log', $filters->toQuery($override));
+$exportUrl = site_url('admin/audit-log/export') . ($query(['page' => null]) === '' ? '' : '?' . $query(['page' => null]));
 
-$sortLink = static function (string $column) use ($filters, $link): string {
-    $next = $filters->sort === $column && $filters->dir === 'asc' ? 'desc' : 'asc';
+$actionOptions = ['' => 'Any action'];
 
-    return $link(['sort' => $column, 'dir' => $next, 'page' => null]);
-};
+foreach ($actionNames as $actionName) {
+    $actionOptions[$actionName] = $actionName;
+}
 
-$arrow = static fn (string $column): string => $filters->sort === $column ? ($filters->dir === 'asc' ? ' ▲' : ' ▼') : '';
+$auditRows = $rows;
+$rows      = [];
 
-$exportUrl = $url('admin/audit-log/export', $filters->toQuery(['page' => null]));
+foreach ($auditRows as $row) {
+    $who = esc($row['actor_label'] ?? 'system')
+        . ($row['impersonator_user_id'] !== null ? '<span class="block text-xs text-[#946200]">via admin #' . esc((string) $row['impersonator_user_id']) . '</span>' : '');
 
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
-$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
+    $changes = '<span class="text-[#646464]">—</span>';
+
+    if ($row['old_values'] !== null || $row['new_values'] !== null) {
+        $changes = '<details><summary class="cursor-pointer text-brand hover:underline">View</summary>'
+            . ($row['old_values'] !== null ? '<pre class="mt-1 whitespace-pre-wrap text-xs text-[#646464]">Before: ' . esc((string) $row['old_values']) . '</pre>' : '')
+            . ($row['new_values'] !== null ? '<pre class="mt-1 whitespace-pre-wrap text-xs text-[#646464]">After: ' . esc((string) $row['new_values']) . '</pre>' : '')
+            . '</details>';
+    }
+
+    $cells = [
+        'created_at'     => (string) $row['created_at'],
+        'actor_label'    => ['html' => $who],
+        'acting_role'    => (string) ($row['acting_role'] ?? '—'),
+        'action'         => ['html' => '<span class="font-mono text-xs">' . esc($row['action']) . '</span>'],
+        'target'         => trim(((string) ($row['target_type'] ?? '')) . ' ' . ((string) ($row['target_id'] ?? ''))) ?: '—',
+        'institution_id' => (string) ($row['institution_name'] ?? ($row['institution_id'] !== null ? '#' . $row['institution_id'] : '—')),
+    ];
+
+    if ($showIp) {
+        $cells['ip'] = ['html' => '<span class="font-mono text-xs">' . esc((string) ($row['ip_address'] ?? '—')) . '</span>'];
+    }
+
+    $cells['changes'] = ['html' => $changes];
+
+    $rows[] = ['id' => (string) $row['id'], 'label' => (string) $row['action'], 'cells' => $cells];
+}
+
+$columns = [
+    ['key' => 'created_at', 'label' => 'Time', 'sortable' => true],
+    ['key' => 'actor_label', 'label' => 'Actor', 'sortable' => true],
+    ['key' => 'acting_role', 'label' => 'Role', 'sortable' => true],
+    ['key' => 'action', 'label' => 'Action', 'sortable' => true],
+    ['key' => 'target', 'label' => 'Target'],
+    ['key' => 'institution_id', 'label' => 'Institution', 'sortable' => true],
+];
+
+if ($showIp) {
+    $columns[] = ['key' => 'ip', 'label' => 'Source IP'];
+}
+
+$columns[] = ['key' => 'changes', 'label' => 'Changes'];
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -40,112 +80,50 @@ $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<form method="get" action="<?= site_url('admin/audit-log') ?>" class="mt-6 grid gap-3 rounded-lg bg-white p-4 shadow sm:grid-cols-2 lg:grid-cols-4">
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Search
-        <input class="<?= $input ?>" type="search" name="q" value="<?= esc($filters->q ?? '') ?>" placeholder="Actor, action, target, institution">
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">From
-        <input class="<?= $input ?>" type="date" name="from" value="<?= esc($filters->from ?? '') ?>">
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">To
-        <input class="<?= $input ?>" type="date" name="to" value="<?= esc($filters->to ?? '') ?>">
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Actor (email or user id)
-        <input class="<?= $input ?>" type="text" name="actor" value="<?= esc($filters->actor ?? '') ?>">
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Action
-        <input class="<?= $input ?>" type="text" name="action" list="audit-actions" value="<?= esc($filters->action ?? '') ?>" placeholder="e.g. auth.login">
-        <datalist id="audit-actions">
-            <?php foreach ($actionNames as $actionName): ?>
-                <option value="<?= esc($actionName) ?>"></option>
-            <?php endforeach; ?>
-        </datalist>
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Target type
-        <input class="<?= $input ?>" type="text" name="target_type" value="<?= esc($filters->targetType ?? '') ?>" placeholder="e.g. user">
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Institution id
-        <input class="<?= $input ?>" type="number" min="1" name="institution" value="<?= esc((string) ($filters->institutionId ?? '')) ?>">
-    </label>
-    <div class="flex items-end gap-2">
-        <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Apply</button>
-        <?php if ($filters->isFiltered()): ?>
-            <a class="px-2 py-1.5 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log') ?>">Clear</a>
-        <?php endif; ?>
-    </div>
-</form>
+<div class="mt-6 flex flex-col gap-4">
 
-<p class="mt-4 text-sm text-gray-600" aria-live="polite">
-    <?= esc(number_format($total)) ?> <?= $total === 1 ? 'entry' : 'entries' ?><?= $filters->isFiltered() ? ' match' : '' ?>
-</p>
+    <?= view('components/toolbar', [
+        'action'   => site_url('admin/audit-log'),
+        'filtered' => $filters->isFiltered(),
+        'fields'   => [
+            ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => 'Actor, action, target, institution', 'value' => $filters->q ?? '', 'span' => 'lg:col-span-2'],
+            ['type' => 'date', 'name' => 'from', 'label' => 'From', 'value' => $filters->from ?? ''],
+            ['type' => 'date', 'name' => 'to', 'label' => 'To', 'value' => $filters->to ?? ''],
+            ['type' => 'search', 'name' => 'actor', 'label' => 'Actor (email or user id)', 'value' => $filters->actor ?? ''],
+            ['type' => 'select', 'name' => 'action', 'label' => 'Action', 'options' => $actionOptions, 'value' => $filters->action ?? ''],
+            ['type' => 'search', 'name' => 'target_type', 'label' => 'Target type', 'placeholder' => 'e.g. user', 'value' => $filters->targetType ?? ''],
+            ['type' => 'search', 'name' => 'institution', 'label' => 'Institution id', 'value' => (string) ($filters->institutionId ?? ''), 'attrs' => ['inputmode' => 'numeric']],
+        ],
+    ], ['saveData' => false]) ?>
 
-<div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="<?= $th ?>"><a href="<?= esc($sortLink('created_at')) ?>">Time<?= $arrow('created_at') ?></a></th>
-                <th class="<?= $th ?>"><a href="<?= esc($sortLink('actor_label')) ?>">Actor<?= $arrow('actor_label') ?></a></th>
-                <th class="<?= $th ?>"><a href="<?= esc($sortLink('acting_role')) ?>">Role<?= $arrow('acting_role') ?></a></th>
-                <th class="<?= $th ?>"><a href="<?= esc($sortLink('action')) ?>">Action<?= $arrow('action') ?></a></th>
-                <th class="<?= $th ?>">Target</th>
-                <th class="<?= $th ?>"><a href="<?= esc($sortLink('institution_id')) ?>">Institution<?= $arrow('institution_id') ?></a></th>
-                <?php if ($showIp): ?><th class="<?= $th ?>">Source IP</th><?php endif; ?>
-                <th class="<?= $th ?>">Changes</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-            <?php if ($rows === []): ?>
-                <tr><td class="px-3 py-8 text-center text-gray-500" colspan="<?= $showIp ? 8 : 7 ?>">No entries<?= $filters->isFiltered() ? ' match these filters' : ' yet' ?>.</td></tr>
-            <?php endif; ?>
-            <?php foreach ($rows as $row): ?>
-                <tr>
-                    <td class="whitespace-nowrap px-3 py-2 text-gray-700"><?= esc($row['created_at']) ?></td>
-                    <td class="px-3 py-2">
-                        <?= esc($row['actor_label'] ?? 'system') ?>
-                        <?php if ($row['impersonator_user_id'] !== null): ?>
-                            <span class="block text-xs text-amber-700">via admin #<?= esc((string) $row['impersonator_user_id']) ?></span>
-                        <?php endif; ?>
-                    </td>
-                    <td class="px-3 py-2"><?= esc($row['acting_role'] ?? '—') ?></td>
-                    <td class="px-3 py-2 font-mono text-xs"><?= esc($row['action']) ?></td>
-                    <td class="px-3 py-2"><?= esc(trim(($row['target_type'] ?? '') . ' ' . ($row['target_id'] ?? '')) ?: '—') ?></td>
-                    <td class="px-3 py-2"><?= esc($row['institution_name'] ?? ($row['institution_id'] !== null ? '#' . $row['institution_id'] : '—')) ?></td>
-                    <?php if ($showIp): ?><td class="px-3 py-2 font-mono text-xs"><?= esc($row['ip_address'] ?? '—') ?></td><?php endif; ?>
-                    <td class="px-3 py-2">
-                        <?php if ($row['old_values'] !== null || $row['new_values'] !== null): ?>
-                            <details>
-                                <summary class="cursor-pointer text-brand">View</summary>
-                                <?php if ($row['old_values'] !== null): ?><pre class="mt-1 whitespace-pre-wrap text-xs text-gray-600">Before: <?= esc($row['old_values']) ?></pre><?php endif; ?>
-                                <?php if ($row['new_values'] !== null): ?><pre class="mt-1 whitespace-pre-wrap text-xs text-gray-600">After: <?= esc($row['new_values']) ?></pre><?php endif; ?>
-                            </details>
-                        <?php else: ?>—<?php endif; ?>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <p class="text-sm text-[#646464]" aria-live="polite">
+        <?= esc(number_format($total)) ?> <?= $total === 1 ? 'entry' : 'entries' ?><?= $filters->isFiltered() ? ' match' : '' ?>
+    </p>
+
+    <?= view('components/data-table', [
+        'caption'    => 'Audit log',
+        'columns'    => $columns,
+        'rows'       => $rows,
+        'sort'       => $filters->sort,
+        'dir'        => $filters->dir,
+        'sortUrl'    => $sortUrl,
+        'emptyIcon'  => 'tasks',
+        'emptyTitle' => $filters->isFiltered() ? 'No entries match these filters' : 'No entries yet',
+        'emptyText'  => $filters->isFiltered() ? 'Try a wider date range or a different search.' : 'What happens on the platform is recorded here, newest first.',
+    ], ['saveData' => false]) ?>
+
+    <?= view('components/pagination', ['page' => $filters->page, 'pages' => $pages, 'total' => $total, 'baseUrl' => site_url('admin/audit-log'), 'query' => $filters->toQuery(['page' => null])], ['saveData' => false]) ?>
+
 </div>
 
-<nav class="mt-4 flex items-center justify-between text-sm" aria-label="Pages">
-    <span class="text-gray-600">Page <?= esc((string) $filters->page) ?> of <?= esc((string) $pages) ?></span>
-    <span class="flex gap-3">
-        <?php if ($filters->page > 1): ?>
-            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page - 1])) ?>">Previous</a>
-        <?php endif; ?>
-        <?php if ($filters->page < $pages): ?>
-            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page + 1])) ?>">Next</a>
-        <?php endif; ?>
-    </span>
-</nav>
-
-<form method="post" action="<?= site_url('admin/audit-log/settings') ?>" class="mt-8 flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 shadow">
+<form method="post" action="<?= site_url('admin/audit-log/settings') ?>" class="mt-8 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
     <?= csrf_field() ?>
     <input type="hidden" name="show_ip" value="0">
-    <label class="flex items-center gap-2 text-sm text-gray-700">
-        <input type="checkbox" name="show_ip" value="1" <?= $showIp ? 'checked' : '' ?>>
+    <label class="flex items-center gap-2 text-sm text-[#3D3D3D]">
+        <input type="checkbox" name="show_ip" value="1" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" <?= $showIp ? 'checked' : '' ?>>
         Show the source IP of each entry (addresses are always recorded; this only controls whether they are shown and exported)
     </label>
-    <button type="submit" class="rounded border border-brand px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand/10">Save</button>
+    <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
 </form>
 
 <?= $this->endSection() ?>

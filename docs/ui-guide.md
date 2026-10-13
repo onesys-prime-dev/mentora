@@ -176,7 +176,7 @@ A pull request that adds or changes a screen is not done until:
 
 ## 8. Known gaps
 
-- The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists and forms still use their own tables and buttons; they move onto `data-table`, `toolbar`, `form-field` and `dialog` in the next restyle branches.
+- The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists (institutions, users, plans, audit log, archive, backups) use `data-table`, `toolbar` and `pagination`; its forms still use their own fields and buttons and move onto `form-field`, `dialog` and `confirm` in the next restyle branch.
 - Dark mode: the header button exists and does nothing yet.
 - The header prints the page title beside the logo and the page's `<h1>` repeats it; the header text is decorative and should be removed once every page has a head.
 - A few literal greens (`#2E7D4F`) remain where a token would be better (`bg-accent`); new code should use the token.
