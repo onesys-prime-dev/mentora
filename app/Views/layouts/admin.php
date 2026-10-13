@@ -17,7 +17,7 @@ $this->setVar('pageTitle', (string) (new App\Services\Admin\PlatformSettings())-
 $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-themeable>
 
 <head>
 
@@ -27,7 +27,7 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
 
 <body
     class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
-    style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
+    style="--page-bg-light: url('<?= base_url('assets/images/background/light.png') ?>'); --page-bg-dark: url('<?= base_url('assets/images/background/dark.png') ?>'); background-image: var(--page-bg-light);"
     data-page="<?= esc($page ?? 'admin') ?>"
     data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >

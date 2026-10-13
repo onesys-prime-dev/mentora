@@ -6,6 +6,19 @@
 
 <title><?= esc($title ?? 'Mentora') ?></title>
 
+<?php // The person's chosen appearance, applied before the page paints so there is no flash (shared/theme.js). ?>
+<script>
+    (function () {
+        try {
+            var root = document.documentElement;
+
+            if (root.hasAttribute('data-themeable') && localStorage.getItem('mentora-theme') === 'dark') {
+                root.setAttribute('data-theme', 'dark');
+            }
+        } catch (e) { /* storage blocked: light */ }
+    })();
+</script>
+
 <?= vite('resources/js/app.js') ?>
 
 <?php

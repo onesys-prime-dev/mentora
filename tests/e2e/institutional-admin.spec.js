@@ -148,3 +148,33 @@ test("TC-IAA-06 A read-only institution can still be looked at and exported, but
         runSql("UPDATE institutions SET status = 'active' WHERE id = 1");
     }
 });
+
+test("TC-IAA-07 Dark mode is switched with the header button, is kept on the next visit, and the main screens still pass the accessibility check", async ({ page }) => {
+    await signInAsInstitutionAdmin(page);
+
+    const html = page.locator("html");
+    const toggle = page.getByRole("button", { name: /Dark mode is off/ });
+
+    await expect(html).not.toHaveAttribute("data-theme", "dark");
+    await toggle.click();
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    await expect(page.getByRole("button", { name: /Dark mode is on/ })).toHaveAttribute("aria-pressed", "true");
+
+    // Kept for the next page and for a fresh load, before the page paints.
+    await page.goto("/institution/people");
+    await expect(html).toHaveAttribute("data-theme", "dark");
+
+    for (const [path] of MAIN_SCREENS) {
+        await page.goto(path);
+        await expect(html, path).toHaveAttribute("data-theme", "dark");
+
+        const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+        const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+
+        expect(serious.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`), `${path} in dark mode`).toEqual([]);
+    }
+
+    // And back.
+    await page.getByRole("button", { name: /Dark mode is on/ }).click();
+    await expect(html).not.toHaveAttribute("data-theme", "dark");
+});

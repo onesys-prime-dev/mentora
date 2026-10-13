@@ -46,7 +46,8 @@ $accountLinks = [
     <div class="flex gap-2 items-stretch font-lao">
         <a
             class="flex gap-1 items-center self-center"
-            href="<?= site_url(role_home($userRole) . '/dashboard') ?>">
+            href="<?= site_url(role_home($userRole) . '/dashboard') ?>"
+            data-brand-logo>
             <img
                 class="h-11 w-auto"
                 src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="Mentora">
@@ -77,7 +78,7 @@ $accountLinks = [
         </a>
         <button
             type="button"
-            aria-label="Toggle dark mode (coming soon)" aria-disabled="true" title="Coming soon"
+            data-theme-toggle aria-pressed="false" aria-label="Dark mode is off. Switch to dark mode" title="Switch to dark mode"
             class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
             <?= icon('night', 'h-4 w-4 text-current') ?>
         </button>

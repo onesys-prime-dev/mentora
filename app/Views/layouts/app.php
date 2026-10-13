@@ -34,7 +34,7 @@ $pageContent = (string) ob_get_clean();
 $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-themeable>
 
 <head>
 
@@ -44,7 +44,7 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
 
 <body 
     class="<?= $bodyHeight ?> bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
-    style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
+    style="--page-bg-light: url('<?= base_url('assets/images/background/light.png') ?>'); --page-bg-dark: url('<?= base_url('assets/images/background/dark.png') ?>'); background-image: var(--page-bg-light);"
     data-page="<?= esc($page ?? '') ?>"
     data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >

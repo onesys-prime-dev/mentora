@@ -155,6 +155,12 @@ audit-logged with the old and new values.
 
 ![A list on a phone](ui-guide/list-mobile.jpg)
 
+### Dark mode
+
+The header button switches `data-theme="dark"` on `<html>` (`shared/theme.js`). The choice is the person's, kept in that browser, and applied by a small script in the head before the page paints. Light is the default and nothing follows the operating system.
+
+It works by re-mapping the utilities the pages use, not by a second class on every element, so a new screen is dark for free **as long as it uses the shared tokens and neutral palette** (`bg-white`, `text-[#646464]`, `border-gray-200`, `text-brand`, the status tones). A one-off colour needs its own line in the dark block of `app.css`. Check a new screen in both: the accessibility case runs the main screens in dark as well.
+
 ## 6. Server rules a screen relies on
 
 - **Scope:** the institution is decided on the server from the signed-in person (`InstitutionScope`), never from an id in the address; a foreign id answers 404.
@@ -179,5 +185,6 @@ A pull request that adds or changes a screen is not done until:
 ## 8. Known gaps
 
 - The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists, forms, onboarding (a `stepper`) and password confirmation use the shared components. Every field of every form uses `form-field`; the only plain inputs left are the typed-name confirmations in the lists, which are part of a `details` confirm, and checkbox groups with several values (a person's roles, the roles that need a sign-in code).
-- Dark mode: the header button exists and does nothing yet.
+- Dark mode re-maps the colours the pages use most (see the dark appearance in `resources/css/app.css`); a colour a page invents for itself is not covered and shows in its light form. Charts draw on a canvas with their own colours and stay light.
+- The header prints the page title beside the logo and the page's `<h1>` repeats it; the header text is decorative and should be removed once every page has a head.
 - A few literal greens (`#2E7D4F`) remain where a token would be better (`bg-accent`); new code should use the token.
