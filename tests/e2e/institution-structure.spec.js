@@ -818,3 +818,30 @@ test("TC-AUD-01 The audit log lists the institution's own entries, narrows by wh
     const file = await download;
     expect(file.suggestedFilename()).toMatch(/^audit-log-\d{8}-\d{6}\.csv$/);
 });
+
+test("TC-VAS-01 An administrator views as a student with a reason and the password, sees the marker, and exits back to People", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto(`/institution/people?q=${encodeURIComponent(accounts.student.email)}`);
+
+    const row = page.getByRole("row", { name: new RegExp(accounts.student.email) });
+    await row.getByText("Actions").click();
+    await row.getByRole("button", { name: "View as this person" }).click();
+
+    const dialog = page.getByRole("dialog", { name: /^View as / });
+    await dialog.getByLabel("Why are you viewing as them?").fill("A student says the page is empty");
+    await dialog.getByRole("button", { name: "Start viewing" }).click();
+
+    const password = page.getByRole("dialog", { name: "Confirm your password" });
+    await password.getByLabel("Password").fill(accounts.institutionAdmin.password);
+    await password.getByRole("button", { name: "Confirm" }).click();
+
+    // The student's own pages, marked, with nothing changeable.
+    const banner = page.locator("[data-impersonation-banner]");
+    await expect(banner).toContainText("Viewing as " + accounts.student.email);
+    await expect(banner).toContainText("A student says the page is empty");
+
+    // Leaving returns to the people list as the administrator.
+    await banner.getByRole("button", { name: "Exit view" }).click();
+    await expect(page).toHaveURL(/institution\/people/);
+    await expect(page.getByRole("heading", { name: "People", level: 1 })).toBeVisible();
+});

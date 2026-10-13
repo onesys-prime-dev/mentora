@@ -62,6 +62,7 @@ class PeopleController extends BaseController
             'peopleRoleLabels'   => UserFilters::ROLE_LABELS,
             'peopleSeats'        => (new PlanLimits())->report($institutionId)['seats'],
             'peopleCanEdit'      => (new InstitutionAccess())->canWrite((int) auth()->id()),
+            'peopleCanViewAs'    => (bool) auth()->user()->can('institution.impersonate'),
         ]);
     }
 

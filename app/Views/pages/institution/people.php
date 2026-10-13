@@ -13,6 +13,7 @@
  * @var array<string, string>      $peopleRoleLabels
  * @var array<string, mixed>       $peopleSeats         used / limit / percent / state
  * @var bool                       $peopleCanEdit
+ * @var bool                       $peopleCanViewAs
  */
 $base    = 'institution/people';
 $f       = $peopleFilters;
@@ -53,11 +54,15 @@ foreach ($peopleRows as $p) {
     }
 
     $actions = '';
+    $label   = esc($p['name']);
+    $items   = '';
+
+    if ($peopleCanViewAs && $p['viewable']) {
+        $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-view-as"'
+            . ' data-dialog-title="View as ' . $label . '" data-dialog-label="Start viewing" data-dialog-action="' . esc(site_url('institution/view-as/' . $p['id'])) . '" data-view-as>View as this person</button>';
+    }
 
     if ($peopleCanEdit) {
-        $label = esc($p['name']);
-        $items = '';
-
         if (! $p['elsewhere']) {
             $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-edit"'
                 . ' data-dialog-title="Edit ' . $label . '" data-dialog-label="Save" data-dialog-action="' . $url('/' . $p['id']) . '"'
@@ -108,6 +113,9 @@ foreach ($peopleRows as $p) {
                 . ' data-dialog-label="Remove" data-dialog-action="' . $url('/' . $p['id'] . '/remove') . '">Remove from my institution</button>';
         }
 
+    }
+
+    if ($items !== '') {
         $actions = '<details class="relative inline-block text-left" data-person-menu>'
             . '<summary class="' . $link . ' cursor-pointer list-none px-2 py-1" aria-label="Actions for ' . $label . '">Actions</summary>'
             . '<div class="absolute right-0 z-20 mt-1 w-64 rounded-xl border border-gray-200 bg-white p-1 shadow-lg max-md:static max-md:w-full max-md:shadow-none">' . $items . '</div>'
@@ -316,6 +324,18 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         'confirmLabel' => 'Confirm',
         'tone'         => 'danger',
         'ajax'         => true,
+    ], ['saveData' => false]) ?>
+<?php endif; ?>
+
+<?php if ($peopleCanViewAs): ?>
+    <?= view('components/dialog', ['id' => 'person-view-as', 'title' => 'View as this person', 'body' =>
+        '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
+        . '<p class="text-sm text-[#3D3D3D]">You will see the site as they see it. It is view only: nothing you do is saved, and it ends by itself after a short time. Your reason and the time you spent are kept in the audit log.</p>'
+        . view('components/form-field', ['name' => 'reason', 'label' => 'Why are you viewing as them?', 'type' => 'textarea', 'required' => true, 'maxlength' => 500, 'help' => 'For example: a student says the grades page is empty.'], ['saveData' => false])
+        . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
+        . '<div class="flex flex-wrap items-center justify-end gap-3">'
+        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
+        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Start viewing</button></div></form>',
     ], ['saveData' => false]) ?>
 <?php endif; ?>
 

@@ -565,6 +565,8 @@ class PeopleService
                 'elsewhere'      => $elsewhere,
                 'sis'            => in_array($id, $managed, true),
                 'self'           => $id === $actorId,
+                // What view-as accepts: a live account of this institution alone that is not an administrator's.
+                'viewable'       => $active && $id !== $actorId && ! $isAdmin && ! $elsewhere,
                 'last_admin'     => $isAdmin && $active && $admins <= 1,
             ];
         }

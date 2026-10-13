@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Admin;
 
 use App\Models\Users\UserProfileModel;
+use App\Services\Institutions\InstitutionScope;
+use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\AccountControl;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
@@ -13,7 +15,8 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * A system administrator viewing the platform as another person (SA5).
+ * A system administrator, or an institution's own administrator, viewing the
+ * platform as another person (SA5, IA12).
  *
  * It is a view and nothing else. While it lasts the session IS the other
  * person (every page, filter and query already works from "who is signed in"),
@@ -27,6 +30,12 @@ use Throwable;
  * (or as themselves); the person must have an active account. Starting and
  * ending are in the audit log, and every entry written in between carries the
  * administrator as the impersonator (AuditLogger reads `impersonator_id`).
+ *
+ * An institution's administrator may view only as a member of their own
+ * institution: never as an administrator of any kind, never as themselves, and
+ * never as someone whose account is shared with another institution, because
+ * the view would show that institution's data too. A person who does not
+ * belong to the institution is answered as one who does not exist.
  *
  * Session keys: `impersonator_id` (the administrator) and `impersonation`
  * (target, reason, times and the role to restore).
@@ -92,7 +101,10 @@ class Impersonation
             throw new InvalidArgumentException('You are already viewing as someone. Exit that view first.');
         }
 
-        if (! $admin->inGroup('admin') || ! $admin->can('impersonation.start')) {
+        $bySystem      = $admin->inGroup('admin') && $admin->can('impersonation.start');
+        $byInstitution = ! $bySystem && $admin->inGroup('institutional_admin') && $admin->can('institution.impersonate');
+
+        if (! $bySystem && ! $byInstitution) {
             throw new InvalidArgumentException('You are not allowed to view as another person.');
         }
 
@@ -106,6 +118,10 @@ class Impersonation
             throw new InvalidArgumentException('You cannot view as yourself.');
         }
 
+        if ($byInstitution && ! InstitutionScope::forInstitution($this->institutionOfAdministrator((int) $admin->id))->ownsPerson($targetId)) {
+            throw new InvalidArgumentException('That person does not exist.');
+        }
+
         /** @var User|null $target */
         $target = model(UserModel::class)->findById($targetId);
 
@@ -115,6 +131,14 @@ class Impersonation
 
         if ($target->inGroup('admin')) {
             throw new InvalidArgumentException('You cannot view as another system administrator.');
+        }
+
+        if ($byInstitution && $target->inGroup('institutional_admin')) {
+            throw new InvalidArgumentException('You cannot view as an administrator.');
+        }
+
+        if ($byInstitution && $this->institutionCount($targetId) > 1) {
+            throw new InvalidArgumentException('That person also belongs to another institution, so their view cannot be shown.');
         }
 
         if (! $target->isActivated() || (new AccountControl())->isDeactivated($targetId)) {
@@ -217,6 +241,36 @@ class Impersonation
         }
 
         return in_array('chairperson', $groups, true) ? 'chairperson' : $groups[0];
+    }
+
+    /**
+     * Where the viewer goes once the view has ended: the person's page for a
+     * system administrator, the people list for an institution's administrator.
+     *
+     * @param array{admin_id: int, target_id: int} $state
+     */
+    public static function returnPath(array $state): string
+    {
+        /** @var User|null $viewer */
+        $viewer = model(UserModel::class)->findById($state['admin_id']);
+
+        return $viewer !== null && $viewer->inGroup('admin') ? 'admin/users/' . $state['target_id'] : 'institution/people';
+    }
+
+    private function institutionOfAdministrator(int $userId): int
+    {
+        $institutionId = (new PlanLimits())->institutionOf($userId);
+
+        if ($institutionId === null) {
+            throw new InvalidArgumentException('You are not allowed to view as another person.');
+        }
+
+        return $institutionId;
+    }
+
+    private function institutionCount(int $userId): int
+    {
+        return db_connect()->table('institution_users')->where('user_id', $userId)->countAllResults();
     }
 
     /** The one institution a person belongs to, for the audit entry (null when none or several). */
