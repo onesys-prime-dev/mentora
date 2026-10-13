@@ -13,6 +13,10 @@ use Generator;
  * Whether source addresses may be seen is decided once, when this is built.
  * When they may not, the address column is never selected and never searched,
  * so it cannot leak through a column, a search match or an export.
+ *
+ * It can also be bound to one institution. Then only that institution's
+ * entries are read, whatever the filters say, and the lists of action names
+ * and target types are drawn from them alone.
  */
 class AuditLogSearch
 {
@@ -34,7 +38,7 @@ class AuditLogSearch
         'audit_logs.new_values',
     ];
 
-    public function __construct(private readonly bool $showIp)
+    public function __construct(private readonly bool $showIp, private readonly ?int $institutionId = null)
     {
     }
 
@@ -95,10 +99,29 @@ class AuditLogSearch
      */
     public function actions(): array
     {
-        return array_column(
-            db_connect()->table('audit_logs')->select('action')->distinct()->orderBy('action')->get()->getResultArray(),
-            'action',
-        );
+        return $this->distinct('action');
+    }
+
+    /**
+     * The distinct target types, for the filter's choices.
+     *
+     * @return list<string>
+     */
+    public function targetTypes(): array
+    {
+        return $this->distinct('target_type');
+    }
+
+    /** @return list<string> */
+    private function distinct(string $column): array
+    {
+        $builder = db_connect()->table('audit_logs')->select($column)->distinct()->where($column . ' IS NOT NULL', null, false);
+
+        if ($this->institutionId !== null) {
+            $builder->where('institution_id', $this->institutionId);
+        }
+
+        return array_column($builder->orderBy($column)->get()->getResultArray(), $column);
     }
 
     /**
@@ -142,7 +165,10 @@ class AuditLogSearch
             }
         }
 
-        if ($filters->institutionId !== null) {
+        // A bound search never takes the institution from the filters.
+        if ($this->institutionId !== null) {
+            $builder->where('audit_logs.institution_id', $this->institutionId);
+        } elseif ($filters->institutionId !== null) {
             $builder->where('audit_logs.institution_id', $filters->institutionId);
         }
 

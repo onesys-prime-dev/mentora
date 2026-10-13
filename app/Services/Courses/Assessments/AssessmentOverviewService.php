@@ -52,7 +52,7 @@ class AssessmentOverviewService
         // (AssessmentScope), so a chairperson viewing a course in their
         // program gets the same instructor-shaped overview, not the
         // student one.
-        return $user->inGroup('instructor') || $user->inGroup('chairperson')
+        return \App\Services\Courses\CourseViewer::seesInstructorView($user) || $user->inGroup('chairperson')
             ? $this->forInstructor($offeringId, $assessments)
             : $this->forStudent($user, $assessments);
     }

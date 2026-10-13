@@ -245,3 +245,47 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 - **`auditEntries(actor|null, offeringRows, filters)`** is the audit viewer for a scope: with an actor it is that person's own chairperson actions (the chairperson page, via `auditLog()`), with none it is every chairperson action on the offerings in scope.
 - **Every metric** (snapshot, enrolment and completion, grades, instructor activity, at risk, the comparison table) is the same code for one program or many, so a department's or an institution's numbers are the union of the single programs' and always agree with the chairperson's. The thresholds they use are the institution's academic defaults.
 - **Used next by** the institution reports (and, later, the dean's Monitor Department).
+
+## Reports
+
+`/institution/reports` (permission `reports.view`; reading and exporting still work in a read-only institution). The Apps tile "Reports".
+
+- **It is Monitor Program over the institution.** Nothing is calculated again: `InstitutionReports` takes the programs in scope and hands them to `MonitorProgramService`, so the institutional administrator, the chairperson and the dashboards read the same numbers, with the same thresholds (the institution's academic defaults).
+- **Filters** (in the address, so a view can be shared): term, department, program, and an activity date range. Choosing a department narrows the program list. A department or program that is not the institution's answers 404; a term that is not its own matches nothing.
+- **The page:** totals (courses, instructors, students, who needs attention, how much is graded and how fast), the grade distribution, a sortable comparison of courses (enrolment, completion, average grade, grading time) and the students who need attention (the 25 silent longest; the export has everyone).
+- **A course:** each course links to its own page: enrolment, completion, grades and distribution, grading time, instructor activity and its students who need attention. (The read-only view of its content is a later branch.)
+- **CSV, one per report:** course comparison, at-risk students, grades and grading, instructor activity. Each is for the same filters as the page, with a name or title that could be read as a spreadsheet formula defused, and each export is itself audited as `institution.report_exported` with the filters and the row count.
+- **Empty:** an institution with nothing to report says so instead of showing zeros.
+
+## Read-only course view
+
+Any offering of the institution can be opened and looked at, as its instructor sees it, by the institutional administrator (permission `courses.view`). "View course" on the Offerings list, and "Open the course (view only)" on a course's report page.
+
+- **Addresses:** `institution/courses/{offering}/{slug}/{feature}` for the page and `institution/api/courses/{offering}/...` for what it loads. They are the same controllers and views as the instructor's and chairperson's, not copies; the workspace takes its address prefix from the page (`courseUrlPrefix`).
+- **A view marker** ("View only. You are looking at IT101 A as an administrator of this institution...") sits above the tabs. A completed or archived course carries its own closed note as well.
+- **What is shown:** overview, announcements, modules (drafts included, like the instructor's), resources, discussions, assessments (with their questions and rubrics), and the gradebook (scheme, roster, and the offline grade sheet download). The grading screens, the editors and the question tools are not offered.
+- **Nothing can be changed.** Only reading routes exist under these addresses: there is no route to post, patch or delete anything in a course, and a test walks every write route of the course area and checks none of them exists here. The instructor-only controls are not drawn either, because the page does not treat the viewer as an instructor.
+- **Scope** is the institution's own: an offering of another institution is a 404 on the page and on every API address (`InstitutionCourseFilter`), and the files a course shares (its resources and announcement attachments) open only for its own institution's administrator. A student's submitted work never does.
+- **One rule in one place:** `CourseViewer` says who sees the instructor's view; the services that used to ask "is this the instructor?" for what to show now ask it, and `InstitutionCourseAccess` decides reach. Writes keep their own checks (the assigned instructor, the program's chairperson).
+- **Read-only institutions** can still be looked at; viewing was never a write.
+
+## Subscription
+
+`/institution/subscription` (permission `institution.settings`) shows the plan, its period, where it is on the timeline (running, expiring, grace, read-only, expired), usage against the plan's limits (seats, storage, AI generations) and the renewal history. It has no forms: plans and renewals belong to the system administrator. History rows never show who recorded them.
+
+## Integrations
+
+`/institution/integrations` (permission `sis.run`) shows the SIS connection's state and the run history, and lets the administrator preview or run an import and preview or send final grades. It calls the same services as the system administrator's page, so every rule holds (feature flag, enabled connection, read-only institution). A real import and a grade delivery ask for the password.
+
+What is never shown: the connection's settings, credentials, folder names (taken out of run messages and row issues) and connection tests.
+
+## Audit log
+
+`/institution/audit` (permission `institution.audit`) lists what happened in the institution, newest first: when, who, the role they acted as, what, what it was about, and the before and after values of a change. Filters are a search, a date range, who (part of an email), what and what about; the columns sort; 25 per page. `Export CSV` downloads the same filtered list (itself recorded as `institution.audit_exported`) and stays open while the institution is read-only.
+
+What it holds and what it never shows:
+- Only the institution's own entries. The search is bound to the institution on the server, so a filter, a search, a choice list or an export cannot name another one.
+- No source addresses: never selected, searched or exported, whatever the vendor's own display setting says.
+- What the vendor's staff did about the institution is listed under the name "Mentora support", not their accounts; a view-as by them shows the same name.
+- Before and after values of changes to the SIS connection's settings and of backups are kept by the vendor ("Kept by Mentora"), as the integrations page keeps folders and credentials out.
+- Cells that start with `=`, `+`, `-` or `@` are defused in the CSV.

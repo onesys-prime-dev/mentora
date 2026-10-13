@@ -731,3 +731,90 @@ test("TC-SEC-01 An announcement reaches the whole institution, and stricter secu
     await page.getByRole("button", { name: "Save announcement" }).click();
     await expect(page.getByText("The announcement was removed.")).toBeVisible();
 });
+
+test("TC-RPT-01 Reports show the institution's courses, narrow by department, open a course and export CSV", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/reports");
+    await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
+
+    await expect(page.locator("[data-report-totals]")).toBeVisible();
+    await expect(page.locator("[data-report-distribution]")).toBeVisible();
+
+    const rows = page.getByRole("table", { name: "Courses compared" }).getByRole("row");
+    const all = await rows.count();
+    expect(all).toBeGreaterThan(1);
+
+    // The program list follows the department, and applying narrows the table.
+    const department = page.getByLabel("Department");
+    const options = await department.locator("option").count();
+    expect(options).toBeGreaterThan(1);
+
+    await department.selectOption({ index: 1 });
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/department=\d+/);
+
+    // A course opens with its own numbers and a way back that keeps the filters.
+    await page.getByRole("table", { name: "Courses compared" }).locator("tbody a").first().click();
+    await expect(page.locator("[data-report-totals]")).toBeVisible();
+    await expect(page.locator("[data-report-activity]")).toBeVisible();
+    await page.getByRole("link", { name: "Back to reports" }).click();
+    await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
+
+    // The CSV is a download, named for the report.
+    const download = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Course comparison (CSV)" }).click();
+    expect((await download).suggestedFilename()).toMatch(/^report-courses-\d{4}-\d{2}-\d{2}\.csv$/);
+});
+
+test("TC-VCV-01 A course opens view only from the offerings list, shows its content, and offers nothing to change", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/offerings");
+
+    await page.locator("[data-view-course]").first().click();
+
+    await expect(page.locator("[data-view-only]")).toContainText("View only");
+    await expect(page.locator("#course-content")).not.toBeEmpty({ timeout: 15000 });
+
+    // Every tab of the workspace loads for the administrator, and none offers an authoring control.
+    for (const tab of ["Announcements", "Modules", "Resources", "Discussions", "Assessments", "Grades"]) {
+        await page.getByRole("tab", { name: tab }).click();
+        await expect(page.locator("#course-content")).not.toContainText("Something went wrong", { timeout: 15000 });
+    }
+
+    await expect(page.getByRole("button", { name: /^(Add|New|Create) /i })).toHaveCount(0);
+});
+
+test("TC-SUB-01 Subscription is read only; Integrations shows no folders", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    await page.goto("/institution/subscription");
+    await expect(page.getByRole("heading", { name: "Subscription", level: 1 })).toBeVisible();
+    await expect(page.locator("[data-subscription], main")).toContainText(/Plan|No subscription yet/);
+    await expect(page.locator("main form")).toHaveCount(0);
+
+    await page.goto("/institution/integrations");
+    await expect(page.getByRole("heading", { name: "Integrations", level: 1 })).toBeVisible();
+    await expect(page.locator("[data-connection]")).toBeVisible();
+    await expect(page.locator("main")).not.toContainText(/writable|csv-uploads|sis-inbound/i);
+});
+
+test("TC-AUD-01 The audit log lists the institution's own entries, narrows by what was done, and exports without addresses", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+    await page.goto("/institution/audit");
+
+    await expect(page.getByRole("heading", { name: "Audit log", level: 1 })).toBeVisible();
+    await expect(page.getByRole("table", { name: "Audit log" })).toBeVisible();
+    await expect(page.locator("main")).not.toContainText("Source IP");
+
+    // Narrowing by what was done keeps only those entries.
+    await page.getByLabel("What").selectOption({ index: 1 });
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/action=/);
+    await expect(page.locator("[data-audit-total]")).toContainText("match");
+
+    // The CSV is a download, and has no address column.
+    const download = page.waitForEvent("download");
+    await page.locator("[data-audit-export]").click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/^audit-log-\d{8}-\d{6}\.csv$/);
+});

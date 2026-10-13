@@ -48,7 +48,7 @@ class LearningUnitModel extends Model
             ])
             ->where('module_id', $moduleId);
 
-        if (! $user->inGroup('instructor')) {
+        if (! \App\Services\Courses\CourseViewer::seesInstructorView($user)) {
 
             $builder->where(
                 'status',
@@ -78,7 +78,7 @@ class LearningUnitModel extends Model
             ])
             ->where('id', $learningUnitId);
 
-        if (! $user->inGroup('instructor')) {
+        if (! \App\Services\Courses\CourseViewer::seesInstructorView($user)) {
 
             $builder->where(
                 'status',

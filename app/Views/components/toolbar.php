@@ -10,6 +10,10 @@
 | fields: list of
 |   ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => '...', 'value' => '', 'span' => 'lg:col-span-2']
 |   ['type' => 'select', 'name' => 'role', 'label' => 'Role', 'options' => ['' => 'Any role', 'student' => 'Student'], 'value' => '']
+|   ['type' => 'date', 'name' => 'from', 'label' => 'From', 'value' => '2026-08-01']
+|
+| A field may carry 'attrs' (name => value, values escaped here), for a script that
+| works on the control, such as a dependent select.
 |
 | Filters travel in the address (GET), so a filtered view can be bookmarked or
 | shared, and every sort and paging link keeps them.
@@ -28,11 +32,13 @@ $input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm fo
         <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 <?= esc($field['span'] ?? '') ?>">
             <?= esc($field['label']) ?>
             <?php if (($field['type'] ?? 'search') === 'select'): ?>
-                <select class="<?= $input ?>" name="<?= esc($field['name']) ?>">
+                <select class="<?= $input ?>" name="<?= esc($field['name']) ?>"<?php foreach (($field['attrs'] ?? []) as $attr => $attrValue): ?> <?= esc((string) $attr) ?>="<?= esc((string) $attrValue) ?>"<?php endforeach; ?>>
                     <?php foreach ($field['options'] as $optionValue => $optionLabel): ?>
                         <option value="<?= esc((string) $optionValue) ?>" <?= (string) ($field['value'] ?? '') === (string) $optionValue ? 'selected' : '' ?>><?= esc((string) $optionLabel) ?></option>
                     <?php endforeach; ?>
                 </select>
+            <?php elseif (($field['type'] ?? '') === 'date'): ?>
+                <input class="<?= $input ?>" type="date" name="<?= esc($field['name']) ?>" value="<?= esc((string) ($field['value'] ?? '')) ?>">
             <?php else: ?>
                 <input class="<?= $input ?>" type="search" name="<?= esc($field['name']) ?>" value="<?= esc((string) ($field['value'] ?? '')) ?>" placeholder="<?= esc($field['placeholder'] ?? '') ?>">
             <?php endif; ?>
