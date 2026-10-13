@@ -28,7 +28,7 @@ Two ways to see the pieces working:
 
 | Thing | Rule | Where |
 |---|---|---|
-| Shell | `layouts/app`: glass header, Apps menu, background image, page title | `app/Views/layouts/` |
+| Shell | `layouts/app`: glass header, Apps menu, background image. The header names the page beside the logo only when the page has no `<h1>` of its own, so it is said once | `app/Views/layouts/` |
 | Fonts | Body Poppins (`font-sans`); numbers and card titles Parkinsans (`font-display`); small caps labels Montserrat (`font-heading`) | `resources/css/app.css` |
 | Brand | `bg-brand` `#0040A6`, `bg-brand-dark` `#002068`, `bg-brand-tint` `#F2F7FF`, `bg-accent` `#2E7D4F`. An institution may override them (Settings, Branding), so use the tokens, not the hex | `@theme` in `app.css`, `shared/brand-tokens.js` |
 | Text | Headings `text-brand`; strong `#1A1C1E`; body `#3D3D3D`; muted `#646464` | components |
@@ -180,5 +180,4 @@ A pull request that adds or changes a screen is not done until:
 
 - The system administrator's area is on the shared shell (header, Apps menu, page heads, alerts) but its lists, forms, onboarding (a `stepper`) and password confirmation use the shared components. Every field of every form uses `form-field`; the only plain inputs left are the typed-name confirmations in the lists, which are part of a `details` confirm, and checkbox groups with several values (a person's roles, the roles that need a sign-in code).
 - Dark mode: the header button exists and does nothing yet.
-- The header prints the page title beside the logo and the page's `<h1>` repeats it; the header text is decorative and should be removed once every page has a head.
 - A few literal greens (`#2E7D4F`) remain where a token would be better (`bg-accent`); new code should use the token.
