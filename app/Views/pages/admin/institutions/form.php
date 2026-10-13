@@ -27,7 +27,7 @@ $input  = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
         <h1 class="text-xl font-bold text-brand"><?= esc($formHeading) ?></h1>
 
         <?php if (session()->has('error')): ?>
-            <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+            <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
         <?php endif; ?>
 
         <form method="post" action="<?= $action ?>" class="mt-4 flex flex-col gap-4">

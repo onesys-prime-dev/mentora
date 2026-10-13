@@ -7,6 +7,7 @@
 // they run in order: it is onboarded, its administrator is invited and signs in,
 // its subscription lapses to read-only, a renewal brings it back, and the
 // administrator looks at the platform as a student.
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { confirmPassword, dateIn, emailedCode, signInAsAdmin, startAdminSignIn } from "./support/admin.js";
 import { runSql } from "./support/database.js";
@@ -263,5 +264,24 @@ test("TC-SA-09 What happened is in the audit log", async ({ page }) => {
 
     for (const action of ["impersonation.started", "impersonation.ended", "invitation.accepted", "institution.exported"]) {
         await expect(body).toContainText(action);
+    }
+});
+
+test("TC-SA-10 The main administration screens pass an automated accessibility check", async ({ page }) => {
+    await signInAsAdmin(page);
+
+    const screens = [
+        "/admin/dashboard", "/admin/institutions", "/admin/plans", "/admin/users", "/admin/flags", "/admin/roles",
+        "/admin/monitoring", "/admin/backups", "/admin/audit-log", "/admin/archive", "/admin/settings/general", "/admin/settings/security",
+    ];
+
+    for (const path of screens) {
+        await page.goto(path);
+        await expect(page.getByRole("heading", { level: 1 }).first(), path).toBeVisible();
+
+        const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+        const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+
+        expect(serious.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`), `${path} has serious accessibility problems`).toEqual([]);
     }
 });

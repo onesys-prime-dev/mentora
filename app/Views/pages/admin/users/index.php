@@ -35,16 +35,13 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-a
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-brand">Users</h1>
-    <a class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/users/new') ?>">Invite a person</a>
-</div>
+<?= view('components/page-head', ['title' => 'Users', 'icon' => 'user', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/users/new') . '">Invite a person</a>'], ['saveData' => false]) ?>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <form method="get" action="<?= site_url('admin/users') ?>" class="mt-6 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow">

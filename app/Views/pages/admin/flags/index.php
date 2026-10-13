@@ -15,7 +15,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 
 <?= $this->section('content') ?>
 
-<h1 class="text-2xl font-bold text-brand">Feature flags</h1>
+<?= view('components/page-head', ['title' => 'Feature flags', 'icon' => 'pin'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     A flag decides whether a feature is on. Here you set it for everyone. <strong>Off is a kill switch</strong>: the feature is off for every
     institution, whatever else says. <strong>On</strong> makes it on by default for everyone. To change a flag for one institution, open
@@ -23,10 +23,10 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 </p>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <?php if ($flagDefs === []): ?>

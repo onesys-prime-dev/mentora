@@ -1,10 +1,20 @@
 <?php
 /**
- * Shell for the system administrator area. Separate from layouts/app because
- * the app header lists student/instructor apps (courses, calendar, ...) that
- * do not exist here.
+ * Shell for the system administrator area. The same shell as every other
+ * area (layouts/app): the glass header with the bell, the Apps menu and the
+ * account menu, the background, the banners and the toasts. What differs is
+ * the Apps menu (the platform's tools, see global_apps('admin')) and a
+ * grouped navigation bar under the header, which an administrator needs on
+ * every page because the platform has more than a dozen of them.
+ *
+ * The header's page title is the system's name: the page's own <h1> says
+ * which page it is.
  */
-$email = $user->email ?? '';
+$this->setVar('user', $user ?? auth()->user());
+$this->setVar('pageTitle', (string) (new App\Services\Admin\PlatformSettings())->get('systemName') . ' administration');
+
+// The same default gutter as the app shell, a little wider to the right so tables have room.
+$mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -15,28 +25,28 @@ $email = $user->email ?? '';
 
 </head>
 
-<body class="min-h-screen bg-gray-100" data-page="<?= esc($page ?? 'admin') ?>">
+<body
+    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
+    style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
+    data-page="<?= esc($page ?? 'admin') ?>"
+    data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
+>
 
     <div class="flex min-h-screen flex-col">
 
-        <header class="flex items-center justify-between border-b border-b-black/10 bg-white px-6 py-3 shadow">
-            <a class="flex items-center gap-3" href="<?= site_url('admin/dashboard') ?>">
-                <img class="h-11 w-auto" src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="Mentora">
-                <span class="text-xl font-semibold text-brand"><?= esc((new App\Services\Admin\PlatformSettings())->get('systemName')) ?> administration</span>
-            </a>
-
-            <div class="flex items-center gap-4 text-sm text-gray-700">
-                <a class="font-semibold text-brand hover:underline" href="<?= site_url('notifications') ?>">Notifications<?php $unreadNotes = (new App\Services\Notifications\NotificationService())->unreadCount((int) auth()->id()); ?><?php if ($unreadNotes > 0): ?> <span class="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white" data-unread-count><?= esc((string) $unreadNotes) ?></span><?php endif; ?></a>
-                <span><?= esc($email) ?></span>
-                <a class="font-semibold text-brand hover:underline" href="<?= site_url('/logout') ?>">Log out</a>
-            </div>
-        </header>
+        <?= $this->include('layouts/partials/header') ?>
 
         <?= $this->include('layouts/partials/admin-menu') ?>
 
         <?= $this->include('layouts/partials/announcement') ?>
 
-        <main class="flex-1 px-6 py-8 lg:px-12">
+        <?= $this->include('layouts/partials/notifications-strip') ?>
+
+        <?php if ($flashToasts ?? false): ?>
+            <?= $this->include('layouts/partials/flash-toasts') ?>
+        <?php endif; ?>
+
+        <main class="flex-1 <?= $mainGutter ?> py-8">
 
             <?= $this->renderSection('content') ?>
 

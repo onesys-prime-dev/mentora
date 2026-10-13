@@ -55,6 +55,25 @@ if (! function_exists('global_apps')) {
             ];
         }
 
+        // The system administrator's tools. The page also has its own grouped navigation bar;
+        // this is the same set as tiles, so the Apps menu is the same everywhere.
+        if ($role === 'admin') {
+            return [
+                ['key' => 'dashboard',    'label' => 'Home',          'icon' => 'apps',      'url' => site_url('admin/dashboard')],
+                ['key' => 'institutions', 'label' => 'Institutions',  'icon' => 'hat',       'url' => site_url('admin/institutions')],
+                ['key' => 'plans',        'label' => 'Plans',         'icon' => 'points',    'url' => site_url('admin/plans')],
+                ['key' => 'users',        'label' => 'Users',         'icon' => 'user',      'url' => site_url('admin/users')],
+                ['key' => 'flags',        'label' => 'Feature flags', 'icon' => 'pin',       'url' => site_url('admin/flags')],
+                ['key' => 'roles',        'label' => 'Roles',         'icon' => 'lock',      'url' => site_url('admin/roles')],
+                ['key' => 'monitoring',   'label' => 'System status', 'icon' => 'score',     'url' => site_url('admin/monitoring')],
+                ['key' => 'backups',      'label' => 'Backups',       'icon' => 'folder',    'url' => site_url('admin/backups')],
+                ['key' => 'audit',        'label' => 'Audit log',     'icon' => 'tasks',     'url' => site_url('admin/audit-log')],
+                ['key' => 'archive',      'label' => 'Archive',       'icon' => 'drafts',    'url' => site_url('admin/archive')],
+                ['key' => 'general',      'label' => 'General',       'icon' => 'settings',  'url' => site_url('admin/settings/general')],
+                ['key' => 'security',     'label' => 'Security',      'icon' => 'attention', 'url' => site_url('admin/settings/security')],
+            ];
+        }
+
         return [
             ['key' => 'courses',       'label' => 'Courses',       'icon' => 'hat',          'url' => site_url($role . '/courses')],
             ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],

@@ -18,23 +18,17 @@ $busy = array_filter($backupRows, static fn (array $row): bool => in_array($row[
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-brand">Backups</h1>
-    <form method="post" action="<?= site_url('admin/backups') ?>">
-        <?= csrf_field() ?>
-        <button type="submit" class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" <?= $busy ? 'disabled' : '' ?>>Back up now</button>
-    </form>
-</div>
+<?= view('components/page-head', ['title' => 'Backups', 'icon' => 'folder', 'actions' => '<form method="post" action="' . site_url('admin/backups') . '">' . csrf_field() . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50" ' . ($busy ? 'disabled' : '') . '>Back up now</button></form>'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-gray-600">The server takes the backups (<span class="font-mono">php spark backup:run</span>); this page shows what it did. Restoring is a manual procedure: see <span class="font-mono">docs/backup.md</span>.</p>
 
 <?php if ($backupAlert !== null): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert" data-backup-alert="<?= esc($backupAlert['kind']) ?>"><?= esc($backupAlert['message']) ?></p>
+    <div class="mt-4" data-backup-alert="<?= esc($backupAlert['kind']) ?>"><?= view('components/alert', ['tone' => 'danger', 'text' => $backupAlert['message']], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <div class="mt-6 overflow-x-auto rounded-lg bg-white shadow">

@@ -18,15 +18,13 @@ $label = 'flex flex-col gap-1 text-sm font-medium text-gray-700';
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-3xl">
-    <a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
-
-    <h1 class="mt-2 text-2xl font-bold text-brand">Onboard <?= esc($onbInstitution['name']) ?></h1>
+    <?= view('components/page-head', ['title' => 'Onboard ' . $onbInstitution['name'], 'icon' => 'hat', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
     <p class="mt-1 text-sm text-gray-600"><span class="font-mono text-xs"><?= esc($onbInstitution['code']) ?></span> &middot; pending: nothing here can be used until onboarding is finished.</p>
 
     <?= view('pages/admin/partials/onboarding-steps', ['obStep' => 3]) ?>
 
     <?php if (session()->has('error')): ?>
-        <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+        <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
     <?php endif; ?>
 
     <div class="mt-6 rounded-lg bg-white p-6 shadow" data-onboarding-summary>

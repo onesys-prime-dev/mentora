@@ -19,18 +19,16 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
-
-<h1 class="mt-2 text-2xl font-bold text-brand">Integrations</h1>
+<?= view('components/page-head', ['title' => 'Integrations', 'icon' => 'link', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-gray-600"><?= esc($sisInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($sisInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $sisInstitution, 'tabActive' => 'integrations']) ?>
 
 <?php if (session()->has('message')): ?>
-    <p class="mt-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700" role="status"><?= esc((string) session('message')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
-    <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
 <?php if (! $sisConnection['flagOn']): ?>
