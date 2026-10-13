@@ -84,6 +84,9 @@ foreach ($offeringRows as $o) {
         }
     }
 
+    // Everyone who can see the list can look at the course itself (read only).
+    $actions = '<a class="' . $link . ' mr-3" href="' . esc(site_url('institution/courses/' . $o['id'] . '/' . url_title((string) $o['course_title'], '-', true) . '/overview')) . '" data-view-course>View course</a>' . $actions;
+
     $rows[] = [
         'id'      => $o['id'],
         'label'   => $o['course_code'] . ' ' . $o['section_code'],

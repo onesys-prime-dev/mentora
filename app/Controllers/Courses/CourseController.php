@@ -73,7 +73,7 @@ class CourseController extends BaseController
         // whichever role they're currently acting as, not just the first
         // group they happen to hold — otherwise a chairperson's own course
         // card would send them to the student section instead.
-        $prefix = active_role() ?: ($user->inGroup('instructor') ? 'instructor' : 'student');
+        $prefix = \App\Services\Courses\CourseViewer::urlPrefix($user, active_role() ?: ($user->inGroup('instructor') ? 'instructor' : 'student'));
 
         return redirect()->to(
             site_url(
@@ -121,6 +121,10 @@ class CourseController extends BaseController
                 'course' => $course,
 
                 'activeFeature' => $activeFeature,
+
+                // The institutional administrator looks at courses; the page says so and addresses the read-only routes.
+                'readOnlyView' => \App\Services\Courses\CourseViewer::isReadOnlyViewer($user),
+                'courseUrlPrefix' => \App\Services\Courses\CourseViewer::urlPrefix($user, (string) ($user->getGroups()[0] ?? '')),
 
                 // A completed or archived offering can be looked at, not changed.
                 'offeringClosed' => db_connect()->table('course_offerings')->where('id', $offeringId)->where('status !=', 'active')->countAllResults() > 0,

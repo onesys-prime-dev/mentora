@@ -83,6 +83,11 @@ class ResourceService
 
     private function canViewOffering(User $user, int $offeringId): bool
     {
+        // The institution's administrator may look, never post: access only, no posting rights.
+        if (\App\Services\Courses\CourseViewer::isReadOnlyViewer($user)) {
+            return (new \App\Services\Institutions\InstitutionCourseAccess())->canAccess($user, $offeringId);
+        }
+
         if ($this->isInstructorHere($user, $offeringId)) {
             return true;
         }

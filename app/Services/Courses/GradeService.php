@@ -40,7 +40,7 @@ class GradeService
 
         $viewData = ['user' => $user];
 
-        if ($user->inGroup('instructor')) {
+        if (\App\Services\Courses\CourseViewer::seesInstructorView($user)) {
 
             $viewData += $this->buildInstructorGradebook($user, $offering);
 
