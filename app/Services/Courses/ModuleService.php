@@ -130,7 +130,7 @@ class ModuleService
 
         $modules = $this->courseModuleModel->retrieveCourseModules($offeringId, $user);
 
-        $isInstructor = $user->inGroup('instructor');
+        $isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
         $moduleIds = array_column($modules, 'id');
 
@@ -248,7 +248,7 @@ class ModuleService
 
         $tree = $this->buildModuleTree($user, $moduleId);
 
-        $isInstructor = $user->inGroup('instructor');
+        $isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
         // The visible module number only counts published modules up to
         // and including this one, in order — same rule as the list page.

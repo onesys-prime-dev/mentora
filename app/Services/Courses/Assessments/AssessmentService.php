@@ -88,7 +88,7 @@ class AssessmentService
         // what they're allowed to see; instructor numbers are this section's).
         $overview = $offering
             ? (new AssessmentOverviewService($this))->build($user, $offeringId, (int) $offering['course_id'])
-            : ['role' => $user->inGroup('instructor') ? 'instructor' : 'student', 'metrics' => [], 'assessments' => []];
+            : ['role' => \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'instructor' : 'student', 'metrics' => [], 'assessments' => []];
 
         return [
             'html' => view(
@@ -109,7 +109,7 @@ class AssessmentService
         int $assessmentId
     ): array {
 
-        $isStudent = !$user->inGroup('instructor');
+        $isStudent = !\App\Services\Courses\CourseViewer::seesInstructorView($user);
 
         // Students never see drafts, archived work, or anything whose
         // Modules item is hidden — not even through a deep link.
@@ -149,7 +149,7 @@ class AssessmentService
 
         // The student's completion of the linked Modules item, and whether
         // that item is still locked behind a prerequisite.
-        $data['assessment']['learning_completion'] = $learningItemId && !$user->inGroup('instructor')
+        $data['assessment']['learning_completion'] = $learningItemId && !\App\Services\Courses\CourseViewer::seesInstructorView($user)
             ? db_connect()->table('learning_completions')
                 ->select(['status', 'completed_at'])
                 ->where('learning_item_id', $learningItemId)
@@ -178,7 +178,7 @@ class AssessmentService
                     'assignmentState' => $isAssignment
                         ? (new AssignmentSubmissionService())->getState($user, $assessmentId)
                         : null,
-                    'quizState' => !$isAssignment && !$user->inGroup('instructor')
+                    'quizState' => !$isAssignment && !\App\Services\Courses\CourseViewer::seesInstructorView($user)
                         ? $this->quizState($user, $data['assessment'])
                         : null,
                     'assessmentLock' => $lock,
@@ -580,7 +580,7 @@ class AssessmentService
 
         $assessmentId = (int) $assessment['id'];
 
-        $isInstructor = $user->inGroup('instructor');
+        $isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
         $isQuiz = strtolower($assessment['assessment_type']) === 'quiz';
 

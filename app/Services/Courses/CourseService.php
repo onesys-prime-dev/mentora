@@ -198,6 +198,11 @@ class CourseService
         int $offeringId
     ): ?array
     {
+        // The institutional administrator's read-only view of any course of their institution.
+        if (CourseViewer::isReadOnlyViewer($user)) {
+            return (new \App\Services\Institutions\InstitutionCourseAccess())->offering($user, $offeringId);
+        }
+
         if ($user->inGroup('student')) {
 
             return $this->enrollmentModel
