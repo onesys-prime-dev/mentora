@@ -85,6 +85,16 @@ These settings have no dots on purpose. The framework's own dotted settings
 environment on Windows, where `.env` silently wins, so a setup that relied on
 them could reset the wrong database.
 
+**Mail and the administrator.** The app never sends real mail in these tests. `serve.js`
+sets `E2E_MAIL_SINK`, which `app/Config/Email.php` turns into "pipe every message to
+`tests/e2e/support/mail-sink.php`"; that script files each one in `writable/e2e-mail`,
+and `tests/e2e/support/mail.js` reads the system administrator's sign-in code and
+invitation links from there. `serve.js` also creates the administrator with
+`php spark admin:create` (the demo seeder refuses to run in production). For a case
+that needs time to have passed, `support/database.js` runs one SQL statement on the
+e2e database (same name guard as the reset); `support/spark.js` runs a spark command
+such as `subscriptions:sync`.
+
 A failed test leaves a screenshot and a trace in `test-results/` and an HTML report
 in `playwright-report/` (`npx playwright show-report`); CI uploads them as the
 `playwright-report` artifact, with `writable/logs/`. Tests run one at a time.

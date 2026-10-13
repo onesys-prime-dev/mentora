@@ -31,7 +31,7 @@ export function renderAcceptedAnswersEditor(answers = [], caseSensitive = false)
 
             <div class="flex flex-col gap-1.5" data-accepted-answers-list>${rows}</div>
 
-            <button type="button" data-add-accepted-answer class="self-start text-xs font-semibold text-[#0040A6] transition hover:underline">+ Add alternative</button>
+            <button type="button" data-add-accepted-answer class="self-start text-xs font-semibold text-brand transition hover:underline">+ Add alternative</button>
 
             <p class="rounded-lg border border-[#FFE3A3] bg-[#FFF8E6] px-3 py-2 text-xs text-[#946200] ${answers.length ? "hidden" : ""}" data-accepted-answers-empty>
                 Add the correct answer so this question can be auto-graded.

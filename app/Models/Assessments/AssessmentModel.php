@@ -94,7 +94,7 @@ class AssessmentModel extends Model
             "(SELECT COUNT(*) FROM assessment_submissions s
                 WHERE s.assessment_id = a.id AND s.is_graded = 1
                   AND s.student_id IN (SELECT e.student_user_id FROM enrollments e
-                      WHERE e.offering_id = {$offeringId} AND e.status = 'enrolled')) AS graded_count",
+                      WHERE e.offering_id = {$offeringId} AND e.status IN ('enrolled', 'completed'))) AS graded_count",
             false
         );
 
@@ -103,7 +103,7 @@ class AssessmentModel extends Model
                 WHERE s.assessment_id = a.id AND s.is_graded = 0
                   AND s.status IN ('Submitted', 'Partially Graded', 'Grading')
                   AND s.student_id IN (SELECT e.student_user_id FROM enrollments e
-                      WHERE e.offering_id = {$offeringId} AND e.status = 'enrolled')) AS needs_review_count",
+                      WHERE e.offering_id = {$offeringId} AND e.status IN ('enrolled', 'completed'))) AS needs_review_count",
             false
         );
 

@@ -28,13 +28,13 @@ $isStudent = $role === 'student';
 
     <div class="flex justify-between items-center">
 
-        <span class="text-2xl font-bold text-[#0040A6]">
+        <span class="text-2xl font-bold text-brand">
             <?= $isStudent ? 'Upcoming Deadlines' : 'Closing Soon' ?>
         </span>
 
         <button
             type="button"
-            class="text-sm text-[#0040A6] cursor-pointer"
+            class="text-sm text-brand cursor-pointer"
             data-course-feature="assessments">
             View All
         </button>
@@ -64,7 +64,7 @@ $isStudent = $role === 'student';
             <?php foreach ($deadlines as $deadline): ?>
 
                 <div
-                    class="group flex items-center gap-5 py-2 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-[#0040A6]/5"
+                    class="group flex items-center gap-5 py-2 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-brand/5"
                     data-overview-open="<?= (int) $deadline['id'] ?>">
 
                     <div class="w-12 h-12 shrink-0 flex flex-col justify-center items-center <?= $tile($deadline['tone']) ?> rounded-xl">
@@ -83,7 +83,7 @@ $isStudent = $role === 'student';
 
                     <div class="flex min-w-0 flex-col">
 
-                        <span class="truncate text-md text-black/70 font-bold transition-colors duration-150 group-hover:text-[#0040A6]">
+                        <span class="truncate text-md text-black/70 font-bold transition-colors duration-150 group-hover:text-brand">
                             <?= esc($deadline['title']) ?>
                         </span>
 
@@ -99,7 +99,7 @@ $isStudent = $role === 'student';
 
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        class="ml-auto h-5 w-5 shrink-0 text-[#A9A9A9] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#0040A6]"
+                        class="ml-auto h-5 w-5 shrink-0 text-[#A9A9A9] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"

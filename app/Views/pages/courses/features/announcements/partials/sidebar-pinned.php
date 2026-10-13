@@ -13,7 +13,7 @@
                 <button
                     type="button"
                     data-scroll-to-announcement="<?= esc($item['id']) ?>"
-                    class="flex items-start gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-[#0040A6]/5">
+                    class="flex items-start gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-brand/5">
                     <span class="mt-0.5 shrink-0 text-sm">📌</span>
                     <span class="truncate text-sm text-[#1A1C1E]"><?= esc($item['subject']) ?></span>
                 </button>

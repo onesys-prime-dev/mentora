@@ -21,6 +21,7 @@ class UserProfileModel extends Model
         'suffix',
         'student_number',
         'program_id',
+        'active_role',
     ];
 
     protected $useSoftDeletes = true;
@@ -58,6 +59,10 @@ class UserProfileModel extends Model
 
         'program_id' => [
             'rules' => 'permit_empty|is_natural_no_zero',
+        ],
+
+        'active_role' => [
+            'rules' => 'permit_empty|max_length[50]',
         ],
     ];
 

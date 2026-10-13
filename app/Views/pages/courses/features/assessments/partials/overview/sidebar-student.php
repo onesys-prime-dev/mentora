@@ -14,9 +14,9 @@ $upNext = $overview['upNext'] ?? [];
 
 $feedback = $overview['feedback'] ?? [];
 
-$rowClasses = 'group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[#A9A9A9]/50 px-5 py-4 outline-none transition-all duration-200 hover:border-[#0040A6]/50 hover:bg-[#0040A6]/5 hover:shadow-sm focus-visible:border-[#0040A6] focus-visible:ring-2 focus-visible:ring-[#0040A6]/20';
+$rowClasses = 'group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[#A9A9A9]/50 px-5 py-4 outline-none transition-all duration-200 hover:border-brand/50 hover:bg-brand/5 hover:shadow-sm focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20';
 
-$arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:text-[#0040A6] group-hover:translate-x-0.5 group-hover:scale-125 group-focus-visible:text-[#0040A6] group-focus-visible:scale-125';
+$arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:text-brand group-hover:translate-x-0.5 group-hover:scale-125 group-focus-visible:text-brand group-focus-visible:scale-125';
 ?>
 
 <!-- Up Next -->
@@ -24,7 +24,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
     <div class="flex items-center gap-3">
         <?= icon('start', 'h-5 w-5') ?>
-        <span class="text-xl font-bold text-[#0040A6]">Up Next</span>
+        <span class="text-xl font-bold text-brand">Up Next</span>
     </div>
 
     <div class="flex flex-col gap-2">
@@ -45,8 +45,8 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
                 <div class="flex min-w-0 items-center gap-3">
 
-                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#0040A6]">
-                        <?= learning_item_icon($item['assessment_type'], 'h-4 w-4 text-[#0040A6]') ?>
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-brand">
+                        <?= learning_item_icon($item['assessment_type'], 'h-4 w-4 text-brand') ?>
                     </div>
 
                     <div class="flex min-w-0 flex-col">
@@ -79,7 +79,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
     <div class="flex items-center gap-3">
         <?= icon('feedbacks', 'h-5 w-5') ?>
-        <span class="text-xl font-bold text-[#0040A6]">Feedback</span>
+        <span class="text-xl font-bold text-brand">Feedback</span>
     </div>
 
     <div class="flex flex-col gap-2">
@@ -89,7 +89,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
             <?php $item = $entry['assessment']; ?>
 
             <div
-                class="group flex cursor-pointer flex-col gap-2 rounded-2xl border border-[#A9A9A9]/50 px-5 py-4 outline-none transition-all duration-200 hover:border-[#0040A6]/50 hover:bg-[#0040A6]/5 hover:shadow-sm focus-visible:border-[#0040A6] focus-visible:ring-2 focus-visible:ring-[#0040A6]/20"
+                class="group flex cursor-pointer flex-col gap-2 rounded-2xl border border-[#A9A9A9]/50 px-5 py-4 outline-none transition-all duration-200 hover:border-brand/50 hover:bg-brand/5 hover:shadow-sm focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
                 role="link"
                 tabindex="0"
                 data-assessment="<?= esc($item['id']) ?>">
@@ -98,8 +98,8 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
 
                     <div class="flex min-w-0 items-center gap-3">
 
-                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#0040A6]">
-                            <?= learning_item_icon($item['assessment_type'], 'h-4 w-4 text-[#0040A6]') ?>
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-brand">
+                            <?= learning_item_icon($item['assessment_type'], 'h-4 w-4 text-brand') ?>
                         </div>
 
                         <span class="truncate font-bold text-[#646464]"><?= esc($item['title']) ?></span>
@@ -121,7 +121,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
                     <span class="text-xs text-[#767676]"><?= esc($entry['when']) ?></span>
 
                     <?php if ((int) $entry['message_count'] > 1): ?>
-                        <span class="shrink-0 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-[10px] font-bold text-[#0040A6]">
+                        <span class="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand">
                             <?= (int) $entry['message_count'] ?> messages
                         </span>
                     <?php endif; ?>

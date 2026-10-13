@@ -63,6 +63,12 @@ Vagrantfile
 /writable/debugbar/*
 !/writable/debugbar/index.html
 
+# Files the app and the browser tests produce (data exports, SIS files, backups, captured mail)
+/writable/exports/
+/writable/sis/
+/writable/backups/
+/writable/e2e-mail/
+
 php_errors.log
 
 #-------------------------

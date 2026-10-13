@@ -97,7 +97,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
 
             checkbox.type = "checkbox";
             checkbox.value = String(candidate.id);
-            checkbox.className = "accent-[#0040A6]";
+            checkbox.className = "accent-brand";
             checkbox.dataset.dependencyCandidate = "";
             checkbox.checked = data.prerequisiteIds.includes(candidate.id);
 

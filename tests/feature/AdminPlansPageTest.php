@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Models\Subscriptions\PlanModel;
+use CodeIgniter\Config\Factories;
 use CodeIgniter\Config\Services;
+use Config\FeatureFlags as FlagConfig;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use CodeIgniter\Test\TestResponse;
@@ -28,6 +30,14 @@ final class AdminPlansPageTest extends RouteTestCase
 
         Services::resetSingle('auditLogger');
 
+        // The feature keys these tests give plans must be flags that exist.
+        config(FlagConfig::class)->flags = [
+            'sis.sync'    => ['description' => 'SIS', 'default' => false],
+            'ai.advanced' => ['description' => 'AI', 'default' => false],
+            'a.one'       => ['description' => 'One', 'default' => false],
+            'b.two'       => ['description' => 'Two', 'default' => false],
+        ];
+
         $this->admin = model(UserModel::class)->findById(CourseFactory::user('admin')->id);
 
         $this->loggedInAs($this->admin);
@@ -38,6 +48,7 @@ final class AdminPlansPageTest extends RouteTestCase
 
     protected function tearDown(): void
     {
+        Factories::reset('config');
         $_GET = [];
         service('superglobals')->setGetArray([]);
 
@@ -234,6 +245,31 @@ final class AdminPlansPageTest extends RouteTestCase
         $this->assertStringContainsString('value="Premium"', $body, 'what was typed is not lost');
         $this->assertStringContainsString('sis.sync', $body);
         $this->assertSame(0, db_connect()->table('plans')->countAllResults());
+    }
+
+    public function testAddingWithAFeatureThatIsNotAFlagShowsTheChoices(): void
+    {
+        $this->submit('admin/plans', $this->form(['name' => 'Typo Plan', 'features' => 'sis.snyc']));
+
+        $this->assertSame(0, db_connect()->table('plans')->countAllResults());
+
+        $body = $this->body('admin/plans/new');
+
+        $this->assertStringContainsString('is not a feature flag', $body);
+        $this->assertStringContainsString('sis.snyc', $body, 'what was typed is kept');
+    }
+
+    public function testTheFormListsTheFeaturesThatCanBeGranted(): void
+    {
+        $this->assertStringContainsString('Available:', $this->body('admin/plans/new'));
+        $this->assertStringContainsString('sis.sync, ai.advanced, a.one, b.two', $this->body('admin/plans/new'));
+    }
+
+    public function testWithNoFlagsTheFormSaysThereIsNothingToChooseFrom(): void
+    {
+        config(FlagConfig::class)->flags = [];
+
+        $this->assertStringContainsString('no feature flags to choose from', $this->body('admin/plans/new'));
     }
 
     public function testAddingADuplicateNameIsRefused(): void

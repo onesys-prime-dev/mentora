@@ -148,4 +148,34 @@ final class ReauthServiceTest extends CIUnitTestCase
         $this->assertSame('admin/users', $service->pullReturn());
         $this->assertSame('admin/dashboard', $service->pullReturn(), 'a second pull falls back to the dashboard');
     }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideInstitutionReturns(): iterable
+    {
+        yield 'a page in the institution area' => ['institution/terms?x=1', 'institution/terms?x=1'];
+        yield 'with a leading slash' => ['/institution/people', 'institution/people'];
+        yield 'the confirm page itself' => ['institution/reauth', 'institution/dashboard'];
+        yield 'the shared confirm page' => ['reauth', 'institution/dashboard'];
+        yield 'a student page' => ['student/dashboard', 'institution/dashboard'];
+        yield 'another site' => ['https://evil.example/institution', 'institution/dashboard'];
+        yield 'protocol-relative' => ['//evil.example/institution/x', 'institution/dashboard'];
+        yield 'a backslash trick' => ['institution\evil', 'institution/dashboard'];
+        yield 'a prefix that merely starts the same' => ['institutional/x', 'institution/dashboard'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('provideInstitutionReturns')]
+    public function testTheInstitutionAreaIsReturnedToWithItsOwnFallback(string $given, string $expected): void
+    {
+        $this->assertSame($expected, ReauthService::safeReturn($given, 'institution/dashboard'));
+    }
+
+    public function testThePendingPageFallsBackToTheCallersHome(): void
+    {
+        $service = $this->service();
+        $service->rememberReturn('student/dashboard');
+
+        $this->assertSame('institution/dashboard', $service->pullReturn('institution/dashboard'));
+    }
 }

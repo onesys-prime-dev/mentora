@@ -432,7 +432,7 @@ final class DashboardServiceTest extends DatabaseTestCase
 
         $widgets = $this->widgets($idle);
 
-        $this->assertSame(['queue' => []], $widgets['grading-queue']);
+        $this->assertSame(['queue' => [], 'overdue_after' => 7], $widgets['grading-queue']);
         $this->assertSame(['students' => []], $widgets['at-risk-students']);
         $this->assertSame(['sections' => []], $widgets['teaching-load']);
         $this->assertSame(['progress' => []], $widgets['class-progress']);

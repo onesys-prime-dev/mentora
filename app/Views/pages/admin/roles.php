@@ -23,7 +23,7 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
 
 <?= $this->section('content') ?>
 
-<h1 class="text-2xl font-bold text-[#0040A6]">Roles and permissions</h1>
+<h1 class="text-2xl font-bold text-brand">Roles and permissions</h1>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     What each role may do. Changes apply on the next request and need your password. The system administrator role is locked,
     and every role keeps at least one permission. <span class="font-semibold text-amber-700">Edited</span> marks a cell that differs from the default.
@@ -52,7 +52,7 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
 
         <?php foreach ($sections as $sectionTitle => $permissions): ?>
             <tbody class="divide-y divide-gray-100">
-                <tr class="bg-gray-50/60"><th class="px-3 py-1.5 text-left text-xs font-semibold text-[#0040A6]" colspan="<?= count($roleTitles) + 1 ?>"><?= esc($sectionTitle) ?></th></tr>
+                <tr class="bg-gray-50/60"><th class="px-3 py-1.5 text-left text-xs font-semibold text-brand" colspan="<?= count($roleTitles) + 1 ?>"><?= esc($sectionTitle) ?></th></tr>
 
                 <?php foreach ($permissions as $permission => $description): ?>
                     <tr>
@@ -79,7 +79,7 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
                                         <input type="hidden" name="granted" value="<?= $has ? '0' : '1' ?>">
                                         <button
                                             type="submit"
-                                            class="h-7 w-7 rounded border <?= $has ? 'border-[#0040A6] bg-[#0040A6] text-white' : 'border-gray-300 bg-white text-gray-300' ?> hover:opacity-80"
+                                            class="h-7 w-7 rounded border <?= $has ? 'border-brand bg-brand text-white' : 'border-gray-300 bg-white text-gray-300' ?> hover:opacity-80"
                                             aria-label="<?= esc("{$verb} {$permission} for {$roleTitle}") ?>"
                                             title="<?= esc("{$verb} {$permission} for {$roleTitle}") ?>"><?= $has ? '✓' : '+' ?></button>
                                     </form>

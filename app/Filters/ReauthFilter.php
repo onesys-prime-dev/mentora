@@ -11,11 +11,13 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Route option for dangerous admin actions: `['filter' => 'reauth']`.
+ * Route option for dangerous actions in an administrative area (the system
+ * administrator's and the institutional administrator's): `['filter' => 'reauth']`.
  *
- * Lets the request through only if the administrator typed their password
- * within the last few minutes; otherwise sends them to the confirm page (or,
- * for a script, answers 403 with a JSON error) before any controller runs.
+ * Lets the request through only if the person typed their password within the
+ * last few minutes; otherwise sends them to the confirm page (or, for a
+ * script, answers 403 with a JSON error) before any controller runs.
+ * The system administrator confirms at admin/reauth, everyone else at reauth.
  */
 class ReauthFilter implements FilterInterface
 {
@@ -44,7 +46,7 @@ class ReauthFilter implements FilterInterface
         // not be, so those send the person back to the page they came from.
         $reauth->rememberReturn(strtoupper($request->getMethod()) === 'GET' ? $this->currentPath($request) : $this->refererPath($request));
 
-        return redirect()->to('admin/reauth');
+        return redirect()->to($user->inGroup('admin') ? 'admin/reauth' : 'reauth');
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
@@ -62,8 +64,15 @@ class ReauthFilter implements FilterInterface
     private function refererPath(IncomingRequest $request): string
     {
         $referer = $request->getHeaderLine('Referer');
-        $base    = base_url();
 
-        return str_starts_with($referer, $base) ? substr($referer, strlen($base)) : '';
+        // The address with the front controller in it (where the server shows index.php) first,
+        // then without: both are this site.
+        foreach ([site_url('/'), base_url()] as $base) {
+            if (str_starts_with($referer, $base)) {
+                return substr($referer, strlen($base));
+            }
+        }
+
+        return '';
     }
 }

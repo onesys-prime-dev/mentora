@@ -1,5 +1,9 @@
 <?php
-$userRole = esc($user->getGroups()[0]);
+$userRoles = array_values(array_filter($user->getGroups(), 'is_string'));
+$activeRole = active_role();
+$userRole = $activeRole !== '' ? $activeRole : ($userRoles[0] ?? '');
+$userRole = esc($userRole);
+$canSwitchRole = count($userRoles) > 1;
 
 /*
 | Account menu identity. A student is identified by number and program; an
@@ -42,32 +46,38 @@ $accountLinks = [
     <div class="flex gap-2 items-stretch font-lao">
         <a
             class="flex gap-1 items-center self-center"
-            href="<?= site_url($userRole . '/dashboard') ?>">
+            href="<?= site_url(role_home($userRole) . '/dashboard') ?>">
             <img
                 class="h-11 w-auto"
                 src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="">
         </a>
 
+        <?php $headerBranding = (new \App\Services\Institutions\InstitutionBranding())->forUser(auth()->user()); ?>
+        <?php if ($headerBranding !== null && $headerBranding['logoUrl'] !== null): ?>
+            <span class="mx-1 h-8 w-px self-center bg-black/10" aria-hidden="true"></span>
+            <img class="h-9 w-auto max-w-[10rem] self-center object-contain" src="<?= esc($headerBranding['logoUrl']) ?>" alt="<?= esc($headerBranding['name']) ?>" data-institution-logo>
+        <?php endif; ?>
+
         <div class="flex items-end">
-            <span class="text-2xl font-semibold text-[#0040A6] capitalize pb-px">
+            <span class="text-2xl font-semibold text-brand capitalize pb-px">
                 <?php if ($page !== null && $page !== 'dashboard'): ?>
-                    <?= esc($page ?? '') ?>
+                    <?= esc($pageTitle ?? ucwords(str_replace(['-', '_'], ' ', (string) $page))) ?>
                 <?php endif; ?>
             </span>
         </div>
     </div>
 
     <div class="flex gap-4 items-center">
-        <button
-            type="button"
+        <a
+            href="<?= site_url('notifications') ?>"
             aria-label="Notifications"
-            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
+            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
             <?= icon('bell', 'h-4 w-4 text-current') ?>
-        </button>
+        </a>
         <button
             type="button"
-            aria-label="Toggle dark mode"
-            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
+            aria-label="Toggle dark mode (coming soon)" aria-disabled="true" title="Coming soon"
+            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
             <?= icon('night', 'h-4 w-4 text-current') ?>
         </button>
 
@@ -79,7 +89,7 @@ $accountLinks = [
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="app-menu-panel"
-                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-[#0040A6] hover:-translate-y-0.5 hover:text-[#002068] hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2 aria-expanded:bg-[#0040A6] aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
+                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
                 <?= icon('apps', 'h-4 w-4 text-current') ?>
             </button>
 
@@ -115,7 +125,7 @@ $accountLinks = [
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="profile-menu-panel"
-                class="h-11 flex items-center gap-5 p-1 pr-3 border border-gray-300 rounded-4xl cursor-pointer transition duration-150 hover:-translate-y-0.5 hover:border-[#0040A6]/50 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 aria-expanded:border-[#0040A6] aria-expanded:bg-[#0040A6]/10 aria-expanded:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">
+                class="h-11 flex items-center gap-5 p-1 pr-3 border border-gray-300 rounded-4xl cursor-pointer transition duration-150 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 aria-expanded:border-brand aria-expanded:bg-brand/10 aria-expanded:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
                 <img
                     class="h-full w-auto rounded-full"
                     src="<?= $avatarUrl ?>"
@@ -124,7 +134,7 @@ $accountLinks = [
                 <!-- arrow-down svg -->
                 <svg
                     id="profile-menu-arrow"
-                    class="h-5 w-5 text-gray-500 transition duration-200 group-hover:text-[#0040A6]"
+                    class="h-5 w-5 text-gray-500 transition duration-200 group-hover:text-brand"
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     fill="none"
@@ -143,7 +153,7 @@ $accountLinks = [
                 class="hidden z-50 absolute right-0 top-full mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
 
                 <!-- Identity -->
-                <div class="flex items-center gap-3 bg-[#F2F7FF] px-4 py-4">
+                <div class="flex items-center gap-3 bg-brand-tint px-4 py-4">
 
                     <img
                         class="h-12 w-12 shrink-0 rounded-full object-cover"
@@ -158,7 +168,7 @@ $accountLinks = [
 
                         <div class="flex min-w-0 items-center gap-1.5">
 
-                            <span class="shrink-0 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-[10px] font-bold text-[#0040A6]" data-profile-role>
+                            <span class="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand" data-profile-role>
                                 <?= esc(ucfirst($userRole)) ?>
                             </span>
 
@@ -179,6 +189,35 @@ $accountLinks = [
                     </div>
 
                 </div>
+
+                <?php if ($canSwitchRole): ?>
+                    <div class="border-b border-gray-100 px-4 py-3">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                            Switch role
+                        </p>
+
+                        <div
+                            class="flex flex-col gap-1"
+                            data-role-switch
+                            data-role-switch-url="<?= esc(site_url('role/switch'), 'attr') ?>">
+                            <?php foreach ($userRoles as $role): ?>
+                                <button
+                                    type="button"
+                                    class="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-brand-tint disabled:cursor-wait disabled:opacity-60"
+                                    data-role-switch-button
+                                    data-role="<?= esc($role, 'attr') ?>"
+                                    <?= $role === $activeRole ? 'aria-current="true" disabled' : '' ?>>
+                                    <span><?= esc(ucfirst($role)) ?></span>
+                                    <?php if ($role === $activeRole): ?>
+                                        <span class="text-xs font-semibold text-brand">Active</span>
+                                    <?php endif; ?>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <p class="mt-2 hidden text-xs text-red-600" data-role-switch-error role="alert"></p>
+                    </div>
+                <?php endif; ?>
 
                 <!-- Links -->
                 <nav class="flex flex-col p-2" aria-label="Account">

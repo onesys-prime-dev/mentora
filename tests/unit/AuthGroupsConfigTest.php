@@ -15,7 +15,13 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
 {
     private const PLATFORM_AREAS = ['institutions', 'subscriptions', 'users', 'roles', 'flags', 'settings', 'audit', 'monitoring', 'backup', 'integrations'];
 
-    private const ACADEMIC = ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor'];
+    /** Permissions that belong inside an institution (the system administrator never holds them). */
+    private const ACADEMIC = [
+        'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor',
+        // The institutional administrator's own administration.
+        'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage', 'people.view', 'people.manage',
+        'reports.view', 'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run',
+    ];
 
     private AuthGroups $config;
 

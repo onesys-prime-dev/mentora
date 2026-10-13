@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Audit;
 
 use App\Models\Audit\AuditLogModel;
+use App\Services\Auth\ActiveRoleService;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\Shield\Entities\User;
 
@@ -95,12 +96,16 @@ class AuditLogger
     }
 
     /**
-     * The role they act as. Until role switching exists this is their first
-     * group; callers that know better pass `acting_role`.
+     * The role they were acting as when this happened — not just any group
+     * they hold, since a multi-role user's audit trail must say which hat
+     * they had on. Callers that already know better (e.g. a system action
+     * with no real actor) pass `acting_role` instead.
      */
     private function roleOf(User $user): ?string
     {
-        return $user->getGroups()[0] ?? null;
+        $role = (new ActiveRoleService())->resolve($user);
+
+        return $role !== '' ? $role : null;
     }
 
     private function institutionOf(User $user): ?int

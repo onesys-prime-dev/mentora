@@ -3,9 +3,20 @@
 namespace App\Controllers\Auth;
 
 use App\Controllers\BaseController;
+use App\Services\Auth\ActiveRoleService;
 
 class RedirectController extends BaseController
 {
+    protected array $dashboards = [
+        'admin'       => '/admin/dashboard',
+        'institutional_admin' => '/institution/dashboard',
+        'student'     => '/student/dashboard',
+        'instructor'  => '/instructor/dashboard',
+        'chairperson' => '/chairperson/dashboard',
+        'registrar'   => '/registrar/dashboard',
+        'parent'      => '/parent/dashboard',
+    ];
+
     public function index()
     {
         if (! auth()->loggedIn()) {
@@ -14,33 +25,38 @@ class RedirectController extends BaseController
 
         $user = auth()->user();
 
-        $routes = [
+        $role = (new ActiveRoleService())->resolve($user);
 
-            'admin' => '/admin/dashboard',
+        if ($role === '' || ! isset($this->dashboards[$role])) {
 
-            'student' => '/student/dashboard',
-
-            'instructor' => '/instructor/dashboard',
-
-            'registrar' => '/registrar/dashboard',
-
-            'parent' => '/parent/dashboard',
-
-        ];
-
-        foreach ($routes as $group => $route) {
-
-            if ($user->inGroup($group)) {
-
-                return redirect()->to($route);
-
-            }
+            // Signed in, but in no usable group (abort() is not a CodeIgniter function).
+            return $this->response
+                ->setStatusCode(403)
+                ->setBody('Your account does not have a role that can use this site yet.');
 
         }
 
-        // Signed in, but in none of the groups above (abort() is not a CodeIgniter function).
-        return $this->response
-            ->setStatusCode(403)
-            ->setBody('Your account does not have a role that can use this site yet.');
+        return redirect()->to($this->dashboards[$role]);
+    }
+
+    public function switchRole()
+    {
+        if (! auth()->loggedIn()) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON(['error' => 'Authentication required.']);
+        }
+
+        $role = $this->request->getPost('role');
+
+        if (! is_string($role) || ! (new ActiveRoleService())->switchTo(auth()->user(), $role)) {
+            return $this->response
+                ->setStatusCode(422)
+                ->setJSON(['error' => 'You cannot switch to that role.']);
+        }
+
+        $redirect = $this->dashboards[$role] ?? '/';
+
+        return $this->response->setJSON(['redirect' => site_url($redirect)]);
     }
 }

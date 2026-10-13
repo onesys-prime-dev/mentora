@@ -18,7 +18,7 @@ $typeHeadings = [
 
 <div class="flex flex-col gap-3 w-full">
 
-    <h3 class="text-xl font-bold text-[#0040A6]">Assessments</h3>
+    <h3 class="text-xl font-bold text-brand">Assessments</h3>
 
     <?php if (($assessmentGroups ?? []) === []): ?>
 
@@ -70,16 +70,16 @@ $typeHeadings = [
                             <div
                                 class="group px-8 py-6 flex justify-between items-center rounded-2xl border-[1px] border-[#A9A9A9]/50
                                         transition-all duration-200
-                                        hover:border-[#0040A6]/50
-                                        hover:bg-[#0040A6]/5
+                                        hover:border-brand/50
+                                        hover:bg-brand/5
                                         hover:shadow-sm
                                         cursor-pointer"
                                 data-assessment="<?= esc($assessment['id']) ?>">
 
                                 <div class="flex items-center gap-5">
 
-                                    <div class="h-10 w-10 flex items-center justify-center border-3 border-[#0040A6] rounded-[100%] transition-transform duration-200 group-hover:scale-105">
-                                        <?= learning_item_icon($type, 'h-5 w-5 text-[#0040A6]') ?>
+                                    <div class="h-10 w-10 flex items-center justify-center border-3 border-brand rounded-[100%] transition-transform duration-200 group-hover:scale-105">
+                                        <?= learning_item_icon($type, 'h-5 w-5 text-brand') ?>
                                     </div>
 
                                     <div class="flex flex-col">
@@ -104,7 +104,7 @@ $typeHeadings = [
 
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        class="h-5 w-5 text-[#A9A9A9] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#0040A6]"
+                                        class="h-5 w-5 text-[#A9A9A9] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"

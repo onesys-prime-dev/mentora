@@ -1,8 +1,9 @@
 name: 🚀 Deploy Mentora
 
-# Every merge to main is built and deployed to the staging server, but only
-# after the full CI workflow (ci.yml) has passed on that exact commit. The
-# production server is a separate, later step (see docs/deploy.md).
+# Every merge to main is built and deployed to the staging environment, but
+# only after the full CI workflow (ci.yml) has passed on that exact commit.
+# Production is a separate workflow started by a version tag
+# (deploy-production.yml). The deploy steps live in deploy-reusable.yml.
 on:
   push:
     branches:
@@ -14,221 +15,18 @@ permissions:
   contents: read
   pull-requests: read
 
-# Two deploys must never run at the same time against the same server folder.
-concurrency:
-  group: deploy-staging
-  cancel-in-progress: false
-
 jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
+    # ci.yml reads GITLEAKS_LICENSE; a called workflow gets no secrets unless
+    # the caller passes them (pull_request runs get them directly).
+    secrets: inherit
 
   deploy:
+    name: Staging
     needs: ci
-    runs-on: ubuntu-24.04
-
-    env:
-      SSH_PORT: 22
-      DEPLOY_PATH: /home/mentora/htdocs/mentora
-      SITE_URL: https://mentora.srv1404227.hstgr.cloud
-      HEALTH_URL: https://mentora.srv1404227.hstgr.cloud/health
-      REMOTE: ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}
-
-    steps:
-      ########################################################
-      # Checkout
-      ########################################################
-
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      ########################################################
-      # PHP (8.5: the version the staging site's PHP-FPM runs)
-      ########################################################
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.5"
-          extensions: mbstring, intl, mysqli, zip
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction
-
-      ########################################################
-      # NODE
-      ########################################################
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      # npm ci installs exactly what package-lock.json says (the CI workflow
-      # proves this works on Linux).
-      - name: Install Node dependencies
-        run: npm ci
-
-      ########################################################
-      # Build
-      ########################################################
-
-      - name: Build Vite assets
-        run: npm run build
-
-      - name: Verify build output
-        run: test -f public/build/.vite/manifest.json
-
-      ########################################################
-      # SSH
-      ########################################################
-
-      - name: Install SSH Key
-        uses: webfactory/ssh-agent@v0.10.0
-        with:
-          ssh-private-key: ${{ secrets.VPS_PRIVATE_KEY }}
-
-      # With the VPS_KNOWN_HOSTS secret set, the server's identity is checked
-      # strictly. Without it the first connection is accepted blindly (a
-      # warning is shown); see docs/deploy.md for how to add the secret.
-      - name: Trust the server's SSH host key
-        env:
-          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
-          SERVER_HOST: ${{ secrets.VPS_HOST }}
-        run: |
-          mkdir -p ~/.ssh
-          # Only the key itself ("ssh-ed25519 AAAA...") is taken from the
-          # secret and paired with VPS_HOST, so it works whether the secret
-          # holds a host name, an IP, or a whole ssh-keyscan line.
-          key=$(printf '%s\n' "$KNOWN_HOSTS" | awk '/ssh-ed25519/ { print $(NF-1), $NF; exit }')
-          if [ -n "$key" ]; then
-            printf '%s %s\n' "$SERVER_HOST" "$key" > ~/.ssh/known_hosts
-            echo "SSH_OPTS=-p ${SSH_PORT} -o StrictHostKeyChecking=yes" >> "$GITHUB_ENV"
-          else
-            echo "::warning::VPS_KNOWN_HOSTS is not set, so the server's identity is not verified. See docs/deploy.md."
-            echo "SSH_OPTS=-p ${SSH_PORT} -o StrictHostKeyChecking=accept-new" >> "$GITHUB_ENV"
-          fi
-
-      ########################################################
-      # Safety checks on the server (before anything is changed)
-      ########################################################
-
-      - name: Check the deploy folder is the live app
-        run: |
-          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
-          set -euo pipefail
-          dir="$1"
-          if [ ! -d "$dir" ] || [ ! -f "$dir/.env" ] || [ ! -d "$dir/writable" ]; then
-            echo "::error::$dir does not look like the live Mentora folder (it needs .env and writable/). Refusing to deploy."
-            exit 1
-          fi
-          command -v php8.5 > /dev/null || { echo "::error::php8.5 was not found on the server."; exit 1; }
-          REMOTE_SCRIPT
-
-      - name: Back up the database
-        run: |
-          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
-          set -euo pipefail
-          cd "$1"
-          get() { grep -E "^$1[[:space:]]*=" .env | head -1 | sed 's/^[^=]*=[[:space:]]*//' | tr -d "'\""; }
-          DBH=$(get database.default.hostname)
-          DBN=$(get database.default.database)
-          DBU=$(get database.default.username)
-          DBP=$(get database.default.password)
-          mkdir -p "$HOME/backups"
-          file="$HOME/backups/deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
-          MYSQL_PWD="$DBP" mysqldump --no-tablespaces -h "$DBH" -u "$DBU" \
-            --single-transaction --routines --triggers "$DBN" | gzip > "$file"
-          # mysqldump writes this line only when the dump finished.
-          if ! zcat "$file" | tail -2 | grep -q "Dump completed"; then
-            rm -f "$file"
-            echo "::error::The database backup did not complete. Nothing was deployed."
-            exit 1
-          fi
-          echo "Backup saved: $file ($(du -h "$file" | cut -f1))"
-          # Keep the 10 most recent deploy backups.
-          ls -1t "$HOME"/backups/deploy-*.sql.gz | tail -n +11 | xargs -r rm -f
-          REMOTE_SCRIPT
-
-      ########################################################
-      # Deploy
-      ########################################################
-
-      # The leading "/" on each exclude limits it to the project root; without
-      # it a rule such as "tests" also matched folders inside vendor/.
-      - name: Deploy application
-        run: |
-          rsync -az --delete \
-            --exclude="/.git" \
-            --exclude="/.github" \
-            --exclude="/.env" \
-            --exclude="/node_modules" \
-            --exclude="/tests" \
-            --exclude="/writable" \
-            --exclude="/python-question-builder-service" \
-            --exclude="/docs" \
-            --exclude="/builds" \
-            --exclude="/.claude" \
-            --exclude="/env" \
-            --exclude="/phpunit.dist.xml" \
-            -e "ssh $SSH_OPTS" \
-            ./ \
-            "$REMOTE:$DEPLOY_PATH"
-
-      ########################################################
-      # Permissions and migrations
-      ########################################################
-
-      - name: Set writable permissions
-        run: |
-          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
-          set -euo pipefail
-          cd "$1"
-          find writable -type d -exec chmod 775 {} \;
-          find writable -type f -exec chmod 664 {} \;
-          REMOTE_SCRIPT
-
-      # Runs with the same PHP the website runs on (8.5), not the server's
-      # default `php` (8.4).
-      - name: Run database migrations
-        run: |
-          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
-          set -euo pipefail
-          cd "$1"
-          php8.5 spark migrate --all
-          REMOTE_SCRIPT
-
-      ########################################################
-      # Health check
-      ########################################################
-
-      # -k: the staging site uses a self-signed certificate (no real domain
-      # yet), which curl would otherwise reject. Remove -k once the site has a
-      # certificate from a real authority.
-      - name: Check the site is healthy
-        run: |
-          for attempt in 1 2 3 4 5 6; do
-            body=$(curl -kfsS --max-time 15 "$HEALTH_URL" || true)
-            echo "Attempt $attempt: $body"
-            if echo "$body" | grep -q '"status":"ok"'; then
-              echo "Healthy."
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::The site did not report healthy at $HEALTH_URL after deploying. The database backup from this deploy is in ~/backups on the server."
-          exit 1
-
-      ########################################################
-      # Smoke test
-      ########################################################
-
-      # /health only proves the app reaches its database. This checks what a
-      # visitor meets first: the login form, the built CSS and JS it links to,
-      # and that anonymous visitors are sent to login (.github/scripts/smoke-test.php).
-      # --insecure for the same reason as -k above: remove it once the site has a
-      # certificate from a real authority.
-      - name: Smoke test the site
-        run: php .github/scripts/smoke-test.php "$SITE_URL" --insecure
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      environment: staging
+    secrets: inherit

@@ -11,7 +11,7 @@
  * built from AssessmentOverviewService — the same source behind the
  * Assessments tab's "To Grade" metric, so the two can't disagree.
  */
-$userRole = esc($user->getGroups()[0]);
+$userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
 $queue = $data['queue'] ?? [];
 
@@ -30,13 +30,19 @@ $typeIcons = [
     'discussion' => 'message',
 ];
 
-/** A week unmarked is the point where students start asking about it. */
-$waitStyle = function (int $days): array {
-    if ($days >= 7) {
+/**
+ * Overdue is the institution's number of days (a week unless it set its own): the
+ * point where students start asking about it. Amber comes at about half of that.
+ */
+$overdueAfter = max(1, (int) ($data['overdue_after'] ?? 7));
+$soonAfter    = max(1, (int) floor($overdueAfter * 3 / 7));
+
+$waitStyle = function (int $days) use ($overdueAfter, $soonAfter): array {
+    if ($days >= $overdueAfter) {
         return ['bubble' => 'bg-red-600',   'chip' => 'bg-red-500/15 text-red-700'];
     }
 
-    if ($days >= 3) {
+    if ($days >= $soonAfter) {
         return ['bubble' => 'bg-amber-600', 'chip' => 'bg-amber-500/20 text-amber-700'];
     }
 

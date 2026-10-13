@@ -19,8 +19,8 @@ $host = $isSafeUrl ? preg_replace('/^www\./', '', (string) parse_url($url, PHP_U
 
         <div class="flex items-center gap-4">
 
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0040A6]/10">
-                <?= icon('link', 'h-6 w-6 text-[#0040A6]') ?>
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand/10">
+                <?= icon('link', 'h-6 w-6 text-brand') ?>
             </div>
 
             <div class="flex min-w-0 flex-col">
@@ -44,7 +44,7 @@ $host = $isSafeUrl ? preg_replace('/^www\./', '', (string) parse_url($url, PHP_U
                 href="<?= esc($url) ?>"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 rounded-xl bg-[#0040A6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#002068]">
+                class="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
 
                 Open link
 

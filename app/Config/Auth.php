@@ -50,8 +50,9 @@ class Auth extends ShieldAuth
         'login'                       => 'pages/auth/login',
         'register'                    => 'pages/auth/register',
         'layout'                      => 'layouts/auth',
-        'action_email_2fa'            => '\CodeIgniter\Shield\Views\email_2fa_show',
-        'action_email_2fa_verify'     => '\CodeIgniter\Shield\Views\email_2fa_verify',
+        // Our own pages: Shield's put their form in a section the auth layout does not render.
+        'action_email_2fa'            => 'pages/auth/two-factor-show',
+        'action_email_2fa_verify'     => 'pages/auth/two-factor-verify',
         'action_email_2fa_email'      => '\CodeIgniter\Shield\Views\Email\email_2fa_email',
         'action_email_activate_show'  => '\CodeIgniter\Shield\Views\email_activate_show',
         'action_email_activate_email' => '\CodeIgniter\Shield\Views\Email\email_activate_email',

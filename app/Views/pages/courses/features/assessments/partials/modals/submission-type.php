@@ -16,7 +16,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
 
             <div class="flex flex-col">
 
-                <h2 class="text-2xl font-bold text-[#0040A6]">
+                <h2 class="text-2xl font-bold text-brand">
                     Configure Submission Types
                 </h2>
 
@@ -55,19 +55,19 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
             id="submission-type-form"
             class="flex flex-col gap-3 p-8">
 
-            <label class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 p-4 transition has-checked:border-[#0040A6] has-checked:bg-[#0040A6]/5">
+            <label class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 p-4 transition has-checked:border-brand has-checked:bg-brand/5">
 
                 <input
                     type="checkbox"
                     name="allow_file_upload"
                     data-submission-type-option
                     data-checked="<?= $allowFileUpload ? '1' : '0' ?>"
-                    class="h-5 w-5 shrink-0 accent-[#0040A6]"
+                    class="h-5 w-5 shrink-0 accent-brand"
                     <?= $allowFileUpload ? 'checked' : '' ?>>
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-6 w-6 shrink-0 text-[#0040A6]"
+                    class="h-6 w-6 shrink-0 text-brand"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -94,19 +94,19 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
 
             </label>
 
-            <label class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 p-4 transition has-checked:border-[#0040A6] has-checked:bg-[#0040A6]/5">
+            <label class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 p-4 transition has-checked:border-brand has-checked:bg-brand/5">
 
                 <input
                     type="checkbox"
                     name="allow_text_entry"
                     data-submission-type-option
                     data-checked="<?= $allowTextEntry ? '1' : '0' ?>"
-                    class="h-5 w-5 shrink-0 accent-[#0040A6]"
+                    class="h-5 w-5 shrink-0 accent-brand"
                     <?= $allowTextEntry ? 'checked' : '' ?>>
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-6 w-6 shrink-0 text-[#0040A6]"
+                    class="h-6 w-6 shrink-0 text-brand"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -133,19 +133,19 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
 
             </label>
 
-            <label class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 p-4 transition has-checked:border-[#0040A6] has-checked:bg-[#0040A6]/5">
+            <label class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 p-4 transition has-checked:border-brand has-checked:bg-brand/5">
 
                 <input
                     type="checkbox"
                     name="allow_link_entry"
                     data-submission-type-option
                     data-checked="<?= $allowLinkEntry ? '1' : '0' ?>"
-                    class="h-5 w-5 shrink-0 accent-[#0040A6]"
+                    class="h-5 w-5 shrink-0 accent-brand"
                     <?= $allowLinkEntry ? 'checked' : '' ?>>
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-6 w-6 shrink-0 text-[#0040A6]"
+                    class="h-6 w-6 shrink-0 text-brand"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -189,7 +189,7 @@ $allowLinkEntry = (bool) ($currentSettings['allow_link_entry'] ?? false);
             <button
                 type="submit"
                 form="submission-type-form"
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
 
                 Save Changes
 

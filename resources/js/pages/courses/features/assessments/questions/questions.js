@@ -519,7 +519,7 @@ function showDropIndicator(list, beforeCard) {
         indicator.dataset.dropIndicator = "";
 
         indicator.className =
-            "h-1 origin-left scale-x-95 rounded-full bg-[#0040A6] opacity-80 shadow-[0_0_0_3px_rgba(0,64,166,0.15)] transition-opacity duration-150 ease-out";
+            "h-1 origin-left scale-x-95 rounded-full bg-brand opacity-80 shadow-[0_0_0_3px_rgba(0,64,166,0.15)] transition-opacity duration-150 ease-out";
 
     }
 
@@ -591,10 +591,10 @@ function removeDropIndicator(list) {
 // tactile "it snapped into place" feedback beyond just the card appearing.
 function pulseSnap(card) {
 
-    card.classList.add("ring-2", "ring-[#0040A6]/40");
+    card.classList.add("ring-2", "ring-brand/40");
 
     setTimeout(() => {
-        card.classList.remove("ring-2", "ring-[#0040A6]/40");
+        card.classList.remove("ring-2", "ring-brand/40");
     }, 220);
 
 }
@@ -628,7 +628,7 @@ function setActiveQuestion(card) {
         .querySelectorAll("[data-question-card]")
         .forEach((c) => {
 
-            c.classList.remove("border-[#0040A6]", "bg-[#0040A6]/5");
+            c.classList.remove("border-brand", "bg-brand/5");
 
             c.classList.add("border-gray-100");
 
@@ -638,7 +638,7 @@ function setActiveQuestion(card) {
 
         card.classList.remove("border-gray-100");
 
-        card.classList.add("border-[#0040A6]", "bg-[#0040A6]/5");
+        card.classList.add("border-brand", "bg-brand/5");
 
     }
 
@@ -1386,7 +1386,7 @@ function createQuestionCardElement(question) {
 
     const bodyHtml = question.question_type === "Multiple Choice"
         ? `<div class="flex flex-col gap-2" data-choices-list></div>
-           <button type="button" data-add-choice-inline class="self-start text-xs font-semibold text-[#0040A6] transition hover:underline">+ Add choice</button>`
+           <button type="button" data-add-choice-inline class="self-start text-xs font-semibold text-brand transition hover:underline">+ Add choice</button>`
         : question.question_type === "Short Answer"
             ? renderAcceptedAnswersEditor(question.accepted_answers || [], isFlagTrue(question.case_sensitive))
             : `<div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-[#767676]">${escapeHtml(PREVIEW_LABELS[question.question_type] || "Students will respond here.")}</div>`;
@@ -1404,25 +1404,25 @@ function createQuestionCardElement(question) {
 
             <span class="text-sm font-bold text-[#767676]" data-question-number>Q?</span>
 
-            <span class="rounded-full bg-[#0040A6]/10 px-2.5 py-0.5 text-xs font-bold text-[#0040A6]" data-question-type-badge>${escapeHtml(question.question_type)}</span>
+            <span class="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-bold text-brand" data-question-type-badge>${escapeHtml(question.question_type)}</span>
 
-            <input type="number" data-question-points-input min="0" step="0.5" value="${formatPointsValue(question.points)}" class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-[#0040A6]">
+            <input type="number" data-question-points-input min="0" step="0.5" value="${formatPointsValue(question.points)}" class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-brand">
             <span class="text-[10px] text-[#767676]">pts</span>
 
             <span class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500 ${isRequired ? "" : "hidden"}" data-question-required-badge>Required</span>
 
-            <span class="rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-[10px] font-bold text-[#0040A6] ${isMultiple ? "" : "hidden"}" data-question-multiple-badge>Select ${answersCount}</span>
+            <span class="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand ${isMultiple ? "" : "hidden"}" data-question-multiple-badge>Select ${answersCount}</span>
 
             <div class="ml-auto flex shrink-0 items-center gap-1">
 
-                <button type="button" data-open-question-settings title="Question settings" class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-[#0040A6]">
+                <button type="button" data-open-question-settings title="Question settings" class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </button>
 
-                <button type="button" data-duplicate-question title="Duplicate question" class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-[#0040A6]">
+                <button type="button" data-duplicate-question title="Duplicate question" class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>

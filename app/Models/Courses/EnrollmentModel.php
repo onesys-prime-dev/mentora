@@ -44,7 +44,11 @@ class EnrollmentModel extends Model
 
     ];
 
-    public function retrieveStudentCourseOfferings(int $userId): array
+    /**
+     * The courses a student is taking now, or with $past the ones whose term was
+     * closed (their place is completed): looked at, not changed.
+     */
+    public function retrieveStudentCourseOfferings(int $userId, bool $past = false): array
     {
         $builder = $this->builder();
 
@@ -133,8 +137,8 @@ class EnrollmentModel extends Model
                 'left'
             )
             ->where('enrollments.student_user_id', $userId)
-            ->where('enrollments.status', 'enrolled')
-            ->where('course_offerings.status', 'active')
+            ->whereIn('enrollments.status', $past ? ['enrolled', 'completed'] : ['enrolled'])
+            ->where('course_offerings.status', $past ? 'completed' : 'active')
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getResultArray();
@@ -197,11 +201,26 @@ class EnrollmentModel extends Model
             )
             ->where('enrollments.student_user_id', $userId)
             ->where('course_offerings.id', $offeringId)
-            ->where('enrollments.status', 'enrolled')
-            ->where('course_offerings.status', 'active')
+            ->whereIn('enrollments.status', ['enrolled', 'completed'])
+            ->whereIn('course_offerings.status', ['active', 'completed'])
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getRowArray();
+    }
+
+    /** Distinct students enrolled across a set of offerings — one person counted once, even if enrolled in several. */
+    public function retrieveEnrolledCountForOfferings(array $offeringIds): int
+    {
+        if ($offeringIds === []) {
+            return 0;
+        }
+
+        return $this->builder()
+            ->select('student_user_id')
+            ->whereIn('offering_id', $offeringIds)
+            ->whereIn('status', ['enrolled', 'completed'])
+            ->distinct()
+            ->countAllResults();
     }
 
     public function retrieveTotalCoursesEnrolled(int $userId): int
@@ -271,7 +290,7 @@ class EnrollmentModel extends Model
                 'user_profiles.user_id = enrollments.student_user_id'
             )
             ->whereIn('enrollments.offering_id', $offeringIds)
-            ->where('enrollments.status', 'enrolled')
+            ->whereIn('enrollments.status', ['enrolled', 'completed'])
             ->get()
             ->getResultArray();
     }
@@ -295,7 +314,7 @@ class EnrollmentModel extends Model
                 'user_profiles.user_id = enrollments.student_user_id'
             )
             ->where('enrollments.offering_id', $offeringId)
-            ->where('enrollments.status', 'enrolled')
+            ->whereIn('enrollments.status', ['enrolled', 'completed'])
             ->orderBy('student_name', 'ASC')
             ->get()
             ->getResultArray();

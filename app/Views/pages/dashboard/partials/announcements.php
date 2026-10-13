@@ -3,7 +3,7 @@
  * "Did anything change since I last looked?" — so rows lead with the
  * headline and carry a posted-at timestamp, not a due date.
  */
-$userRole = esc($user->getGroups()[0]);
+$userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
 $announcements = $data['announcements'] ?? [];
 ?>

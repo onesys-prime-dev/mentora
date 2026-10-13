@@ -7,7 +7,7 @@ $sort = $filters['sort'] ?? 'newest';
 
     <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Announcement Tools</span>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 transition focus-within:border-[#0040A6]/50">
+    <label class="flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 transition focus-within:border-brand/50">
         <svg class="h-4 w-4 shrink-0 text-[#767676]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
         </svg>
@@ -26,13 +26,13 @@ $sort = $filters['sort'] ?? 'newest';
             <button
                 type="button"
                 data-filter="all"
-                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'all' ? 'bg-[#0040A6] text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
+                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'all' ? 'bg-brand text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
                 All
             </button>
             <button
                 type="button"
                 data-filter="pinned"
-                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'pinned' ? 'bg-[#0040A6] text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
+                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'pinned' ? 'bg-brand text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
                 Pinned
             </button>
         </div>

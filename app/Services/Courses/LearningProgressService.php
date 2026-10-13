@@ -798,7 +798,7 @@ class LearningProgressService
         $enrolled = $db->table('enrollments')
             ->where('offering_id', $offeringId)
             ->where('student_user_id', $user->id)
-            ->where('status', 'enrolled')
+            ->whereIn('status', ['enrolled', 'completed'])
             ->countAllResults() > 0;
 
         if (! $enrolled) {

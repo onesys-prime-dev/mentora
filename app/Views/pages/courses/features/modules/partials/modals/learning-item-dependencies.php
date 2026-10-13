@@ -9,7 +9,7 @@
 
             <div class="flex flex-col">
 
-                <h2 class="text-2xl font-bold text-[#0040A6]">
+                <h2 class="text-2xl font-bold text-brand">
                     Dependencies
                 </h2>
 
@@ -47,7 +47,7 @@
 
                 <span class="relative inline-flex shrink-0 items-center">
                     <input type="checkbox" class="peer sr-only" data-dependencies-enabled>
-                    <span class="h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-[#0040A6] peer-focus-visible:ring-2 peer-focus-visible:ring-[#0040A6]/30"></span>
+                    <span class="h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30"></span>
                     <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
                 </span>
 
@@ -56,9 +56,9 @@
             <!-- Modes -->
             <div class="hidden flex-col gap-3" data-dependencies-options>
 
-                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-[#0040A6] has-[:checked]:bg-[#0040A6]/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
 
-                    <input type="radio" name="dependency_mode" value="previous" class="mt-1 accent-[#0040A6]" data-dependencies-mode>
+                    <input type="radio" name="dependency_mode" value="previous" class="mt-1 accent-brand" data-dependencies-mode>
 
                     <span class="flex flex-col">
                         <span class="text-sm font-semibold text-gray-800">Previous learning item</span>
@@ -67,9 +67,9 @@
 
                 </label>
 
-                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-[#0040A6] has-[:checked]:bg-[#0040A6]/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
 
-                    <input type="radio" name="dependency_mode" value="custom" class="mt-1 accent-[#0040A6]" data-dependencies-mode>
+                    <input type="radio" name="dependency_mode" value="custom" class="mt-1 accent-brand" data-dependencies-mode>
 
                     <span class="flex flex-col">
                         <span class="text-sm font-semibold text-gray-800">Custom dependency</span>
@@ -104,7 +104,7 @@
             <button
                 type="button"
                 data-dependencies-save
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068] disabled:cursor-not-allowed disabled:opacity-60">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
                 Save
             </button>
 

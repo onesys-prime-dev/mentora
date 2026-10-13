@@ -1,0 +1,280 @@
+name: Deploy (reusable)
+
+# The deploy itself, shared by the staging and production workflows
+# (deploy.yml and deploy-production.yml). It is not started directly: a caller
+# passes the name of a GitHub Environment and this job runs inside it, so it
+# uses that environment's secrets and variables, and its protection rules
+# (for example "required reviewers" on production) pause the job before any
+# step runs. Setup guide: docs/github-environments.md.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment to deploy to (staging or production)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.SITE_URL }}
+
+    # Two deploys must never run at the same time against the same server folder.
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+
+    # Settings come from the environment's variables. Staging falls back to
+    # the values it has always used, so it keeps working before its variables
+    # exist. Production has no fallback on purpose: a missing value stops the
+    # deploy (see "Check this environment is configured") rather than guessing.
+    env:
+      DEPLOY_ENV: ${{ inputs.environment }}
+      SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+      PHP_BIN: ${{ vars.PHP_BIN || 'php8.5' }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || (inputs.environment == 'staging' && '/home/mentora/htdocs/mentora' || '') }}
+      SITE_URL: ${{ vars.SITE_URL || (inputs.environment == 'staging' && 'https://mentora.srv1404227.hstgr.cloud' || '') }}
+      # Staging uses a self-signed certificate, so its checks skip certificate
+      # verification. Production must have a real one; set TLS_INSECURE=true
+      # there only knowingly.
+      TLS_INSECURE: ${{ vars.TLS_INSECURE || (inputs.environment == 'staging' && 'true' || 'false') }}
+      SERVER_HOST: ${{ secrets.VPS_HOST }}
+      REMOTE: ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}
+
+    steps:
+      ########################################################
+      # Is this environment set up?
+      ########################################################
+
+      # Nothing has touched the server yet. Fails with a plain message when a
+      # value is missing, instead of an obscure SSH or rsync error later.
+      - name: Check this environment is configured
+        env:
+          HAS_KEY: ${{ secrets.VPS_PRIVATE_KEY != '' }}
+          HAS_USER: ${{ secrets.VPS_USERNAME != '' }}
+          HAS_HOST: ${{ secrets.VPS_HOST != '' }}
+        run: |
+          missing=""
+          [ "$HAS_KEY" = "true" ]  || missing="$missing secret:VPS_PRIVATE_KEY"
+          [ "$HAS_USER" = "true" ] || missing="$missing secret:VPS_USERNAME"
+          [ "$HAS_HOST" = "true" ] || missing="$missing secret:VPS_HOST"
+          [ -n "$DEPLOY_PATH" ]    || missing="$missing variable:DEPLOY_PATH"
+          [ -n "$SITE_URL" ]       || missing="$missing variable:SITE_URL"
+          if [ -n "$missing" ]; then
+            echo "::error::The '$DEPLOY_ENV' environment is missing:$missing. Add them under Settings > Environments > $DEPLOY_ENV (see docs/github-environments.md). Nothing was deployed."
+            exit 1
+          fi
+          case "$SITE_URL" in
+            https://*) ;;
+            *) echo "::error::SITE_URL must start with https:// (it is '$SITE_URL')."; exit 1 ;;
+          esac
+          if [ "$DEPLOY_ENV" = "production" ] && [ "$TLS_INSECURE" = "true" ]; then
+            echo "::warning::TLS_INSECURE is true on production, so the health and smoke checks do not verify the certificate."
+          fi
+          echo "Deploying to $DEPLOY_ENV: $SITE_URL"
+
+          if [ "$TLS_INSECURE" = "true" ]; then
+            echo "CURL_TLS=-k" >> "$GITHUB_ENV"
+            echo "SMOKE_TLS=--insecure" >> "$GITHUB_ENV"
+          fi
+          echo "HEALTH_URL=${SITE_URL%/}/health" >> "$GITHUB_ENV"
+
+      ########################################################
+      # Checkout
+      ########################################################
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      ########################################################
+      # PHP (8.5: the version the site's PHP-FPM runs)
+      ########################################################
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: mbstring, intl, mysqli, zip
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      ########################################################
+      # NODE
+      ########################################################
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # npm ci installs exactly what package-lock.json says (the CI workflow
+      # proves this works on Linux).
+      - name: Install Node dependencies
+        run: npm ci
+
+      ########################################################
+      # Build
+      ########################################################
+
+      - name: Build Vite assets
+        run: npm run build
+
+      - name: Verify build output
+        run: test -f public/build/.vite/manifest.json
+
+      ########################################################
+      # SSH
+      ########################################################
+
+      - name: Install SSH Key
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_PRIVATE_KEY }}
+
+      # With the VPS_KNOWN_HOSTS secret set, the server's identity is checked
+      # strictly. Without it the first connection is accepted blindly (a
+      # warning is shown); see docs/deploy.md for how to add the secret.
+      - name: Trust the server's SSH host key
+        env:
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          # Only the key itself ("ssh-ed25519 AAAA...") is taken from the
+          # secret and paired with VPS_HOST, so it works whether the secret
+          # holds a host name, an IP, or a whole ssh-keyscan line.
+          key=$(printf '%s\n' "$KNOWN_HOSTS" | awk '/ssh-ed25519/ { print $(NF-1), $NF; exit }')
+          if [ -n "$key" ]; then
+            printf '%s %s\n' "$SERVER_HOST" "$key" > ~/.ssh/known_hosts
+            echo "SSH_OPTS=-p ${SSH_PORT} -o StrictHostKeyChecking=yes" >> "$GITHUB_ENV"
+          else
+            echo "::warning::VPS_KNOWN_HOSTS is not set for $DEPLOY_ENV, so the server's identity is not verified. See docs/deploy.md."
+            echo "SSH_OPTS=-p ${SSH_PORT} -o StrictHostKeyChecking=accept-new" >> "$GITHUB_ENV"
+          fi
+
+      ########################################################
+      # Safety checks on the server (before anything is changed)
+      ########################################################
+
+      - name: Check the deploy folder is the live app
+        run: |
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" "$PHP_BIN" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          dir="$1"
+          if [ ! -d "$dir" ] || [ ! -f "$dir/.env" ] || [ ! -d "$dir/writable" ]; then
+            echo "::error::$dir does not look like the live Mentora folder (it needs .env and writable/). Refusing to deploy."
+            exit 1
+          fi
+          command -v "$2" > /dev/null || { echo "::error::$2 was not found on the server."; exit 1; }
+          REMOTE_SCRIPT
+
+      - name: Back up the database
+        run: |
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          cd "$1"
+          get() { grep -E "^$1[[:space:]]*=" .env | head -1 | sed 's/^[^=]*=[[:space:]]*//' | tr -d "'\""; }
+          DBH=$(get database.default.hostname)
+          DBN=$(get database.default.database)
+          DBU=$(get database.default.username)
+          DBP=$(get database.default.password)
+          mkdir -p "$HOME/backups"
+          file="$HOME/backups/deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
+          MYSQL_PWD="$DBP" mysqldump --no-tablespaces -h "$DBH" -u "$DBU" \
+            --single-transaction --routines --triggers "$DBN" | gzip > "$file"
+          # mysqldump writes this line only when the dump finished.
+          if ! zcat "$file" | tail -2 | grep -q "Dump completed"; then
+            rm -f "$file"
+            echo "::error::The database backup did not complete. Nothing was deployed."
+            exit 1
+          fi
+          echo "Backup saved: $file ($(du -h "$file" | cut -f1))"
+          # Keep the 10 most recent deploy backups.
+          ls -1t "$HOME"/backups/deploy-*.sql.gz | tail -n +11 | xargs -r rm -f
+          REMOTE_SCRIPT
+
+      ########################################################
+      # Deploy
+      ########################################################
+
+      # The leading "/" on each exclude limits it to the project root; without
+      # it a rule such as "tests" also matched folders inside vendor/.
+      - name: Deploy application
+        run: |
+          rsync -az --delete \
+            --exclude="/.git" \
+            --exclude="/.github" \
+            --exclude="/.env" \
+            --exclude="/node_modules" \
+            --exclude="/tests" \
+            --exclude="/writable" \
+            --exclude="/python-question-builder-service" \
+            --exclude="/docs" \
+            --exclude="/builds" \
+            --exclude="/.claude" \
+            --exclude="/env" \
+            --exclude="/phpunit.dist.xml" \
+            -e "ssh $SSH_OPTS" \
+            ./ \
+            "$REMOTE:$DEPLOY_PATH"
+
+      ########################################################
+      # Permissions and migrations
+      ########################################################
+
+      - name: Set writable permissions
+        run: |
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          cd "$1"
+          find writable -type d -exec chmod 775 {} \;
+          find writable -type f -exec chmod 664 {} \;
+          REMOTE_SCRIPT
+
+      # Runs with the same PHP the website runs on (PHP_BIN, 8.5 by default),
+      # not the server's default `php`.
+      - name: Run database migrations
+        run: |
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" "$PHP_BIN" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          cd "$1"
+          "$2" spark migrate --all
+          REMOTE_SCRIPT
+
+      ########################################################
+      # Health check
+      ########################################################
+
+      # CURL_TLS is "-k" only while TLS_INSECURE is true (a self-signed
+      # certificate); with a real certificate the check verifies it.
+      - name: Check the site is healthy
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            body=$(curl ${CURL_TLS:-} -fsS --max-time 15 "$HEALTH_URL" || true)
+            echo "Attempt $attempt: $body"
+            if echo "$body" | grep -q '"status":"ok"'; then
+              echo "Healthy."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The site did not report healthy at $HEALTH_URL after deploying. The database backup from this deploy is in ~/backups on the server."
+          exit 1
+
+      ########################################################
+      # Smoke test
+      ########################################################
+
+      # /health only proves the app reaches its database. This checks what a
+      # visitor meets first: the login form, the built CSS and JS it links to,
+      # and that anonymous visitors are sent to login (.github/scripts/smoke-test.php).
+      - name: Smoke test the site
+        run: php .github/scripts/smoke-test.php "$SITE_URL" ${SMOKE_TLS:-}
