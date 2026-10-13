@@ -9,7 +9,9 @@ use App\Controllers\Institution\Concerns\AnswersDialogForms;
 use App\Services\Institutions\AcademicDefaults;
 use App\Services\Institutions\BrandColours;
 use App\Services\Institutions\InstitutionAccess;
+use App\Services\Institutions\InstitutionAnnouncement;
 use App\Services\Institutions\InstitutionProfileService;
+use App\Services\Institutions\InstitutionSecurity;
 use App\Services\Institutions\InstitutionScope;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -28,6 +30,10 @@ class InstitutionSettingsController extends BaseController
     private const BRANDING = 'institution/settings/branding';
 
     private const ACADEMIC = 'institution/settings/academic';
+
+    private const ANNOUNCEMENT = 'institution/settings/announcement';
+
+    private const SECURITY = 'institution/settings/security';
 
     private InstitutionProfileService $profiles;
 
@@ -59,6 +65,52 @@ class InstitutionSettingsController extends BaseController
     public function resetAcademic(): ResponseInterface|RedirectResponse
     {
         return $this->run(fn (int $inst) => (new AcademicDefaults())->reset($inst, auth()->user()), 'The academic defaults are back to the platform values.', self::ACADEMIC);
+    }
+
+    public function announcement(): string
+    {
+        return $this->show('announcement');
+    }
+
+    public function saveAnnouncement(): ResponseInterface|RedirectResponse
+    {
+        $input = $this->input();
+
+        return $this->run(
+            function (int $inst) use ($input): void {
+                (new InstitutionAnnouncement())->save($inst, (string) ($input['text'] ?? ''), (string) ($input['until'] ?? ''));
+            },
+            trim((string) ($input['text'] ?? '')) === '' ? 'The announcement was removed.' : 'The announcement was saved.',
+            self::ANNOUNCEMENT,
+        );
+    }
+
+    public function removeAnnouncement(): ResponseInterface|RedirectResponse
+    {
+        return $this->run(function (int $inst): void {
+            (new InstitutionAnnouncement())->remove($inst);
+        }, 'The announcement was removed.', self::ANNOUNCEMENT);
+    }
+
+    public function security(): string
+    {
+        return $this->show('security');
+    }
+
+    public function saveSecurity(): ResponseInterface|RedirectResponse
+    {
+        $input = $this->input();
+
+        return $this->run(function (int $inst) use ($input): void {
+            (new InstitutionSecurity())->save($inst, $input);
+        }, 'The security settings were saved.', self::SECURITY);
+    }
+
+    public function resetSecurity(): ResponseInterface|RedirectResponse
+    {
+        return $this->run(function (int $inst): void {
+            (new InstitutionSecurity())->reset($inst);
+        }, 'The security settings are back to the platform values.', self::SECURITY);
     }
 
     public function saveProfile(): ResponseInterface|RedirectResponse
@@ -97,6 +149,9 @@ class InstitutionSettingsController extends BaseController
             'user'          => auth()->user(),
             'settingsTab'   => $tab,
             'settingsData'  => $this->profiles->get($institutionId),
+            'reauthDialog'  => $tab === 'security',
+            'settingsAnnouncement' => $tab === 'announcement' ? (new InstitutionAnnouncement())->get($institutionId) : null,
+            'settingsSecurity' => $tab === 'security' ? (new InstitutionSecurity())->forInstitution($institutionId) : null,
             'settingsAcademic' => $tab === 'academic' ? (new AcademicDefaults())->forInstitution($institutionId) : null,
             'settingsCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'settingsDefaults' => ['primary' => BrandColours::DEFAULT_PRIMARY, 'accent' => BrandColours::DEFAULT_ACCENT],

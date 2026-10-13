@@ -512,6 +512,13 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('academic', 'Institution\InstitutionSettingsController::academic');
             $routes->post('academic', 'Institution\InstitutionSettingsController::saveAcademic');
             $routes->post('academic/reset', 'Institution\InstitutionSettingsController::resetAcademic');
+            $routes->get('announcement', 'Institution\InstitutionSettingsController::announcement');
+            $routes->post('announcement', 'Institution\InstitutionSettingsController::saveAnnouncement');
+            $routes->post('announcement/remove', 'Institution\InstitutionSettingsController::removeAnnouncement');
+            // Security settings need the password (IA1): a loosened rule is refused, but a tightened one locks people out.
+            $routes->get('security', 'Institution\InstitutionSettingsController::security');
+            $routes->post('security', 'Institution\InstitutionSettingsController::saveSecurity', ['filter' => 'reauth']);
+            $routes->post('security/reset', 'Institution\InstitutionSettingsController::resetSecurity', ['filter' => 'reauth']);
         });
 
         // The institution's people (people.view to look, people.manage to change; the

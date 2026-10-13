@@ -689,3 +689,45 @@ test("TC-ACD-01 Academic defaults are saved, weights that do not add up are refu
     await expect(page.getByLabel("Category 1 name")).not.toHaveValue("Projects");
     await expect(page.getByLabel("No recent activity (days)")).toHaveValue("14");
 });
+
+test("TC-SEC-01 An announcement reaches the whole institution, and stricter security asks for the password", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    // The banner.
+    await page.goto("/institution/settings/announcement");
+    await page.locator("textarea[name='text']").fill("Enrolment closes on Friday.");
+    await page.getByRole("button", { name: "Save announcement" }).click();
+    await expect(page.getByText("The announcement was saved.")).toBeVisible();
+    await expect(page.locator("[data-announcement-preview]")).toContainText("Enrolment closes on Friday.");
+    await expect(page.locator("[data-institution-announcement]")).toContainText("Enrolment closes on Friday.");
+
+    // Security asks for the password first; a looser value is then refused beside its field.
+    await page.goto("/institution/settings/security");
+    await expect(page.locator("[data-platform-value]").first()).toBeVisible();
+
+    await page.getByLabel("Sign out after inactivity").fill("999");
+    await page.getByRole("button", { name: "Save security settings" }).click();
+
+    const password = page.getByRole("dialog", { name: "Confirm your password" });
+    await password.getByLabel("Password").fill(accounts.institutionAdmin.password);
+    await password.getByRole("button", { name: "Confirm" }).click();
+
+    await expect(page.locator("[data-field='sessionTimeoutMinutes'] [data-field-error]")).not.toBeEmpty();
+
+    // A stricter one is saved (the password is still confirmed).
+    await page.getByLabel("Sign out after inactivity").fill("30");
+    await page.getByRole("button", { name: "Save security settings" }).click();
+
+    await expect(page.getByText("The security settings were saved.")).toBeVisible();
+    await expect(page.getByLabel("Sign out after inactivity")).toHaveValue("30");
+    await expect(page.locator("[data-in-force]").nth(1)).toContainText("30");
+
+    // Put everything back for the cases that follow.
+    await page.getByRole("button", { name: "Go back to the platform values" }).click();
+    await expect(page.getByText("The security settings are back to the platform values.")).toBeVisible();
+
+    await page.goto("/institution/settings/announcement");
+    await page.locator("textarea[name='text']").fill("");
+    await page.getByRole("button", { name: "Save announcement" }).click();
+    await expect(page.getByText("The announcement was removed.")).toBeVisible();
+});

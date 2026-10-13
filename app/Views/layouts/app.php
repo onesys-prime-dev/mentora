@@ -47,6 +47,8 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 
         <?= $this->include('layouts/partials/announcement') ?>
 
+        <?= $this->include('layouts/partials/institution-announcement') ?>
+
         <?= $this->include('layouts/partials/impersonation-banner') ?>
 
         <?= $this->include('layouts/partials/notifications-strip') ?>

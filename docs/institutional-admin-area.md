@@ -213,3 +213,24 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 - **Refusals** are shown beside the field: a passing mark or percentage outside 1 to 100, days outside their range, a scale that does not exist, a category with no name or a repeated one, and weights that do not add up (the message says what they add up to). Nothing is saved when anything is wrong.
 - **Reset** ("Go back to the platform values") removes everything the institution set.
 - **Audit:** `institution.academic_defaults_updated` with the values before and after.
+
+## Announcement and security
+
+`/institution/settings/announcement` and `/institution/settings/security` (the last two tabs of Institution settings; `institution.settings`; read-only while the institution is read-only).
+
+### Announcement
+- One line (plain text, up to 300 characters, no `<` or `>`) shown at the top of every page for the institution's own people, **under the platform's announcement**. Optionally "show until" a date (the whole of that day, in the platform's timezone). People can hide it for themselves; it comes back when its text changes.
+- Not shown to other institutions or to system administrators. Saving it empty (or "Remove announcement") takes it down. Stored per institution in the settings store, so each change is audited like any setting.
+
+### Security (stricter only)
+| Setting | Stricter means | Where it is enforced |
+| --- | --- | --- |
+| Shortest password | longer | `PasswordPolicy`, on accepting an invitation (the inviting institution's rule) and on a password reset |
+| Sign out after inactivity | fewer minutes | `AccountStateFilter` |
+| Failed sign-ins before a lockout | fewer (any number beats "never"; 0 cannot loosen) | `LoginLockout`, by the institution of the account the email belongs to |
+| Lockout length | longer | `LoginLockout` |
+| Roles that need an emailed code | more roles (the platform's stay on) | `AdminEmail2FA` |
+
+- **In force** is the stricter of the platform's and the institution's value, decided in one place (`InstitutionSecurity`). Someone who belongs to no institution, and every system administrator, is held to the platform's.
+- **A looser value is refused** beside its field, naming what the platform already requires; nothing is saved when anything is refused. A value equal to the platform's is not stored, so the institution follows the platform if it tightens. If the platform later asks for more than the institution did, the platform's value is the one in force.
+- **The password is asked for** (the same dialog as elsewhere) before saving or resetting, because tightening can lock people out. Changes are audited as `settings.changed` / `settings.reset` with the institution.
