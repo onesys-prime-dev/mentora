@@ -42,7 +42,7 @@ class LearningProgressService
      */
     public function annotateTree(User $user, array &$module): void
     {
-        $isInstructor = $user->inGroup('instructor');
+        $isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
         $itemIds = [];
 
@@ -128,7 +128,7 @@ class LearningProgressService
      */
     public function lockFor(User $user, int $learningItemId): ?array
     {
-        if ($user->inGroup('instructor')) {
+        if (\App\Services\Courses\CourseViewer::seesInstructorView($user)) {
             return null;
         }
 
@@ -162,7 +162,7 @@ class LearningProgressService
     {
         $locks = array_fill_keys(array_map('intval', $learningItemIds), null);
 
-        if ($locks === [] || $user->inGroup('instructor')) {
+        if ($locks === [] || \App\Services\Courses\CourseViewer::seesInstructorView($user)) {
             return $locks;
         }
 

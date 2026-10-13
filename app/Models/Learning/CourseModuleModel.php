@@ -47,7 +47,7 @@ class CourseModuleModel extends Model
             ])
             ->where('offering_id', $offeringId);
 
-        if (! $user->inGroup('instructor')) {
+        if (! \App\Services\Courses\CourseViewer::seesInstructorView($user)) {
 
             $builder->where(
                 'status',
@@ -80,7 +80,7 @@ class CourseModuleModel extends Model
             ])
             ->where('id', $moduleId);
 
-        if (! $user->inGroup('instructor')) {
+        if (! \App\Services\Courses\CourseViewer::seesInstructorView($user)) {
 
             $builder->where(
                 'status',

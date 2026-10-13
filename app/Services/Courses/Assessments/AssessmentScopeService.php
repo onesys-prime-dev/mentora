@@ -107,6 +107,10 @@ class AssessmentScopeService
     /** May this user work inside the offering: its assigned instructor, an enrolled student, or the chairperson of its program? */
     public function canAccess(User $user, int $offeringId): bool
     {
+        if (\App\Services\Courses\CourseViewer::isReadOnlyViewer($user)) {
+            return (new \App\Services\Institutions\InstitutionCourseAccess())->canAccess($user, $offeringId);
+        }
+
         if ($user->inGroup('instructor')) {
             return (bool) (new InstructorAssignmentModel())->retrieveInstructorCourseOffering((int) $user->id, $offeringId);
         }
