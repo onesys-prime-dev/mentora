@@ -48,6 +48,8 @@ if (! function_exists('global_apps')) {
                 ['key' => 'people',      'label' => 'People',      'icon' => 'user',     'url' => site_url('institution/people')],
                 ['key' => 'reports',     'label' => 'Reports',     'icon' => 'score',    'url' => site_url('institution/reports')],
                 ['key' => 'settings',    'label' => 'Settings',    'icon' => 'settings', 'url' => site_url('institution/settings')],
+                ['key' => 'subscription', 'label' => 'Subscription', 'icon' => 'info',   'url' => site_url('institution/subscription')],
+                ['key' => 'integrations', 'label' => 'Integrations', 'icon' => 'link',   'url' => site_url('institution/integrations')],
                 ['key' => 'institution', 'label' => 'Data export', 'icon' => 'folder',   'url' => site_url('institution/export')],
             ];
         }

@@ -45,6 +45,11 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
         'backLabel'   => 'Back to reports',
     ], ['saveData' => false]) ?>
 
+    <p>
+        <a class="inline-flex rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-view-course
+           href="<?= esc(site_url('institution/courses/' . $o['offering_id'] . '/' . url_title((string) $o['course_title'], '-', true) . '/overview')) ?>">Open the course (view only)</a>
+    </p>
+
     <p class="text-sm text-[#3D3D3D]" data-report-instructors>
         <?= $detail['instructors'] === [] ? 'No instructor is assigned yet.' : 'Taught by ' . esc(implode(', ', $detail['instructors'])) . '.' ?>
     </p>

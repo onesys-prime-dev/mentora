@@ -500,6 +500,49 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/status', 'Institution\EnrolmentsController::setStatus/$1');
         });
 
+        // A read-only view of every course of the institution (courses.view), exactly what its
+        // instructor sees. Only the reading routes of a course exist here: there is no route to
+        // post, patch or delete anything in a course, so nothing can be changed from this view.
+        // The editors, the grading screens and the question-generation tools are left out too.
+        $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'institutioncourse']]);
+        $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3', ['filter' => ['permission:courses.view', 'institutioncourse']]);
+        $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'institutioncourse']]);
+
+        $routes->group('api/courses', ['filter' => ['permission:courses.view', 'institutioncourse', 'assessmentscope']], function ($routes) {
+            $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
+            $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
+            $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
+            $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
+            $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
+            $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
+            $routes->get('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::learningItemDependencies/$1/$2');
+            $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
+            $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
+            $routes->get('(:num)/discussions/more', 'Courses\DiscussionController::loadMore/$1');
+            $routes->get('(:num)/discussions/(:num)', 'Courses\DiscussionController::thread/$1/$2');
+            $routes->get('(:num)/assessments', 'Courses\Assessments\AssessmentController::show/$1');
+            $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$1/$2');
+            $routes->get('(:num)/assessments/(:num)/rubrics', 'Courses\Assessments\RubricController::index/$2');
+            $routes->get('(:num)/rubrics/(:num)', 'Courses\Assessments\RubricController::show/$2');
+            $routes->get('(:num)/assessments/(:num)/questions', 'Courses\Assessments\QuestionController::index/$2');
+            $routes->get('(:num)/questions/(:num)', 'Courses\Assessments\QuestionController::show/$2');
+            $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
+            $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
+            $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
+            $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        });
+
+        // The subscription, to read (institution.settings), and the SIS connection's runs (sis.run):
+        // the connection's own settings and credentials stay with the system administrator.
+        $routes->get('subscription', 'Institution\SubscriptionController::index', ['filter' => 'permission:institution.settings']);
+        $routes->group('integrations', ['filter' => 'permission:sis.run'], function ($routes) {
+            $routes->get('/', 'Institution\IntegrationsController::index');
+            $routes->post('preview', 'Institution\IntegrationsController::preview');
+            $routes->post('run', 'Institution\IntegrationsController::run', ['filter' => 'reauth']);
+            $routes->post('grades/preview', 'Institution\IntegrationsController::gradesPreview');
+            $routes->post('grades/send', 'Institution\IntegrationsController::gradesSend', ['filter' => 'reauth']);
+        });
+
         // Reports across the institution (reports.view): the page, a course, and CSV.
         $routes->group('reports', ['filter' => 'permission:reports.view'], function ($routes) {
             $routes->get('/', 'Institution\ReportsController::index');

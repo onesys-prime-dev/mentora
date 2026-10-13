@@ -65,6 +65,12 @@ $features = [
 
     </div>
 
+    <?php if (! empty($readOnlyView)): ?>
+        <div class="px-4 sm:px-10" data-view-only>
+            <?= view('components/lock-note', ['kind' => 'closed', 'text' => 'View only. You are looking at ' . $course['course_code'] . ' ' . $course['section_code'] . ' as an administrator of this institution: everything is shown as its instructor sees it, and nothing can be changed here.'], ['saveData' => false]) ?>
+        </div>
+    <?php endif; ?>
+
     <?php if (! empty($offeringClosed)): ?>
         <div class="px-4 sm:px-10" data-offering-closed>
             <?= view('components/lock-note', ['kind' => 'closed', 'text' => 'This course is closed. You can still look at it and download what is there, but nothing in it can be changed.'], ['saveData' => false]) ?>
@@ -118,9 +124,9 @@ window.coursesConfig = <?= json_encode([
 
     'role' => $userRole,
 
-    'browserBaseUrl' => site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']),
+    'browserBaseUrl' => site_url(($courseUrlPrefix ?? $userRole) . '/courses/' . $course['offering_id'] . '/' . $course['slug']),
 
-    'apiBaseUrl' => site_url($userRole . '/api/courses/' . $course['offering_id']),
+    'apiBaseUrl' => site_url(($courseUrlPrefix ?? $userRole) . '/api/courses/' . $course['offering_id']),
 
     'activeFeature' => $activeFeature,
 
