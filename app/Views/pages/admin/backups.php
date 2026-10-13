@@ -4,14 +4,33 @@
  * @var array{kind: string, message: string}|null $backupAlert
  * @var string                               $backupFolder
  */
-$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
-$badge = [
-    'requested' => 'bg-gray-100 text-gray-700',
-    'running'   => 'bg-blue-100 text-blue-800',
-    'succeeded' => 'bg-green-100 text-green-800',
-    'failed'    => 'bg-red-100 text-red-800',
-];
+// A status is a word and a tone, never colour alone (components/status-badge).
+$tones = ['requested' => 'neutral', 'running' => 'info', 'succeeded' => 'success', 'failed' => 'danger'];
+
 $busy = array_filter($backupRows, static fn (array $row): bool => in_array($row['status'], ['requested', 'running'], true)) !== [];
+
+$backupTable = [];
+
+foreach ($backupRows as $row) {
+    $status = '<span data-backup="' . esc($row['status']) . '">'
+        . view('components/status-badge', ['label' => ucfirst((string) $row['status']), 'tone' => $tones[$row['status']] ?? 'neutral'], ['saveData' => false])
+        . '</span>'
+        . ($row['message'] !== null ? '<span class="mt-1 block text-xs text-[#C33939]">' . esc($row['message']) . '</span>' : '');
+
+    $backupTable[] = [
+        'id'    => (string) $row['id'],
+        'label' => (string) $row['created_at'],
+        'cells' => [
+            'asked'    => substr((string) $row['created_at'], 0, 16),
+            'trigger'  => (string) $row['trigger'],
+            'status'   => ['html' => $status],
+            'file'     => ['html' => '<span class="font-mono text-xs">' . esc((string) ($row['file_name'] ?? '—')) . '</span>'],
+            'size'     => $row['size_bytes'] === null ? '—' : number_format((int) $row['size_bytes'] / 1048576, 1) . ' MB',
+            'finished' => substr((string) ($row['finished_at'] ?? ''), 0, 16) ?: '—',
+            'by'       => (string) ($row['requested_by_label'] ?? 'system'),
+        ],
+    ];
+}
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -31,39 +50,23 @@ $busy = array_filter($backupRows, static fn (array $row): bool => in_array($row[
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<div class="mt-6 overflow-x-auto rounded-lg bg-white shadow">
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="<?= $th ?>">Asked</th>
-                <th class="<?= $th ?>">Trigger</th>
-                <th class="<?= $th ?>">Status</th>
-                <th class="<?= $th ?>">File</th>
-                <th class="<?= $th ?>">Size</th>
-                <th class="<?= $th ?>">Finished</th>
-                <th class="<?= $th ?>">By</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-            <?php if ($backupRows === []): ?>
-                <tr><td class="px-3 py-8 text-center text-gray-500" colspan="7">No backups recorded yet.</td></tr>
-            <?php endif; ?>
-            <?php foreach ($backupRows as $row): ?>
-                <tr data-backup="<?= esc($row['status']) ?>">
-                    <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) $row['created_at'], 0, 16)) ?></td>
-                    <td class="px-3 py-2"><?= esc($row['trigger']) ?></td>
-                    <td class="px-3 py-2">
-                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $badge[$row['status']] ?>"><?= esc($row['status']) ?></span>
-                        <?php if ($row['message'] !== null): ?><span class="block text-xs text-red-700"><?= esc($row['message']) ?></span><?php endif; ?>
-                    </td>
-                    <td class="px-3 py-2 font-mono text-xs"><?= esc((string) ($row['file_name'] ?? '—')) ?></td>
-                    <td class="whitespace-nowrap px-3 py-2"><?= $row['size_bytes'] === null ? '—' : esc(number_format((int) $row['size_bytes'] / 1048576, 1)) . ' MB' ?></td>
-                    <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) ($row['finished_at'] ?? ''), 0, 16) ?: '—') ?></td>
-                    <td class="px-3 py-2 text-xs text-gray-600"><?= esc((string) ($row['requested_by_label'] ?? 'system')) ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+<div class="mt-6">
+    <?= view('components/data-table', [
+        'caption'    => 'Backups',
+        'columns'    => [
+            ['key' => 'asked', 'label' => 'Asked'],
+            ['key' => 'trigger', 'label' => 'Trigger'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'file', 'label' => 'File'],
+            ['key' => 'size', 'label' => 'Size'],
+            ['key' => 'finished', 'label' => 'Finished'],
+            ['key' => 'by', 'label' => 'By'],
+        ],
+        'rows'       => $backupTable,
+        'emptyIcon'  => 'folder',
+        'emptyTitle' => 'No backups recorded yet',
+        'emptyText'  => 'Use "Back up now", or let the server\'s scheduled job take them; each one is listed here.',
+    ], ['saveData' => false]) ?>
 </div>
 
 <?= $this->endSection() ?>

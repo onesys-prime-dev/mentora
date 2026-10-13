@@ -6,9 +6,62 @@
  * @var list<array<string, mixed>> $deletedRows each with purge_on, days_left and contents
  * @var int                        $retentionDays
  */
-$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
-$btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
+$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+
+$pastTable = [];
+
+foreach ($pastRows as $row) {
+    $pastTable[] = [
+        'id'      => (string) $row['id'],
+        'label'   => $row['name'],
+        'cells'   => [
+            'name'    => ['html' => '<span class="font-medium">' . esc($row['name']) . '</span>'],
+            'code'    => ['html' => '<span class="font-mono text-xs">' . esc($row['code']) . '</span>'],
+            'changed' => substr((string) $row['updated_at'], 0, 10),
+        ],
+        'actions' => '<a class="' . $btn . ' border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50" href="' . site_url('admin/institutions/' . $row['id'] . '/edit') . '">Edit</a>',
+    ];
+}
+
+$deletedTable = [];
+
+foreach ($deletedRows as $row) {
+    $c  = $row['contents'];
+    $id = (string) $row['id'];
+    $left = $row['days_left'] === 0 ? 'due now' : (string) $row['days_left'] . ' day' . ($row['days_left'] === 1 ? '' : 's') . ' left';
+
+    $members = esc((string) $c['members']) . ' member account(s) are kept'
+        . ($c['members_left_without_an_institution'] > 0 ? ', ' . esc((string) $c['members_left_without_an_institution']) . ' of them with no institution left' : '');
+
+    $actions = '<div class="flex flex-wrap items-start justify-end gap-2 max-md:justify-start">'
+        . '<form method="post" action="' . site_url('admin/institutions/' . $id . '/restore') . '">' . csrf_field()
+        . '<input type="hidden" name="return" value="archive">'
+        . '<button type="submit" class="' . $btn . ' border-brand bg-white text-brand hover:bg-brand-tint">Restore</button></form>'
+        . '<details class="text-left">'
+        . '<summary class="' . $btn . ' cursor-pointer border-[#C33939] bg-white text-[#C33939] hover:bg-[#FDEDEC]">Purge now</summary>'
+        . '<form method="post" action="' . site_url('admin/institutions/' . $id . '/purge') . '" class="mt-2 flex w-72 flex-col gap-2">' . csrf_field()
+        . '<input type="hidden" name="return" value="archive">'
+        . '<p class="text-xs text-[#8E2424]">This cannot be undone. It permanently removes the institution and everything in it: '
+        . esc((string) $c['departments']) . ' department(s), ' . esc((string) $c['programs']) . ' program(s), '
+        . esc((string) $c['courses']) . ' course(s) and all their offerings, enrolments, work and grades. ' . $members . '.</p>'
+        . '<label class="text-xs text-[#646464]" for="purge-' . $id . '">Type <strong>' . esc($row['name']) . '</strong> to confirm</label>'
+        . '<input id="purge-' . $id . '" class="' . $input . '" type="text" name="confirm_name" autocomplete="off" required>'
+        . '<button type="submit" class="' . $btn . ' border-[#C33939] bg-[#C33939] text-white hover:bg-[#8E2424]">Purge permanently</button>'
+        . '</form></details></div>';
+
+    $deletedTable[] = [
+        'id'      => $id,
+        'label'   => $row['name'],
+        'cells'   => [
+            'name'     => ['html' => '<span class="font-medium">' . esc($row['name']) . '</span>'],
+            'code'     => ['html' => '<span class="font-mono text-xs">' . esc($row['code']) . '</span>'],
+            'deleted'  => substr((string) $row['deleted_at'], 0, 10),
+            'purge_on' => ['html' => esc($row['purge_on']) . '<span class="block text-xs ' . ($row['days_left'] === 0 ? 'font-semibold text-[#C33939]' : 'text-[#646464]') . '">' . esc($left) . '</span>'],
+        ],
+        'actions' => $actions,
+    ];
+}
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -28,92 +81,39 @@ $input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outl
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<h2 class="mt-8 text-lg font-semibold text-brand">Past institutions</h2>
-<div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="<?= $th ?>">Name</th>
-                <th class="<?= $th ?>">Code</th>
-                <th class="<?= $th ?>">Last changed</th>
-                <th class="<?= $th ?>">Actions</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-            <?php if ($pastRows === []): ?>
-                <tr><td class="px-3 py-6 text-center text-gray-500" colspan="4">No past institutions.</td></tr>
-            <?php endif; ?>
-            <?php foreach ($pastRows as $row): ?>
-                <tr>
-                    <td class="px-3 py-2 font-medium"><?= esc($row['name']) ?></td>
-                    <td class="px-3 py-2 font-mono text-xs"><?= esc($row['code']) ?></td>
-                    <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) $row['updated_at'], 0, 10)) ?></td>
-                    <td class="px-3 py-2"><a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $row['id'] . '/edit') ?>">Edit</a></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
+<section class="mt-8 flex flex-col gap-3" aria-labelledby="archive-past" data-section="past">
+    <h2 id="archive-past" class="text-lg font-bold text-brand">Past institutions</h2>
 
-<h2 class="mt-8 text-lg font-semibold text-brand">Deleted institutions</h2>
-<div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="<?= $th ?>">Name</th>
-                <th class="<?= $th ?>">Code</th>
-                <th class="<?= $th ?>">Deleted</th>
-                <th class="<?= $th ?>">Purged on</th>
-                <th class="<?= $th ?>">Actions</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-            <?php if ($deletedRows === []): ?>
-                <tr><td class="px-3 py-6 text-center text-gray-500" colspan="5">No deleted institutions.</td></tr>
-            <?php endif; ?>
-            <?php foreach ($deletedRows as $row): ?>
-                <?php $c = $row['contents']; ?>
-                <tr>
-                    <td class="px-3 py-2 font-medium"><?= esc($row['name']) ?></td>
-                    <td class="px-3 py-2 font-mono text-xs"><?= esc($row['code']) ?></td>
-                    <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) $row['deleted_at'], 0, 10)) ?></td>
-                    <td class="whitespace-nowrap px-3 py-2">
-                        <?= esc($row['purge_on']) ?>
-                        <span class="block text-xs <?= $row['days_left'] === 0 ? 'text-red-700' : 'text-gray-500' ?>">
-                            <?= $row['days_left'] === 0 ? 'due now' : esc((string) $row['days_left']) . ' day' . ($row['days_left'] === 1 ? '' : 's') . ' left' ?>
-                        </span>
-                    </td>
-                    <td class="px-3 py-2">
-                        <div class="flex flex-wrap items-start gap-2">
-                            <form method="post" action="<?= site_url('admin/institutions/' . $row['id'] . '/restore') ?>">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="return" value="archive">
-                                <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Restore</button>
-                            </form>
+    <?= view('components/data-table', [
+        'caption'    => 'Past institutions',
+        'columns'    => [
+            ['key' => 'name', 'label' => 'Name'],
+            ['key' => 'code', 'label' => 'Code'],
+            ['key' => 'changed', 'label' => 'Last changed'],
+        ],
+        'rows'       => $pastTable,
+        'emptyIcon'  => 'drafts',
+        'emptyTitle' => 'No past institutions',
+        'emptyText'  => 'An institution appears here when its subscription has ended and it has gone past its read-only period.',
+    ], ['saveData' => false]) ?>
+</section>
 
-                            <details>
-                                <summary class="<?= $btn ?> cursor-pointer border-red-400 text-red-700 hover:bg-red-50">Purge now</summary>
-                                <form method="post" action="<?= site_url('admin/institutions/' . $row['id'] . '/purge') ?>" class="mt-2 flex max-w-xs flex-col gap-2">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="return" value="archive">
-                                    <p class="text-xs text-red-700">
-                                        This cannot be undone. It permanently removes the institution and everything in it:
-                                        <?= esc((string) $c['departments']) ?> department(s), <?= esc((string) $c['programs']) ?> program(s),
-                                        <?= esc((string) $c['courses']) ?> course(s) and all their offerings, enrolments, work and grades.
-                                        <?= esc((string) $c['members']) ?> member account(s) are kept<?php if ($c['members_left_without_an_institution'] > 0): ?>,
-                                        <?= esc((string) $c['members_left_without_an_institution']) ?> of them with no institution left<?php endif; ?>.
-                                    </p>
-                                    <label class="text-xs text-gray-600" for="purge-<?= esc((string) $row['id']) ?>">Type <strong><?= esc($row['name']) ?></strong> to confirm</label>
-                                    <input id="purge-<?= esc((string) $row['id']) ?>" class="<?= $input ?>" type="text" name="confirm_name" autocomplete="off" required>
-                                    <button type="submit" class="<?= $btn ?> border-red-600 bg-red-600 text-white hover:bg-red-700">Purge permanently</button>
-                                </form>
-                            </details>
-                        </div>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
+<section class="mt-8 flex flex-col gap-3" aria-labelledby="archive-deleted" data-section="deleted">
+    <h2 id="archive-deleted" class="text-lg font-bold text-brand">Deleted institutions</h2>
+
+    <?= view('components/data-table', [
+        'caption'    => 'Deleted institutions',
+        'columns'    => [
+            ['key' => 'name', 'label' => 'Name'],
+            ['key' => 'code', 'label' => 'Code'],
+            ['key' => 'deleted', 'label' => 'Deleted'],
+            ['key' => 'purge_on', 'label' => 'Purged on'],
+        ],
+        'rows'       => $deletedTable,
+        'emptyIcon'  => 'drafts',
+        'emptyTitle' => 'No deleted institutions',
+        'emptyText'  => 'A deleted institution can be restored here until it is purged.',
+    ], ['saveData' => false]) ?>
+</section>
 
 <?= $this->endSection() ?>

@@ -12,30 +12,69 @@ use App\Services\Users\UserFilters;
 
 $f = $userFilters;
 
-$url = static function (string $path, array $query): string {
-    $string = http_build_query($query);
+$query = static fn (array $override = []): string => http_build_query($f->toQuery($override));
+$link  = static fn (array $override = []): string => site_url('admin/users') . ($query($override) === '' ? '' : '?' . $query($override));
 
-    return site_url($path) . ($string === '' ? '' : '?' . $string);
-};
+$sortUrl = static fn (string $column, string $next): string => $link(['sort' => $column, 'dir' => $next, 'page' => null]);
 
-$link     = static fn (array $override = []): string => $url('admin/users', $f->toQuery($override));
-$sortLink = static function (string $column) use ($f, $link): string {
-    $next = $f->sort === $column && $f->dir === 'asc' ? 'desc' : 'asc';
+$exportUrl = site_url('admin/users/export') . ($query(['page' => null]) === '' ? '' : '?' . $query(['page' => null]));
 
-    return $link(['sort' => $column, 'dir' => $next, 'page' => null]);
-};
-$arrow = static fn (string $column): string => $f->sort === $column ? ($f->dir === 'asc' ? ' ▲' : ' ▼') : '';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$warn    = 'rounded-full border border-[#946200] bg-white px-5 py-2 text-sm font-semibold text-[#946200] transition hover:bg-[#FFF1D6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#946200]/50';
 
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
-$th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
-$btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50';
+$institutionOptions = ['' => 'Any institution'];
+
+foreach ($userInstitutions as $institution) {
+    $institutionOptions[(string) $institution['id']] = (string) $institution['name'];
+}
+
+$roleOptions = ['' => 'Any role'] + UserFilters::ROLE_LABELS;
+
+$rows = [];
+
+foreach ($userRows as $row) {
+    $name        = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+    $shown       = $name !== '' ? $name : (string) $row['username'];
+    $deactivated = (int) $row['active'] === 0 || $row['deactivated_at'] !== null;
+
+    $nameCell = '<span data-user="' . esc((string) $row['id']) . '" data-status="' . ($deactivated ? 'deactivated' : 'active') . '">'
+        . '<a class="font-medium text-brand hover:underline" href="' . site_url('admin/users/' . $row['id']) . '">' . esc($shown) . '</a>'
+        . ((int) $row['id'] === $userSelf ? ' <span class="text-xs font-normal text-[#646464]">(you)</span>' : '')
+        . '</span>';
+
+    $rows[] = [
+        'id'    => (string) $row['id'],
+        'label' => $shown,
+        'cells' => [
+            'name'        => ['html' => $nameCell],
+            'email'       => (string) ($row['email'] ?? '—'),
+            'roles'       => implode(', ', array_map(static fn (string $role): string => UserFilters::ROLE_LABELS[$role] ?? $role, $row['roles'])),
+            'institution' => $row['institutions'] === [] ? '—' : implode(', ', array_column($row['institutions'], 'name')),
+            'status'      => ['html' => view('components/status-badge', ['label' => $deactivated ? 'Deactivated' : 'Active', 'tone' => $deactivated ? 'danger' : 'success'], ['saveData' => false])],
+            'last_active' => substr((string) ($row['last_active'] ?? ''), 0, 16) ?: '—',
+        ],
+    ];
+}
+
+// One form: its buttons all act on whoever is ticked (the shared table adds their ids on submit).
+$bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-bulk-form class="flex flex-wrap items-center gap-3">' . csrf_field()
+    . '<button type="submit" name="action" value="deactivate" class="' . $warn . '" data-bulk-action>Deactivate</button>'
+    . '<button type="submit" name="action" value="reactivate" class="' . $second . '" data-bulk-action>Reactivate</button>'
+    . '<button type="submit" formaction="' . site_url('admin/users/export') . '" class="' . $second . '" data-bulk-action>Export selected (CSV)</button>'
+    . '</form>';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
 
 <?= $this->section('content') ?>
 
-<?= view('components/page-head', ['title' => 'Users', 'icon' => 'user', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/users/new') . '">Invite a person</a>'], ['saveData' => false]) ?>
+<?= view('components/page-head', [
+    'title'   => 'Users',
+    'icon'    => 'user',
+    'actions' => '<a class="' . $second . '" href="' . esc($exportUrl) . '" data-export-filtered>Export these (CSV)</a>'
+        . '<a class="' . $primary . '" href="' . site_url('admin/users/new') . '">Invite a person</a>',
+], ['saveData' => false]) ?>
 
 <?php if (session()->has('message')): ?>
     <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
@@ -44,107 +83,48 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-a
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<form method="get" action="<?= site_url('admin/users') ?>" class="mt-6 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow">
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Search
-        <input class="<?= $input ?>" type="search" name="q" value="<?= esc($f->q ?? '') ?>" placeholder="Name, email or username">
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Institution
-        <select class="<?= $input ?>" name="institution">
-            <option value="">Any institution</option>
-            <?php foreach ($userInstitutions as $institution): ?>
-                <option value="<?= esc((string) $institution['id']) ?>" <?= $f->institutionId === (int) $institution['id'] ? 'selected' : '' ?>><?= esc($institution['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Role
-        <select class="<?= $input ?>" name="role">
-            <option value="">Any role</option>
-            <?php foreach (UserFilters::ROLE_LABELS as $role => $roleLabel): ?>
-                <option value="<?= esc($role) ?>" <?= $f->role === $role ? 'selected' : '' ?>><?= esc($roleLabel) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </label>
-    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Status
-        <select class="<?= $input ?>" name="status">
-            <option value="">Any status</option>
-            <option value="active" <?= $f->status === 'active' ? 'selected' : '' ?>>Active</option>
-            <option value="deactivated" <?= $f->status === 'deactivated' ? 'selected' : '' ?>>Deactivated</option>
-        </select>
-    </label>
-    <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Apply</button>
-    <?php if ($f->isFiltered()): ?>
-        <a class="px-2 py-1.5 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/users') ?>">Clear</a>
-    <?php endif; ?>
-    <a class="ml-auto px-2 py-1.5 text-sm font-semibold text-brand hover:underline" href="<?= esc($url('admin/users/export', $f->toQuery(['page' => null]))) ?>" data-export-filtered>Export these (CSV)</a>
-</form>
+<div class="mt-6 flex flex-col gap-4">
 
-<p class="mt-4 text-sm text-gray-600" aria-live="polite">
-    <?= esc(number_format($userTotal)) ?> <?= $userTotal === 1 ? 'person' : 'people' ?><?= $f->isFiltered() ? ' match' : '' ?>
-</p>
+    <?= view('components/toolbar', [
+        'action'   => site_url('admin/users'),
+        'filtered' => $f->isFiltered(),
+        'fields'   => [
+            ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => 'Name, email or username', 'value' => $f->q ?? '', 'span' => 'lg:col-span-1'],
+            ['type' => 'select', 'name' => 'institution', 'label' => 'Institution', 'options' => $institutionOptions, 'value' => $f->institutionId === null ? '' : (string) $f->institutionId],
+            ['type' => 'select', 'name' => 'role', 'label' => 'Role', 'options' => $roleOptions, 'value' => $f->role ?? ''],
+            ['type' => 'select', 'name' => 'status', 'label' => 'Status', 'options' => ['' => 'Any status', 'active' => 'Active', 'deactivated' => 'Deactivated'], 'value' => $f->status ?? ''],
+        ],
+    ], ['saveData' => false]) ?>
 
-<form method="post" action="<?= site_url('admin/users/bulk') ?>" data-users-bulk>
-    <?= csrf_field() ?>
+    <p class="text-sm text-[#646464]" aria-live="polite">
+        <?= esc(number_format($userTotal)) ?> <?= $userTotal === 1 ? 'person' : 'people' ?><?= $f->isFiltered() ? ' match' : '' ?>
+    </p>
 
-    <div class="mt-2 flex flex-wrap items-center gap-3 rounded-t-lg bg-white px-3 py-2 shadow">
-        <span class="text-sm text-gray-700" data-selected-count>No one selected</span>
-        <button type="submit" name="action" value="deactivate" class="<?= $btn ?> border-amber-500 text-amber-700 hover:bg-amber-50" data-bulk-action>Deactivate</button>
-        <button type="submit" name="action" value="reactivate" class="<?= $btn ?> border-green-600 text-green-700 hover:bg-green-50" data-bulk-action>Reactivate</button>
-        <button type="submit" formaction="<?= site_url('admin/users/export') ?>" class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" data-bulk-action>Export selected (CSV)</button>
-    </div>
+    <?= view('components/data-table', [
+        'caption'    => 'People across every institution',
+        'columns'    => [
+            ['key' => 'name', 'label' => 'Name', 'sortable' => true],
+            ['key' => 'email', 'label' => 'Email', 'sortable' => true],
+            ['key' => 'roles', 'label' => 'Roles'],
+            ['key' => 'institution', 'label' => 'Institutions'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'last_active', 'label' => 'Last active', 'sortable' => true],
+        ],
+        'rows'       => $rows,
+        'sort'       => $f->sort,
+        'dir'        => $f->dir,
+        'sortUrl'    => $sortUrl,
+        'selectable' => true,
+        'bulk'       => $bulk,
+        'nounOne'    => 'person',
+        'nounMany'   => 'people',
+        'emptyIcon'  => 'user',
+        'emptyTitle' => $f->isFiltered() ? 'No one matches these filters' : 'No one yet',
+        'emptyText'  => $f->isFiltered() ? 'Try a different search, institution, role or status.' : 'Invite the first person to get started.',
+    ], ['saveData' => false]) ?>
 
-    <div class="overflow-x-auto rounded-b-lg bg-white shadow">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-3 py-2"><input type="checkbox" data-select-all aria-label="Select everyone on this page"></th>
-                    <th class="<?= $th ?>"><a href="<?= esc($sortLink('name')) ?>">Name<?= $arrow('name') ?></a></th>
-                    <th class="<?= $th ?>"><a href="<?= esc($sortLink('email')) ?>">Email<?= $arrow('email') ?></a></th>
-                    <th class="<?= $th ?>">Roles</th>
-                    <th class="<?= $th ?>">Institutions</th>
-                    <th class="<?= $th ?>">Status</th>
-                    <th class="<?= $th ?>"><a href="<?= esc($sortLink('last_active')) ?>">Last active<?= $arrow('last_active') ?></a></th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                <?php if ($userRows === []): ?>
-                    <tr><td class="px-3 py-8 text-center text-gray-500" colspan="7">No one<?= $f->isFiltered() ? ' matches these filters' : ' yet' ?>.</td></tr>
-                <?php endif; ?>
+    <?= view('components/pagination', ['page' => $f->page, 'pages' => $userPages, 'total' => $userTotal, 'baseUrl' => site_url('admin/users'), 'query' => $f->toQuery(['page' => null])], ['saveData' => false]) ?>
 
-                <?php foreach ($userRows as $row): ?>
-                    <?php
-                    $name        = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
-                    $deactivated = (int) $row['active'] === 0 || $row['deactivated_at'] !== null;
-                    ?>
-                    <tr data-user="<?= esc((string) $row['id']) ?>" data-status="<?= $deactivated ? 'deactivated' : 'active' ?>">
-                        <td class="px-3 py-2"><input type="checkbox" name="ids[]" value="<?= esc((string) $row['id']) ?>" data-user-select aria-label="Select <?= esc($name !== '' ? $name : (string) $row['username']) ?>"></td>
-                        <td class="px-3 py-2 font-medium">
-                            <a class="text-brand hover:underline" href="<?= site_url('admin/users/' . $row['id']) ?>"><?= esc($name !== '' ? $name : (string) $row['username']) ?></a>
-                            <?php if ((int) $row['id'] === $userSelf): ?><span class="ml-1 text-xs font-normal text-gray-500">(you)</span><?php endif; ?>
-                        </td>
-                        <td class="px-3 py-2 text-gray-600"><?= esc((string) ($row['email'] ?? '—')) ?></td>
-                        <td class="px-3 py-2"><?= esc(implode(', ', array_map(static fn (string $role): string => UserFilters::ROLE_LABELS[$role] ?? $role, $row['roles']))) ?></td>
-                        <td class="px-3 py-2"><?= $row['institutions'] === [] ? '<span class="text-gray-500">—</span>' : esc(implode(', ', array_column($row['institutions'], 'name'))) ?></td>
-                        <td class="px-3 py-2">
-                            <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $deactivated ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' ?>"><?= $deactivated ? 'Deactivated' : 'Active' ?></span>
-                        </td>
-                        <td class="whitespace-nowrap px-3 py-2 text-gray-600"><?= esc(substr((string) ($row['last_active'] ?? ''), 0, 16) ?: '—') ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</form>
-
-<nav class="mt-4 flex items-center justify-between text-sm" aria-label="Pages">
-    <span class="text-gray-600">Page <?= esc((string) $f->page) ?> of <?= esc((string) $userPages) ?></span>
-    <span class="flex gap-3">
-        <?php if ($f->page > 1): ?>
-            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $f->page - 1])) ?>">Previous</a>
-        <?php endif; ?>
-        <?php if ($f->page < $userPages): ?>
-            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $f->page + 1])) ?>">Next</a>
-        <?php endif; ?>
-    </span>
-</nav>
+</div>
 
 <?= $this->endSection() ?>

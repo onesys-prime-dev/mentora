@@ -1,6 +1,6 @@
 # P2 test cases: the system administrator
 
-10 cases, automated in `tests/e2e/system-admin.spec.js`. Read [README.md](README.md)
+11 cases, automated in `tests/e2e/system-admin.spec.js`. Read [README.md](README.md)
 first. **All are `Draft`** (see the README).
 
 The administrator signs in with a 6-digit code the app emails. In the browser
@@ -25,6 +25,7 @@ and run in order.
 | TC-SA-08 | Viewing as a student is view only, always marked, and ends with one click | System administrator |
 | TC-SA-09 | What happened is in the audit log | System administrator |
 | TC-SA-10 | The main administration screens pass an automated accessibility check | System administrator |
+| TC-SA-11 | The users list narrows by search, and ticking people shows how many are chosen | System administrator |
 
 ## TC-SA-01 The administrator needs the emailed code
 
@@ -86,3 +87,9 @@ and run in order.
 - **Steps:** sign in as the administrator and open Home, Institutions, Plans, Users, Feature flags, Roles, System status, Backups, Audit log, Archive, General and Security. Run the automated check (axe, WCAG 2 A and AA) on each.
 - **Expected:** no serious or critical problem. Found and fixed when the case was added: the System status page refreshed itself with a `<meta>` refresh the person could not stop; it now reloads from a script that a "Refresh every minute" box turns off (the `<meta>` stays only for browsers without scripts).
 - **Already automated:** `tests/feature/AdminMonitoringPageTest.php`.
+
+## TC-SA-11 The users list
+
+- **Steps:** open Users. Search for `student5@mentora.test`. Tick the one row.
+- **Expected:** one row remains; before ticking there is no bulk bar; after, it says "1 person selected" and offers Deactivate, Reactivate and Export selected.
+- **Already automated:** `tests/feature/AdminUsersPageTest.php`, `tests/js/shared/data-table.test.js`.

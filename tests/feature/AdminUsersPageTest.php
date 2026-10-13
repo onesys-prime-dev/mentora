@@ -168,15 +168,17 @@ final class AdminUsersPageTest extends RouteTestCase
         $this->assertStringContainsString('(you)', $this->body('admin/users'));
     }
 
-    public function testTheListCarriesTheCheckboxesAndBulkButtonsTheScriptNeeds(): void
+    public function testTheListCarriesTheCheckboxesAndBulkButtonsTheSharedTableNeeds(): void
     {
-        PeopleFactory::person('student', 'Maria', 'Santos', null, $this->acme);
+        $maria = PeopleFactory::person('student', 'Maria', 'Santos', null, $this->acme);
 
         $body = $this->body('admin/users');
 
-        $this->assertStringContainsString('data-users-bulk', $body);
+        $this->assertStringContainsString('data-table', $body);
         $this->assertStringContainsString('data-select-all', $body);
         $this->assertStringContainsString('data-selected-count', $body);
+        $this->assertStringContainsString('data-bulk-form', $body);
+        $this->assertMatchesRegularExpression('/data-row-select value="' . $maria->id . '"/', $body);
         $this->assertSame(3, preg_match_all('/data-bulk-action/', $body), 'deactivate, reactivate and export');
         $this->assertStringContainsString('data-page="admin-users"', $body);
     }

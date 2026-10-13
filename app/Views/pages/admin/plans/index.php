@@ -4,10 +4,47 @@
  *
  * @var list<array<string, mixed>> $planRows each with `features` as a list
  */
-$th  = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
-$btn = 'rounded border px-2.5 py-1 text-xs font-semibold';
+$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$plain = 'border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50';
 
 $cap = static fn ($value, string $unit = ''): string => $value === null ? 'Unlimited' : number_format((int) $value) . $unit;
+
+$rows = [];
+
+foreach ($planRows as $row) {
+    $retired = $row['status'] === 'retired';
+    $id      = (string) $row['id'];
+
+    $actions = '<div class="flex flex-wrap items-start justify-end gap-2 max-md:justify-start">';
+
+    if ($retired) {
+        $actions .= '<form method="post" action="' . site_url('admin/plans/' . $id . '/reinstate') . '">' . csrf_field()
+            . '<button type="submit" class="' . $btn . ' border-brand bg-white text-brand hover:bg-brand-tint">Reinstate</button></form>';
+    } else {
+        $actions .= '<a class="' . $btn . ' ' . $plain . '" href="' . site_url('admin/plans/' . $id . '/edit') . '">Edit</a>'
+            . '<form method="post" action="' . site_url('admin/plans/' . $id . '/retire') . '">' . csrf_field()
+            . '<button type="submit" class="' . $btn . ' border-[#946200] bg-white text-[#946200] hover:bg-[#FFF1D6]">Retire</button></form>';
+    }
+
+    $actions .= '</div>';
+
+    $name = '<span class="font-medium">' . esc($row['name']) . '</span>'
+        . ($row['description'] !== null ? '<span class="block max-w-xs text-xs text-[#646464]">' . esc($row['description']) . '</span>' : '');
+
+    $rows[] = [
+        'id'      => $id,
+        'label'   => $row['name'],
+        'cells'   => [
+            'name'     => ['html' => $name],
+            'status'   => ['html' => view('components/status-badge', ['label' => $retired ? 'Retired' : 'Active', 'tone' => $retired ? 'neutral' : 'success'], ['saveData' => false])],
+            'seats'    => $cap($row['seat_limit']),
+            'storage'  => $cap($row['storage_limit_mb'], ' MB'),
+            'ai'       => $cap($row['ai_generation_limit']),
+            'features' => ['html' => $row['features'] === [] ? '—' : '<span class="font-mono text-xs">' . esc(implode(', ', $row['features'])) . '</span>'],
+        ],
+        'actions' => $actions,
+    ];
+}
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -27,58 +64,22 @@ $cap = static fn ($value, string $unit = ''): string => $value === null ? 'Unlim
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<div class="mt-6 overflow-x-auto rounded-lg bg-white shadow">
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-            <tr>
-                <th class="<?= $th ?>">Plan</th>
-                <th class="<?= $th ?>">Status</th>
-                <th class="<?= $th ?>">Student seats</th>
-                <th class="<?= $th ?>">Storage</th>
-                <th class="<?= $th ?>">AI generations / term</th>
-                <th class="<?= $th ?>">Features</th>
-                <th class="<?= $th ?>">Actions</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-            <?php if ($planRows === []): ?>
-                <tr><td class="px-3 py-8 text-center text-gray-500" colspan="7">No plans yet.</td></tr>
-            <?php endif; ?>
-
-            <?php foreach ($planRows as $row): ?>
-                <?php $retired = $row['status'] === 'retired'; ?>
-                <tr class="<?= $retired ? 'bg-gray-50 text-gray-500' : '' ?>">
-                    <td class="px-3 py-2">
-                        <span class="font-medium"><?= esc($row['name']) ?></span>
-                        <?php if ($row['description'] !== null): ?><span class="block max-w-xs text-xs text-gray-500"><?= esc($row['description']) ?></span><?php endif; ?>
-                    </td>
-                    <td class="px-3 py-2">
-                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $retired ? 'bg-gray-200 text-gray-700' : 'bg-green-100 text-green-800' ?>"><?= $retired ? 'Retired' : 'Active' ?></span>
-                    </td>
-                    <td class="px-3 py-2"><?= esc($cap($row['seat_limit'])) ?></td>
-                    <td class="px-3 py-2"><?= esc($cap($row['storage_limit_mb'], ' MB')) ?></td>
-                    <td class="px-3 py-2"><?= esc($cap($row['ai_generation_limit'])) ?></td>
-                    <td class="px-3 py-2 font-mono text-xs"><?= $row['features'] === [] ? '—' : esc(implode(', ', $row['features'])) ?></td>
-                    <td class="px-3 py-2">
-                        <div class="flex flex-wrap items-start gap-2">
-                            <?php if ($retired): ?>
-                                <form method="post" action="<?= site_url('admin/plans/' . $row['id'] . '/reinstate') ?>">
-                                    <?= csrf_field() ?>
-                                    <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Reinstate</button>
-                                </form>
-                            <?php else: ?>
-                                <a class="<?= $btn ?> border-gray-300 text-gray-700 hover:bg-gray-50" href="<?= site_url('admin/plans/' . $row['id'] . '/edit') ?>">Edit</a>
-                                <form method="post" action="<?= site_url('admin/plans/' . $row['id'] . '/retire') ?>">
-                                    <?= csrf_field() ?>
-                                    <button type="submit" class="<?= $btn ?> border-amber-500 text-amber-700 hover:bg-amber-50">Retire</button>
-                                </form>
-                            <?php endif; ?>
-                        </div>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+<div class="mt-6">
+    <?= view('components/data-table', [
+        'caption'    => 'Plans',
+        'columns'    => [
+            ['key' => 'name', 'label' => 'Plan'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'seats', 'label' => 'Student seats'],
+            ['key' => 'storage', 'label' => 'Storage'],
+            ['key' => 'ai', 'label' => 'AI generations / term'],
+            ['key' => 'features', 'label' => 'Features'],
+        ],
+        'rows'       => $rows,
+        'emptyIcon'  => 'points',
+        'emptyTitle' => 'No plans yet',
+        'emptyText'  => 'A plan is what an institution subscribes to. Add one to start onboarding customers.',
+    ], ['saveData' => false]) ?>
 </div>
 
 <?= $this->endSection() ?>
