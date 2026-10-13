@@ -63,13 +63,18 @@ class AnnouncementService
     |--------------------------------------------------------------------------
     */
 
+    /** Instructor here, or the chairperson of the program it belongs to — same posting rights either way. */
     private function isInstructorHere(User $user, int $offeringId): bool
     {
-        if (!$user->inGroup('instructor')) {
-            return false;
+        if ($user->inGroup('instructor')) {
+            return (bool) $this->instructorAssignmentModel->retrieveInstructorCourseOffering($user->id, $offeringId);
         }
 
-        return (bool) $this->instructorAssignmentModel->retrieveInstructorCourseOffering($user->id, $offeringId);
+        if ($user->inGroup('chairperson')) {
+            return (new ChairpersonAccessService())->canAccess($user, $offeringId);
+        }
+
+        return false;
     }
 
     private function canViewOffering(User $user, int $offeringId): bool

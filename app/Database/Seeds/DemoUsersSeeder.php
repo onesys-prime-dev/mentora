@@ -134,6 +134,21 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => 1,
             ],
 
+            // Dual-role: chairs one sub-department, also teaches — exercises
+            // role-switching and the "defaults to chairperson" first-login rule.
+            [
+                'username'    => 'chairperson.demo2',
+                'email'       => 'chairperson2@mentora.test',
+                'password'    => 'Chairperson123!',
+                'group'       => ['chairperson', 'instructor'],
+                'first_name'  => 'Isabel',
+                'middle_name' => 'Torres',
+                'last_name'   => 'Mendoza',
+                'suffix'      => null,
+                'student_number' => null,
+                'program_id'  => 1,
+            ],
+
             // =====================================================
             // Parent
             // =====================================================
@@ -149,6 +164,25 @@ class DemoUsersSeeder extends Seeder
                 'suffix'      => null,
                 'student_number' => null,
                 'program_id'  => null,
+                'institution_id' => 1,
+            ],
+
+            // =====================================================
+            // Institutional administrator (of institution 1)
+            // =====================================================
+
+            [
+                'username'       => 'institution.admin',
+                'email'          => 'institution.admin@mentora.test',
+                'password'       => 'Institution123!',
+                'group'          => 'institutional_admin',
+                'first_name'     => 'Ines',
+                'middle_name'    => null,
+                'last_name'      => 'Administrador',
+                'suffix'         => null,
+                'student_number' => null,
+                'program_id'     => null,
+                'institution_id' => 1,
             ],
 
         ];
@@ -176,7 +210,9 @@ class DemoUsersSeeder extends Seeder
             /** @var User $user */
             $user = $userModel->findById($userModel->getInsertID());
 
-            $user->addGroup($account['group']);
+            foreach ((array) $account['group'] as $group) {
+                $user->addGroup($group);
+            }
 
             $profileModel->insert([
                 'user_id'     => $user->id,
@@ -188,7 +224,20 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => $account['program_id'],
             ]);
 
-            echo "[CREATED] {$account['group']} ({$account['email']})" . PHP_EOL;
+            // Accounts that belong to an institution straight away (the others are linked by
+            // InstitutionUsersSeeder, by id).
+            if (isset($account['institution_id'])) {
+                $now = date('Y-m-d H:i:s');
+
+                $this->db->table('institution_users')->insert([
+                    'institution_id' => $account['institution_id'],
+                    'user_id'        => $user->id,
+                    'created_at'     => $now,
+                    'updated_at'     => $now,
+                ]);
+            }
+
+            echo '[CREATED] ' . implode('+', (array) $account['group']) . " ({$account['email']})" . PHP_EOL;
         }
     }
 }

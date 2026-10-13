@@ -15,7 +15,7 @@ $emphasis = ['grade', 'submission'];
 
 <div class="flex flex-col gap-6 p-6 pb-8 border border-[#A9A9A9]/50 rounded-2xl">
 
-    <span class="text-2xl font-bold text-[#0040A6]">
+    <span class="text-2xl font-bold text-brand">
         Recent Activity
     </span>
 
@@ -45,7 +45,7 @@ $emphasis = ['grade', 'submission'];
 
                     <div class="flex flex-col items-center gap-1 pt-1">
 
-                        <div class="w-3.5 h-3.5 shrink-0 rounded-4xl <?= in_array($event['kind'], $emphasis, true) ? 'bg-[#0040A6]' : 'bg-black/25' ?>"></div>
+                        <div class="w-3.5 h-3.5 shrink-0 rounded-4xl <?= in_array($event['kind'], $emphasis, true) ? 'bg-brand' : 'bg-black/25' ?>"></div>
 
                         <?php if (! $isLast): ?>
                             <div class="w-0.5 flex-1 bg-black/10"></div>

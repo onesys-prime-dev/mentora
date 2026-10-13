@@ -7,7 +7,7 @@
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
 
-            <h2 class="text-2xl font-bold text-[#0040A6]">
+            <h2 class="text-2xl font-bold text-brand">
                 Edit Criteria
             </h2>
 
@@ -51,7 +51,7 @@
                     name="title"
                     autocomplete="off"
                     placeholder="e.g. Logic & Correctness"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     data-criteria-editor-title
                     required>
 
@@ -68,7 +68,7 @@
                     autocomplete="off"
                     rows="3"
                     placeholder="What does this criterion evaluate?"
-                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     data-criteria-editor-description></textarea>
 
             </div>
@@ -86,7 +86,7 @@
                     step="1"
                     autocomplete="off"
                     placeholder="e.g. 50"
-                    class="w-40 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="w-40 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     data-criteria-editor-max-points
                     required>
 
@@ -120,7 +120,7 @@
                 <button
                     type="submit"
                     form="rubric-criteria-editor-form"
-                    class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                    class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
 
                     Save Changes
 

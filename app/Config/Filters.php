@@ -2,8 +2,16 @@
 
 namespace Config;
 
+use App\Filters\AccountStateFilter;
 use App\Filters\AssessmentScope;
+use App\Filters\ChairpersonCourseAudit;
+use App\Filters\ImpersonationFilter;
+use App\Filters\LoginLockoutFilter;
+use App\Filters\MaintenanceFilter;
+use App\Filters\ClosedOfferingFilter;
+use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
+use App\Filters\RoleFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -38,6 +46,14 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'assessmentscope' => AssessmentScope::class,
         'reauth'        => ReauthFilter::class,
+        'readonly'      => ReadOnlyFilter::class,
+        'closedoffering' => ClosedOfferingFilter::class,
+        'role'          => RoleFilter::class,
+        'accountstate'  => AccountStateFilter::class,
+        'impersonation' => ImpersonationFilter::class,
+        'loginlockout'  => LoginLockoutFilter::class,
+        'maintenance'   => MaintenanceFilter::class,
+        'chairpersoncourseaudit' => ChairpersonCourseAudit::class,
     ];
 
     /**
@@ -79,6 +95,12 @@ class Filters extends BaseFilters
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
+
+            // A deactivated account, or a session an administrator ended, is turned away here.
+            'maintenance',   // the platform's timezone, and only administrators in during maintenance
+            'loginlockout',  // too many failed sign-ins: refuse the attempt
+            'impersonation', // a system administrator viewing as someone: view-only, time-limited
+            'accountstate',
         ],
         'after' => [
             // 'honeypot',

@@ -3,7 +3,7 @@
     <button
         type="button"
         data-learning-unit-actions
-        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:text-[#0040A6] focus:outline-none focus:ring-2 focus:ring-[#0040A6]/20 cursor-pointer">
+        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer">
 
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +28,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6] cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-edit-learning-unit
                 data-module-id="<?= esc($module['id']) ?>"
                 data-learning-unit-id="<?= esc($learning_unit['id']) ?>"
@@ -56,7 +56,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6] cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-unit-publish-toggle
                 data-learning-unit-id="<?= esc($learning_unit['id']) ?>"
                 data-status="<?= esc($learning_unit['status']) ?>">

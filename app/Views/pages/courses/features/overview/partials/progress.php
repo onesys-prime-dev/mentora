@@ -17,7 +17,7 @@ $barColor = static fn (string $tone) => match ($tone) {
 
 <?php if ($role === 'student'): ?>
 
-    <div class="flex flex-col gap-8 p-6 pb-8 bg-[#0040A6] rounded-2xl text-white">
+    <div class="flex flex-col gap-8 p-6 pb-8 bg-brand rounded-2xl text-white">
 
         <div class="flex flex-col gap-4">
 
@@ -67,7 +67,7 @@ $barColor = static fn (string $tone) => match ($tone) {
 
         <div class="flex justify-between items-center">
 
-            <span class="text-2xl font-bold text-[#0040A6]">
+            <span class="text-2xl font-bold text-brand">
                 Class Progress
             </span>
 
@@ -101,7 +101,7 @@ $barColor = static fn (string $tone) => match ($tone) {
 
                         <div class="flex justify-between items-center gap-3 text-sm">
                             <span class="truncate text-[#646464]"><?= esc($module['title']) ?></span>
-                            <span class="shrink-0 font-bold text-[#0040A6]"><?= esc($module['completion']) ?>%</span>
+                            <span class="shrink-0 font-bold text-brand"><?= esc($module['completion']) ?>%</span>
                         </div>
 
                         <div class="h-2 bg-black/10 rounded-full overflow-clip">

@@ -25,7 +25,7 @@ $overallValue = $finalGrade !== null ? number_format((float) $finalGrade, 2) . '
 $overallHtml = esc($overallValue);
 
 if ($gradeLabel !== null) {
-    $overallHtml .= ' <span class="ml-1 rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-sm" data-grades-scale-grade>' . esc($gradeLabel) . '</span>';
+    $overallHtml .= ' <span class="ml-1 rounded-full bg-brand/10 px-2 py-0.5 text-sm" data-grades-scale-grade>' . esc($gradeLabel) . '</span>';
 }
 ?>
 

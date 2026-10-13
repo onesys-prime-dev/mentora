@@ -10,7 +10,15 @@ export const accounts = {
     student3: { email: "student3@mentora.test", password: "Student123!" },
     student4: { email: "student4@mentora.test", password: "Student123!" },
     instructor2: { email: "instructor2@mentora.test", password: "Instructor123!" },
+
+    // The demo institutional administrator of institution 1.
+    institutionAdmin: { email: "institution.admin@mentora.test", password: "Institution123!" },
 };
+
+// The system administrator tests/e2e/support/serve.js creates (the demo seeder refuses to run in
+// production, so this one is made with `php spark admin:create`). It signs in with an emailed
+// code; see support/admin.js.
+export const adminAccount = { email: "admin@mentora.test", password: "Administrator123!" };
 
 /** Fills in and submits the login form. Does not check where it leads. */
 export async function submitLoginForm(page, email, password) {

@@ -11,7 +11,7 @@
  * student's Gradebook roster entry (course offering's Grades tab, scrolled
  * to and briefly highlighted).
  */
-$userRole = esc($user->getGroups()[0]);
+$userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
 $students = $data['students'] ?? [];
 

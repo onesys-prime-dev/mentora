@@ -1,0 +1,636 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Sis;
+
+use App\Models\Academic\InstitutionModel;
+use App\Models\Users\UserProfileModel;
+use App\Services\Flags\FeatureFlags;
+use App\Services\Notifications\NotificationTriggers;
+use App\Services\Subscriptions\PlanLimits;
+use App\Services\Users\UsernameGenerator;
+use CodeIgniter\Shield\Entities\User;
+use CodeIgniter\Shield\Models\UserModel;
+use DateTimeImmutable;
+use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
+
+/**
+ * The inbound sync (SA10): people, courses and enrolments from the SIS into
+ * one institution. The SIS is the source of truth, so what it says replaces
+ * what Mentora holds for the same record.
+ *
+ * What a run guarantees:
+ *  - One database transaction. If anything unexpected goes wrong the whole
+ *    run is rolled back and recorded as failed: no partial data.
+ *  - A file that cannot be read at all (bad columns, bad signature) fails the
+ *    run before anything is written.
+ *  - A single bad row (invalid, a conflict, no seat left, an unknown course)
+ *    is counted as failed with its reason and the rest still import.
+ *  - A dry run does exactly the work of a real one, inside the same
+ *    transaction, and then rolls it back: its counts are what a real run would
+ *    produce and nothing is written.
+ *  - A first real run needs an earlier successful run (a preview counts).
+ *
+ * Records are matched through `sis_links` (SIS id -> Mentora id). A person
+ * with no link is matched by email, but only an account that already belongs
+ * to this institution with the same role; any other clash is a failed row.
+ * Things the SIS no longer lists are left alone, never deleted. People get no
+ * password: they are given a link by an administrator (Users page).
+ *
+ * Enrolments go into the institution's active term (the latest one, if
+ * several), in the section the SIS names ("A" when it names none).
+ *
+ * Not safe to call twice at once on one instance (it keeps run counters).
+ */
+class SisImporter
+{
+    /** Issues kept with a run; the counts always cover every row. */
+    public const MAX_ISSUES = 200;
+
+    private const ROLE_OF = ['students' => 'student', 'instructors' => 'instructor'];
+
+    private int $institutionId = 0;
+
+    private DateTimeImmutable $now;
+
+    /** @var array<string, array{created: int, updated: int, skipped: int, failed: int}> */
+    private array $counts = [];
+
+    /** @var list<array{dataset: string, item: string, reason: string}> */
+    private array $issues = [];
+
+    private ?int $termId = null;
+
+    private bool $termLooked = false;
+
+    public function __construct(
+        private readonly ?SisConnectionService $connections = null,
+        private readonly ?SisRunLog $runs = null,
+    ) {
+    }
+
+    /**
+     * @throws InvalidArgumentException when a run is not allowed right now (nothing is recorded)
+     */
+    public function run(int $institutionId, ?User $actor, bool $dryRun, string $trigger = SisRunLog::MANUAL, ?DateTimeImmutable $now = null): SisImportResult
+    {
+        $this->now           = $now ?? new DateTimeImmutable();
+        $this->institutionId = $institutionId;
+        $this->counts        = [];
+        $this->issues        = [];
+        $this->termId        = null;
+        $this->termLooked    = false;
+
+        $institution = (new InstitutionModel())->find($institutionId) ?? throw new InvalidArgumentException('That institution does not exist.');
+        $connections = $this->connections ?? new SisConnectionService();
+        $runs        = $this->runs ?? new SisRunLog();
+        $view        = $connections->view($institutionId);
+
+        if (! $view['flagOn']) {
+            throw new InvalidArgumentException('The "' . SisConnectionService::FLAG . '" feature is off for this institution.');
+        }
+
+        if (! $view['configured']) {
+            throw new InvalidArgumentException('Save the connection settings first.');
+        }
+
+        if (! $dryRun) {
+            if (! $view['enabled']) {
+                throw new InvalidArgumentException('The connection is not enabled.');
+            }
+
+            if ($institution['status'] !== InstitutionModel::ACTIVE) {
+                throw new InvalidArgumentException('Only an active institution can be synced.');
+            }
+
+            if (! $this->hasSucceededBefore($institutionId)) {
+                throw new InvalidArgumentException('Run a preview (dry run) first, and check it, before the first real import.');
+            }
+        }
+
+        $runId = $runs->start($institutionId, SisRunLog::INBOUND, $trigger, $actor === null ? null : (int) $actor->id, $dryRun, $this->now);
+
+        try {
+            $connector = $connections->connector($institutionId);
+            $batches   = [];
+
+            foreach (SisCsvParser::datasets() as $dataset) {
+                if ($connector->has($dataset)) {
+                    $batches[$dataset] = $connector->read($dataset);
+                }
+            }
+
+            if ($batches === []) {
+                throw new SisException('The SIS has not provided any of: ' . implode(', ', array_map(static fn (string $d): string => "{$d}.csv", SisCsvParser::datasets())) . '.');
+            }
+        } catch (SisException $e) {
+            return $this->failed($runs, $runId, $dryRun, $institution, $e->getMessage());
+        }
+
+        $db = db_connect();
+        $db->transBegin();
+
+        try {
+            foreach ($batches as $dataset => $batch) {
+                $this->counts[$dataset] = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0];
+
+                foreach ($batch->rejected as $rejected) {
+                    $this->fail($dataset, "row {$rejected['row']}", $rejected['reason']);
+                }
+            }
+
+            foreach (['students', 'instructors'] as $dataset) {
+                if (isset($batches[$dataset])) {
+                    $this->people($dataset, $batches[$dataset]);
+                }
+            }
+
+            if (isset($batches['courses'])) {
+                $this->courses($batches['courses']);
+            }
+
+            if (isset($batches['enrollments'])) {
+                $this->enrollments($batches['enrollments']);
+            }
+
+            $result = new SisImportResult($runId, true, $dryRun, $this->counts, $this->issues, $this->summary($dryRun));
+
+            if (! $dryRun) {
+                service('auditLogger')->log('sis.import_run', $actor, [
+                    'target_type'    => 'institution',
+                    'target_id'      => $institutionId,
+                    'institution_id' => $institutionId,
+                    'new'            => $result->totals() + ['trigger' => $trigger, 'run_id' => $runId],
+                ]);
+
+                $db->transCommit();
+            } else {
+                $db->transRollback();
+            }
+        } catch (Throwable $e) {
+            $db->transRollback();
+            log_message('error', 'SIS import for institution ' . $institutionId . ' failed: ' . $e->getMessage());
+
+            return $this->failed($runs, $runId, $dryRun, $institution, 'An unexpected error stopped the import; nothing was changed. The details are in the server log.');
+        }
+
+        $runs->finish($runId, true, [
+            'created' => $result->totals()['created'],
+            'updated' => $result->totals()['updated'],
+            'skipped' => $result->totals()['skipped'],
+            'failed'  => $result->totals()['failed'],
+        ], $result->message, $this->now, $this->details($result));
+
+        if ($dryRun) {
+            service('auditLogger')->log('sis.import_previewed', $actor, [
+                'target_type'    => 'institution',
+                'target_id'      => $institutionId,
+                'institution_id' => $institutionId,
+                'new'            => $result->totals() + ['run_id' => $runId],
+            ]);
+        }
+
+        return $result;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | People
+    |--------------------------------------------------------------------------
+    */
+
+    private function people(string $dataset, SisBatch $batch): void
+    {
+        $role = self::ROLE_OF[$dataset];
+
+        foreach ($batch->records as $i => $record) {
+            $mapped = SisMapper::person($record);
+            $item   = $mapped['external_id'] . ' (row ' . ($batch->rows[$i] ?? '?') . ')';
+
+            $this->person($dataset, $item, $mapped, $role);
+        }
+    }
+
+    /**
+     * @param array{external_id: string, first_name: string, last_name: string, email: string, student_number: ?string} $m
+     */
+    private function person(string $dataset, string $item, array $m, string $role): void
+    {
+        $db     = db_connect();
+        $userId = $this->linked('person', $m['external_id']);
+
+        if ($userId !== null && ! $this->isMember($userId)) {
+            $this->unlink('person', $m['external_id']); // the account is gone; start again from the email
+            $userId = null;
+        }
+
+        $owner = $db->table('auth_identities')->select('user_id')->where('type', 'email_password')->where('secret', $m['email'])->get()->getRowArray();
+
+        if ($userId === null && $owner !== null) {
+            $other = (int) $owner['user_id'];
+
+            if (! $this->isMember($other) || ! $this->hasRole($other, $role) || $this->hasRole($other, 'admin')) {
+                $this->fail($dataset, $item, "An account with {$m['email']} already exists and is not a {$role} of this institution.");
+
+                return;
+            }
+
+            if ($this->linkedExternal($other) !== null) {
+                $this->fail($dataset, $item, "{$m['email']} already belongs to another SIS record.");
+
+                return;
+            }
+
+            $this->link('person', $m['external_id'], $other);
+            $userId = $other;
+        }
+
+        if ($userId === null) {
+            $this->createPerson($dataset, $item, $m, $role);
+
+            return;
+        }
+
+        $profile = $db->table('user_profiles')->where('user_id', $userId)->get()->getRowArray() ?? [];
+        $current = $profile + ['email' => (string) ($db->table('auth_identities')->select('secret')->where('user_id', $userId)->where('type', 'email_password')->get()->getRowArray()['secret'] ?? '')];
+        $changes = SisMapper::changes($current, $m, ['first_name', 'last_name', 'email', 'student_number']);
+
+        if ($changes === []) {
+            $this->counts[$dataset]['skipped']++;
+
+            return;
+        }
+
+        if (isset($changes['email'])) {
+            if ($owner !== null && (int) $owner['user_id'] !== $userId) {
+                $this->fail($dataset, $item, "The email {$m['email']} belongs to another account.");
+
+                return;
+            }
+
+            $db->table('auth_identities')->where('user_id', $userId)->where('type', 'email_password')->update(['secret' => $changes['email'], 'updated_at' => $this->stamp()]);
+            unset($changes['email']);
+        }
+
+        if ($changes !== []) {
+            $profiles = new UserProfileModel();
+            $saved    = $profile === [] ? $profiles->insert(['user_id' => $userId, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number']]) : $profiles->update($userId, $changes);
+
+            if ($saved === false) {
+                throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
+            }
+        }
+
+        $this->counts[$dataset]['updated']++;
+    }
+
+    /**
+     * @param array{external_id: string, first_name: string, last_name: string, email: string, student_number: ?string} $m
+     */
+    private function createPerson(string $dataset, string $item, array $m, string $role): void
+    {
+        if ($role === 'student' && ($blocked = (new PlanLimits())->seatBlock($this->institutionId)) !== null) {
+            $this->fail($dataset, $item, $blocked);
+
+            return;
+        }
+
+        $users = model(UserModel::class);
+
+        $saved = $users->save(new User([
+            'username' => (new UsernameGenerator())->from($m['first_name'], $m['last_name']),
+            'email'    => $m['email'],
+            'password' => bin2hex(random_bytes(24)),
+            'active'   => true,
+        ]));
+
+        if (! $saved) {
+            throw new RuntimeException('The account could not be created: ' . implode(' ', $users->errors()));
+        }
+
+        $user = $users->findById($users->getInsertID());
+        $user->addGroup($role);
+
+        $profiles = new UserProfileModel();
+
+        if ($profiles->insert(['user_id' => $user->id, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number']]) === false) {
+            throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
+        }
+
+        $stamp = $this->stamp();
+
+        if (! db_connect()->table('institution_users')->insert(['institution_id' => $this->institutionId, 'user_id' => $user->id, 'created_at' => $stamp, 'updated_at' => $stamp])) {
+            throw new RuntimeException('The account could not be linked to the institution.');
+        }
+
+        $this->link('person', $m['external_id'], (int) $user->id);
+        $this->counts[$dataset]['created']++;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Courses
+    |--------------------------------------------------------------------------
+    */
+
+    private function courses(SisBatch $batch): void
+    {
+        $db = db_connect();
+
+        foreach ($batch->records as $i => $record) {
+            $m    = SisMapper::course($record);
+            $item = $m['external_id'] . ' (row ' . ($batch->rows[$i] ?? '?') . ')';
+
+            $courseId = $this->linked('course', $m['external_id']);
+
+            if ($courseId !== null && $this->courseRow($courseId) === null) {
+                $this->unlink('course', $m['external_id']);
+                $courseId = null;
+            }
+
+            if ($courseId === null) {
+                $programId = $this->programFor($m['program_code']);
+
+                if ($programId === null) {
+                    $this->fail('courses', $item, $m['program_code'] === null ? 'program_code is required for a course Mentora has not seen yet.' : "program_code \"{$m['program_code']}\" is not a program of this institution.");
+
+                    continue;
+                }
+
+                $existing = $db->table('courses')->where('program_id', $programId)->where('course_code', $m['course_code'])->get()->getRowArray();
+
+                if ($existing !== null) {
+                    if ($this->linkedExternalOf('course', (int) $existing['id']) !== null) {
+                        $this->fail('courses', $item, "The course code {$m['course_code']} already belongs to another SIS record.");
+
+                        continue;
+                    }
+
+                    $this->link('course', $m['external_id'], (int) $existing['id']);
+                    $courseId = (int) $existing['id'];
+                } else {
+                    $stamp = $this->stamp();
+
+                    if (! $db->table('courses')->insert([
+                        'program_id'   => $programId,
+                        'course_code'  => $m['course_code'],
+                        'course_title' => $m['course_title'],
+                        'units'        => $m['units'] ?? SisMapper::DEFAULT_UNITS,
+                        'status'       => 'active',
+                        'created_at'   => $stamp,
+                        'updated_at'   => $stamp,
+                    ])) {
+                        throw new RuntimeException('The course could not be created.');
+                    }
+
+                    $this->link('course', $m['external_id'], (int) $db->insertID());
+                    $this->counts['courses']['created']++;
+
+                    continue;
+                }
+            }
+
+            $course  = $this->courseRow($courseId);
+            $changes = SisMapper::changes($course ?? [], $m, ['course_code', 'course_title', 'units']);
+
+            if ($changes === []) {
+                $this->counts['courses']['skipped']++;
+
+                continue;
+            }
+
+            if (isset($changes['course_code']) && $db->table('courses')->where('program_id', $course['program_id'])->where('course_code', $changes['course_code'])->where('id !=', $courseId)->countAllResults() > 0) {
+                $this->fail('courses', $item, "Another course in the program already has the code {$changes['course_code']}.");
+
+                continue;
+            }
+
+            $db->table('courses')->where('id', $courseId)->update($changes + ['updated_at' => $this->stamp()]);
+            $this->counts['courses']['updated']++;
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Enrolments
+    |--------------------------------------------------------------------------
+    */
+
+    private function enrollments(SisBatch $batch): void
+    {
+        $db = db_connect();
+
+        foreach ($batch->records as $i => $record) {
+            $m    = SisMapper::enrollment($record);
+            $item = "{$m['student_external_id']} in {$m['course_external_id']} (row " . ($batch->rows[$i] ?? '?') . ')';
+
+            $courseId  = $this->linked('course', $m['course_external_id']);
+            $studentId = $this->linked('person', $m['student_external_id']);
+
+            if ($courseId === null || $this->courseRow($courseId) === null) {
+                $this->fail('enrollments', $item, "The course {$m['course_external_id']} is not known; list it in courses.csv.");
+
+                continue;
+            }
+
+            if ($studentId === null || ! $this->isMember($studentId) || ! $this->hasRole($studentId, 'student')) {
+                $this->fail('enrollments', $item, "{$m['student_external_id']} is not a known student; list them in students.csv.");
+
+                continue;
+            }
+
+            $termId = $this->activeTerm();
+
+            if ($termId === null) {
+                $this->fail('enrollments', $item, 'The institution has no active term to enrol into.');
+
+                continue;
+            }
+
+            $offering = $db->table('course_offerings')->where(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $m['section']])->get()->getRowArray();
+
+            if ($offering === null) {
+                $stamp = $this->stamp();
+
+                if (! $db->table('course_offerings')->insert(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $m['section'], 'status' => 'active', 'created_at' => $stamp, 'updated_at' => $stamp])) {
+                    throw new RuntimeException('The course offering could not be created.');
+                }
+
+                $offeringId = (int) $db->insertID();
+            } else {
+                $offeringId = (int) $offering['id'];
+            }
+
+            $existing = $db->table('enrollments')->where(['offering_id' => $offeringId, 'student_user_id' => $studentId])->get()->getRowArray();
+
+            if ($existing === null) {
+                $stamp = $this->stamp();
+
+                if (! $db->table('enrollments')->insert(['offering_id' => $offeringId, 'student_user_id' => $studentId, 'status' => $m['status'], 'enrolled_at' => $stamp, 'updated_at' => $stamp])) {
+                    throw new RuntimeException('The enrolment could not be created.');
+                }
+
+                $this->counts['enrollments']['created']++;
+            } elseif ($existing['status'] === $m['status']) {
+                $this->counts['enrollments']['skipped']++;
+            } else {
+                $db->table('enrollments')->where('id', $existing['id'])->update(['status' => $m['status'], 'updated_at' => $this->stamp()]);
+                $this->counts['enrollments']['updated']++;
+            }
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lookups and bookkeeping
+    |--------------------------------------------------------------------------
+    */
+
+    private function linked(string $entity, string $externalId): ?int
+    {
+        $row = db_connect()->table('sis_links')->where(['institution_id' => $this->institutionId, 'entity' => $entity, 'external_id' => $externalId])->get()->getRowArray();
+
+        return $row === null ? null : (int) $row['local_id'];
+    }
+
+    private function linkedExternal(int $userId): ?string
+    {
+        return $this->linkedExternalOf('person', $userId);
+    }
+
+    private function linkedExternalOf(string $entity, int $localId): ?string
+    {
+        $row = db_connect()->table('sis_links')->where(['institution_id' => $this->institutionId, 'entity' => $entity, 'local_id' => $localId])->get()->getRowArray();
+
+        return $row === null ? null : (string) $row['external_id'];
+    }
+
+    private function link(string $entity, string $externalId, int $localId): void
+    {
+        if (! db_connect()->table('sis_links')->insert(['institution_id' => $this->institutionId, 'entity' => $entity, 'external_id' => $externalId, 'local_id' => $localId, 'created_at' => $this->stamp()])) {
+            throw new RuntimeException('The SIS link could not be saved.');
+        }
+    }
+
+    private function unlink(string $entity, string $externalId): void
+    {
+        db_connect()->table('sis_links')->where(['institution_id' => $this->institutionId, 'entity' => $entity, 'external_id' => $externalId])->delete();
+    }
+
+    private function isMember(int $userId): bool
+    {
+        return db_connect()->table('institution_users')
+            ->join('users', 'users.id = institution_users.user_id')
+            ->where('institution_users.institution_id', $this->institutionId)
+            ->where('institution_users.user_id', $userId)
+            ->where('users.deleted_at IS NULL', null, false)
+            ->countAllResults() > 0;
+    }
+
+    private function hasRole(int $userId, string $role): bool
+    {
+        return db_connect()->table('auth_groups_users')->where(['user_id' => $userId, 'group' => $role])->countAllResults() > 0;
+    }
+
+    /** @return array<string, mixed>|null a course of this institution */
+    private function courseRow(int $courseId): ?array
+    {
+        return db_connect()->table('courses')
+            ->select('courses.*')
+            ->join('programs', 'programs.id = courses.program_id')
+            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
+            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->where('departments.institution_id', $this->institutionId)
+            ->where('courses.id', $courseId)
+            ->get()->getRowArray();
+    }
+
+    private function programFor(?string $code): ?int
+    {
+        if ($code === null) {
+            return null;
+        }
+
+        $row = db_connect()->table('programs')
+            ->select('programs.id')
+            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
+            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->where('departments.institution_id', $this->institutionId)
+            ->where('programs.code', $code)
+            ->get()->getRowArray();
+
+        return $row === null ? null : (int) $row['id'];
+    }
+
+    private function activeTerm(): ?int
+    {
+        if (! $this->termLooked) {
+            $row = db_connect()->table('academic_terms')->select('id')->where(['institution_id' => $this->institutionId, 'status' => 'active'])->orderBy('start_date', 'desc')->get()->getRowArray();
+
+            $this->termId     = $row === null ? null : (int) $row['id'];
+            $this->termLooked = true;
+        }
+
+        return $this->termId;
+    }
+
+    private function hasSucceededBefore(int $institutionId): bool
+    {
+        return db_connect()->table('sis_runs')
+            ->where(['institution_id' => $institutionId, 'direction' => 'inbound', 'status' => 'succeeded'])
+            ->where('trigger !=', 'test')
+            ->countAllResults() > 0;
+    }
+
+    private function fail(string $dataset, string $item, string $reason): void
+    {
+        $this->counts[$dataset]['failed']++;
+        $this->issues[] = ['dataset' => $dataset, 'item' => $item, 'reason' => $reason];
+    }
+
+    private function stamp(): string
+    {
+        return $this->now->format('Y-m-d H:i:s');
+    }
+
+    private function summary(bool $dryRun): string
+    {
+        $totals = (new SisImportResult(0, true, $dryRun, $this->counts, [], ''))->totals();
+
+        return ($dryRun ? 'Preview, nothing was written: ' : '') . "created {$totals['created']}, updated {$totals['updated']}, skipped {$totals['skipped']}, failed {$totals['failed']}.";
+    }
+
+    private function details(SisImportResult $result): array
+    {
+        return [
+            'datasets'  => $result->datasets,
+            'issues'    => array_slice($result->issues, 0, self::MAX_ISSUES),
+            'truncated' => count($result->issues) > self::MAX_ISSUES,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $institution
+     */
+    private function failed(SisRunLog $runs, int $runId, bool $dryRun, array $institution, string $message): SisImportResult
+    {
+        $runs->finish($runId, false, [], $message, $this->now, ['datasets' => [], 'issues' => [], 'truncated' => false]);
+
+        if (! $dryRun) {
+            (new NotificationTriggers())->syncFailed((int) $institution['id'], (string) $institution['name'], $message, $runId, $this->now);
+        }
+
+        service('auditLogger')->log('sis.import_failed', null, [
+            'actor_label'    => 'system',
+            'target_type'    => 'institution',
+            'target_id'      => (int) $institution['id'],
+            'institution_id' => (int) $institution['id'],
+            'new'            => ['dry_run' => $dryRun, 'run_id' => $runId, 'message' => $message],
+        ]);
+
+        return new SisImportResult($runId, false, $dryRun, [], [], $message);
+    }
+}

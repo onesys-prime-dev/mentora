@@ -16,7 +16,7 @@
 
 # CI_ENVIRONMENT = production
 
-#--------------------------------------------------------------------
+#-------------------------- ------------------------------------------
 # APP
 #--------------------------------------------------------------------
 
@@ -48,6 +48,27 @@
 # database.tests.charset = utf8mb4
 # database.tests.DBCollat = utf8mb4_general_ci
 # database.tests.port = 3306
+
+#--------------------------------------------------------------------
+# EMAIL
+#--------------------------------------------------------------------
+# Needed for anything that must reach a real inbox, above all the 6-digit
+# sign-in code of a system administrator. Without it the app uses PHP mail(),
+# which does nothing useful on most machines. Full guide: docs/mail.md.
+# Then check it with:  php spark mail:test you@yourdomain.com
+#
+# The From address must be the address you log in to the mail server with
+# (Gmail and most providers rewrite or refuse anything else).
+#
+# email.protocol = smtp
+# email.SMTPHost = smtp.gmail.com
+# email.SMTPPort = 587
+# email.SMTPCrypto = tls
+# email.SMTPUser = you@gmail.com
+# email.SMTPPass = your-16-letter-app-password
+# email.fromEmail = you@gmail.com
+# email.fromName = "Mentora LMS"
+# email.SMTPTimeout = 15
 
 #--------------------------------------------------------------------
 # ENCRYPTION

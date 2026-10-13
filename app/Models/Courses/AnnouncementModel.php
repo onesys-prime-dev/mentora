@@ -104,6 +104,40 @@ class AnnouncementModel extends Model
             ->findAll();
     }
 
+    /**
+     * Announcement counts per offering within [$from, $until) when given —
+     * the "announcements" side of instructor activity.
+     *
+     * @return array<int, int>
+     */
+    public function retrieveCountsByOffering(array $offeringIds, ?string $from = null, ?string $until = null): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        $builder = $this->select(['offering_id', 'COUNT(*) AS announcement_count'])
+            ->whereIn('offering_id', $offeringIds);
+
+        if ($from !== null) {
+            $builder->where('created_at >=', $from);
+        }
+
+        if ($until !== null) {
+            $builder->where('created_at <', $until);
+        }
+
+        $rows = $builder->groupBy('offering_id')->findAll();
+
+        $byOffering = [];
+
+        foreach ($rows as $row) {
+            $byOffering[(int) $row['offering_id']] = (int) $row['announcement_count'];
+        }
+
+        return $byOffering;
+    }
+
     public function retrieveOne(int $id): ?array
     {
         return $this->select([

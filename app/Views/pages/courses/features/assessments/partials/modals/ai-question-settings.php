@@ -7,7 +7,7 @@
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
 
-            <h2 class="text-xl font-bold text-[#0040A6]">
+            <h2 class="text-xl font-bold text-brand">
                 Question Settings
             </h2>
 
@@ -44,7 +44,7 @@
                         class="peer sr-only"
                         data-ai-question-settings-required>
 
-                    <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+                    <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
                     <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 
@@ -67,7 +67,7 @@
                             class="peer sr-only"
                             data-ai-question-settings-allow-multiple>
 
-                        <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+                        <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
                         <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 
@@ -85,7 +85,7 @@
                         type="number"
                         min="2"
                         step="1"
-                        class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                        class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                         data-ai-question-settings-answers-count>
 
                     <span class="text-xs text-[#767676]">
@@ -112,7 +112,7 @@
                             class="peer sr-only"
                             data-ai-question-settings-case-sensitive>
 
-                        <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+                        <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
                         <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 
@@ -143,7 +143,7 @@
             <button
                 type="submit"
                 form="ai-question-settings-form"
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
 
                 Save
 

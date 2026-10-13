@@ -21,7 +21,7 @@ $content = is_array($currentItem['content'] ?? null) ? $currentItem['content'] :
             value="<?= esc($content['url'] ?? '') ?>"
             placeholder="https://..."
             autocomplete="off"
-            class="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-[#0040A6]">
+            class="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-brand">
 
         <p data-link-error class="hidden text-xs font-semibold text-red-500"></p>
 
@@ -38,7 +38,7 @@ $content = is_array($currentItem['content'] ?? null) ? $currentItem['content'] :
             data-link-description
             rows="4"
             placeholder="What will students find at this link?"
-            class="resize-y rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-[#0040A6]"><?= esc($content['description'] ?? '') ?></textarea>
+            class="resize-y rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-brand"><?= esc($content['description'] ?? '') ?></textarea>
 
     </div>
 

@@ -20,8 +20,9 @@ $fullHeight = $fullHeight ?? false;
 
 $bodyHeight  = $fullHeight ? 'min-h-screen lg:h-screen lg:overflow-hidden' : 'min-h-screen';
 $shellHeight = $fullHeight ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen';
-// A page can pass a narrower, responsive gutter; everything else keeps px-40.
-$mainGutter  = $mainGutter ?? 'px-40';
+// A page can pass its own gutter. The default keeps px-40 from xl up (as before) and
+// narrows below it, so pages work on a laptop, a tablet and a phone.
+$mainGutter  = $mainGutter ?? 'px-4 sm:px-8 lg:px-16 xl:px-40';
 $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
 ?>
 <!DOCTYPE html>
@@ -37,11 +38,26 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
     class="<?= $bodyHeight ?> bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
     style="background-image: url('<?= base_url('assets/images/background/light.png') ?>');"
     data-page="<?= esc($page ?? '') ?>"
+    data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >
 
     <div class="flex flex-col <?= $shellHeight ?>">
 
         <?= $this->include('layouts/partials/header') ?>
+
+        <?= $this->include('layouts/partials/announcement') ?>
+
+        <?= $this->include('layouts/partials/institution-announcement') ?>
+
+        <?= $this->include('layouts/partials/impersonation-banner') ?>
+
+        <?= $this->include('layouts/partials/notifications-strip') ?>
+
+        <?= $this->include('layouts/partials/read-only-banner') ?>
+
+        <?php if ($flashToasts ?? false): ?>
+            <?= $this->include('layouts/partials/flash-toasts') ?>
+        <?php endif; ?>
 
         <main class="flex-1 <?= $mainGutter ?> <?= $mainSpacing ?>">
 
@@ -50,6 +66,10 @@ $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
         </main>
 
     </div>
+
+    <?php if ($reauthDialog ?? false): ?>
+        <?= $this->include('layouts/partials/reauth-dialog') ?>
+    <?php endif; ?>
 
     <?= $this->renderSection('scripts') ?>
 

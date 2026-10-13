@@ -21,8 +21,8 @@ $questionCount = (int) ($assessmentContext['questionCount'] ?? 0);
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 
             <?php foreach ([
-                ['label' => 'Questions', 'value' => $questionCount, 'class' => 'text-[#0040A6]'],
-                ['label' => 'Submitted', 'value' => (int) ($quizCounts['submitted'] ?? 0), 'class' => 'text-[#0040A6]'],
+                ['label' => 'Questions', 'value' => $questionCount, 'class' => 'text-brand'],
+                ['label' => 'Submitted', 'value' => (int) ($quizCounts['submitted'] ?? 0), 'class' => 'text-brand'],
                 ['label' => 'To Grade', 'value' => (int) ($quizCounts['toGrade'] ?? 0), 'class' => 'text-[#946200]'],
                 ['label' => 'Graded', 'value' => (int) ($quizCounts['graded'] ?? 0), 'class' => 'text-emerald-700'],
             ] as $stat): ?>
@@ -59,7 +59,7 @@ $questionCount = (int) ($assessmentContext['questionCount'] ?? 0);
                 type="button"
                 data-open-assessment="<?= esc($currentAssessment['id']) ?>"
                 data-assessment-mode="builder"
-                class="rounded-xl bg-[#0040A6] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
                 Open Quiz Builder
             </button>
 

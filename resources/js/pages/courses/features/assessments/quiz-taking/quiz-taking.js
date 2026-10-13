@@ -124,9 +124,9 @@ function highlightSelectedChoice(question, selectedInput) {
             const isSelected =
                 row.querySelector("[data-quiz-choice-input]") === selectedInput;
 
-            row.classList.toggle("border-[#0040A6]", isSelected);
-            row.classList.toggle("bg-[#0040A6]/5", isSelected);
-            row.classList.toggle("text-[#0040A6]", isSelected);
+            row.classList.toggle("border-brand", isSelected);
+            row.classList.toggle("bg-brand/5", isSelected);
+            row.classList.toggle("text-brand", isSelected);
 
             row.classList.toggle("border-gray-200", !isSelected);
             row.classList.toggle("text-gray-700", !isSelected);
@@ -144,9 +144,9 @@ function highlightSelectedChoices(question) {
             const isSelected =
                 row.querySelector("[data-quiz-choice-input]")?.checked ?? false;
 
-            row.classList.toggle("border-[#0040A6]", isSelected);
-            row.classList.toggle("bg-[#0040A6]/5", isSelected);
-            row.classList.toggle("text-[#0040A6]", isSelected);
+            row.classList.toggle("border-brand", isSelected);
+            row.classList.toggle("bg-brand/5", isSelected);
+            row.classList.toggle("text-brand", isSelected);
 
             row.classList.toggle("border-gray-200", !isSelected);
             row.classList.toggle("text-gray-700", !isSelected);

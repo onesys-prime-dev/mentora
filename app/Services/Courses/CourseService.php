@@ -8,6 +8,7 @@ use App\Models\Courses\EnrollmentModel;
 use App\Models\Courses\CourseScheduleModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Models\Assignments\InstructorAssignmentModel;
+use App\Models\Assignments\ChairpersonAssignmentModel;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -16,6 +17,8 @@ class CourseService
     protected EnrollmentModel $enrollmentModel;
 
     protected InstructorAssignmentModel $instructorAssignmentModel;
+
+    protected ChairpersonAssignmentModel $chairpersonAssignmentModel;
 
     protected CourseScheduleModel $courseScheduleModel;
 
@@ -26,6 +29,8 @@ class CourseService
         $this->enrollmentModel = new EnrollmentModel();
 
         $this->instructorAssignmentModel = new InstructorAssignmentModel();
+
+        $this->chairpersonAssignmentModel = new ChairpersonAssignmentModel();
 
         $this->courseScheduleModel = new CourseScheduleModel();
 
@@ -38,12 +43,16 @@ class CourseService
     |--------------------------------------------------------------------------
     */
 
-    public function getCourseOfferings(User $user): array
+    /**
+     * The cards for a person's courses: the current ones, or with $past the ones
+     * whose term has been closed (they can be looked at, not changed).
+     */
+    public function getCourseOfferings(User $user, bool $past = false): array
     {
         if ($user->inGroup('student')) {
 
             return $this->withCardDetails(
-                $this->enrollmentModel->retrieveStudentCourseOfferings($user->id),
+                $this->enrollmentModel->retrieveStudentCourseOfferings($user->id, $past),
                 fn (array $courses) => $this->studentProgress($user, array_column($courses, 'offering_id'))
             );
 
@@ -52,7 +61,15 @@ class CourseService
         if ($user->inGroup('instructor')) {
 
             return $this->withCardDetails(
-                $this->instructorAssignmentModel->retrieveInstructorCourseOfferings($user->id),
+                $this->instructorAssignmentModel->retrieveInstructorCourseOfferings($user->id, $past),
+                fn (array $courses) => $this->classProgress($courses)
+            );
+        }
+
+        if ($user->inGroup('chairperson')) {
+
+            return $this->withCardDetails(
+                $this->chairpersonAssignmentModel->retrieveChairedCourseOfferings($user->id, $past),
                 fn (array $courses) => $this->classProgress($courses)
             );
         }
@@ -194,6 +211,14 @@ class CourseService
         if ($user->inGroup('instructor')) {
             return $this->instructorAssignmentModel
                 ->retrieveInstructorCourseOffering(
+                    $user->id,
+                    $offeringId
+                );
+        }
+
+        if ($user->inGroup('chairperson')) {
+            return $this->chairpersonAssignmentModel
+                ->retrieveChairedCourseOffering(
                     $user->id,
                     $offeringId
                 );

@@ -2,6 +2,7 @@
 
 namespace App\Services\Storage;
 
+use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Files\File;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -27,6 +28,7 @@ class StorageService
         'ai_generation_batches' => 'source_file_id',
         'announcement_attachments' => 'file_id',
         'discussion_attachments' => 'file_id',
+        'institutions' => 'logo_file_id',
     ];
 
     /*
@@ -39,6 +41,10 @@ class StorageService
         File $file,
         string $directory
     ): array {
+
+        // The signed-in person's institution may be out of storage on its plan. Checked here, in the one
+        // place every upload passes through; when it is full this throws and the request is answered.
+        (new PlanLimits())->assertCanStore(auth()->user(), (int) $file->getSize());
 
         $filename =
 

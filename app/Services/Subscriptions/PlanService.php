@@ -6,6 +6,7 @@ namespace App\Services\Subscriptions;
 
 use App\Models\Subscriptions\PlanModel;
 use App\Services\Audit\RecordsAuditedChanges;
+use App\Services\Flags\FeatureFlags;
 use CodeIgniter\Shield\Entities\User;
 use InvalidArgumentException;
 use Throwable;
@@ -74,6 +75,7 @@ class PlanService
         $values = PlanInput::parse($input);
 
         $this->assertNameFree($values['name']);
+        $this->assertKnownFeatures($values['features']);
 
         $model = new PlanModel();
         $id    = $model->insert(self::stored($values) + ['status' => PlanModel::ACTIVE]);
@@ -118,6 +120,7 @@ class PlanService
         $values = PlanInput::parse($input);
 
         $this->assertNameFree($values['name'], $id);
+        $this->assertKnownFeatures($values['features'], $plan['features']);
 
         $before = self::comparable($plan);
 
@@ -205,6 +208,36 @@ class PlanService
     private function existing(int $id): array
     {
         return $this->find($id) ?? throw new InvalidArgumentException('That plan does not exist.');
+    }
+
+    /**
+     * Every feature a plan grants must be a feature flag that exists, so a typo
+     * cannot quietly grant nothing. A plan may keep a feature whose flag has
+     * since been removed from the code (so its other details can still be
+     * edited); it just cannot be given one that never existed.
+     *
+     * @param list<string> $features
+     * @param list<string> $alreadyHeld the plan's current features, when editing
+     *
+     * @throws InvalidArgumentException
+     */
+    private function assertKnownFeatures(array $features, array $alreadyHeld = []): void
+    {
+        $known   = array_keys((new FeatureFlags())->definitions());
+        $unknown = array_values(array_diff($features, $known, $alreadyHeld));
+
+        if ($unknown === []) {
+            return;
+        }
+
+        $names = '"' . implode('", "', $unknown) . '"';
+
+        throw new InvalidArgumentException(sprintf(
+            '%s %s. %s',
+            $names,
+            count($unknown) === 1 ? 'is not a feature flag' : 'are not feature flags',
+            $known === [] ? 'There are no feature flags to choose from.' : 'Choose from: ' . implode(', ', $known) . '.',
+        ));
     }
 
     /**

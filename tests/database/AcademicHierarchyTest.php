@@ -6,6 +6,7 @@ use App\Models\Academic\DepartmentModel;
 use App\Models\Academic\InstitutionModel;
 use App\Models\Academic\ProgramModel;
 use App\Models\Academic\SubDepartmentModel;
+use App\Models\Assignments\ChairpersonAssignmentModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Users\UserProfileModel;
@@ -221,5 +222,53 @@ final class AcademicHierarchyTest extends DatabaseTestCase
             $this->assertSame($home['sub_department_name'], $row['sub_department_name'], "query #{$index}");
             $this->assertSame($home['institution_name'], $row['institution_name'], "query #{$index}");
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chairperson assignments
+    |--------------------------------------------------------------------------
+    */
+
+    public function testASubDepartmentsActiveChairIsRecognisedAndOthersAreNot(): void
+    {
+        $sub = $this->chain('1')['sub'];
+        $otherSub = $this->chain('2')['sub'];
+        $chair = CourseFactory::user('chairperson');
+        $notChair = CourseFactory::user('chairperson');
+        $model = new ChairpersonAssignmentModel();
+
+        $model->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
+
+        $this->assertTrue($model->isChairOf($chair->id, $sub));
+        $this->assertFalse($model->isChairOf($chair->id, $otherSub), 'holds no assignment to the other sub-department');
+        $this->assertFalse($model->isChairOf($notChair->id, $sub), 'was never assigned at all');
+    }
+
+    public function testARevokedChairNoLongerCounts(): void
+    {
+        $sub = $this->chain('1')['sub'];
+        $chair = CourseFactory::user('chairperson');
+        $model = new ChairpersonAssignmentModel();
+
+        $model->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'revoked']);
+
+        $this->assertFalse($model->isChairOf($chair->id, $sub));
+        $this->assertSame([], $model->subDepartmentIdsFor($chair->id));
+    }
+
+    public function testASubDepartmentIdsForListsOnlyActiveAssignments(): void
+    {
+        $a = $this->chain('1')['sub'];
+        $b = $this->chain('2')['sub'];
+        $c = $this->chain('3')['sub'];
+        $chair = CourseFactory::user('chairperson');
+        $model = new ChairpersonAssignmentModel();
+
+        $model->insert(['sub_department_id' => $a, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
+        $model->insert(['sub_department_id' => $b, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
+        $model->insert(['sub_department_id' => $c, 'chairperson_user_id' => $chair->id, 'status' => 'expired']);
+
+        $this->assertSame([$a, $b], $model->subDepartmentIdsFor($chair->id));
     }
 }

@@ -37,7 +37,7 @@ $colors = match ($tone) {
     'danger'  => ['accent' => 'bg-[#C33939]', 'ink' => 'text-[#C33939]', 'bubble' => 'bg-[#FDEDEC]', 'sr' => 'Needs attention'],
     'warning' => ['accent' => 'bg-[#946200]', 'ink' => 'text-[#946200]', 'bubble' => 'bg-[#FFF8E8]', 'sr' => 'Warning'],
     'success' => ['accent' => 'bg-[#2E7D4F]', 'ink' => 'text-[#2E7D4F]', 'bubble' => 'bg-[#E8F5EC]', 'sr' => 'On track'],
-    default   => ['accent' => null,           'ink' => 'text-[#0040A6]', 'bubble' => 'bg-[#EEF1F8]', 'sr' => null],
+    default   => ['accent' => null,           'ink' => 'text-brand', 'bubble' => 'bg-[#EEF1F8]', 'sr' => null],
 };
 
 $prominent = $size === 'prominent';
@@ -59,7 +59,7 @@ if ($filter !== null) {
 $surface = 'relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#A9A9A9]/50 bg-white text-left '
     . ($prominent ? 'gap-2 px-6 py-6' : 'gap-2 px-5 py-5')
     . ($interactive
-        ? ' cursor-pointer transition hover:border-[#0040A6]/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/50'
+        ? ' cursor-pointer transition hover:border-brand/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50'
         : '');
 ?>
 

@@ -129,6 +129,24 @@ final class InstitutionPurgeTest extends DatabaseTestCase
         $this->assertSame(0, db_connect()->table('academic_terms')->where('institution_id', $institution)->countAllResults());
     }
 
+    public function testPurgingRemovesTheInstitutionsInvitationsToo(): void
+    {
+        $institution = $this->deletedInstitution(10);
+        $other       = $this->deletedInstitution(11);
+
+        foreach ([$institution => 'doomed', $other => 'kept'] as $id => $word) {
+            db_connect()->table('institution_invitations')->insert([
+                'institution_id' => $id, 'role' => 'institutional_admin', 'email' => "{$word}@example.com", 'first_name' => 'Ana', 'last_name' => 'Cruz',
+                'token_hash' => hash('sha256', $word), 'expires_at' => '2026-12-31 00:00:00',
+            ]);
+        }
+
+        $this->service->purge($institution, null, $this->admin);
+
+        $this->assertSame(0, db_connect()->table('institution_invitations')->where('institution_id', $institution)->countAllResults());
+        $this->assertSame(1, db_connect()->table('institution_invitations')->where('institution_id', $other)->countAllResults());
+    }
+
     public function testAnotherInstitutionIsNotTouched(): void
     {
         $doomed = $this->deletedInstitution(10);

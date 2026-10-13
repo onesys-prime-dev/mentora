@@ -37,7 +37,7 @@
         <button
             type="button"
             data-publish
-            class="rounded-xl bg-[#0040A6] px-5 py-2.5 text-sm font-semibold text-white transition cursor-pointer hover:bg-[#002068]">
+            class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition cursor-pointer hover:bg-brand-dark">
 
             Publish
 

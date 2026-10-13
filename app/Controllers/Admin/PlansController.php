@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Services\Flags\FeatureFlags;
 use App\Services\Subscriptions\PlanService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -106,6 +107,7 @@ class PlansController extends BaseController
             'page'        => 'admin',
             'user'        => auth()->user(),
             'formHeading' => $heading,
+            'planFeatureKeys' => array_keys((new FeatureFlags())->definitions()),
             'plan'        => $plan,
             'formValues'  => [
                 'name'                => old('name', $values['name'] ?? ''),

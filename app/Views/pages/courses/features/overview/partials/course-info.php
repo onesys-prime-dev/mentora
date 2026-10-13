@@ -74,11 +74,11 @@ $cards[] = [
 
     <div class="flex items-center gap-3">
 
-        <div class="w-5 h-5 flex justify-center items-center text-xs font-semibold font-lao text-[#0040A6] border border-[#0040A6] rounded-[100%]">
+        <div class="w-5 h-5 flex justify-center items-center text-xs font-semibold font-lao text-brand border border-brand rounded-[100%]">
             i
         </div>
 
-        <span class="text-lg text-[#0040A6]">
+        <span class="text-lg text-brand">
             Course Description
         </span>
 

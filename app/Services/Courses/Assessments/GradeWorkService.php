@@ -655,7 +655,7 @@ class GradeWorkService
 
         $builder->where('enrollments.offering_id', $offeringId);
 
-        $builder->where('enrollments.status', 'enrolled');
+        $builder->whereIn('enrollments.status', ['enrolled', 'completed']);
 
 
         $builder->orderBy('student_name', 'ASC');

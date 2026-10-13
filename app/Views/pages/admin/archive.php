@@ -8,14 +8,14 @@
  */
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
 
 <?= $this->section('content') ?>
 
-<h1 class="text-2xl font-bold text-[#0040A6]">Archive</h1>
+<h1 class="text-2xl font-bold text-brand">Archive</h1>
 <p class="mt-2 max-w-3xl text-sm text-gray-600">
     Institutions that are no longer running. Past institutions keep all their data, read-only, until they are renewed.
     A deleted institution can be restored for <?= esc((string) $retentionDays) ?> days; after that it is purged for good.
@@ -28,7 +28,7 @@ $input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outl
     <p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"><?= esc((string) session('error')) ?></p>
 <?php endif; ?>
 
-<h2 class="mt-8 text-lg font-semibold text-[#0040A6]">Past institutions</h2>
+<h2 class="mt-8 text-lg font-semibold text-brand">Past institutions</h2>
 <div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
     <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50">
@@ -55,7 +55,7 @@ $input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outl
     </table>
 </div>
 
-<h2 class="mt-8 text-lg font-semibold text-[#0040A6]">Deleted institutions</h2>
+<h2 class="mt-8 text-lg font-semibold text-brand">Deleted institutions</h2>
 <div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
     <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50">
@@ -88,7 +88,7 @@ $input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outl
                             <form method="post" action="<?= site_url('admin/institutions/' . $row['id'] . '/restore') ?>">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="return" value="archive">
-                                <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Restore</button>
+                                <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Restore</button>
                             </form>
 
                             <details>

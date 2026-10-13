@@ -32,7 +32,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
             <div class="flex items-center gap-3">
                 <?= icon('info', 'h-5 w-5') ?>
 
-                <span class="font-bold text-lg text-[#0040A6]">
+                <span class="font-bold text-lg text-brand">
                     Instructions
                 </span>
             </div>
@@ -45,7 +45,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
         <!-- Quiz -->
         <div class="flex w-full flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-10 py-12 text-center">
 
-            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#0040A6]/10">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10">
                 <?= icon('quiz', 'h-8 w-8') ?>
             </div>
 
@@ -63,7 +63,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
                 </div>
 
                 <div class="flex items-center gap-6 text-sm text-[#646464]">
-                    <span><strong class="text-[#0040A6]"><?= (int) ($quizCounts['submitted'] ?? 0) ?></strong> submitted</span>
+                    <span><strong class="text-brand"><?= (int) ($quizCounts['submitted'] ?? 0) ?></strong> submitted</span>
                     <span><strong class="text-[#946200]"><?= (int) ($quizCounts['toGrade'] ?? 0) ?></strong> to grade</span>
                     <span><strong class="text-emerald-700"><?= (int) ($quizCounts['graded'] ?? 0) ?></strong> graded</span>
                 </div>
@@ -74,7 +74,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
                         type="button"
                         data-open-assessment="<?= esc($currentAssessment['id']) ?>"
                         data-assessment-mode="builder"
-                        class="rounded-xl bg-[#0040A6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#002068]">
+                        class="rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
                         Open Quiz Builder
                     </button>
 
@@ -121,7 +121,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
                         type="button"
                         data-open-assessment="<?= esc($currentAssessment['id']) ?>"
                         data-assessment-mode="take"
-                        class="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#0040A6] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#002068]">
+                        class="mt-2 inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
 
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
