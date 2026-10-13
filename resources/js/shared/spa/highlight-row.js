@@ -10,7 +10,7 @@
 */
 
 export function highlightRow(selector, {
-    highlightClasses = ["ring-2", "ring-[#0040A6]"],
+    highlightClasses = ["ring-2", "ring-brand"],
     durationMs = 1500,
 } = {}) {
 

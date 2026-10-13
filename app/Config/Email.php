@@ -53,7 +53,7 @@ class Email extends BaseConfig
     /**
      * SMTP Timeout (in seconds)
      */
-    public int $SMTPTimeout = 5;
+    public int $SMTPTimeout = 15;
 
     /**
      * Enable persistent SMTP connections
@@ -123,4 +123,26 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Browser end-to-end tests (tests/e2e) never send real mail: they point
+        // the app at a script that files each message in writable/e2e-mail,
+        // where the tests read sign-in codes and invitation links. A plain
+        // variable, not email.*, for the same reason as E2E_DATABASE (dotted
+        // variables cannot be set from the process environment on Windows,
+        // where .env would win). Only that one script is accepted.
+        $sink = (string) env('E2E_MAIL_SINK', '');
+
+        if ($sink !== '') {
+            if (basename($sink) !== 'mail-sink.php' || ! is_file($sink)) {
+                throw new \RuntimeException("Refusing E2E_MAIL_SINK '{$sink}': it must be tests/e2e/support/mail-sink.php.");
+            }
+
+            $this->protocol = 'sendmail';
+            $this->mailPath = 'php "' . $sink . '"';
+        }
+    }
 }

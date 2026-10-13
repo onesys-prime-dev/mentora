@@ -2,6 +2,7 @@
 
 namespace App\Database\Seeds;
 
+use App\Services\Admin\AdminAccountPolicy;
 use App\Services\Admin\SystemAdminService;
 use CodeIgniter\Database\Seeder;
 use CodeIgniter\Shield\Models\UserModel;
@@ -15,6 +16,12 @@ class SystemAdminSeeder extends Seeder
 {
     public function run()
     {
+        if (($problem = (new AdminAccountPolicy())->seederProblem()) !== null) {
+            echo "[REFUSED] {$problem}" . PHP_EOL;
+
+            return;
+        }
+
         $email = 'admin@mentora.test';
 
         if (model(UserModel::class)->findByCredentials(['email' => $email]) !== null) {

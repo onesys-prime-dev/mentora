@@ -213,7 +213,7 @@ function bindOverrideForm()
                     : "—";
 
                 button.classList.toggle("text-[#946200]", percentage !== null);
-                button.classList.toggle("text-[#0040A6]", percentage === null);
+                button.classList.toggle("text-brand", percentage === null);
 
                 let badge = button.querySelector("span");
 

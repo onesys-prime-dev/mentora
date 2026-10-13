@@ -27,7 +27,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
     class="w-1/5 flex flex-col gap-6"
     data-assessment-id="<?= esc($currentAssessment['id']) ?>">
 
-    <span class="font-bold text-lg text-[#0040A6]">
+    <span class="font-bold text-lg text-brand">
         Assessment Settings
     </span>
 
@@ -44,7 +44,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                 type="datetime-local"
                 data-inspector-field="due_date"
                 value="<?= esc($dueDate) ?>"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
         </div>
 
@@ -63,7 +63,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                 data-inspector-total-points
                 value="<?= esc($totalPoints) ?>"
                 <?= $totalPointsSource ? 'disabled data-inspector-total-points-source="' . esc($totalPointsSource) . '"' : '' ?>
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
 
             <?php if ($totalPointsSource) : ?>
                 <p class="text-xs text-gray-500" data-inspector-total-points-hint>
@@ -91,7 +91,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                     data-inspector-field="duration"
                     value="<?= esc($currentAssessment['duration'] ?? '') ?>"
                     placeholder="No limit"
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-14 text-sm outline-none transition focus:border-[#0040A6]">
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-14 text-sm outline-none transition focus:border-brand">
 
                 <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#767676]">
                     min
@@ -122,7 +122,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                     data-inspector-field="passing_percentage"
                     data-inspector-passing-percentage
                     value="<?= esc($passingPercentage ?? '') ?>"
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-8 text-sm outline-none transition focus:border-[#0040A6]">
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-8 text-sm outline-none transition focus:border-brand">
 
                 <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#767676]">
                     %
@@ -171,7 +171,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                     class="peer sr-only"
                     <?= $allowMultipleAttempts ? 'checked' : '' ?>>
 
-                <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+                <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
                 <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 
@@ -194,7 +194,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                 data-inspector-attempt-limit
                 value="<?= esc($attemptLimit) ?>"
                 <?= $allowMultipleAttempts ? '' : 'disabled' ?>
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400">
 
         </div>
 
@@ -211,7 +211,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                 type="datetime-local"
                 data-inspector-field="available_from"
                 value="<?= esc($availableFrom) ?>"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
         </div>
 
@@ -226,7 +226,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                 type="datetime-local"
                 data-inspector-field="available_until"
                 value="<?= esc($availableUntil) ?>"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
         </div>
 
@@ -247,7 +247,7 @@ $allowLateSubmission = (bool) ($currentSettings['allow_late_submission'] ?? fals
                     class="peer sr-only"
                     <?= $allowLateSubmission ? 'checked' : '' ?>>
 
-                <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-[#0040A6]"></div>
+                <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
                 <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 

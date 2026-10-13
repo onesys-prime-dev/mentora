@@ -8,7 +8,9 @@ day-to-day workflow.
 | Workflow | File | Runs when | Purpose |
 |---|---|---|---|
 | CI | `.github/workflows/ci.yml` | PR into `main`; also called by Deploy | Prove the change is sound |
-| Deploy | `.github/workflows/deploy.yml` | push to `main`, or a manual run | Run CI first (`needs: ci`); only if it passes: build, back up the database, copy the app, migrate, health-check, smoke-test (see `deploy.md`) |
+| Deploy (staging) | `.github/workflows/deploy.yml` | push to `main`, or a manual run | Run CI first (`needs: ci`); only if it passes, call `deploy-reusable.yml` for the `staging` environment: build, back up the database, copy the app, migrate, health-check, smoke-test (see `deploy.md`) |
+| Deploy (production) | `.github/workflows/deploy-production.yml` | a `v*` tag, or a manual run from a tag | Check the tag is `vX.Y.Z` and on `main`, re-run CI, wait for the `production` environment's approval, then the same reusable deploy (see `github-environments.md`) |
+| Deploy steps | `.github/workflows/deploy-reusable.yml` | called by the two above | The shared steps; runs inside the named GitHub Environment so it uses that environment's secrets and variables |
 | Uptime check | `.github/workflows/uptime.yml` | hourly, or a manual run | Smoke-test staging; open an issue assigned to the alert owner when it is down, close it on recovery (see `uptime.md`, including what it costs in Actions minutes) |
 
 ## CI jobs (all must pass)
@@ -63,7 +65,9 @@ against `main`; they run the same checks.
 
 **The deploy is gated.** `deploy.yml` calls `ci.yml` and its `deploy` job
 `needs: ci`, so a commit that fails CI is never deployed, even if it reached
-`main` by a direct push.
+`main` by a direct push. Production adds two more gates: the tag must be a
+`vX.Y.Z` tag on a commit already on `main`, and the `production` environment
+waits for a reviewer's approval.
 
 **Merging is not yet enforced.** GitHub does not enforce rulesets or branch
 protection on a private repository on a free plan. So nothing technically
@@ -77,5 +81,5 @@ force pushes and deletions.
 
 Tracked in the plan: a higher PHPStan level, stricter ESLint rules, release
 folders with automatic rollback, an external uptime service (the hourly check in `uptime.md` is the stopgap), more end-to-end
-flows (one runs today), and the production environment with approval.
+flows (one runs today).
 The deploy itself is described in `docs/deploy.md`.

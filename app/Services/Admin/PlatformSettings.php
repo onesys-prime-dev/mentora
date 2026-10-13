@@ -38,6 +38,22 @@ class PlatformSettings
         'expiryWarningDays'    => ['type' => 'int', 'label' => 'Expiry warning window (days)', 'institution' => true, 'min' => 0, 'max' => 365],
         'expiryGraceDays'      => ['type' => 'int', 'label' => 'Grace period (days)', 'institution' => true, 'min' => 0, 'max' => 365],
         'expiryReadOnlyDays'   => ['type' => 'int', 'label' => 'Read-only period (days)', 'institution' => true, 'min' => 0, 'max' => 365],
+        'invitationValidityDays' => ['type' => 'int', 'label' => 'Days an invitation link works', 'institution' => false, 'min' => 1, 'max' => 60],
+        'systemName'           => ['type' => 'string', 'label' => 'System name', 'institution' => false, 'maxLength' => 80],
+        'supportContact'       => ['type' => 'string', 'label' => 'Support contact', 'institution' => false, 'maxLength' => 200],
+        'timezone'             => ['type' => 'string', 'label' => 'Timezone', 'institution' => false, 'maxLength' => 64],
+        'maintenanceMode'      => ['type' => 'bool', 'label' => 'Maintenance mode', 'institution' => false],
+        'maintenanceMessage'   => ['type' => 'string', 'label' => 'Maintenance message', 'institution' => false, 'maxLength' => 500],
+        'announcement'         => ['type' => 'string', 'label' => 'Announcement', 'institution' => false, 'maxLength' => 500],
+        'passwordMinLength'    => ['type' => 'int', 'label' => 'Shortest password (characters)', 'institution' => true, 'min' => 8, 'max' => 64],
+        'sessionTimeoutMinutes' => ['type' => 'int', 'label' => 'Sign out after inactivity (minutes)', 'institution' => true, 'min' => 5, 'max' => 120],
+        'lockoutAttempts'      => ['type' => 'int', 'label' => 'Failed sign-ins before a lockout (0 = never)', 'institution' => true, 'min' => 0, 'max' => 50],
+        'lockoutMinutes'       => ['type' => 'int', 'label' => 'Lockout length (minutes)', 'institution' => true, 'min' => 1, 'max' => 1440],
+        'twoFactorRoles'       => ['type' => 'string', 'label' => 'Roles that need an emailed sign-in code', 'institution' => true, 'maxLength' => 200],
+        // An institution's own banner, shown under the platform's (set by its administrator).
+        'institutionAnnouncement' => ['type' => 'string', 'label' => 'Institution announcement', 'institution' => true, 'maxLength' => 300],
+        'institutionAnnouncementUntil' => ['type' => 'string', 'label' => 'Institution announcement ends', 'institution' => true, 'maxLength' => 10],
+        'passwordResetValidityHours' => ['type' => 'int', 'label' => 'Hours a password reset link works', 'institution' => false, 'min' => 1, 'max' => 168],
     ];
 
     /** @return array<string, array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int}> */
@@ -87,6 +103,9 @@ class PlatformSettings
 
         setting()->set($this->key($name), $new, $this->context($institutionId));
 
+        // What an institution's people are held to is worked out from these values and kept for the request.
+        \App\Services\Institutions\InstitutionSecurity::forget();
+
         if ($old !== $new) {
             $this->audit('settings.changed', $name, $institutionId, $old, $new);
         }
@@ -100,6 +119,8 @@ class PlatformSettings
         $old = $this->get($name, $institutionId);
 
         setting()->forget($this->key($name), $this->context($institutionId));
+
+        \App\Services\Institutions\InstitutionSecurity::forget();
 
         $new = $this->get($name, $institutionId);
 

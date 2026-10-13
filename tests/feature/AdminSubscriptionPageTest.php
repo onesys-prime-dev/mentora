@@ -36,7 +36,7 @@ final class AdminSubscriptionPageTest extends RouteTestCase
         $this->loggedInAs($this->admin);
         $this->withSession();
 
-        db_connect()->table('institutions')->insert(['name' => 'Acme University', 'code' => 'ACME', 'status' => 'pending', 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('institutions')->insert(['name' => 'Acme University', 'code' => 'ACME', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
         $this->institution = (int) db_connect()->insertID();
 
         db_connect()->table('plans')->insert(['name' => 'Standard', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
@@ -262,11 +262,129 @@ final class AdminSubscriptionPageTest extends RouteTestCase
     {
         $this->submit($this->uri(), $this->term(['period_start' => '2025-01-01', 'period_end' => '2025-12-31']));
 
-        $this->assertStringContainsString('>Ended<', $this->body());
+        $this->assertStringContainsString('>Expired<', $this->body());
 
         $this->submit($this->uri('/renew'), $this->term(['period_start' => '2026-01-01', 'period_end' => date('Y-m-d', strtotime('+1 year'))]));
 
         $this->assertStringContainsString('Running', $this->body());
+    }
+
+    /** @return iterable<string, array{string, string, string}> end date relative to today, badge, sentence */
+    public static function provideTimelineStates(): iterable
+    {
+        yield 'far from the end' => ['+200 days', '>Running<', 'days until the end date'];
+        yield 'close to the end' => ['+10 days', '>Expiring soon<', 'Ends in 10 days'];
+        yield 'ends today' => ['+0 days', '>Expiring soon<', 'Ends today'];
+        yield 'just ended' => ['-3 days', '>Grace period<', 'Full access continues until'];
+        yield 'after grace' => ['-30 days', '>Read-only<', 'Read-only until'];
+        yield 'long after' => ['-200 days', '>Expired<', 'a renewal brings it back'];
+    }
+
+    #[DataProvider('provideTimelineStates')]
+    public function testThePageShowsWhereTheSubscriptionIsOnItsTimeline(string $end, string $badge, string $sentence): void
+    {
+        $this->submit($this->uri(), $this->term(['period_start' => '2020-01-01', 'period_end' => date('Y-m-d', strtotime($end))]));
+
+        $body = $this->body();
+
+        $this->assertStringContainsString($badge, $body);
+        $this->assertStringContainsString($sentence, $body);
+    }
+
+    public function testRenewingAPastInstitutionShowsItActiveAgainInTheList(): void
+    {
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'past']);
+        $this->submit($this->uri(), $this->term(['period_start' => '2020-01-01', 'period_end' => '2020-12-31']));
+
+        $this->submit($this->uri('/renew'), $this->term(['period_start' => '2021-01-01', 'period_end' => date('Y-m-d', strtotime('+1 year'))]));
+
+        $this->assertSame('active', db_connect()->table('institutions')->where('id', $this->institution)->get()->getRowArray()['status']);
+        $this->assertStringContainsString('>Running<', $this->body());
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Usage
+    |--------------------------------------------------------------------------
+    */
+
+    private function planLimits(?int $seats, ?int $storageMb, ?int $ai): void
+    {
+        db_connect()->table('plans')->where('id', $this->plan)->update(['seat_limit' => $seats, 'storage_limit_mb' => $storageMb, 'ai_generation_limit' => $ai]);
+    }
+
+    private function students(int $count): void
+    {
+        for ($i = 0; $i < $count; $i++) {
+            $student = CourseFactory::user('student');
+            db_connect()->table('institution_users')->insert(['institution_id' => $this->institution, 'user_id' => $student->id]);
+        }
+    }
+
+    public function testThereIsNoUsagePanelBeforeASubscriptionStarts(): void
+    {
+        $this->assertStringNotContainsString('data-usage', $this->body());
+    }
+
+    public function testTheUsagePanelShowsEachLimitAndHowFullItIs(): void
+    {
+        $this->planLimits(10, 100, 200);
+        $this->students(3);
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-usage', $body);
+        $this->assertStringContainsString('3 of 10 (30%)', $body);
+        $this->assertStringContainsString('0 MB of 100 MB (0%)', $body);
+        $this->assertStringContainsString('0 of 200 (0%)', $body);
+        $this->assertSame(3, substr_count($body, 'data-usage-line="ok"'));
+    }
+
+    public function testNoLimitShowsUnlimitedWithoutABar(): void
+    {
+        $this->planLimits(null, null, null);
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertSame(3, substr_count($body, 'data-usage-line="unlimited"'));
+        $this->assertStringContainsString('of unlimited', $body);
+        $this->assertStringNotContainsString('role="progressbar"', $body);
+    }
+
+    public function testFromNinetyPercentItIsAWarningAndAtOneHundredItIsFull(): void
+    {
+        $this->planLimits(10, null, null);
+        $this->students(9);
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-usage-line="warning"', $body);
+        $this->assertStringContainsString('Nearly full', $body);
+        $this->assertStringContainsString('9 of 10 (90%)', $body);
+
+        $this->students(1);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-usage-line="full"', $body);
+        $this->assertStringContainsString('>Full<', $body);
+        $this->assertStringContainsString('10 of 10 (100%)', $body);
+    }
+
+    public function testTheBarNeverGoesBeyondFullWidth(): void
+    {
+        $this->planLimits(2, null, null);
+        $this->students(5); // already over, e.g. the plan was lowered later
+        $this->submit($this->uri(), $this->term());
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('5 of 2 (250%)', $body);
+        $this->assertStringContainsString('style="width: 100%"', $body);
+        $this->assertStringContainsString('aria-valuenow="100"', $body);
     }
 
     /*
@@ -311,7 +429,7 @@ final class AdminSubscriptionPageTest extends RouteTestCase
 
     public function testAnotherInstitutionsRecordCannotBeCorrectedThroughThisPage(): void
     {
-        db_connect()->table('institutions')->insert(['name' => 'Other University', 'code' => 'OTHER', 'status' => 'pending', 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('institutions')->insert(['name' => 'Other University', 'code' => 'OTHER', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
         $other = (int) db_connect()->insertID();
 
         $this->submit("admin/institutions/{$other}/subscription", $this->term(['amount' => '200']));
@@ -351,7 +469,7 @@ final class AdminSubscriptionPageTest extends RouteTestCase
 
     public function testTheListCanBeFilteredByPlan(): void
     {
-        db_connect()->table('institutions')->insert(['name' => 'Plain University', 'code' => 'PLAIN', 'status' => 'pending', 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('institutions')->insert(['name' => 'Plain University', 'code' => 'PLAIN', 'status' => 'active', 'created_at' => date('Y-m-d H:i:s')]);
         $this->submit($this->uri(), $this->term());
 
         $body = $this->body('admin/institutions?plan=' . $this->plan);

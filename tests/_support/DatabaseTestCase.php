@@ -62,6 +62,7 @@ abstract class DatabaseTestCase extends CIUnitTestCase
                 self::$emptied[static::class] = true;
             }
 
+            self::forgetEarlierQueryFailure();
             db_connect()->transBegin();
         }
     }
@@ -70,9 +71,25 @@ abstract class DatabaseTestCase extends CIUnitTestCase
     {
         if ($this->isolateTests) {
             db_connect()->transRollback();
+            self::forgetEarlierQueryFailure();
         }
 
         parent::tearDown();
+    }
+
+    /**
+     * A query that fails inside a transaction (a test that checks a unique key
+     * refuses a duplicate, say) makes CodeIgniter remember "something failed" on
+     * the shared connection, and nothing clears it. Code that later asks
+     * transStatus() would then see that old failure and wrongly report its own
+     * work as failed, in a different test. Clearing it keeps every test's
+     * outcome its own.
+     */
+    private static function forgetEarlierQueryFailure(): void
+    {
+        $db = db_connect();
+
+        (new \ReflectionProperty($db, 'transStatus'))->setValue($db, true);
     }
 
     private function emptyAllTables(): void

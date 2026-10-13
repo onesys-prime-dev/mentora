@@ -6,14 +6,14 @@
         <div class="flex items-center gap-3">
             <?= icon('quiz', 'h-5 w-5') ?>
 
-            <span class="font-bold text-lg text-[#0040A6]">
+            <span class="font-bold text-lg text-brand">
                 Quiz Builder
             </span>
         </div>
 
         <div class="flex w-full min-h-100 flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-10 py-12 text-center">
 
-            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#0040A6]/10">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10">
                 <?= icon('quiz', 'h-8 w-8') ?>
             </div>
 
@@ -47,7 +47,7 @@
                 type="button"
                 data-enter-quiz-builder
                 data-assessment-id="<?= esc($currentAssessment['id']) ?>"
-                class="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#0040A6] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#002068]">
+                class="mt-2 inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
 
                 Enter Quiz Builder
 
@@ -91,7 +91,7 @@
                                 <?= esc((int) $question['points']) ?> pts
                             </span>
 
-                            <span class="rounded-full bg-[#0040A6]/10 px-2.5 py-0.5 text-xs font-bold text-[#0040A6]">
+                            <span class="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-bold text-brand">
                                 <?= esc($question['question_type']) ?>
                             </span>
 

@@ -66,8 +66,8 @@ export function scrollToHashedResource(root) {
 
     target.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    target.classList.add("ring-2", "ring-[#0040A6]/40");
+    target.classList.add("ring-2", "ring-brand/40");
 
-    setTimeout(() => target.classList.remove("ring-2", "ring-[#0040A6]/40"), 2000);
+    setTimeout(() => target.classList.remove("ring-2", "ring-brand/40"), 2000);
 
 }

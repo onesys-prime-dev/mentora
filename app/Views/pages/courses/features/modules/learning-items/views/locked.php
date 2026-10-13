@@ -42,7 +42,7 @@ $prerequisites = $lock['prerequisites'] ?? [];
 
                     <button
                         type="button"
-                        class="learning-item-link flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-semibold text-[#0040A6] transition hover:border-[#0040A6]/40 hover:bg-[#0040A6]/5"
+                        class="learning-item-link flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-semibold text-brand transition hover:border-brand/40 hover:bg-brand/5"
                         data-learning-item="<?= esc($prerequisite['id']) ?>">
 
                         <span class="truncate"><?= esc($prerequisite['title']) ?></span>

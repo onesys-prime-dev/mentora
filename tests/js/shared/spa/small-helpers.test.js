@@ -137,7 +137,7 @@ describe("highlightRow", () => {
 
         expect(row.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
         expect(row.classList.contains("ring-2")).toBe(true);
-        expect(row.classList.contains("ring-[#0040A6]")).toBe(true);
+        expect(row.classList.contains("ring-brand")).toBe(true);
 
         vi.advanceTimersByTime(1499);
         expect(row.classList.contains("ring-2")).toBe(true);

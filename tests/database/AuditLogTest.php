@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Audit\AuditLogModel;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\ActiveRoleService;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
 
@@ -55,13 +56,25 @@ final class AuditLogTest extends DatabaseTestCase
         $this->assertEqualsWithDelta(time(), strtotime($entry['created_at']), 5);
     }
 
-    public function testAGivenActingRoleWinsOverTheFirstGroup(): void
+    public function testAGivenActingRoleWinsOverTheResolvedOne(): void
     {
         $user = CourseFactory::user('instructor');
 
         $entry = $this->entry($this->logger()->log('course.updated', $user, ['acting_role' => 'chairperson']));
 
         $this->assertSame('chairperson', $entry['acting_role']);
+    }
+
+    public function testAMultiRoleActorIsRecordedUnderTheirActualActiveRoleNotJustAnyGroup(): void
+    {
+        $user = CourseFactory::user('chairperson');
+        $user->addGroup('instructor');
+
+        (new ActiveRoleService())->switchTo($user, 'instructor');
+
+        $entry = $this->entry($this->logger()->log('course.updated', $user));
+
+        $this->assertSame('instructor', $entry['acting_role'], 'the role they had active when this happened, not whichever group is first');
     }
 
     public function testTheActorsInstitutionIsFilledIn(): void

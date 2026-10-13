@@ -7,9 +7,13 @@
  * Same global apps as the header's app menu — both come from global_apps()
  * (app/Helpers/navigation_helper.php), so the two can't drift apart.
  */
-$userRole = esc($user->getGroups()[0]);
+$userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
-$links = global_apps($userRole);
+// $data is this widget's own resolved data (see $renderWidget in index.php)
+// — most roles return [] from getQuickAccessData(), so $extra is empty and
+// nothing changes for them; a role can add tiles here that don't belong in
+// global_apps() because they don't make sense from the header app menu too.
+$links = array_merge(global_apps($userRole), $data['extra'] ?? []);
 ?>
 
 <!-- quick access -->

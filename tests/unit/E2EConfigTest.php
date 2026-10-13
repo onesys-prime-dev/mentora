@@ -5,6 +5,7 @@ declare(strict_types=1);
 use CodeIgniter\Test\CIUnitTestCase;
 use Config\App;
 use Config\Database;
+use Config\Email;
 
 /**
  * The end-to-end test switches in app/Config/App.php and Database.php. The
@@ -15,7 +16,7 @@ use Config\Database;
  */
 final class E2EConfigTest extends CIUnitTestCase
 {
-    private const VARIABLES = ['E2E_DATABASE', 'E2E_DB_HOST', 'E2E_DB_USER', 'E2E_DB_PASSWORD', 'E2E_BASE_URL'];
+    private const VARIABLES = ['E2E_DATABASE', 'E2E_DB_HOST', 'E2E_DB_USER', 'E2E_DB_PASSWORD', 'E2E_BASE_URL', 'E2E_MAIL_SINK'];
 
     protected function setUp(): void
     {
@@ -106,5 +107,44 @@ final class E2EConfigTest extends CIUnitTestCase
         $this->set('E2E_BASE_URL', 'http://127.0.0.1:8089///');
 
         $this->assertSame('http://127.0.0.1:8089/', (new App())->baseURL);
+    }
+
+    public function testMailIsUntouchedWhenTheSinkIsNotSet(): void
+    {
+        $email = new Email();
+
+        $this->assertStringNotContainsString('mail-sink', $email->mailPath);
+    }
+
+    public function testTheMailSinkSwitchesMailToTheScript(): void
+    {
+        $sink = ROOTPATH . 'tests/e2e/support/mail-sink.php';
+        $this->set('E2E_MAIL_SINK', $sink);
+
+        $email = new Email();
+
+        $this->assertSame('sendmail', $email->protocol);
+        $this->assertSame('php "' . $sink . '"', $email->mailPath);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideThingsThatAreNotTheSink(): iterable
+    {
+        yield 'some other program' => [ROOTPATH . 'spark'];
+        yield 'a script of the right name that does not exist' => [ROOTPATH . 'tests/e2e/nowhere/mail-sink.php'];
+        yield 'a shell command' => ['/usr/sbin/sendmail'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('provideThingsThatAreNotTheSink')]
+    public function testAnythingButTheSinkScriptIsRefused(string $sink): void
+    {
+        $this->set('E2E_MAIL_SINK', $sink);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Refusing E2E_MAIL_SINK');
+
+        new Email();
     }
 }

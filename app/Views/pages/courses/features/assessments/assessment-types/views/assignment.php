@@ -6,7 +6,7 @@
         <div class="flex items-center gap-3">
             <?= icon('info', 'h-5 w-5') ?>
 
-            <span class="font-bold text-lg text-[#0040A6]">
+            <span class="font-bold text-lg text-brand">
                 Instructions
             </span>
         </div>
@@ -24,7 +24,7 @@
             <div class="flex items-center gap-3">
                 <?= icon('info', 'h-5 w-5') ?>
 
-                <span class="font-bold text-lg text-[#0040A6]">
+                <span class="font-bold text-lg text-brand">
                     Grading Rubrics
                 </span>
             </div>
@@ -35,7 +35,7 @@
 
                     <div class="p-4 flex flex-col gap-2 rounded-xl bg-[#F2F2F2]">
 
-                        <span class="font-bold text-md text-[#0040A6]">
+                        <span class="font-bold text-md text-brand">
                             <?= esc((int) $criterion['max_points']) ?> pts
                         </span>
 

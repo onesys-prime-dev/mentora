@@ -2,6 +2,11 @@ import "../css/app.css";
 
 import "./shared/profile-menu";
 import "./shared/app-menu";
+import "./shared/role-switch";
+import "./shared/announcement";
+import "./shared/toast";
+import "./shared/dialog";
+import "./shared/data-table";
 
 const page = document.body.dataset.page;
 

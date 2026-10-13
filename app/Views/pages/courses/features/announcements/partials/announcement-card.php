@@ -13,14 +13,14 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 ?>
 
 <div
-    class="group relative scroll-mt-6 rounded-2xl border <?= $announcement['is_pinned'] ? 'border-[#0040A6]/30' : 'border-gray-200' ?> bg-white shadow-sm"
+    class="group relative scroll-mt-6 rounded-2xl border <?= $announcement['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?> bg-white shadow-sm"
     data-announcement-card
     data-announcement-id="<?= esc($announcement['id']) ?>"
     data-announcement-subject="<?= esc($announcement['subject'], 'attr') ?>"
     data-announcement-message="<?= esc($announcement['message'] ?: '{}', 'attr') ?>"
     data-announcement-attachments="<?= esc(json_encode(array_map(static fn ($f) => ['file_id' => $f['id'], 'original_filename' => $f['original_filename']], $announcement['attachments'])), 'attr') ?>">
 
-    <div class="flex items-center gap-1.5 rounded-t-2xl bg-[#0040A6]/5 px-5 py-1.5 text-xs font-bold text-[#0040A6] <?= $announcement['is_pinned'] ? '' : 'hidden' ?>" data-pinned-banner>
+    <div class="flex items-center gap-1.5 rounded-t-2xl bg-brand/5 px-5 py-1.5 text-xs font-bold text-brand <?= $announcement['is_pinned'] ? '' : 'hidden' ?>" data-pinned-banner>
         <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2a1 1 0 011 1v6.17l3.293 3.293a1 1 0 01-.707 1.707H13v6a1 1 0 11-2 0v-6H6.414a1 1 0 01-.707-1.707L9 9.17V3a1 1 0 011-1h4z"/></svg>
         Pinned
     </div>
@@ -33,7 +33,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
                 type="button"
                 data-react="<?= esc($key) ?>"
                 title="<?= esc($r['label']) ?>"
-                class="flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:scale-110 hover:bg-gray-100 <?= $announcement['own_reaction'] === $key ? 'bg-[#0040A6]/10' : '' ?>">
+                class="flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:scale-110 hover:bg-gray-100 <?= $announcement['own_reaction'] === $key ? 'bg-brand/10' : '' ?>">
                 <?= $r['emoji'] ?>
             </button>
         <?php endforeach; ?>
@@ -95,19 +95,19 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
         <!-- normal display content; hidden in place while this card is being edited -->
         <div class="flex flex-col gap-3" data-card-display>
 
-            <span class="text-xl font-bold text-[#0040A6]"><?= esc($announcement['subject']) ?></span>
+            <span class="text-xl font-bold text-brand"><?= esc($announcement['subject']) ?></span>
 
             <div class="text-[#1A1C1E] leading-relaxed [&_p]:min-h-[1em]" data-announcement-message data-collapsed="1">
                 <?= $messageHtml ?>
             </div>
-            <button type="button" data-see-more class="hidden self-start text-sm font-semibold text-[#0040A6] hover:underline">See more</button>
+            <button type="button" data-see-more class="hidden self-start text-sm font-semibold text-brand hover:underline">See more</button>
 
             <?php if ($announcement['attachments'] !== []): ?>
 
                 <div class="grid grid-cols-4 gap-2">
                     <?php foreach ($announcement['attachments'] as $file): ?>
                         <?php $isImage = str_starts_with((string) $file['mime_type'], 'image/'); ?>
-                        <a href="<?= esc($file['url']) ?>" target="_blank" rel="noopener" class="group flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-2 text-center transition hover:border-[#0040A6]/40">
+                        <a href="<?= esc($file['url']) ?>" target="_blank" rel="noopener" class="group flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-2 text-center transition hover:border-brand/40">
                             <?php if ($isImage): ?>
                                 <img src="<?= esc($file['url']) ?>" class="h-14 w-full rounded-lg object-cover" alt="">
                             <?php else: ?>
@@ -141,7 +141,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
                     data-card-editor-subject
                     placeholder="Add a subject"
                     autocomplete="off"
-                    class="w-full text-lg font-bold text-[#0040A6] placeholder:text-gray-300 placeholder:font-bold outline-none">
+                    class="w-full text-lg font-bold text-brand placeholder:text-gray-300 placeholder:font-bold outline-none">
             </div>
 
             <div class="border-b border-gray-100 px-4 py-2 flex items-center gap-1">
@@ -178,7 +178,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 
                 <div class="flex items-center gap-2">
                     <button type="button" data-card-editor-cancel class="rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition hover:bg-gray-100">Cancel</button>
-                    <button type="button" data-card-editor-save class="rounded-full bg-[#0040A6] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Save</button>
+                    <button type="button" data-card-editor-save class="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Save</button>
                 </div>
 
             </div>
@@ -207,19 +207,19 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 
         <button type="button" data-reply-trigger class="flex w-full items-center gap-3 text-left">
             <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-8 w-8 shrink-0 rounded-full" alt="">
-            <span class="flex-1 rounded-2xl border border-gray-200 px-4 py-2 text-sm text-[#767676] transition hover:border-[#0040A6]/40">Reply in thread</span>
+            <span class="flex-1 rounded-2xl border border-gray-200 px-4 py-2 text-sm text-[#767676] transition hover:border-brand/40">Reply in thread</span>
         </button>
 
         <div class="hidden items-center gap-3" data-reply-form>
             <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-8 w-8 shrink-0 rounded-full" alt="">
-            <div class="flex flex-1 items-end gap-2 rounded-2xl border border-gray-200 px-4 py-2 focus-within:border-[#0040A6]/50">
+            <div class="flex flex-1 items-end gap-2 rounded-2xl border border-gray-200 px-4 py-2 focus-within:border-brand/50">
                 <textarea
                     rows="1"
                     data-reply-input
                     placeholder="Reply in thread"
                     class="flex-1 resize-none text-sm outline-none placeholder:text-[#767676]"></textarea>
                 <div class="flex items-center gap-1 pb-0.5">
-                    <button type="button" data-reply-send title="Send" class="rounded-lg p-1.5 text-[#0040A6] transition hover:bg-[#0040A6]/10 disabled:opacity-40" disabled aria-label="Send">
+                    <button type="button" data-reply-send title="Send" class="rounded-lg p-1.5 text-brand transition hover:bg-brand/10 disabled:opacity-40" disabled aria-label="Send">
                         <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a1 1 0 00-1.39 1.17L4.5 12 2 18.23a1 1 0 001.4 1.17z"/></svg>
                     </button>
                 </div>

@@ -17,7 +17,7 @@ $typeLabels = [
 // One consistent accent for every "What's included" pill — a touch
 // lighter than the card background so it reads as a soft chip, not a
 // strong color block.
-$typeAccent = ['bg' => 'bg-[#0040A6]/5', 'text' => 'text-[#0040A6]'];
+$typeAccent = ['bg' => 'bg-brand/5', 'text' => 'text-brand'];
 
 $formatDuration = static function (int $minutes): string {
     if ($minutes <= 0) {
@@ -40,7 +40,7 @@ $formatDuration = static function (int $minutes): string {
         ob_start();
         if ($isInstructor): ?>
             <button
-                class="inline-flex items-center gap-2 rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]"
+                class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark"
                 data-create-module-button>
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -94,7 +94,7 @@ $formatDuration = static function (int $minutes): string {
                 <div class="group flex flex-col flex-1 bg-white border <?= $isDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10' ?> rounded-2xl transition-colors" data-module-card>
 
                     <!-- header: chevron toggles the panel below, no navigation -->
-                    <div class="flex justify-between items-center gap-5 p-6 cursor-pointer rounded-2xl focus-within:ring-2 focus-within:ring-[#0040A6]/30" data-module="<?= esc($module['id']) ?>">
+                    <div class="flex justify-between items-center gap-5 p-6 cursor-pointer rounded-2xl focus-within:ring-2 focus-within:ring-brand/30" data-module="<?= esc($module['id']) ?>">
 
                         <div class="flex justify-center items-center">
 
@@ -117,7 +117,7 @@ $formatDuration = static function (int $minutes): string {
                                 <div class="flex flex-col flex-1">
 
                                     <div class="flex items-center gap-2">
-                                        <span class="text-2xl font-bold text-[#0040A6]">
+                                        <span class="text-2xl font-bold text-brand">
                                             <?= esc($module['title']) ?>
                                         </span>
                                         <?php if ($isDraft): ?>
@@ -150,13 +150,13 @@ $formatDuration = static function (int $minutes): string {
 
                                 <?php elseif ($isInstructor): ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E0E5F2] uppercase text-xs font-black text-[#002068] rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 bg-[#E0E5F2] uppercase text-xs font-black text-brand-dark rounded-4xl">
                                         Class progress <?= esc($module['progress']) ?>%
                                     </span>
 
                                 <?php elseif ($module['progress'] > 0): ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E0E5F2] uppercase text-xs font-black text-[#002068] rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 bg-[#E0E5F2] uppercase text-xs font-black text-brand-dark rounded-4xl">
                                         Progress <?= esc($module['progress']) ?>%
                                     </span>
 
@@ -172,17 +172,17 @@ $formatDuration = static function (int $minutes): string {
 
                             <?php if ($module['progress'] < 100): ?>
                                 <div class="h-2 w-full mt-4 flex bg-[#E7E6E6] rounded-4xl">
-                                    <div class="h-full bg-[#0040A6] rounded-4xl transition-[width] duration-300" style="width: <?= esc($module['progress']) ?>%;"></div>
+                                    <div class="h-full bg-brand rounded-4xl transition-[width] duration-300" style="width: <?= esc($module['progress']) ?>%;"></div>
                                 </div>
                             <?php endif; ?>
 
                         </div>
 
                         <div class="flex items-center gap-3 px-3">
-                            <span class="text-xs font-semibold text-[#0040A6] opacity-0 transition-opacity duration-200 group-hover:opacity-100" data-module-details-label="<?= esc($module['id']) ?>">
+                            <span class="text-xs font-semibold text-brand opacity-0 transition-opacity duration-200 group-hover:opacity-100" data-module-details-label="<?= esc($module['id']) ?>">
                                 Module details
                             </span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 stroke-[#002068] transition-transform duration-300" data-module-arrow="<?= esc($module['id']) ?>" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 stroke-brand-dark transition-transform duration-300" data-module-arrow="<?= esc($module['id']) ?>" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M6 9l6 6 6-6"/>
                             </svg>
                         </div>
@@ -230,7 +230,7 @@ $formatDuration = static function (int $minutes): string {
                             <button
                                 type="button"
                                 data-go-to-module="<?= esc($module['id']) ?>"
-                                class="self-start mt-2 inline-flex items-center gap-2 rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-[#002068]">
+                                class="self-start mt-2 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark">
                                 Go to module
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />

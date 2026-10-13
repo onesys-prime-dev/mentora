@@ -8,14 +8,14 @@
         <div class="flex items-center gap-3">
             <?= icon('work', 'h-5 w-5') ?>
 
-            <span class="font-bold text-lg text-[#0040A6]">
+            <span class="font-bold text-lg text-brand">
                 Your Work
             </span>
         </div>
 
         <div class="flex w-full min-h-100 flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-10 py-12 text-center">
 
-            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#0040A6]/10">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10">
                 <?= icon('quiz', 'h-8 w-8') ?>
             </div>
 
@@ -59,7 +59,7 @@
                 <button
                     type="button"
                     data-take-quiz
-                    class="mt-2 inline-flex items-center gap-2 rounded-xl bg-[#0040A6] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#002068]">
+                    class="mt-2 inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
 
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z" />

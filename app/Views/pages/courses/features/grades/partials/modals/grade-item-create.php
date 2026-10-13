@@ -10,7 +10,7 @@
 
         <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
 
-            <h2 class="text-xl font-bold text-[#0040A6]">
+            <h2 class="text-xl font-bold text-brand">
                 Add Manual Item
             </h2>
 
@@ -29,13 +29,13 @@
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-semibold text-gray-700">Name</label>
                 <input type="text" data-grade-item-create-name required placeholder="e.g. Attendance"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]">
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand">
             </div>
 
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-semibold text-gray-700">Max points</label>
                 <input type="number" min="0.01" step="0.5" data-grade-item-create-max required value="100"
-                    class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]">
+                    class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand">
                 <span class="text-xs text-[#767676]">Scores are entered through the offline grade sheet.</span>
             </div>
 
@@ -50,7 +50,7 @@
             </button>
 
             <button type="submit" form="grade-item-create-form"
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
                 Add Item
             </button>
 

@@ -245,7 +245,7 @@ class QuizAttemptService
         return db_connect()->table('enrollments')
             ->where('student_user_id', $studentId)
             ->where('offering_id', $offeringId)
-            ->where('status', 'enrolled')
+            ->whereIn('status', ['enrolled', 'completed'])
             ->countAllResults() > 0;
     }
 

@@ -16,7 +16,7 @@ $classes = match ($tone) {
     'success' => 'bg-[#E8F5EC] text-[#2E7D4F]',
     'warning' => 'bg-[#FFF1D6] text-[#946200]',
     'danger'  => 'bg-[#FDEDEC] text-[#C33939]',
-    'info'    => 'bg-[#E0E5F2] text-[#002068]',
+    'info'    => 'bg-[#E0E5F2] text-brand-dark',
     default   => 'bg-gray-100 text-[#646464]',
 };
 ?>

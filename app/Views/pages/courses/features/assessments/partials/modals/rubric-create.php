@@ -9,7 +9,7 @@
 
             <div class="flex flex-col">
 
-                <h2 class="text-2xl font-bold text-[#0040A6]">
+                <h2 class="text-2xl font-bold text-brand">
                     Create New Rubric
                 </h2>
 
@@ -59,7 +59,7 @@
                     name="title"
                     autocomplete="off"
                     placeholder="e.g. Programming Assignment Rubric"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     data-rubric-create-title
                     required>
 
@@ -76,7 +76,7 @@
                     autocomplete="off"
                     rows="3"
                     placeholder="Briefly describe what this rubric evaluates..."
-                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#0040A6]"
+                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
                     data-rubric-create-description></textarea>
 
             </div>
@@ -91,7 +91,7 @@
 
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#0040A6] transition hover:bg-[#0040A6]/10"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10"
                         data-add-rubric-criteria
                         data-context="create">
 
@@ -151,7 +151,7 @@
             <button
                 type="submit"
                 form="rubric-create-form"
-                class="rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
 
                 Create Rubric
 

@@ -4,7 +4,7 @@
     data-resource-row
     data-resource-id="<?= esc($resource['resource_id']) ?>">
 
-    <div class="flex h-20 items-center justify-center rounded-xl bg-[#0040A6]/5">
+    <div class="flex h-20 items-center justify-center rounded-xl bg-brand/5">
         <?= resource_type_icon($resource['type_bucket'], 'h-9 w-9') ?>
     </div>
 

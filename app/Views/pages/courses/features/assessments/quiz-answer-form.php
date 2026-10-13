@@ -28,7 +28,7 @@ $previewLabels = [
 
             <div class="flex items-center gap-2">
 
-                <span class="text-xl font-bold text-[#0040A6]">
+                <span class="text-xl font-bold text-brand">
                     Take Quiz
                 </span>
 
@@ -142,7 +142,7 @@ $previewLabels = [
                             0 of <?= esc(count($questions)) ?> answered
                         </span>
 
-                        <span class="font-bold text-[#0040A6]">
+                        <span class="font-bold text-brand">
                             <?= esc((int) $totalPoints) ?> pts total
                         </span>
 
@@ -151,7 +151,7 @@ $previewLabels = [
                     <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                         <div
                             data-quiz-progress-bar
-                            class="h-full w-0 rounded-full bg-[#0040A6] transition-all"></div>
+                            class="h-full w-0 rounded-full bg-brand transition-all"></div>
                     </div>
 
                 </div>
@@ -186,7 +186,7 @@ $previewLabels = [
 
                                     <div class="flex items-center gap-2">
 
-                                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0040A6]/10 text-xs font-bold text-[#0040A6]">
+                                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand">
                                             <?= esc($index + 1) ?>
                                         </span>
 
@@ -209,7 +209,7 @@ $previewLabels = [
 
                                     <?php if ($isMultipleAnswer): ?>
 
-                                        <span class="pl-9 text-xs font-semibold text-[#0040A6]">
+                                        <span class="pl-9 text-xs font-semibold text-brand">
                                             Select <?= esc($answersCount) ?> answer<?= $answersCount === 1 ? '' : 's' ?>
                                         </span>
 
@@ -228,14 +228,14 @@ $previewLabels = [
                                             <label
                                                 data-quiz-choice-row
                                                 class="flex cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors
-                                                    <?= $isSelected ? 'border-[#0040A6] bg-[#0040A6]/5 text-[#0040A6]' : 'border-gray-200 text-gray-700 hover:border-[#0040A6]/40 hover:bg-gray-50' ?>">
+                                                    <?= $isSelected ? 'border-brand bg-brand/5 text-brand' : 'border-gray-200 text-gray-700 hover:border-brand/40 hover:bg-gray-50' ?>">
 
                                                 <input
                                                     type="<?= $isMultipleAnswer ? 'checkbox' : 'radio' ?>"
                                                     <?= $isMultipleAnswer ? '' : 'name="question-' . esc($question['id']) . '"' ?>
                                                     value="<?= esc($choice['id']) ?>"
                                                     data-quiz-choice-input
-                                                    class="h-4 w-4 shrink-0 accent-[#0040A6]"
+                                                    class="h-4 w-4 shrink-0 accent-brand"
                                                     <?= $isSelected ? 'checked' : '' ?>>
 
                                                 <?= esc($choice['choice_text']) ?>
@@ -258,7 +258,7 @@ $previewLabels = [
                                         rows="4"
                                         data-quiz-text-input
                                         placeholder="<?= esc($previewLabels[$question['question_type']] ?? 'Type your answer...') ?>"
-                                        class="ml-9 rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"
+                                        class="ml-9 rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-brand"
                                     ><?= esc($response['response_text'] ?? '') ?></textarea>
 
                                 <?php endif; ?>
@@ -282,7 +282,7 @@ $previewLabels = [
                         <button
                             type="button"
                             data-submit-quiz
-                            class="inline-flex items-center gap-2 rounded-xl bg-[#0040A6] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#002068]">
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
 
                             Submit Quiz
 
