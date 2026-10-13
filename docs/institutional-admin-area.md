@@ -234,3 +234,14 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 - **In force** is the stricter of the platform's and the institution's value, decided in one place (`InstitutionSecurity`). Someone who belongs to no institution, and every system administrator, is held to the platform's.
 - **A looser value is refused** beside its field, naming what the platform already requires; nothing is saved when anything is refused. A value equal to the platform's is not stored, so the institution follows the platform if it tightens. If the platform later asks for more than the institution did, the platform's value is the one in force.
 - **The password is asked for** (the same dialog as elsewhere) before saving or resetting, because tightening can lock people out. Changes are audited as `settings.changed` / `settings.reset` with the institution.
+
+## Monitor Program over a set of programs
+
+`MonitorProgramService` no longer assumes one chairperson. Its metrics already took plain lists of offering ids; what tied it to a chairperson was how the offerings were found and the audit viewer. Both now take a scope.
+
+- **`offeringRowsForPrograms(programIds, filters)`** returns every offering in a set of programs (any status, optionally one term) in the shared row shape (`App\Models\Courses\OfferingDetail`, also what the chairperson's Courses page reads). An empty set is no offerings, never all of them.
+- **`chairedProgramIds(user)`** is the chairperson's scope: the programs under the sub-departments they actively chair, read live (a program added later is covered at once, an ended assignment stops at once). `offeringRows(user, filters)` is now exactly `offeringRowsForPrograms(chairedProgramIds(user), filters)`, so the chairperson's page is unchanged.
+- **`termsForPrograms(programIds)`** feeds the term filter for any scope.
+- **`auditEntries(actor|null, offeringRows, filters)`** is the audit viewer for a scope: with an actor it is that person's own chairperson actions (the chairperson page, via `auditLog()`), with none it is every chairperson action on the offerings in scope.
+- **Every metric** (snapshot, enrolment and completion, grades, instructor activity, at risk, the comparison table) is the same code for one program or many, so a department's or an institution's numbers are the union of the single programs' and always agree with the chairperson's. The thresholds they use are the institution's academic defaults.
+- **Used next by** the institution reports (and, later, the dean's Monitor Department).
