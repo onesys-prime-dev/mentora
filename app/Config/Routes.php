@@ -532,6 +532,17 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
         });
 
+        // The subscription, to read (institution.settings), and the SIS connection's runs (sis.run):
+        // the connection's own settings and credentials stay with the system administrator.
+        $routes->get('subscription', 'Institution\SubscriptionController::index', ['filter' => 'permission:institution.settings']);
+        $routes->group('integrations', ['filter' => 'permission:sis.run'], function ($routes) {
+            $routes->get('/', 'Institution\IntegrationsController::index');
+            $routes->post('preview', 'Institution\IntegrationsController::preview');
+            $routes->post('run', 'Institution\IntegrationsController::run', ['filter' => 'reauth']);
+            $routes->post('grades/preview', 'Institution\IntegrationsController::gradesPreview');
+            $routes->post('grades/send', 'Institution\IntegrationsController::gradesSend', ['filter' => 'reauth']);
+        });
+
         // Reports across the institution (reports.view): the page, a course, and CSV.
         $routes->group('reports', ['filter' => 'permission:reports.view'], function ($routes) {
             $routes->get('/', 'Institution\ReportsController::index');

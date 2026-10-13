@@ -190,6 +190,21 @@ jobs:
             exit($ran >= $files ? 0 : 1);
           '
 
+      # Why does the 8.5 leg run slower than 8.2? Print what differs between
+      # the legs so the logs can be compared side by side.
+      - name: PHP runtime diagnostics
+        run: |
+          php -r '
+            echo "PHP ", PHP_VERSION, "\n";
+            foreach (["opcache.enable_cli", "opcache.jit", "opcache.jit_buffer_size", "memory_limit", "error_reporting"] as $k) {
+              echo $k, " = ", var_export(ini_get($k), true), "\n";
+            }
+            echo "opcache loaded = ", extension_loaded("Zend OPcache") ? "yes" : "no", "\n";
+            echo "xdebug loaded  = ", extension_loaded("xdebug") ? "yes" : "no", "\n";
+            echo "pcov loaded    = ", extension_loaded("pcov") ? "yes" : "no", "\n";
+          '
+          php -m | tr '\n' ' '; echo
+
       - name: Run tests
         shell: bash
         run: vendor/bin/phpunit ${{ matrix.phpunit_args }} | tee phpunit-output.txt

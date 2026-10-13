@@ -783,3 +783,17 @@ test("TC-VCV-01 A course opens view only from the offerings list, shows its cont
 
     await expect(page.getByRole("button", { name: /^(Add|New|Create) /i })).toHaveCount(0);
 });
+
+test("TC-SUB-01 Subscription is read only; Integrations shows no folders", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    await page.goto("/institution/subscription");
+    await expect(page.getByRole("heading", { name: "Subscription", level: 1 })).toBeVisible();
+    await expect(page.locator("[data-subscription], main")).toContainText(/Plan|No subscription yet/);
+    await expect(page.locator("main form")).toHaveCount(0);
+
+    await page.goto("/institution/integrations");
+    await expect(page.getByRole("heading", { name: "Integrations", level: 1 })).toBeVisible();
+    await expect(page.locator("[data-connection]")).toBeVisible();
+    await expect(page.locator("main")).not.toContainText(/writable|csv-uploads|sis-inbound/i);
+});
