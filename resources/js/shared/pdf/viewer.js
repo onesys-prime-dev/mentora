@@ -155,7 +155,7 @@ class PdfViewer {
             "noopener noreferrer";
 
         download.className =
-            "rounded-lg bg-[#0040A6] px-4 py-2 text-sm font-medium text-white hover:bg-[#00338A]";
+            "rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-[#00338A]";
 
         download.textContent =
             "Download";

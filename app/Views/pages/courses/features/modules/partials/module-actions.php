@@ -3,7 +3,7 @@
     <button
         type="button"
         data-module-actions
-        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:text-[#0040A6] focus:outline-none focus:ring-2 focus:ring-[#0040A6]/20">
+        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand/20">
 
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +28,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6]"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand"
                 data-edit-module
                 data-module-id="<?= esc($module['id']) ?>"
                 data-module-title="<?= esc($module['title']) ?>"
@@ -55,7 +55,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6]"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand"
                 data-module-publish-toggle
                 data-module-id="<?= esc($module['id']) ?>"
                 data-status="<?= esc($module['status']) ?>">

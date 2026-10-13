@@ -21,9 +21,9 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
     aria-labelledby="<?= $titleId ?>"
     class="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm
            transition duration-200 ease-out
-           hover:-translate-y-0.5 hover:border-[#0040A6]/40 hover:shadow-lg
+           hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg
            active:translate-y-0 active:scale-[0.99]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2
            motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100">
 
     <img
@@ -45,7 +45,7 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
                 <span id="<?= $titleId ?>" class="line-clamp-2 min-h-14 text-xl font-bold leading-7 text-[#1A1C1E]">
                     <?= esc($course['course_title']) ?>
                 </span>
-                <svg class="mt-1.5 h-5 w-5 shrink-0 text-[#767676] transition group-hover:translate-x-0.5 group-hover:text-[#0040A6]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                <svg class="mt-1.5 h-5 w-5 shrink-0 text-[#767676] transition group-hover:translate-x-0.5 group-hover:text-brand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
             </div>
 
         </div>
@@ -74,7 +74,7 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
                 aria-valuemin="0"
                 aria-valuemax="100"
                 aria-valuenow="<?= $progress ?>">
-                <div class="h-full rounded-full bg-[#0040A6]" style="width: <?= $progress ?>%;"></div>
+                <div class="h-full rounded-full bg-brand" style="width: <?= $progress ?>%;"></div>
             </div>
         </div>
 

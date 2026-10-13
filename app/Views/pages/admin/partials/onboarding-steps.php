@@ -11,7 +11,7 @@ $obLabels = ['Institution', 'Plan and subscription', 'Administrator'];
         <?php
         $number = $index + 1;
         $state  = $number < $obStep ? 'done' : ($number === $obStep ? 'current' : 'todo');
-        $badge  = ['done' => 'bg-green-600 text-white', 'current' => 'bg-[#0040A6] text-white', 'todo' => 'bg-gray-200 text-gray-600'][$state];
+        $badge  = ['done' => 'bg-green-600 text-white', 'current' => 'bg-brand text-white', 'todo' => 'bg-gray-200 text-gray-600'][$state];
         ?>
         <li class="flex items-center gap-2 <?= $state === 'todo' ? 'text-gray-500' : 'font-semibold text-gray-900' ?>" data-step="<?= $number ?>" data-state="<?= $state ?>" <?= $state === 'current' ? 'aria-current="step"' : '' ?>>
             <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold <?= $badge ?>"><?= $state === 'done' ? '✓' : $number ?></span>

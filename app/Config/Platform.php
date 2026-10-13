@@ -78,4 +78,10 @@ class Platform extends BaseConfig
 
     /** Roles that must confirm a code sent by email when signing in, comma separated. `admin` is always included (SA8). */
     public string $twoFactorRoles = 'admin';
+
+    /** An institution's own banner text (only ever set per institution); empty for none. */
+    public string $institutionAnnouncement = '';
+
+    /** The last day (YYYY-MM-DD) that banner is shown; empty for no end. */
+    public string $institutionAnnouncementUntil = '';
 }

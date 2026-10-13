@@ -1,19 +1,19 @@
 <div
     id="ai-review-tray"
     data-ai-review-tray
-    class="hidden flex-col gap-3 rounded-2xl border border-[#0040A6]/30 bg-[#F9FBFF] p-4">
+    class="hidden flex-col gap-3 rounded-2xl border border-brand/30 bg-[#F9FBFF] p-4">
 
     <div class="flex items-center justify-between">
 
         <div class="flex items-center gap-2">
 
-            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0040A6]/10 text-[#0040A6]">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-brand/10 text-brand">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                 </svg>
             </span>
 
-            <span class="font-bold text-[#0040A6]">AI Review Tray</span>
+            <span class="font-bold text-brand">AI Review Tray</span>
 
             <span data-ai-tray-progress class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-gray-500">
                 0 of 0
@@ -26,7 +26,7 @@
             <button
                 type="button"
                 data-ai-tray-accept-all
-                class="rounded-xl bg-[#0040A6] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#002068]">
+                class="rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark">
                 Accept All
             </button>
 
@@ -45,7 +45,7 @@
     </div>
 
     <div data-ai-tray-generating class="hidden items-center gap-2 text-xs text-gray-500">
-        <span data-ai-tray-progress-ring class="text-[#0040A6]"></span>
+        <span data-ai-tray-progress-ring class="text-brand"></span>
         <span data-ai-tray-generating-label>Generating more questions...</span>
     </div>
 

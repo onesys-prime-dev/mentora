@@ -20,7 +20,7 @@ $sortLink = static function (string $column) use ($filters, $link): string {
 
 $sortLabel = ['name' => 'Name', 'instructor' => 'Instructor', 'enrollment' => 'Enrollment', 'recent_activity' => 'Recent activity'];
 
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -34,8 +34,8 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
 <div class="flex flex-col gap-6 py-3">
 
     <div class="flex flex-col gap-1">
-        <h1 class="flex items-center gap-4 text-2xl font-bold text-[#0040A6]">
-            <?= icon('hat', 'h-6 w-6 shrink-0 text-[#0040A6]') ?>
+        <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
+            <?= icon('hat', 'h-6 w-6 shrink-0 text-brand') ?>
             Courses
         </h1>
         <p class="text-sm text-[#3D3D3D]">Every course in the programs you chair.</p>
@@ -74,9 +74,9 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
             </select>
         </label>
         <div class="flex items-end gap-2 lg:col-span-5">
-            <button type="submit" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">Apply</button>
+            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Apply</button>
             <?php if ($filters->isFiltered()): ?>
-                <a class="px-2 py-2 text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('chairperson/courses') ?>">Clear</a>
+                <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= site_url('chairperson/courses') ?>">Clear</a>
             <?php endif; ?>
         </div>
     </form>
@@ -89,7 +89,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
             Sort:
             <?php foreach ($sortLabel as $column => $label): ?>
                 <a href="<?= esc($sortLink($column)) ?>"
-                   class="rounded-full px-2 py-1 font-semibold <?= $filters->sort === $column ? 'bg-[#0040A6]/10 text-[#0040A6]' : 'hover:bg-gray-100' ?>">
+                   class="rounded-full px-2 py-1 font-semibold <?= $filters->sort === $column ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100' ?>">
                     <?= esc($label) ?><?= $filters->sort === $column ? ($filters->dir === 'asc' ? ' ▲' : ' ▼') : '' ?>
                 </a>
             <?php endforeach; ?>
@@ -102,7 +102,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your courses</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Your courses have not gone anywhere.</span>
-            <a href="<?= site_url('chairperson/courses') ?>" class="rounded-full bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#002068] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0040A6]/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= site_url('chairperson/courses') ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php elseif ($courses === []): ?>
@@ -137,10 +137,10 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
             <span class="text-gray-600">Page <?= esc((string) $filters->page) ?> of <?= esc((string) $pages) ?></span>
             <span class="flex gap-3">
                 <?php if ($filters->page > 1): ?>
-                    <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $filters->page - 1])) ?>">Previous</a>
+                    <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page - 1])) ?>">Previous</a>
                 <?php endif; ?>
                 <?php if ($filters->page < $pages): ?>
-                    <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $filters->page + 1])) ?>">Next</a>
+                    <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page + 1])) ?>">Next</a>
                 <?php endif; ?>
             </span>
         </nav>

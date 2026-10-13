@@ -60,7 +60,7 @@ final class InvitationInput
         $email = is_string($value) ? strtolower(trim($value)) : '';
 
         if ($email === '' || mb_strlen($email) > self::EMAIL_MAX || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-            throw new InvalidArgumentException('Enter a valid email address for the administrator.');
+            throw new InvalidArgumentException('Enter a valid email address.');
         }
 
         return $email;

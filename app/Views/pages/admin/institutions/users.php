@@ -7,7 +7,7 @@
  * @var list<array<string, mixed>> $peopleInvitations newest first, each with `status`
  * @var array<string, mixed>       $peopleValues      first_name, last_name, email as typed
  */
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
@@ -32,9 +32,9 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
+<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/institutions') ?>">&larr; Institutions</a>
 
-<h1 class="mt-2 text-2xl font-bold text-[#0040A6]">Users</h1>
+<h1 class="mt-2 text-2xl font-bold text-brand">Users</h1>
 <p class="mt-1 text-sm text-gray-600"><?= esc($peopleInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($peopleInstitution['code']) ?>)</span></p>
 
 <?= view('pages/admin/partials/institution-tabs', ['tabInstitution' => $peopleInstitution, 'tabActive' => 'users']) ?>
@@ -47,7 +47,7 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
 <?php endif; ?>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-invitations>
-    <h2 class="text-lg font-semibold text-[#0040A6]">Administrator invitations</h2>
+    <h2 class="text-lg font-semibold text-brand">Administrator invitations</h2>
     <p class="mt-1 text-sm text-gray-600">An invitation is an emailed link that works once. The person sets their own password and the account is made then. Only the newest invitation works: sending another cancels the one before it.</p>
 
     <?php if ($peopleInvitations === []): ?>
@@ -81,7 +81,7 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
                                     <div class="flex flex-wrap gap-2">
                                         <form method="post" action="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/invitations/' . $invitation['id'] . '/resend') ?>">
                                             <?= csrf_field() ?>
-                                            <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Resend invitation</button>
+                                            <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Resend invitation</button>
                                         </form>
                                         <?php if ($invitation['status'] === 'pending'): ?>
                                             <form method="post" action="<?= site_url('admin/institutions/' . $peopleInstitution['id'] . '/invitations/' . $invitation['id'] . '/revoke') ?>">
@@ -116,7 +116,7 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
                     <input class="<?= $input ?>" type="email" name="email" value="<?= esc((string) $peopleValues['email']) ?>" maxlength="254" required>
                 </label>
                 <div class="sm:col-span-2">
-                    <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Send invitation</button>
+                    <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Send invitation</button>
                 </div>
             </form>
         </details>
@@ -124,7 +124,7 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
 </section>
 
 <section class="mt-6 rounded-lg bg-white p-6 shadow" data-members>
-    <h2 class="text-lg font-semibold text-[#0040A6]">People</h2>
+    <h2 class="text-lg font-semibold text-brand">People</h2>
     <p class="mt-1 text-sm text-gray-600">
         <?= esc((string) $peopleMembers['total']) ?> <?= $peopleMembers['total'] === 1 ? 'person' : 'people' ?>
         <?php if ($peopleMembers['perRole'] !== []): ?>

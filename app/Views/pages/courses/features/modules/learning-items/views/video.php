@@ -67,7 +67,7 @@ $progressAttributes = $trackProgress
         <div class="h-1.5 w-40 overflow-hidden rounded-full bg-[#E7E6E6]">
             <div
                 data-video-progress-bar
-                class="h-full rounded-full bg-[#0040A6] transition-all duration-500"
+                class="h-full rounded-full bg-brand transition-all duration-500"
                 style="width: <?= (int) ($currentItem['progress_percent'] ?? 0) ?>%;"></div>
         </div>
 

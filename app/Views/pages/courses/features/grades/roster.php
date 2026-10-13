@@ -19,7 +19,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
 
         <?= icon('grades', 'h-6 w-6') ?>
 
-        <span class="text-xl font-bold text-[#0040A6]">Gradebook</span>
+        <span class="text-xl font-bold text-brand">Gradebook</span>
 
         <span class="flex items-center gap-2 text-sm text-gray-500 ml-2" data-roster-save-status>
             <span class="h-2 w-2 rounded-full bg-emerald-500" data-roster-save-dot></span>
@@ -78,7 +78,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
                                     value="<?= $student['scores'][$item['id']] ?? '' ?>"
                                     placeholder="—"
                                     data-manual-score-input data-item-id="<?= (int) $item['id'] ?>"
-                                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none transition focus:border-[#0040A6]">
+                                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none transition focus:border-brand">
                             </td>
                         <?php endforeach; ?>
 
@@ -99,7 +99,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
                                 data-is-override="<?= $student['is_override'] ? '1' : '0' ?>"
                                 data-override-reason="<?= esc($student['override_reason'] ?? '', 'attr') ?>"
                                 data-student-name="<?= esc($student['student_name'], 'attr') ?>"
-                                class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-bold transition hover:bg-gray-100 <?= $student['is_override'] ? 'text-[#946200]' : 'text-[#0040A6]' ?>"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-bold transition hover:bg-gray-100 <?= $student['is_override'] ? 'text-[#946200]' : 'text-brand' ?>"
                                 title="Click to override">
                                 <?= $student['percentage'] !== null ? $points($student['percentage']) . '%' : '—' ?>
                                 <?php if ($student['is_override']): ?>

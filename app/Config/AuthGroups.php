@@ -94,6 +94,19 @@ class AuthGroups extends ShieldAuthGroups
         'grading.manage'        => 'Grade work and manage the gradebook',
         'announcements.manage'  => 'Post and manage announcements',
         'program.monitor'       => 'Monitor a whole program',
+
+        // The institution's own administration (institutional administrator)
+        'structure.manage'      => 'Manage departments, sub-departments, programs and courses',
+        'terms.manage'          => 'Manage academic terms, close them and copy offerings',
+        'offerings.manage'      => 'Manage course offerings and their instructors',
+        'enrolments.manage'     => 'Enrol students and change enrolments',
+        'people.view'           => 'View the people of the institution',
+        'people.manage'         => 'Invite, edit, deactivate and change roles of the institution\'s people',
+        'reports.view'          => 'View institution-wide reports',
+        'institution.settings'  => 'Change the institution\'s profile, branding and settings',
+        'institution.audit'     => 'View the institution\'s audit log',
+        'institution.impersonate' => 'View the platform as one of the institution\'s users (view only)',
+        'sis.run'               => 'Preview and run the SIS import and send grades',
     ];
 
     /**
@@ -117,7 +130,12 @@ class AuthGroups extends ShieldAuthGroups
             'integrations.view', 'integrations.manage',
             'impersonation.start',
         ],
-        'institutional_admin' => ['courses.view', 'program.monitor'],
+        'institutional_admin' => [
+            'courses.view', 'program.monitor',
+            'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage',
+            'people.view', 'people.manage', 'reports.view',
+            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run',
+        ],
         'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor'],
         'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage'],
         'student'             => ['courses.view'],

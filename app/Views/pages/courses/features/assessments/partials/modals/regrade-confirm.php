@@ -6,7 +6,7 @@
 
         <div class="border-b border-gray-200 px-8 py-6">
 
-            <h2 class="text-xl font-bold text-[#0040A6]">
+            <h2 class="text-xl font-bold text-brand">
                 Change this grade?
             </h2>
 
@@ -33,7 +33,7 @@
             <button
                 type="button"
                 data-confirm-regrade
-                class="rounded-xl bg-[#0040A6] px-5 py-2.5 font-semibold text-white transition hover:bg-[#002068] disabled:cursor-not-allowed disabled:opacity-60">
+                class="rounded-xl bg-brand px-5 py-2.5 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
 
                 Yes, change grade
 

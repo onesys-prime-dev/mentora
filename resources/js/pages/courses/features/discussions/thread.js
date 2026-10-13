@@ -248,7 +248,7 @@ async function handleReact(body, threadId, button) {
             const mine = b.dataset.react === result.emoji;
 
             b.setAttribute("aria-pressed", String(mine));
-            b.classList.toggle("bg-[#0040A6]/10", mine);
+            b.classList.toggle("bg-brand/10", mine);
 
         });
 
@@ -283,7 +283,7 @@ function renderReactionSummary(group, counts, own) {
         const pill = document.createElement("span");
 
         pill.className = "flex items-center gap-1 rounded-full px-2 py-0.5 "
-            + (emoji === own ? "bg-[#0040A6]/10 text-[#0040A6]" : "bg-gray-100");
+            + (emoji === own ? "bg-brand/10 text-brand" : "bg-gray-100");
 
         pill.textContent = `${emoji} ${count}`;
 

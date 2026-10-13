@@ -139,7 +139,7 @@ class GradeSheetExportService
             ])
             ->join('user_profiles p', 'p.user_id = e.student_user_id', 'left')
             ->where('e.offering_id', $offeringId)
-            ->where('e.status', 'enrolled')
+            ->whereIn('e.status', ['enrolled', 'completed'])
             ->orderBy('p.last_name', 'ASC')
             ->orderBy('p.first_name', 'ASC')
             ->get()

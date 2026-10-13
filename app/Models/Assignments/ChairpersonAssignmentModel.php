@@ -2,6 +2,7 @@
 
 namespace App\Models\Assignments;
 
+use App\Models\Courses\OfferingDetail;
 use CodeIgniter\Model;
 
 class ChairpersonAssignmentModel extends Model
@@ -59,9 +60,9 @@ class ChairpersonAssignmentModel extends Model
      * InstructorAssignmentModel::retrieveInstructorCourseOfferings(), so a
      * view built for one can read the other.
      */
-    public function retrieveChairedCourseOfferings(int $userId): array
+    public function retrieveChairedCourseOfferings(int $userId, bool $past = false): array
     {
-        return $this->chairedOfferingsBuilder($userId)
+        return $this->chairedOfferingsBuilder($userId, $past ? 'completed' : 'active')
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getResultArray();
@@ -90,55 +91,9 @@ class ChairpersonAssignmentModel extends Model
      */
     public function chairedOfferingsBuilder(int $userId, ?string $status = 'active'): \CodeIgniter\Database\BaseBuilder
     {
-        $builder = $this->builder()
-            ->select([
-                'course_offerings.id AS offering_id',
-                'course_offerings.section_code',
-                'course_offerings.capacity',
-                'course_offerings.status AS offering_status',
-
-                'courses.id AS course_id',
-                'courses.course_code',
-                'courses.course_title',
-                'courses.description',
-                'courses.units',
-
-                'programs.id AS program_id',
-                'programs.name AS program_name',
-
-                'academic_terms.id AS term_id',
-                'academic_terms.name AS term_name',
-                'academic_terms.academic_year',
-
-                'sub_departments.id AS sub_department_id',
-                'sub_departments.name AS sub_department_name',
-                'departments.id AS department_id',
-                'departments.name AS department_name',
-
-                'institutions.id AS institution_id',
-                'institutions.name AS institution_name',
-            ])
-            ->select(
-                "(SELECT COUNT(*)
-                    FROM enrollments
-                   WHERE enrollments.offering_id = course_offerings.id
-                     AND enrollments.status = 'enrolled') AS enrolled",
-                false
-            )
-            // The card shows one instructor (the first assigned), same
-            // convention as EnrollmentModel's student-facing list: a
-            // co-taught course isn't listed once per teacher, and a course
-            // with nobody assigned yet isn't dropped.
-            ->select(
-                "(SELECT COUNT(*)
-                    FROM instructor_assignments
-                   WHERE instructor_assignments.offering_id = course_offerings.id) AS instructor_count",
-                false
-            )
-            ->select([
-                "CONCAT(instructor_profiles.first_name, ' ', instructor_profiles.last_name) AS instructor_name",
-                'users.id AS instructor_id',
-            ])
+        // The columns are the shared offering shape (OfferingDetail), so the Courses page,
+        // Monitor Program and the institution reports read the same row.
+        $builder = OfferingDetail::select($this->builder())
             // course_offerings must be joined before anything whose ON
             // clause references course_offerings.id (MySQL resolves a
             // JOIN's ON clause only against tables already named earlier

@@ -26,7 +26,7 @@ $sortLink = static function (string $column) use ($f, $link): string {
 };
 $arrow = static fn (string $column): string => $f->sort === $column ? ($f->dir === 'asc' ? ' ▲' : ' ▼') : '';
 
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50';
 ?>
@@ -36,8 +36,8 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-a
 <?= $this->section('content') ?>
 
 <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]">Users</h1>
-    <a class="rounded bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#002068]" href="<?= site_url('admin/users/new') ?>">Invite a person</a>
+    <h1 class="text-2xl font-bold text-brand">Users</h1>
+    <a class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark" href="<?= site_url('admin/users/new') ?>">Invite a person</a>
 </div>
 
 <?php if (session()->has('message')): ?>
@@ -74,11 +74,11 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-a
             <option value="deactivated" <?= $f->status === 'deactivated' ? 'selected' : '' ?>>Deactivated</option>
         </select>
     </label>
-    <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Apply</button>
+    <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Apply</button>
     <?php if ($f->isFiltered()): ?>
-        <a class="px-2 py-1.5 text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/users') ?>">Clear</a>
+        <a class="px-2 py-1.5 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/users') ?>">Clear</a>
     <?php endif; ?>
-    <a class="ml-auto px-2 py-1.5 text-sm font-semibold text-[#0040A6] hover:underline" href="<?= esc($url('admin/users/export', $f->toQuery(['page' => null]))) ?>" data-export-filtered>Export these (CSV)</a>
+    <a class="ml-auto px-2 py-1.5 text-sm font-semibold text-brand hover:underline" href="<?= esc($url('admin/users/export', $f->toQuery(['page' => null]))) ?>" data-export-filtered>Export these (CSV)</a>
 </form>
 
 <p class="mt-4 text-sm text-gray-600" aria-live="polite">
@@ -121,7 +121,7 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-a
                     <tr data-user="<?= esc((string) $row['id']) ?>" data-status="<?= $deactivated ? 'deactivated' : 'active' ?>">
                         <td class="px-3 py-2"><input type="checkbox" name="ids[]" value="<?= esc((string) $row['id']) ?>" data-user-select aria-label="Select <?= esc($name !== '' ? $name : (string) $row['username']) ?>"></td>
                         <td class="px-3 py-2 font-medium">
-                            <a class="text-[#0040A6] hover:underline" href="<?= site_url('admin/users/' . $row['id']) ?>"><?= esc($name !== '' ? $name : (string) $row['username']) ?></a>
+                            <a class="text-brand hover:underline" href="<?= site_url('admin/users/' . $row['id']) ?>"><?= esc($name !== '' ? $name : (string) $row['username']) ?></a>
                             <?php if ((int) $row['id'] === $userSelf): ?><span class="ml-1 text-xs font-normal text-gray-500">(you)</span><?php endif; ?>
                         </td>
                         <td class="px-3 py-2 text-gray-600"><?= esc((string) ($row['email'] ?? '—')) ?></td>
@@ -142,10 +142,10 @@ $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold disabled:cursor-not-a
     <span class="text-gray-600">Page <?= esc((string) $f->page) ?> of <?= esc((string) $userPages) ?></span>
     <span class="flex gap-3">
         <?php if ($f->page > 1): ?>
-            <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $f->page - 1])) ?>">Previous</a>
+            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $f->page - 1])) ?>">Previous</a>
         <?php endif; ?>
         <?php if ($f->page < $userPages): ?>
-            <a class="font-semibold text-[#0040A6] hover:underline" href="<?= esc($link(['page' => $f->page + 1])) ?>">Next</a>
+            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $f->page + 1])) ?>">Next</a>
         <?php endif; ?>
     </span>
 </nav>

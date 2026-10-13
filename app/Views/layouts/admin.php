@@ -22,13 +22,13 @@ $email = $user->email ?? '';
         <header class="flex items-center justify-between border-b border-b-black/10 bg-white px-6 py-3 shadow">
             <a class="flex items-center gap-3" href="<?= site_url('admin/dashboard') ?>">
                 <img class="h-11 w-auto" src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="Mentora">
-                <span class="text-xl font-semibold text-[#0040A6]"><?= esc((new App\Services\Admin\PlatformSettings())->get('systemName')) ?> administration</span>
+                <span class="text-xl font-semibold text-brand"><?= esc((new App\Services\Admin\PlatformSettings())->get('systemName')) ?> administration</span>
             </a>
 
             <div class="flex items-center gap-4 text-sm text-gray-700">
-                <a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('notifications') ?>">Notifications<?php $unreadNotes = (new App\Services\Notifications\NotificationService())->unreadCount((int) auth()->id()); ?><?php if ($unreadNotes > 0): ?> <span class="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white" data-unread-count><?= esc((string) $unreadNotes) ?></span><?php endif; ?></a>
+                <a class="font-semibold text-brand hover:underline" href="<?= site_url('notifications') ?>">Notifications<?php $unreadNotes = (new App\Services\Notifications\NotificationService())->unreadCount((int) auth()->id()); ?><?php if ($unreadNotes > 0): ?> <span class="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white" data-unread-count><?= esc((string) $unreadNotes) ?></span><?php endif; ?></a>
                 <span><?= esc($email) ?></span>
-                <a class="font-semibold text-[#0040A6] hover:underline" href="<?= site_url('/logout') ?>">Log out</a>
+                <a class="font-semibold text-brand hover:underline" href="<?= site_url('/logout') ?>">Log out</a>
             </div>
         </header>
 

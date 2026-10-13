@@ -6,7 +6,7 @@
 
         <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
 
-            <h2 class="text-xl font-bold text-[#0040A6]">
+            <h2 class="text-xl font-bold text-brand">
                 Import Questions
             </h2>
 
@@ -35,14 +35,14 @@
                 type="file"
                 data-import-file-input
                 accept=".docx"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
             <div data-import-error class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>
 
             <button
                 type="button"
                 data-import-preview-button
-                class="self-end rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068] disabled:cursor-not-allowed disabled:opacity-60">
+                class="self-end rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
                 Preview Changes
             </button>
 
@@ -95,7 +95,7 @@
                 <button
                     type="button"
                     data-import-apply-button
-                    class="hidden rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068]">
+                    class="hidden rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
                     Apply Import
                 </button>
 

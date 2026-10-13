@@ -1,6 +1,7 @@
 /**
- * The platform announcement line: a person can dismiss it, and it stays
- * dismissed for them until the text changes (a new announcement shows again).
+ * The announcement lines (the platform's, and the person's institution's
+ * under it): a person can dismiss each, and it stays dismissed for them until
+ * its text changes (a new announcement shows again).
  *
  * The line is plain HTML that works without this script; this only adds the
  * dismiss button. Dismissals live in the browser's localStorage, keyed by the
@@ -49,32 +50,31 @@ export function dismiss(storage, key) {
 }
 
 /**
- * Binds the dismiss button. Returns the banner element, or null when there is none.
+ * Binds the dismiss button of every announcement line on the page. Returns
+ * the first banner element, or null when there is none.
  *
  * @param {ParentNode} [root]
  * @param {Storage | null} [storage]
  */
 export function initAnnouncement(root = document, storage = safeStorage()) {
-    const banner = root.querySelector("[data-announcement]");
+    const banners = Array.from(root.querySelectorAll("[data-announcement]"));
 
-    if (banner === null) {
-        return null;
+    for (const banner of banners) {
+        const key = announcementKey(banner.querySelector("[data-announcement-text]")?.textContent ?? "");
+
+        if (isDismissed(storage, key)) {
+            banner.hidden = true;
+
+            continue;
+        }
+
+        banner.querySelector("[data-announcement-dismiss]")?.addEventListener("click", () => {
+            banner.hidden = true;
+            dismiss(storage, key);
+        });
     }
 
-    const key = announcementKey(banner.querySelector("[data-announcement-text]")?.textContent ?? "");
-
-    if (isDismissed(storage, key)) {
-        banner.hidden = true;
-
-        return banner;
-    }
-
-    banner.querySelector("[data-announcement-dismiss]")?.addEventListener("click", () => {
-        banner.hidden = true;
-        dismiss(storage, key);
-    });
-
-    return banner;
+    return banners[0] ?? null;
 }
 
 function safeStorage() {

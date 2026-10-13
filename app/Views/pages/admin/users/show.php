@@ -12,7 +12,7 @@
  */
 use App\Services\Users\UserFilters;
 
-$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$input = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
 $btn   = 'rounded border px-2.5 py-1 text-xs font-semibold';
 
@@ -26,10 +26,10 @@ $memberOf    = array_column($person['institutions'], 'id');
 
 <?= $this->section('content') ?>
 
-<a class="text-sm font-semibold text-[#0040A6] hover:underline" href="<?= site_url('admin/users') ?>">&larr; Users</a>
+<a class="text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/users') ?>">&larr; Users</a>
 
 <div class="mt-2 flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-[#0040A6]"><?= esc($name !== '' ? $name : (string) $person['username']) ?></h1>
+    <h1 class="text-2xl font-bold text-brand"><?= esc($name !== '' ? $name : (string) $person['username']) ?></h1>
     <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $deactivated ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' ?>" data-account-status="<?= $deactivated ? 'deactivated' : 'active' ?>"><?= $deactivated ? 'Deactivated' : 'Active' ?></span>
     <?php if ($personIsSelf): ?><span class="text-sm text-gray-500">(this is you)</span><?php endif; ?>
 </div>
@@ -45,7 +45,7 @@ $memberOf    = array_column($person['institutions'], 'id');
 <div class="mt-6 grid gap-6 lg:grid-cols-2">
 
     <section class="rounded-lg bg-white p-6 shadow" data-section="details">
-        <h2 class="text-lg font-semibold text-[#0040A6]">Details</h2>
+        <h2 class="text-lg font-semibold text-brand">Details</h2>
         <?php if ($personSisManaged): ?>
             <p class="mt-2 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800" data-sis-managed>This person comes from the school's student information system, which decides their name and email. Change them there; the next sync brings it here.</p>
         <?php endif; ?>
@@ -62,7 +62,7 @@ $memberOf    = array_column($person['institutions'], 'id');
             </label>
             <?php if (! $personSisManaged): ?>
                 <div class="sm:col-span-2">
-                    <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Save</button>
+                    <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Save</button>
                     <span class="ml-2 text-xs text-gray-500">Needs your password.</span>
                 </div>
             <?php endif; ?>
@@ -74,7 +74,7 @@ $memberOf    = array_column($person['institutions'], 'id');
     </section>
 
     <section class="rounded-lg bg-white p-6 shadow" data-section="access">
-        <h2 class="text-lg font-semibold text-[#0040A6]">Access</h2>
+        <h2 class="text-lg font-semibold text-brand">Access</h2>
         <div class="mt-3 flex flex-col gap-3">
             <?php if ($deactivated): ?>
                 <form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/reactivate') ?>" class="flex flex-wrap items-center gap-3">
@@ -98,7 +98,7 @@ $memberOf    = array_column($person['institutions'], 'id');
 
             <form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/reset-password') ?>" class="flex flex-wrap items-center gap-3">
                 <?= csrf_field() ?>
-                <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10" <?= $deactivated ? 'disabled' : '' ?>>Send a password reset link</button>
+                <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10" <?= $deactivated ? 'disabled' : '' ?>>Send a password reset link</button>
                 <span class="text-sm text-gray-600">They choose the new password themselves. Needs your password.</span>
             </form>
         </div>
@@ -106,7 +106,7 @@ $memberOf    = array_column($person['institutions'], 'id');
 
     <?php if (! $isAdmin && ! $personIsSelf && ! $deactivated): ?>
         <section class="rounded-lg bg-white p-6 shadow lg:col-span-2" data-section="view-as">
-            <h2 class="text-lg font-semibold text-[#0040A6]">View as this person</h2>
+            <h2 class="text-lg font-semibold text-brand">View as this person</h2>
             <p class="mt-1 text-sm text-gray-600">See the platform exactly as they do. It is <strong>view only</strong>: nothing can be changed, it ends by itself after the time limit, and it is kept in the audit log with your reason. Needs your password.</p>
             <form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/impersonate') ?>" class="mt-3 flex flex-wrap items-end gap-3">
                 <?= csrf_field() ?>
@@ -119,7 +119,7 @@ $memberOf    = array_column($person['institutions'], 'id');
     <?php endif; ?>
 
     <section class="rounded-lg bg-white p-6 shadow" data-section="roles">
-        <h2 class="text-lg font-semibold text-[#0040A6]">Roles</h2>
+        <h2 class="text-lg font-semibold text-brand">Roles</h2>
 
         <?php if ($isAdmin): ?>
             <p class="mt-3 text-sm text-gray-700">System administrator. This account's roles are not changed here: system administrators are created and managed with <span class="font-mono text-xs">php spark</span>.</p>
@@ -133,7 +133,7 @@ $memberOf    = array_column($person['institutions'], 'id');
                     </label>
                 <?php endforeach; ?>
                 <div class="mt-2">
-                    <button type="submit" class="rounded bg-[#0040A6] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#002068]">Save roles</button>
+                    <button type="submit" class="rounded bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">Save roles</button>
                     <span class="ml-2 text-xs text-gray-500">At least one. Needs your password.</span>
                 </div>
             </form>
@@ -141,7 +141,7 @@ $memberOf    = array_column($person['institutions'], 'id');
     </section>
 
     <section class="rounded-lg bg-white p-6 shadow" data-section="institutions">
-        <h2 class="text-lg font-semibold text-[#0040A6]">Institutions</h2>
+        <h2 class="text-lg font-semibold text-brand">Institutions</h2>
 
         <?php if ($person['institutions'] === []): ?>
             <p class="mt-3 text-sm text-gray-600"><?= $isAdmin ? 'System administrators belong to no institution.' : 'Not a member of any institution.' ?></p>
@@ -149,7 +149,7 @@ $memberOf    = array_column($person['institutions'], 'id');
             <ul class="mt-3 flex flex-col gap-2">
                 <?php foreach ($person['institutions'] as $institution): ?>
                     <li class="flex items-center justify-between gap-3 text-sm">
-                        <a class="text-[#0040A6] hover:underline" href="<?= site_url('admin/institutions/' . $institution['id']) ?>"><?= esc($institution['name']) ?></a>
+                        <a class="text-brand hover:underline" href="<?= site_url('admin/institutions/' . $institution['id']) ?>"><?= esc($institution['name']) ?></a>
                         <form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/memberships/' . $institution['id'] . '/remove') ?>">
                             <?= csrf_field() ?>
                             <button type="submit" class="<?= $btn ?> border-red-400 text-red-700 hover:bg-red-50">Remove</button>
@@ -172,7 +172,7 @@ $memberOf    = array_column($person['institutions'], 'id');
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <button type="submit" class="<?= $btn ?> border-[#0040A6] text-[#0040A6] hover:bg-[#0040A6]/10">Add</button>
+                <button type="submit" class="<?= $btn ?> border-brand text-brand hover:bg-brand/10">Add</button>
             </form>
             <p class="mt-1 text-xs text-gray-500">Changing institutions needs your password.</p>
         <?php endif; ?>

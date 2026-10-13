@@ -4,7 +4,7 @@
 
     <div class="flex flex-col gap-1 p-8 border-b border-[#9E9E9E]">
 
-        <span class="text-xl text-[#0040A6] font-bold">
+        <span class="text-xl text-brand font-bold">
             Module <?= esc($module['order_index']) ?>
         </span>
 
@@ -15,7 +15,7 @@
         <div class="w-full flex items-center gap-3 mt-2">
             <div class="h-2 w-full flex bg-[#E7E6E6] rounded-4xl">
                 <div
-                    class="h-full bg-[#0040A6] rounded-4xl transition-all duration-500"
+                    class="h-full bg-brand rounded-4xl transition-all duration-500"
                     data-module-progress-bar
                     style="width: <?= esc($module['progress']) ?>%;"></div>
             </div>
@@ -116,7 +116,7 @@
                                     <span
                                         class="text-sm
                                         <?= $isCurrent
-                                            ? 'font-semibold text-[#0040A6]'
+                                            ? 'font-semibold text-brand'
                                             : ($isLocked ? 'text-[#767676]' : '') ?>"
                                         data-item-title>
                                         <?= esc($item['title']) ?>

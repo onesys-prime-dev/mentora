@@ -25,7 +25,7 @@ $formatPoints = static fn (float $points) => (float) (int) $points === $points ?
 $chipClasses = [
     'success' => 'bg-[#E8F5EC] text-[#2E7D4F]',
     'warning' => 'bg-[#FFF1D6] text-[#946200]',
-    'info'    => 'bg-[#0040A6]/10 text-[#0040A6]',
+    'info'    => 'bg-brand/10 text-brand',
     'danger'  => 'bg-[#FDEDEC] text-[#C33939]',
     'muted'   => 'bg-gray-100 text-gray-500',
     'neutral' => 'bg-gray-100 text-gray-500',
@@ -34,7 +34,7 @@ $chipClasses = [
 
 <div class="flex flex-col gap-3 w-full">
 
-    <h3 class="text-xl font-bold text-[#0040A6]">Assessments</h3>
+    <h3 class="text-xl font-bold text-brand">Assessments</h3>
 
     <?php if ($groups === []): ?>
 
@@ -73,8 +73,8 @@ $chipClasses = [
                             <div
                                 class="group px-8 py-6 flex justify-between items-center gap-6 rounded-2xl border-[1px] border-[#A9A9A9]/50
                                         transition-all duration-200
-                                        hover:border-[#0040A6]/50
-                                        hover:bg-[#0040A6]/5
+                                        hover:border-brand/50
+                                        hover:bg-brand/5
                                         hover:shadow-sm
                                         cursor-pointer"
                                 data-assessment="<?= esc($assessment['id']) ?>"
@@ -82,8 +82,8 @@ $chipClasses = [
 
                                 <div class="flex min-w-0 items-center gap-5">
 
-                                    <div class="h-10 w-10 shrink-0 flex items-center justify-center border-3 border-[#0040A6] rounded-[100%] transition-transform duration-200 group-hover:scale-105">
-                                        <?= learning_item_icon($type, 'h-5 w-5 text-[#0040A6]') ?>
+                                    <div class="h-10 w-10 shrink-0 flex items-center justify-center border-3 border-brand rounded-[100%] transition-transform duration-200 group-hover:scale-105">
+                                        <?= learning_item_icon($type, 'h-5 w-5 text-brand') ?>
                                     </div>
 
                                     <div class="flex min-w-0 flex-col">
@@ -104,7 +104,7 @@ $chipClasses = [
 
                                     <div class="flex shrink-0 flex-col justify-center items-end gap-1">
 
-                                        <span class="font-bold text-lg text-[#0040A6]">
+                                        <span class="font-bold text-lg text-brand">
                                             <?= esc($scoreText) ?>
                                         </span>
 
@@ -132,11 +132,11 @@ $chipClasses = [
                                     <!-- The previous grade stands until the resubmission is graded. -->
                                     <div class="flex shrink-0 flex-col justify-center items-end gap-1">
 
-                                        <span class="font-bold text-lg text-[#0040A6]">
+                                        <span class="font-bold text-lg text-brand">
                                             <?= esc($scoreText) ?>
                                         </span>
 
-                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-[#0040A6]/10 text-[#0040A6]">
+                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-bold bg-brand/10 text-brand">
                                             Resubmitted · being reviewed
                                         </span>
 

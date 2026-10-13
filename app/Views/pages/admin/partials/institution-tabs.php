@@ -20,7 +20,7 @@ $tabs    = [
         <?php foreach ($tabs as $key => [$tabLabel, $tabPath]): ?>
             <li>
                 <a
-                    class="inline-block border-b-2 px-4 py-2 text-sm font-semibold <?= $key === $tabActive ? 'border-[#0040A6] text-[#0040A6]' : 'border-transparent text-gray-600 hover:border-gray-400 hover:text-gray-900' ?>"
+                    class="inline-block border-b-2 px-4 py-2 text-sm font-semibold <?= $key === $tabActive ? 'border-brand text-brand' : 'border-transparent text-gray-600 hover:border-gray-400 hover:text-gray-900' ?>"
                     href="<?= site_url($tabPath) ?>"
                     data-tab="<?= esc($key) ?>"
                     <?= $key === $tabActive ? 'aria-current="page"' : '' ?>

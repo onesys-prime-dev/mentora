@@ -6,7 +6,7 @@ $totalPoints = (float) ($currentAssessment['total_points'] ?? 0);
 $submissionStatus = $submission['status'] ?? $selectedStudent['submission_status'] ?? null;
 
 $statusMeta = match ($submissionStatus) {
-    'Submitted' => ['label' => 'Ready for Grading', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]', 'canExpand' => true],
+    'Submitted' => ['label' => 'Ready for Grading', 'class' => 'bg-brand/10 text-brand', 'canExpand' => true],
     'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]', 'canExpand' => true],
     'Grading' => ['label' => 'Grading In Progress', 'class' => 'bg-[#FFF1D6] text-[#946200]', 'canExpand' => true],
     'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]', 'canExpand' => true],
@@ -68,7 +68,7 @@ $attemptTabs ??= [];
 
             <div class="flex items-center gap-2">
 
-                <span class="text-xl font-bold text-[#0040A6]">
+                <span class="text-xl font-bold text-brand">
                     Grade Work
                 </span>
 
@@ -110,7 +110,7 @@ $attemptTabs ??= [];
 
                     <select
                         data-grade-work-status-filter
-                        class="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 outline-none focus:border-[#0040A6]">
+                        class="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 outline-none focus:border-brand">
 
                         <option value="">All</option>
                         <option value="Submitted">Submitted</option>
@@ -150,7 +150,7 @@ $attemptTabs ??= [];
                         $rowStatus = $student['submission_status'] ?? null;
 
                         $rowMeta = match ($rowStatus) {
-                            'Submitted' => ['label' => 'Submitted', 'class' => 'bg-[#0040A6]/10 text-[#0040A6]'],
+                            'Submitted' => ['label' => 'Submitted', 'class' => 'bg-brand/10 text-brand'],
                             'Partially Graded' => ['label' => 'Partially Graded', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
                             'Grading' => ['label' => 'Grading', 'class' => 'bg-[#FFF1D6] text-[#946200]'],
                             'Graded' => ['label' => 'Graded', 'class' => 'bg-[#E8F5EC] text-[#2E7D4F]'],
@@ -176,9 +176,9 @@ $attemptTabs ??= [];
                         data-grade-work-student-id="<?= esc($student['student_id']) ?>"
                         data-student-status="<?= esc($rowStatus ?? '') ?>"
                         data-student-name="<?= esc($student['student_name']) ?>"
-                        class="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors <?= $isActive ? 'border-[#0040A6] bg-[#0040A6]/5' : 'border-gray-200 bg-white hover:border-[#0040A6]/40' ?>">
+                        class="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors <?= $isActive ? 'border-brand bg-brand/5' : 'border-gray-200 bg-white hover:border-brand/40' ?>">
 
-                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0040A6]/10 text-xs font-bold text-[#0040A6]">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand">
                             <?= esc(mb_substr($initials, 0, 2)) ?>
                         </div>
 
@@ -254,7 +254,7 @@ $attemptTabs ??= [];
                                 <button
                                     type="button"
                                     data-view-student-grade="<?= esc($selectedStudent['student_id']) ?>"
-                                    class="inline-flex items-center gap-1 text-xs font-semibold text-[#0040A6] transition hover:underline">
+                                    class="inline-flex items-center gap-1 text-xs font-semibold text-brand transition hover:underline">
                                     View full grade
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                                 </button>
@@ -282,8 +282,8 @@ $attemptTabs ??= [];
                                         <?= $tab['counts'] ? 'title="This attempt counts toward the grade"' : '' ?>
                                         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition
                                             <?= $tab['active']
-                                                ? 'border-[#0040A6] bg-[#0040A6] text-white'
-                                                : 'border-gray-200 bg-white text-gray-600 hover:border-[#0040A6]/50 hover:text-[#0040A6]' ?>">
+                                                ? 'border-brand bg-brand text-white'
+                                                : 'border-gray-200 bg-white text-gray-600 hover:border-brand/50 hover:text-brand' ?>">
 
                                         Attempt <?= esc($tab['number']) ?>
 
@@ -399,7 +399,7 @@ $attemptTabs ??= [];
                                                         placeholder="0"
                                                         <?= $canEditQuestion ? '' : 'disabled' ?>
                                                         data-question-points-input
-                                                        class="w-16 rounded-lg border border-gray-200 px-2 py-1 text-center text-sm font-bold text-[#0040A6] outline-none focus:border-[#0040A6] disabled:bg-gray-100 disabled:text-gray-400">
+                                                        class="w-16 rounded-lg border border-gray-200 px-2 py-1 text-center text-sm font-bold text-brand outline-none focus:border-brand disabled:bg-gray-100 disabled:text-gray-400">
 
                                                     <span class="text-[10px] text-gray-500">/ <?= esc((int) $question['points']) ?> pts</span>
 
@@ -530,7 +530,7 @@ $attemptTabs ??= [];
 
                     <span
                         data-grade-work-score-preview
-                        class="font-bold text-[#0040A6]">
+                        class="font-bold text-brand">
                         <?= $existingScore !== null ? esc((int) $existingScore) . '/' . esc((int) $totalPoints) : 'No Score Yet' ?>
                     </span>
 
@@ -541,7 +541,7 @@ $attemptTabs ??= [];
                             type="button"
                             data-regrade-open
                             title="Change this grade" aria-label="Change this grade"
-                            class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-[#0040A6] hover:text-[#0040A6]">
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-brand hover:text-brand">
 
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" />
@@ -566,7 +566,7 @@ $attemptTabs ??= [];
                             type="button"
                             data-expand-grade-work-actions
                             data-expanded="<?= $panelState === 'editing' ? '1' : '0' ?>"
-                            class="inline-flex items-center gap-1.5 rounded-xl bg-[#0040A6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#002068]">
+                            class="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
 
                             <span data-expand-grade-work-label>Grade Work</span>
 
@@ -603,7 +603,7 @@ $attemptTabs ??= [];
                             <span class="text-sm font-bold text-[#1A1C1E]">Grade</span>
 
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-lg text-[#0040A6]" data-grade-work-quiz-total>
+                                <span class="font-bold text-lg text-brand" data-grade-work-quiz-total>
                                     <?= esc(rtrim(rtrim(number_format((float) ($submission['score'] ?? 0), 2), '0'), '.')) ?>
                                 </span>
                                 <span class="text-sm text-[#646464]">of <?= esc((int) $totalPoints) ?> pts — from the question grades above</span>
@@ -670,7 +670,7 @@ $attemptTabs ??= [];
                                         placeholder="0"
                                         <?= $isLocked ? 'disabled' : '' ?>
                                         data-grade-work-default-grading-points
-                                        class="w-20 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-lg text-[#0040A6] outline-none disabled:border-b-transparent">
+                                        class="w-20 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-lg text-brand outline-none disabled:border-b-transparent">
 
                                     <span class="text-sm text-[#646464]">
                                         of
@@ -691,7 +691,7 @@ $attemptTabs ??= [];
                                         step="0.5"
                                         value="<?= $existingGradingMode === 'Default' && $existingScore !== null ? esc($existingScore) : 0 ?>"
                                         data-grade-work-default-grading-slider
-                                        class="w-full accent-[#0040A6]">
+                                        class="w-full accent-brand">
 
                                 <?php endif; ?>
 
@@ -727,7 +727,7 @@ $attemptTabs ??= [];
                                                 value="<?= esc($criterionValue) ?>"
                                                 <?= $isLocked ? 'disabled' : '' ?>
                                                 data-grade-work-rubric-criteria-points
-                                                class="w-16 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-md text-[#0040A6] outline-none disabled:border-b-transparent">
+                                                class="w-16 rounded-lg border-0 border-b-2 border-b-[#5B5B5B] bg-transparent px-1 py-1 text-center font-bold text-md text-brand outline-none disabled:border-b-transparent">
 
                                             <span class="text-sm text-[#646464]">
                                                 of
@@ -760,7 +760,7 @@ $attemptTabs ??= [];
                                                 step="0.5"
                                                 value="<?= esc($criterionValue) ?>"
                                                 data-grade-work-rubric-criteria-slider
-                                                class="w-full accent-[#0040A6]">
+                                                class="w-full accent-brand">
 
                                         <?php endif; ?>
 
@@ -791,7 +791,7 @@ $attemptTabs ??= [];
                                 rows="3"
                                 data-grade-work-feedback
                                 placeholder="Leave feedback for the student..."
-                                class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-[#0040A6]"></textarea>
+                                class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-brand"></textarea>
 
                         </div>
 
@@ -802,7 +802,7 @@ $attemptTabs ??= [];
                         <button
                             type="button"
                             data-grade-work-submit-grade
-                            class="self-end rounded-xl bg-[#0040A6] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[#002068]">
+                            class="self-end rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark">
 
                             Submit Grade
 

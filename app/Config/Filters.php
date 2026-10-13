@@ -8,6 +8,7 @@ use App\Filters\ChairpersonCourseAudit;
 use App\Filters\ImpersonationFilter;
 use App\Filters\LoginLockoutFilter;
 use App\Filters\MaintenanceFilter;
+use App\Filters\ClosedOfferingFilter;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
 use App\Filters\RoleFilter;
@@ -46,6 +47,7 @@ class Filters extends BaseFilters
         'assessmentscope' => AssessmentScope::class,
         'reauth'        => ReauthFilter::class,
         'readonly'      => ReadOnlyFilter::class,
+        'closedoffering' => ClosedOfferingFilter::class,
         'role'          => RoleFilter::class,
         'accountstate'  => AccountStateFilter::class,
         'impersonation' => ImpersonationFilter::class,

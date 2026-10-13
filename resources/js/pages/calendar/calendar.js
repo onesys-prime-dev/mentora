@@ -25,7 +25,7 @@ const MONTH_NAMES = [
 
 const KIND_META = {
     assessment: { dot: "bg-[#946200]", chip: "bg-[#FFF1D6] text-[#946200]" },
-    announcement: { dot: "bg-[#0040A6]", chip: "bg-[#E0E5F2] text-[#002068]" },
+    announcement: { dot: "bg-brand", chip: "bg-[#E0E5F2] text-brand-dark" },
     reminder: { dot: "bg-emerald-600", chip: "bg-emerald-100 text-emerald-700" },
 };
 
@@ -243,7 +243,7 @@ function setActiveViewButton(activeView)
 
         const isActive = button.dataset.calendarView === activeView;
 
-        button.classList.toggle("bg-[#0040A6]", isActive);
+        button.classList.toggle("bg-brand", isActive);
         button.classList.toggle("text-white", isActive);
 
     });
@@ -352,9 +352,9 @@ function renderMonth()
         <button
             type="button"
             data-calendar-cell="${dateStr}"
-            class="flex h-full min-h-[96px] flex-col items-stretch gap-1 border-b border-r border-[#A9A9A9]/20 p-2 text-left transition hover:bg-[#0040A6]/5 ${inMonth ? "" : "bg-black/[0.02]"}">
+            class="flex h-full min-h-[96px] flex-col items-stretch gap-1 border-b border-r border-[#A9A9A9]/20 p-2 text-left transition hover:bg-brand/5 ${inMonth ? "" : "bg-black/[0.02]"}">
 
-            <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${sameDay(cellDate, today) ? "bg-[#0040A6] text-white" : inMonth ? "text-[#646464]" : "text-[#A9A9A9]"}">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${sameDay(cellDate, today) ? "bg-brand text-white" : inMonth ? "text-[#646464]" : "text-[#A9A9A9]"}">
                 ${cellDate.getDate()}
             </span>
 
@@ -449,7 +449,7 @@ function renderDay()
         <button
             type="button"
             data-calendar-add="${dateStr}"
-            class="inline-flex w-fit items-center gap-2 rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-[#002068]">
+            class="inline-flex w-fit items-center gap-2 rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
             </svg>
@@ -481,7 +481,7 @@ function dayRow(event)
 
     <div
         data-calendar-event="${event.kind}:${event.id}"
-        class="group flex cursor-pointer items-start gap-4 rounded-2xl border border-[#A9A9A9]/50 p-4 transition hover:border-[#0040A6]/50 hover:bg-[#0040A6]/5">
+        class="group flex cursor-pointer items-start gap-4 rounded-2xl border border-[#A9A9A9]/50 p-4 transition hover:border-brand/50 hover:bg-brand/5">
 
         <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}"></span>
 
@@ -572,7 +572,7 @@ function renderYear()
                 type="button"
                 data-calendar-mini-day="${dateStr}"
                 ${inMonth ? "" : "tabindex=\"-1\" aria-hidden=\"true\""}
-                class="relative flex h-6 w-6 items-center justify-center rounded-full text-[10px] ${inMonth ? "text-[#646464]" : "invisible pointer-events-none"} ${sameDay(cellDate, today) && inMonth ? "bg-[#0040A6] text-white" : ""}">
+                class="relative flex h-6 w-6 items-center justify-center rounded-full text-[10px] ${inMonth ? "text-[#646464]" : "invisible pointer-events-none"} ${sameDay(cellDate, today) && inMonth ? "bg-brand text-white" : ""}">
                 ${inMonth ? cellDate.getDate() : ""}
                 ${hasEvents ? '<span class="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#946200]"></span>' : ""}
             </button>
@@ -588,7 +588,7 @@ function renderYear()
             <button
                 type="button"
                 data-calendar-mini-month="${m}"
-                class="text-left text-sm font-bold text-[#0040A6] transition hover:underline">
+                class="text-left text-sm font-bold text-brand transition hover:underline">
                 ${MONTH_NAMES[m]}
             </button>
 
@@ -677,8 +677,8 @@ function openDateMenu(dateStr)
             type="button"
             data-calendar-action="${action}"
             data-calendar-action-date="${dateStr}"
-            class="flex items-center gap-3 rounded-2xl border border-[#A9A9A9]/50 p-4 text-left transition hover:border-[#0040A6]/50 hover:bg-[#0040A6]/5">
-            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-[#0040A6]/10 text-[#0040A6]">
+            class="flex items-center gap-3 rounded-2xl border border-[#A9A9A9]/50 p-4 text-left transition hover:border-brand/50 hover:bg-brand/5">
+            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-brand">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">${iconPath}</svg>
             </span>
             <span class="font-semibold text-[#646464]">${label}</span>
@@ -704,9 +704,9 @@ function openDateMenu(dateStr)
                     type="button"
                     data-calendar-edit-deadline="${event.id}"
                     data-calendar-edit-offering="${event.offering_id}"
-                    class="flex items-center justify-between rounded-2xl border border-[#A9A9A9]/50 px-4 py-3 text-left text-sm transition hover:border-[#0040A6]/50 hover:bg-[#0040A6]/5">
+                    class="flex items-center justify-between rounded-2xl border border-[#A9A9A9]/50 px-4 py-3 text-left text-sm transition hover:border-brand/50 hover:bg-brand/5">
                     <span class="truncate font-semibold text-[#646464]">${escapeHtml(event.title)}</span>
-                    <span class="shrink-0 text-xs text-[#0040A6]">Edit deadline →</span>
+                    <span class="shrink-0 text-xs text-brand">Edit deadline →</span>
                 </button>
             `).join("")}
         </div>
@@ -877,7 +877,7 @@ function openAssessmentForm(dateStr)
 
             <p class="text-xs text-[#878787]">Created as a draft — publish it from the Assessments tab when it's ready.</p>
 
-            <button type="submit" class="rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-[#002068]">
+            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
                 Create
             </button>
 
@@ -1047,7 +1047,7 @@ function openAnnouncementForm()
                 <textarea name="body" required rows="4" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2"></textarea>
             </label>
 
-            <button type="submit" class="rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-[#002068]">
+            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
                 Post
             </button>
 
@@ -1148,7 +1148,7 @@ function openReminderForm(dateStr)
                 <textarea name="note" rows="3" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2"></textarea>
             </label>
 
-            <button type="submit" class="rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-[#002068]">
+            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
                 Add
             </button>
 
@@ -1234,7 +1234,7 @@ function openEditDeadlineForm(event)
 
             </div>
 
-            <button type="submit" class="rounded-4xl bg-[#0040A6] px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-[#002068]">
+            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
                 Save
             </button>
 

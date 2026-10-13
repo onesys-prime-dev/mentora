@@ -10,7 +10,7 @@
  * @var int|null                     $tfPlan     plan selected when nothing was typed
  * @var array<string, mixed>         $tfValues   saved values (plan_id, period_start, ...), may be empty
  */
-$tfInput = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0040A6]/55';
+$tfInput = 'rounded border border-gray-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
 $tfLabel = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
 $tfValue = static fn (string $name, string $default = ''): string => (string) old($name, (string) ($tfValues[$name] ?? $default));
 ?>

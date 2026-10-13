@@ -25,7 +25,7 @@ $isInstructor = $userRole === 'instructor';
 
 $legend = [
     ['kind' => 'assessment',   'label' => 'Assessment',   'dot' => 'bg-[#946200]'],
-    ['kind' => 'announcement', 'label' => 'Announcement', 'dot' => 'bg-[#0040A6]'],
+    ['kind' => 'announcement', 'label' => 'Announcement', 'dot' => 'bg-brand'],
     ['kind' => 'reminder',     'label' => 'Reminder',     'dot' => 'bg-emerald-600'],
 ];
 ?>
@@ -57,7 +57,7 @@ $legend = [
                 <button
                     type="button"
                     data-calendar-nav="prev"
-                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-[#0040A6]/5"
+                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-brand/5"
                     aria-label="Previous">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -67,7 +67,7 @@ $legend = [
                 <button
                     type="button"
                     data-calendar-nav="next"
-                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-[#0040A6]/5"
+                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-brand/5"
                     aria-label="Next">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -77,11 +77,11 @@ $legend = [
                 <button
                     type="button"
                     data-calendar-today
-                    class="rounded-full border border-[#A9A9A9]/50 px-4 py-2 text-sm font-semibold text-[#646464] transition hover:bg-[#0040A6]/5">
+                    class="rounded-full border border-[#A9A9A9]/50 px-4 py-2 text-sm font-semibold text-[#646464] transition hover:bg-brand/5">
                     Today
                 </button>
 
-                <span data-calendar-label class="text-2xl font-bold text-[#0040A6]"></span>
+                <span data-calendar-label class="text-2xl font-bold text-brand"></span>
 
             </div>
 
@@ -104,7 +104,7 @@ $legend = [
                         <button
                             type="button"
                             data-calendar-view="<?= esc($view) ?>"
-                            class="rounded-full px-4 py-1.5 font-semibold text-[#646464] transition <?= $view === 'month' ? 'bg-[#0040A6] text-white' : '' ?>">
+                            class="rounded-full px-4 py-1.5 font-semibold text-[#646464] transition <?= $view === 'month' ? 'bg-brand text-white' : '' ?>">
                             <?= esc($label) ?>
                         </button>
                     <?php endforeach; ?>
@@ -134,7 +134,7 @@ $legend = [
     <div class="flex w-full max-w-md flex-col gap-5 rounded-2xl bg-white p-6 shadow-xl">
 
         <div class="flex items-center justify-between">
-            <span data-calendar-modal-title class="text-lg font-bold text-[#0040A6]"></span>
+            <span data-calendar-modal-title class="text-lg font-bold text-brand"></span>
 
             <button type="button" data-calendar-modal-close class="text-[#A9A9A9] transition hover:text-[#646464]" aria-label="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

@@ -11,7 +11,7 @@ $authorName = trim((string) $thread['author_name']) !== '' ? trim((string) $thre
 ?>
 
 <div
-    class="group flex cursor-pointer flex-col gap-2 rounded-2xl border bg-white px-6 py-4 transition hover:border-[#0040A6]/50 hover:shadow-sm <?= $thread['is_pinned'] ? 'border-[#0040A6]/30' : 'border-gray-200' ?>"
+    class="group flex cursor-pointer flex-col gap-2 rounded-2xl border bg-white px-6 py-4 transition hover:border-brand/50 hover:shadow-sm <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>"
     role="link"
     tabindex="0"
     data-thread-open="<?= esc($thread['id']) ?>"
@@ -20,10 +20,10 @@ $authorName = trim((string) $thread['author_name']) !== '' ? trim((string) $thre
     <div class="flex flex-wrap items-center gap-2">
 
         <?php if ($unread): ?>
-            <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-[#0040A6]" aria-hidden="true"></span>
+            <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-hidden="true"></span>
         <?php endif; ?>
 
-        <span class="min-w-0 text-lg <?= $unread ? 'font-black' : 'font-bold' ?> text-[#1A1C1E] group-hover:text-[#0040A6]"><?= esc($thread['title']) ?></span>
+        <span class="min-w-0 text-lg <?= $unread ? 'font-black' : 'font-bold' ?> text-[#1A1C1E] group-hover:text-brand"><?= esc($thread['title']) ?></span>
 
         <?php if ($unread): ?>
             <?= view('components/status-badge', ['tone' => 'info', 'label' => 'New activity'], ['saveData' => false]) ?>

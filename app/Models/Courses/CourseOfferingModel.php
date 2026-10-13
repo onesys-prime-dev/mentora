@@ -77,7 +77,7 @@ class CourseOfferingModel extends Model
             ->select(
                 "(SELECT COUNT(*) FROM enrollments
                    WHERE enrollments.offering_id = course_offerings.id
-                     AND enrollments.status = 'enrolled') AS enrolled",
+                     AND enrollments.status IN ('enrolled', 'completed')) AS enrolled",
                 false
             )
             ->join('courses', 'courses.id = course_offerings.course_id')

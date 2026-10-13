@@ -48,7 +48,7 @@ $caseSensitive = !empty($question['case_sensitive']);
             Q<?= esc($index + 1) ?>
         </span>
 
-        <span class="rounded-full bg-[#0040A6]/10 px-2.5 py-0.5 text-xs font-bold text-[#0040A6]" data-question-type-badge>
+        <span class="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-bold text-brand" data-question-type-badge>
             <?= esc($question['question_type']) ?>
         </span>
 
@@ -58,7 +58,7 @@ $caseSensitive = !empty($question['case_sensitive']);
             min="0"
             step="0.5"
             value="<?= esc($pointsValue) ?>"
-            class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-[#0040A6]">
+            class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-brand">
         <span class="text-[10px] text-[#767676]">pts</span>
 
         <span
@@ -68,7 +68,7 @@ $caseSensitive = !empty($question['case_sensitive']);
         </span>
 
         <span
-            class="rounded-full bg-[#0040A6]/10 px-2 py-0.5 text-[10px] font-bold text-[#0040A6] <?= $allowMultipleAnswers ? '' : 'hidden' ?>"
+            class="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand <?= $allowMultipleAnswers ? '' : 'hidden' ?>"
             data-question-multiple-badge>
             Select <?= esc($answersCount) ?>
         </span>
@@ -79,7 +79,7 @@ $caseSensitive = !empty($question['case_sensitive']);
                 type="button"
                 data-open-question-settings
                 title="Question settings"
-                class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-[#0040A6]" aria-label="Question settings">
+                class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand" aria-label="Question settings">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -92,7 +92,7 @@ $caseSensitive = !empty($question['case_sensitive']);
                 type="button"
                 data-duplicate-question
                 title="Duplicate question"
-                class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-[#0040A6]" aria-label="Duplicate question">
+                class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand" aria-label="Duplicate question">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -173,7 +173,7 @@ $caseSensitive = !empty($question['case_sensitive']);
             <button
                 type="button"
                 data-add-choice-inline
-                class="self-start text-xs font-semibold text-[#0040A6] transition hover:underline">
+                class="self-start text-xs font-semibold text-brand transition hover:underline">
 
                 + Add choice
 

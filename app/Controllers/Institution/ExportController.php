@@ -7,7 +7,7 @@ namespace App\Controllers\Institution;
 use App\Controllers\BaseController;
 use App\Models\Academic\InstitutionModel;
 use App\Services\Institutions\InstitutionExport;
-use App\Services\Subscriptions\PlanLimits;
+use App\Services\Institutions\InstitutionScope;
 use CodeIgniter\HTTP\DownloadResponse;
 use CodeIgniter\HTTP\RedirectResponse;
 use InvalidArgumentException;
@@ -32,6 +32,7 @@ class ExportController extends BaseController
         return view('pages/institution/export', [
             'title'         => 'Data export',
             'page'          => 'institution',
+            'pageTitle'     => 'Data export',
             'user'          => auth()->user(),
             'exportName'    => (string) $institution['name'],
             'exportAllowed' => InstitutionExport::isEligible((string) $institution['status']),
@@ -83,7 +84,7 @@ class ExportController extends BaseController
     /** @return array<string, mixed>|null the signed-in administrator's institution */
     private function institution(): ?array
     {
-        $id = (new PlanLimits())->institutionOf((int) auth()->id());
+        $id = (new InstitutionScope())->institutionId();
 
         return $id === null ? null : (new InstitutionModel())->find($id);
     }

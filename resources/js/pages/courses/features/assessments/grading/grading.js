@@ -442,12 +442,12 @@ function bindGradingModeToggle() {
 
         defaultBtn.classList.toggle("bg-white", isDefault);
         defaultBtn.classList.toggle("shadow", isDefault);
-        defaultBtn.classList.toggle("text-[#0040A6]", isDefault);
+        defaultBtn.classList.toggle("text-brand", isDefault);
         defaultBtn.classList.toggle("text-gray-500", !isDefault);
 
         rubricBtn?.classList.toggle("bg-white", !isDefault);
         rubricBtn?.classList.toggle("shadow", !isDefault);
-        rubricBtn?.classList.toggle("text-[#0040A6]", !isDefault);
+        rubricBtn?.classList.toggle("text-brand", !isDefault);
         rubricBtn?.classList.toggle("text-gray-500", isDefault);
 
         defaultPanel.dataset.active = isDefault ? "1" : "0";

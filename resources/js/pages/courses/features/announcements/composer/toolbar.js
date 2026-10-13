@@ -68,7 +68,7 @@ function updateButtons(root, editor) {
             : button.dataset.action === "justifyRight" ? editor.isActive({ textAlign: "right" })
             : false;
 
-        button.classList.toggle("bg-[#0040A6]", active);
+        button.classList.toggle("bg-brand", active);
         button.classList.toggle("text-white", active);
         button.classList.toggle("text-gray-500", !active);
 

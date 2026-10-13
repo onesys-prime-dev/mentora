@@ -4,7 +4,7 @@
         type="button"
         data-learning-item-actions
         title="Item actions"
-        class="flex h-9 w-9 items-center justify-center rounded-full text-[#767676] transition-all duration-200 hover:bg-white hover:text-[#0040A6] focus:outline-none focus:ring-2 focus:ring-[#0040A6]/20 cursor-pointer" aria-label="Item actions">
+        class="flex h-9 w-9 items-center justify-center rounded-full text-[#767676] transition-all duration-200 hover:bg-white hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer" aria-label="Item actions">
 
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -29,7 +29,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6] cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-learning-item-edit-button
                 data-learning-item="<?= esc($learning_item['id']) ?>">
 
@@ -54,7 +54,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6] cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-learning-item-dependencies
                 data-learning-item-id="<?= esc($learning_item['id']) ?>"
                 data-learning-item-title="<?= esc($learning_item['title']) ?>">
@@ -67,7 +67,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-[#0040A6] cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-item-publish-toggle
                 data-learning-item-id="<?= esc($learning_item['id']) ?>"
                 data-status="<?= esc($learning_item['status']) ?>">

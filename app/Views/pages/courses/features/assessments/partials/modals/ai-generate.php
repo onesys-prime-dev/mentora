@@ -25,7 +25,7 @@ $sourceUnitSummary = $sourceUnit
 
         <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
 
-            <h2 class="text-xl font-bold text-[#0040A6]">
+            <h2 class="text-xl font-bold text-brand">
                 Generate Questions with AI
             </h2>
 
@@ -44,7 +44,7 @@ $sourceUnitSummary = $sourceUnit
 
         <form id="ai-generate-form" class="flex flex-col gap-5 p-8">
 
-            <p class="rounded-xl bg-[#F2F7FF] px-4 py-3 text-xs text-[#0040A6]">
+            <p class="rounded-xl bg-brand-tint px-4 py-3 text-xs text-brand">
                 Runs on a locally-hosted AI model — nothing you paste or upload here leaves this server.
                 Questions land in a review tray first; nothing is added to the quiz until you accept it.
             </p>
@@ -72,7 +72,7 @@ $sourceUnitSummary = $sourceUnit
                         type="text"
                         name="topic"
                         placeholder="e.g. Basic photosynthesis for a high school biology class"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
                 </div>
 
                 <div data-ai-source-panel="text" class="hidden flex-col gap-1.5">
@@ -80,7 +80,7 @@ $sourceUnitSummary = $sourceUnit
                         name="source_text"
                         rows="5"
                         placeholder="Paste reference material here — the AI will write original questions inspired by it, never copy it verbatim."
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]"></textarea>
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand"></textarea>
                 </div>
 
                 <div data-ai-source-panel="file" class="hidden flex-col gap-1.5">
@@ -88,7 +88,7 @@ $sourceUnitSummary = $sourceUnit
                         type="file"
                         name="file"
                         accept=".pdf,.png,.jpg,.jpeg,.webp"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
                     <span class="text-xs text-[#767676]">PDF or image (scanned pages are read with OCR).</span>
                 </div>
 
@@ -108,7 +108,7 @@ $sourceUnitSummary = $sourceUnit
 
                             <div class="flex min-w-0 flex-col">
                                 <span class="truncate text-[11px] font-semibold uppercase tracking-wide text-[#767676]"><?= esc($sourceUnit['module_title']) ?></span>
-                                <span class="truncate text-sm font-bold text-[#0040A6]" data-ai-source-unit-title><?= esc($sourceUnit['title']) ?></span>
+                                <span class="truncate text-sm font-bold text-brand" data-ai-source-unit-title><?= esc($sourceUnit['title']) ?></span>
                                 <?php if ($sourceUnitReadable > 0): ?>
                                     <span class="text-xs text-gray-500">Reads <?= esc($sourceUnitSummary) ?></span>
                                 <?php endif; ?>
@@ -143,7 +143,7 @@ $sourceUnitSummary = $sourceUnit
                         min="1"
                         max="100"
                         value="10"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
                 </div>
 
                 <div class="flex flex-col gap-1.5">
@@ -156,7 +156,7 @@ $sourceUnitSummary = $sourceUnit
                         min="0"
                         step="0.5"
                         placeholder="AI decides"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0040A6]">
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
                 </div>
 
             </div>
@@ -186,7 +186,7 @@ $sourceUnitSummary = $sourceUnit
                                 data-ai-type-mix-count
                                 data-type-key="<?= esc($key) ?>"
                                 value="<?= $key === 'multiple_choice' ? '10' : '0' ?>"
-                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm text-center outline-none transition focus:border-[#0040A6]">
+                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm text-center outline-none transition focus:border-brand">
 
                         </label>
 
@@ -219,7 +219,7 @@ $sourceUnitSummary = $sourceUnit
                 type="submit"
                 form="ai-generate-form"
                 data-ai-generate-submit
-                class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0040A6] px-6 py-3 font-semibold text-white transition hover:bg-[#002068] disabled:cursor-not-allowed disabled:opacity-60">
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
 
                 <span data-ai-generate-submit-icon class="hidden"></span>
                 <span data-ai-generate-submit-label>Generate</span>
