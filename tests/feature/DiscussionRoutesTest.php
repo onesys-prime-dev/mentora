@@ -448,11 +448,15 @@ final class DiscussionRoutesTest extends RouteTestCase
         $other = $this->otherSection();
         $before = $this->snapshot();
 
+        // Refused before any controller runs (CourseMembershipFilter): not found, and nothing changed.
         foreach ([$this->student, $this->instructor] as $user) {
-            $result = $this->sendAs($user, $verb, $path, $other);
+            try {
+                $this->sendAs($user, $verb, $path, $other);
+                $this->fail("{$this->prefix($user)}: {$verb} {$path} was not refused");
+            } catch (PageNotFoundException) {
+                $this->addToAssertionCount(1);
+            }
 
-            $this->assertSame(200, $result->response()->getStatusCode());
-            $this->assertFalse(json_decode((string) $result->getJSON(), true)['success'], "{$this->prefix($user)}: {$verb} {$path}");
             $this->assertSame($before, $this->snapshot(), "{$this->prefix($user)}: {$verb} {$path} changed something");
         }
     }
