@@ -500,6 +500,13 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/status', 'Institution\EnrolmentsController::setStatus/$1');
         });
 
+        // Reports across the institution (reports.view): the page, a course, and CSV.
+        $routes->group('reports', ['filter' => 'permission:reports.view'], function ($routes) {
+            $routes->get('/', 'Institution\ReportsController::index');
+            $routes->get('export/(:segment)', 'Institution\ReportsController::export/$1');
+            $routes->get('offerings/(:num)', 'Institution\ReportsController::offering/$1');
+        });
+
         // The institution's own settings: profile and branding (institution.settings).
         $routes->group('settings', ['filter' => 'permission:institution.settings'], function ($routes) {
             $routes->get('/', 'Institution\InstitutionSettingsController::profile');

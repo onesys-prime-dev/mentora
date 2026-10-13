@@ -245,3 +245,14 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 - **`auditEntries(actor|null, offeringRows, filters)`** is the audit viewer for a scope: with an actor it is that person's own chairperson actions (the chairperson page, via `auditLog()`), with none it is every chairperson action on the offerings in scope.
 - **Every metric** (snapshot, enrolment and completion, grades, instructor activity, at risk, the comparison table) is the same code for one program or many, so a department's or an institution's numbers are the union of the single programs' and always agree with the chairperson's. The thresholds they use are the institution's academic defaults.
 - **Used next by** the institution reports (and, later, the dean's Monitor Department).
+
+## Reports
+
+`/institution/reports` (permission `reports.view`; reading and exporting still work in a read-only institution). The Apps tile "Reports".
+
+- **It is Monitor Program over the institution.** Nothing is calculated again: `InstitutionReports` takes the programs in scope and hands them to `MonitorProgramService`, so the institutional administrator, the chairperson and the dashboards read the same numbers, with the same thresholds (the institution's academic defaults).
+- **Filters** (in the address, so a view can be shared): term, department, program, and an activity date range. Choosing a department narrows the program list. A department or program that is not the institution's answers 404; a term that is not its own matches nothing.
+- **The page:** totals (courses, instructors, students, who needs attention, how much is graded and how fast), the grade distribution, a sortable comparison of courses (enrolment, completion, average grade, grading time) and the students who need attention (the 25 silent longest; the export has everyone).
+- **A course:** each course links to its own page: enrolment, completion, grades and distribution, grading time, instructor activity and its students who need attention. (The read-only view of its content is a later branch.)
+- **CSV, one per report:** course comparison, at-risk students, grades and grading, instructor activity. Each is for the same filters as the page, with a name or title that could be read as a spreadsheet formula defused, and each export is itself audited as `institution.report_exported` with the filters and the row count.
+- **Empty:** an institution with nothing to report says so instead of showing zeros.
