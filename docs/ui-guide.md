@@ -28,7 +28,7 @@ Two ways to see the pieces working:
 
 | Thing | Rule | Where |
 |---|---|---|
-| Shell | `layouts/app`: glass header, Apps menu, background image, page title | `app/Views/layouts/` |
+| Shell | `layouts/app`: glass header, Apps menu, background image. The header names the page beside the logo only when the page has no `<h1>` of its own, so it is said once | `app/Views/layouts/` |
 | Fonts | Body Poppins (`font-sans`); numbers and card titles Parkinsans (`font-display`); small caps labels Montserrat (`font-heading`) | `resources/css/app.css` |
 | Brand | `bg-brand` `#0040A6`, `bg-brand-dark` `#002068`, `bg-brand-tint` `#F2F7FF`, `bg-accent` `#2E7D4F`. An institution may override them (Settings, Branding), so use the tokens, not the hex | `@theme` in `app.css`, `shared/brand-tokens.js` |
 | Text | Headings `text-brand`; strong `#1A1C1E`; body `#3D3D3D`; muted `#646464` | components |

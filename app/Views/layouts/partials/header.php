@@ -60,11 +60,12 @@ $accountLinks = [
         <?php endif; ?>
 
         <div class="flex items-end">
-            <span class="text-2xl font-semibold text-brand capitalize pb-px">
-                <?php if ($page !== null && $page !== 'dashboard'): ?>
+            <?php /* The page's own <h1> says where you are; the layout sets headerTitle false then. */ ?>
+            <?php if ($page !== null && $page !== 'dashboard' && ($headerTitle ?? true)): ?>
+                <span class="text-2xl font-semibold text-brand capitalize pb-px" data-header-title>
                     <?= esc($pageTitle ?? ucwords(str_replace(['-', '_'], ' ', (string) $page))) ?>
-                <?php endif; ?>
-            </span>
+                </span>
+            <?php endif; ?>
         </div>
     </div>
 
