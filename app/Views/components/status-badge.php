@@ -13,7 +13,7 @@ $tone = $tone ?? 'neutral';
 $icon = $icon ?? null;
 
 $classes = match ($tone) {
-    'success' => 'bg-[#E8F5EC] text-[#2E7D4F]',
+    'success' => 'bg-[#E8F5EC] text-[#2B7549]',
     'warning' => 'bg-[#FFF1D6] text-[#946200]',
     'danger'  => 'bg-[#FDEDEC] text-[#C33939]',
     'info'    => 'bg-[#E0E5F2] text-brand-dark',

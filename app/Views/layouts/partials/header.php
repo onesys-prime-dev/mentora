@@ -49,7 +49,7 @@ $accountLinks = [
             href="<?= site_url(role_home($userRole) . '/dashboard') ?>">
             <img
                 class="h-11 w-auto"
-                src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="">
+                src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="Mentora">
         </a>
 
         <?php $headerBranding = (new \App\Services\Institutions\InstitutionBranding())->forUser(auth()->user()); ?>
