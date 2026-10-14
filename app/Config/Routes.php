@@ -25,6 +25,16 @@ $routes->post('reset-password/(:segment)', 'PasswordResetController::complete/$1
 // is the other person's and must not need the admin group to get out (the filter allows it).
 $routes->post('impersonation/stop', 'Admin\ImpersonationController::stop');
 
+// The question-builder worker's side of the job queue: no session, loopback and
+// a shared secret only (AiWorkerFilter).
+$routes->group('internal/ai', ['filter' => 'aiworker'], function ($routes) {
+    $routes->post('claim', 'Internal\AiJobsController::claim');
+    $routes->post('heartbeat', 'Internal\AiJobsController::heartbeat');
+    $routes->post('progress', 'Internal\AiJobsController::progress');
+    $routes->post('complete', 'Internal\AiJobsController::complete');
+    $routes->post('fail', 'Internal\AiJobsController::fail');
+});
+
 // A signed-in person's own notifications, for every role.
 $routes->get('notifications', 'NotificationController::index', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);

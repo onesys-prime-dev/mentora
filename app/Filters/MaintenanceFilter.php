@@ -24,7 +24,7 @@ use Throwable;
  */
 class MaintenanceFilter implements FilterInterface
 {
-    private const OPEN_PATHS = ['login', 'logout', 'health', 'auth', 'impersonation/stop', 'reset-password', 'invitation'];
+    private const OPEN_PATHS = ['login', 'logout', 'health', 'auth', 'impersonation/stop', 'reset-password', 'invitation', 'internal/ai'];
 
     public function before(RequestInterface $request, $arguments = null)
     {
