@@ -149,6 +149,36 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => 1,
             ],
 
+            // Dean-only: oversees the general department.
+            [
+                'username'       => 'dean.demo1',
+                'email'          => 'dean1@mentora.test',
+                'password'       => 'Dean123!',
+                'group'          => 'dean',
+                'first_name'     => 'Daniel',
+                'middle_name'    => 'Santos',
+                'last_name'      => 'Reyes',
+                'suffix'         => null,
+                'student_number' => null,
+                'program_id'     => null,
+                'institution_id' => 1,
+            ],
+
+            // Dual-role: oversees CBM, chairs its IT sub-department, and teaches.
+            [
+                'username'       => 'dean.demo2',
+                'email'          => 'dean2@mentora.test',
+                'password'       => 'Dean123!',
+                'group'          => ['dean', 'chairperson', 'instructor'],
+                'first_name'     => 'Diana',
+                'middle_name'    => 'Torres',
+                'last_name'      => 'Mendoza',
+                'suffix'         => null,
+                'student_number' => null,
+                'program_id'     => 1,
+                'institution_id' => 1,
+            ],
+
             // =====================================================
             // Parent
             // =====================================================

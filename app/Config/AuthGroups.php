@@ -45,6 +45,10 @@ class AuthGroups extends ShieldAuthGroups
             'title'       => 'Chairperson',
             'description' => 'Chairperson Users',
         ],
+        'dean' => [
+            'title'       => 'Dean',
+            'description' => 'Dean Users',
+        ],
         'parent' => [
             'title'       => 'Parent',
             'description' => 'Parent Users',
@@ -94,6 +98,11 @@ class AuthGroups extends ShieldAuthGroups
         'grading.manage'        => 'Grade work and manage the gradebook',
         'announcements.manage'  => 'Post and manage announcements',
         'program.monitor'       => 'Monitor a whole program',
+        'department.monitor'    => 'Monitor a whole department',
+        'grades.approve'        => 'Approve final-grade overrides',
+        'grades.signoff'        => 'Sign off term-end grades',
+        'followups.manage'      => 'Manage department follow-ups',
+        'department.announce'   => 'Publish department announcements',
 
         // The institution's own administration (institutional administrator)
         'structure.manage'      => 'Manage departments, sub-departments, programs and courses',
@@ -136,6 +145,7 @@ class AuthGroups extends ShieldAuthGroups
             'people.view', 'people.manage', 'reports.view',
             'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run',
         ],
+        'dean'              => ['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce'],
         'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor'],
         'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage'],
         'student'             => ['courses.view'],
