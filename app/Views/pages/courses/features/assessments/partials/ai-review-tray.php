@@ -47,6 +47,11 @@
     <div data-ai-tray-generating class="hidden items-center gap-2 text-xs text-gray-500">
         <span data-ai-tray-progress-ring class="text-brand"></span>
         <span data-ai-tray-generating-label>Generating more questions...</span>
+        <button type="button" data-ai-tray-cancel class="ml-1 rounded-full px-2 py-0.5 text-xs font-medium text-gray-600 underline hover:text-gray-900">Cancel</button>
+    </div>
+
+    <div data-ai-tray-job-error role="alert" class="hidden items-start gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-xs text-red-800">
+        <span data-ai-tray-job-error-text></span>
     </div>
 
     <div data-ai-tray-stopped-early class="hidden items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-800">

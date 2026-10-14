@@ -847,6 +847,36 @@ export async function fetchGenerationBatch(offeringId, batchId) {
 
 }
 
+export async function cancelGenerationBatch(offeringId, batchId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/cancel`,
+        { method: "POST", headers: defaultHeaders() }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to cancel generation.");
+    }
+
+    return response.json();
+
+}
+
+export async function fetchPendingGeneration(offeringId, assessmentId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/pending-generation`,
+        { headers: defaultHeaders() }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to check for pending questions.");
+    }
+
+    return response.json();
+
+}
+
 export async function updateGeneratedQuestion(offeringId, generatedQuestionId, payload) {
 
     const response = await fetch(

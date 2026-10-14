@@ -29,9 +29,15 @@ class QuestionGenerationService
     protected SimilarityChecker $similarityChecker;
     protected StorageService $storageService;
     protected LearningUnitContentExtractor $contentExtractor;
+    protected AiJobGeneration $jobGeneration;
 
-    public function __construct(?QuestionGeneratorClientInterface $client = null)
+    /** When on, a batch is a background job for the worker instead of chunks in the request. */
+    protected bool $useJobs;
+
+    public function __construct(?QuestionGeneratorClientInterface $client = null, ?bool $useJobs = null)
     {
+        $this->useJobs = $useJobs ?? AiJobGeneration::enabled();
+        $this->jobGeneration = new AiJobGeneration();
         $this->batchModel = new AiGenerationBatchModel();
         $this->generatedQuestionModel = new AiGeneratedQuestionModel();
         $this->assessmentModel = new AssessmentModel();
@@ -177,7 +183,13 @@ class QuestionGenerationService
 
         $batchId = $this->batchModel->getInsertID();
 
-        $result = $this->generateChunk($batchId);
+        if ($this->useJobs) {
+            $this->jobGeneration->enqueue($this->batchModel->find($batchId), (int) $user->id);
+
+            $result = $this->getBatch($batchId);
+        } else {
+            $result = $this->generateChunk($batchId);
+        }
 
         // One-time notice for the tray: items in the chosen unit that exist
         // but couldn't be read, so the questions won't cover them.
@@ -198,6 +210,11 @@ class QuestionGenerationService
             return $this->batchSummary($batch);
         }
 
+        // A job-backed batch is filled by the worker; asking again only looks.
+        if ($this->jobGeneration->sync($batchId) !== null) {
+            return $this->getBatch($batchId);
+        }
+
         return $this->generateChunk($batchId);
     }
 
@@ -209,7 +226,36 @@ class QuestionGenerationService
             return ['success' => false, 'message' => 'Batch not found.'];
         }
 
-        return $this->batchSummary($batch);
+        // For a job-backed batch this also applies a finished job's questions.
+        $job = $this->jobGeneration->sync($batchId);
+
+        if ($job !== null) {
+            $batch = $this->batchModel->find($batchId);
+        }
+
+        return $this->batchSummary($batch) + ($job !== null ? ['job' => $job] : []);
+    }
+
+    /** Stops a background batch. */
+    public function cancelBatch(User $user, int $batchId): array
+    {
+        $batch = $this->batchModel->find($batchId);
+
+        if (!$batch) {
+            return ['success' => false, 'message' => 'Batch not found.'];
+        }
+
+        $this->jobGeneration->cancel($batch, (int) $user->id);
+
+        return $this->getBatch($batchId);
+    }
+
+    /** The person's unfinished or unreviewed batch for a quiz, so a reload can reopen the tray. */
+    public function pendingBatch(User $user, int $assessmentId): ?array
+    {
+        $batch = $this->jobGeneration->pendingBatch((int) $user->id, $assessmentId);
+
+        return $batch === null ? null : $this->getBatch((int) $batch['id']);
     }
 
     public function updateGeneratedQuestion(int $id, array $data): array

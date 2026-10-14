@@ -79,6 +79,22 @@ class QuestionGenerationController extends BaseController
         );
     }
 
+    public function cancel(int $batchId)
+    {
+        return $this->response->setJSON(
+            $this->generationService->cancelBatch(auth()->user(), $batchId)
+        );
+    }
+
+    /** The signed-in person's batch for this quiz that is still running or unreviewed, or null. */
+    public function pending(int $assessmentId)
+    {
+        return $this->response->setJSON([
+            'success' => true,
+            'pending' => $this->generationService->pendingBatch(auth()->user(), $assessmentId),
+        ]);
+    }
+
     public function updateQuestion(int $generatedQuestionId)
     {
         $data = $this->request->getJSON(true) ?? [];
