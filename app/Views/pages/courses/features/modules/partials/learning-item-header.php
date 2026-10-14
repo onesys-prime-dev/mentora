@@ -1,5 +1,5 @@
 <?php 
-$userRole = esc($user->getGroups()[0]);
+$userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'instructor' : esc($user->getGroups()[0]);
 ?>
 
 <!-- header -->

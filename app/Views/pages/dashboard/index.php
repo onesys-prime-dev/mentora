@@ -17,6 +17,22 @@ $renderWidget = function (string $slug) use ($widgets) {
     return $this->include('pages/dashboard/partials/' . $slug);
 };
 
+/**
+ * The chairperson dashboard's own flat-card visual style lives in its own
+ * partials/chairperson/ subfolder (see its partials' docblocks) rather
+ * than forking the shared ones every other role still uses — this reads
+ * from the same $widgets data, just a different template path.
+ */
+$renderChairWidget = function (string $slug) use ($widgets) {
+    if (! isset($widgets[$slug])) {
+        return '';
+    }
+
+    $this->setVar('data', $widgets[$slug]);
+
+    return $this->include('pages/dashboard/partials/chairperson/' . $slug);
+};
+
 // A multi-role user's dashboard must match the role they're actually
 // acting as, not just whichever group happens to sort first — otherwise
 // a chairperson who also teaches would see the instructor layout.
@@ -71,27 +87,9 @@ $layouts = [
         ],
     ],
 
-    /*
-     * Same row shape as instructor's (identity spans both rows), but
-     * grading-queue/at-risk-students are program-wide instead of one
-     * instructor's sections, and the third row-1 slot is the chair's own
-     * "needs attention" signal (inactive-courses) rather than instructor-
-     * only widgets.
-     */
-    'chairperson' => [
-        'identity' => [
-            'span'    => 'lg:col-span-3 lg:row-span-2',
-            'widgets' => ['profile-card', 'program-snapshot'],
-        ],
-        'cells' => [
-            ['slug' => 'grading-queue',    'span' => 'lg:col-span-5'],
-            ['slug' => 'at-risk-students', 'span' => 'lg:col-span-4'],
-            ['slug' => 'inactive-courses', 'span' => 'lg:col-span-3'],
-            ['slug' => 'announcements',    'span' => 'lg:col-span-5'],
-            ['slug' => 'audit-highlights', 'span' => 'lg:col-span-4'],
-            ['slug' => 'quick-access',     'span' => 'lg:col-span-3'],
-        ],
-    ],
+    // Chairperson isn't in this map — it has its own bespoke layout below
+    // (flat cards, a merged Needs Attention list, quick access as a top
+    // strip), not the generic 12-column grid every other role shares.
 ];
 
 $layout = $layouts[$userRole] ?? $layouts['student'];
@@ -148,33 +146,65 @@ $cells = $layout['cells'];
         Below `lg` the rows are dropped and the cards stack and scroll
         normally; two fixed rows would squash six stacked cards.
     -->
-    <div class="grid grid-cols-12 gap-5 lg:flex-1 lg:min-h-0 lg:grid-rows-2">
+    <?php if ($userRole === 'chairperson'): ?>
 
-        <!--
-            Identity column. The first widget is the profile strip and sizes
-            to its content; whatever follows takes the rest of the column.
-        -->
-        <div class="col-span-12 <?= $identity['span'] ?> min-h-0 flex flex-col gap-4">
+        <?= $renderChairWidget('quick-access') ?>
 
-            <?php foreach ($identity['widgets'] as $position => $slug): ?>
+        <!-- From lg up this fills the viewport (no page scroll); lists scroll inside their cards. -->
+        <div class="flex flex-wrap lg:flex-nowrap gap-5 lg:flex-1 lg:min-h-0">
 
-                <div class="<?= $position === 0 ? 'shrink-0' : 'flex-1 min-h-0' ?>">
-                    <?= $renderWidget($slug) ?>
+            <!-- Identity rail: profile + program snapshot + workload (takes the leftover height). -->
+            <div class="w-full lg:w-80 shrink-0 flex flex-col gap-5 lg:min-h-0">
+                <div class="shrink-0"><?= $renderChairWidget('profile-card') ?></div>
+                <div class="shrink-0"><?= $renderChairWidget('program-snapshot') ?></div>
+                <div class="lg:flex-1 lg:min-h-0"><?= $renderChairWidget('instructor-workload') ?></div>
+            </div>
+
+            <!-- Main column: one merged attention list, then announcements + recent actions side by side. -->
+            <div class="flex-1 min-w-0 flex flex-col gap-5 lg:min-h-0">
+
+                <div class="h-80 lg:h-auto lg:flex-3 lg:min-h-0"><?= $renderChairWidget('needs-attention') ?></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 lg:flex-2 lg:min-h-0">
+                    <div class="h-80 lg:h-auto min-w-0 lg:min-h-0"><?= $renderChairWidget('announcements') ?></div>
+                    <div class="h-80 lg:h-auto min-w-0 lg:min-h-0"><?= $renderChairWidget('audit-highlights') ?></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    <?php else: ?>
+
+        <div class="grid grid-cols-12 gap-5 lg:flex-1 lg:min-h-0 lg:grid-rows-2">
+
+            <!--
+                Identity column. The first widget is the profile strip and sizes
+                to its content; whatever follows takes the rest of the column.
+            -->
+            <div class="col-span-12 <?= $identity['span'] ?> min-h-0 flex flex-col gap-4">
+
+                <?php foreach ($identity['widgets'] as $position => $slug): ?>
+
+                    <div class="<?= $position === 0 ? 'shrink-0' : 'flex-1 min-h-0' ?>">
+                        <?= $renderWidget($slug) ?>
+                    </div>
+
+                <?php endforeach; ?>
+
+            </div>
+
+            <?php foreach ($cells as $cell): ?>
+
+                <div class="col-span-12 <?= $cell['span'] ?> min-h-0">
+                    <?= $renderWidget($cell['slug']) ?>
                 </div>
 
             <?php endforeach; ?>
 
         </div>
 
-        <?php foreach ($cells as $cell): ?>
-
-            <div class="col-span-12 <?= $cell['span'] ?> min-h-0">
-                <?= $renderWidget($cell['slug']) ?>
-            </div>
-
-        <?php endforeach; ?>
-
-    </div>
+    <?php endif; ?>
 
 </div>
 

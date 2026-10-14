@@ -143,7 +143,7 @@ class CourseService
      * the 'enrolled' count already fetched by retrieveInstructorCourseOfferings()
      * rather than re-querying it.
      */
-    protected function classProgress(array $courses): array
+    public function classProgress(array $courses): array
     {
         $offeringIds = array_column($courses, 'offering_id');
 
