@@ -148,7 +148,7 @@ final class PermissionMatrixTest extends DatabaseTestCase
 
     public function testRolesAndPermissionsAreListedFromTheConfig(): void
     {
-        $this->assertEqualsCanonicalizing(['student', 'instructor', 'chairperson', 'parent', 'institutional_admin', 'admin'], $this->matrix->roles());
+        $this->assertEqualsCanonicalizing(['student', 'instructor', 'chairperson', 'dean', 'parent', 'institutional_admin', 'admin'], $this->matrix->roles());
         $this->assertArrayHasKey('courses.view', $this->matrix->permissions());
     }
 
