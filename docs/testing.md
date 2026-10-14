@@ -28,6 +28,32 @@ npm run test:watch   # re-runs as you edit
 Tests live in `tests/js/`, mirroring the paths under `resources/js/`, and are
 named `*.test.js`.
 
+### Automated pull-request checks
+
+Use `bash scripts/create-pr.sh` from Git Bash to run checks, push the current branch,
+and open a pull request using the repository template:
+
+```bash
+bash scripts/create-pr.sh main "feat: describe the change" "What and why"
+PR_CHECK_SCOPE=targeted bash scripts/create-pr.sh main "feat: describe the change"
+```
+
+The default `full` scope runs the complete PHPUnit, PHPStan, Vitest, ESLint and
+Vite checks. `targeted` discovers changed PHP tests and application files, and
+runs frontend checks only when frontend files or configuration changed. Targeted
+checks are intended for local iteration; CI remains authoritative before merge.
+
+For unusual layouts, targeted selections can be overridden with space-separated
+paths:
+
+```bash
+PR_TEST_FILES="tests/database/SomeTest.php" \
+PR_PHPSTAN_PATHS="app/Services/SomeService.php" \
+PR_VITEST_FILES="tests/js/some-feature.test.js" \
+PR_CHECK_SCOPE=targeted \
+bash scripts/create-pr.sh main "feat: describe the change"
+```
+
 The first run builds the whole schema from the migrations (App and Shield), so
 it takes a few seconds longer; later runs reuse it.
 
