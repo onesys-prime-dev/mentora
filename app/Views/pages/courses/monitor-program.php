@@ -53,8 +53,9 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
         <p class="text-sm text-[#3D3D3D]">How the programs you chair are performing.</p>
     </div>
 
-    <form method="get" action="<?= site_url('chairperson/monitor-program') ?>" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Term
+    <!-- One-line filter toolbar (term · date range · apply), like an analytics report bar. -->
+    <form method="get" action="<?= site_url('chairperson/monitor-program') ?>" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm">
+        <label class="flex min-w-48 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">Term
             <select class="<?= $input ?>" name="term">
                 <option value="">Any term</option>
                 <?php foreach ($terms as $term): ?>
@@ -64,12 +65,15 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                 <?php endforeach; ?>
             </select>
         </label>
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">From
-            <input class="<?= $input ?>" type="date" name="from" value="<?= esc($filters->from ?? '') ?>">
-        </label>
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">To
-            <input class="<?= $input ?>" type="date" name="to" value="<?= esc($filters->to ?? '') ?>">
-        </label>
+        <div class="flex min-w-72 flex-[1.5] items-end gap-2">
+            <label class="flex flex-1 flex-col gap-1 text-xs font-medium text-gray-600">From
+                <input class="<?= $input ?>" type="date" name="from" value="<?= esc($filters->from ?? '') ?>">
+            </label>
+            <span class="pb-2.5 text-gray-400">–</span>
+            <label class="flex flex-1 flex-col gap-1 text-xs font-medium text-gray-600">To
+                <input class="<?= $input ?>" type="date" name="to" value="<?= esc($filters->to ?? '') ?>">
+            </label>
+        </div>
         <div class="flex items-end gap-2">
             <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Apply</button>
             <?php if ($filters->isFiltered()): ?>
@@ -91,10 +95,19 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
         <!-- Program snapshot -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <?php foreach ([['label' => 'Courses', 'value' => $snapshot['courses']], ['label' => 'Instructors', 'value' => $snapshot['instructors']], ['label' => 'Enrolled students', 'value' => $snapshot['students']]] as $tile): ?>
-                <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-xs font-medium text-[#646464]"><?= esc($tile['label']) ?></p>
-                    <p class="text-3xl font-bold text-brand"><?= esc(number_format((int) $tile['value'])) ?></p>
+            <?php foreach ([
+                ['label' => 'Courses', 'value' => $snapshot['courses'], 'icon' => 'hat', 'tint' => 'bg-[#E8EEFC] text-[#0040A6]'],
+                ['label' => 'Instructors', 'value' => $snapshot['instructors'], 'icon' => 'user', 'tint' => 'bg-[#E6F4EC] text-[#1E8A4C]'],
+                ['label' => 'Enrolled students', 'value' => $snapshot['students'], 'icon' => 'lessons', 'tint' => 'bg-[#FFF1D6] text-[#946200]'],
+            ] as $tile): ?>
+                <div class="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl <?= $tile['tint'] ?>">
+                        <?= icon($tile['icon'], 'h-6 w-6') ?>
+                    </span>
+                    <div>
+                        <p class="text-3xl font-bold leading-none text-[#0A0F1E]"><?= esc(number_format((int) $tile['value'])) ?></p>
+                        <p class="mt-1 text-xs font-medium text-[#646464]"><?= esc($tile['label']) ?></p>
+                    </div>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -118,14 +131,16 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                 id="monitor-program-charts"
                 class="grid grid-cols-1 gap-5 lg:grid-cols-2"
                 data-completion="<?= esc(json_encode(array_map(static fn (array $c) => ['label' => $c['course_code'], 'value' => $c['completion_percentage']], $comparison)), 'attr') ?>"
-                data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>"
+                data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>">
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">Completion per course</p>
-                    <canvas id="monitor-program-completion-chart" height="220"></canvas>
+                    <p class="text-sm font-semibold text-[#1A1C1E]">Completion per course</p>
+                    <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
+                    <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
                 </div>
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
-                    <canvas id="monitor-program-grade-chart" height="220"></canvas>
+                    <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
+                    <p class="mb-3 text-xs text-[#646464]">Students per grade band across the program.</p>
+                    <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
                 </div>
             </div>
 
@@ -155,7 +170,14 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                                         </a>
                                     </td>
                                     <td class="px-3 py-2"><?= esc((string) $row['enrolled']) ?></td>
-                                    <td class="px-3 py-2"><?= esc($percent($row['completion_percentage'])) ?></td>
+                                    <td class="px-3 py-2">
+                                        <div class="flex items-center gap-2">
+                                            <div class="h-1.5 w-20 overflow-hidden rounded-full bg-[#F1F3F8]">
+                                                <div class="h-full rounded-full bg-[#0040A6]" style="width: <?= (int) round((float) ($row['completion_percentage'] ?? 0)) ?>%"></div>
+                                            </div>
+                                            <span><?= esc($percent($row['completion_percentage'])) ?></span>
+                                        </div>
+                                    </td>
                                     <td class="px-3 py-2"><?= esc($percent($row['average_percentage'])) ?></td>
                                     <td class="px-3 py-2"><?= $row['avg_grading_turnaround_hours'] === null ? '—' : esc(number_format($row['avg_grading_turnaround_hours'], 1) . 'h') ?></td>
                                     <td class="px-3 py-2 text-[#646464]"><?= esc($row['instructor_name'] ?? 'Unassigned') ?></td>
@@ -165,6 +187,9 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                     </table>
                 </div>
             </div>
+
+            <!-- At-risk students + audit log side by side -->
+            <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
 
             <!-- At-risk students -->
             <div class="rounded-2xl bg-white p-5 shadow-sm">
@@ -228,6 +253,8 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                         </span>
                     </nav>
                 <?php endif; ?>
+            </div>
+
             </div>
 
         <?php endif; ?>

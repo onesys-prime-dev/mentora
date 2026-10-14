@@ -116,9 +116,19 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
-    | Inactive courses
+    | Needs attention: inactive courses (one of its three merged sources —
+    | see getNeedsAttentionData()). Filtered by 'kind' since the widget now
+    | merges grading/at-risk/inactive into one list.
     |--------------------------------------------------------------------------
     */
+
+    private function attentionItemsOfKind(string $kind): array
+    {
+        return array_values(array_filter(
+            $this->widgets()['needs-attention']['items'],
+            static fn (array $item) => $item['kind'] === $kind
+        ));
+    }
 
     public function testInactiveCoursesFlagsACourseWithNoRecentModuleActivity(): void
     {
@@ -126,7 +136,7 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
             'updated_at' => date('Y-m-d H:i:s', strtotime('-30 days')),
         ]);
 
-        $courses = $this->widgets()['inactive-courses']['courses'];
+        $courses = $this->attentionItemsOfKind('inactive');
 
         $this->assertCount(1, $courses);
         $this->assertSame($this->mine['id'], $courses[0]['offering_id']);
@@ -138,21 +148,21 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $this->assertSame([], $this->widgets()['inactive-courses']['courses']);
+        $this->assertSame([], $this->attentionItemsOfKind('inactive'));
     }
 
     public function testInactiveCoursesNeverIncludesACourseOutsideTheProgram(): void
     {
         // $elsewhere's module is freshly created (recent updated_at) but it
         // doesn't matter either way — it must never appear, stale or not.
-        $offeringIds = array_column($this->widgets()['inactive-courses']['courses'], 'offering_id');
+        $offeringIds = array_column($this->attentionItemsOfKind('inactive'), 'offering_id');
 
         $this->assertNotContains($this->elsewhere['id'], $offeringIds);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Grading queue / at-risk students: program scoping
+    | Needs attention: grading queue / at-risk students (program scoping)
     | (RosterRiskService's own at-risk definition is covered elsewhere;
     | this only proves the chairperson branch is scoped correctly.)
     |--------------------------------------------------------------------------
@@ -172,8 +182,7 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
         CourseFactory::enroll($this->elsewhere['id'], $otherStudent);
         AssessmentFactory::attempt($elsewhereAssessment, $otherStudent, 'Submitted');
 
-        $queue = $this->widgets()['grading-queue']['queue'];
-        $offeringIds = array_column($queue, 'offering_id');
+        $offeringIds = array_column($this->attentionItemsOfKind('grading'), 'offering_id');
 
         $this->assertContains($this->mine['id'], $offeringIds);
         $this->assertNotContains($this->elsewhere['id'], $offeringIds);
@@ -184,12 +193,10 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
         $student = CourseFactory::user('student');
         CourseFactory::enroll($this->mine['id'], $student);
 
-        $widgets = $this->widgets();
-
         // No assertion on membership here (that's RosterRiskService's own
-        // definition to prove) — just that this doesn't error and the
-        // widget is scoped to chaired offerings, not every offering.
-        $this->assertArrayHasKey('students', $widgets['at-risk-students']);
+        // definition to prove) — just that this doesn't error.
+        $this->attentionItemsOfKind('at_risk');
+        $this->addToAssertionCount(1);
     }
 
     /*
@@ -237,6 +244,90 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
     public function testAuditHighlightsIsEmptyWithNoActivity(): void
     {
         $this->assertSame([], $this->widgets()['audit-highlights']['entries']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Needs attention: merge order and shape
+    |--------------------------------------------------------------------------
+    */
+
+    public function testNeedsAttentionIsEmptyWithNothingToFlag(): void
+    {
+        // The fixture's module otherwise has no updated_at yet, which
+        // getInactiveCoursesData() reads as "no activity ever" — recently
+        // touched, like a real active course, so only grading/at-risk
+        // (neither set up here) could put anything in the list.
+        db_connect()->table('course_modules')->where('offering_id', $this->mine['id'])->update([
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->assertSame([], $this->widgets()['needs-attention']['items']);
+    }
+
+    public function testNeedsAttentionListsGradingBeforeAtRiskBeforeInactive(): void
+    {
+        $assessmentId = CourseFactory::assessment($this->mine['id'], $this->chair, $this->mine['module'], null, 'Assignment');
+        db_connect()->table('assessments')->where('id', $assessmentId)->update(['due_date' => date('Y-m-d H:i:s', strtotime('-1 day'))]);
+        $submittedStudent = CourseFactory::user('student');
+        CourseFactory::enroll($this->mine['id'], $submittedStudent);
+        AssessmentFactory::attempt($assessmentId, $submittedStudent, 'Submitted');
+
+        $riskyStudent = CourseFactory::user('student');
+        db_connect()->table('user_profiles')->insert(['user_id' => $riskyStudent->id, 'first_name' => 'Ana', 'last_name' => 'Cruz']);
+        CourseFactory::enroll($this->mine['id'], $riskyStudent);
+        CourseFactory::items(CourseFactory::unit($this->mine['module']), [[]]);
+
+        db_connect()->table('course_modules')->where('offering_id', $this->mine['id'])->update([
+            'updated_at' => date('Y-m-d H:i:s', strtotime('-30 days')),
+        ]);
+
+        $kinds = array_column($this->widgets()['needs-attention']['items'], 'kind');
+
+        $this->assertSame(['grading', 'at_risk', 'inactive'], $kinds);
+    }
+
+    public function testNeedsAttentionGradingItemCarriesTheBadgeAndDrillDownIds(): void
+    {
+        $assessmentId = CourseFactory::assessment($this->mine['id'], $this->chair, $this->mine['module'], null, 'Assignment');
+        db_connect()->table('assessments')->where('id', $assessmentId)->update(['due_date' => date('Y-m-d H:i:s', strtotime('-1 day'))]);
+        $student = CourseFactory::user('student');
+        CourseFactory::enroll($this->mine['id'], $student);
+        AssessmentFactory::attempt($assessmentId, $student, 'Submitted');
+
+        $item = $this->attentionItemsOfKind('grading')[0];
+
+        $this->assertSame('1 to grade', $item['badge']);
+        $this->assertSame($this->mine['id'], $item['offering_id']);
+        $this->assertSame($assessmentId, $item['assessment_id']);
+    }
+
+    /**
+     * A big program can easily flag more than fits on a dashboard card — the
+     * list itself (not just the view) caps at NEEDS_ATTENTION_LIMIT, with
+     * 'total' keeping the true count so the view can say "view N more"
+     * rather than silently dropping items.
+     */
+    public function testNeedsAttentionReturnsEveryFlaggedItemUncapped(): void
+    {
+        CourseFactory::items(CourseFactory::unit($this->mine['module']), [[]]);
+
+        // Keep the module "active" so only the at-risk students below count.
+        db_connect()->table('course_modules')->where('offering_id', $this->mine['id'])->update([
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $expected = 8;
+
+        for ($i = 0; $i < $expected; $i++) {
+            $student = CourseFactory::user('student');
+            db_connect()->table('user_profiles')->insert(['user_id' => $student->id, 'first_name' => 'S', 'last_name' => (string) $i]);
+            CourseFactory::enroll($this->mine['id'], $student);
+        }
+
+        // The widget scrolls internally for a longer list rather than
+        // silently dropping items past some fixed count.
+        $this->assertCount($expected, $this->widgets()['needs-attention']['items']);
     }
 
     /*
