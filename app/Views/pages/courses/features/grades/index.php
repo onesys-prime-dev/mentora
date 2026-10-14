@@ -8,7 +8,7 @@
  *
  * All data comes from GradeService (real queries, no placeholders).
  */
-$userRole = esc($user->getGroups()[0]);
+$userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'instructor' : esc($user->getGroups()[0]);
 ?>
 
 <div class="p-10 flex flex-col gap-10">

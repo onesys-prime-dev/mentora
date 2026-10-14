@@ -9,7 +9,7 @@
 |--------------------------------------------------------------------------
 */
 
-$isInstructor = $user->inGroup('instructor');
+$isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
 $assignmentState ??= null;
 
