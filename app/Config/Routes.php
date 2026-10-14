@@ -264,6 +264,13 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
     });
 });
 
+// The dean oversees one department. Every route in this group is read-only
+// oversight; role:dean also checks the dean's active assignment (ActiveRoleService).
+$routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($routes) {
+    $routes->get('/', 'Dean\DeanDashboardController::index');
+    $routes->get('dashboard', 'Dean\DeanDashboardController::index');
+});
+
 // A chairperson has full instructor rights on every course in their
 // program (R7 of the chairperson plan) — this block mirrors instructor's
 // course routes exactly, same controllers, scoped by ChairpersonAccessService
