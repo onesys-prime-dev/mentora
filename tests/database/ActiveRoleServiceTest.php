@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use App\Models\Users\UserProfileModel;
 use App\Services\Auth\ActiveRoleService;
+use App\Services\Institutions\DeanAssignmentService;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\PeopleFactory;
 
 /**
  * Which role a multi-role user is currently acting as: resumed across
@@ -67,6 +69,75 @@ final class ActiveRoleServiceTest extends DatabaseTestCase
         $user = $this->dualRoleUser();
 
         $this->assertSame('chairperson', $this->service->resolve($user));
+    }
+
+    /** A person who is dean, chairperson and instructor, with or without an active deanship. */
+    private function deanWithOtherRoles(bool $assigned): User
+    {
+        $institution = PeopleFactory::institution('ARS');
+        db_connect()->table('departments')->insert(['institution_id' => $institution, 'code' => 'D1', 'name' => 'Department One']);
+        $department = (int) db_connect()->insertID();
+
+        $user = PeopleFactory::person('instructor', 'Dana', 'Dean', null, $institution);
+        $user->addGroup('chairperson');
+
+        if ($assigned) {
+            (new DeanAssignmentService())->assign($institution, $department, (int) $user->id);
+        } else {
+            $user->addGroup('dean');
+        }
+
+        return model(CodeIgniter\Shield\Models\UserModel::class)->findById($user->id);
+    }
+
+    public function testADeanWhoIsAlsoAChairpersonAndInstructorDefaultsToDean(): void
+    {
+        $user = $this->deanWithOtherRoles(true);
+
+        $this->assertSame('dean', $this->service->resolve($user));
+    }
+
+    public function testADeanCanSwitchToTheirOtherRolesAndBack(): void
+    {
+        $user = $this->deanWithOtherRoles(true);
+
+        $this->assertTrue($this->service->switchTo($user, 'instructor'));
+        $this->assertSame('instructor', $this->service->resolve($user));
+        $this->assertTrue($this->service->switchTo($user, 'dean'));
+        $this->assertSame('dean', $this->service->resolve($user));
+    }
+
+    public function testADeanWithoutAnAssignmentCannotActAsDeanWhileHoldingAnotherRole(): void
+    {
+        $user = $this->deanWithOtherRoles(false);
+
+        $this->assertSame('chairperson', $this->service->resolve($user));
+        $this->assertFalse($this->service->switchTo($user, 'dean'));
+    }
+
+    public function testADeanWithNothingElseKeepsTheRoleSoTheyReachTheExplanationPage(): void
+    {
+        $user = $this->withProfile(CourseFactory::user('dean'));
+
+        $this->assertSame('dean', $this->service->resolve($user));
+    }
+
+    public function testRoleDeanIsDroppedMidSessionWhenTheAssignmentEnds(): void
+    {
+        $user = $this->deanWithOtherRoles(true);
+        $this->assertSame('dean', $this->service->resolve($user));
+
+        db_connect()->table('dean_assignments')->where('dean_user_id', $user->id)->update(['status' => 'ended', 'active_marker' => null]);
+
+        $this->assertSame('chairperson', $this->service->resolve($user), 'the session still says dean, but the deanship has ended');
+    }
+
+    public function testSwitchingToARoleTheUserDoesNotHoldIsRefusedForDeanToo(): void
+    {
+        $user = $this->withProfile(CourseFactory::user('instructor'));
+
+        $this->assertFalse($this->service->switchTo($user, 'dean'));
+        $this->assertNull($this->savedRole($user));
     }
 
     public function testSwitchingToAHeldRoleSucceedsAndIsPickedUpOnTheNextResolve(): void

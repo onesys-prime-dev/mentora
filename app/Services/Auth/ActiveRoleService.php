@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Models\Assignments\DeanAssignmentModel;
 use App\Models\Users\UserProfileModel;
 use CodeIgniter\Shield\Entities\User;
 
@@ -28,7 +29,7 @@ class ActiveRoleService
      */
     public function resolve(User $user): string
     {
-        $groups = $user->getGroups() ?? [];
+        $groups = $this->usableGroups($user);
 
         if ($groups === []) {
             return '';
@@ -54,7 +55,7 @@ class ActiveRoleService
     /** Switches to $role only if the user actually holds it. Persists to session + profile. */
     public function switchTo(User $user, string $role): bool
     {
-        if (! in_array($role, $user->getGroups() ?? [], true)) {
+        if (! in_array($role, $this->usableGroups($user), true)) {
             return false;
         }
 
@@ -63,10 +64,50 @@ class ActiveRoleService
         return true;
     }
 
-    /** A dual-role user defaults to chairperson on first login; otherwise their only/first group. */
+    /**
+     * The highest role held opens first (dean, then chairperson); otherwise
+     * their only or first group.
+     *
+     * @param list<string> $groups
+     */
+    public static function preferredRole(array $groups): string
+    {
+        foreach (['dean', 'chairperson'] as $role) {
+            if (in_array($role, $groups, true)) {
+                return $role;
+            }
+        }
+
+        return $groups[0];
+    }
+
     protected function defaultRole(array $groups): string
     {
-        return in_array('chairperson', $groups, true) ? 'chairperson' : $groups[0];
+        return self::preferredRole($groups);
+    }
+
+    /**
+     * The groups the user can act as right now. A dean without an active
+     * assignment cannot act as dean while they hold another role; a dean
+     * with nothing else keeps it, so they land on the no-assignment page.
+     *
+     * @return list<string>
+     */
+    protected function usableGroups(User $user): array
+    {
+        $groups = array_values(array_filter($user->getGroups() ?? [], 'is_string'));
+
+        if (! in_array('dean', $groups, true)) {
+            return $groups;
+        }
+
+        $others = array_values(array_diff($groups, ['dean']));
+
+        if ($others === [] || (new DeanAssignmentModel())->departmentOfDean((int) $user->id) !== null) {
+            return $groups;
+        }
+
+        return $others;
     }
 
     protected function activate(User $user, string $role): void

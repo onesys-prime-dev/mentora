@@ -13,6 +13,7 @@ class RedirectController extends BaseController
         'student'     => '/student/dashboard',
         'instructor'  => '/instructor/dashboard',
         'chairperson' => '/chairperson/dashboard',
+        'dean'        => '/dean/dashboard',
         'registrar'   => '/registrar/dashboard',
         'parent'      => '/parent/dashboard',
     ];

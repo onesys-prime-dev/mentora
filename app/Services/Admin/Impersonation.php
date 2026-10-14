@@ -240,7 +240,7 @@ class Impersonation
             return $saved;
         }
 
-        return in_array('chairperson', $groups, true) ? 'chairperson' : $groups[0];
+        return \App\Services\Auth\ActiveRoleService::preferredRole($groups);
     }
 
     /**
