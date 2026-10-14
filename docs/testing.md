@@ -30,12 +30,12 @@ named `*.test.js`.
 
 ### Automated pull-request checks
 
-Use `scripts/create-pr.sh` from Git Bash to run checks, push the current branch,
+Use `bash scripts/create-pr.sh` from Git Bash to run checks, push the current branch,
 and open a pull request using the repository template:
 
 ```bash
-scripts/create-pr.sh main "feat: describe the change" "What and why"
-PR_CHECK_SCOPE=targeted scripts/create-pr.sh main "feat: describe the change"
+bash scripts/create-pr.sh main "feat: describe the change" "What and why"
+PR_CHECK_SCOPE=targeted bash scripts/create-pr.sh main "feat: describe the change"
 ```
 
 The default `full` scope runs the complete PHPUnit, PHPStan, Vitest, ESLint and
@@ -51,7 +51,7 @@ PR_TEST_FILES="tests/database/SomeTest.php" \
 PR_PHPSTAN_PATHS="app/Services/SomeService.php" \
 PR_VITEST_FILES="tests/js/some-feature.test.js" \
 PR_CHECK_SCOPE=targeted \
-scripts/create-pr.sh main "feat: describe the change"
+bash scripts/create-pr.sh main "feat: describe the change"
 ```
 
 The first run builds the whole schema from the migrations (App and Shield), so

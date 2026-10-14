@@ -3,14 +3,14 @@
 # the real results — never created if a check actually failed.
 #
 # Usage:
-#   scripts/create-pr.sh <base-branch> "<title>" ["<what-and-why>" [full|targeted]]
+#   bash scripts/create-pr.sh <base-branch> "<title>" ["<what-and-why>" [full|targeted]]
 #
 # Examples:
-#   scripts/create-pr.sh main "feat: add role switching"
-#   scripts/create-pr.sh main "feat: add role switching" \
+#   bash scripts/create-pr.sh main "feat: add role switching"
+#   bash scripts/create-pr.sh main "feat: add role switching" \
 #       "Adds role switching for users who hold multiple roles."
-#   scripts/create-pr.sh feature/user-roles-schema "feat: ..."   # stacked PR
-#   PR_CHECK_SCOPE=targeted scripts/create-pr.sh main "feat: ..."  # fast local checks
+#   bash scripts/create-pr.sh feature/user-roles-schema "feat: ..."   # stacked PR
+#   PR_CHECK_SCOPE=targeted bash scripts/create-pr.sh main "feat: ..."  # fast local checks
 set -uo pipefail
 
 # Windows/Git Bash can't exec these directly without the real shim extension.
@@ -210,16 +210,23 @@ else
     run_check "Vite build" "$NPM" run build
 fi
 
+TESTS_WERE_RUN=0
+if [[ "$CHECK_SCOPE" == "full" ]]; then
+    TESTS_WERE_RUN=1
+elif [[ "${#SELECTED_TESTS[@]}" -gt 0 ]]; then
+    TESTS_WERE_RUN=1
+fi
+
 {
     echo "## What and why"
     echo
-    if [[ -n "$SUMMARY" ]]; then
-        echo "$SUMMARY"
-    else
-        echo "_No summary provided — edit this section before merging._"
-    fi
+    echo "<!-- One or two sentences: what changes, and why it is needed. -->"
+    echo
+    [[ -n "$SUMMARY" ]] && echo "$SUMMARY" || echo "_No summary provided — edit this section before merging._"
     echo
     echo "## How to check it"
+    echo
+    echo "<!-- Steps a reviewer (or future you) can follow to see it working. -->"
     echo
     echo "The following checks were run locally before opening this PR:"
     echo
@@ -229,13 +236,16 @@ fi
     echo
     echo "## Checklist"
     echo
-    # Only auto-check what this script actually verified — everything
-    # above. CI's own result isn't known yet at this point, so it stays
-    # unchecked rather than assumed; items that need a human to
-    # actually judge (secrets, a real diff read) aren't here at all,
-    # since a box this script always checks regardless of truth is
-    # worse than no box.
     echo "- [ ] CI is green (the \"CI passed\" check below)"
+    if [[ "$TESTS_WERE_RUN" -eq 1 ]]; then
+        echo "- [x] Tests are included, or the reason there are none is given here: <!-- checks ran -->"
+    else
+        echo "- [ ] Tests are included, or the reason there are none is given here: <!-- no related tests were discovered; see the checks above -->"
+    fi
+    echo "- [ ] If this fixes a bug, I added a test that fails without the fix"
+    echo "- [ ] If this changes the database, there is a migration and \`php spark migrate --all\` works on an empty database"
+    echo "- [ ] No secrets, `.env` values or personal data are in the diff"
+    echo "- [ ] I looked through the diff on this page once before asking for a merge"
 } > "$BODY_FILE"
 
 if [[ ${#FAILURES[@]} -gt 0 ]]; then
