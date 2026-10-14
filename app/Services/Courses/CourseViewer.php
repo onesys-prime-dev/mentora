@@ -21,10 +21,16 @@ use CodeIgniter\Shield\Entities\User;
  */
 final class CourseViewer
 {
-    /** The instructor, or someone with a read-only view of the course. */
+    /**
+     * The instructor, the chairperson overseeing the program, or someone with
+     * a read-only view of the course. The chairperson is not enrolled, so the
+     * student view (their own submissions and grades) has nothing to show them.
+     */
     public static function seesInstructorView(User $user): bool
     {
-        return $user->inGroup('instructor') || self::isReadOnlyViewer($user);
+        return $user->inGroup('instructor')
+            || $user->inGroup('chairperson')
+            || self::isReadOnlyViewer($user);
     }
 
     /** The institutional administrator: looks at courses, never changes them. */
