@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Services\Institutions\DeanAssignmentService;
+use App\Services\Institutions\StructureException;
+use CodeIgniter\Exceptions\PageNotFoundException;
 use Tests\Support\DatabaseTestCase;
 use Tests\Support\PeopleFactory;
 
@@ -64,5 +66,67 @@ final class DeanAssignmentServiceTest extends DatabaseTestCase
 
         $this->assertNull($this->service->currentDeanOfDepartment($this->department));
         $this->assertSame('ended', db_connect()->table('dean_assignments')->where('id', $id)->get()->getRowArray()['status']);
+    }
+
+    public function testAssigningAnExistingDeanRoleDoesNotDuplicateTheRole(): void
+    {
+        $person = PeopleFactory::person('dean', 'Existing', 'Dean', null, $this->institution);
+
+        $this->service->assign($this->institution, $this->department, (int) $person->id);
+
+        $this->assertSame(1, db_connect()->table('auth_groups_users')->where([
+            'user_id' => $person->id, 'group' => 'dean',
+        ])->countAllResults());
+    }
+
+    public function testAssigningTheSamePersonElsewhereEndsTheirPreviousAssignment(): void
+    {
+        $db = db_connect();
+        $db->table('departments')->insert([
+            'institution_id' => $this->institution,
+            'code' => 'D2',
+            'name' => 'Department Two',
+        ]);
+        $secondDepartment = (int) $db->insertID();
+        $person = PeopleFactory::person('instructor', 'One', 'Dean', null, $this->institution);
+
+        $firstId = $this->service->assign($this->institution, $this->department, (int) $person->id);
+        $this->service->assign($this->institution, $secondDepartment, (int) $person->id);
+
+        $this->assertSame('ended', $db->table('dean_assignments')->where('id', $firstId)->get()->getRowArray()['status']);
+        $this->assertSame($secondDepartment, (int) $this->service->departmentOfDean((int) $person->id)['department_id']);
+    }
+
+    public function testAssigningUnknownDepartmentFails(): void
+    {
+        $person = PeopleFactory::person('instructor', 'Missing', 'Department', null, $this->institution);
+
+        $this->expectException(PageNotFoundException::class);
+        $this->service->assign($this->institution, 999999, (int) $person->id);
+    }
+
+    public function testAssigningNonMemberFails(): void
+    {
+        $person = PeopleFactory::person('instructor');
+
+        $this->expectException(StructureException::class);
+        $this->service->assign($this->institution, $this->department, (int) $person->id);
+    }
+
+    public function testEndingAnAlreadyEndedAssignmentIsIdempotent(): void
+    {
+        $person = PeopleFactory::person('instructor', 'Ended', 'Twice', null, $this->institution);
+        $id = $this->service->assign($this->institution, $this->department, (int) $person->id);
+
+        $this->service->end($this->institution, $id);
+        $this->service->end($this->institution, $id);
+
+        $this->assertSame('ended', db_connect()->table('dean_assignments')->where('id', $id)->get()->getRowArray()['status']);
+    }
+
+    public function testEndingUnknownAssignmentFails(): void
+    {
+        $this->expectException(PageNotFoundException::class);
+        $this->service->end($this->institution, 999999);
     }
 }

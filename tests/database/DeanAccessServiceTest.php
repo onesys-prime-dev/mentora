@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Courses\DeanAccessService;
+use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
 use Tests\Support\PeopleFactory;
 
@@ -51,5 +52,60 @@ final class DeanAccessServiceTest extends DatabaseTestCase
         $service = new DeanAccessService();
 
         $this->assertFalse($service->canAccessPerson($dean, (int) $dean->id));
+    }
+
+    public function testDepartmentAndOfferingAccessAreAvailableForAnActiveDean(): void
+    {
+        $db = db_connect();
+        $offering = CourseFactory::offering('D');
+        $offeringRow = $db->table('course_offerings co')
+            ->select('co.id, c.program_id, sd.department_id, i.id AS institution_id')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments d', 'd.id = sd.department_id')
+            ->join('institutions i', 'i.id = d.institution_id')
+            ->where('co.id', $offering)->get()->getRowArray();
+        $dean = PeopleFactory::person('dean', 'Active', 'Dean', null, (int) $offeringRow['institution_id']);
+        $db->table('dean_assignments')->insert([
+            'department_id' => $offeringRow['department_id'],
+            'dean_user_id' => $dean->id,
+            'status' => 'active',
+            'active_marker' => 1,
+            'assigned_at' => date('Y-m-d H:i:s'),
+        ]);
+        $service = new DeanAccessService();
+
+        $this->assertSame((int) $offeringRow['department_id'], $service->departmentIds($dean)[0]);
+        $this->assertSame((int) $offeringRow['department_id'], (int) $service->departmentFor($dean)['department_id']);
+        $this->assertTrue($service->canAccessOffering($dean, $offering));
+        $this->assertTrue($service->canAccess($dean, $offering));
+        $this->assertTrue($service->canAccessProgram($dean, (int) $offeringRow['program_id']));
+    }
+
+    public function testPersonAccessIncludesInstitutionMembersAndAssignedInstructors(): void
+    {
+        $db = db_connect();
+        $offering = CourseFactory::offering('P');
+        $row = $db->table('course_offerings co')
+            ->select('co.id, sd.department_id, i.id AS institution_id')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments d', 'd.id = sd.department_id')
+            ->join('institutions i', 'i.id = d.institution_id')
+            ->where('co.id', $offering)->get()->getRowArray();
+        $dean = PeopleFactory::person('dean', 'People', 'Dean', null, (int) $row['institution_id']);
+        $student = PeopleFactory::person('student', 'Institution', 'Member', null, (int) $row['institution_id']);
+        $instructor = PeopleFactory::person('instructor', 'Assigned', 'Teacher', null, (int) $row['institution_id']);
+        CourseFactory::assignInstructor($offering, $instructor);
+        $db->table('dean_assignments')->insert([
+            'department_id' => $row['department_id'], 'dean_user_id' => $dean->id,
+            'status' => 'active', 'active_marker' => 1, 'assigned_at' => date('Y-m-d H:i:s'),
+        ]);
+        $service = new DeanAccessService();
+
+        $this->assertTrue($service->canAccessPerson($dean, (int) $student->id));
+        $this->assertTrue($service->canAccessPerson($dean, (int) $instructor->id));
     }
 }
