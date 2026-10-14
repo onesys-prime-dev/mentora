@@ -69,7 +69,7 @@ class DeanAssignmentService
             throw new RuntimeException('The dean assignment could not be saved.');
         }
 
-        service('auditLogger')->log('structure.dean_assigned', $actor ?? auth()->user(), [
+        service('auditLogger')->log('structure.dean_assigned', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $id, 'institution_id' => $institutionId,
             'new' => ['department_id' => $departmentId, 'dean_user_id' => $userId],
         ]);
@@ -98,7 +98,7 @@ class DeanAssignmentService
             'status' => 'ended', 'active_marker' => null, 'ended_at' => $now, 'updated_at' => $now,
         ]);
 
-        service('auditLogger')->log('structure.dean_ended', $actor ?? auth()->user(), [
+        service('auditLogger')->log('structure.dean_ended', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $assignmentId, 'institution_id' => $institutionId,
             'old' => ['department_id' => (int) $row['department_id'], 'dean_user_id' => (int) $row['dean_user_id']],
         ]);
@@ -112,5 +112,10 @@ class DeanAssignmentService
     public function departmentOfDean(int $userId): ?array
     {
         return $this->assignments->departmentOfDean($userId);
+    }
+
+    private function actorOrNull(?User $actor): ?User
+    {
+        return $actor ?? (is_cli() ? null : auth()->user());
     }
 }

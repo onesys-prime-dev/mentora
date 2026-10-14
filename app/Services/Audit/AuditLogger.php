@@ -118,6 +118,10 @@ class AuditLogger
     /** The system administrator who is viewing as the actor, when impersonation is active. */
     private function impersonatorId(): ?int
     {
+        if (is_cli()) {
+            return null;
+        }
+
         $id = session('impersonator_id');
 
         return $id === null ? null : (int) $id;
