@@ -1,4 +1,4 @@
-<?php $userRole = esc($user->getGroups()[0] ?? ''); ?>
+<?php $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'instructor' : esc($user->getGroups()[0] ?? ''); ?>
 
 <div class="flex flex-col gap-8">
 

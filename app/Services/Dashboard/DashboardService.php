@@ -89,9 +89,8 @@ class DashboardService
         'chairperson' => [
             'profile-card',
             'program-snapshot',
-            'grading-queue',
-            'at-risk-students',
-            'inactive-courses',
+            'instructor-workload',
+            'needs-attention',
             'announcements',
             'audit-highlights',
             'quick-access',
@@ -161,8 +160,10 @@ class DashboardService
             'class-progress'   => $this->getClassProgressData($user),
             'content-status'   => $this->getContentStatusData($user),
             'program-snapshot' => $this->getProgramSnapshotData($user),
-            'inactive-courses' => $this->getInactiveCoursesData($user),
+            'instructor-workload' => $this->getInstructorWorkloadData($user),
+            'inactive-courses' =>$this->getInactiveCoursesData($user),
             'audit-highlights' => $this->getAuditHighlightsData($user),
+            'needs-attention'  => $this->getNeedsAttentionData($user),
             default            => [],
         };
     }
@@ -400,15 +401,11 @@ class DashboardService
      */
     protected function getQuickAccessData(User $user): array
     {
-        if (! $user->inGroup('chairperson')) {
-            return [];
-        }
-
-        return [
-            'extra' => [
-                ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url('chairperson/monitor-program')],
-            ],
-        ];
+        // Monitor Program used to live here as a chairperson-only extra
+        // before global_apps() carried it for every role (inert outside
+        // chairperson) — nothing currently needs this hook, but it stays
+        // available for the next tile that's too one-off for global_apps().
+        return [];
     }
 
     /**
@@ -430,6 +427,33 @@ class DashboardService
             'instructors' => count(array_unique(array_filter(array_column($sections, 'instructor_id')))),
             'students'    => $this->enrollmentModel->retrieveEnrolledCountForOfferings($offeringIds),
         ];
+    }
+
+    /**
+     * How many sections each instructor carries across the chairperson's
+     * program, heaviest first, so an uneven spread is visible at a glance.
+     * Sections with no instructor assigned yet are counted separately.
+     */
+    protected function getInstructorWorkloadData(User $user): array
+    {
+        $counts = [];
+        $unassigned = 0;
+
+        foreach ($this->chairpersonSections($user) as $section) {
+            if (empty($section['instructor_id'])) {
+                $unassigned++;
+
+                continue;
+            }
+
+            $id = (int) $section['instructor_id'];
+            $counts[$id] ??= ['name' => trim((string) $section['instructor_name']), 'sections' => 0];
+            $counts[$id]['sections']++;
+        }
+
+        usort($counts, static fn (array $a, array $b) => $b['sections'] <=> $a['sections']);
+
+        return ['instructors' => $counts, 'unassigned' => $unassigned];
     }
 
     /**
@@ -474,6 +498,62 @@ class DashboardService
         usort($courses, static fn (array $a, array $b) => $a['last_activity'] <=> $b['last_activity']);
 
         return ['courses' => $courses];
+    }
+
+    /**
+     * The chairperson dashboard's "Needs Attention": overdue grading,
+     * at-risk students and quiet courses in one prioritized list instead
+     * of three separate cards of mismatched length. Reuses
+     * getGradingQueueData()/getAtRiskStudentsData()/getInactiveCoursesData()
+     * rather than re-deriving any of it, so this can never disagree with
+     * what those same definitions say elsewhere on the dashboard.
+     *
+     * Grading leads (it's the one with a clear next action), then at-risk
+     * students, then quiet courses — each group keeps its own method's
+     * ordering (oldest-waiting first, longest-silent first). Not capped —
+     * the widget itself scrolls internally (same as every other dashboard
+     * card with a longer list), so nothing is silently hidden.
+     */
+    protected function getNeedsAttentionData(User $user): array
+    {
+        $items = [];
+
+        foreach ($this->getGradingQueueData($user)['queue'] as $item) {
+            $items[] = [
+                'kind' => 'grading',
+                'offering_id' => $item['offering_id'],
+                'slug' => $item['slug'],
+                'assessment_id' => $item['assessment_id'],
+                'title' => $item['course_code'] . ' ' . $item['section_code'] . ' — ' . $item['title'],
+                'subtitle' => $item['waiting_days'] <= 1 ? 'Since yesterday' : $item['waiting_days'] . ' days waiting',
+                'badge' => $item['ungraded'] . ' to grade',
+            ];
+        }
+
+        foreach ($this->getAtRiskStudentsData($user)['students'] as $student) {
+            $items[] = [
+                'kind' => 'at_risk',
+                'offering_id' => $student['offering_id'],
+                'slug' => $student['slug'],
+                'student_id' => $student['student_id'],
+                'title' => $student['name'],
+                'subtitle' => $student['section'] . ' · Last seen ' . $student['last_active'],
+                'badge' => $student['reason'] === 'inactive' ? 'Inactive' : 'Behind',
+            ];
+        }
+
+        foreach ($this->getInactiveCoursesData($user)['courses'] as $course) {
+            $items[] = [
+                'kind' => 'inactive',
+                'offering_id' => $course['offering_id'],
+                'slug' => $course['slug'],
+                'title' => $course['course_code'] . ' ' . $course['section_code'],
+                'subtitle' => 'Last activity: ' . $course['last_activity'],
+                'badge' => 'Needs a look',
+            ];
+        }
+
+        return ['items' => $items];
     }
 
     /**

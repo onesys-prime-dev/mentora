@@ -50,6 +50,15 @@ class ChairpersonCourseSearch
             ->get()
             ->getResultArray();
 
+        // The card's "Class progress" bar; same figure the instructor's card
+        // shows, so the two never disagree about a section.
+        $progress = (new CourseService())->classProgress($rows);
+
+        foreach ($rows as &$row) {
+            $row['progress'] = $progress[(int) $row['offering_id']] ?? 0;
+        }
+        unset($row);
+
         return ['rows' => $rows, 'total' => $total];
     }
 
