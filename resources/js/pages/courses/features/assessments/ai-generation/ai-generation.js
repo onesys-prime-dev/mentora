@@ -10,6 +10,8 @@ import {
     startGeneration,
     fetchNextChunk,
     fetchGenerationBatch,
+    fetchPendingGeneration,
+    cancelGenerationBatch,
     updateGeneratedQuestion,
     acceptGeneratedQuestion,
     discardGeneratedQuestion,
@@ -53,6 +55,10 @@ const pendingPayloads = new Map();
 
 const SIMILARITY_FLAG_THRESHOLD = 0.4;
 
+// How often a background job is asked how far it has got.
+const JOB_POLL_MS = 3000;
+const JOB_POLL_LIMIT = 400;
+
 // Mirrors python-question-builder-service/app/config.py MAX_QUESTIONS_PER_CALL
 // — used only to scale the progress-ring's time estimate, never sent to or
 // enforced against the server.
@@ -81,8 +87,173 @@ export function initializeAiGeneration(offeringId, assessmentId) {
     bindAiSettingsModal();
     initTrayProgressRing();
 
+    bindJobControls();
+
     if (activeBatchId) {
         resumeBatch(activeBatchId);
+    } else {
+        restorePending();
+    }
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Background jobs: follow, cancel, restore after a reload
+|--------------------------------------------------------------------------
+*/
+
+function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function jobIsRunning(result) {
+    return !!result.job && ["queued", "running"].includes(result.job.status);
+}
+
+export function jobLabel(job) {
+
+    const parts = [job.note || "Working on your questions"];
+
+    if (job.of > 0 && job.stage === "write") {
+        parts.push(`${job.done} of ${job.of}`);
+    }
+
+    if (job.waiting_seconds) {
+        parts.push(`waiting about ${job.waiting_seconds} s for the free allowance`);
+    }
+
+    return parts.join(" - ");
+
+}
+
+function renderJobError(message) {
+
+    const box = document.querySelector("[data-ai-tray-job-error]");
+    const text = document.querySelector("[data-ai-tray-job-error-text]");
+
+    if (!box) {
+        return;
+    }
+
+    if (text) {
+        text.textContent = message || "";
+    }
+
+    box.classList.toggle("hidden", !message);
+    box.classList.toggle("flex", !!message);
+
+}
+
+async function followJob(batchId, first) {
+
+    let result = first;
+    let polls = 0;
+
+    while (jobIsRunning(result) && polls < JOB_POLL_LIMIT) {
+
+        const label = document.querySelector("[data-ai-tray-generating-label]");
+
+        if (label) {
+            label.textContent = jobLabel(result.job);
+        }
+
+        await wait(JOB_POLL_MS);
+
+        // The tray was dismissed or another batch took over.
+        if (activeBatchId !== batchId) {
+            return;
+        }
+
+        try {
+            result = await fetchGenerationBatch(state.offeringId, batchId);
+        } catch (error) {
+            console.error(error);
+            polls += 5; // a flaky network gives up sooner, but not at once
+        }
+
+        polls++;
+
+    }
+
+    renderBatch(result);
+
+    if (result.job?.status === "failed") {
+        renderJobError(result.job.message);
+    } else if (result.job?.status === "cancelled") {
+        renderJobError("Generation was cancelled.");
+    } else if (jobIsRunning(result)) {
+        renderJobError("This is taking longer than expected. Your questions will appear here when they are ready.");
+    } else {
+        renderJobError("");
+    }
+
+}
+
+function bindJobControls() {
+
+    const cancel = document.querySelector("[data-ai-tray-cancel]");
+
+    if (!cancel || cancel.dataset.bound) {
+        return;
+    }
+
+    cancel.dataset.bound = "1";
+
+    cancel.addEventListener("click", async () => {
+
+        if (!activeBatchId) {
+            return;
+        }
+
+        cancel.disabled = true;
+
+        try {
+            const result = await cancelGenerationBatch(state.offeringId, activeBatchId);
+
+            renderBatch(result);
+            renderJobError("Generation was cancelled.");
+        } catch (error) {
+            console.error(error);
+            renderJobError("Could not cancel. Please try again.");
+        } finally {
+            cancel.disabled = false;
+        }
+
+    });
+
+}
+
+async function restorePending() {
+
+    if (!state.assessmentId) {
+        return;
+    }
+
+    try {
+
+        const result = await fetchPendingGeneration(state.offeringId, state.assessmentId);
+
+        if (!result.success || !result.pending) {
+            return;
+        }
+
+        activeBatchId = result.pending.batch.id;
+
+        showTray();
+
+        renderBatch(result.pending);
+
+        if (jobIsRunning(result.pending)) {
+            setGeneratingIndicator(true);
+            await followJob(activeBatchId, result.pending);
+            setGeneratingIndicator(false);
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
     }
 
 }
@@ -433,6 +604,15 @@ async function continueGenerating(batchId) {
 
             const result = await fetchNextChunk(state.offeringId, batchId);
 
+            // A background batch is filled by the worker: follow its job
+            // instead of asking for more chunks.
+            if (result.job) {
+                ticker?.stop();
+                renderBatch(result);
+                await followJob(batchId, result);
+                break;
+            }
+
             ticker?.finish();
 
             renderBatch(result);
@@ -460,7 +640,7 @@ async function resumeBatch(batchId) {
 
         const result = await fetchGenerationBatch(state.offeringId, batchId);
 
-        if (!result.success || result.questions.length === 0) {
+        if (!result.success || (result.questions.length === 0 && !jobIsRunning(result))) {
             activeBatchId = null;
             return;
         }
@@ -494,6 +674,8 @@ function showTray() {
 
     tray?.classList.remove("hidden");
     tray?.classList.add("flex");
+
+    renderJobError("");
 
     // A stale banner from a previous, already-dismissed batch shouldn't
     // reappear when a fresh generation starts — renderBatch() will show it
