@@ -1,4 +1,3 @@
-import ollama
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
@@ -21,6 +20,8 @@ ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 @app.get("/health")
 def health():
     try:
+        import ollama
+
         ollama.list()
         ollama_ok = True
     except Exception:

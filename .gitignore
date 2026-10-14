@@ -151,3 +151,10 @@ pnpm-debug.log*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Question builder service
+python-question-builder-service/venv/
+python-question-builder-service/**/__pycache__/
+python-question-builder-service/*.log
+python-question-builder-service/gen_result.json
+.pytest_cache/

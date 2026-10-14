@@ -61,7 +61,7 @@ questions, not be instant).
 3. **Python environment**:
    ```
    python -m venv venv
-   venv\Scripts\pip install -r requirements.txt
+   venv\Scripts\pip install -r requirements-local.txt
    ```
 
 4. **Run the service**:

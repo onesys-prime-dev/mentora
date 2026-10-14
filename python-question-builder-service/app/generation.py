@@ -3,8 +3,6 @@ import os
 import re
 import threading
 
-import ollama
-
 from . import config, verification
 from .schemas import GenerateRequest, GeneratedQuestion
 
@@ -400,6 +398,9 @@ def _call_model(
     request: GenerateRequest,
     temperature: float = 0.7,
 ) -> str:
+    # Imported here so the service's tests run without the Ollama client.
+    import ollama
+
     num_predict = count * config.TOKENS_PER_QUESTION + 256
 
     response = ollama.chat(
