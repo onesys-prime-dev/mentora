@@ -158,3 +158,4 @@ python-question-builder-service/**/__pycache__/
 python-question-builder-service/*.log
 python-question-builder-service/gen_result.json
 .pytest_cache/
+python-question-builder-service/eval/report*.json
