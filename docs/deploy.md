@@ -76,6 +76,22 @@ Check once that the fingerprint matches the server's real key (on the server:
 `ssh-keyscan -t ed25519 <host> | ssh-keygen -lf -`). Until the secret exists the
 deploy prints a warning and accepts the key on first contact.
 
+## The question-builder worker
+
+AI question generation runs as a small separate process, `mentora-qb-worker`, on the same server. It opens no port: it asks Mentora for queued jobs over loopback, calls the hosted model (Groq's free tier by default) and reports back. Mentora's own `.env` never holds the provider key.
+
+One-time setup, by someone with root (the files are in `python-question-builder-service/deploy/`):
+
+1. Copy the service code to `QB_PATH` (default suggestion `/opt/mentora-qb`) and create its virtual environment: `python3 -m venv venv && venv/bin/pip install -r requirements.txt`. Install Tesseract if scanned PDFs are wanted.
+2. Create `/etc/mentora/qb-worker.env` (mode 600) from `qb-worker.env.example`: `QB_WORKER_SECRET` (the same value as `questionBuilder.workerSecret` below), `GROQ_API_KEY`, and `QB_BACKEND=groq`. Use a different Groq key or organisation for staging.
+3. Install and start the unit: `cp mentora-qb-worker.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now mentora-qb-worker`.
+4. In Mentora's `.env` set `questionBuilder.workerSecret` (same secret) and, when ready to switch generation to background jobs, `questionBuilder.useJobs = true`. Allow the deploy user to restart the unit without a password: `deploy ALL=(root) NOPASSWD: /bin/systemctl restart mentora-qb-worker`.
+5. Set the repository variable `QB_PATH` for the environment so each deploy updates the code and restarts the unit. Without it the deploy leaves the worker alone.
+
+Checking it: the system administrator's monitoring page shows "question-builder worker last seen N s ago". `journalctl -u mentora-qb-worker -f` shows its log (it never logs the key or a source text).
+
+Rolling back: set `questionBuilder.useJobs = false` and generation goes back to the original in-request service. Stopping the worker only stops new jobs; queued jobs wait and a job that was running is put back at most twice.
+
 ## When a deploy fails
 
 | Failing step | Meaning | What to do |

@@ -1,0 +1,35 @@
+# Mentora question-builder worker. It opens no port: it pulls jobs from Mentora
+# over loopback and calls the hosted model. Install once as root:
+#
+#   cp mentora-qb-worker.service /etc/systemd/system/
+#   install -m 600 -o mentora -g mentora qb-worker.env.example /etc/mentora/qb-worker.env   # then edit it
+#   systemctl daemon-reload && systemctl enable --now mentora-qb-worker
+#
+# The environment file holds the provider key and the shared secret. It lives
+# outside the repository and outside the web root, and is never logged.
+
+[Unit]
+Description=Mentora question-builder worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mentora
+Group=mentora
+WorkingDirectory=/opt/mentora-qb
+EnvironmentFile=/etc/mentora/qb-worker.env
+ExecStart=/opt/mentora-qb/venv/bin/python -m qb.worker
+Restart=on-failure
+RestartSec=5
+
+# The VPS is shared with the website: keep the worker small and contained.
+MemoryMax=1G
+CPUQuota=100%
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

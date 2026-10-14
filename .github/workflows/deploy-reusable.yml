@@ -39,6 +39,8 @@ jobs:
       DEPLOY_ENV: ${{ inputs.environment }}
       SSH_PORT: ${{ vars.SSH_PORT || '22' }}
       PHP_BIN: ${{ vars.PHP_BIN || 'php8.5' }}
+      # Where the question-builder worker lives on the server. Empty: the worker is not deployed from here.
+      QB_PATH: ${{ vars.QB_PATH || '' }}
       DEPLOY_PATH: ${{ vars.DEPLOY_PATH || (inputs.environment == 'staging' && '/home/mentora/htdocs/mentora' || '') }}
       SITE_URL: ${{ vars.SITE_URL || (inputs.environment == 'staging' && 'https://mentora.srv1404227.hstgr.cloud' || '') }}
       # Staging uses a self-signed certificate, so its checks skip certificate
@@ -225,6 +227,28 @@ jobs:
             -e "ssh $SSH_OPTS" \
             ./ \
             "$REMOTE:$DEPLOY_PATH"
+
+      ########################################################
+      # Question-builder worker (optional)
+      ########################################################
+
+      # Only when QB_PATH is set. The unit and its secrets file are placed once
+      # by someone with root (python-question-builder-service/deploy/); this
+      # step only updates the code and restarts the unit. It never fails the
+      # deploy: the website does not depend on the worker, and a missed
+      # restart is reported as a warning to fix by hand.
+      - name: Deploy the question-builder worker
+        if: env.QB_PATH != ''
+        run: |
+          rsync -az --delete             --exclude="/venv" --exclude="/tests" --exclude="/eval"             --exclude="__pycache__" --exclude="*.log"             -e "ssh $SSH_OPTS"             python-question-builder-service/             "$REMOTE:$QB_PATH/" || { echo "::warning::The worker code could not be copied."; exit 0; }
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$QB_PATH" <<'REMOTE_SCRIPT' || echo "::warning::The worker could not be updated or restarted; see docs/deploy.md."
+          set -euo pipefail
+          cd "$1"
+          [ -d venv ] || python3 -m venv venv
+          venv/bin/pip install --quiet -r requirements.txt
+          sudo -n systemctl restart mentora-qb-worker
+          systemctl is-active --quiet mentora-qb-worker
+          REMOTE_SCRIPT
 
       ########################################################
       # Permissions and migrations
