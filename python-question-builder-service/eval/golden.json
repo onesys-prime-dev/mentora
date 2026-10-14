@@ -1,0 +1,47 @@
+{
+  "_note": "Starter set of 6. The handout (Q13) calls for 25 to 30 real passages including a PDF, a scan and a document of existing questions; add them here as the owner supplies them.",
+  "cases": [
+    {
+      "id": "text-networking",
+      "kind": "text",
+      "count": 6,
+      "type_mix": {"multiple_choice": 4, "short_answer": 2},
+      "source_text": "The network layer is responsible for routing packets from a source host to a destination host across one or more networks. The Internet Protocol (IP) is the main protocol at this layer. Each device is identified by an IP address. Routers read the destination address of a packet and forward it toward its destination using a routing table. The transport layer, by contrast, provides end-to-end communication between processes. TCP offers reliable, ordered delivery by using acknowledgements and retransmission, while UDP offers faster but unreliable delivery with no guarantee of order."
+    },
+    {
+      "id": "text-photosynthesis",
+      "kind": "text",
+      "count": 6,
+      "type_mix": {"multiple_choice": 5, "short_answer": 1},
+      "source_text": "Photosynthesis is the process by which green plants convert light energy into chemical energy. It takes place in the chloroplasts, which contain the pigment chlorophyll. During the light-dependent reactions, light energy splits water molecules, releasing oxygen and producing ATP and NADPH. In the Calvin cycle, which does not need light directly, ATP and NADPH are used to fix carbon dioxide into glucose. The overall equation is six carbon dioxide plus six water yields glucose plus six oxygen."
+    },
+    {
+      "id": "text-economics",
+      "kind": "text",
+      "count": 5,
+      "type_mix": {"multiple_choice": 3, "short_answer": 1, "essay": 1},
+      "source_text": "Opportunity cost is the value of the next best alternative that is given up when a choice is made. Because resources are scarce, every decision to produce or consume one thing means giving up something else. A production possibilities frontier shows the maximum combinations of two goods that an economy can produce with its resources and technology. Points inside the frontier indicate unemployed or inefficiently used resources, while points outside it are not attainable at present."
+    },
+    {
+      "id": "math-linear",
+      "kind": "math",
+      "count": 5,
+      "type_mix": {"multiple_choice": 5},
+      "source_text": "A linear equation in one variable has the form ax + b = c, where a is not zero. To solve it, subtract b from both sides and then divide both sides by a. For example, 2x + 3 = 11 gives 2x = 8 and so x = 4. A solution can be checked by substituting it back into the original equation."
+    },
+    {
+      "id": "topic-only-databases",
+      "kind": "topic",
+      "count": 5,
+      "type_mix": {"multiple_choice": 4, "short_answer": 1},
+      "topic": "Relational databases: primary keys, foreign keys and normalization"
+    },
+    {
+      "id": "text-short",
+      "kind": "text",
+      "count": 8,
+      "type_mix": {"multiple_choice": 8},
+      "source_text": "A variable stores a value that a program can change while it runs."
+    }
+  ]
+}
