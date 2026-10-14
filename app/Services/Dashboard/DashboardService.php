@@ -453,7 +453,7 @@ class DashboardService
 
         usort($counts, static fn (array $a, array $b) => $b['sections'] <=> $a['sections']);
 
-        return ['instructors' => array_values($counts), 'unassigned' => $unassigned];
+        return ['instructors' => $counts, 'unassigned' => $unassigned];
     }
 
     /**
