@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Filters\AccountStateFilter;
+use App\Filters\AiWorkerFilter;
 use App\Filters\AjaxRedirectFilter;
 use App\Filters\AssessmentScope;
 use App\Filters\ChairpersonCourseAudit;
@@ -60,6 +61,7 @@ class Filters extends BaseFilters
         'loginlockout'  => LoginLockoutFilter::class,
         'maintenance'   => MaintenanceFilter::class,
         'chairpersoncourseaudit' => ChairpersonCourseAudit::class,
+        'aiworker'      => AiWorkerFilter::class,
     ];
 
     /**

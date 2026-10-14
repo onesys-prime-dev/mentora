@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Monitoring;
 
+use App\Services\AI\AiJobService;
 use App\Services\AI\LocalQuestionBuilderClient;
 use Closure;
 use DateTimeImmutable;
@@ -193,6 +194,16 @@ class SystemHealth
     /** @return array{status: string, detail: string} */
     private function ai(): array
     {
+        // A worker that is reporting is the answer; until one does, the
+        // original HTTP service is what the app still talks to.
+        $jobs     = new AiJobService();
+        $lastSeen = $jobs->lastWorkerSeen();
+        $now      = (new DateTimeImmutable())->getTimestamp();
+
+        if ($lastSeen !== null && ($now - $lastSeen) <= AiJobService::WORKER_STALE_SECONDS) {
+            return AiJobService::workerStatus($lastSeen, $now);
+        }
+
         return (new LocalQuestionBuilderClient())->isAvailable()
             ? ['status' => self::UP, 'detail' => 'The service answers.']
             : ['status' => self::DEGRADED, 'detail' => 'The service does not answer; question generation is unavailable.'];
