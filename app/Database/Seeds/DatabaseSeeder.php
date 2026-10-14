@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CourseSchedulesSeeder::class);
         $this->call(InstructorAssignmentsSeeder::class);
         $this->call(ChairpersonAssignmentsSeeder::class);
+        $this->call(DeanAssignmentsSeeder::class);
 
         // Content: files, then modules → units → items → linked assessments
         $this->call(FilesSeeder::class);

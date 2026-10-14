@@ -118,7 +118,12 @@ class AuditLogger
     /** The system administrator who is viewing as the actor, when impersonation is active. */
     private function impersonatorId(): ?int
     {
-        $id = session('impersonator_id');
+        // Seeders and other CLI runs may have no session driver; they have no one to impersonate.
+        try {
+            $id = session('impersonator_id');
+        } catch (\Throwable) {
+            return null;
+        }
 
         return $id === null ? null : (int) $id;
     }
