@@ -123,16 +123,22 @@ class Worker:
 
 
 def main() -> None:  # pragma: no cover - process entry point
+    from .config import ConfigError, build_worker, from_env
+
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
-    php = PhpClient(
-        os.environ.get("QB_PHP_URL", "http://127.0.0.1"),
-        os.environ.get("QB_WORKER_SECRET", ""),
-        os.environ.get("QB_WORKER_ID", f"worker-{os.getpid()}"),
-    )
+    try:
+        settings = from_env()
+    except ConfigError as exc:
+        log.error("%s", exc)
+        raise SystemExit(2)
 
-    # Stage handlers are registered by later branches.
-    Worker(php, handlers={}, backend=os.environ.get("QB_BACKEND", "")).run_forever()
+    if settings.backend == "groq" and not settings.key_configured:
+        log.warning("GROQ_API_KEY is not set: every job will fail with provider_auth until it is.")
+
+    log.info("Worker %s starting (backend %s, models %s)", settings.worker_id, settings.backend, ", ".join(settings.models))
+
+    build_worker(settings).run_forever()
 
 
 if __name__ == "__main__":  # pragma: no cover
