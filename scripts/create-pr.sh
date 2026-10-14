@@ -3,14 +3,15 @@
 # the real results — never created if a check actually failed.
 #
 # Usage:
-#   scripts/create-pr.sh <base-branch> "<title>" ["<what-and-why>"]
+#   scripts/create-pr.sh <base-branch> "<title>" ["<what-and-why>" [full|targeted]]
 #
 # Examples:
 #   scripts/create-pr.sh main "feat: add role switching"
 #   scripts/create-pr.sh main "feat: add role switching" \
 #       "Adds role switching for users who hold multiple roles."
 #   scripts/create-pr.sh feature/user-roles-schema "feat: ..."   # stacked PR
-set -u
+#   PR_CHECK_SCOPE=targeted scripts/create-pr.sh main "feat: ..."  # fast local checks
+set -uo pipefail
 
 # Windows/Git Bash can't exec these directly without the real shim extension.
 NPM="/c/Program Files/nodejs/npm.cmd"
@@ -21,10 +22,16 @@ command -v gh >/dev/null 2>&1 && GH="gh"
 BASE_BRANCH="${1:-main}"
 PR_TITLE="${2:?Usage: scripts/create-pr.sh <base-branch> \"<title>\" [\"<what-and-why>\"]}"
 SUMMARY="${3:-}"
+CHECK_SCOPE="${4:-${PR_CHECK_SCOPE:-full}}"
 HEAD_BRANCH="$(git branch --show-current)"
 
 if [[ -z "$HEAD_BRANCH" ]]; then
     echo "You are not on a Git branch." >&2
+    exit 1
+fi
+
+if [[ "$CHECK_SCOPE" != "full" && "$CHECK_SCOPE" != "targeted" ]]; then
+    echo "Check scope must be 'full' or 'targeted'." >&2
     exit 1
 fi
 
@@ -36,13 +43,15 @@ BODY_FILE="$(mktemp)"
 run_check() {
     local name="$1"
     shift
-    local output
     local status
 
     echo "Running: $name"
-
-    output="$("$@" 2>&1)"
-    status=$?
+    echo "Command: $*"
+    echo "=== $name ===" >> "$LOG_FILE"
+    "$@" 2>&1 | tee -a "$LOG_FILE"
+    status=${PIPESTATUS[0]}
+    echo "=== $name (exit $status) ===" >> "$LOG_FILE"
+    echo
 
     if [[ $status -eq 0 ]]; then
         RESULTS+=("- \`$name\` — passed")
@@ -50,8 +59,14 @@ run_check() {
         RESULTS+=("- \`$name\` — failed")
         FAILURES+=("$name")
     fi
+}
 
-    { echo "=== $name (exit $status) ==="; printf '%s\n' "$output"; echo; } >> "$LOG_FILE"
+skip_check() {
+    local name="$1"
+    local reason="$2"
+
+    echo "Skipping: $name ($reason)"
+    RESULTS+=("- \`$name\` — skipped ($reason)")
 }
 
 # A schema left over from a different branch's migrations is a false
@@ -66,14 +81,31 @@ if ! "/c/xampp/mysql/bin/mysql.exe" -u root -e "DROP DATABASE IF EXISTS mentora_
     exit 1
 fi
 
+run_check "Database migrations" php spark migrate --all --env testing
+
 # --no-coverage: no Xdebug/PCOV locally, so attempting coverage just
 # produces a "no code coverage driver available" warning — and
 # failOnWarning="true" in phpunit.dist.xml turns that into a false failure.
-run_check "PHPUnit"   php vendor/phpunit/phpunit/phpunit -c phpunit.dist.xml --no-coverage
-run_check "PHPStan"   "$PHPSTAN" analyse --no-progress --memory-limit=1G
-run_check "Vitest"    "$NPM" test
-run_check "ESLint"    "$NPM" run lint
-run_check "Vite build" "$NPM" run build
+echo "Check scope: $CHECK_SCOPE"
+if [[ "$CHECK_SCOPE" == "targeted" ]]; then
+    run_check "PHPUnit (targeted)" php vendor/phpunit/phpunit/phpunit -c phpunit.dist.xml --no-coverage \
+        tests/database/DeanAssignmentServiceTest.php tests/database/DeanAccessServiceTest.php
+    run_check "PHPStan (targeted)" "$PHPSTAN" analyse --no-progress --memory-limit=1G \
+        app/Config/AuthGroups.php app/Models/Assignments/DeanAssignmentModel.php \
+        app/Services/Courses/DeanAccessService.php app/Services/Institutions/DeanAssignmentService.php
+    run_check "Vitest (targeted)" "$NPM" test -- --run
+    if git diff --name-only "$BASE_BRANCH"...HEAD | grep -Eq '\.(js|jsx|ts|tsx)$'; then
+        run_check "ESLint (targeted)" "$NPM" run lint
+    else
+        skip_check "ESLint (targeted)" "no JavaScript or TypeScript files changed"
+    fi
+else
+    run_check "PHPUnit" php vendor/phpunit/phpunit/phpunit -c phpunit.dist.xml --no-coverage
+    run_check "PHPStan" "$PHPSTAN" analyse --no-progress --memory-limit=1G
+    run_check "Vitest" "$NPM" test
+    run_check "ESLint" "$NPM" run lint
+    run_check "Vite build" "$NPM" run build
+fi
 
 {
     echo "## What and why"
@@ -87,6 +119,8 @@ run_check "Vite build" "$NPM" run build
     echo "## How to check it"
     echo
     echo "The following checks were run locally before opening this PR:"
+    echo
+    echo "Check scope: \`$CHECK_SCOPE\`"
     echo
     printf '%s\n' "${RESULTS[@]}"
     echo
