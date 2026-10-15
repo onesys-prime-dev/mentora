@@ -76,38 +76,69 @@ class QuestionGenerationController extends BaseController
         return is_array($raw) ? array_values(array_map('intval', $raw)) : null;
     }
 
-    public function nextChunk(int $batchId)
+    /**
+     * A batch is its creator's, and belongs to a quiz of the offering in the
+     * URL. Anything else answers 404, so an id from another teacher or another
+     * course does not even confirm that it exists.
+     */
+    private function ownBatch(int $offeringId, int $batchId): void
     {
+        if (! $this->generationService->ownsBatch(auth()->user(), $batchId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Batch not found.');
+        }
+    }
+
+    private function ownQuestion(int $offeringId, int $generatedQuestionId): void
+    {
+        if (! $this->generationService->ownsGeneratedQuestion(auth()->user(), $generatedQuestionId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Question not found.');
+        }
+    }
+
+    public function nextChunk(int $offeringId, int $batchId)
+    {
+        $this->ownBatch($offeringId, $batchId);
+
         return $this->response->setJSON(
             $this->generationService->nextChunk($batchId)
         );
     }
 
-    public function show(int $batchId)
+    public function show(int $offeringId, int $batchId)
     {
+        $this->ownBatch($offeringId, $batchId);
+
         return $this->response->setJSON(
             $this->generationService->getBatch($batchId)
         );
     }
 
-    public function cancel(int $batchId)
+    public function cancel(int $offeringId, int $batchId)
     {
+        $this->ownBatch($offeringId, $batchId);
+
         return $this->response->setJSON(
             $this->generationService->cancelBatch(auth()->user(), $batchId)
         );
     }
 
     /** The signed-in person's batch for this quiz that is still running or unreviewed, or null. */
-    public function pending(int $assessmentId)
+    public function pending(int $offeringId, int $assessmentId)
     {
+        if (! (new AssessmentScopeService())->assessmentBelongsTo($assessmentId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Assessment not found.');
+        }
+
         return $this->response->setJSON([
             'success' => true,
             'pending' => $this->generationService->pendingBatch(auth()->user(), $assessmentId),
         ]);
     }
 
-    public function updateQuestion(int $generatedQuestionId)
+    public function updateQuestion(int $offeringId, int $generatedQuestionId)
     {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
         $data = $this->request->getJSON(true) ?? [];
 
         return $this->response->setJSON(
@@ -115,8 +146,10 @@ class QuestionGenerationController extends BaseController
         );
     }
 
-    public function acceptQuestion(int $generatedQuestionId)
+    public function acceptQuestion(int $offeringId, int $generatedQuestionId)
     {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
         $user = auth()->user();
 
         return $this->response->setJSON(
@@ -124,15 +157,19 @@ class QuestionGenerationController extends BaseController
         );
     }
 
-    public function discardQuestion(int $generatedQuestionId)
+    public function discardQuestion(int $offeringId, int $generatedQuestionId)
     {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
         return $this->response->setJSON(
             $this->generationService->discardGeneratedQuestion($generatedQuestionId)
         );
     }
 
-    public function acceptAll(int $batchId)
+    public function acceptAll(int $offeringId, int $batchId)
     {
+        $this->ownBatch($offeringId, $batchId);
+
         $user = auth()->user();
 
         return $this->response->setJSON(

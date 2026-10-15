@@ -86,6 +86,8 @@ $elements = [
 
     <div class="flex flex-col gap-2">
 
+        <?php if (feature_enabled('ai.question_generation')) : ?>
+
         <button
             type="button"
             data-open-ai-generate
@@ -103,6 +105,14 @@ $elements = [
             </span>
 
         </button>
+
+        <?php else : ?>
+
+            <p class="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+                AI question generation is turned off for your institution.
+            </p>
+
+        <?php endif; ?>
 
     </div>
 

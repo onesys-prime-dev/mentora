@@ -4,6 +4,8 @@ namespace App\Services\Courses\Assessments;
 
 use CodeIgniter\Shield\Entities\User;
 
+use App\Services\Audit\AuditLogger;
+use App\Services\Flags\FeatureFlags;
 use App\Services\Subscriptions\PlanLimits;
 use App\Models\Assessments\AiGenerationBatchModel;
 use App\Models\Assessments\AiGeneratedQuestionModel;
@@ -14,6 +16,7 @@ use App\Services\AI\QuestionGeneratorClientInterface;
 use App\Services\AI\QuestionGeneratorBusyException;
 use App\Services\AI\QuestionGeneratorUnavailableException;
 use App\Services\AI\SimilarityChecker;
+use Throwable;
 
 class QuestionGenerationService
 {
@@ -42,6 +45,65 @@ class QuestionGenerationService
         $this->contentExtractor = new LearningUnitContentExtractor();
     }
 
+    /** The types a generated question may have; Discussion has no builder. */
+    private const TYPES = ['Multiple Choice', 'Short Answer', 'Essay', 'File Upload'];
+
+    private const MAX_POINTS = 1000;
+
+    private const MAX_CHOICES = 8;
+
+    /**
+     * Whether this batch is the person's own and belongs to a quiz of the
+     * offering. Every action on a batch asks this first.
+     */
+    public function ownsBatch(User $user, int $batchId, int $offeringId): bool
+    {
+        $batch = $this->batchModel->find($batchId);
+
+        if (! $batch || (int) ($batch['created_by'] ?? 0) !== (int) $user->id || empty($batch['assessment_id'])) {
+            return false;
+        }
+
+        return (new AssessmentScopeService())->assessmentBelongsTo((int) $batch['assessment_id'], $offeringId);
+    }
+
+    /** Whether this generated question sits in one of the person's own batches of the offering. */
+    public function ownsGeneratedQuestion(User $user, int $generatedQuestionId, int $offeringId): bool
+    {
+        $row = $this->generatedQuestionModel->find($generatedQuestionId);
+
+        return $row !== null && $this->ownsBatch($user, (int) $row['batch_id'], $offeringId);
+    }
+
+    /**
+     * Whether AI question generation is switched on for the person's
+     * institution (the platform flag and the institution's own override).
+     */
+    private function generationEnabled(User $user): bool
+    {
+        try {
+            return (new FeatureFlags())->isEnabled('ai.question_generation', (new PlanLimits())->institutionOf((int) $user->id));
+        } catch (Throwable $e) {
+            log_message('error', 'Could not read the AI generation switch: ' . $e->getMessage());
+
+            // Unreadable switch: stay available rather than lock every teacher out.
+            return true;
+        }
+    }
+
+    private function audit(User $user, string $action, int $batchId, array $new): void
+    {
+        try {
+            (new AuditLogger())->log($action, $user, [
+                'target_type' => 'ai_generation_batch',
+                'target_id'   => $batchId,
+                'new'         => $new,
+            ]);
+        } catch (Throwable $e) {
+            log_message('error', 'AI generation audit entry failed: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Start a new batch. The only source is the learning unit the quiz sits
      * under: the person chooses which of its readings and PDFs to use, and
@@ -66,6 +128,10 @@ class QuestionGenerationService
 
         if (!$assessment) {
             return ['success' => false, 'message' => 'Assessment not found.'];
+        }
+
+        if (! $this->generationEnabled($user)) {
+            return ['success' => false, 'code' => 'disabled', 'message' => 'AI question generation is turned off for your institution.'];
         }
 
         // The institution's plan caps AI question generations per term. Checked before anything is
@@ -129,6 +195,12 @@ class QuestionGenerationService
         ]);
 
         $batchId = $this->batchModel->getInsertID();
+
+        $this->audit($user, 'ai.batch.started', (int) $batchId, [
+            'assessment_id' => (int) $data['assessment_id'],
+            'requested'     => (int) ($data['count'] ?? 10),
+            'items'         => count($extracted['items']),
+        ]);
 
         if ($this->useJobs) {
             $this->jobGeneration->enqueue($this->batchModel->find($batchId), (int) $user->id);
@@ -194,6 +266,8 @@ class QuestionGenerationService
 
         $this->jobGeneration->cancel($batch, (int) $user->id);
 
+        $this->audit($user, 'ai.batch.cancelled', $batchId, ['generated' => (int) $batch['generated_count']]);
+
         return $this->getBatch($batchId);
     }
 
@@ -211,6 +285,12 @@ class QuestionGenerationService
 
         if (!$row) {
             return ['success' => false, 'message' => 'Question not found.'];
+        }
+
+        $invalid = $this->editProblem($data);
+
+        if ($invalid !== null) {
+            return ['success' => false, 'message' => $invalid];
         }
 
         $update = array_merge([
@@ -251,6 +331,43 @@ class QuestionGenerationService
             'success' => true,
             'question' => $this->generatedQuestionModel->getDecoded($id),
         ];
+    }
+
+    /**
+     * What is wrong with an edit of a staged question, or null when it is fine.
+     * The same limits the quiz builder itself keeps, so nothing odd is staged
+     * only to be refused at accept time.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function editProblem(array $data): ?string
+    {
+        if (array_key_exists('question_text', $data) && (! is_string($data['question_text']) || trim($data['question_text']) === '' || mb_strlen($data['question_text']) > 5000)) {
+            return 'The question needs text of up to 5,000 characters.';
+        }
+
+        if (array_key_exists('question_type', $data) && ! in_array($data['question_type'], self::TYPES, true)) {
+            return 'That question type is not available.';
+        }
+
+        if (array_key_exists('points', $data) && $data['points'] !== null
+            && (! is_numeric($data['points']) || (float) $data['points'] < 0 || (float) $data['points'] > self::MAX_POINTS)) {
+            return 'Points must be a number from 0 to ' . self::MAX_POINTS . '.';
+        }
+
+        if (array_key_exists('choices', $data)) {
+            if (! is_array($data['choices']) || count($data['choices']) > self::MAX_CHOICES) {
+                return 'A question can have up to ' . self::MAX_CHOICES . ' choices.';
+            }
+
+            foreach ($data['choices'] as $choice) {
+                if (! is_array($choice) || ! is_string($choice['text'] ?? null) || mb_strlen($choice['text']) > 1000) {
+                    return 'Each choice needs text of up to 1,000 characters.';
+                }
+            }
+        }
+
+        return null;
     }
 
     public function acceptGeneratedQuestion(User $user, int $id): array
@@ -358,6 +475,10 @@ class QuestionGenerationService
                 ->set(['status' => 'accepted', 'updated_at' => date('Y-m-d H:i:s')])
                 ->update();
 
+        }
+
+        if ($acceptedIds !== []) {
+            $this->audit($user, 'ai.batch.accepted', $batchId, ['accepted' => count($acceptedIds)]);
         }
 
         return [
