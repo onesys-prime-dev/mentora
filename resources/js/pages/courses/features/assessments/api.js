@@ -986,6 +986,12 @@ async function importJson(response, fallback) {
 
 }
 
+export function importSampleUrl(offeringId, assessmentId) {
+
+    return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/sample`;
+
+}
+
 export async function previewImport(offeringId, assessmentId, formData) {
 
     const response = await fetch(

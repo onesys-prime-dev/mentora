@@ -404,12 +404,13 @@ final class QuestionImportExportTest extends DatabaseTestCase
         $this->assertSame('Plain question text', $diff['added'][0]['question_text']);
     }
 
-    public function testAFileThatIsNotOneOfOurExportsIsRefusedAndNeverSentToAi(): void
+    public function testADocumentWithNoRecognisableQuestionsIsRefusedWithTheLayoutToUseAndNeverSentToAi(): void
     {
         $result = $this->parse(['Chapter 3 notes', 'Photosynthesis turns light into sugar.', '']);
 
         $this->assertFalse($result['success']);
-        $this->assertStringContainsString('was not exported from Mentora', $result['message']);
+        $this->assertStringContainsString('No questions were found', $result['message']);
+        $this->assertStringContainsString('sample', $result['message']);
         $this->assertArrayNotHasKey('diff', $result);
         $this->assertArrayNotHasKey('needs_ai_fallback', $result);
         $this->assertArrayNotHasKey('extracted_text', $result, 'the document text is not handed on to anything');

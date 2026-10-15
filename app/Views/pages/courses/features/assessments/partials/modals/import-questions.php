@@ -28,22 +28,48 @@
         <div data-import-step="upload" class="flex flex-col gap-4 p-8">
 
             <p class="text-sm text-gray-600">
-                Import a quiz file you exported from the builder, after editing it in Word.
-                Nothing is saved until you review the changes and confirm.
+                Bring in questions from a Word or Rich Text file, or paste them. Your own exam works as it is:
+                number the questions, letter the choices and give the answer. A quiz you exported from here
+                and edited works too. Nothing is saved until you review and confirm.
             </p>
 
-            <input
-                type="file"
-                data-import-file-input
-                accept=".docx,.rtf"
-                aria-label="Quiz file to import"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+            <div class="inline-flex w-fit rounded-xl bg-gray-100 p-1" role="tablist">
+                <button type="button" role="tab" data-import-source-tab="file" class="rounded-lg bg-white px-4 py-1.5 text-sm font-semibold text-brand shadow transition">Upload a file</button>
+                <button type="button" role="tab" data-import-source-tab="text" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">Paste text</button>
+            </div>
 
-            <p class="text-xs text-[#767676]">
-                Word (.docx) or Rich Text (.rtf), up to 5 MB. Leave each question's grey
-                &ldquo;machine-readable&rdquo; line as it is: it is how the quiz knows which
-                question is which.
-            </p>
+            <div data-import-source-panel="file" class="flex flex-col gap-2">
+                <input
+                    type="file"
+                    data-import-file-input
+                    accept=".docx,.rtf"
+                    aria-label="Quiz file to import"
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+
+                <p class="text-xs text-[#767676]">Word (.docx) or Rich Text (.rtf), up to 5 MB.</p>
+            </div>
+
+            <div data-import-source-panel="text" class="hidden flex-col gap-2">
+                <textarea
+                    data-import-text-input
+                    rows="8"
+                    aria-label="Questions to import"
+                    placeholder="1. Which layer routes packets?&#10;a) Transport&#10;b) Network&#10;Answer: b"
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand"></textarea>
+            </div>
+
+            <details class="rounded-xl border border-gray-200 p-3 text-xs text-gray-600">
+                <summary class="cursor-pointer font-semibold text-gray-700">What layout can I use?</summary>
+                <div class="mt-2 flex flex-col gap-1.5">
+                    <p><strong>Questions</strong> start with a number: <code>1.</code> <code>1)</code> <code>Q1:</code> <code>Question 1</code>.</p>
+                    <p><strong>Choices</strong> start with a letter: <code>a)</code> <code>A.</code> <code>(a)</code>.</p>
+                    <p><strong>The answer</strong> is a line like <code>Answer: b</code> (or <code>Answer: a, c</code>), a <code>*</code> after the right choice, or a list under &ldquo;Answer Key&rdquo; at the end.</p>
+                    <p><strong>Points</strong> can be written <code>(2 pts)</code> or on a line <code>Points: 2</code>. No choices and an answer makes a short answer; no choices and no answer makes an essay.</p>
+                    <p>
+                        <a data-import-sample-link href="#" class="font-semibold text-brand hover:underline">Download a sample file</a>
+                    </p>
+                </div>
+            </details>
 
             <div data-import-error role="alert" class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>
 
@@ -51,7 +77,7 @@
                 type="button"
                 data-import-preview-button
                 class="self-end rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
-                Review changes
+                Review questions
             </button>
 
         </div>

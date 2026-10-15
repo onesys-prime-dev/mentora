@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeItem, importSummary } from "../../../resources/js/pages/courses/features/assessments/import-export/import-export.js";
+import { collectOverrides, describeItem, importSummary } from "../../../resources/js/pages/courses/features/assessments/import-export/import-export.js";
 
 describe("importSummary", () => {
     it("says what will happen with the ticked items", () => {
@@ -26,5 +26,26 @@ describe("describeItem", () => {
     it("uses the singular for one point and leaves out choices when there are none", () => {
         expect(describeItem({ question_type: "Essay", points: 1, choices: [] })).toBe("Essay, 1 point");
         expect(describeItem({ question_type: "Short Answer", points: "3" })).toBe("Short Answer, 3 points");
+    });
+});
+
+describe("collectOverrides", () => {
+    it("reads the corrections made on questions taken from an ordinary document", () => {
+        document.body.innerHTML = `
+            <div data-import-diff-list>
+                <label data-import-key="a0">
+                    <span data-import-correction>
+                        <select data-import-type><option value="Multiple Choice" selected>Multiple Choice</option><option value="Essay">Essay</option></select>
+                        <input data-import-points value="3">
+                        <input type="checkbox" data-import-correct="0">
+                        <input type="checkbox" data-import-correct="2" checked>
+                    </span>
+                </label>
+                <label data-import-key="c9"><span>no controls: an exported question</span></label>
+            </div>`;
+
+        expect(collectOverrides()).toEqual({
+            a0: { question_type: "Multiple Choice", points: 3, correct: [2] },
+        });
     });
 });

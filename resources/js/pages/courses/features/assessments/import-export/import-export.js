@@ -8,6 +8,7 @@ import { bindModal } from "../modals/index.js";
 
 import {
     exportQuestionsUrl,
+    importSampleUrl,
     previewImport,
     applyImport,
     undoImport,
@@ -27,6 +28,9 @@ let preview = null;
 
 // The token of an applied import, while it can still be undone.
 let undoToken = null;
+
+// "file" or "text": where the questions to import come from.
+let importSource = "file";
 
 export function initializeImportExport(offeringId, assessmentId, refresh) {
 
@@ -172,6 +176,16 @@ function bindImportModal() {
         .querySelector("[data-import-preview-button]")
         ?.addEventListener("click", handlePreview);
 
+    document.querySelectorAll("[data-import-source-tab]").forEach((tab) => {
+        tab.addEventListener("click", () => setImportSource(tab.dataset.importSourceTab));
+    });
+
+    const sample = document.querySelector("[data-import-sample-link]");
+
+    if (sample) {
+        sample.href = importSampleUrl(state.offeringId, state.assessmentId);
+    }
+
     document
         .querySelector("[data-import-apply-button]")
         ?.addEventListener("click", handleApply);
@@ -198,12 +212,42 @@ function bindImportModal() {
 
 }
 
+function setImportSource(source) {
+
+    importSource = source;
+
+    document.querySelectorAll("[data-import-source-tab]").forEach((tab) => {
+
+        const active = tab.dataset.importSourceTab === source;
+
+        tab.classList.toggle("bg-white", active);
+        tab.classList.toggle("shadow", active);
+        tab.classList.toggle("text-brand", active);
+        tab.classList.toggle("text-gray-500", !active);
+        tab.setAttribute("aria-selected", active ? "true" : "false");
+
+    });
+
+    document.querySelectorAll("[data-import-source-panel]").forEach((panel) => {
+
+        const active = panel.dataset.importSourcePanel === source;
+
+        panel.classList.toggle("hidden", !active);
+        panel.classList.toggle("flex", active);
+
+    });
+
+}
+
 function resetImportModal() {
 
     preview = null;
     undoToken = null;
 
     document.querySelector("[data-import-file-input]").value = "";
+    document.querySelector("[data-import-text-input]").value = "";
+
+    setImportSource("file");
 
     document.querySelector("[data-import-error]")?.classList.add("hidden");
 
@@ -245,9 +289,13 @@ async function handlePreview() {
 
     document.querySelector("[data-import-error]").classList.add("hidden");
 
-    if (!fileInput.files[0]) {
+    const pasted = document.querySelector("[data-import-text-input]").value;
 
-        showError("Choose a Word (.docx) or Rich Text (.rtf) file first.");
+    if (importSource === "text" ? pasted.trim() === "" : !fileInput.files[0]) {
+
+        showError(importSource === "text"
+            ? "Paste your questions first."
+            : "Choose a Word (.docx) or Rich Text (.rtf) file first.");
 
         return;
 
@@ -256,11 +304,15 @@ async function handlePreview() {
     const button = document.querySelector("[data-import-preview-button]");
 
     button.disabled = true;
-    button.textContent = "Reading the file...";
+    button.textContent = "Reading...";
 
     const formData = new FormData();
 
-    formData.set("file", fileInput.files[0]);
+    if (importSource === "text") {
+        formData.set("text", pasted);
+    } else {
+        formData.set("file", fileInput.files[0]);
+    }
 
     try {
 
@@ -285,7 +337,7 @@ async function handlePreview() {
     } finally {
 
         button.disabled = false;
-        button.textContent = "Review changes";
+        button.textContent = "Review questions";
 
     }
 
@@ -301,8 +353,12 @@ function itemRow(item, tone) {
     const box = document.createElement("input");
 
     box.type = "checkbox";
+    // A question read from an ordinary document that cannot be imported as it stands
+    // (no correct answer yet) can still be ticked once the teacher corrects it below.
+    const correctable = preview.source === "plain" && !item.id;
+
     box.checked = item.importable;
-    box.disabled = !item.importable;
+    box.disabled = !item.importable && !correctable;
     box.className = "mt-0.5 h-4 w-4 shrink-0 accent-brand";
     box.addEventListener("change", refreshReview);
 
@@ -337,7 +393,122 @@ function itemRow(item, tone) {
 
     row.append(box, body);
 
+    // A question read from an ordinary document can be corrected here before
+    // it goes in: its type, its points and which choice is right.
+    if (preview.source === "plain" && !item.id) {
+        body.appendChild(correctionControls(item));
+    }
+
     return row;
+
+}
+
+function correctionControls(item) {
+
+    const wrap = document.createElement("span");
+
+    wrap.className = "mt-1 flex flex-wrap items-center gap-3";
+    wrap.dataset.importCorrection = "";
+
+    // The controls sit inside the row's label: clicks on them must not tick or untick the row.
+    wrap.addEventListener("click", (event) => event.stopPropagation());
+
+    const type = document.createElement("select");
+
+    type.className = "rounded-md border border-gray-300 bg-white px-2 py-1 text-xs";
+    type.dataset.importType = "";
+    type.setAttribute("aria-label", "Question type");
+
+    ["Multiple Choice", "Short Answer", "Essay", "File Upload"].forEach((name) => {
+
+        const option = document.createElement("option");
+
+        option.value = name;
+        option.textContent = name;
+        option.selected = name === item.question_type;
+
+        type.appendChild(option);
+
+    });
+
+    const points = document.createElement("input");
+
+    points.type = "number";
+    points.min = "0";
+    points.step = "0.5";
+    points.value = String(item.points);
+    points.dataset.importPoints = "";
+    points.className = "w-16 rounded-md border border-gray-300 px-2 py-1 text-xs";
+    points.setAttribute("aria-label", "Points");
+
+    const choices = document.createElement("span");
+
+    choices.className = "flex flex-wrap items-center gap-2";
+    choices.dataset.importChoices = "";
+
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    (item.choices || []).forEach((choice, index) => {
+
+        const label = document.createElement("label");
+
+        label.className = "inline-flex items-center gap-1 text-xs";
+
+        const box = document.createElement("input");
+
+        box.type = "checkbox";
+        box.checked = choice.is_correct;
+        box.dataset.importCorrect = String(index);
+        box.className = "h-3.5 w-3.5 accent-brand";
+
+        label.append(box, document.createTextNode(`${letters[index] || index + 1} correct`));
+        choices.appendChild(label);
+
+    });
+
+    const pointsLabel = document.createElement("label");
+
+    pointsLabel.className = "inline-flex items-center gap-1 text-xs text-gray-700";
+    pointsLabel.append(document.createTextNode("Points"), points);
+
+    wrap.append(type, pointsLabel, choices);
+
+    return wrap;
+
+}
+
+/**
+ * What the teacher corrected in the review, by preview key, for the server to
+ * apply and check again.
+ *
+ * @param {ParentNode} root
+ * @returns {Record<string, {question_type: string, points: number, correct?: number[]}>}
+ */
+export function collectOverrides(root = document) {
+
+    const overrides = {};
+
+    root.querySelectorAll("[data-import-diff-list] [data-import-key]").forEach((row) => {
+
+        const controls = row.querySelector("[data-import-correction]");
+
+        if (!controls) {
+            return;
+        }
+
+        const correct = Array.from(controls.querySelectorAll("[data-import-correct]"))
+            .filter((box) => box.checked)
+            .map((box) => Number(box.dataset.importCorrect));
+
+        overrides[row.dataset.importKey] = {
+            question_type: controls.querySelector("[data-import-type]").value,
+            points: Number(controls.querySelector("[data-import-points]").value),
+            correct,
+        };
+
+    });
+
+    return overrides;
 
 }
 
@@ -457,7 +628,7 @@ function refreshReview() {
     const skipped = new Set(skipKeys);
     const { added, changed } = preview.diff;
 
-    const take = (items) => items.filter((item) => item.importable && !skipped.has(item.key)).length;
+    const take = (items) => items.filter((item) => !skipped.has(item.key) && (item.importable || preview.source === "plain")).length;
 
     const counts = {
         added: take(added),
@@ -505,6 +676,7 @@ async function handleApply() {
             skip_keys: skipKeys,
             remove_ids: removeIds,
             acknowledge_responses: document.querySelector("[data-import-acknowledge]").checked,
+            overrides: collectOverrides(),
         });
 
         if (!result.success) {

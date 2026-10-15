@@ -8,6 +8,9 @@ use App\Services\Courses\Assessments\QuestionImportService;
 
 class QuestionImportExportController extends BaseController
 {
+    /** The most text accepted when questions are pasted rather than uploaded. */
+    private const MAX_PASTE = 200000;
+
     protected QuestionExportService $exportService;
     protected QuestionImportService $importService;
 
@@ -49,10 +52,21 @@ class QuestionImportExportController extends BaseController
      */
     public function preview(int $assessmentId)
     {
+        // Pasted text is read like a document.
+        $pasted = $this->request->getPost('text');
+
+        if (is_string($pasted) && trim($pasted) !== '') {
+            if (mb_strlen($pasted) > self::MAX_PASTE) {
+                return $this->refuse('That is more text than can be imported at once. Paste it in smaller parts.');
+            }
+
+            return $this->response->setJSON($this->importService->previewText(auth()->user(), $assessmentId, $pasted));
+        }
+
         $file = $this->request->getFile('file');
 
         if (!$file || !$file->isValid()) {
-            return $this->refuse('Choose a Word (.docx) or Rich Text (.rtf) file to import.');
+            return $this->refuse('Choose a Word (.docx) or Rich Text (.rtf) file, or paste your questions.');
         }
 
         $extension = strtolower($file->getClientExtension());
@@ -89,8 +103,15 @@ class QuestionImportExportController extends BaseController
             $body['token'],
             array_map('strval', (array) ($body['skip_keys'] ?? [])),
             array_map('intval', (array) ($body['remove_ids'] ?? [])),
-            !empty($body['acknowledge_responses'])
+            !empty($body['acknowledge_responses']),
+            is_array($body['overrides'] ?? null) ? $body['overrides'] : []
         ));
+    }
+
+    /** A small exam in the layout the importer reads, to start from. */
+    public function sample(int $assessmentId)
+    {
+        return $this->response->download('quiz-import-sample.docx', $this->importService->sampleDocument());
     }
 
     public function undo(int $assessmentId)
