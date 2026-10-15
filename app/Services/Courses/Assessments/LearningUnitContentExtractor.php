@@ -22,7 +22,10 @@ class LearningUnitContentExtractor
     // Python's prompt builder already truncates source_text to 12000 chars;
     // this just stops a very large unit from costing more OCR than can
     // ever reach the model.
-    private const MAX_SOURCE_LENGTH = 20000;
+    // Large enough for whole PDFs: the question builder reads a source in
+    // windows and digests only what a batch needs, so there is no reason to
+    // cut a unit down to its first few pages.
+    public const MAX_SOURCE_LENGTH = 400000;
 
     private const ITEM_SEPARATOR = "\n\n---\n\n";
 
@@ -210,6 +213,10 @@ class LearningUnitContentExtractor
             throw new QuestionGeneratorUnavailableException('the PDF file is missing.');
         }
 
-        return $client->extractText($path, $file['mime_type'])['text'] ?? '';
+        $text = $client->extractText($path, $file['mime_type'])['text'] ?? '';
+
+        // A unit joins several documents, so each one's own page numbers would
+        // collide; the item's title heading says which document a passage is from.
+        return (string) preg_replace('/^\[\[page \d+\]\]\R?/m', '', $text);
     }
 }

@@ -173,7 +173,10 @@ def make_generate_handler(pool: ModelPool):
         if topic_only:
             pages = ingest_mod.ingest_text(f"Topic: {payload.get('topic', '').strip()}").pages
         else:
-            pages = ingest_mod.ingest_text(str(payload["source_text"])).pages
+            # `[[page N]]` lines from a PDF keep their numbers, so a fact can
+            # say which page it came from; text with none is one page.
+            text = str(payload["source_text"])
+            pages = ingest_mod.split_marked(text) or ingest_mod.ingest_text(text).pages
 
         store = PayloadDigestStore(payload.get("digest"))
         needed = math.ceil(count * CONCEPT_MARGIN)

@@ -78,7 +78,34 @@ class LocalQuestionBuilderClient implements QuestionGeneratorClientInterface
         return $body;
     }
 
+    /**
+     * A PDF with a text layer is read in PHP, so reading learning-item PDFs
+     * never depends on another service. A scan (no text layer) or an image
+     * needs OCR, which the original service does; when it is not running the
+     * message says what is wrong with the file.
+     */
     public function extractText(string $filePath, string $mimeType): array
+    {
+        if ($mimeType === 'application/pdf' || strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === 'pdf') {
+
+            try {
+                return (new PdfTextExtractor())->extract($filePath);
+            } catch (\RuntimeException $e) {
+                $reason = $e->getMessage();
+            }
+
+            try {
+                return $this->extractOverHttp($filePath, $mimeType);
+            } catch (QuestionGeneratorUnavailableException) {
+                throw new QuestionGeneratorUnavailableException($reason);
+            }
+
+        }
+
+        return $this->extractOverHttp($filePath, $mimeType);
+    }
+
+    private function extractOverHttp(string $filePath, string $mimeType): array
     {
         try {
 

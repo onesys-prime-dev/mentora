@@ -188,16 +188,16 @@ final class LearningUnitContentExtractorTest extends DatabaseTestCase
         $this->assertSame(['text' => '', 'skipped' => [], 'failure' => null], $this->extract());
     }
 
-    public function testTheTextIsCutAtTwentyThousandCharactersAndLaterItemsAreNotRead(): void
+    public function testTheTextIsCutAtTheSourceLimitAndLaterItemsAreNotRead(): void
     {
-        $long = str_repeat('word ', 6000);
+        $long = str_repeat('word ', (int) (\App\Services\Courses\Assessments\LearningUnitContentExtractor::MAX_SOURCE_LENGTH / 5) + 1000);
         $this->reading('Big one', [$this->paragraph($long)]);
         $this->reading('Big two', [$this->paragraph($long)]);
         $this->reading('Never read', [$this->paragraph('late')]);
 
         $text = $this->extract()['text'];
 
-        $this->assertSame(20000, mb_strlen($text));
+        $this->assertSame(\App\Services\Courses\Assessments\LearningUnitContentExtractor::MAX_SOURCE_LENGTH, mb_strlen($text));
         $this->assertStringNotContainsString('Never read', $text);
     }
 

@@ -1,7 +1,11 @@
 import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+// The worker is bundled as a script of its own (`?worker`), not loaded from its
+// raw `.mjs` file. A server that does not send `.mjs` as JavaScript (nginx's
+// default mime types do not) makes the browser refuse that file, and the
+// viewer then never shows the PDF.
+import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
 
 class PdfViewer {
 
@@ -44,6 +48,44 @@ class PdfViewer {
     }
 
     async initialize() {
+
+        try {
+
+            await this.load();
+
+        } catch (error) {
+
+            console.error("PDF viewer could not load the document", error);
+
+            this.showError(error);
+
+        }
+
+    }
+
+    showError(error) {
+
+        const notice = document.createElement("div");
+
+        notice.setAttribute("role", "alert");
+
+        notice.className =
+            "m-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800";
+
+        const missing = error?.name === "MissingPDFException" || error?.status === 404;
+        const denied = error?.status === 401 || error?.status === 403;
+
+        notice.textContent = missing
+            ? "This PDF could not be found. It may have been removed or replaced."
+            : denied
+                ? "You do not have access to this PDF."
+                : "This PDF could not be loaded. Reload the page, or download it instead if that is allowed.";
+
+        this.container.replaceChildren(notice);
+
+    }
+
+    async load() {
 
         const pdfUrl = this.container.dataset.url;
 
