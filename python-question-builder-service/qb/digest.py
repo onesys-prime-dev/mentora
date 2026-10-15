@@ -61,11 +61,32 @@ class MemoryDigestStore:
         self.items[source_hash] = digest
 
 
+def normalise_digest(data) -> dict | None:
+    """A digest as it comes back from PHP. PHP decodes `{"0": ..., "1": ...}`
+    into a sequential array and re-encodes it as a JSON list, so `sections`
+    may arrive as a list (or an empty list for none); either is turned back
+    into the dict keyed by window index. Anything unusable is no cache."""
+
+    if not isinstance(data, dict):
+        return None
+
+    sections = data.get("sections")
+
+    if isinstance(sections, list):
+        sections = {str(i): s for i, s in enumerate(sections)}
+    elif not isinstance(sections, dict):
+        sections = {}
+
+    clean = {k: v for k, v in sections.items() if isinstance(v, dict) and isinstance(v.get("concepts"), list)}
+
+    return {**data, "sections": clean}
+
+
 class PayloadDigestStore:
     """The cached digest PHP handed over in the job, and the one to hand back."""
 
     def __init__(self, cached: dict | None = None):
-        self.cached = cached
+        self.cached = normalise_digest(cached)
         self.updated: dict | None = None
 
     def get(self, source_hash):
@@ -164,7 +185,7 @@ def build_digest(
 
     key = source_hash(pages)
     parts = windows(pages, window_chars)
-    cached = store.get(key)
+    cached = normalise_digest(store.get(key))
 
     data = cached or {"source_hash": key, "window_count": len(parts), "sections": {}}
     data["window_count"] = len(parts)
