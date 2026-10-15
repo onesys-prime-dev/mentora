@@ -64,16 +64,50 @@
 
                 <div
                     data-export-options-panel
-                    class="absolute right-0 top-full z-20 mt-2 hidden w-56 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
+                    class="absolute right-0 top-full z-20 mt-2 hidden w-72 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
 
+                    <!-- Each choice is "what" and "as which file"; the value is read as one format. -->
                     <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Export format
+                        Printable test
                     </span>
+
+                    <p class="-mt-2 text-xs text-gray-500">
+                        The questions to hand out, with the answer key on the last pages.
+                    </p>
 
                     <div class="flex flex-col gap-1">
 
                         <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
-                            <input type="radio" name="export-format" value="docx" data-export-format-option checked class="h-4 w-4 accent-brand">
+                            <input type="radio" name="export-format" value="test-pdf" data-export-format-option checked class="h-4 w-4 accent-brand">
+                            PDF (.pdf)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="test-docx" data-export-format-option class="h-4 w-4 accent-brand">
+                            Word document (.docx)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="test-rtf" data-export-format-option class="h-4 w-4 accent-brand">
+                            Rich Text (.rtf)
+                        </label>
+
+                    </div>
+
+                    <div class="h-px bg-gray-200"></div>
+
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Editable file
+                    </span>
+
+                    <p class="-mt-2 text-xs text-gray-500">
+                        Edit the questions and import the file back into this quiz.
+                    </p>
+
+                    <div class="flex flex-col gap-1">
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="docx" data-export-format-option class="h-4 w-4 accent-brand">
                             Word document (.docx)
                         </label>
 

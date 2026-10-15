@@ -29,6 +29,7 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
     private int $module;
     private int $unit;
     private int $quiz;
+    private int $reading;
     private User $instructor;
     private FakeGenerator $generator;
     private QuestionGenerationService $service;
@@ -43,21 +44,31 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
         $this->unit = CourseFactory::unit($this->module);
         $this->instructor = CourseFactory::user('instructor');
         CourseFactory::assignInstructor($this->offering, $this->instructor);
-        $this->quiz = CourseFactory::assessment($this->offering, $this->instructor, $this->module);
+
+        // The only source is the unit the quiz sits under: one reading to read, and the quiz's own item.
+        [$this->reading, $quizItem] = CourseFactory::items($this->unit, [
+            ['title' => 'Planets', 'type' => 'reading'],
+            ['title' => 'Quiz', 'type' => 'quiz'],
+        ]);
+        db_connect()->table('learning_items')->where('id', $this->reading)->update(['content' => json_encode([
+            'version' => 1,
+            'blocks' => [['type' => 'paragraph', 'content' => [['text' => 'Jupiter is the largest planet in the solar system.']]]],
+        ])]);
+
+        $this->quiz = CourseFactory::assessment($this->offering, $this->instructor, $this->module, $quizItem);
         $this->generator = new FakeGenerator();
-        $this->service = new QuestionGenerationService($this->generator);
+        // Explicit: these are the in-request path's tests, whatever the machine's .env says.
+        $this->service = new QuestionGenerationService($this->generator, false);
     }
 
-    private function start(array $data = [], ?UploadedFile $file = null): array
+    private function start(array $data = []): array
     {
         return $this->service->startBatch($this->instructor, $data + [
             'assessment_id' => $this->quiz,
             'course_id' => $this->courseId,
             'offering_id' => $this->offering,
-            'source_type' => 'topic',
-            'topic' => 'Planets',
             'count' => 3,
-        ], $file);
+        ]);
     }
 
     private function batch(int $id): array
@@ -89,16 +100,21 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
         $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
     }
 
-    public function testATopicBatchStoresItsRequestAndGeneratesTheFirstChunk(): void
+    public function testABatchStoresItsRequestAndItsSourceItemsAndGeneratesTheFirstChunk(): void
     {
         $this->generator->chunk = 2;
 
-        $result = $this->start(['topic' => 'The solar system', 'count' => 5, 'type_mix' => ['Multiple Choice' => 3, 'Essay' => 2], 'points_per_question' => 2.5]);
+        $result = $this->start(['count' => 5, 'type_mix' => ['Multiple Choice' => 3, 'Essay' => 2], 'points_per_question' => 2.5]);
 
         $this->assertTrue($result['success']);
         $batch = $this->batch((int) $result['batch']['id']);
-        $this->assertSame('The solar system', $batch['topic']);
-        $this->assertSame('topic', $batch['source_type']);
+        $this->assertNull($batch['topic']);
+        $this->assertSame('learning_unit', $batch['source_type']);
+        $this->assertSame($this->unit, (int) $batch['learning_unit_id']);
+        $items = json_decode($batch['source_items'], true);
+        $this->assertSame([$this->reading], array_column($items, 'id'));
+        $this->assertSame('Planets', $items[0]['title']);
+        $this->assertStringContainsString('Jupiter is the largest planet', $items[0]['text']);
         $this->assertSame($this->quiz, (int) $batch['assessment_id']);
         $this->assertSame($this->courseId, (int) $batch['course_id']);
         $this->assertSame(5, (int) $batch['requested_count']);
@@ -114,10 +130,11 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
 
     public function testTheGeneratorIsGivenTheRequestAndTheNumberStillWanted(): void
     {
-        $this->start(['topic' => 'Planets', 'count' => 3, 'type_mix' => ['Essay' => 3], 'points_per_question' => 4]);
+        $this->start(['count' => 3, 'type_mix' => ['Essay' => 3], 'points_per_question' => 4]);
 
         $call = $this->generator->calls[0];
-        $this->assertSame('Planets', $call['topic']);
+        $this->assertNull($call['topic']);
+        $this->assertStringContainsString('Jupiter is the largest planet', $call['source_text']);
         $this->assertSame(3, $call['count']);
         $this->assertSame(['Essay' => 3], $call['type_mix']);
         $this->assertEquals(4, $call['points_per_question']);
@@ -139,7 +156,7 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
             'choices' => [['text' => 'Jupiter', 'is_correct' => true], ['text' => 'Mars', 'is_correct' => false]], 'math_check' => 'verified',
         ]];
 
-        $result = $this->start(['count' => 1, 'source_text' => 'Jupiter is the largest planet in the solar system.']);
+        $result = $this->start(['count' => 1]);
 
         $row = $result['questions'][0];
         $this->assertSame('pending', $row['status']);
@@ -152,13 +169,13 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
         $this->assertSame([], $row['accepted_answers']);
     }
 
-    public function testWithoutSourceTextThereIsNoSimilarityScoreAndMathCheckDefaults(): void
+    public function testAQuestionWithNoMathCheckDefaultsToNotApplicable(): void
     {
         $this->generator->questions = [['question_text' => 'Q', 'question_type' => 'Essay', 'points' => 1]];
 
         $row = $this->start(['count' => 1])['questions'][0];
 
-        $this->assertNull($row['similarity_score']);
+        $this->assertNotNull($row['similarity_score'], 'always compared with the unit text');
         $this->assertSame('not_applicable', $row['math_check']);
     }
 
@@ -200,33 +217,119 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
         $this->assertSame('The service is down.', $batch['error_message']);
     }
 
-    public function testAFileSourceNeedsAValidFile(): void
+    private function readingWith(string $title, string $text, string $status = 'published'): int
     {
-        $this->assertSame(['success' => false, 'message' => 'A valid file is required.'], $this->start(['source_type' => 'file']));
-        $broken = new UploadedFile('', 'notes.pdf', 'application/pdf', 0, UPLOAD_ERR_INI_SIZE);
-        $this->assertSame(['success' => false, 'message' => 'A valid file is required.'], $this->start(['source_type' => 'file'], $broken));
-        $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
+        [$id] = CourseFactory::items($this->unit, [['title' => $title, 'type' => 'reading', 'status' => $status]]);
+        db_connect()->table('learning_items')->where('id', $id)->update(['content' => json_encode([
+            'version' => 1,
+            'blocks' => [['type' => 'paragraph', 'content' => [['text' => $text]]]],
+        ])]);
+
+        return $id;
     }
 
-    public function testAQuizOutsideAUnitCannotUseTheUnitAsASource(): void
+    /** @return list<int> ids of the items the stored batch was generated from */
+    private function sourceIds(array $result): array
+    {
+        $batch = $this->batch((int) $result['batch']['id']);
+
+        return array_column(json_decode($batch['source_items'], true), 'id');
+    }
+
+    public function testOnlyTheChosenItemsAreReadAndStored(): void
+    {
+        $second = $this->readingWith('Moons', 'Europa is a moon of Jupiter with an ocean under its ice.');
+        $this->readingWith('Comets', 'Comets are icy bodies that grow tails near the sun.');
+
+        $result = $this->start(['learning_item_ids' => [$second]]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame([$second], $this->sourceIds($result));
+        $batch = $this->batch((int) $result['batch']['id']);
+        $this->assertStringContainsString('Europa', $batch['source_text']);
+        $this->assertStringNotContainsString('Comets are icy', $batch['source_text']);
+        $this->assertStringNotContainsString('Jupiter is the largest', $batch['source_text']);
+    }
+
+    public function testNoSelectionMeansEveryReadingAndPdfOfTheUnit(): void
+    {
+        $second = $this->readingWith('Moons', 'Europa is a moon of Jupiter.');
+
+        $result = $this->start();
+
+        $this->assertSame([$this->reading, $second], $this->sourceIds($result));
+    }
+
+    public function testAnEmptySelectionIsRefusedBeforeAnythingIsStarted(): void
+    {
+        $result = $this->start(['learning_item_ids' => []]);
+
+        $this->assertSame(['success' => false, 'message' => 'Choose at least one reading or PDF to generate questions from.'], $result);
+        $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
+        $this->assertSame([], $this->generator->calls);
+    }
+
+    public function testAnItemOfAnotherUnitOrAnotherTypeIsNeverRead(): void
+    {
+        $otherOffering = CourseFactory::offering();
+        $otherUnit = CourseFactory::unit(CourseFactory::module($otherOffering));
+        [$foreign] = CourseFactory::items($otherUnit, [['title' => 'Secret', 'type' => 'reading']]);
+        db_connect()->table('learning_items')->where('id', $foreign)->update(['content' => json_encode([
+            'version' => 1, 'blocks' => [['type' => 'paragraph', 'content' => [['text' => 'Foreign unit text.']]]],
+        ])]);
+        [$video] = CourseFactory::items($this->unit, [['title' => 'Clip', 'type' => 'video']]);
+
+        $result = $this->start(['learning_item_ids' => [$foreign, $video, $this->reading]]);
+
+        $this->assertSame([$this->reading], $this->sourceIds($result));
+        $this->assertStringNotContainsString('Foreign unit text', $this->batch((int) $result['batch']['id'])['source_text']);
+
+        $onlyForeign = $this->start(['learning_item_ids' => [$foreign, $video]]);
+        $this->assertFalse($onlyForeign['success']);
+    }
+
+    public function testADraftReadingCanBeChosenByItsInstructor(): void
+    {
+        $draft = $this->readingWith('Work in progress', 'Saturn has rings made of ice and rock.', 'draft');
+
+        $result = $this->start(['learning_item_ids' => [$draft]]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame([$draft], $this->sourceIds($result));
+    }
+
+    public function testAQuizOutsideAUnitHasNoSourceToGenerateFrom(): void
     {
         db_connect()->table('assessments')->where('id', $this->quiz)->update(['learning_item_id' => null, 'module_id' => null]);
 
-        $result = $this->start(['source_type' => 'learning_unit']);
+        $result = $this->start();
 
-        $this->assertSame(['success' => false, 'message' => "This quiz isn't in a learning unit."], $result);
+        $this->assertSame([
+            'success' => false,
+            'message' => "This quiz isn't in a learning unit. Place it in a learning unit to generate questions from its readings and PDFs.",
+        ], $result);
     }
 
     public function testAUnitWithNothingToReadCannotBeTheSource(): void
     {
-        [$item] = CourseFactory::items($this->unit, [['type' => 'quiz']]);
-        db_connect()->table('assessments')->where('id', $this->quiz)->update(['learning_item_id' => $item]);
+        db_connect()->table('learning_items')->where('id', $this->reading)->update(['item_type' => 'video']);
 
-        $result = $this->start(['source_type' => 'learning_unit']);
+        $result = $this->start();
 
         $this->assertFalse($result['success']);
-        $this->assertStringContainsString('no readings or PDFs', $result['message']);
+        $this->assertSame('That learning unit has no readings or PDFs yet.', $result['message']);
         $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
+    }
+
+    public function testChosenItemsThatCannotBeReadAreReportedByName(): void
+    {
+        [$pdf] = CourseFactory::items($this->unit, [['title' => 'Lost slides', 'type' => 'pdf']]);
+
+        $result = $this->start(['learning_item_ids' => [$this->reading, $pdf]]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(['Lost slides'], $result['skipped_sources']);
+        $this->assertSame([$this->reading], $this->sourceIds($result));
     }
 
     /*

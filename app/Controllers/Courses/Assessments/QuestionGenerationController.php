@@ -20,10 +20,10 @@ class QuestionGenerationController extends BaseController
     }
 
     /**
-     * Always multipart/form-data (even when there's no file) so the same
-     * endpoint handles topic / pasted-text / uploaded-file sources without
-     * the frontend switching content types. `type_mix` arrives as a
-     * JSON-encoded string field since HTML FormData can't nest objects.
+     * The only source is the learning unit the quiz sits under; the unit is
+     * derived from the assessment, never read from the request. `type_mix`
+     * and `learning_item_ids` arrive as JSON-encoded string fields since HTML
+     * FormData can't nest objects.
      */
     public function start(int $offeringId)
     {
@@ -48,9 +48,7 @@ class QuestionGenerationController extends BaseController
             // Derived from the URL's offering, never trusted from the client.
             'course_id' => (int) ($offering['course_id'] ?? 0),
             'offering_id' => $offeringId,
-            'source_type' => $post['source_type'] ?? 'topic',
-            'topic' => $post['topic'] ?? null,
-            'source_text' => $post['source_text'] ?? null,
+            'learning_item_ids' => $this->itemIds($post['learning_item_ids'] ?? null),
             'count' => (int) ($post['count'] ?? 10),
             'type_mix' => isset($post['type_mix']) ? json_decode($post['type_mix'], true) : null,
             'points_per_question' => isset($post['points_per_question']) && $post['points_per_question'] !== ''
@@ -58,11 +56,24 @@ class QuestionGenerationController extends BaseController
                 : null,
         ];
 
-        $file = $this->request->getFile('file');
-
         return $this->response->setJSON(
-            $this->generationService->startBatch($user, $data, $file)
+            $this->generationService->startBatch($user, $data)
         );
+    }
+
+    /**
+     * The chosen item ids from a JSON string or a repeated field; null when
+     * the request names none (the service then uses every reading and PDF).
+     *
+     * @return list<int>|null
+     */
+    private function itemIds(mixed $raw): ?array
+    {
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+
+        return is_array($raw) ? array_values(array_map('intval', $raw)) : null;
     }
 
     public function nextChunk(int $batchId)

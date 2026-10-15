@@ -185,7 +185,7 @@ final class LearningUnitContentExtractorTest extends DatabaseTestCase
 
     public function testAnEmptyUnitGivesNothing(): void
     {
-        $this->assertSame(['text' => '', 'skipped' => [], 'failure' => null], $this->extract());
+        $this->assertSame(['text' => '', 'skipped' => [], 'failure' => null, 'items' => []], $this->extract());
     }
 
     public function testTheTextIsCutAtTheSourceLimitAndLaterItemsAreNotRead(): void
@@ -323,5 +323,71 @@ final class ExtractorClient implements QuestionGeneratorClientInterface
     public function isAvailable(): bool
     {
         return true;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Choosing items
+    |--------------------------------------------------------------------------
+    */
+
+    public function testTheUnitListsItsReadingsAndPdfsForTheChecklist(): void
+    {
+        $intro = $this->reading('Intro', [$this->paragraph('Hello')]);
+        $draft = $this->reading('Draft notes', [$this->paragraph('Soon')], 'draft');
+        $slides = $this->pdf('Slides');
+        CourseFactory::items($this->unit, [['type' => 'video'], ['type' => 'quiz']]);
+        [$quizItem] = CourseFactory::items($this->unit, [['type' => 'quiz']]);
+        $quiz = CourseFactory::assessment($this->offering, $this->instructor, $this->module, $quizItem);
+
+        $unit = $this->extractor->unitForAssessment(db_connect()->table('assessments')->where('id', $quiz)->get()->getRowArray(), $this->instructor);
+
+        $this->assertSame([$intro, $draft, $slides], array_column($unit['items'], 'id'));
+        $this->assertSame(['reading', 'reading', 'pdf'], array_column($unit['items'], 'type'));
+        $this->assertSame(['published', 'draft', 'published'], array_column($unit['items'], 'status'));
+        $this->assertSame(2, $unit['readings']);
+        $this->assertSame(1, $unit['pdfs']);
+    }
+
+    public function testASelectionKeepsOnlyThisUnitsReadingsAndPdfsInUnitOrder(): void
+    {
+        $a = $this->reading('A', [$this->paragraph('Alpha')]);
+        $b = $this->reading('B', [$this->paragraph('Beta')]);
+        [$video] = CourseFactory::items($this->unit, [['type' => 'video']]);
+        [$quizItem] = CourseFactory::items($this->unit, [['type' => 'quiz']]);
+        $quiz = CourseFactory::assessment($this->offering, $this->instructor, $this->module, $quizItem);
+        $unit = $this->extractor->unitForAssessment(db_connect()->table('assessments')->where('id', $quiz)->get()->getRowArray(), $this->instructor);
+
+        $this->assertSame([$a, $b], $this->extractor->selection($unit, null));
+        $this->assertSame([$a, $b], $this->extractor->selection($unit, [$b, $a, 999999, $video]));
+        $this->assertSame([$b], $this->extractor->selection($unit, ['' . $b]));
+        $this->assertSame([], $this->extractor->selection($unit, []));
+        $this->assertSame([], $this->extractor->selection($unit, 'not a list'));
+    }
+
+    public function testOnlyTheChosenItemsAreReadAndEachComesBackWithItsOwnText(): void
+    {
+        $a = $this->reading('A', [$this->paragraph('Alpha text')]);
+        $this->reading('B', [$this->paragraph('Beta text')]);
+        $slides = $this->pdf('Slides', "[[page 1]]\nSlide one text.\n\n[[page 2]]\nSlide two text.");
+
+        $result = $this->extractor->extract($this->unit, $this->instructor, $this->client, [$a, $slides]);
+
+        $this->assertSame([$a, $slides], array_column($result['items'], 'id'));
+        $this->assertSame(['reading', 'pdf'], array_column($result['items'], 'type'));
+        $this->assertSame('Alpha text', $result['items'][0]['text']);
+        $this->assertStringContainsString("[[page 2]]\nSlide two text.", $result['items'][1]['text'], 'a PDF keeps its own page numbers');
+        $this->assertStringNotContainsString('Beta', $result['text']);
+        $this->assertStringNotContainsString('[[page', $result['text'], 'the combined text drops page markers');
+    }
+
+    public function testAnItemNotChosenIsNeverSentToTheExtractionService(): void
+    {
+        $this->reading('A', [$this->paragraph('Alpha')]);
+        $this->pdf('Slides');
+
+        $this->extractor->extract($this->unit, $this->instructor, $this->client, []);
+
+        $this->assertSame([], $this->client->paths);
     }
 }

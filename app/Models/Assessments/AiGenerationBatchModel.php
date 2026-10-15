@@ -21,6 +21,7 @@ class AiGenerationBatchModel extends Model
         'source_file_id',
         'learning_unit_id',
         'source_text',
+        'source_items',
         'type_mix',
         'requested_count',
         'generated_count',

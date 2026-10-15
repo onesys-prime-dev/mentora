@@ -99,18 +99,44 @@ class AiJobGeneration
 
         $sourceText = (string) ($batch['source_text'] ?? '');
         $hash       = $sourceText !== '' ? self::sourceHash($sourceText) : null;
+        $items      = json_decode((string) ($batch['source_items'] ?? ''), true);
+        $items      = is_array($items) ? array_values(array_filter($items, 'is_array')) : [];
 
         $payload = [
             'topic'               => $batch['topic'],
-            'source_text'         => $sourceText !== '' ? $sourceText : null,
             'count'               => (int) $batch['requested_count'],
             'type_mix'            => $batch['type_mix'] ? json_decode((string) $batch['type_mix'], true) : null,
             'points_per_question' => $batch['points_per_question'],
             'existing_questions'  => $this->existingQuestions($batch),
             'rotation'            => $this->priorBatches($batch),
             'seed'                => (int) $batch['id'],
-            'digest'              => $hash === null ? null : $this->storedDigest($institutionId, $hash, $now),
         ];
+
+        if ($items !== []) {
+            // The selected learning items, each with the digest already kept
+            // for its own text: the worker reads only what is new.
+            $digests = [];
+
+            foreach ($items as $item) {
+                $itemHash = self::sourceHash((string) ($item['text'] ?? ''));
+                $kept     = $this->storedDigest($institutionId, $itemHash, $now);
+
+                if ($kept !== null) {
+                    $digests[$itemHash] = $kept;
+                }
+            }
+
+            $payload['items']   = $items;
+            $payload['digests'] = (object) $digests;
+
+            // The combined text goes too: a worker that does not know `items` yet
+            // (not redeployed) reads that instead, so the two can ship in either order.
+            $payload['source_text'] = $sourceText !== '' ? $sourceText : null;
+        } else {
+            // A batch started before items were kept: the single combined source.
+            $payload['source_text'] = $sourceText !== '' ? $sourceText : null;
+            $payload['digest']      = $hash === null ? null : $this->storedDigest($institutionId, $hash, $now);
+        }
 
         return $this->jobs->enqueue([
             'institution_id' => $institutionId,
@@ -281,6 +307,11 @@ class AiJobGeneration
         $this->batches->update($batchId, ['generated_count' => $count]);
 
         $this->storeDigest((int) $job['institution_id'], $result['digest'] ?? null, $now);
+
+        // Per-item digests: only the new or updated ones come back.
+        foreach ((array) ($result['digests'] ?? []) as $digest) {
+            $this->storeDigest((int) $job['institution_id'], $digest, $now);
+        }
 
         $db->transComplete();
     }

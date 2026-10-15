@@ -46,6 +46,57 @@ class QuestionExportService
         return $this->export($assessmentId, 'RTF', 'rtf');
     }
 
+    /**
+     * The quiz as a paper test: questions to hand out, then the answer key on
+     * pages of their own. Not meant to be imported back (use exportToDocx for
+     * that).
+     *
+     * @param string $format pdf, docx or rtf
+     */
+    public function exportPrintable(int $assessmentId, string $format): array
+    {
+        $format = strtolower($format);
+
+        if (!in_array($format, PrintableTestExport::FORMATS, true)) {
+            return ['success' => false, 'message' => 'That format is not available for a printable test.'];
+        }
+
+        $assessment = $this->assessmentModel->find($assessmentId);
+
+        if (!$assessment) {
+            return ['success' => false, 'message' => 'Assessment not found.'];
+        }
+
+        $printable = new PrintableTestExport();
+        $model = $printable->model($assessment, $this->questionModel->listForAssessment($assessmentId));
+
+        $filename = 'assessment-' . $assessmentId . '-test-' . date('Ymd-His') . '.' . $format;
+        $path = $this->exportDirectory() . '/' . $filename;
+
+        $printable->save($model, $format, $path);
+
+        return ['success' => true, 'file_path' => $path, 'filename' => $filename];
+    }
+
+    private function exportDirectory(): string
+    {
+        $directory = (new \App\Services\Storage\StorageService())->root() . 'exports';
+
+        if (!is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        // Exported files are only needed for the download that follows, so a
+        // day-old one is cleared out whenever a new one is written.
+        foreach (glob($directory . '/*') ?: [] as $file) {
+            if (is_file($file) && filemtime($file) < time() - 86400) {
+                @unlink($file);
+            }
+        }
+
+        return $directory;
+    }
+
     private function export(int $assessmentId, string $writerType, string $extension): array
     {
         $assessment = $this->assessmentModel->find($assessmentId);
@@ -58,15 +109,9 @@ class QuestionExportService
 
         $phpWord = $this->buildDocument($assessment, $questions);
 
-        $directory = (new \App\Services\Storage\StorageService())->root() . 'exports';
-
-        if (!is_dir($directory)) {
-            mkdir($directory, 0777, true);
-        }
-
         $filename = 'assessment-' . $assessmentId . '-' . date('Ymd-His') . '.' . $extension;
 
-        $path = $directory . '/' . $filename;
+        $path = $this->exportDirectory() . '/' . $filename;
 
         $writer = IOFactory::createWriter($phpWord, $writerType);
         $writer->save($path);
@@ -139,6 +184,16 @@ class QuestionExportService
             // case sensitivity rides along in the metadata line (case=...).
             $caseSuffix = '';
 
+            // A multiple-answers question says so (and how many to choose), so
+            // importing it back keeps it a multiple-answers question.
+            $multiSuffix = '';
+
+            if ($question['question_type'] === 'Multiple Choice' && !empty($question['allow_multiple_answers'])) {
+
+                $multiSuffix = '; multi=yes' . (!empty($question['answers_count']) ? '; answers=' . (int) $question['answers_count'] : '');
+
+            }
+
             if ($question['question_type'] === 'Short Answer') {
 
                 $section->addText(
@@ -152,13 +207,14 @@ class QuestionExportService
 
             $section->addText(
                 sprintf(
-                    '%s id=%d; type=%s; points=%s; required=%s; correct=%s%s',
+                    '%s id=%d; type=%s; points=%s; required=%s; correct=%s%s%s',
                     self::META_PREFIX,
                     $question['id'],
                     $question['question_type'],
                     rtrim(rtrim(number_format((float) $question['points'], 2, '.', ''), '0'), '.'),
                     !empty($question['is_required']) ? 'yes' : 'no',
                     implode(',', $correctLetters),
+                    $multiSuffix,
                     $caseSuffix
                 ),
                 $metaStyle

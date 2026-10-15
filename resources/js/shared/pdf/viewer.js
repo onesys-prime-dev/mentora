@@ -1,11 +1,16 @@
 import * as pdfjsLib from "pdfjs-dist";
-// The worker is bundled as a script of its own (`?worker`), not loaded from its
-// raw `.mjs` file. A server that does not send `.mjs` as JavaScript (nginx's
-// default mime types do not) makes the browser refuse that file, and the
-// viewer then never shows the PDF.
-import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
+// The worker is built as a script of its own and named `.js` (`?worker&url`),
+// not served as its raw `.mjs` file. A server that does not send `.mjs` as
+// JavaScript (nginx's default mime types do not) makes the browser refuse that
+// file, and the viewer then never shows the PDF.
+//
+// Only the URL is handed over, not a ready-made Worker: under the Vite dev
+// server the script lives on another origin (localhost:5173), which a page
+// cannot construct a Worker from directly, while PDF.js knows how to load a
+// cross-origin worker script when it is given the URL.
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?worker&url";
 
-pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 class PdfViewer {
 

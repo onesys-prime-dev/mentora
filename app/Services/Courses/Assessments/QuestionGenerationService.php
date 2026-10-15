@@ -3,31 +3,26 @@
 namespace App\Services\Courses\Assessments;
 
 use CodeIgniter\Shield\Entities\User;
-use CodeIgniter\HTTP\Files\UploadedFile;
 
 use App\Services\Subscriptions\PlanLimits;
 use App\Models\Assessments\AiGenerationBatchModel;
 use App\Models\Assessments\AiGeneratedQuestionModel;
 use App\Models\Assessments\AssessmentModel;
-use App\Models\Files\FileModel;
 
 use App\Services\AI\LocalQuestionBuilderClient;
 use App\Services\AI\QuestionGeneratorClientInterface;
 use App\Services\AI\QuestionGeneratorBusyException;
 use App\Services\AI\QuestionGeneratorUnavailableException;
 use App\Services\AI\SimilarityChecker;
-use App\Services\Storage\StorageService;
 
 class QuestionGenerationService
 {
     protected AiGenerationBatchModel $batchModel;
     protected AiGeneratedQuestionModel $generatedQuestionModel;
     protected AssessmentModel $assessmentModel;
-    protected FileModel $fileModel;
 
     protected QuestionGeneratorClientInterface $client;
     protected SimilarityChecker $similarityChecker;
-    protected StorageService $storageService;
     protected LearningUnitContentExtractor $contentExtractor;
     protected AiJobGeneration $jobGeneration;
 
@@ -41,31 +36,29 @@ class QuestionGenerationService
         $this->batchModel = new AiGenerationBatchModel();
         $this->generatedQuestionModel = new AiGeneratedQuestionModel();
         $this->assessmentModel = new AssessmentModel();
-        $this->fileModel = new FileModel();
 
         $this->client = $client ?? new LocalQuestionBuilderClient();
         $this->similarityChecker = new SimilarityChecker();
-        $this->storageService = new StorageService();
         $this->contentExtractor = new LearningUnitContentExtractor();
     }
 
     /**
-     * Start a new batch and generate the first chunk. The JS side calls
-     * nextChunk() repeatedly afterward until requested_count is reached.
+     * Start a new batch. The only source is the learning unit the quiz sits
+     * under: the person chooses which of its readings and PDFs to use, and
+     * only those are read. The unit is always derived from the assessment,
+     * never taken from the request.
      *
      * @param array $data {
      *     assessment_id: int,
      *     course_id: int,
      *     offering_id: int,
-     *     source_type: 'topic'|'text'|'file'|'learning_unit' (the quiz's own unit),
-     *     topic?: string,
-     *     source_text?: string,
+     *     learning_item_ids?: list<int>|null (null: every reading and PDF),
      *     count: int,
      *     type_mix?: array,
      *     points_per_question?: float,
      * }
      */
-    public function startBatch(User $user, array $data, ?UploadedFile $file = null): array
+    public function startBatch(User $user, array $data): array
     {
         $assessment = !empty($data['assessment_id'])
             ? $this->assessmentModel->find($data['assessment_id'])
@@ -76,87 +69,42 @@ class QuestionGenerationService
         }
 
         // The institution's plan caps AI question generations per term. Checked before anything is
-        // uploaded or started, so a refused request leaves nothing behind.
+        // read or started, so a refused request leaves nothing behind.
         $blocked = (new PlanLimits())->generationBlock($user, (int) ($data['count'] ?? 10));
 
         if ($blocked !== null) {
             return ['success' => false, 'message' => $blocked];
         }
 
-        $sourceType = $data['source_type'] ?? 'topic';
+        $unit = $this->contentExtractor->unitForAssessment($assessment, $user);
 
-        $sourceFileId = null;
-        $sourceText = $data['source_text'] ?? null;
-
-        if ($sourceType === 'file') {
-
-            if (!$file || !$file->isValid()) {
-                return ['success' => false, 'message' => 'A valid file is required.'];
-            }
-
-            $stored = $this->storageService->upload($file, 'ai-generation-sources');
-
-            $this->fileModel->insert([
-                'owner_user_id' => $user->id,
-                'original_filename' => $stored['original_name'],
-                'stored_filename' => $stored['filename'],
-                'mime_type' => $stored['mime_type'],
-                'file_size' => $stored['size'],
-                'storage_key' => $stored['storage_key'],
-                'status' => 'active',
-            ]);
-
-            $sourceFileId = $this->fileModel->getInsertID();
-
-            try {
-
-                $extracted = $this->client->extractText(
-                    $this->storageService->path($stored['storage_key']),
-                    $stored['mime_type']
-                );
-
-                $sourceText = $extracted['text'];
-
-            } catch (QuestionGeneratorUnavailableException $e) {
-
-                return [
-                    'success' => false,
-                    'message' => 'Could not read that file: ' . $e->getMessage(),
-                ];
-
-            }
-
+        if (!$unit) {
+            return [
+                'success' => false,
+                'message' => "This quiz isn't in a learning unit. Place it in a learning unit to generate questions from its readings and PDFs.",
+            ];
         }
 
-        $learningUnitId = null;
-        $skippedSources = [];
+        $selection = $this->contentExtractor->selection($unit, $data['learning_item_ids'] ?? null);
 
-        if ($sourceType === 'learning_unit') {
+        if ($selection === []) {
+            return [
+                'success' => false,
+                'message' => $unit['items'] === []
+                    ? 'That learning unit has no readings or PDFs yet.'
+                    : 'Choose at least one reading or PDF to generate questions from.',
+            ];
+        }
 
-            // Always the unit this quiz sits under — never a client-supplied
-            // id, so generation can't read another unit or course.
-            $unit = $this->contentExtractor->unitForAssessment($assessment, $user);
+        $extracted = $this->contentExtractor->extract($unit['id'], $user, $this->client, $selection);
 
-            if (!$unit) {
-                return ['success' => false, 'message' => "This quiz isn't in a learning unit."];
-            }
+        if (trim($extracted['text']) === '') {
 
-            $learningUnitId = $unit['id'];
-
-            $extracted = $this->contentExtractor->extract($learningUnitId, $user, $this->client);
-
-            if (trim($extracted['text']) === '') {
-
-                return [
-                    'success' => false,
-                    'message' => $extracted['failure']
-                        ?? 'That learning unit has no readings or PDFs to generate questions from.',
-                ];
-
-            }
-
-            $sourceText = $extracted['text'];
-            $skippedSources = $extracted['skipped'];
+            return [
+                'success' => false,
+                'message' => $extracted['failure']
+                    ?? 'The items you chose have no text to generate questions from.',
+            ];
 
         }
 
@@ -164,13 +112,12 @@ class QuestionGenerationService
 
         $this->batchModel->insert([
 
-            'assessment_id' => $data['assessment_id'] ?? null,
+            'assessment_id' => $data['assessment_id'],
             'course_id' => $data['course_id'],
-            'source_type' => $sourceType,
-            'topic' => $data['topic'] ?? null,
-            'source_file_id' => $sourceFileId,
-            'learning_unit_id' => $learningUnitId,
-            'source_text' => $sourceText,
+            'source_type' => 'learning_unit',
+            'learning_unit_id' => $unit['id'],
+            'source_text' => $extracted['text'],
+            'source_items' => json_encode($extracted['items'], JSON_UNESCAPED_UNICODE),
             'type_mix' => isset($data['type_mix']) ? json_encode($data['type_mix']) : null,
             'requested_count' => $data['count'] ?? 10,
             'generated_count' => 0,
@@ -191,9 +138,9 @@ class QuestionGenerationService
             $result = $this->generateChunk($batchId);
         }
 
-        // One-time notice for the tray: items in the chosen unit that exist
-        // but couldn't be read, so the questions won't cover them.
-        $result['skipped_sources'] = $skippedSources;
+        // One-time notice for the tray: chosen items that exist but couldn't
+        // be read, so the questions won't cover them.
+        $result['skipped_sources'] = $extracted['skipped'];
 
         return $result;
     }

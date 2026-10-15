@@ -965,6 +965,27 @@ export function exportQuestionsUrl(offeringId, assessmentId, format = "docx") {
 
 }
 
+/**
+ * The server answers 200 with {success:false, message} for an import it
+ * understood but refuses, and 422 with the same body for a file it will not
+ * read; either way the teacher is shown the server's own sentence.
+ */
+async function importJson(response, fallback) {
+
+    try {
+        const body = await response.json();
+
+        if (body && typeof body === "object") {
+            return body;
+        }
+    } catch {
+        // Not JSON (a server error page): fall through to the fallback sentence.
+    }
+
+    throw new Error(fallback);
+
+}
+
 export async function previewImport(offeringId, assessmentId, formData) {
 
     const response = await fetch(
@@ -976,15 +997,14 @@ export async function previewImport(offeringId, assessmentId, formData) {
         }
     );
 
-    if (!response.ok) {
-        throw new Error("Unable to preview this import.");
-    }
-
-    return response.json();
+    return importJson(response, "Unable to read this file.");
 
 }
 
-export async function applyImport(offeringId, assessmentId, changes) {
+/**
+ * @param {{token: string, skip_keys: string[], remove_ids: number[], acknowledge_responses: boolean}} choices
+ */
+export async function applyImport(offeringId, assessmentId, choices) {
 
     const response = await fetch(
         `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/apply`,
@@ -994,14 +1014,28 @@ export async function applyImport(offeringId, assessmentId, changes) {
                 ...defaultHeaders(),
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(changes),
+            body: JSON.stringify(choices),
         }
     );
 
-    if (!response.ok) {
-        throw new Error("Unable to apply this import.");
-    }
+    return importJson(response, "Unable to apply this import.");
 
-    return response.json();
+}
+
+export async function undoImport(offeringId, assessmentId, token) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/undo`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ token }),
+        }
+    );
+
+    return importJson(response, "Unable to undo this import.");
 
 }

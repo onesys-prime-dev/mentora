@@ -261,7 +261,7 @@ final class PlanLimitEnforcementTest extends DatabaseTestCase
         $course     = (int) db_connect()->table('course_offerings')->where('id', $offering)->get()->getRowArray()['course_id'];
         $batches    = db_connect()->table('ai_generation_batches')->countAllResults();
 
-        $result = (new QuestionGenerationService())->startBatch($teacher, ['assessment_id' => $assessment, 'course_id' => $course, 'source_type' => 'topic', 'topic' => 'Fractions', 'count' => 10]);
+        $result = (new QuestionGenerationService())->startBatch($teacher, ['assessment_id' => $assessment, 'course_id' => $course, 'count' => 10]);
 
         $this->assertFalse($result['success']);
         $this->assertStringContainsString('5 AI question generations left', $result['message']);
@@ -277,28 +277,9 @@ final class PlanLimitEnforcementTest extends DatabaseTestCase
         $assessment = CourseFactory::assessment($offering, $teacher);
         $course     = (int) db_connect()->table('course_offerings')->where('id', $offering)->get()->getRowArray()['course_id'];
 
-        $result = (new QuestionGenerationService())->startBatch($teacher, ['assessment_id' => $assessment, 'course_id' => $course, 'source_type' => 'topic', 'topic' => 'Fractions', 'count' => 1]);
+        $result = (new QuestionGenerationService())->startBatch($teacher, ['assessment_id' => $assessment, 'course_id' => $course, 'count' => 1]);
 
         $this->assertFalse($result['success']);
         $this->assertStringContainsString('used all 10 AI question generations', $result['message']);
-    }
-
-    public function testTheUploadForAFileBasedGenerationIsNotStartedWhenTheAllowanceIsGone(): void
-    {
-        [$teacher, $offering] = $this->instructorOnAPlan(null, 5);
-        db_connect()->table('academic_terms')->where('institution_id', $this->institutionOf($offering))->update(['start_date' => '2020-01-01', 'end_date' => '2099-12-31']);
-        $this->aiBatch($offering, $teacher, 5, date('Y-m-d H:i:s'));
-
-        $assessment = CourseFactory::assessment($offering, $teacher);
-        $course     = (int) db_connect()->table('course_offerings')->where('id', $offering)->get()->getRowArray()['course_id'];
-        $filesBefore = db_connect()->table('files')->countAllResults();
-
-        $file = $this->getMockBuilder(UploadedFile::class)->disableOriginalConstructor()->onlyMethods(['isValid'])->getMock();
-        $file->method('isValid')->willReturn(true);
-
-        $result = (new QuestionGenerationService())->startBatch($teacher, ['assessment_id' => $assessment, 'course_id' => $course, 'source_type' => 'file', 'count' => 3], $file);
-
-        $this->assertFalse($result['success']);
-        $this->assertSame($filesBefore, db_connect()->table('files')->countAllResults(), 'the source file was not even stored');
     }
 }

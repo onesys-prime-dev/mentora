@@ -80,7 +80,7 @@ export function initializeAiGeneration(offeringId, assessmentId) {
     });
 
     bindOpenButton();
-    bindSourceTabs();
+    bindItemSelection();
     typeMixValidate = bindTypeMixValidation();
     bindForm();
     bindTrayActions();
@@ -258,47 +258,6 @@ async function restorePending() {
 
 }
 
-/**
- * Used by the import flow's AI fallback: a document that isn't one of this
- * app's own exports gets its text handed straight here rather than
- * attempting a structural diff.
- */
-export async function generateFromExtractedText(sourceText, count = 10) {
-
-    const formData = new FormData();
-
-    formData.set("assessment_id", state.assessmentId);
-    formData.set("source_type", "text");
-    formData.set("source_text", sourceText);
-    formData.set("count", String(count));
-    formData.set("type_mix", JSON.stringify({ multiple_choice: count }));
-
-    try {
-
-        const result = await startGeneration(state.offeringId, formData);
-
-        if (!result.success) {
-            throw new Error(result.message || "Unable to start generation.");
-        }
-
-        activeBatchId = result.batch.id;
-
-        showTray();
-
-        renderBatch(result);
-
-        if (result.batch.status === "generating") {
-            await continueGenerating(result.batch.id);
-        }
-
-    } catch (error) {
-
-        console.error(error);
-
-    }
-
-}
-
 /*
 |--------------------------------------------------------------------------
 | Modal open / source tabs
@@ -319,44 +278,71 @@ function bindOpenButton() {
 
 }
 
-function bindSourceTabs() {
+/**
+ * The ids of the ticked learning items, in the order they are listed.
+ *
+ * @param {ParentNode} root
+ * @returns {number[]}
+ */
+export function selectedItemIds(root = document) {
 
-    const tabs = document.querySelectorAll("[data-ai-source-tab]");
+    return Array.from(root.querySelectorAll("[data-ai-item]"))
+        .filter((box) => box.checked)
+        .map((box) => Number(box.value));
 
-    function activate(source) {
+}
 
-        tabs.forEach((tab) => {
+/**
+ * "3 of 5 selected", with the words for none and all.
+ *
+ * @param {number} selected
+ * @param {number} total
+ * @returns {string}
+ */
+export function selectionSummary(selected, total) {
 
-            const isActive = tab.dataset.aiSourceTab === source;
+    if (total === 0) {
+        return "Nothing to choose from";
+    }
 
-            tab.classList.toggle("bg-white", isActive);
-            tab.classList.toggle("shadow", isActive);
-            tab.classList.toggle("text-brand", isActive);
-            tab.classList.toggle("text-gray-500", !isActive);
+    if (selected === 0) {
+        return `None of ${total} selected`;
+    }
 
-        });
+    return `${selected} of ${total} selected`;
 
-        document.querySelectorAll("[data-ai-source-panel]").forEach((panel) => {
+}
 
-            const isActive = panel.dataset.aiSourcePanel === source;
+function bindItemSelection() {
 
-            panel.classList.toggle("hidden", !isActive);
-            panel.classList.toggle("flex", isActive);
+    const boxes = () => Array.from(document.querySelectorAll("[data-ai-item]"));
+    const summary = document.querySelector("[data-ai-selected-summary]");
 
-        });
+    function refresh() {
 
-        document.querySelector("#ai-generate-form").dataset.activeSource = source;
+        if (summary) {
+            summary.textContent = selectionSummary(selectedItemIds().length, boxes().length);
+        }
 
-        // The Learning Unit tab can be unusable (unit has nothing to read).
+        // The Generate button follows the selection.
         typeMixValidate?.();
 
     }
 
-    tabs.forEach((tab) => {
-        tab.addEventListener("click", () => activate(tab.dataset.aiSourceTab));
-    });
+    function setAll(checked) {
 
-    activate("topic");
+        boxes().forEach((box) => {
+            box.checked = checked;
+        });
+
+        refresh();
+
+    }
+
+    boxes().forEach((box) => box.addEventListener("change", refresh));
+
+    document.querySelector("[data-ai-select-all]")?.addEventListener("click", () => setAll(true));
+    document.querySelector("[data-ai-select-none]")?.addEventListener("click", () => setAll(false));
 
 }
 
@@ -392,11 +378,8 @@ function bindTypeMixValidation() {
 
         const isValid = target > 0 && sum === target;
 
-        // Learning Unit source with no readings or PDFs: nothing to read.
-        const activeSource = document.querySelector("#ai-generate-form")?.dataset.activeSource;
-
-        const sourceIsUsable = activeSource !== "learning_unit"
-            || document.querySelector('[data-ai-source-panel="learning_unit"]')?.dataset.aiSourceReadable === "1";
+        // There has to be something to read, and at least one item ticked.
+        const sourceIsUsable = form.dataset.aiSourceUsable === "1" && selectedItemIds().length > 0;
 
         if (statusEl) {
 
@@ -458,40 +441,20 @@ function bindForm() {
 
         errorBox.classList.add("hidden");
 
-        const activeSource = form.dataset.activeSource || "topic";
-
         const formData = new FormData();
 
         formData.set("assessment_id", state.assessmentId);
-        formData.set("source_type", activeSource);
         formData.set("count", form.querySelector('[name="count"]').value || "10");
+
+        // The unit is the quiz's own, decided on the server; only the chosen
+        // items are sent.
+        formData.set("learning_item_ids", JSON.stringify(selectedItemIds()));
 
         const pointsField = form.querySelector('[name="points_per_question"]');
 
         if (pointsField.value !== "") {
             formData.set("points_per_question", pointsField.value);
         }
-
-        if (activeSource === "topic") {
-
-            formData.set("topic", form.querySelector('[name="topic"]').value);
-
-        } else if (activeSource === "text") {
-
-            formData.set("source_text", form.querySelector('[name="source_text"]').value);
-
-        } else if (activeSource === "file") {
-
-            const fileInput = form.querySelector('[name="file"]');
-
-            if (fileInput.files[0]) {
-                formData.set("file", fileInput.files[0]);
-            }
-
-        }
-
-        // "learning_unit" needs nothing more — the server always reads the
-        // unit this quiz sits under.
 
         const typeMix = {};
 

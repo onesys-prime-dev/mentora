@@ -150,7 +150,7 @@ final class QuestionImportExportTest extends DatabaseTestCase
         $this->assertContains('Q2. What does CPU stand for?', $lines);
         $this->assertContains('Accepted answers: CPU | Central Processing Unit', $lines);
         $this->assertContains('Q3. Discuss.', $lines);
-        $this->assertContains("[machine-readable — do not edit] id={$q['mc']['question']}; type=Multiple Choice; points=4; required=yes; correct=b,c", $lines);
+        $this->assertContains("[machine-readable — do not edit] id={$q['mc']['question']}; type=Multiple Choice; points=4; required=yes; correct=b,c; multi=yes", $lines);
         $this->assertContains("[machine-readable — do not edit] id={$q['short']}; type=Short Answer; points=2; required=yes; correct=; case=yes", $lines);
         $this->assertContains("[machine-readable — do not edit] id={$q['essay']}; type=Essay; points=6; required=no; correct=", $lines);
     }
@@ -214,7 +214,6 @@ final class QuestionImportExportTest extends DatabaseTestCase
         $result = $this->import->parseDocx($this->quiz, $this->exported()['file_path']);
 
         $this->assertTrue($result['success']);
-        $this->assertFalse($result['needs_ai_fallback']);
         $this->assertSame(['added' => [], 'changed' => [], 'removed' => []], $result['diff']);
     }
 
@@ -405,14 +404,15 @@ final class QuestionImportExportTest extends DatabaseTestCase
         $this->assertSame('Plain question text', $diff['added'][0]['question_text']);
     }
 
-    public function testAFileThatIsNotOneOfOurExportsFallsBackToAiGeneration(): void
+    public function testAFileThatIsNotOneOfOurExportsIsRefusedAndNeverSentToAi(): void
     {
         $result = $this->parse(['Chapter 3 notes', 'Photosynthesis turns light into sugar.', '']);
 
-        $this->assertTrue($result['success']);
-        $this->assertTrue($result['needs_ai_fallback']);
-        $this->assertStringContainsString('Photosynthesis turns light into sugar.', $result['extracted_text']);
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('was not exported from Mentora', $result['message']);
         $this->assertArrayNotHasKey('diff', $result);
+        $this->assertArrayNotHasKey('needs_ai_fallback', $result);
+        $this->assertArrayNotHasKey('extracted_text', $result, 'the document text is not handed on to anything');
     }
 
     public function testAMissingAssessmentIsRefusedWhenReading(): void

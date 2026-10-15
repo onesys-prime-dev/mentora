@@ -8,6 +8,7 @@ import os
 import socket
 from dataclasses import dataclass
 
+from .errors import InvalidRequest
 from .governor import RateGovernor
 from .php_client import PhpClient, Post, make_post
 from .pipeline import make_generate_handler
@@ -92,4 +93,22 @@ def build_worker(
         post=post or make_post(settings.php_verify_tls),
     )
 
-    return Worker(php, {"generate": make_generate_handler(pool)}, backend=settings.backend)
+    return Worker(php, {"generate": with_material(make_generate_handler(pool))}, backend=settings.backend)
+
+
+def with_material(handler):
+    """Refuses a job that carries nothing to read, with a clear failure code,
+    instead of letting the pipeline fall over on it."""
+
+    def checked(job: dict, ctx) -> dict:
+        payload = job.get("payload") or {}
+        has_items = any(isinstance(i, dict) and str(i.get("text") or "").strip() for i in payload.get("items") or [])
+        has_text = bool(str(payload.get("source_text") or "").strip())
+        has_topic = bool(str(payload.get("topic") or "").strip())
+
+        if not (has_items or has_text or has_topic):
+            raise InvalidRequest("This batch has no material to read.")
+
+        return handler(job, ctx)
+
+    return checked
