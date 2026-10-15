@@ -203,7 +203,8 @@ final class LearningUnitContentExtractorTest extends DatabaseTestCase
 
     public function testOnceTheLimitIsReachedLaterPdfsAreNotEvenSentToTheExtractionService(): void
     {
-        $long = str_repeat('word ', 5000);
+        // More than the source limit in one reading, so nothing after it can be used.
+        $long = str_repeat('word ', (int) (\App\Services\Courses\Assessments\LearningUnitContentExtractor::MAX_SOURCE_LENGTH / 5) + 1000);
         $this->reading('Big', [$this->paragraph($long)]);
         $this->pdf('Later slides', 'Never needed');
 
