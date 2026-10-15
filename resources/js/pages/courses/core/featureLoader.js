@@ -137,6 +137,11 @@ export function highlightFeatureTab(feature)
             button.classList.toggle("border-black/15", isActive);
             button.classList.toggle("!text-black", isActive);
 
+            // An inactive tab is the blue one with white text. The server writes the
+            // opened tab without those, so they are put back here when it is left.
+            button.classList.toggle("bg-blue-900", !isActive);
+            button.classList.toggle("text-white", !isActive);
+
             // The active tab is white, so the dark hover would flip it back.
             button.classList.toggle("hover:bg-blue-800", !isActive);
 
