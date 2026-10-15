@@ -52,6 +52,9 @@ class QuestionGenerationService
 
     private const MAX_CHOICES = 8;
 
+    /** Similarity to the source at or above which a question needs a look before it is accepted in bulk. */
+    private const SOURCE_SIMILARITY_HARD = 0.6;
+
     /**
      * Whether this batch is the person's own and belongs to a quiz of the
      * offering. Every action on a batch asks this first.
@@ -430,7 +433,57 @@ class QuestionGenerationService
         return ['success' => true, 'message' => 'Discarded.'];
     }
 
-    public function acceptAll(User $user, int $batchId): array
+    /**
+     * Whether a staged question should be looked at before it goes in:
+     * the answer may be wrong, was not confirmed, repeats a question already
+     * in the quiz or copies the source too closely.
+     *
+     * @param array<string, mixed> $question as listed (decoded), with duplicate_of
+     */
+    private function needsLook(array $question): bool
+    {
+        $verification = is_array($question['verification'] ?? null) ? $question['verification'] : [];
+
+        return ($question['math_check'] ?? '') === 'mismatch'
+            || ($verification['solver_agrees'] ?? null) === false
+            || ($verification['grounded'] ?? null) === false
+            || ! empty($question['duplicate_of'])
+            || (float) ($question['similarity_score'] ?? 0) >= self::SOURCE_SIMILARITY_HARD;
+    }
+
+    /**
+     * The staged questions of a batch, each marked with the quiz question it
+     * repeats (if any) and whether it needs a look.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function reviewList(array $batch): array
+    {
+        $live = [];
+
+        if (! empty($batch['assessment_id'])) {
+            $live = array_map(
+                static fn (array $q): string => (string) $q['question_text'],
+                db_connect()->table('assessment_questions')->select('question_text')
+                    ->where('assessment_id', (int) $batch['assessment_id'])->get()->getResultArray()
+            );
+        }
+
+        $list = [];
+
+        foreach ($this->generatedQuestionModel->listForBatch((int) $batch['id']) as $question) {
+            $question['duplicate_of'] = QuestionTwins::find((string) $question['question_text'], $live);
+            $question['needs_look'] = $this->needsLook($question);
+            $list[] = $question;
+        }
+
+        return $list;
+    }
+
+    /**
+     * @param bool $onlyClear leave out the ones that need a look (and say how many)
+     */
+    public function acceptAll(User $user, int $batchId, bool $onlyClear = false): array
     {
         $batch = $this->batchModel->find($batchId);
 
@@ -447,7 +500,15 @@ class QuestionGenerationService
         $acceptedIds = [];
         $createdQuestions = [];
 
-        foreach ($this->generatedQuestionModel->listForBatch($batchId) as $row) {
+        $skipped = 0;
+
+        foreach ($this->reviewList($batch) as $row) {
+
+            if ($onlyClear && $row['needs_look']) {
+                $skipped++;
+
+                continue;
+            }
 
             $result = $questionService->createQuestion($user, $batch['assessment_id'], [
                 'question_text' => $row['question_text'],
@@ -485,6 +546,7 @@ class QuestionGenerationService
             'success' => true,
             'message' => count($acceptedIds) . ' question(s) accepted.',
             'accepted_count' => count($acceptedIds),
+            'skipped_count' => $skipped,
             // Lets the frontend drop the new cards straight into the live
             // canvas instead of reloading the whole builder.
             'questions' => $createdQuestions,
@@ -609,7 +671,7 @@ class QuestionGenerationService
             // or shipping duplicates).
             'stopped_early' => $batch['status'] === 'completed'
                 && (int) $batch['generated_count'] < (int) $batch['requested_count'],
-            'questions' => $this->generatedQuestionModel->listForBatch($batch['id']),
+            'questions' => $this->reviewList($batch),
         ];
     }
 

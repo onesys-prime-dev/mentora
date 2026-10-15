@@ -171,9 +171,10 @@ class QuestionGenerationController extends BaseController
         $this->ownBatch($offeringId, $batchId);
 
         $user = auth()->user();
+        $body = $this->request->getJSON(true);
 
         return $this->response->setJSON(
-            $this->generationService->acceptAll($user, $batchId)
+            $this->generationService->acceptAll($user, $batchId, is_array($body) && ! empty($body['only_clear']))
         );
     }
 }

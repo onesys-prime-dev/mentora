@@ -25,6 +25,13 @@
 
             <button
                 type="button"
+                data-ai-tray-accept-clear
+                class="hidden rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                Accept all verified
+            </button>
+
+            <button
+                type="button"
                 data-ai-tray-accept-all
                 class="rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark">
                 Accept All
@@ -59,7 +66,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
         </svg>
         <span>
-            Stopped at <span data-ai-tray-stopped-early-count></span> — the AI ran out of genuinely distinct questions for this topic. Try adding reference material or broadening the topic to generate more.
+            Stopped at <span data-ai-tray-stopped-early-count></span> — there was not enough distinct material to write more. Select more readings or PDFs of this unit to get more questions.
         </span>
     </div>
 
@@ -71,6 +78,8 @@
             Couldn't read <span data-ai-tray-skipped-sources-list></span>, so these questions don't cover it.
         </span>
     </div>
+
+    <p data-ai-tray-message role="status" class="hidden rounded-xl bg-white px-3 py-2 text-xs font-medium text-gray-700"></p>
 
     <div data-ai-tray-list class="flex flex-col gap-2"></div>
 

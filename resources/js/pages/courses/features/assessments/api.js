@@ -935,13 +935,20 @@ export async function discardGeneratedQuestion(offeringId, generatedQuestionId) 
 
 }
 
-export async function acceptAllGeneratedQuestions(offeringId, batchId) {
+/**
+ * @param {boolean} [onlyClear] leave out the questions that need a look
+ */
+export async function acceptAllGeneratedQuestions(offeringId, batchId, onlyClear = false) {
 
     const response = await fetch(
         `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/accept-all`,
         {
             method: "POST",
-            headers: defaultHeaders(),
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ only_clear: onlyClear }),
         }
     );
 

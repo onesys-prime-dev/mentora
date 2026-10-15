@@ -137,4 +137,69 @@ final class QuestionGenerationSafetyTest extends DatabaseTestCase
         $this->assertContains('ai.batch.accepted', $actions);
         $this->assertContains('ai.batch.cancelled', $actions);
     }
+
+    private function stage(array $row): int
+    {
+        db_connect()->table('ai_generated_questions')->insert($row + [
+            'batch_id' => $this->batch, 'question_type' => 'Essay', 'points' => 1, 'status' => 'pending', 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return (int) db_connect()->insertID();
+    }
+
+    public function testTheTrayMarksAQuestionThatRepeatsOneAlreadyInTheQuiz(): void
+    {
+        \Tests\Support\AssessmentFactory::question($this->quiz, $this->owner, 'Essay', 1, ['question_text' => 'Explain how a packet crosses a router.']);
+        $this->stage(['question_text' => 'Explain how a packet crosses a router, please.']);
+
+        $questions = $this->service->getBatch($this->batch)['questions'];
+        $twin = array_values(array_filter($questions, static fn (array $q): bool => $q['duplicate_of'] !== null));
+
+        $this->assertCount(1, $twin);
+        $this->assertTrue($twin[0]['needs_look']);
+    }
+
+    public function testEvidenceAndVerificationAreKeptAndDecoded(): void
+    {
+        $id = $this->stage([
+            'question_text' => 'Name the largest planet.', 'question_type' => 'Short Answer',
+            'evidence_quote' => 'Jupiter is the largest planet.', 'source_title' => 'Planets', 'source_page' => 4,
+            'verification' => json_encode(['solver_agrees' => true, 'grounded' => true]),
+            'flags' => json_encode(['recall']),
+        ]);
+
+        $row = (new \App\Models\Assessments\AiGeneratedQuestionModel())->getDecoded($id);
+
+        $this->assertSame(4, (int) $row['source_page']);
+        $this->assertTrue($row['verification']['solver_agrees']);
+        $this->assertSame(['recall'], $row['flags']);
+    }
+
+    public function testAcceptAllVerifiedLeavesOutQuestionsThatNeedALook(): void
+    {
+        $clear = $this->stage(['question_text' => 'Describe the water cycle in your own words.', 'verification' => json_encode(['solver_agrees' => true])]);
+        $wrong = $this->stage(['question_text' => 'Compute twelve times eleven today.', 'math_check' => 'mismatch']);
+        $disagreed = $this->stage(['question_text' => 'Argue for a different sorting method.', 'verification' => json_encode(['solver_agrees' => false])]);
+
+        $result = $this->service->acceptAll($this->owner, $this->batch, true);
+
+        $this->assertSame(2, $result['accepted_count'], 'the original short answer and the clear one');
+        $this->assertSame(2, $result['skipped_count']);
+
+        $status = static fn (int $id): string => (string) db_connect()->table('ai_generated_questions')->where('id', $id)->get()->getRowArray()['status'];
+
+        $this->assertSame('accepted', $status($clear));
+        $this->assertSame('pending', $status($wrong));
+        $this->assertSame('pending', $status($disagreed));
+    }
+
+    public function testAcceptAllWithoutTheGuardStillAddsEverything(): void
+    {
+        $this->stage(['question_text' => 'Compute twelve times eleven today.', 'math_check' => 'mismatch']);
+
+        $result = $this->service->acceptAll($this->owner, $this->batch);
+
+        $this->assertSame(2, $result['accepted_count']);
+        $this->assertSame(0, $result['skipped_count']);
+    }
 }

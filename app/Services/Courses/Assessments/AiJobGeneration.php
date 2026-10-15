@@ -298,6 +298,12 @@ class AiJobGeneration
                 'accepted_answers' => $q['type'] === 'Short Answer' ? ShortAnswerGrader::encode($q['accepted_answers'] ?? []) : null,
                 'similarity_score' => $checker->score((string) $q['text'], array_column($choices, 'text'), $batch['source_text']),
                 'math_check'       => in_array($q['math_check'] ?? '', ['verified', 'mismatch', 'not_applicable'], true) ? $q['math_check'] : 'not_applicable',
+                'explanation'      => isset($q['explanation']) ? mb_substr((string) $q['explanation'], 0, 2000) : null,
+                'evidence_quote'   => isset($q['evidence_quote']) ? mb_substr((string) $q['evidence_quote'], 0, 2000) : null,
+                'source_title'     => isset($q['source_title']) ? mb_substr((string) $q['source_title'], 0, 255) : null,
+                'source_page'      => isset($q['page']) && is_numeric($q['page']) ? (int) $q['page'] : null,
+                'verification'     => isset($q['verification']) && is_array($q['verification']) ? json_encode($q['verification']) : null,
+                'flags'            => isset($q['flags']) && is_array($q['flags']) ? json_encode(array_values(array_map('strval', $q['flags']))) : null,
                 'status'           => 'pending',
                 'created_at'       => $stamp,
             ]);

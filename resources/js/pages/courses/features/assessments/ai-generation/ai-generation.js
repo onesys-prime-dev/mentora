@@ -20,6 +20,8 @@ import {
 
 import { insertLiveQuestionCard } from "../questions/questions.js";
 
+import { acceptCounts, acceptReport, cardChips, sourceLine } from "./review-helpers.js";
+
 import {
     renderAcceptedAnswersEditor,
     collectAcceptedAnswers,
@@ -52,8 +54,6 @@ let trayProgressRing = null;
 
 const saveTimers = new Map();
 const pendingPayloads = new Map();
-
-const SIMILARITY_FLAG_THRESHOLD = 0.4;
 
 // How often a background job is asked how far it has got.
 const JOB_POLL_MS = 3000;
@@ -810,19 +810,74 @@ function renderBatch(result) {
             .map((el) => el.dataset.aiQuestionId)
     );
 
-    result.questions.forEach((question) => {
+    // Questions that need a look come first, so they are not missed below the fold.
+    [...result.questions]
+        .sort((a, b) => Number(!!b.needs_look) - Number(!!a.needs_look))
+        .forEach((question) => {
 
-        if (existingIds.has(String(question.id))) {
-            return;
-        }
+            if (existingIds.has(String(question.id))) {
+                return;
+            }
 
-        list.appendChild(createCard(question));
+            list.appendChild(createCard(question));
 
-    });
+        });
 
     updateProgress(result.batch);
 
+    refreshAcceptButtons();
+
     updateStoppedEarlyBanner(result.stopped_early, result.batch);
+
+}
+
+/** The tray's two accept buttons say how many each will add. */
+function refreshAcceptButtons() {
+
+    const cards = Array.from(document.querySelectorAll("[data-ai-question-card]"));
+    const counts = acceptCounts(cards.map((card) => ({ needs_look: card.dataset.aiNeedsLook === "1" })));
+
+    const clear = document.querySelector("[data-ai-tray-accept-clear]");
+    const all = document.querySelector("[data-ai-tray-accept-all]");
+
+    if (clear) {
+        clear.textContent = `Accept all verified (${counts.clear})`;
+        clear.disabled = counts.clear === 0;
+        clear.classList.toggle("hidden", counts.needLook === 0);
+    }
+
+    if (all) {
+        all.textContent = counts.needLook === 0 ? `Accept all (${counts.total})` : "Accept all, including flagged";
+        all.classList.toggle("bg-brand", counts.needLook === 0);
+        all.classList.toggle("text-white", counts.needLook === 0);
+        all.classList.toggle("border", counts.needLook > 0);
+        all.classList.toggle("border-gray-300", counts.needLook > 0);
+        all.classList.toggle("text-gray-700", counts.needLook > 0);
+    }
+
+}
+
+function showTrayMessage(text) {
+
+    const box = document.querySelector("[data-ai-tray-message]");
+
+    if (!box) {
+        return;
+    }
+
+    box.textContent = text;
+    box.classList.toggle("hidden", text === "");
+
+}
+
+function showCardError(card, text) {
+
+    const line = card.querySelector("[data-ai-card-error]");
+
+    if (line) {
+        line.textContent = text;
+        line.classList.toggle("hidden", text === "");
+    }
 
 }
 
@@ -871,21 +926,32 @@ function createCard(question) {
     card.dataset.aiAnswersCount = question.answers_count ?? 2;
     card.dataset.aiCaseSensitive = isFlagTrue(question.case_sensitive) ? "1" : "0";
 
+    card.dataset.aiNeedsLook = question.needs_look ? "1" : "0";
+
     card.className =
-        "flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3";
+        `flex flex-col gap-2 rounded-xl border bg-white p-3 ${question.needs_look ? "border-amber-300" : "border-gray-200"}`;
 
-    const similarityBadge =
-        question.similarity_score !== null && question.similarity_score > SIMILARITY_FLAG_THRESHOLD
-            ? `<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Similar to source — review before accepting</span>`
-            : "";
+    // What the builder knows about this question, most serious first. The
+    // answer check of a math question is computed, never guessed.
+    const chipTones = {
+        danger: "bg-red-100 text-red-700",
+        warning: "bg-amber-100 text-amber-800",
+        ok: "bg-emerald-100 text-emerald-800",
+    };
 
-    // Deterministic sympy cross-check of the marked-correct answer for
-    // math questions — the model is not reliable at arithmetic/algebra,
-    // this is never a guess (see verification.py).
-    const mathCheckBadge =
-        question.math_check === "mismatch"
-            ? `<span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ Marked answer looks wrong — verify before accepting</span>`
-            : "";
+    const chipsHtml = cardChips(question)
+        .map((chip) => `<span class="rounded-full px-2 py-0.5 text-[10px] font-bold ${chipTones[chip.tone]}">${escapeHtml(chip.label)}</span>`)
+        .join("");
+
+    const origin = sourceLine(question);
+
+    const evidenceHtml = origin !== "" || question.evidence_quote
+        ? `<details class="text-[11px] text-gray-600">
+                <summary class="cursor-pointer font-semibold text-gray-700">${escapeHtml(origin || "Where this came from")}</summary>
+                ${question.evidence_quote ? `<blockquote class="mt-1 border-l-2 border-gray-200 pl-2 italic">${escapeHtml(question.evidence_quote)}</blockquote>` : ""}
+                ${question.explanation ? `<p class="mt-1"><span class="font-semibold">Why:</span> ${escapeHtml(question.explanation)}</p>` : ""}
+           </details>`
+        : "";
 
     const isMultipleAnswer = isFlagTrue(question.allow_multiple_answers);
 
@@ -907,8 +973,7 @@ function createCard(question) {
             <input type="number" data-ai-points-input min="0" step="0.5" value="${question.points}" class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none focus:border-brand">
             <span class="text-[10px] text-[#767676]">pts</span>
             ${multipleBadge}
-            ${similarityBadge}
-            ${mathCheckBadge}
+            ${chipsHtml}
             <div class="ml-auto flex items-center gap-1">
                 <button type="button" data-ai-open-settings title="Question settings" class="rounded-lg p-1.5 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -926,6 +991,8 @@ function createCard(question) {
         </div>
         <textarea data-ai-text-input rows="2" class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-sm outline-none transition focus:bg-gray-50">${escapeHtml(question.question_text)}</textarea>
         ${choicesHtml}
+        ${evidenceHtml}
+        <p data-ai-card-error role="alert" class="hidden text-xs font-medium text-red-600"></p>
     `;
 
     return card;
@@ -1102,9 +1169,17 @@ function bindTrayActions() {
 
                 const result = await acceptGeneratedQuestion(state.offeringId, questionId);
 
+                if (!result.success) {
+
+                    showCardError(card, result.message || "This question could not be added. Try again.");
+
+                    return;
+
+                }
+
                 card.remove();
 
-                if (result.success && result.question) {
+                if (result.question) {
                     insertLiveQuestionCard(result.question);
                 }
 
@@ -1113,6 +1188,8 @@ function bindTrayActions() {
             } catch (error) {
 
                 console.error(error);
+
+                showCardError(card, "This question could not be added. Check your connection and try again.");
 
             }
 
@@ -1129,6 +1206,8 @@ function bindTrayActions() {
             } catch (error) {
 
                 console.error(error);
+
+                showCardError(card, "This question could not be discarded. Try again.");
 
             }
 
@@ -1157,35 +1236,75 @@ function bindTrayActions() {
 
     });
 
-    document
-        .querySelector("[data-ai-tray-accept-all]")
-        ?.addEventListener("click", async () => {
+    async function acceptAllNow(onlyClear) {
 
-            if (!activeBatchId) {
+        if (!activeBatchId) {
+            return;
+        }
+
+        const counts = acceptCounts(
+            Array.from(document.querySelectorAll("[data-ai-question-card]"))
+                .map((card) => ({ needs_look: card.dataset.aiNeedsLook === "1" }))
+        );
+
+        if (!onlyClear && counts.needLook > 0
+            && !window.confirm(`${counts.needLook} of these ${counts.needLook === 1 ? "has" : "have"} a warning (a possible wrong answer, a repeat or a close copy). Add all ${counts.total} anyway?`)) {
+            return;
+        }
+
+        try {
+
+            const result = await acceptAllGeneratedQuestions(state.offeringId, activeBatchId, onlyClear);
+
+            if (!result.success) {
+
+                showTrayMessage(result.message || "The questions could not be added. Try again.");
+
                 return;
+
             }
 
-            try {
+            (result.questions || []).forEach((question) => {
+                insertLiveQuestionCard(question);
+            });
 
-                const result = await acceptAllGeneratedQuestions(state.offeringId, activeBatchId);
+            // Added ones leave the tray; any left are the ones that need a look.
+            if (result.skipped_count > 0) {
+
+                document.querySelectorAll("[data-ai-question-card]").forEach((card) => {
+
+                    if (card.dataset.aiNeedsLook !== "1") {
+                        card.remove();
+                    }
+
+                });
+
+                showTrayMessage(acceptReport(result));
+                refreshAcceptButtons();
+
+            } else {
 
                 hideTray();
 
-                if (result.success) {
-
-                    (result.questions || []).forEach((question) => {
-                        insertLiveQuestionCard(question);
-                    });
-
-                }
-
-            } catch (error) {
-
-                console.error(error);
-
             }
 
-        });
+        } catch (error) {
+
+            console.error(error);
+
+            showTrayMessage("The questions could not be added. Check your connection and try again.");
+
+        }
+
+    }
+
+    document
+        .querySelector("[data-ai-tray-accept-all]")
+        ?.addEventListener("click", () => acceptAllNow(false));
+
+    document
+        .querySelector("[data-ai-tray-accept-clear]")
+        ?.addEventListener("click", () => acceptAllNow(true));
 
     document
         .querySelector("[data-ai-tray-dismiss]")
@@ -1200,6 +1319,8 @@ function afterQuestionResolved() {
     if (document.querySelectorAll("[data-ai-question-card]").length === 0) {
         activeBatchId = null;
     }
+
+    refreshAcceptButtons();
 
 }
 
