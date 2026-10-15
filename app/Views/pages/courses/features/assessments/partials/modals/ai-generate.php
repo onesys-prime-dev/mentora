@@ -19,9 +19,9 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
     id="ai-generate-modal"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
 
-    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+    <div class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
 
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-8 py-6">
 
             <h2 class="text-xl font-bold text-brand">
                 Generate Questions with AI
@@ -40,7 +40,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
         </div>
 
-        <form id="ai-generate-form" class="flex flex-col gap-5 p-8" data-ai-source-usable="<?= $unitItems !== [] ? '1' : '0' ?>">
+        <form id="ai-generate-form" class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-8" data-ai-source-usable="<?= $unitItems !== [] ? '1' : '0' ?>">
 
             <p class="rounded-xl bg-brand-tint px-4 py-3 text-xs text-brand">
                 <?php if ($aiIsExternal): ?>
@@ -281,7 +281,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
         </form>
 
-        <div class="flex justify-end gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-8 py-6">
 
             <button
                 type="button"
