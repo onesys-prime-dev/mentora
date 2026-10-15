@@ -6,6 +6,15 @@
 
 import { bindModal } from "../modals/index.js";
 import { bindQuestionPicker } from "./question-picker.js";
+import {
+    fileSummary,
+    importLabel,
+    isAcceptedFile,
+    recallExportPrefs,
+    rememberExportPrefs,
+    statusChip,
+    stepState,
+} from "./import-ui.js";
 
 import {
     exportQuestionsUrl,
@@ -92,6 +101,8 @@ function bindExportButton() {
 
     });
 
+    restoreExportPrefs();
+
     // The print settings only apply to the printable test.
     function syncPrintOptions() {
 
@@ -119,11 +130,48 @@ function bindExportButton() {
                 document.querySelector("[data-export-format-option]:checked")?.value
                 || "docx";
 
+            rememberExportPrefs({ format, print: printSettings() });
+
             window.location.href = exportQuestionsUrl(state.offeringId, state.assessmentId, format, printSettings());
 
             closePanel();
 
         });
+
+}
+
+/** Puts the export panel back the way this teacher last left it. */
+function restoreExportPrefs() {
+
+    const prefs = recallExportPrefs();
+
+    if (prefs.format) {
+
+        const radio = Array.from(document.querySelectorAll("[data-export-format-option]"))
+            .find((option) => option.value === prefs.format);
+
+        if (radio) {
+            radio.checked = true;
+        }
+
+    }
+
+    const print = prefs.print || {};
+    const set = (selector, value, key = "value") => {
+
+        const el = document.querySelector(selector);
+
+        if (el && value !== undefined) {
+            el[key] = value;
+        }
+
+    };
+
+    set("[data-print-versions]", print.versions === undefined ? undefined : String(print.versions));
+    set("[data-print-paper]", print.paper);
+    set("[data-print-shuffle-questions]", print.shuffleQuestions, "checked");
+    set("[data-print-shuffle-choices]", print.shuffleChoices, "checked");
+    set("[data-print-key-only]", print.keyOnly, "checked");
 
 }
 
@@ -220,6 +268,8 @@ function bindImportModal() {
         tab.addEventListener("click", () => setImportSource(tab.dataset.importSourceTab));
     });
 
+    bindDropzone();
+
     const template = document.querySelector("[data-import-template-link]");
 
     if (template) {
@@ -255,6 +305,82 @@ function bindImportModal() {
     document
         .querySelector("[data-import-acknowledge]")
         ?.addEventListener("change", refreshReview);
+
+}
+
+/** Drag a file onto the dialog's file area, or choose one: the same input either way. */
+function bindDropzone() {
+
+    const zone = document.querySelector("[data-import-dropzone]");
+    const input = document.querySelector("[data-import-file-input]");
+    const label = document.querySelector("[data-import-file-name]");
+
+    if (!zone || !input) {
+        return;
+    }
+
+    function show(file) {
+
+        if (!file) {
+            label.classList.add("hidden");
+            return;
+        }
+
+        if (!isAcceptedFile(file.name)) {
+
+            input.value = "";
+            label.classList.add("hidden");
+            showError("That file type cannot be imported. Use Word (.docx), Rich Text (.rtf), Excel (.xlsx), CSV (.csv) or a text file (.txt).");
+
+            return;
+
+        }
+
+        document.querySelector("[data-import-error]").classList.add("hidden");
+        label.textContent = fileSummary(file);
+        label.classList.remove("hidden");
+
+    }
+
+    input.addEventListener("change", () => show(input.files[0]));
+
+    ["dragenter", "dragover"].forEach((name) => {
+        zone.addEventListener(name, (event) => {
+            event.preventDefault();
+            zone.classList.add("border-brand", "bg-[#F2F7FF]");
+        });
+    });
+
+    ["dragleave", "drop"].forEach((name) => {
+        zone.addEventListener(name, (event) => {
+            event.preventDefault();
+            zone.classList.remove("border-brand", "bg-[#F2F7FF]");
+        });
+    });
+
+    zone.addEventListener("drop", (event) => {
+
+        const file = event.dataTransfer?.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        try {
+
+            const transfer = new DataTransfer();
+
+            transfer.items.add(file);
+            input.files = transfer.files;
+
+        } catch {
+            // Browsers without DataTransfer construction fall back to the file chooser.
+            return;
+        }
+
+        show(file);
+
+    });
 
 }
 
@@ -343,6 +469,26 @@ function showStep(step) {
     document
         .querySelector("[data-import-apply-button]")
         ?.classList.toggle("hidden", step !== "review");
+
+    document.querySelectorAll("[data-import-stepper]").forEach((item) => {
+
+        const state = stepState(item.dataset.importStepper, step);
+        const dot = item.querySelector("span");
+
+        item.classList.toggle("text-gray-400", state === "upcoming");
+        item.classList.toggle("text-brand", state !== "upcoming");
+        dot.classList.toggle("bg-brand", state !== "upcoming");
+        dot.classList.toggle("text-white", state !== "upcoming");
+        dot.classList.toggle("bg-gray-200", state === "upcoming");
+        dot.classList.toggle("text-gray-600", state === "upcoming");
+
+        if (state === "current") {
+            item.setAttribute("aria-current", "step");
+        } else {
+            item.removeAttribute("aria-current");
+        }
+
+    });
 
 }
 
@@ -450,7 +596,20 @@ function itemRow(item, tone) {
     detail.className = "text-[#555555]";
     detail.textContent = describeItem(item);
 
-    body.append(title, detail);
+    const chip = statusChip(item);
+    const chipTones = {
+        new: "bg-emerald-100 text-emerald-800",
+        changed: "bg-amber-100 text-amber-800",
+        duplicate: "bg-amber-100 text-amber-900",
+        problem: "bg-red-100 text-red-700",
+    };
+    const chipEl = document.createElement("span");
+
+    chipEl.className = `w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold ${chipTones[chip.tone]}`;
+    chipEl.textContent = chip.label;
+    chipEl.dataset.importChip = chip.tone;
+
+    body.append(chipEl, title, detail);
 
     item.problems.forEach((problem) => {
 
@@ -720,9 +879,7 @@ function refreshReview() {
     const unconfirmed = needsAcknowledgement && !document.querySelector("[data-import-acknowledge]").checked;
 
     apply.disabled = nothing || unconfirmed;
-    apply.textContent = counts.removed > 0
-        ? `Import and delete ${counts.removed}`
-        : "Import";
+    apply.textContent = importLabel(counts);
 
 }
 

@@ -24,6 +24,14 @@
 
         </div>
 
+        <ol class="flex items-center gap-2 border-b border-gray-100 px-8 py-3 text-xs font-semibold" aria-label="Import steps">
+            <li data-import-stepper="upload" class="flex items-center gap-2"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] text-white">1</span> Choose</li>
+            <li class="h-px w-6 bg-gray-300" aria-hidden="true"></li>
+            <li data-import-stepper="review" class="flex items-center gap-2 text-gray-400"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">2</span> Review</li>
+            <li class="h-px w-6 bg-gray-300" aria-hidden="true"></li>
+            <li data-import-stepper="done" class="flex items-center gap-2 text-gray-400"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">3</span> Done</li>
+        </ol>
+
         <!-- Step 1: choose the file -->
         <div data-import-step="upload" class="flex flex-col gap-4 p-8">
 
@@ -39,7 +47,7 @@
                 <button type="button" role="tab" data-import-source-tab="quiz" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">From another quiz</button>
             </div>
 
-            <div data-import-source-panel="file" class="flex flex-col gap-2">
+            <div data-import-source-panel="file" data-import-dropzone class="flex flex-col gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition">
                 <input
                     type="file"
                     data-import-file-input
@@ -47,6 +55,8 @@
                     aria-label="Quiz file to import"
                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
+                <p data-import-file-name class="hidden text-xs font-semibold text-gray-700" aria-live="polite"></p>
+                <p class="text-xs text-[#767676]">Drag a file here, or choose one.</p>
                 <p class="text-xs text-[#767676]">
                     Word (.docx), Rich Text (.rtf), Excel (.xlsx), CSV (.csv) or Aiken/GIFT text (.txt), up to 5 MB.
                     <a data-import-template-link href="#" class="font-semibold text-brand hover:underline">Download the Excel template</a>
