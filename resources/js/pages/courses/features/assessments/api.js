@@ -1045,3 +1045,49 @@ export async function undoImport(offeringId, assessmentId, token) {
     return importJson(response, "Unable to undo this import.");
 
 }
+
+/*
+|--------------------------------------------------------------------------
+| Add from another quiz
+|--------------------------------------------------------------------------
+*/
+
+export async function fetchQuestionSources(offeringId, assessmentId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/question-sources`,
+        { headers: defaultHeaders() }
+    );
+
+    return importJson(response, "Unable to load your other quizzes.");
+
+}
+
+export async function fetchSourceQuestions(offeringId, assessmentId, sourceId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/question-sources/${sourceId}`,
+        { headers: defaultHeaders() }
+    );
+
+    return importJson(response, "Unable to load the questions of that quiz.");
+
+}
+
+export async function copyQuestions(offeringId, assessmentId, sourceId, questionIds) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/question-sources/copy`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ source_assessment_id: sourceId, question_ids: questionIds }),
+        }
+    );
+
+    return importJson(response, "Unable to add those questions.");
+
+}

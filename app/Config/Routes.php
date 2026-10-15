@@ -236,6 +236,9 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/assessments/(:num)/import/apply', 'Courses\Assessments\QuestionImportExportController::apply/$2');
         $routes->post('(:num)/assessments/(:num)/import/undo', 'Courses\Assessments\QuestionImportExportController::undo/$2');
         $routes->get('(:num)/assessments/(:num)/import/sample', 'Courses\Assessments\QuestionImportExportController::sample/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources', 'Courses\Assessments\QuestionPickerController::sources/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources/(:num)', 'Courses\Assessments\QuestionPickerController::questions/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/question-sources/copy', 'Courses\Assessments\QuestionPickerController::copy/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
 
@@ -411,6 +414,9 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/assessments/(:num)/import/apply', 'Courses\Assessments\QuestionImportExportController::apply/$2');
         $routes->post('(:num)/assessments/(:num)/import/undo', 'Courses\Assessments\QuestionImportExportController::undo/$2');
         $routes->get('(:num)/assessments/(:num)/import/sample', 'Courses\Assessments\QuestionImportExportController::sample/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources', 'Courses\Assessments\QuestionPickerController::sources/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources/(:num)', 'Courses\Assessments\QuestionPickerController::questions/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/question-sources/copy', 'Courses\Assessments\QuestionPickerController::copy/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
 

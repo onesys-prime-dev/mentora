@@ -36,6 +36,7 @@
             <div class="inline-flex w-fit rounded-xl bg-gray-100 p-1" role="tablist">
                 <button type="button" role="tab" data-import-source-tab="file" class="rounded-lg bg-white px-4 py-1.5 text-sm font-semibold text-brand shadow transition">Upload a file</button>
                 <button type="button" role="tab" data-import-source-tab="text" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">Paste text</button>
+                <button type="button" role="tab" data-import-source-tab="quiz" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">From another quiz</button>
             </div>
 
             <div data-import-source-panel="file" class="flex flex-col gap-2">
@@ -58,7 +59,42 @@
                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand"></textarea>
             </div>
 
-            <details class="rounded-xl border border-gray-200 p-3 text-xs text-gray-600">
+            <div data-import-source-panel="quiz" class="hidden flex-col gap-3">
+
+                <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                    Quiz to take questions from
+                    <select
+                        data-picker-source
+                        disabled
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-normal text-gray-800 outline-none transition focus:border-brand disabled:bg-gray-50">
+                    </select>
+                </label>
+
+                <div data-picker-tools class="hidden items-center gap-3">
+                    <input
+                        type="search"
+                        data-picker-search
+                        aria-label="Search these questions"
+                        placeholder="Search these questions"
+                        class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                    <button type="button" data-picker-select-all class="shrink-0 text-xs font-semibold text-brand hover:underline">Select all</button>
+                </div>
+
+                <div data-picker-list class="flex max-h-72 flex-col gap-1.5 overflow-y-auto"></div>
+
+                <p data-picker-message class="hidden text-xs text-[#767676]" aria-live="polite"></p>
+
+                <button
+                    type="button"
+                    data-picker-add
+                    disabled
+                    class="self-end rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                    Add questions
+                </button>
+
+            </div>
+
+            <details data-import-layout-guide class="rounded-xl border border-gray-200 p-3 text-xs text-gray-600">
                 <summary class="cursor-pointer font-semibold text-gray-700">What layout can I use?</summary>
                 <div class="mt-2 flex flex-col gap-1.5">
                     <p><strong>Questions</strong> start with a number: <code>1.</code> <code>1)</code> <code>Q1:</code> <code>Question 1</code>.</p>

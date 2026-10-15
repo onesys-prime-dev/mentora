@@ -5,6 +5,7 @@
 */
 
 import { bindModal } from "../modals/index.js";
+import { bindQuestionPicker } from "./question-picker.js";
 
 import {
     exportQuestionsUrl,
@@ -29,8 +30,10 @@ let preview = null;
 // The token of an applied import, while it can still be undone.
 let undoToken = null;
 
-// "file" or "text": where the questions to import come from.
+// "file", "text" or "quiz": where the questions to import come from.
 let importSource = "file";
+
+let picker = null;
 
 export function initializeImportExport(offeringId, assessmentId, refresh) {
 
@@ -39,6 +42,11 @@ export function initializeImportExport(offeringId, assessmentId, refresh) {
     modal = bindModal({
         modal: "#import-questions-modal",
         closeButtons: "[data-close-import-questions-modal]",
+    });
+
+    picker = bindQuestionPicker({
+        ids: () => ({ offeringId: state.offeringId, assessmentId: state.assessmentId }),
+        onAdded: showQuestionsAdded,
     });
 
     bindExportButton();
@@ -212,6 +220,22 @@ function bindImportModal() {
 
 }
 
+/**
+ * Questions copied from another quiz: no review step (the teacher already
+ * ticked them), so go straight to the result, with nothing to undo.
+ */
+async function showQuestionsAdded(message) {
+
+    undoToken = null;
+
+    renderResult({ message, skipped: [] });
+
+    showStep("done");
+
+    await state.refresh();
+
+}
+
 function setImportSource(source) {
 
     importSource = source;
@@ -237,6 +261,14 @@ function setImportSource(source) {
 
     });
 
+    // The picker has its own add button and layout guide does not apply to it.
+    document.querySelector("[data-import-preview-button]")?.classList.toggle("hidden", source === "quiz");
+    document.querySelector("[data-import-layout-guide]")?.classList.toggle("hidden", source === "quiz");
+
+    if (source === "quiz") {
+        picker?.load();
+    }
+
 }
 
 function resetImportModal() {
@@ -246,6 +278,8 @@ function resetImportModal() {
 
     document.querySelector("[data-import-file-input]").value = "";
     document.querySelector("[data-import-text-input]").value = "";
+
+    picker?.reset();
 
     setImportSource("file");
 
