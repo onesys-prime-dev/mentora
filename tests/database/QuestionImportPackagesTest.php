@@ -269,4 +269,34 @@ final class QuestionImportPackagesTest extends DatabaseTestCase
         $this->assertSame(1, $preview['counts']['added']);
         $this->assertSame('a', $preview['diff']['added'][0]['choices'][0]['is_correct'] ? 'a' : 'b');
     }
+
+    public function testATestGenFileIsRecognisedAndExplainedNotGuessedAt(): void
+    {
+        $result = $this->preview($this->fixture('Onesys Sample.tst'), 'tst');
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('TestGen', $result['message']);
+        $this->assertStringContainsString('50 questions', $result['message']);
+        $this->assertStringContainsString('Moodle XML', $result['message']);
+
+        // Zipped up the way it is downloaded, it is still recognised.
+        $this->assertSame($result['message'], $this->preview($this->fixture('Onesys Sample.tst'), 'zip')['message']);
+    }
+
+    public function testAnExportProblemReportIsNotTakenForAQuiz(): void
+    {
+        $result = $this->preview($this->fixture('Error in Moodle.TXT'), 'txt');
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('not a quiz', $result['message']);
+    }
+
+    public function testAnEmptyOrDamagedTstIsRefusedPlainly(): void
+    {
+        $path = sys_get_temp_dir() . '/bad-' . bin2hex(random_bytes(3)) . '.tst';
+        file_put_contents($path, 'not a zip');
+        $this->temp[] = $path;
+
+        $this->assertStringContainsString('not a TestGen test file', $this->preview($path, 'tst')['message']);
+    }
 }

@@ -8,7 +8,7 @@
 | what the import button says, and what the export panel remembers.
 */
 
-export const ACCEPTED_EXTENSIONS = ["docx", "rtf", "xlsx", "csv", "txt", "pdf", "html", "htm", "xml", "dat", "zip"];
+export const ACCEPTED_EXTENSIONS = ["docx", "rtf", "xlsx", "csv", "txt", "pdf", "html", "htm", "xml", "dat", "zip", "tst"];
 
 export const STEPS = ["upload", "review", "done"];
 
@@ -97,6 +97,22 @@ export function importLabel(counts) {
     }
 
     return `Import ${total} ${total === 1 ? "question" : "questions"}`;
+
+}
+
+/**
+ * The line above the review: what the file was recognised as.
+ *
+ * @param {{detected?: string, source?: string}} preview
+ * @returns {string}
+ */
+export function detectedLine(preview) {
+
+    if (preview.detected) {
+        return `Read as: ${preview.detected}`;
+    }
+
+    return preview.source === "mentora" ? "Read as: Mentora export" : "";
 
 }
 

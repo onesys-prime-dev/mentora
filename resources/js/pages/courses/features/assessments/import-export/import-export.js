@@ -8,6 +8,7 @@ import { bindModal } from "../modals/index.js";
 import { bindQuestionPicker } from "./question-picker.js";
 import {
     fileSummary,
+    detectedLine,
     importLabel,
     isAcceptedFile,
     recallExportPrefs,
@@ -746,6 +747,13 @@ export function collectOverrides(root = document) {
 function renderReview() {
 
     const { diff } = preview;
+
+    const detected = document.querySelector("[data-import-detected]");
+
+    if (detected) {
+        detected.textContent = detectedLine(preview);
+        detected.classList.toggle("hidden", detectedLine(preview) === "");
+    }
 
     document.querySelector("[data-import-added-count]").textContent = diff.added.length;
     document.querySelector("[data-import-changed-count]").textContent = diff.changed.length;

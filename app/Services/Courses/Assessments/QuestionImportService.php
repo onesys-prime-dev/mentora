@@ -36,9 +36,9 @@ class QuestionImportService
     public const DOCUMENT_EXTENSIONS = ['docx', 'rtf'];
 
     /** Spreadsheets and plain-text formats from other systems (Excel/CSV, Aiken, GIFT). */
-    public const FORMAT_EXTENSIONS = ['csv', 'xlsx', 'txt', 'pdf', 'html', 'htm', 'xml', 'dat', 'zip'];
+    public const FORMAT_EXTENSIONS = ['csv', 'xlsx', 'txt', 'pdf', 'html', 'htm', 'xml', 'dat', 'zip', 'tst'];
 
-    public const EXTENSIONS = ['docx', 'rtf', 'csv', 'xlsx', 'txt', 'pdf', 'html', 'htm', 'xml', 'dat', 'zip'];
+    public const EXTENSIONS = ['docx', 'rtf', 'csv', 'xlsx', 'txt', 'pdf', 'html', 'htm', 'xml', 'dat', 'zip', 'tst'];
 
     // A Short Answer's answer key: "Accepted answers: CPU | Central
     // Processing Unit" (see QuestionExportService::ACCEPTED_ANSWERS_LABEL).
@@ -131,6 +131,14 @@ class QuestionImportService
         }
 
         try {
+            if (in_array($extension, ['tst', 'zip'], true) && ($testGen = TestGenFile::describe($filePath)) !== null) {
+                return ['success' => false, 'message' => TestGenFile::message($testGen)];
+            }
+
+            if ($extension === 'tst') {
+                return ['success' => false, 'message' => 'This .tst file is not a TestGen test file that can be read. Export the test from its program as Word, PDF, Moodle XML or QTI.'];
+            }
+
             if (in_array($extension, ['xml', 'dat', 'zip'], true)) {
                 $found = $this->xmlQuestions($filePath, $extension);
 
@@ -161,6 +169,8 @@ class QuestionImportService
                     $read = (new GiftParser())->parse($text);
                 } elseif (AikenParser::looks($text)) {
                     $read = (new AikenParser())->parse($text);
+                } elseif (preg_match('/Question\s*#\s*Seriousness\s*Issue/i', $text) === 1) {
+                    return ['success' => false, 'message' => 'This is not a quiz: it is a report of problems found when a quiz was exported (a list of question numbers, "Alert" levels and issues). Import the quiz file it was written for instead.'];
                 } else {
                     return ['success' => false, 'message' => 'This text file is not in Aiken or GIFT format. Aiken questions end with an "ANSWER: B" line; GIFT answers sit inside { }.'];
                 }

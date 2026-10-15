@@ -93,3 +93,15 @@ describe("export preferences", () => {
     });
 
 });
+
+import { detectedLine } from "../../../resources/js/pages/courses/features/assessments/import-export/import-ui.js";
+
+describe("detectedLine", () => {
+
+    it("names what the file was read as", () => {
+        expect(detectedLine({ detected: "Blackboard (QTI)" })).toBe("Read as: Blackboard (QTI)");
+        expect(detectedLine({ source: "mentora" })).toBe("Read as: Mentora export");
+        expect(detectedLine({ source: "plain" })).toBe("");
+    });
+
+});

@@ -51,7 +51,7 @@
                 <input
                     type="file"
                     data-import-file-input
-                    accept=".docx,.rtf,.xlsx,.csv,.txt,.pdf,.html,.htm,.xml,.dat,.zip"
+                    accept=".docx,.rtf,.xlsx,.csv,.txt,.pdf,.html,.htm,.xml,.dat,.zip,.tst"
                     aria-label="Quiz file to import"
                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
@@ -114,6 +114,8 @@
                     <p><strong>Choices</strong> start with a letter: <code>a)</code> <code>A.</code> <code>(a)</code>.</p>
                     <p><strong>The answer</strong> is a line like <code>Answer: b</code> (or <code>Answer: a, c</code>), a <code>*</code> after the right choice, or a list under &ldquo;Answer Key&rdquo; at the end.</p>
                     <p><strong>Points</strong> can be written <code>(2 pts)</code> or on a line <code>Points: 2</code>. No choices and an answer makes a short answer; no choices and no answer makes an essay.</p>
+                    <p><strong>From other systems:</strong> an exam printed from a test-bank tool (text, RTF, PDF or HTML, with the answer key at the end), Moodle XML, and QTI packages from Blackboard, D2L, Sakai and WebCT.
+                    A file with no answer key comes in with each answer left for you to choose. TestGen <code>.tst</code> files must be exported first.</p>
                     <p>
                         <a data-import-sample-link href="#" class="font-semibold text-brand hover:underline">Download a sample file</a>
                     </p>
@@ -135,6 +137,8 @@
         <div data-import-step="review" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-8">
 
             <p class="text-xs font-medium text-[#767676]">Nothing has been saved yet.</p>
+
+            <p data-import-detected class="hidden w-fit rounded-full bg-brand-tint px-3 py-1 text-xs font-semibold text-brand"></p>
 
             <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
 
