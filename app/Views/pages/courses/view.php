@@ -107,7 +107,7 @@ $features = [
         // #course-content is always part of the server's HTML and arrives already showing the shape
         // of the active tab. Only what is inside it is rendered by JavaScript: the first load adopts
         // this skeleton and replaces it with the screen (featureLoader.js).
-        $skeletonShape = ($activeFeature ?? 'overview') === 'overview' ? 'overview' : 'list';
+        $skeletonShape = array_key_exists($activeFeature ?? '', $features) ? $activeFeature : 'overview';
         ?>
         <div
             class="w-full bg-white rounded-3xl"

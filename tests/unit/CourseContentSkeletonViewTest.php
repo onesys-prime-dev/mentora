@@ -46,11 +46,31 @@ final class CourseContentSkeletonViewTest extends CIUnitTestCase
         $this->assertStringContainsString('aria-hidden="true"', $instructor);
     }
 
-    public function testTheListSkeletonDrawsTheSameThreeRowsTheScriptsDo(): void
+    public function testEveryTabHasItsOwnSkeletonPartial(): void
     {
-        $html = view('pages/courses/skeletons/list', [], ['saveData' => false]);
+        foreach (['overview', 'announcements', 'modules', 'resources', 'discussions', 'assessments', 'grades'] as $tab) {
+            foreach (['instructor', 'student'] as $role) {
+                $html = view('pages/courses/skeletons/' . $tab, ['role' => $role], ['saveData' => false]);
 
-        $this->assertSame(3, substr_count($html, 'rounded-2xl border border-gray-100 p-6'));
-        $this->assertStringContainsString('animate-pulse', $html);
+                $this->assertStringContainsString('animate-pulse', $html, $tab);
+                $this->assertStringContainsString('data-server-skeleton-shape', $html, $tab);
+                $this->assertStringContainsString('aria-hidden="true"', $html, $tab);
+            }
+        }
+    }
+
+    public function testTheInstructorsSkeletonsCarryTheirExtraControls(): void
+    {
+        $instructor = view('pages/courses/skeletons/modules', ['role' => 'instructor'], ['saveData' => false]);
+        $student = view('pages/courses/skeletons/modules', ['role' => 'student'], ['saveData' => false]);
+
+        $this->assertStringContainsString('h-10 w-36 rounded-full', $instructor);
+        $this->assertStringNotContainsString('h-10 w-36 rounded-full', $student);
+    }
+
+    public function testTheViewPicksTheSkeletonOfTheActiveTab(): void
+    {
+        $this->assertStringContainsString('? $activeFeature : ', $this->source());
+        $this->assertStringContainsString('array_key_exists($activeFeature', $this->source());
     }
 }

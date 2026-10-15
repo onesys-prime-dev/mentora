@@ -194,7 +194,7 @@ A pull request that adds or changes a screen is not done until:
 There are two kinds of page load in Mentora, and each has its own loading cue.
 
 - **Server page reload**: the browser fetches a whole new document. It happens on any link to another page (header, app menu, dashboard, admin tables), on a form that posts and redirects, on a script that assigns `window.location`, and on the browser's reload and back/forward. Every layout writes the slim bar into the HTML (`layouts/partials/page-progress.php`), already running, so it is on screen from the first paint; `shared/spa/page-progress.js` also starts it the moment a link is clicked or a form submitted, and clears it when the page is restored from the back/forward cache.
-- **Client page load**: the document does not reload. Inside a course, a tab or screen click changes the address with `pushState`, fetches the screen's HTML and swaps it into `#course-content` with a skeleton and `swapContent`. It uses the same bar (`shared/spa/progress.js`) when it takes long.
+- **Client page load**: the document does not reload. Inside a course, a tab or screen click changes the address with `pushState`, fetches the screen's HTML and swaps it into `#course-content` with a skeleton and `swapContent`. A tab click does what a page load does, in the same order: the tab lights up at once, the new tab's skeleton (the same shape the server draws on a reload) replaces the old screen, the top bar shows while it loads, and only then does the content take the skeleton's place. Screens inside a tab (a module item, a thread, an assessment) draw their own skeleton straight away and use the same bar when they take long.
 
 Rules for new pages and scripts:
 

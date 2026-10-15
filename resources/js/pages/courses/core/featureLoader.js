@@ -1,4 +1,5 @@
 import { supersede } from "../../../shared/spa/load-guard.js";
+import { endProgress, startProgress } from "../../../shared/spa/progress.js";
 
 const loaders = {
 
@@ -17,6 +18,70 @@ const loaders = {
     grades: () => import("../features/grades/index.js"),
 
 };
+
+// The loading shape of each tab, the same one the server draws on a page load
+// (app/Views/pages/courses/skeletons). A tab click draws it at once, so going to
+// another tab feels like opening the page: shape first, then the content.
+// These are small modules, loaded without the tab's own code.
+const skeletons = {
+
+    overview: () => import("../features/overview/skeleton.js").then((m) => m.renderOverviewSkeleton),
+
+    announcements: () => import("../features/announcements/skeleton.js").then((m) => m.renderAnnouncementsSkeleton),
+
+    modules: () => import("../features/modules/skeleton.js").then((m) => m.renderModulesSkeleton),
+
+    resources: () => import("../features/resources/skeleton.js").then((m) => m.renderResourcesSkeleton),
+
+    discussions: () => import("../features/discussions/skeleton.js").then((m) => m.renderDiscussionsSkeleton),
+
+    assessments: () => import("../features/assessments/skeleton.js").then((m) => m.renderAssessmentsSkeleton),
+
+    grades: () => import("../features/grades/skeleton.js").then((m) => m.renderGradesSkeleton),
+
+};
+
+/**
+ * Replaces what is in the region with the tab's loading shape. The old screen
+ * stays (dimmed) until the shape is ready, so the region never blinks empty.
+ * Marked like a server skeleton so the screen's own loader does not draw a
+ * second one over it.
+ */
+async function drawTabSkeleton(feature, content, isCurrent) {
+
+    content.classList.add("spa-loading");
+
+    let html = null;
+
+    try {
+
+        const render = await skeletons[feature]?.();
+
+        html = render ? render() : null;
+
+    } catch (error) {
+        console.error(error);
+    }
+
+    if (!isCurrent()) {
+        return;
+    }
+
+    content.classList.remove("spa-loading");
+
+    if (html === null) {
+
+        content.replaceChildren();
+
+        return;
+
+    }
+
+    content.innerHTML = html;
+    content.dataset.serverSkeleton = "";
+    content.dataset.spaSkeleton = "";
+
+}
 
 // The server's skeleton is only adopted for the load that belongs to the tab
 // the page was opened on; the first tab click gives it up.
@@ -118,6 +183,11 @@ export async function loadFeature(feature)
 
     const content = document.querySelector("#course-content");
 
+    let skeletonDrawn = Promise.resolve();
+
+    // The tab lights up at once, as it does in a server-rendered page.
+    highlightFeatureTab(feature);
+
     content?.setAttribute("aria-busy", "true");
 
     if (content) {
@@ -130,23 +200,30 @@ export async function loadFeature(feature)
         // place: keep it (so nothing blinks to empty) and let the screen replace it.
         // Any later load is a client navigation and starts from an empty region.
         if (!adoptServerSkeleton(content)) {
-            content.replaceChildren();
+            skeletonDrawn = drawTabSkeleton(feature, content, () => loadId === latestLoad);
         }
 
     }
+
+    // The top bar is up for as long as the tab is loading, as on a page load.
+    startProgress();
 
     let module;
 
     try {
         module = await loader();
+        await skeletonDrawn;
     } catch (error) {
         console.error(error);
         content?.removeAttribute("aria-busy");
+        content?.classList.remove("spa-loading");
         releaseServerSkeleton(content);
+        endProgress();
         return;
     }
 
     if (loadId !== latestLoad) {
+        endProgress();
         return;
     }
 
@@ -158,6 +235,8 @@ export async function loadFeature(feature)
                 content?.removeAttribute("aria-busy");
                 releaseServerSkeleton(content);
             }
+
+            endProgress();
         });
 
     highlightFeatureTab(feature);
