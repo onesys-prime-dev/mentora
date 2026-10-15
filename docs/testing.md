@@ -313,3 +313,4 @@ tests, which makes them confusing to track down.
   The numbers in its comments were measured on a repeat visit; if a legitimate
   change adds a query, raise the budget in the same PR and say why, rather
   than loosening it silently.
+- The question-builder worker has an evaluation runner (`python -m eval.qb_run`, see `python-question-builder-service/README.md`). It calls the real model, so it is run by hand and is not part of CI.

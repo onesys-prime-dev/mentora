@@ -152,3 +152,15 @@ an example, which cuts prefill cost on every call.
 This runs as a manually-started local process for now. Process supervision
 (Windows service, Docker, etc.) for anything beyond local dev is a follow-up,
 not covered here.
+
+## Evaluating quality
+
+`eval/` measures the worker pipeline against a golden set of passages (`eval/golden_qb.json`; extend it with real course material, including a scanned PDF and a document of existing questions). It runs the same handler the worker runs, against the configured model, so it uses the free allowance: run it by hand with a separate key, never in per-PR CI.
+
+```
+python -m eval.qb_run --out eval/qb-report.json --ratings eval/qb-ratings.csv
+python -m eval.qb_run --only net-two-items
+python -m eval.qb_run --score-ratings eval/qb-ratings.csv
+```
+
+The report gives, per case and overall: how many of the questions asked for came back, whether each is tied to the material, how many the second check agreed with, repeats, whether the type and number of choices asked for were written, what was dropped and why, and tokens. A proxy cannot judge whether a stem is clear or the wrong choices are good, so `--ratings` writes a sheet for a named reviewer to score a sample (clarity, distractors, difficulty fit, keep) and `--score-ratings` averages it. Compare the report of every prompt or pipeline change with the one before it.
