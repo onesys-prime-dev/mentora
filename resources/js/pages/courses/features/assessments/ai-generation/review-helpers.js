@@ -132,7 +132,7 @@ export const REPLACE_CHOICES = [
  */
 export function otherTypes(current) {
 
-    return ["Multiple Choice", "Short Answer", "Essay"].filter((type) => type !== current);
+    return ["Multiple Choice", "Short Answer", "Essay", "File Upload"].filter((type) => type !== current);
 
 }
 

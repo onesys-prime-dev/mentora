@@ -50,8 +50,8 @@ final class GenerationOptionsTest extends TestCase
     public function testTheTypeMixKeepsKnownTypesWithPositiveCounts(): void
     {
         $this->assertSame(
-            ['true_false' => 3, 'Essay' => 2],
-            GenerationOptions::typeMix(['true_false' => '3', 'Essay' => 2, 'robot' => 4, 'multiple_choice' => 0, 'short_answer' => -1])
+            ['true_false' => 3, 'Essay' => 2, 'file_upload' => 1],
+            GenerationOptions::typeMix(['true_false' => '3', 'Essay' => 2, 'file_upload' => 1, 'robot' => 4, 'multiple_choice' => 0, 'short_answer' => -1])
         );
         $this->assertNull(GenerationOptions::typeMix(['robot' => 1]));
         $this->assertNull(GenerationOptions::typeMix('x'));

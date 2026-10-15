@@ -91,4 +91,24 @@ final class AiGenerateModalViewTest extends CIUnitTestCase
         $this->assertStringContainsString('sent to an external AI service (Groq)', $html);
         $this->assertStringNotContainsString('stays here', $html);
     }
+
+    public function testTheModalOffersEveryTypeTheBuilderHasWithTheSameNames(): void
+    {
+        $html = $this->render(null);
+        $palette = (string) file_get_contents(APPPATH . 'Views/pages/courses/features/assessments/partials/quiz-builder-palette.php');
+
+        preg_match_all("/'type' => '([^']+)'/", $palette, $types);
+        preg_match_all("/'description' => '([^']+)'/", $palette, $descriptions);
+
+        $this->assertSame(['Multiple Choice', 'Short Answer', 'Essay', 'File Upload'], $types[1]);
+
+        foreach ($types[1] as $i => $type) {
+            $this->assertStringContainsString('>' . $type . '</span>', $html, "{$type} is offered");
+            $this->assertStringContainsString($descriptions[1][$i], $html, "{$type} has the builder's description");
+        }
+
+        foreach (['multiple_choice', 'multiple_answer', 'true_false', 'short_answer', 'essay', 'file_upload'] as $key) {
+            $this->assertStringContainsString('data-type-key="' . $key . '"', $html);
+        }
+    }
 }

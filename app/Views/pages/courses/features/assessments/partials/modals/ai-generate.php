@@ -180,17 +180,25 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
                 <div class="flex flex-col gap-2 rounded-xl border border-gray-200 p-3">
 
-                    <?php foreach ([
-                        'multiple_choice' => 'Multiple Choice',
-                        'multiple_answer' => 'Multiple answers (several right)',
-                        'true_false' => 'True / False',
-                        'short_answer' => 'Short Answer',
-                        'essay' => 'Essay',
-                    ] as $key => $label): ?>
+                    <?php
+                    // The same four types, names and descriptions as the quiz builder's palette.
+                    // Multiple Choice also covers "several right answers" and True/False, which the
+                    // builder offers as settings of a multiple-choice question.
+                    foreach ([
+                        ['multiple_choice', 'Multiple Choice', 'Students pick one correct answer.', false],
+                        ['multiple_answer', 'Several correct answers', 'A multiple-choice question where two or more choices are right.', true],
+                        ['true_false', 'True / False', 'A multiple-choice statement with the choices True and False.', true],
+                        ['short_answer', 'Short Answer', 'Students type a brief response.', false],
+                        ['essay', 'Essay', 'Students write a longer response.', false],
+                        ['file_upload', 'File Upload', 'Students upload a file as their answer.', false],
+                    ] as [$key, $label, $hint, $isVariant]): ?>
 
-                        <label class="flex items-center justify-between gap-3">
+                        <label class="flex items-center justify-between gap-3 <?= $isVariant ? 'pl-5' : '' ?>">
 
-                            <span class="text-sm text-gray-700"><?= esc($label) ?></span>
+                            <span class="flex flex-col">
+                                <span class="text-sm <?= $isVariant ? 'text-gray-600' : 'font-medium text-gray-800' ?>"><?= $isVariant ? '↳ ' : '' ?><?= esc($label) ?></span>
+                                <span class="text-xs text-[#767676]"><?= esc($hint) ?></span>
+                            </span>
 
                             <input
                                 type="number"

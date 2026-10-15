@@ -17,7 +17,7 @@ final class GenerationOptions
     public const LEVELS = ['any', 'recall', 'understand', 'apply'];
 
     /** The question types the builder can write, by the key the form and the worker use. */
-    public const TYPE_KEYS = ['multiple_choice', 'short_answer', 'essay', 'true_false', 'multiple_answer'];
+    public const TYPE_KEYS = ['multiple_choice', 'short_answer', 'essay', 'file_upload', 'true_false', 'multiple_answer'];
 
     /** The same types by display name, which older callers send. */
     public const TYPE_LABELS = ['Multiple Choice', 'Short Answer', 'Essay', 'File Upload'];

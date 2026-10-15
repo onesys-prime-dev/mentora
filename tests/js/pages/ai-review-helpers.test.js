@@ -72,7 +72,7 @@ describe("replace choices", () => {
     });
 
     it("offers the other types, never the current one", () => {
-        expect(otherTypes("Essay")).toEqual(["Multiple Choice", "Short Answer"]);
+        expect(otherTypes("Essay")).toEqual(["Multiple Choice", "Short Answer", "File Upload"]);
         expect(otherTypes("Multiple Choice")).not.toContain("Multiple Choice");
     });
 

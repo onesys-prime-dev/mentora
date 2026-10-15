@@ -96,3 +96,19 @@ def test_the_prompt_states_the_number_of_choices():
     prompt = build_prompt([Assignment(concept, MULTIPLE_CHOICE, FACTS["f1"])], [], "", 5)
 
     assert "exactly 5 choices" in prompt
+
+
+def test_file_upload_is_a_type_like_the_builders_four():
+    from qb.questions import FILE_UPLOAD
+
+    assert split_counts(4, {"essay": 1, "file_upload": 1, "multiple_choice": 2}) == {
+        "Essay": 1,
+        FILE_UPLOAD: 1,
+        MULTIPLE_CHOICE: 2,
+    }
+
+    upload = Question(type=FILE_UPLOAD, text="Upload a diagram of the network layers.", fact_id="f1")
+
+    assert gates.check(upload, FACTS) == []
+    assert gates.check(Question(type=FILE_UPLOAD, text="Upload it", fact_id="f1", choices=[Choice("a", True)]), FACTS) == ["open_has_choices_or_key"]
+    assert pipeline.to_payload(upload, "m")["type"] == "File Upload"
