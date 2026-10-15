@@ -514,7 +514,7 @@ async function handlePreview() {
 
         showError(importSource === "text"
             ? "Paste your questions first."
-            : "Choose a Word, Rich Text, Excel, CSV or text file first.");
+            : "Choose a file first (Word, PDF, Excel, CSV, text, Moodle XML or a quiz package).");
 
         return;
 

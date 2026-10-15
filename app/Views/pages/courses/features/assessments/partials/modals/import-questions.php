@@ -33,12 +33,11 @@
         </ol>
 
         <!-- Step 1: choose the file -->
-        <div data-import-step="upload" class="flex flex-col gap-4 p-8">
+        <div data-import-step="upload" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-8">
 
             <p class="text-sm text-gray-600">
-                Bring in questions from a Word, Rich Text, Excel, CSV or text file, or paste them. Your own exam works as it is:
-                number the questions, letter the choices and give the answer. A quiz you exported from here
-                and edited works too, and so do Aiken and GIFT files from other systems. Nothing is saved until you review and confirm.
+                Bring in questions from a file, from pasted text, or from another of your quizzes. You see every question,
+                can correct it or skip it, and nothing is saved until you confirm. You can undo an import for 10 minutes.
             </p>
 
             <div class="inline-flex w-fit rounded-xl bg-gray-100 p-1" role="tablist">
@@ -56,10 +55,12 @@
                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
                 <p data-import-file-name class="hidden text-xs font-semibold text-gray-700" aria-live="polite"></p>
-                <p class="text-xs text-[#767676]">Drag a file here, or choose one.</p>
+                <p class="text-xs font-medium text-gray-700">Drag a file here, or choose one. Up to 5 MB.</p>
                 <p class="text-xs text-[#767676]">
-                    Word, Rich Text, PDF (with selectable text), HTML, Excel, CSV, Aiken/GIFT/printed-exam text, Moodle XML, or a Blackboard, D2L, Sakai or WebCT package (.zip), up to 5 MB.
-                    <a data-import-template-link href="#" class="font-semibold text-brand hover:underline">Download the Excel template</a>
+                    <strong>Documents:</strong> Word (.docx), Rich Text (.rtf), PDF with selectable text, HTML, plain text (.txt).<br>
+                    <strong>Spreadsheets:</strong> Excel (.xlsx), CSV.
+                    <a data-import-template-link href="#" class="font-semibold text-brand hover:underline">Download the Excel template</a><br>
+                    <strong>Other systems:</strong> Moodle XML (.xml), Aiken and GIFT (.txt), and packages from Blackboard, D2L, Sakai and WebCT (.zip).
                 </p>
             </div>
 
@@ -109,16 +110,44 @@
 
             <details data-import-layout-guide class="rounded-xl border border-gray-200 p-3 text-xs text-gray-600">
                 <summary class="cursor-pointer font-semibold text-gray-700">What layout can I use?</summary>
-                <div class="mt-2 flex flex-col gap-1.5">
-                    <p><strong>Questions</strong> start with a number: <code>1.</code> <code>1)</code> <code>Q1:</code> <code>Question 1</code>.</p>
-                    <p><strong>Choices</strong> start with a letter: <code>a)</code> <code>A.</code> <code>(a)</code>.</p>
-                    <p><strong>The answer</strong> is a line like <code>Answer: b</code> (or <code>Answer: a, c</code>), a <code>*</code> after the right choice, or a list under &ldquo;Answer Key&rdquo; at the end.</p>
-                    <p><strong>Points</strong> can be written <code>(2 pts)</code> or on a line <code>Points: 2</code>. No choices and an answer makes a short answer; no choices and no answer makes an essay.</p>
-                    <p><strong>From other systems:</strong> an exam printed from a test-bank tool (text, RTF, PDF or HTML, with the answer key at the end), Moodle XML, and QTI packages from Blackboard, D2L, Sakai and WebCT.
-                    A file with no answer key comes in with each answer left for you to choose. TestGen <code>.tst</code> files must be exported first.</p>
+                <div class="mt-3 flex flex-col gap-3">
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">A typed or pasted exam (Word, RTF, text)</p>
+                        <p><strong>Questions</strong> start with a number: <code>1.</code> <code>1)</code> <code>Q1:</code> <code>Question 1</code>.
+                        <strong>Choices</strong> start with a letter: <code>a)</code> <code>A.</code> <code>(a)</code>, one per line or side by side.</p>
+                        <p><strong>The answer</strong> is a line like <code>Answer: b</code> (or <code>Answer: a, c</code>), a <code>*</code> after the right choice,
+                        or a list such as <code>1) D</code> under &ldquo;Answer Key&rdquo; at the end.
+                        <strong>Points</strong> can be written <code>(2 pts)</code> or <code>Points: 2</code>.</p>
+                        <p>No choices and an answer makes a short answer; no choices and no answer makes an essay. Headings such as
+                        <code>TRUE/FALSE.</code> or <code>ESSAY.</code> set the type of what follows.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">An exam printed from a test-bank tool (text, RTF, PDF, HTML)</p>
+                        <p>The layout of TestGen and similar tools is read as it is: <code>1) question ... 1) ____</code>, choices <code>A) ... B) ...</code>
+                        on one line, and the key at the end. A PDF must have selectable text; a scan cannot be read.
+                        An HTML export has no key, so each answer is left for you to choose.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">Spreadsheets and other systems</p>
+                        <p><strong>Excel or CSV:</strong> one question per row with the columns Type, Question, A to H, Answer, Points, Required.
+                        <strong>Aiken</strong> ends each question with <code>ANSWER: B</code>; <strong>GIFT</strong> puts answers in braces.
+                        <strong>Moodle XML</strong> and the <strong>.zip packages</strong> of Blackboard, D2L, Sakai and WebCT are read as exported.</p>
+                        <p>A Pearson TestGen <code>.tst</code> file cannot be read directly: export the test from TestGen as Word, PDF, Moodle XML or QTI.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">What happens to a question</p>
+                        <p>Imports add questions to the quiz and flag likely repeats. Only a file exported from this quiz by Mentora can update or remove
+                        existing questions, and only after you confirm. Images and explanations are not carried.</p>
+                    </div>
+
                     <p>
                         <a data-import-sample-link href="#" class="font-semibold text-brand hover:underline">Download a sample file</a>
                     </p>
+
                 </div>
             </details>
 
