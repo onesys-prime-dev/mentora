@@ -2,6 +2,7 @@
 
 namespace App\Database\Seeds;
 
+use App\Database\Seeds\Material\Material;
 use App\Services\Courses\Assessments\ShortAnswerGrader;
 
 /**
@@ -83,7 +84,7 @@ class DemoContentSeeder extends DemoSeeder
                         'title' => $item['title'],
                         'item_type' => $item['type'],
                         'content' => match ($item['type']) {
-                            'reading' => $this->doc($item['doc']),
+                            'reading' => $this->doc(Material::reading($item['title'])),
                             'video' => json_encode(['autoplay' => false, 'show_controls' => true]),
                             'link' => json_encode(['url' => $item['url'], 'description' => $item['description'] ?? '']),
                             default => null,
@@ -129,9 +130,14 @@ class DemoContentSeeder extends DemoSeeder
 
     private function seedResource(int $itemId, array $item, int $ownerId): void
     {
-        $fileId = isset($item['pdf'])
-            ? $this->makePdf($item['pdf']['key'], $item['pdf']['name'], $item['pdf']['title'], $item['pdf']['lines'], $ownerId)
-            : $this->fileId($item['file']);
+        if ($item['type'] === 'pdf') {
+            // The words of every handout live in Material; the file is rendered here.
+            $pdf = Material::pdf($item['title']);
+            $slug = strtolower(trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', $item['title']), '-'));
+            $fileId = $this->makeHandout('documents/demo/' . $slug . '.pdf', $pdf['file'], $item['title'], $pdf['subtitle'], $pdf['sections'], $ownerId);
+        } else {
+            $fileId = $this->fileId($item['file']);
+        }
 
         $this->db->table('learning_resources')->insert([
             'learning_item_id' => $itemId,

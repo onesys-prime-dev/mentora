@@ -121,28 +121,69 @@ abstract class DemoSeeder extends Seeder
     */
 
     /**
-     * A reading / instructions document in the block editor's format.
+     * Text with **bold** and ~~italic~~ markup as the editor's inline runs.
+     *
+     * @return list<array{text: string, marks?: list<string>}>
+     */
+    protected function runs(string $text): array
+    {
+        $runs = [];
+
+        foreach (preg_split('/(\*\*.+?\*\*|~~.+?~~)/s', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) ?: [] as $part) {
+            if (str_starts_with($part, '**') && str_ends_with($part, '**') && strlen($part) > 4) {
+                $runs[] = ['text' => substr($part, 2, -2), 'marks' => ['bold']];
+            } elseif (str_starts_with($part, '~~') && str_ends_with($part, '~~') && strlen($part) > 4) {
+                $runs[] = ['text' => substr($part, 2, -2), 'marks' => ['italic']];
+            } else {
+                $runs[] = ['text' => $part];
+            }
+        }
+
+        return $runs === [] ? [['text' => '']] : $runs;
+    }
+
+    /**
+     * A reading / instructions document in the block editor's format. Text
+     * may carry **bold** and ~~italic~~ markup.
      *
      * @param list<array{0: string, 1: string|list<string>}> $blocks
      *   ['h', 'Heading'] | ['p', 'Paragraph'] | ['ul', ['a', 'b']] | ['ol', [...]]
      */
     protected function doc(array $blocks): string
     {
+        // The editor has no code block: a code sample becomes one left-aligned
+        // paragraph per line, and `backticks` around inline code are dropped.
+        $expanded = [];
+
+        foreach ($blocks as [$type, $value]) {
+            if ($type === 'code') {
+                foreach (explode("
+", (string) $value) as $line) {
+                    $expanded[] = ['code-line', $line];
+                }
+
+                continue;
+            }
+
+            $expanded[] = [$type, is_array($value) ? array_map(static fn (string $v): string => str_replace('`', '', $v), $value) : str_replace('`', '', (string) $value)];
+        }
+
         $out = [];
 
-        foreach ($blocks as $index => [$type, $value]) {
+        foreach ($expanded as $index => [$type, $value]) {
 
             $id = sprintf('block_%03d', $index + 1);
 
             $out[] = match ($type) {
-                'h' => ['id' => $id, 'type' => 'heading', 'level' => $index === 0 ? 1 : 2, 'align' => 'left', 'content' => [['text' => $value]]],
+                'h' => ['id' => $id, 'type' => 'heading', 'level' => $index === 0 ? 1 : 2, 'align' => 'left', 'content' => $this->runs((string) $value)],
                 'ul', 'ol' => [
                     'id' => $id,
                     'type' => $type === 'ul' ? 'unordered-list' : 'ordered-list',
                     'align' => 'left',
-                    'items' => array_map(static fn (string $item) => [['text' => $item]], $value),
+                    'items' => array_map(fn (string $item) => $this->runs($item), $value),
                 ],
-                default => ['id' => $id, 'type' => 'paragraph', 'align' => 'justify', 'content' => [['text' => $value]]],
+                'code-line' => ['id' => $id, 'type' => 'paragraph', 'align' => 'left', 'content' => [['text' => $value === '' ? ' ' : $value, 'marks' => ['italic']]]],
+                default => ['id' => $id, 'type' => 'paragraph', 'align' => 'justify', 'content' => $this->runs((string) $value)],
             };
 
         }
@@ -165,6 +206,36 @@ abstract class DemoSeeder extends Seeder
         }
 
         file_put_contents($path, $this->renderPdf($title, $lines));
+
+        $this->db->table('files')->insert([
+            'owner_user_id' => $ownerId,
+            'original_filename' => $originalName,
+            'stored_filename' => basename($storageKey),
+            'mime_type' => 'application/pdf',
+            'file_size' => filesize($path),
+            'storage_key' => $storageKey,
+            'status' => 'active',
+            'uploaded_at' => $this->at(),
+            'updated_at' => $this->at(),
+        ]);
+
+        return (int) $this->db->insertID();
+    }
+
+    /**
+     * Stores a rendered handout (see DemoPdf) and records it in `files`.
+     *
+     * @param list<array<int, mixed>> $sections
+     */
+    protected function makeHandout(string $storageKey, string $originalName, string $title, string $subtitle, array $sections, int $ownerId): int
+    {
+        $path = (new StorageService())->path($storageKey);
+
+        if (!is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+
+        file_put_contents($path, DemoPdf::render($title, $subtitle, $sections));
 
         $this->db->table('files')->insert([
             'owner_user_id' => $ownerId,
