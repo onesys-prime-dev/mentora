@@ -80,7 +80,7 @@ class QuestionImportExportController extends BaseController
         $extension = strtolower($file->getClientExtension());
 
         if (!in_array($extension, QuestionImportService::EXTENSIONS, true)) {
-            return $this->refuse('Only Word (.docx), Rich Text (.rtf), PDF, HTML, Excel (.xlsx), CSV (.csv) and Aiken, GIFT or printed-exam text (.txt) files can be imported.');
+            return $this->refuse('Only Word (.docx), Rich Text (.rtf), PDF, HTML, Excel (.xlsx), CSV (.csv), Aiken, GIFT or printed-exam text (.txt), Moodle XML and QTI packages (Blackboard, D2L, Sakai, WebCT) can be imported.');
         }
 
         if ($file->getSize() > QuestionImportService::MAX_BYTES) {

@@ -36,9 +36,9 @@ class QuestionImportService
     public const DOCUMENT_EXTENSIONS = ['docx', 'rtf'];
 
     /** Spreadsheets and plain-text formats from other systems (Excel/CSV, Aiken, GIFT). */
-    public const FORMAT_EXTENSIONS = ['csv', 'xlsx', 'txt', 'pdf', 'html', 'htm'];
+    public const FORMAT_EXTENSIONS = ['csv', 'xlsx', 'txt', 'pdf', 'html', 'htm', 'xml', 'dat', 'zip'];
 
-    public const EXTENSIONS = ['docx', 'rtf', 'csv', 'xlsx', 'txt', 'pdf', 'html', 'htm'];
+    public const EXTENSIONS = ['docx', 'rtf', 'csv', 'xlsx', 'txt', 'pdf', 'html', 'htm', 'xml', 'dat', 'zip'];
 
     // A Short Answer's answer key: "Accepted answers: CPU | Central
     // Processing Unit" (see QuestionExportService::ACCEPTED_ANSWERS_LABEL).
@@ -131,7 +131,16 @@ class QuestionImportService
         }
 
         try {
-            if (in_array($extension, ['pdf', 'html', 'htm'], true)) {
+            if (in_array($extension, ['xml', 'dat', 'zip'], true)) {
+                $found = $this->xmlQuestions($filePath, $extension);
+
+                if (isset($found['error'])) {
+                    return ['success' => false, 'message' => $found['error']];
+                }
+
+                $read = $found['read'];
+                $detected = $found['detected'];
+            } elseif (in_array($extension, ['pdf', 'html', 'htm'], true)) {
                 $text = $extension === 'pdf' ? $this->pdfText($filePath) : $this->htmlText($filePath);
 
                 if ($text === null) {
@@ -166,7 +175,69 @@ class QuestionImportService
             return ['success' => false, 'message' => 'This file could not be read. Check that it is not damaged.'];
         }
 
-        return $this->finishFormat($assessmentId, $read);
+        return $this->finishFormat($assessmentId, $read, $detected ?? null);
+    }
+
+    /**
+     * Questions from a Moodle XML file, a QTI file (Blackboard pool .dat, D2L,
+     * Sakai) or a zip package of them (Blackboard, D2L, Sakai, WebCT/Vista).
+     *
+     * @return array{read: array<string, mixed>, detected: string}|array{error: string}
+     */
+    private function xmlQuestions(string $filePath, string $extension): array
+    {
+        $members = [];
+        $flavour = null;
+
+        if ($extension === 'zip') {
+            $package = (new QuizPackage())->open($filePath);
+
+            if (isset($package['error'])) {
+                return ['error' => $package['error']];
+            }
+
+            $members = $package['members'];
+            $flavour = $package['flavour'];
+            ksort($members, SORT_NATURAL);
+        } else {
+            $members = [basename($filePath) => (string) file_get_contents($filePath)];
+        }
+
+        $questions = [];
+        $skipped = [];
+        $detected = null;
+
+        foreach ($members as $content) {
+            if (MoodleXmlParser::looks($content)) {
+                $one = (new MoodleXmlParser())->parse($content);
+                $detected ??= 'Moodle XML';
+            } elseif (QtiParser::looks($content)) {
+                $one = (new QtiParser())->parse($content, count($questions) + count($skipped));
+                $detected ??= ($flavour !== null ? $flavour . ' (QTI)' : 'QTI');
+            } else {
+                continue;
+            }
+
+            if ($one === null) {
+                continue;
+            }
+
+            $questions = array_merge($questions, $one['questions']);
+            $skipped = array_merge($skipped, $one['skipped']);
+        }
+
+        if ($detected === null) {
+            return ['error' => $extension === 'zip'
+                ? 'No quiz questions were found in this package. It should hold a Moodle XML file or QTI items exported from Blackboard, D2L, Sakai or WebCT.'
+                : 'This XML file is not a quiz export. Moodle XML and QTI files can be imported.'];
+        }
+
+        // Question lines follow the order they were read in.
+        foreach ($questions as $i => $q) {
+            $questions[$i]['line'] = $i + 1;
+        }
+
+        return ['read' => ['questions' => $questions, 'skipped' => $skipped], 'detected' => $detected];
     }
 
     /**
@@ -177,7 +248,7 @@ class QuestionImportService
      *
      * @return array<string, mixed>
      */
-    private function finishFormat(int $assessmentId, array $read): array
+    private function finishFormat(int $assessmentId, array $read, ?string $detected = null): array
     {
         if (count($read['questions']) + count($read['skipped']) > self::MAX_QUESTIONS) {
             return ['success' => false, 'message' => 'This file has more than ' . self::MAX_QUESTIONS . ' questions. Import it in smaller parts.'];
@@ -217,6 +288,10 @@ class QuestionImportService
         $result['success']             = true;
         $result['source']              = 'plain';
         $result['responses_affected']  = 0;
+
+        if ($detected !== null) {
+            $result['detected'] = $detected;
+        }
 
         return $result;
     }

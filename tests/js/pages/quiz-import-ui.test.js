@@ -13,11 +13,11 @@ import {
 describe("isAcceptedFile", () => {
 
     it("accepts the supported types in any case", () => {
-        ["a.docx", "a.RTF", "b.xlsx", "c.csv", "d.txt", "e.pdf", "f.html"].forEach((n) => expect(isAcceptedFile(n)).toBe(true));
+        ["a.docx", "a.RTF", "b.xlsx", "c.csv", "d.txt", "e.pdf", "f.html", "g.xml", "h.zip"].forEach((n) => expect(isAcceptedFile(n)).toBe(true));
     });
 
     it("refuses other types and names without an extension", () => {
-        ["a.exe", "a.zip", "docx", ".docx"].forEach((n) => expect(isAcceptedFile(n)).toBe(false));
+        ["a.exe", "a.png", "docx", ".docx"].forEach((n) => expect(isAcceptedFile(n)).toBe(false));
     });
 
 });
