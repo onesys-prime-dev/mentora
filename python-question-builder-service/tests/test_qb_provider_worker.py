@@ -255,3 +255,32 @@ def test_a_failed_job_logs_its_code_and_reason(caplog):
         Worker(php, {"generate": handler}).run_once()
 
     assert "provider_auth" in caplog.text and "refused the key" in caplog.text
+
+
+def test_reasoning_models_get_a_low_effort_and_others_are_left_alone():
+    sent = []
+
+    def transport(url, headers, body, timeout):
+        sent.append(json.loads(body))
+
+        return 200, {}, json.dumps(GOOD).encode()
+
+    provider = OpenAICompatProvider("k", transport=transport)
+    provider.complete("openai/gpt-oss-120b", "s", "u")
+    provider.complete("qwen/qwen3.8-27b", "s", "u")
+
+    assert sent[0]["reasoning_effort"] == "low"
+    assert "reasoning_effort" not in sent[1]
+
+
+def test_invalid_json_from_the_model_is_a_provider_error_so_another_model_can_try():
+    body = json.dumps({"error": {"message": "Failed to validate JSON. Please adjust your prompt.", "code": "json_validate_failed"}})
+    provider = OpenAICompatProvider("k", transport=lambda *a: (400, {}, body.encode()))
+
+    with pytest.raises(ProviderError):
+        provider.complete("m", "s", "u")
+
+    other = json.dumps({"error": {"message": "max_tokens is too large"}})
+
+    with pytest.raises(InvalidRequest):
+        OpenAICompatProvider("k", transport=lambda *a: (400, {}, other.encode())).complete("m", "s", "u")

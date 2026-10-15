@@ -20,7 +20,7 @@ class FakeProvider:
         return self.caps
 
     def complete(self, model, system, user, *, json_mode=True, max_output_tokens=1024) -> Completion:
-        self.calls.append({"model": model, "system": system, "user": user, "json_mode": json_mode})
+        self.calls.append({"model": model, "system": system, "user": user, "json_mode": json_mode, "max_output_tokens": max_output_tokens})
 
         item = self.script.pop(0) if self.script else "{}"
 
