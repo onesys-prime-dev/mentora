@@ -32,5 +32,6 @@ class AiGenerationBatchModel extends Model
         'created_at',
         'replaces_question_id',
         'instruction',
+        'options',
     ];
 }

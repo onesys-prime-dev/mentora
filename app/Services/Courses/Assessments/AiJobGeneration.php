@@ -108,7 +108,8 @@ class AiJobGeneration
             'type_mix'            => $batch['type_mix'] ? json_decode((string) $batch['type_mix'], true) : null,
             'points_per_question' => $batch['points_per_question'],
             'existing_questions'  => $this->existingQuestions($batch),
-            'instruction'         => ! empty($batch['instruction']) ? (string) $batch['instruction'] : null,
+            'instruction'         => $this->instructionFor($batch),
+            'options'             => GenerationOptions::normalise(json_decode((string) ($batch['options'] ?? ''), true)),
             'rotation'            => $this->priorBatches($batch),
             'seed'                => (int) $batch['id'],
         ];
@@ -300,6 +301,8 @@ class AiJobGeneration
                 'accepted_answers' => $q['type'] === 'Short Answer' ? ShortAnswerGrader::encode($q['accepted_answers'] ?? []) : null,
                 'similarity_score' => $checker->score((string) $q['text'], array_column($choices, 'text'), $batch['source_text']),
                 'math_check'       => in_array($q['math_check'] ?? '', ['verified', 'mismatch', 'not_applicable'], true) ? $q['math_check'] : 'not_applicable',
+                'allow_multiple_answers' => ! empty($q['allow_multiple_answers']),
+                'answers_count'    => ! empty($q['allow_multiple_answers']) && is_numeric($q['answers_count'] ?? null) ? (int) $q['answers_count'] : null,
                 'explanation'      => isset($q['explanation']) ? mb_substr((string) $q['explanation'], 0, 2000) : null,
                 'evidence_quote'   => isset($q['evidence_quote']) ? mb_substr((string) $q['evidence_quote'], 0, 2000) : null,
                 'source_title'     => isset($q['source_title']) ? mb_substr((string) $q['source_title'], 0, 255) : null,
@@ -421,6 +424,24 @@ class AiJobGeneration
         $texts = array_map(static fn (array $r): string => mb_substr((string) $r['question_text'], 0, 160), array_merge($replaced, $live, $staged));
 
         return array_values(array_unique($texts));
+    }
+
+    /**
+     * What the writer is told about how to write: the teacher's steering
+     * (difficulty, level, language, focus) and, for a replacement, what they
+     * asked for.
+     *
+     * @param array<string, mixed> $batch
+     */
+    private function instructionFor(array $batch): ?string
+    {
+        $steering = GenerationOptions::instruction(
+            GenerationOptions::normalise(json_decode((string) ($batch['options'] ?? ''), true))
+        );
+
+        $text = trim(((string) ($batch['instruction'] ?? '')) . ' ' . $steering);
+
+        return $text === '' ? null : $text;
     }
 
     /** @param array<string, mixed> $batch */

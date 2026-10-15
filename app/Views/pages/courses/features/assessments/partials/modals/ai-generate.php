@@ -182,6 +182,8 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
                     <?php foreach ([
                         'multiple_choice' => 'Multiple Choice',
+                        'multiple_answer' => 'Multiple answers (several right)',
+                        'true_false' => 'True / False',
                         'short_answer' => 'Short Answer',
                         'essay' => 'Essay',
                     ] as $key => $label): ?>
@@ -209,6 +211,71 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                 </span>
 
             </div>
+
+            <!-- Fine-tune -->
+            <details data-ai-fine-tune class="rounded-xl border border-gray-200 p-3">
+
+                <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Fine-tune the questions <span data-ai-fine-tune-summary class="ml-1 normal-case text-[#767676]"></span>
+                </summary>
+
+                <div class="mt-3 grid grid-cols-2 gap-3">
+
+                    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        Difficulty
+                        <select name="ai_difficulty" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-normal">
+                            <option value="mixed">Mixed</option>
+                            <option value="easier">Easier</option>
+                            <option value="harder">Harder</option>
+                        </select>
+                    </label>
+
+                    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        Kind of thinking
+                        <select name="ai_level" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-normal">
+                            <option value="any">Any</option>
+                            <option value="recall">Remember facts</option>
+                            <option value="understand">Understand ideas</option>
+                            <option value="apply">Apply to a new case</option>
+                        </select>
+                    </label>
+
+                    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        Choices per question
+                        <select name="ai_choices" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-normal">
+                            <option value="3">3</option>
+                            <option value="4" selected>4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </label>
+
+                    <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        Language
+                        <input
+                            type="text"
+                            name="ai_language"
+                            maxlength="40"
+                            placeholder="Same as the material"
+                            class="rounded-lg border border-gray-300 px-2 py-2 text-sm font-normal outline-none focus:border-brand">
+                    </label>
+
+                    <label class="col-span-2 flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        Focus <span class="font-normal text-[#767676]">(optional)</span>
+                        <input
+                            type="text"
+                            name="ai_focus"
+                            maxlength="200"
+                            placeholder="For example: chapter 3 formulas only"
+                            class="rounded-lg border border-gray-300 px-2 py-2 text-sm font-normal outline-none focus:border-brand">
+                    </label>
+
+                </div>
+
+                <button type="button" data-ai-fine-tune-reset class="mt-3 text-xs font-semibold text-brand hover:underline">
+                    Reset to defaults
+                </button>
+
+            </details>
 
             <div data-ai-generate-error class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>
 

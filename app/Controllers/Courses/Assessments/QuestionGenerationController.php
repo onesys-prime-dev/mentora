@@ -50,7 +50,8 @@ class QuestionGenerationController extends BaseController
             'offering_id' => $offeringId,
             'learning_item_ids' => $this->itemIds($post['learning_item_ids'] ?? null),
             'count' => (int) ($post['count'] ?? 10),
-            'type_mix' => isset($post['type_mix']) ? json_decode($post['type_mix'], true) : null,
+            'type_mix' => isset($post['type_mix']) ? json_decode((string) $post['type_mix'], true) : null,
+            'options' => isset($post['options']) ? json_decode((string) $post['options'], true) : null,
             'points_per_question' => isset($post['points_per_question']) && $post['points_per_question'] !== ''
                 ? (float) $post['points_per_question']
                 : null,

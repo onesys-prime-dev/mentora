@@ -128,6 +128,56 @@ final class AiJobGenerationTest extends DatabaseTestCase
         $this->assertSame(['multiple_choice' => 3], $job['payload']['type_mix']);
     }
 
+    public function testWhatTheTeacherSteeredWithGoesToTheWorkerAsOptionsAndOneInstruction(): void
+    {
+        $result = $this->start([
+            'type_mix' => ['true_false' => 2, 'multiple_answer' => 1],
+            'options' => ['difficulty' => 'harder', 'choices' => 5, 'language' => 'Filipino', 'focus' => 'chapter 3', 'bogus' => 'x'],
+        ]);
+
+        $payload = $this->jobs->find($result['job']['id'])['payload'];
+
+        $this->assertSame(['true_false' => 2, 'multiple_answer' => 1], $payload['type_mix']);
+        $this->assertSame(5, $payload['options']['choices']);
+        $this->assertArrayNotHasKey('bogus', $payload['options']);
+        $this->assertStringContainsString('demanding', $payload['instruction']);
+        $this->assertStringContainsString('Filipino', $payload['instruction']);
+        $this->assertStringContainsString('chapter 3', $payload['instruction']);
+    }
+
+    public function testNothingSteeredMeansNoInstruction(): void
+    {
+        $payload = $this->jobs->find($this->start()['job']['id'])['payload'];
+
+        $this->assertNull($payload['instruction']);
+        $this->assertSame(4, $payload['options']['choices']);
+    }
+
+    public function testAMultipleAnswerQuestionKeepsItsSettingsWhenTheBatchIsFilled(): void
+    {
+        $started = $this->start();
+        $batchId = (int) $started['batch']['id'];
+        $result = $this->workerResult();
+        $result['questions'] = [[
+            'type' => 'Multiple Choice',
+            'text' => 'Which of these are routers or switches?',
+            'choices' => [
+                ['text' => 'Router', 'is_correct' => true], ['text' => 'Switch', 'is_correct' => true],
+                ['text' => 'Cable', 'is_correct' => false], ['text' => 'Plug', 'is_correct' => false],
+            ],
+            'allow_multiple_answers' => true, 'answers_count' => 2,
+            'accepted_answers' => [], 'math_check' => 'not_applicable',
+        ]];
+
+        $this->finishJob($result, (int) $started['job']['id']);
+        $this->service->getBatch($batchId);
+
+        $row = db_connect()->table('ai_generated_questions')->where('batch_id', $batchId)->get()->getRowArray();
+
+        $this->assertSame(1, (int) $row['allow_multiple_answers']);
+        $this->assertSame(2, (int) $row['answers_count']);
+    }
+
     public function testTheQuizsExistingQuestionsGoWithTheJob(): void
     {
         \Tests\Support\AssessmentFactory::question($this->quiz, $this->instructor, 'Essay', 1.0, ['question_text' => 'An existing question about routing?']);

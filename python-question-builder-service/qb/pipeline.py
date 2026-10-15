@@ -17,7 +17,14 @@ from .items import digest_items
 from .mathcheck import MISMATCH, VERIFIED, check_question
 from .plan import Assignment, make_plan
 from .pool import ModelPool
-from .questions import MULTIPLE_CHOICE, Question
+from .questions import (
+    CHOICE_COUNT_DEFAULT,
+    CHOICE_COUNT_RANGE,
+    MULTIPLE_ANSWER,
+    MULTIPLE_CHOICE,
+    TRUE_FALSE,
+    Question,
+)
 from .verify import needs_verification, verify
 from .write import PROMPT_VERSION, write_questions
 
@@ -138,13 +145,33 @@ def shuffle_choices(questions: list[Question], seed: int) -> None:
     rng = random.Random(seed)
 
     for question in questions:
-        if question.type == MULTIPLE_CHOICE:
+        # True/False keeps True first; every other choice question is shuffled.
+        if question.type in (MULTIPLE_CHOICE, MULTIPLE_ANSWER):
             rng.shuffle(question.choices)
 
 
+def choice_count_from(payload: dict) -> int:
+    """How many choices the teacher asked for, kept in range."""
+
+    try:
+        value = int((payload.get("options") or {}).get("choices", CHOICE_COUNT_DEFAULT))
+    except (TypeError, ValueError):
+        return CHOICE_COUNT_DEFAULT
+
+    low, high = CHOICE_COUNT_RANGE
+
+    return max(low, min(high, value))
+
+
 def to_payload(question: Question, model: str) -> dict:
+    correct = sum(1 for c in question.choices if c.is_correct)
+    several = question.type == MULTIPLE_ANSWER
+
     return {
-        "type": question.type,
+        # True/False and Multiple Answer are multiple choice in the quiz.
+        "type": MULTIPLE_CHOICE if question.type in (TRUE_FALSE, MULTIPLE_ANSWER) else question.type,
+        "allow_multiple_answers": several,
+        "answers_count": correct if several else None,
         "text": question.text,
         "choices": [{"text": c.text, "is_correct": c.is_correct} for c in question.choices],
         "accepted_answers": question.accepted_answers,
@@ -219,6 +246,7 @@ def make_generate_handler(pool: ModelPool):
         written = write_questions(
             plan.assignments, facts, pool, seen_texts=existing,
             instruction=str(payload.get("instruction") or ""),
+            choice_count=choice_count_from(payload),
         )
 
         ctx.progress(stage="check", done=0, of=len(written.questions), note="Checking each answer")

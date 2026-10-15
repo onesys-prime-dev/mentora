@@ -22,6 +22,7 @@ import {
 import { insertLiveQuestionCard } from "../questions/questions.js";
 
 import { acceptCounts, acceptReport, cardChips, otherTypes, REPLACE_CHOICES, sourceLine } from "./review-helpers.js";
+import { DEFAULTS, fineTuneSummary, recall, remember } from "./generate-settings.js";
 
 import {
     renderAcceptedAnswersEditor,
@@ -84,6 +85,7 @@ export function initializeAiGeneration(offeringId, assessmentId) {
     bindItemSelection();
     typeMixValidate = bindTypeMixValidation();
     bindForm();
+    bindFineTune();
     bindTrayActions();
     bindAiSettingsModal();
     initTrayProgressRing();
@@ -356,6 +358,88 @@ function bindItemSelection() {
 |--------------------------------------------------------------------------
 */
 
+/** The generate form's current choices, as the remembered settings keep them. */
+function readSettings(form) {
+
+    const types = {};
+
+    form.querySelectorAll("[data-ai-type-mix-count]").forEach((input) => {
+
+        const count = Number(input.value || 0);
+
+        if (count > 0) {
+            types[input.dataset.typeKey] = count;
+        }
+
+    });
+
+    return {
+        count: Number(form.querySelector('[name="count"]').value || DEFAULTS.count),
+        points: form.querySelector('[name="points_per_question"]').value,
+        types,
+        difficulty: form.querySelector('[name="ai_difficulty"]').value,
+        level: form.querySelector('[name="ai_level"]').value,
+        choices: Number(form.querySelector('[name="ai_choices"]').value),
+        language: form.querySelector('[name="ai_language"]').value.trim(),
+        focus: form.querySelector('[name="ai_focus"]').value.trim(),
+    };
+
+}
+
+function writeSettings(form, settings) {
+
+    form.querySelector('[name="count"]').value = String(settings.count);
+    form.querySelector('[name="points_per_question"]').value = settings.points;
+    form.querySelector('[name="ai_difficulty"]').value = settings.difficulty;
+    form.querySelector('[name="ai_level"]').value = settings.level;
+    form.querySelector('[name="ai_choices"]').value = String(settings.choices);
+    form.querySelector('[name="ai_language"]').value = settings.language;
+    form.querySelector('[name="ai_focus"]').value = settings.focus;
+
+    form.querySelectorAll("[data-ai-type-mix-count]").forEach((input) => {
+        input.value = String(settings.types[input.dataset.typeKey] || 0);
+    });
+
+    // The "n of N allocated" line follows the values just set.
+    typeMixValidate?.();
+
+}
+
+/** Starts the form from the teacher's last choices for this course, and keeps the fine-tune summary current. */
+function bindFineTune() {
+
+    const form = document.querySelector("#ai-generate-form");
+
+    if (!form || !form.querySelector('[name="ai_difficulty"]')) {
+        return;
+    }
+
+    const summary = form.querySelector("[data-ai-fine-tune-summary]");
+    const refresh = () => {
+
+        if (summary) {
+            summary.textContent = fineTuneSummary(readSettings(form));
+        }
+
+    };
+
+    writeSettings(form, recall(state.offeringId));
+    refresh();
+
+    form.querySelectorAll('[name^="ai_"]').forEach((control) => {
+        control.addEventListener("input", refresh);
+        control.addEventListener("change", refresh);
+    });
+
+    form.querySelector("[data-ai-fine-tune-reset]")?.addEventListener("click", () => {
+
+        writeSettings(form, DEFAULTS);
+        refresh();
+
+    });
+
+}
+
 function bindTypeMixValidation() {
 
     const form = document.querySelector("#ai-generate-form");
@@ -470,6 +554,19 @@ function bindForm() {
         });
 
         formData.set("type_mix", JSON.stringify(typeMix));
+
+        const settings = readSettings(form);
+
+        formData.set("options", JSON.stringify({
+            difficulty: settings.difficulty,
+            level: settings.level,
+            choices: settings.choices,
+            language: settings.language,
+            focus: settings.focus,
+        }));
+
+        // Next time the form starts from what was asked for now.
+        remember(state.offeringId, settings);
 
         const requestedTotal = Number(formData.get("count") || 0);
         const firstChunkCount = Math.min(requestedTotal || 1, MAX_QUESTIONS_PER_CALL);

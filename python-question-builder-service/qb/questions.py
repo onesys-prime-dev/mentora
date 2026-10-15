@@ -8,11 +8,22 @@ SHORT_ANSWER = "Short Answer"
 ESSAY = "Essay"
 FILE_UPLOAD = "File Upload"
 
+# Two shapes of multiple choice the builder writes and checks on their own:
+# a statement to mark True or False, and a question with several right choices.
+# Both are stored as "Multiple Choice" (see pipeline.to_payload).
+TRUE_FALSE = "True/False"
+MULTIPLE_ANSWER = "Multiple Answer"
+
+CHOICE_COUNT_DEFAULT = 4
+CHOICE_COUNT_RANGE = (3, 5)
+
 TYPE_KEYS = {
     "multiple_choice": MULTIPLE_CHOICE,
     "short_answer": SHORT_ANSWER,
     "essay": ESSAY,
     "file_upload": FILE_UPLOAD,
+    "true_false": TRUE_FALSE,
+    "multiple_answer": MULTIPLE_ANSWER,
 }
 
 _WORD = re.compile(r"[a-z0-9']+")
@@ -61,5 +72,7 @@ class Question:
     source_title: str = ""
     source_item_id: int | None = None
     math_spec: dict | None = None
+    # How many choices a multiple-choice question was asked to have.
+    choice_count: int = CHOICE_COUNT_DEFAULT
     flags: list[str] = field(default_factory=list)
     verification: dict = field(default_factory=dict)

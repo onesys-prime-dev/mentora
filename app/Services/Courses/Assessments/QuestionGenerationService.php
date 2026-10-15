@@ -187,7 +187,8 @@ class QuestionGenerationService
             'learning_unit_id' => $unit['id'],
             'source_text' => $extracted['text'],
             'source_items' => json_encode($extracted['items'], JSON_UNESCAPED_UNICODE),
-            'type_mix' => isset($data['type_mix']) ? json_encode($data['type_mix']) : null,
+            'type_mix' => ($mix = GenerationOptions::typeMix($data['type_mix'] ?? null)) !== null ? json_encode($mix) : null,
+            'options' => json_encode(GenerationOptions::normalise($data['options'] ?? null)),
             'requested_count' => $data['count'] ?? 10,
             'generated_count' => 0,
             'points_per_question' => $data['points_per_question'] ?? null,
@@ -457,10 +458,11 @@ class QuestionGenerationService
             'learning_unit_id'     => $original['learning_unit_id'],
             'source_text'          => $original['source_text'],
             'source_items'         => $original['source_items'],
-            'type_mix'             => json_encode([self::REPLACE_TYPE_KEYS[$wanted] => 1]),
+            'type_mix'             => json_encode([$this->replaceKey($row, $wanted, $mode) => 1]),
             'requested_count'      => 1,
             'generated_count'      => 0,
             'points_per_question'  => $row['points'],
+            'options'              => $original['options'] ?? null,
             'status'               => 'generating',
             'created_by'           => $user->id,
             'created_at'           => date('Y-m-d H:i:s'),
@@ -481,6 +483,31 @@ class QuestionGenerationService
         }
 
         return $this->getBatch($newId) + ['replaces' => $generatedQuestionId, 'batch_id' => $newId];
+    }
+
+    /**
+     * The type key a replacement is written as: a true/false or a
+     * several-answers question is replaced by the same kind.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function replaceKey(array $row, string $wantedType, string $mode): string
+    {
+        if ($mode === 'type' || $wantedType !== 'Multiple Choice') {
+            return self::REPLACE_TYPE_KEYS[$wantedType];
+        }
+
+        if (! empty($row['allow_multiple_answers'])) {
+            return 'multiple_answer';
+        }
+
+        $texts = array_map(
+            static fn (array $c): string => strtolower(trim((string) ($c['text'] ?? ''))),
+            (array) (json_decode((string) ($row['choices'] ?? ''), true) ?: [])
+        );
+        sort($texts);
+
+        return $texts === ['false', 'true'] ? 'true_false' : 'multiple_choice';
     }
 
     public function acceptGeneratedQuestion(User $user, int $id): array
