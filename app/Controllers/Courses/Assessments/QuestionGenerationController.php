@@ -157,6 +157,25 @@ class QuestionGenerationController extends BaseController
         );
     }
 
+    /** Writes a different question in place of a staged one. */
+    public function replaceQuestion(int $offeringId, int $generatedQuestionId)
+    {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
+        $body = $this->request->getJSON(true);
+        $body = is_array($body) ? $body : [];
+
+        $result = $this->generationService->replaceQuestion(
+            auth()->user(),
+            $generatedQuestionId,
+            (string) ($body['mode'] ?? 'different'),
+            (string) ($body['instruction'] ?? ''),
+            isset($body['type']) ? (string) $body['type'] : null
+        );
+
+        return $this->response->setStatusCode($result['success'] ? 200 : 422)->setJSON($result);
+    }
+
     public function discardQuestion(int $offeringId, int $generatedQuestionId)
     {
         $this->ownQuestion($offeringId, $generatedQuestionId);

@@ -277,6 +277,12 @@ class QuestionGenerationService
     /** The person's unfinished or unreviewed batch for a quiz, so a reload can reopen the tray. */
     public function pendingBatch(User $user, int $assessmentId): ?array
     {
+        // A replacement still being written is finished first, so its question is in the tray.
+        foreach ($this->batchModel->where('assessment_id', $assessmentId)->where('created_by', (int) $user->id)
+            ->where('replaces_question_id IS NOT NULL', null, false)->where('status', 'generating')->findAll() as $replacement) {
+            $this->jobGeneration->sync((int) $replacement['id']);
+        }
+
         $batch = $this->jobGeneration->pendingBatch((int) $user->id, $assessmentId);
 
         return $batch === null ? null : $this->getBatch((int) $batch['id']);
@@ -371,6 +377,110 @@ class QuestionGenerationService
         }
 
         return null;
+    }
+
+    /** What each replacement preset asks the writer for. */
+    private const REPLACE_PRESETS = [
+        'different' => 'Write a different question about another part of the material. Do not rephrase the one being replaced.',
+        'easier'    => 'Make it easier: ask for plain recall of one clear fact, with obviously distinct choices.',
+        'harder'    => 'Make it harder: ask the student to apply or compare ideas rather than recall one sentence, with plausible close choices.',
+        'type'      => 'Ask about the same idea in the requested question type.',
+    ];
+
+    private const REPLACE_TYPE_KEYS = [
+        'Multiple Choice' => 'multiple_choice',
+        'Short Answer'    => 'short_answer',
+        'Essay'           => 'essay',
+        'File Upload'     => 'file_upload',
+    ];
+
+    /**
+     * Replaces one staged question with a freshly written one: a one-question
+     * batch from the same material, a short instruction, and the replaced
+     * question left in place until the new one has arrived.
+     *
+     * @param string $mode       different | easier | harder | type
+     * @param string $instruction an optional note from the teacher (up to 200 characters)
+     * @param string|null $type  the question type wanted, for mode "type"
+     *
+     * @return array<string, mixed>
+     */
+    public function replaceQuestion(User $user, int $generatedQuestionId, string $mode, string $instruction = '', ?string $type = null): array
+    {
+        $row = $this->generatedQuestionModel->find($generatedQuestionId);
+
+        if (! $row || $row['status'] !== 'pending') {
+            return ['success' => false, 'message' => 'That question is no longer waiting for review.'];
+        }
+
+        if (! isset(self::REPLACE_PRESETS[$mode])) {
+            return ['success' => false, 'message' => 'Choose how the replacement should differ.'];
+        }
+
+        $instruction = trim((string) preg_replace('/\s+/u', ' ', $instruction));
+
+        if (mb_strlen($instruction) > 200) {
+            return ['success' => false, 'message' => 'Keep the instruction under 200 characters.'];
+        }
+
+        if (! $this->generationEnabled($user)) {
+            return ['success' => false, 'code' => 'disabled', 'message' => 'AI question generation is turned off for your institution.'];
+        }
+
+        $blocked = (new PlanLimits())->generationBlock($user, 1);
+
+        if ($blocked !== null) {
+            return ['success' => false, 'message' => $blocked];
+        }
+
+        $wanted = $mode === 'type' && isset(self::REPLACE_TYPE_KEYS[(string) $type]) ? (string) $type : (string) $row['question_type'];
+        $original = $this->batchModel->find((int) $row['batch_id']);
+
+        if (! $original) {
+            return ['success' => false, 'message' => 'Batch not found.'];
+        }
+
+        $text = self::REPLACE_PRESETS[$mode];
+
+        if ($mode === 'type') {
+            $text .= ' The type is: ' . $wanted . '.';
+        }
+
+        if ($instruction !== '') {
+            $text .= ' The teacher asks: ' . $instruction;
+        }
+
+        $this->batchModel->insert([
+            'assessment_id'        => $original['assessment_id'],
+            'course_id'            => $original['course_id'],
+            'source_type'          => 'learning_unit',
+            'learning_unit_id'     => $original['learning_unit_id'],
+            'source_text'          => $original['source_text'],
+            'source_items'         => $original['source_items'],
+            'type_mix'             => json_encode([self::REPLACE_TYPE_KEYS[$wanted] => 1]),
+            'requested_count'      => 1,
+            'generated_count'      => 0,
+            'points_per_question'  => $row['points'],
+            'status'               => 'generating',
+            'created_by'           => $user->id,
+            'created_at'           => date('Y-m-d H:i:s'),
+            'replaces_question_id' => $generatedQuestionId,
+            'instruction'          => mb_substr($text, 0, 300),
+        ]);
+
+        $newId = (int) $this->batchModel->getInsertID();
+
+        $this->audit($user, 'ai.question.replace_requested', $newId, ['replaces' => $generatedQuestionId, 'mode' => $mode]);
+
+        if ($this->useJobs) {
+            $this->jobGeneration->enqueue($this->batchModel->find($newId), (int) $user->id);
+        } else {
+            $this->generateChunk($newId);
+            $done = $this->batchModel->find($newId);
+            $this->jobGeneration->settleReplacement($done, (int) $done['generated_count']);
+        }
+
+        return $this->getBatch($newId) + ['replaces' => $generatedQuestionId, 'batch_id' => $newId];
     }
 
     public function acceptGeneratedQuestion(User $user, int $id): array
@@ -586,6 +696,7 @@ class QuestionGenerationService
                 'type_mix' => $batch['type_mix'] ? json_decode($batch['type_mix'], true) : null,
                 'points_per_question' => $batch['points_per_question'],
                 'recent_questions' => $recentQuestions,
+                'instruction' => $batch['instruction'] ?? null,
             ]);
 
         } catch (QuestionGeneratorBusyException $e) {

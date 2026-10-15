@@ -30,5 +30,7 @@ class AiGenerationBatchModel extends Model
         'error_message',
         'created_by',
         'created_at',
+        'replaces_question_id',
+        'instruction',
     ];
 }

@@ -62,3 +62,18 @@ describe("acceptCounts and acceptReport", () => {
     });
 
 });
+
+import { REPLACE_CHOICES, otherTypes } from "../../../resources/js/pages/courses/features/assessments/ai-generation/review-helpers.js";
+
+describe("replace choices", () => {
+
+    it("offers different, easier and harder", () => {
+        expect(REPLACE_CHOICES.map((c) => c.mode)).toEqual(["different", "easier", "harder"]);
+    });
+
+    it("offers the other types, never the current one", () => {
+        expect(otherTypes("Essay")).toEqual(["Multiple Choice", "Short Answer"]);
+        expect(otherTypes("Multiple Choice")).not.toContain("Multiple Choice");
+    });
+
+});

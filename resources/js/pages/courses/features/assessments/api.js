@@ -936,6 +936,33 @@ export async function discardGeneratedQuestion(offeringId, generatedQuestionId) 
 }
 
 /**
+ * Writes a different question in place of a staged one.
+ *
+ * @param {{mode: "different"|"easier"|"harder"|"type", instruction?: string, type?: string}} options
+ */
+export async function replaceGeneratedQuestion(offeringId, generatedQuestionId, options) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generated-questions/${generatedQuestionId}/replace`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(options),
+        }
+    );
+
+    try {
+        return await response.json();
+    } catch {
+        throw new Error("Unable to replace this question.");
+    }
+
+}
+
+/**
  * @param {boolean} [onlyClear] leave out the questions that need a look
  */
 export async function acceptAllGeneratedQuestions(offeringId, batchId, onlyClear = false) {

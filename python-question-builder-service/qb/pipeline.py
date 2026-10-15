@@ -216,7 +216,10 @@ def make_generate_handler(pool: ModelPool):
         plan = make_plan(concepts, count, type_mix, existing)
 
         ctx.progress(stage="write", done=0, of=len(plan.assignments), note="Writing questions")
-        written = write_questions(plan.assignments, facts, pool, seen_texts=existing)
+        written = write_questions(
+            plan.assignments, facts, pool, seen_texts=existing,
+            instruction=str(payload.get("instruction") or ""),
+        )
 
         ctx.progress(stage="check", done=0, of=len(written.questions), note="Checking each answer")
         assignments = {a.concept["id"]: a for a in plan.assignments}

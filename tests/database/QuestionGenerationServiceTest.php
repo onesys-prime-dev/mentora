@@ -575,6 +575,71 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
     {
         $this->assertSame(['success' => false, 'message' => 'Batch not found.'], $this->service->acceptAll($this->instructor, 999999));
     }
+    /*
+    |--------------------------------------------------------------------------
+    | Replacing one question
+    |--------------------------------------------------------------------------
+    */
+
+    public function testAQuestionCanBeReplacedAndTheOldOneIsDiscarded(): void
+    {
+        $this->generator->chunk = 2;
+        $started = $this->start(['count' => 2]);
+        $batchId = (int) $started['batch']['id'];
+        $first = (int) $started['questions'][0]['id'];
+
+        $result = $this->service->replaceQuestion($this->instructor, $first, 'harder', 'use the planets');
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($first, $result['replaces']);
+        $this->assertSame('discarded', $this->generated($first)['status']);
+
+        $inBatch = db_connect()->table('ai_generated_questions')->where('batch_id', $batchId)->where('status', 'pending')->countAllResults();
+        $this->assertSame(2, $inBatch, 'the new question sits in the original batch beside the other');
+
+        $asked = $this->generator->calls[count($this->generator->calls) - 1];
+        $this->assertSame(1, $asked['count']);
+        $this->assertStringContainsString('Make it harder', (string) $asked['instruction']);
+        $this->assertStringContainsString('use the planets', (string) $asked['instruction']);
+    }
+
+    public function testNothingIsDiscardedWhenNoReplacementArrives(): void
+    {
+        $this->generator->chunk = 2;
+        $started = $this->start(['count' => 2]);
+        $first = (int) $started['questions'][0]['id'];
+
+        $this->generator->chunk = 0;
+        $this->service->replaceQuestion($this->instructor, $first, 'different');
+
+        $this->assertSame('pending', $this->generated($first)['status']);
+    }
+
+    public function testAReplacementIsRefusedForABadRequest(): void
+    {
+        $this->generator->chunk = 1;
+        $started = $this->start(['count' => 1]);
+        $id = (int) $started['questions'][0]['id'];
+
+        $this->assertFalse($this->service->replaceQuestion($this->instructor, $id, 'bogus')['success']);
+        $this->assertFalse($this->service->replaceQuestion($this->instructor, $id, 'easier', str_repeat('x', 201))['success']);
+        $this->assertFalse($this->service->replaceQuestion($this->instructor, 999999, 'easier')['success']);
+
+        $this->service->discardGeneratedQuestion($id);
+        $this->assertFalse($this->service->replaceQuestion($this->instructor, $id, 'easier')['success'], 'only a waiting question can be replaced');
+    }
+
+    public function testTheRequestedTypeIsTheOneWritten(): void
+    {
+        $this->generator->chunk = 1;
+        $started = $this->start(['count' => 1]);
+        $id = (int) $started['questions'][0]['id'];
+
+        $this->service->replaceQuestion($this->instructor, $id, 'type', '', 'Essay');
+
+        $asked = $this->generator->calls[count($this->generator->calls) - 1];
+        $this->assertSame(['essay' => 1], $asked['type_mix']);
+    }
 }
 
 /** A stand-in for the question generator that hands back canned questions. */

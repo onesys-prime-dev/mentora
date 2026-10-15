@@ -48,7 +48,7 @@ def group(assignments: list[Assignment], size: int = GROUP_SIZE) -> list[list[As
     return [assignments[i : i + size] for i in range(0, len(assignments), size)]
 
 
-def build_prompt(assignments: list[Assignment], avoid: list[str]) -> str:
+def build_prompt(assignments: list[Assignment], avoid: list[str], instruction: str = "") -> str:
     lines = []
 
     for a in assignments:
@@ -76,6 +76,12 @@ def build_prompt(assignments: list[Assignment], avoid: list[str]) -> str:
 
     if avoid:
         text += "\n\nDo not repeat these existing questions:\n" + "\n".join(f"- {q[:120]}" for q in avoid[:15])
+
+    if instruction.strip():
+        # The teacher's wording about how these questions should differ. It
+        # shapes style and difficulty; it is not a source and not a command to
+        # change the answer format.
+        text += "\n\nHow the teacher wants these written (style and difficulty only):\n" + instruction.strip()[:300]
 
     return text
 
@@ -126,6 +132,7 @@ def write_questions(
     pool: ModelPool,
     *,
     seen_texts: list[str] | None = None,
+    instruction: str = "",
     on_progress=None,
 ) -> WriteResult:
     """Writes and gates questions for every assignment. `seen_texts` is the
@@ -140,7 +147,7 @@ def write_questions(
         if on_progress:
             on_progress(number, len(groups))
 
-        completion = pool.complete(SYSTEM_PROMPT, build_prompt(part, seen), max_output_tokens=300 * len(part)).completion
+        completion = pool.complete(SYSTEM_PROMPT, build_prompt(part, seen, instruction), max_output_tokens=300 * len(part)).completion
         result.calls += 1
         result.tokens_in += completion.tokens_in
         result.tokens_out += completion.tokens_out

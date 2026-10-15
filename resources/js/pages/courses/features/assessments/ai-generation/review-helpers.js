@@ -74,6 +74,25 @@ export function sourceLine(question) {
 
 }
 
+/** The ways a staged question can be replaced, in the order the menu shows them. */
+export const REPLACE_CHOICES = [
+    { mode: "different", label: "A different question" },
+    { mode: "easier", label: "Easier" },
+    { mode: "harder", label: "Harder" },
+];
+
+/**
+ * The other question types a staged question could become.
+ *
+ * @param {string} current
+ * @returns {string[]}
+ */
+export function otherTypes(current) {
+
+    return ["Multiple Choice", "Short Answer", "Essay"].filter((type) => type !== current);
+
+}
+
 /**
  * What accept all will do, so it can be said before it is done.
  *

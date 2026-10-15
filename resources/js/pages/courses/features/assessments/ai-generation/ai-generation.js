@@ -16,11 +16,12 @@ import {
     acceptGeneratedQuestion,
     discardGeneratedQuestion,
     acceptAllGeneratedQuestions,
+    replaceGeneratedQuestion,
 } from "../api.js";
 
 import { insertLiveQuestionCard } from "../questions/questions.js";
 
-import { acceptCounts, acceptReport, cardChips, sourceLine } from "./review-helpers.js";
+import { acceptCounts, acceptReport, cardChips, otherTypes, REPLACE_CHOICES, sourceLine } from "./review-helpers.js";
 
 import {
     renderAcceptedAnswersEditor,
@@ -870,6 +871,97 @@ function showTrayMessage(text) {
 
 }
 
+/**
+ * Asks for a replacement and swaps the card when it arrives. The old card
+ * stays (greyed) until then, so a failure loses nothing.
+ */
+async function replaceCard(card, options) {
+
+    const questionId = card.dataset.aiQuestionId;
+
+    card.querySelector("[data-ai-replace-menu]")?.classList.add("hidden");
+    card.querySelector("[data-ai-replace-menu]")?.classList.remove("flex");
+    showCardError(card, "");
+    card.classList.add("opacity-60");
+
+    const button = card.querySelector("[data-ai-open-replace]");
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Replacing...";
+    }
+
+    function restore(message) {
+
+        card.classList.remove("opacity-60");
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Replace";
+        }
+
+        if (message) {
+            showCardError(card, message);
+        }
+
+    }
+
+    try {
+
+        await flushPendingSave(questionId);
+
+        let result = await replaceGeneratedQuestion(state.offeringId, questionId, options);
+
+        if (!result.success) {
+
+            restore(result.message || "A replacement could not be written. Try again.");
+
+            return;
+
+        }
+
+        const replacementBatch = result.batch_id;
+
+        // A background job takes a while: ask until it has finished.
+        for (let attempt = 0; result.batch.status === "generating" && attempt < JOB_POLL_LIMIT; attempt++) {
+
+            await new Promise((resolve) => setTimeout(resolve, JOB_POLL_MS));
+
+            result = await fetchGenerationBatch(state.offeringId, replacementBatch);
+
+        }
+
+        if (result.batch.status !== "completed" || (result.batch.generated_count || 0) < 1) {
+
+            restore("A replacement could not be written this time. This question is unchanged.");
+
+            return;
+
+        }
+
+        // The new question now sits in the original batch.
+        const original = await fetchGenerationBatch(state.offeringId, activeBatchId);
+        const list = document.querySelector("[data-ai-tray-list]");
+        const known = new Set(Array.from(list.querySelectorAll("[data-ai-question-card]")).map((el) => el.dataset.aiQuestionId));
+
+        const fresh = (original.questions || []).filter((q) => !known.has(String(q.id)));
+
+        fresh.forEach((question) => list.insertBefore(createCard(question), card));
+
+        card.remove();
+
+        refreshAcceptButtons();
+
+    } catch (error) {
+
+        console.error(error);
+
+        restore("A replacement could not be written. Check your connection and try again.");
+
+    }
+
+}
+
 function showCardError(card, text) {
 
     const line = card.querySelector("[data-ai-card-error]");
@@ -981,6 +1073,16 @@ function createCard(question) {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </button>
+                <span class="relative">
+                    <button type="button" data-ai-open-replace title="Replace this question" class="rounded-lg px-2 py-1 text-xs font-semibold text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                        Replace
+                    </button>
+                    <div data-ai-replace-menu class="absolute right-0 top-full z-10 mt-1 hidden w-52 flex-col gap-0.5 rounded-xl border border-gray-200 bg-white p-2 text-xs shadow-xl">
+                        ${REPLACE_CHOICES.map((c) => `<button type="button" data-ai-replace-mode="${c.mode}" class="rounded-lg px-2 py-1.5 text-left text-gray-700 hover:bg-gray-50">${escapeHtml(c.label)}</button>`).join("")}
+                        ${otherTypes(question.question_type).map((t) => `<button type="button" data-ai-replace-mode="type" data-ai-replace-type="${escapeHtml(t)}" class="rounded-lg px-2 py-1.5 text-left text-gray-700 hover:bg-gray-50">As ${escapeHtml(t)}</button>`).join("")}
+                        <input type="text" data-ai-replace-note maxlength="200" placeholder="Or tell it what you want, then Enter" class="mt-1 rounded-lg border border-gray-200 px-2 py-1.5 outline-none focus:border-brand">
+                    </div>
+                </span>
                 <button type="button" data-ai-discard-question title="Discard" class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -1161,6 +1263,30 @@ function bindTrayActions() {
 
         }
 
+        if (event.target.closest("[data-ai-open-replace]")) {
+
+            const menu = card.querySelector("[data-ai-replace-menu]");
+
+            menu.classList.toggle("hidden");
+            menu.classList.toggle("flex");
+
+            return;
+
+        }
+
+        const replaceChoice = event.target.closest("[data-ai-replace-mode]");
+
+        if (replaceChoice) {
+
+            await replaceCard(card, {
+                mode: replaceChoice.dataset.aiReplaceMode,
+                type: replaceChoice.dataset.aiReplaceType || undefined,
+            });
+
+            return;
+
+        }
+
         if (event.target.closest("[data-ai-accept-question]")) {
 
             await flushPendingSave(questionId);
@@ -1232,6 +1358,25 @@ function bindTrayActions() {
 
             openAiSettingsModal(card);
 
+        }
+
+    });
+
+    // "Or tell it what you want" in a card's replace menu: Enter sends it.
+    document.addEventListener("keydown", (event) => {
+
+        const note = event.target.closest?.("[data-ai-replace-note]");
+
+        if (!note || event.key !== "Enter") {
+            return;
+        }
+
+        event.preventDefault();
+
+        const text = note.value.trim();
+
+        if (text !== "") {
+            replaceCard(note.closest("[data-ai-question-card]"), { mode: "different", instruction: text });
         }
 
     });

@@ -108,6 +108,7 @@ class AiJobGeneration
             'type_mix'            => $batch['type_mix'] ? json_decode((string) $batch['type_mix'], true) : null,
             'points_per_question' => $batch['points_per_question'],
             'existing_questions'  => $this->existingQuestions($batch),
+            'instruction'         => ! empty($batch['instruction']) ? (string) $batch['instruction'] : null,
             'rotation'            => $this->priorBatches($batch),
             'seed'                => (int) $batch['id'],
         ];
@@ -207,6 +208,7 @@ class AiJobGeneration
         $batch = $db->table('ai_generation_batches')
             ->where('assessment_id', $assessmentId)
             ->where('created_by', $userId)
+            ->where('replaces_question_id IS NULL', null, false)
             ->whereIn('status', ['generating', 'completed'])
             ->orderBy('id', 'DESC')
             ->get(5)->getResultArray();
@@ -312,6 +314,8 @@ class AiJobGeneration
 
         $this->batches->update($batchId, ['generated_count' => $count]);
 
+        $this->settleReplacement($batch, $count);
+
         $this->storeDigest((int) $job['institution_id'], $result['digest'] ?? null, $now);
 
         // Per-item digests: only the new or updated ones come back.
@@ -320,6 +324,32 @@ class AiJobGeneration
         }
 
         $db->transComplete();
+    }
+
+    /**
+     * A one-question batch that stands in for a staged question: its question
+     * moves into the original batch (so the tray shows it there) and the one
+     * it replaces is discarded. Nothing is discarded when no question came.
+     *
+     * @param array<string, mixed> $batch
+     */
+    public function settleReplacement(array $batch, int $inserted): void
+    {
+        if (empty($batch['replaces_question_id']) || $inserted < 1) {
+            return;
+        }
+
+        $old = $this->questions->find((int) $batch['replaces_question_id']);
+
+        if ($old === null) {
+            return;
+        }
+
+        $this->questions->where('batch_id', (int) $batch['id'])->set(['batch_id' => (int) $old['batch_id']])->update();
+
+        if ($old['status'] === 'pending') {
+            $this->questions->update((int) $old['id'], ['status' => 'discarded', 'updated_at' => date('Y-m-d H:i:s')]);
+        }
     }
 
     /** @return array<string, mixed>|null */
@@ -378,7 +408,17 @@ class AiJobGeneration
             ->where('b.id !=', (int) $batch['id'])
             ->orderBy('q.id', 'DESC')->get(self::EXISTING_QUESTIONS)->getResultArray();
 
-        $texts = array_map(static fn (array $r): string => mb_substr((string) $r['question_text'], 0, 160), array_merge($live, $staged));
+        $replaced = [];
+
+        if (! empty($batch['replaces_question_id'])) {
+            $old = $this->questions->find((int) $batch['replaces_question_id']);
+
+            if ($old !== null) {
+                $replaced[] = ['question_text' => $old['question_text']];
+            }
+        }
+
+        $texts = array_map(static fn (array $r): string => mb_substr((string) $r['question_text'], 0, 160), array_merge($replaced, $live, $staged));
 
         return array_values(array_unique($texts));
     }

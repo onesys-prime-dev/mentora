@@ -227,6 +227,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->patch('(:num)/generated-questions/(:num)', 'Courses\Assessments\QuestionGenerationController::updateQuestion/$1/$2');
         $routes->post('(:num)/generated-questions/(:num)/accept', 'Courses\Assessments\QuestionGenerationController::acceptQuestion/$1/$2');
         $routes->post('(:num)/generated-questions/(:num)/discard', 'Courses\Assessments\QuestionGenerationController::discardQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/replace', 'Courses\Assessments\QuestionGenerationController::replaceQuestion/$1/$2');
         $routes->post('(:num)/generation-batches/(:num)/accept-all', 'Courses\Assessments\QuestionGenerationController::acceptAll/$1/$2');
         $routes->post('(:num)/generation-batches/(:num)/cancel', 'Courses\Assessments\QuestionGenerationController::cancel/$1/$2');
         $routes->get('(:num)/assessments/(:num)/pending-generation', 'Courses\Assessments\QuestionGenerationController::pending/$1/$2');
@@ -405,6 +406,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->patch('(:num)/generated-questions/(:num)', 'Courses\Assessments\QuestionGenerationController::updateQuestion/$1/$2');
         $routes->post('(:num)/generated-questions/(:num)/accept', 'Courses\Assessments\QuestionGenerationController::acceptQuestion/$1/$2');
         $routes->post('(:num)/generated-questions/(:num)/discard', 'Courses\Assessments\QuestionGenerationController::discardQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/replace', 'Courses\Assessments\QuestionGenerationController::replaceQuestion/$1/$2');
         $routes->post('(:num)/generation-batches/(:num)/accept-all', 'Courses\Assessments\QuestionGenerationController::acceptAll/$1/$2');
         $routes->post('(:num)/generation-batches/(:num)/cancel', 'Courses\Assessments\QuestionGenerationController::cancel/$1/$2');
         $routes->get('(:num)/assessments/(:num)/pending-generation', 'Courses\Assessments\QuestionGenerationController::pending/$1/$2');
