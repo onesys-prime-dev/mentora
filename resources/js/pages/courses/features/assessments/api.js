@@ -935,6 +935,25 @@ export async function discardGeneratedQuestion(offeringId, generatedQuestionId) 
 
 }
 
+/** Discards every question still waiting in a set. */
+export async function discardAllGeneratedQuestions(offeringId, batchId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/discard-all`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to discard these questions.");
+    }
+
+    return response.json();
+
+}
+
 /** Asks for more questions to add to a finished set. */
 export async function topUpGeneration(offeringId, batchId, count) {
 

@@ -202,4 +202,33 @@ final class QuestionGenerationSafetyTest extends DatabaseTestCase
         $this->assertSame(2, $result['accepted_count']);
         $this->assertSame(0, $result['skipped_count']);
     }
+
+    public function testDiscardAllThrowsAwayWhatIsWaitingAndKeepsWhatWasAccepted(): void
+    {
+        $accepted = $this->stage(['question_text' => 'Already added to the quiz earlier.', 'status' => 'accepted']);
+        $waitingA = $this->stage(['question_text' => 'First waiting question about routers.']);
+        $waitingB = $this->stage(['question_text' => 'Second waiting question about switches.']);
+
+        $result = $this->service->discardAll($this->owner, $this->batch);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(3, $result['discarded'], 'the one from setUp plus the two staged');
+
+        $status = static fn (int $id): string => (string) db_connect()->table('ai_generated_questions')->where('id', $id)->get()->getRowArray()['status'];
+
+        $this->assertSame('accepted', $status($accepted));
+        $this->assertSame('discarded', $status($waitingA));
+        $this->assertSame('discarded', $status($waitingB));
+        $this->assertSame([], $this->service->getBatch($this->batch)['questions']);
+    }
+
+    public function testDiscardAllIsAuditedAndRefusesAnUnknownBatch(): void
+    {
+        $this->service->discardAll($this->owner, $this->batch);
+
+        $actions = array_column(db_connect()->table('audit_logs')->select('action')->get()->getResultArray(), 'action');
+
+        $this->assertContains('ai.batch.discarded', $actions);
+        $this->assertFalse($this->service->discardAll($this->owner, 999999)['success']);
+    }
 }

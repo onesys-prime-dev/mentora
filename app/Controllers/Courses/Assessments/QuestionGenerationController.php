@@ -190,6 +190,14 @@ class QuestionGenerationController extends BaseController
         return $this->response->setStatusCode($result['success'] ? 200 : 422)->setJSON($result);
     }
 
+    /** Discards every question still waiting in a set. */
+    public function discardAll(int $offeringId, int $batchId)
+    {
+        $this->ownBatch($offeringId, $batchId);
+
+        return $this->response->setJSON($this->generationService->discardAll(auth()->user(), $batchId));
+    }
+
     public function discardQuestion(int $offeringId, int $generatedQuestionId)
     {
         $this->ownQuestion($offeringId, $generatedQuestionId);

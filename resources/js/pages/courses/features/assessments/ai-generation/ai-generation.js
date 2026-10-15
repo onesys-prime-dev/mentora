@@ -18,6 +18,7 @@ import {
     acceptAllGeneratedQuestions,
     replaceGeneratedQuestion,
     topUpGeneration,
+    discardAllGeneratedQuestions,
 } from "../api.js";
 
 import { insertLiveQuestionCard } from "../questions/questions.js";
@@ -1671,8 +1672,51 @@ function bindTrayActions() {
 
     document
         .querySelector("[data-ai-tray-dismiss]")
-        ?.addEventListener("click", () => {
-            hideTray();
+        ?.addEventListener("click", async () => {
+
+            const waiting = document.querySelectorAll("[data-ai-question-card]").length;
+
+            // Nothing is waiting (or still being written): there is nothing to lose.
+            if (!activeBatchId || waiting === 0) {
+
+                hideTray();
+
+                return;
+
+            }
+
+            const sentence = waiting === 1
+                ? "Discard the 1 question in the review tray?"
+                : `Discard all ${waiting} questions in the review tray?`;
+
+            if (!window.confirm(`${sentence} This cannot be undone. Questions you already accepted stay in the quiz.`)) {
+                return;
+            }
+
+            try {
+
+                const result = await discardAllGeneratedQuestions(state.offeringId, activeBatchId);
+
+                if (!result.success) {
+
+                    showTrayMessage(result.message || "The questions could not be discarded. Try again.");
+
+                    return;
+
+                }
+
+                document.querySelectorAll("[data-ai-question-card]").forEach((card) => card.remove());
+
+                hideTray();
+
+            } catch (error) {
+
+                console.error(error);
+
+                showTrayMessage("The questions could not be discarded. Check your connection and try again.");
+
+            }
+
         });
 
 }

@@ -260,6 +260,38 @@ class QuestionGenerationService
         return $this->batchSummary($batch) + ($job !== null ? ['job' => $job] : []);
     }
 
+    /**
+     * Throws away every question still waiting in a set (and stops it if it
+     * is still being written). What was already accepted stays.
+     *
+     * @return array{success: bool, discarded: int, message: string}
+     */
+    public function discardAll(User $user, int $batchId): array
+    {
+        $batch = $this->batchModel->find($batchId);
+
+        if (! $batch) {
+            return ['success' => false, 'discarded' => 0, 'message' => 'Batch not found.'];
+        }
+
+        if ($batch['status'] === 'generating') {
+            $this->jobGeneration->cancel($batch, (int) $user->id);
+        }
+
+        $count = $this->generatedQuestionModel->where('batch_id', $batchId)->where('status', 'pending')->countAllResults();
+
+        $this->generatedQuestionModel->where('batch_id', $batchId)->where('status', 'pending')
+            ->set(['status' => 'discarded', 'updated_at' => date('Y-m-d H:i:s')])->update();
+
+        $this->audit($user, 'ai.batch.discarded', $batchId, ['discarded' => $count]);
+
+        return [
+            'success'   => true,
+            'discarded' => $count,
+            'message'   => $count === 1 ? '1 question was discarded.' : "{$count} questions were discarded.",
+        ];
+    }
+
     /** Stops a background batch. */
     public function cancelBatch(User $user, int $batchId): array
     {
