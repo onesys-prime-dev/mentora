@@ -161,11 +161,11 @@
 /* A light that sweeps across a placeholder block: the data is on its way. */
 @keyframes skeleton-shimmer {
     from {
-        background-position: 200% 0;
+        background-position: 105% 0;
     }
 
     to {
-        background-position: -100% 0;
+        background-position: -5% 0;
     }
 }
 
@@ -191,12 +191,6 @@
 }
 
 @layer components {
-    .spa-loading {
-        opacity: 0.6;
-        pointer-events: none;
-        transition: opacity 150ms ease;
-    }
-
     .spa-enter {
         animation: spa-fade-in 220ms ease-out;
     }
@@ -212,19 +206,23 @@
     .animate-pulse [class~="bg-gray-200"],
     .animate-pulse[class~="bg-gray-200"],
     [data-skeleton] [class~="bg-gray-200"] {
-        background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255) 50%, transparent 100%);
-        background-size: 200% 100%;
+        /* A slightly deeper grey than the plain block, so the light has something to stand out against. */
+        background-color: #d5dae1;
+        background-image: linear-gradient(90deg, transparent 0%, transparent 30%, rgb(255 255 255) 50%, transparent 70%, transparent 100%);
+        background-size: 250% 100%;
         background-repeat: no-repeat;
-        background-position: 200% 0;
-        animation: skeleton-shimmer 1.3s linear infinite;
+        /* Starts off the left edge and travels to the right. */
+        background-position: 105% 0;
+        animation: skeleton-shimmer 1.1s linear infinite;
     }
 
     .animate-pulse [class~="bg-gray-100"] {
-        background-image: linear-gradient(90deg, transparent 0%, rgb(209 213 219 / 0.7) 50%, transparent 100%);
-        background-size: 200% 100%;
+        background-color: #e8ebef;
+        background-image: linear-gradient(90deg, transparent 0%, transparent 30%, rgb(255 255 255) 50%, transparent 70%, transparent 100%);
+        background-size: 250% 100%;
         background-repeat: no-repeat;
-        background-position: 200% 0;
-        animation: skeleton-shimmer 1.3s linear infinite;
+        background-position: 105% 0;
+        animation: skeleton-shimmer 1.1s linear infinite;
     }
 
     .spa-progress {
@@ -473,14 +471,21 @@ html[data-theme="dark"] .border-\[\#B9B9B9\],
 html[data-theme="dark"] .border-\[\#999696\],
 html[data-theme="dark"] .border-\[\#A9A9A9\] { border-color: var(--dk-line-strong); }
 
+/* The light is the loading effect: the region itself does not also fade in and out. */
+@media (prefers-reduced-motion: no-preference) {
+    .animate-pulse {
+        animation: none;
+    }
+}
+
 /* On the dark appearance the sweep is a quieter white. */
 @media (prefers-reduced-motion: no-preference) {
     html[data-theme="dark"] .animate-pulse [class~="bg-gray-200"],
     html[data-theme="dark"] [data-skeleton] [class~="bg-gray-200"] {
-        background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.22) 50%, transparent 100%);
+        background-image: linear-gradient(90deg, transparent 0%, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%, transparent 100%);
     }
 
     html[data-theme="dark"] .animate-pulse [class~="bg-gray-100"] {
-        background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.12) 50%, transparent 100%);
+        background-image: linear-gradient(90deg, transparent 0%, transparent 30%, rgb(255 255 255 / 0.16) 50%, transparent 70%, transparent 100%);
     }
 }
