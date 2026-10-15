@@ -54,6 +54,8 @@ class Question:
     explanation: str = ""
     fact_id: str = ""
     evidence: str = ""  # the digest fact's text, filled from fact_id, never from the model
+    # Every fact of the concept, so a check can tell a wrong choice from another true statement.
+    context_facts: list[str] = field(default_factory=list)
     page: int | None = None
     math_spec: dict | None = None
     flags: list[str] = field(default_factory=list)

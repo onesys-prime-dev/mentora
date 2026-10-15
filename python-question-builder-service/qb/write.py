@@ -27,7 +27,9 @@ SYSTEM_PROMPT = (
     '"correct":true}],"accepted_answers":["..."],"explanation":"why the answer '
     'is right","fact_id":"the id of the fact it relies on","math_spec":null}]}. '
     "Multiple Choice has exactly 4 choices and exactly one correct; never use "
-    "'all of the above' or refer to choices by position. Short Answer has 1 to "
+    "'all of the above' or refer to choices by position. Every wrong choice "
+    "must be plausible but FALSE according to the facts: never copy a true "
+    "statement from the facts (or paraphrase one) as a wrong choice. Short Answer has 1 to "
     "3 accepted answers of at most 8 words each, and no choices. Essay and "
     "File Upload have no choices and no answers."
 )
@@ -50,6 +52,23 @@ def build_prompt(assignments: list[Assignment], avoid: list[str]) -> str:
     lines = []
 
     for a in assignments:
+        if a.fact is not None:
+            others = [f for f in a.concept["facts"] if f["id"] != a.fact["id"]]
+            text = (
+                f"Concept {a.concept['id']} ({a.concept['name']}), write a {a.type} about this fact:\n"
+                f"  - [{a.fact['id']}] {a.fact['text']}"
+            )
+
+            if others:
+                text += (
+                    "\n  Other facts of this concept (context only: do not ask about them, "
+                    "and never use one as a wrong choice):\n"
+                    + "\n".join(f"  - {f['text']}" for f in others)
+                )
+
+            lines.append(text)
+            continue
+
         facts = "\n".join(f"  - [{f['id']}] {f['text']}" for f in a.concept["facts"])
         lines.append(f"Concept {a.concept['id']} ({a.concept['name']}), write a {a.type}:\n{facts}")
 
@@ -77,7 +96,7 @@ def parse_questions(raw: str) -> list[dict]:
     return [i for i in items if isinstance(i, dict)] if isinstance(items, list) else []
 
 
-def to_question(item: dict, facts: dict[str, dict]) -> Question:
+def to_question(item: dict, facts: dict[str, dict], context: list[str] | None = None) -> Question:
     fact = facts.get(str(item.get("fact_id", "")))
 
     return Question(
@@ -95,6 +114,7 @@ def to_question(item: dict, facts: dict[str, dict]) -> Question:
         evidence=fact["text"] if fact else "",
         page=fact["page"] if fact else None,
         math_spec=item.get("math_spec") if isinstance(item.get("math_spec"), dict) else None,
+        context_facts=list(context or []),
     )
 
 
@@ -123,16 +143,22 @@ def write_questions(
         result.tokens_in += completion.tokens_in
         result.tokens_out += completion.tokens_out
 
-        allowed = {a.concept["id"] for a in part}
+        concepts = {a.concept["id"]: a.concept for a in part}
 
         for item in parse_questions(completion.text):
-            question = to_question(item, facts)
+            concept = concepts.get(str(item.get("concept_id", "")))
+            context = [f["text"] for f in concept["facts"]][:6] if concept else []
+            question = to_question(item, facts, context)
 
-            if question.concept_id not in allowed:
+            if concept is None:
                 result.dropped["wrong_concept"] += 1
                 continue
 
             reasons = gates.check(question, facts, seen)
+
+            # A real fact, but of some other concept: not what was asked about.
+            if question.fact_id and question.fact_id not in {f["id"] for f in concept["facts"]}:
+                reasons.append("wrong_fact")
 
             if reasons:
                 result.dropped.update(reasons)

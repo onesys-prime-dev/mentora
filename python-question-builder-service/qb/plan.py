@@ -18,6 +18,9 @@ COVERED_OVERLAP = 0.6
 class Assignment:
     concept: dict
     type: str
+    # The one fact this question is about. A concept with several facts can
+    # supply several questions, each on a different fact.
+    fact: dict | None = None
 
 
 @dataclass
@@ -60,17 +63,44 @@ def is_covered(concept: dict, existing_questions: list[str]) -> bool:
 
 
 def make_plan(concepts: list[dict], count: int, type_mix: dict[str, int], existing_questions: list[str] | None = None) -> Plan:
+    """One question per fact, spread so that every concept is asked about once
+    before any concept is asked about twice: a first pass takes each concept's
+    first fact, a second pass its second, and so on. Facts the quiz already
+    covers are left out."""
+
     existing = existing_questions or []
-    fresh = [c for c in concepts if not is_covered(c, existing)]
-    skipped = len(concepts) - len(fresh)
+    skipped = 0
+    queues: list[tuple[dict, list[dict]]] = []
+
+    for concept in concepts:
+        fresh = []
+
+        for fact in concept["facts"]:
+            if any(overlap(q, fact["text"]) >= COVERED_OVERLAP for q in existing):
+                skipped += 1
+            else:
+                fresh.append(fact)
+
+        if fresh:
+            queues.append((concept, fresh))
+
+    chosen: list[tuple[dict, dict]] = []
+    depth = 0
+
+    while len(chosen) < count and any(len(facts) > depth for _, facts in queues):
+        for concept, facts in queues:
+            if depth < len(facts) and len(chosen) < count:
+                chosen.append((concept, facts[depth]))
+
+        depth += 1
 
     types: list[str] = []
 
     for type_label, n in split_counts(count, type_mix).items():
         types.extend([type_label] * n)
 
-    take = min(count, len(fresh))
-    assignments = [Assignment(concept, types[i]) for i, concept in enumerate(fresh[:take])]
+    take = len(chosen)
+    assignments = [Assignment(concept, types[i], fact) for i, (concept, fact) in enumerate(chosen)]
 
     notes = []
 

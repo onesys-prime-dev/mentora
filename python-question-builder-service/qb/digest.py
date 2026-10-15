@@ -22,7 +22,7 @@ from .pool import ModelPool
 
 # About 3,500 tokens of source per window (4 characters a token).
 WINDOW_CHARS = 14_000
-MAX_CONCEPTS_PER_WINDOW = 8
+MAX_CONCEPTS_PER_WINDOW = 12
 MAX_FACTS_PER_CONCEPT = 6
 # Share of a fact's content words that must appear in its window.
 GROUNDING_OVERLAP = 0.6
@@ -175,12 +175,13 @@ def build_digest(
     pool: ModelPool,
     store: DigestStore,
     *,
-    needed_concepts: int,
+    needed_facts: int,
     rotation: int = 0,
     window_chars: int = WINDOW_CHARS,
     on_progress: Callable[[int, int], None] | None = None,
 ) -> Digest:
-    """Digest enough windows to supply `needed_concepts`, starting at window
+    """Digest enough windows to supply `needed_facts` (each fact can be the
+    subject of one question), starting at window
     `rotation` (mod the number of windows) and wrapping."""
 
     key = source_hash(pages)
@@ -198,7 +199,7 @@ def build_digest(
     changed = False
 
     for done, index in enumerate(order, start=1):
-        if _concept_count(data) >= needed_concepts:
+        if _fact_count(data) >= needed_facts:
             break
 
         if str(index) in data["sections"]:
@@ -219,8 +220,8 @@ def build_digest(
     return digest
 
 
-def _concept_count(data: dict) -> int:
-    return sum(len(s["concepts"]) for s in data["sections"].values())
+def _fact_count(data: dict) -> int:
+    return sum(len(c["facts"]) for s in data["sections"].values() for c in s["concepts"])
 
 
 def _digest_window(window: list[Page], index: int, pool: ModelPool, digest: Digest) -> dict | None:
@@ -232,7 +233,7 @@ def _digest_window(window: list[Page], index: int, pool: ModelPool, digest: Dige
     parsed = None
 
     for attempt in range(2):  # the second asks again once, then the window is skipped
-        result = pool.complete(SYSTEM_PROMPT, user, max_output_tokens=900)
+        result = pool.complete(SYSTEM_PROMPT, user, max_output_tokens=1600)
         digest.calls += 1
         digest.tokens_in += result.completion.tokens_in
         digest.tokens_out += result.completion.tokens_out
