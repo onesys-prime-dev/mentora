@@ -9,7 +9,7 @@ import socket
 from dataclasses import dataclass
 
 from .governor import RateGovernor
-from .php_client import PhpClient, Post, urllib_post
+from .php_client import PhpClient, Post, make_post
 from .pipeline import make_generate_handler
 from .pool import ModelPool
 from .providers.base import Provider
@@ -33,6 +33,8 @@ class Settings:
     api_key: str
     base_url: str
     models: list[str]
+    # False only for a staging site with a self-signed certificate.
+    php_verify_tls: bool = True
 
     @property
     def key_configured(self) -> bool:
@@ -62,6 +64,7 @@ def from_env(env: dict[str, str] | None = None) -> Settings:
         api_key=env.get("GROQ_API_KEY", "").strip(),
         base_url=env.get("QB_BASE_URL", GROQ_BASE_URL).strip(),
         models=models,
+        php_verify_tls=env.get("QB_PHP_VERIFY_TLS", "true").strip().lower() not in ("false", "0", "no", "off"),
     )
 
 
@@ -75,13 +78,18 @@ def build_provider(settings: Settings, transport: Transport = urllib_transport) 
 def build_worker(
     settings: Settings,
     *,
-    post: Post = urllib_post,
+    post: Post | None = None,
     transport: Transport = urllib_transport,
     provider: Provider | None = None,
 ) -> Worker:
     provider = provider or build_provider(settings, transport)
     governor = RateGovernor({model: GROQ_FREE_LIMITS for model in settings.models})
     pool = ModelPool(provider, settings.models, governor)
-    php = PhpClient(settings.php_url, settings.worker_secret, settings.worker_id, post=post)
+    php = PhpClient(
+        settings.php_url,
+        settings.worker_secret,
+        settings.worker_id,
+        post=post or make_post(settings.php_verify_tls),
+    )
 
     return Worker(php, {"generate": make_generate_handler(pool)}, backend=settings.backend)

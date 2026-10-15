@@ -2,6 +2,7 @@
 The worker never touches the database."""
 
 import json
+import ssl
 import urllib.error
 import urllib.request
 from typing import Callable
@@ -15,11 +16,24 @@ class PhpUnavailable(Exception):
     """PHP did not answer or refused us; the worker waits and tries again."""
 
 
-def urllib_post(url: str, headers: dict, body: bytes, timeout: float) -> tuple[int, bytes]:
+def make_post(verify_tls: bool = True) -> Post:
+    """The HTTP call, with certificate checking on unless asked otherwise. It
+    is only ever switched off for a staging site whose certificate is
+    self-signed and which is reached over loopback."""
+
+    context = None if verify_tls else ssl._create_unverified_context()
+
+    def post(url: str, headers: dict, body: bytes, timeout: float) -> tuple[int, bytes]:
+        return urllib_post(url, headers, body, timeout, context=context)
+
+    return post
+
+
+def urllib_post(url: str, headers: dict, body: bytes, timeout: float, context: ssl.SSLContext | None = None) -> tuple[int, bytes]:
     request = urllib.request.Request(url, data=body, headers=headers, method="POST")
 
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
             return response.status, response.read()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read()
