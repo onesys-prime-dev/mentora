@@ -149,3 +149,45 @@ def test_the_payload_store_returns_only_a_digest_for_the_same_source():
 
     store.put("abc", {"x": 1})
     assert store.updated == {"x": 1}
+
+
+def test_a_digest_php_sent_back_with_sections_as_a_list_still_works():
+    # PHP re-encodes {"0": ..., "1": ...} as a list; the empty case becomes [].
+    as_list = {"source_hash": "h", "window_count": 2, "sections": [
+        {"pages": [1, 1], "concepts": [{"id": "0.0", "name": "A", "facts": [{"id": "0.0.0", "text": "t", "page": 1}]}]},
+        {"pages": [2, 2], "concepts": [{"id": "1.0", "name": "B", "facts": [{"id": "1.0.0", "text": "u", "page": 2}]}]},
+    ]}
+
+    fixed = dg.normalise_digest(as_list)
+
+    assert sorted(fixed["sections"]) == ["0", "1"]
+    assert dg.normalise_digest({"source_hash": "h", "sections": []})["sections"] == {}
+    assert dg.normalise_digest("nonsense") is None
+    assert dg.normalise_digest({"sections": {"0": "bad", "1": {"concepts": []}}})["sections"] == {"1": {"concepts": []}}
+
+
+def test_a_list_shaped_cached_digest_is_used_not_crashed_on_and_costs_nothing():
+    pages = [Page(1, "Routers forward packets using the destination address in a routing table.")]
+    cached = {
+        "source_hash": dg.source_hash(pages),
+        "window_count": 1,
+        "sections": [{"pages": [1, 1], "concepts": [
+            {"id": "0.0", "name": "Routing", "facts": [{"id": "0.0.0", "text": "Routers forward packets", "page": 1}]}]}],
+    }
+    provider, pool = make_pool([])
+
+    result = dg.build_digest(pages, pool, dg.PayloadDigestStore(cached), needed_concepts=1)
+
+    assert provider.calls == []
+    assert [c["name"] for c in result.concepts()] == ["Routing"]
+
+
+def test_a_cached_digest_with_no_sections_at_all_is_read_afresh():
+    pages = [Page(1, "Routers forward packets using the destination address in a routing table.")]
+    cached = {"source_hash": dg.source_hash(pages), "window_count": 1, "sections": []}
+    reply = answer(("Routing", [("Routers forward packets using the destination address", 1)]))
+    provider, pool = make_pool([reply])
+
+    result = dg.build_digest(pages, pool, dg.PayloadDigestStore(cached), needed_concepts=1)
+
+    assert len(provider.calls) == 1 and len(result.concepts()) == 1
