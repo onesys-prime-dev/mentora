@@ -10,6 +10,7 @@ import { bindQuestionPicker } from "./question-picker.js";
 import {
     exportQuestionsUrl,
     importSampleUrl,
+    importTemplateUrl,
     previewImport,
     applyImport,
     undoImport,
@@ -219,6 +220,12 @@ function bindImportModal() {
         tab.addEventListener("click", () => setImportSource(tab.dataset.importSourceTab));
     });
 
+    const template = document.querySelector("[data-import-template-link]");
+
+    if (template) {
+        template.href = importTemplateUrl(state.offeringId, state.assessmentId);
+    }
+
     const sample = document.querySelector("[data-import-sample-link]");
 
     if (sample) {
@@ -360,7 +367,7 @@ async function handlePreview() {
 
         showError(importSource === "text"
             ? "Paste your questions first."
-            : "Choose a Word (.docx) or Rich Text (.rtf) file first.");
+            : "Choose a Word, Rich Text, Excel, CSV or text file first.");
 
         return;
 

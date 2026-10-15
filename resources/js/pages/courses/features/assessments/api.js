@@ -1011,6 +1011,12 @@ async function importJson(response, fallback) {
 
 }
 
+export function importTemplateUrl(offeringId, assessmentId) {
+
+    return exportQuestionsUrl(offeringId, assessmentId, "template-xlsx");
+
+}
+
 export function importSampleUrl(offeringId, assessmentId) {
 
     return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/sample`;

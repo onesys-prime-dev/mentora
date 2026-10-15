@@ -28,9 +28,9 @@
         <div data-import-step="upload" class="flex flex-col gap-4 p-8">
 
             <p class="text-sm text-gray-600">
-                Bring in questions from a Word or Rich Text file, or paste them. Your own exam works as it is:
+                Bring in questions from a Word, Rich Text, Excel, CSV or text file, or paste them. Your own exam works as it is:
                 number the questions, letter the choices and give the answer. A quiz you exported from here
-                and edited works too. Nothing is saved until you review and confirm.
+                and edited works too, and so do Aiken and GIFT files from other systems. Nothing is saved until you review and confirm.
             </p>
 
             <div class="inline-flex w-fit rounded-xl bg-gray-100 p-1" role="tablist">
@@ -43,11 +43,14 @@
                 <input
                     type="file"
                     data-import-file-input
-                    accept=".docx,.rtf"
+                    accept=".docx,.rtf,.xlsx,.csv,.txt"
                     aria-label="Quiz file to import"
                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
-                <p class="text-xs text-[#767676]">Word (.docx) or Rich Text (.rtf), up to 5 MB.</p>
+                <p class="text-xs text-[#767676]">
+                    Word (.docx), Rich Text (.rtf), Excel (.xlsx), CSV (.csv) or Aiken/GIFT text (.txt), up to 5 MB.
+                    <a data-import-template-link href="#" class="font-semibold text-brand hover:underline">Download the Excel template</a>
+                </p>
             </div>
 
             <div data-import-source-panel="text" class="hidden flex-col gap-2">

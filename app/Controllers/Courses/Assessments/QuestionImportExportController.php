@@ -27,7 +27,9 @@ class QuestionImportExportController extends BaseController
         // its answer key at the end.
         $format = strtolower((string) $this->request->getGet('format'));
 
-        if (str_starts_with($format, 'test-')) {
+        if (in_array($format, ['aiken', 'gift', 'csv', 'xlsx', 'template-xlsx'], true)) {
+            $result = $this->exportService->exportFormat($assessmentId, $format);
+        } elseif (str_starts_with($format, 'test-')) {
             $result = $this->exportService->exportPrintable($assessmentId, substr($format, 5), [
                 'versions'          => (int) $this->request->getGet('versions'),
                 'shuffle_questions' => $this->request->getGet('shuffle_questions') === '1',
@@ -72,13 +74,13 @@ class QuestionImportExportController extends BaseController
         $file = $this->request->getFile('file');
 
         if (!$file || !$file->isValid()) {
-            return $this->refuse('Choose a Word (.docx) or Rich Text (.rtf) file, or paste your questions.');
+            return $this->refuse('Choose a Word, Rich Text, Excel, CSV or text file, or paste your questions.');
         }
 
         $extension = strtolower($file->getClientExtension());
 
         if (!in_array($extension, QuestionImportService::EXTENSIONS, true)) {
-            return $this->refuse('Only Word (.docx) and Rich Text (.rtf) files can be imported.');
+            return $this->refuse('Only Word (.docx), Rich Text (.rtf), Excel (.xlsx), CSV (.csv) and Aiken or GIFT text (.txt) files can be imported.');
         }
 
         if ($file->getSize() > QuestionImportService::MAX_BYTES) {

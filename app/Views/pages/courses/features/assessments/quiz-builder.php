@@ -161,6 +161,41 @@
 
                     </div>
 
+                    <div class="h-px bg-gray-200"></div>
+
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Other systems and spreadsheets
+                    </span>
+
+                    <p class="-mt-2 text-xs text-gray-500">
+                        Excel or CSV for departments; Aiken and GIFT for other quiz systems. Aiken holds
+                        single-answer multiple choice only.
+                    </p>
+
+                    <div class="flex flex-col gap-1">
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="xlsx" data-export-format-option class="h-4 w-4 accent-brand">
+                            Excel (.xlsx)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="csv" data-export-format-option class="h-4 w-4 accent-brand">
+                            CSV (.csv)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="gift" data-export-format-option class="h-4 w-4 accent-brand">
+                            GIFT (Moodle, .txt)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="aiken" data-export-format-option class="h-4 w-4 accent-brand">
+                            Aiken (.txt)
+                        </label>
+
+                    </div>
+
                     <button
                         type="button"
                         data-export-questions

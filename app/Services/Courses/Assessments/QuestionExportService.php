@@ -79,6 +79,56 @@ class QuestionExportService
         return ['success' => true, 'file_path' => $path, 'filename' => $filename];
     }
 
+    /**
+     * The quiz for another system: `aiken` or `gift` (plain text), `csv` or
+     * `xlsx` (one question per row), or `template-xlsx`, an empty starting
+     * sheet with two example rows.
+     */
+    public function exportFormat(int $assessmentId, string $format): array
+    {
+        $assessment = $this->assessmentModel->find($assessmentId);
+
+        if (!$assessment) {
+            return ['success' => false, 'message' => 'Assessment not found.'];
+        }
+
+        $questions = $this->questionModel->listForAssessment($assessmentId);
+        $stamp = date('Ymd-His');
+        $path = $this->exportDirectory() . '/assessment-' . $assessmentId . '-' . $format . '-' . $stamp;
+
+        switch ($format) {
+            case 'aiken':
+            case 'gift':
+                $body = $format === 'aiken' ? TextQuizFormats::aiken($questions) : TextQuizFormats::gift($questions);
+
+                if ($body === '') {
+                    return ['success' => false, 'message' => 'None of this quiz\'s questions can be written in that format. '
+                        . ($format === 'aiken' ? 'Aiken holds multiple choice questions with one right answer.' : 'Add questions with answers first.')];
+                }
+
+                $extension = 'txt';
+                file_put_contents($path . '.txt', $body);
+
+                break;
+
+            case 'csv':
+            case 'xlsx':
+                $extension = $format;
+                SpreadsheetQuestions::write(SpreadsheetQuestions::rowsFor($questions), $format, $path . '.' . $format);
+
+                break;
+
+            default:
+                $extension = 'xlsx';
+                SpreadsheetQuestions::write(SpreadsheetQuestions::templateRows(), 'xlsx', $path . '.xlsx');
+        }
+
+        $name = $format === 'template-xlsx' ? 'quiz-questions-template.xlsx'
+            : 'assessment-' . $assessmentId . '-' . $format . '.' . $extension;
+
+        return ['success' => true, 'file_path' => $path . '.' . $extension, 'filename' => $name];
+    }
+
     private function exportDirectory(): string
     {
         $directory = (new \App\Services\Storage\StorageService())->root() . 'exports';

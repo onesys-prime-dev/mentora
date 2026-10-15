@@ -32,7 +32,13 @@ class QuestionImportService
 
     public const MAX_QUESTIONS = 300;
 
-    public const EXTENSIONS = ['docx', 'rtf'];
+    /** Documents, read by their layout or by Mentora's own markers. */
+    public const DOCUMENT_EXTENSIONS = ['docx', 'rtf'];
+
+    /** Spreadsheets and plain-text formats from other systems (Excel/CSV, Aiken, GIFT). */
+    public const FORMAT_EXTENSIONS = ['csv', 'xlsx', 'txt'];
+
+    public const EXTENSIONS = ['docx', 'rtf', 'csv', 'xlsx', 'txt'];
 
     // A Short Answer's answer key: "Accepted answers: CPU | Central
     // Processing Unit" (see QuestionExportService::ACCEPTED_ANSWERS_LABEL).
@@ -78,7 +84,82 @@ class QuestionImportService
      */
     public function previewFile(User $user, int $assessmentId, string $filePath, string $extension): array
     {
+        if (in_array(strtolower($extension), self::FORMAT_EXTENSIONS, true)) {
+            return $this->hold($user, $assessmentId, $this->parseFormat($assessmentId, $filePath, strtolower($extension)));
+        }
+
         return $this->hold($user, $assessmentId, $this->parseFile($assessmentId, $filePath, $extension));
+    }
+
+    /**
+     * A spreadsheet (Excel or CSV), an Aiken file or a GIFT file. Like an
+     * ordinary document it only adds questions.
+     *
+     * @return array<string, mixed>
+     */
+    private function parseFormat(int $assessmentId, string $filePath, string $extension): array
+    {
+        if (! $this->assessmentModel->find($assessmentId)) {
+            return ['success' => false, 'message' => 'Assessment not found.'];
+        }
+
+        try {
+            if ($extension === 'txt') {
+                $text = (string) file_get_contents($filePath);
+
+                if (GiftParser::looks($text)) {
+                    $read = (new GiftParser())->parse($text);
+                } elseif (AikenParser::looks($text)) {
+                    $read = (new AikenParser())->parse($text);
+                } else {
+                    return ['success' => false, 'message' => 'This text file is not in Aiken or GIFT format. Aiken questions end with an "ANSWER: B" line; GIFT answers sit inside { }.'];
+                }
+            } else {
+                $read = (new SpreadsheetQuestions())->parse(SpreadsheetQuestions::rowsOf($filePath, $extension));
+
+                if ($read === null) {
+                    return ['success' => false, 'message' => 'No header row was found. The first row needs a "Question" column (and Type, A to H, Answer, Points). Download the template to start from.'];
+                }
+            }
+        } catch (Throwable) {
+            return ['success' => false, 'message' => 'This file could not be read. Check that it is not damaged.'];
+        }
+
+        if (count($read['questions']) + count($read['skipped']) > self::MAX_QUESTIONS) {
+            return ['success' => false, 'message' => 'This file has more than ' . self::MAX_QUESTIONS . ' questions. Import it in smaller parts.'];
+        }
+
+        if ($read['questions'] === []) {
+            $why = $read['skipped'] !== [] ? ' ' . $read['skipped'][0]['reason'] : '';
+
+            return ['success' => false, 'message' => 'No questions could be imported from this file.' . $why];
+        }
+
+        $parsed = array_map(static fn (array $q): array => $q + [
+            'id'                => null,
+            'is_required'       => true,
+            'case_sensitive'    => false,
+            'unmatched_correct' => false,
+        ], $read['questions']);
+
+        $result = $this->buildDiff($assessmentId, $parsed, false);
+
+        // Rows the reader could not turn into a question are listed, with their line.
+        foreach ($read['skipped'] as $row) {
+            $result['problems'][] = [
+                'severity'      => QuestionImportValidator::ERROR,
+                'message'       => $row['reason'],
+                'line'          => $row['line'],
+                'question_text' => '',
+            ];
+        }
+
+        $result['counts']['problems'] += count($read['skipped']);
+        $result['success']             = true;
+        $result['source']              = 'plain';
+        $result['responses_affected']  = 0;
+
+        return $result;
     }
 
     /**
@@ -756,7 +837,7 @@ class QuestionImportService
      */
     private function extractParagraphs(string $filePath, string $extension): array
     {
-        if (! in_array($extension, self::EXTENSIONS, true)) {
+        if (! in_array($extension, self::DOCUMENT_EXTENSIONS, true)) {
             throw new RuntimeException('Unsupported file type.');
         }
 
