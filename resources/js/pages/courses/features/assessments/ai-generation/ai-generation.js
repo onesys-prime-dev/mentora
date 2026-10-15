@@ -248,6 +248,13 @@ async function restorePending() {
 
         renderBatch(result.pending);
 
+        // Other sets of this quiz are still waiting: say so, they open one after another.
+        const others = Number(result.pending.other_sets || 0);
+
+        showTrayMessage(others > 0
+            ? `${others} more ${others === 1 ? "set of questions is" : "sets of questions are"} waiting for review. They open when you finish this one.`
+            : "");
+
         if (jobIsRunning(result.pending)) {
             setGeneratingIndicator(true);
             await followJob(activeBatchId, result.pending);
@@ -1673,7 +1680,12 @@ function bindTrayActions() {
 function afterQuestionResolved() {
 
     if (document.querySelectorAll("[data-ai-question-card]").length === 0) {
+
         activeBatchId = null;
+
+        // An older unreviewed set of this quiz opens next, if there is one.
+        restorePending();
+
     }
 
     refreshAcceptButtons();

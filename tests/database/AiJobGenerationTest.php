@@ -178,6 +178,87 @@ final class AiJobGenerationTest extends DatabaseTestCase
         $this->assertSame(2, (int) $row['answers_count']);
     }
 
+    public function testAFinishedJobIsAppliedAndTheTeacherIsToldEvenWithNoBrowserWatching(): void
+    {
+        $started = $this->start();
+        $batchId = (int) $started['batch']['id'];
+
+        $this->finishJob($this->workerResult(), (int) $started['job']['id']);
+
+        (new \App\Services\Courses\Assessments\AiJobGeneration($this->jobs))->settleFinished((int) $started['job']['id']);
+
+        $this->assertSame('completed', db_connect()->table('ai_generation_batches')->where('id', $batchId)->get()->getRowArray()['status']);
+
+        $notes = db_connect()->table('notifications')->where('user_id', $this->instructor->id)->where('type', 'ai.questions_ready')->get()->getResultArray();
+
+        $this->assertCount(1, $notes);
+        $this->assertSame('2 questions are ready to review', $notes[0]['title']);
+        $this->assertSame("ai-batch-{$batchId}", $notes[0]['dedupe_key']);
+    }
+
+    public function testSettlingAJobTwiceTellsThePersonOnce(): void
+    {
+        $started = $this->start();
+        $this->finishJob($this->workerResult(), (int) $started['job']['id']);
+
+        $generation = new \App\Services\Courses\Assessments\AiJobGeneration($this->jobs);
+        $generation->settleFinished((int) $started['job']['id']);
+        $generation->settleFinished((int) $started['job']['id']);
+
+        $this->assertSame(1, db_connect()->table('notifications')->where('type', 'ai.questions_ready')->countAllResults());
+    }
+
+    public function testAFailedJobTellsThePersonInPlainWords(): void
+    {
+        $started = $this->start();
+        $this->jobs->claim('w1', self::T0);
+        $this->jobs->fail((int) $started['job']['id'], 'w1', 'free_quota', 'used up', self::T0 + 2);
+
+        (new \App\Services\Courses\Assessments\AiJobGeneration($this->jobs))->settleFinished((int) $started['job']['id']);
+
+        $note = db_connect()->table('notifications')->where('type', 'ai.questions_failed')->get()->getRowArray();
+
+        $this->assertNotNull($note);
+        $this->assertStringContainsString('used up', $note['body']);
+    }
+
+    public function testAJobWaitingTooLongSaysTheBuilderIsSlowToStart(): void
+    {
+        $started = $this->start();
+        $generation = new \App\Services\Courses\Assessments\AiJobGeneration($this->jobs);
+
+        $fresh = $generation->view($this->jobs->find((int) $started['job']['id']));
+        $this->assertFalse($fresh['stalled']);
+
+        db_connect()->table('ai_jobs')->where('id', $started['job']['id'])->update(['created_at' => date('Y-m-d H:i:s', time() - 300)]);
+
+        $late = $generation->view($this->jobs->find((int) $started['job']['id']));
+
+        $this->assertTrue($late['stalled']);
+        $this->assertStringContainsString('slow to start', $late['note']);
+    }
+
+    public function testOtherUnreviewedSetsAreCountedAndOldOnesAreLeftAlone(): void
+    {
+        $first = $this->start();
+        $this->finishJob($this->workerResult('h1'), (int) $first['job']['id']);
+        $this->service->getBatch((int) $first['batch']['id']);
+
+        $second = $this->start();
+        $this->jobs->claim('w2', self::T0 + 10);
+        $this->jobs->complete((int) $second['job']['id'], 'w2', $this->workerResult('h2'), self::T0 + 15);
+        $this->service->getBatch((int) $second['batch']['id']);
+
+        $pending = $this->service->pendingBatch($this->instructor, $this->quiz);
+
+        $this->assertSame((int) $second['batch']['id'], (int) $pending['batch']['id'], 'the newest set opens first');
+        $this->assertSame(1, $pending['other_sets']);
+
+        db_connect()->table('ai_generation_batches')->where('id', $first['batch']['id'])->update(['created_at' => date('Y-m-d H:i:s', time() - 20 * 86400)]);
+
+        $this->assertSame(0, $this->service->pendingBatch($this->instructor, $this->quiz)['other_sets']);
+    }
+
     public function testTheQuizsExistingQuestionsGoWithTheJob(): void
     {
         \Tests\Support\AssessmentFactory::question($this->quiz, $this->instructor, 'Essay', 1.0, ['question_text' => 'An existing question about routing?']);

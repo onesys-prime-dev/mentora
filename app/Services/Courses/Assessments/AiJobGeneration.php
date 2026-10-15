@@ -6,8 +6,11 @@ namespace App\Services\Courses\Assessments;
 
 use App\Models\Assessments\AiGeneratedQuestionModel;
 use App\Models\Assessments\AiGenerationBatchModel;
+use App\Models\Assessments\AssessmentModel;
+use DateTimeImmutable;
 use App\Services\AI\AiJobService;
 use App\Services\AI\SimilarityChecker;
+use App\Services\Notifications\NotificationService;
 use App\Services\Subscriptions\PlanLimits;
 
 /**
@@ -24,6 +27,12 @@ class AiJobGeneration
     public const DIGEST_DAYS = 30;
 
     private const EXISTING_QUESTIONS = 30;
+
+    /** A queued job older than this means the question builder is not picking work up. */
+    public const STALLED_AFTER_SECONDS = 90;
+
+    /** A set nobody reviewed for this long is left alone rather than reopened. */
+    public const PENDING_DAYS = 14;
 
     private const MESSAGES = [
         'free_quota'             => "Today's free allowance for AI questions is used up. It resets tomorrow, and nothing already made is lost.",
@@ -211,6 +220,7 @@ class AiJobGeneration
             ->where('created_by', $userId)
             ->where('replaces_question_id IS NULL', null, false)
             ->where('extends_batch_id IS NULL', null, false)
+            ->where('created_at >=', date('Y-m-d H:i:s', time() - self::PENDING_DAYS * 86400))
             ->whereIn('status', ['generating', 'completed'])
             ->orderBy('id', 'DESC')
             ->get(5)->getResultArray();
@@ -229,6 +239,33 @@ class AiJobGeneration
     }
 
     /**
+     * How many of the person's other sets for this quiz are waiting for
+     * review, besides the one shown.
+     */
+    public function otherWaiting(int $userId, int $assessmentId, int $exceptBatchId): int
+    {
+        $count = 0;
+
+        $rows = db_connect()->table('ai_generation_batches')
+            ->where('assessment_id', $assessmentId)
+            ->where('created_by', $userId)
+            ->where('id !=', $exceptBatchId)
+            ->where('replaces_question_id IS NULL', null, false)
+            ->where('extends_batch_id IS NULL', null, false)
+            ->where('status', 'completed')
+            ->where('created_at >=', date('Y-m-d H:i:s', time() - self::PENDING_DAYS * 86400))
+            ->get()->getResultArray();
+
+        foreach ($rows as $row) {
+            if ($this->questions->where('batch_id', (int) $row['id'])->where('status', 'pending')->countAllResults() > 0) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * @param array<string, mixed> $job
      *
      * @return array<string, mixed>
@@ -238,18 +275,74 @@ class AiJobGeneration
         $status = (string) $job['status'];
         $code   = $job['error_code'] ?? null;
 
+        $age     = isset($job['created_at']) ? time() - (int) strtotime((string) $job['created_at']) : 0;
+        $stalled = $status === AiJobService::QUEUED && $age >= self::STALLED_AFTER_SECONDS;
+
         return [
             'id'              => (int) $job['id'],
             'status'          => $status,
             'stage'           => $job['stage'],
             'done'            => (int) $job['progress_done'],
             'of'              => (int) $job['progress_of'],
-            'note'            => $status === AiJobService::QUEUED ? 'Waiting for the question builder' : $job['progress_note'],
+            'stalled'         => $stalled,
+            'note'            => $status === AiJobService::QUEUED
+                ? ($stalled ? 'The question builder is slow to start. Your request is saved and will run as soon as it is free' : 'Waiting for the question builder')
+                : $job['progress_note'],
             'waiting_seconds' => $job['waiting_seconds'] !== null ? (int) $job['waiting_seconds'] : null,
             'error_code'      => $code,
             'message'         => $status === AiJobService::FAILED ? $this->message((string) $code) : null,
             'retryable'       => in_array($code, ['provider_rate_limited', 'provider_error', 'provider_model_missing', 'worker_lost'], true),
         ];
+    }
+
+    /**
+     * A job finished (or failed) while nobody was watching: apply it now and
+     * tell the person who asked, so the questions are not found only by luck.
+     * Safe to run more than once: the batch is applied once and a person is
+     * told once per batch.
+     */
+    public function settleFinished(int $jobId, ?DateTimeImmutable $now = null): void
+    {
+        $row = db_connect()->table('ai_jobs')->where('id', $jobId)->get()->getRowArray();
+
+        if ($row === null || empty($row['batch_id']) || empty($row['created_by'])) {
+            return;
+        }
+
+        $batchId = (int) $row['batch_id'];
+
+        $this->sync($batchId);
+
+        $batch = $this->batches->find($batchId);
+
+        // Replacements and top-ups are watched in the tray that asked for them.
+        if (! $batch || ! empty($batch['replaces_question_id']) || ! empty($batch['extends_batch_id'])) {
+            return;
+        }
+
+        $institutionId = $row['institution_id'] !== null ? (int) $row['institution_id'] : null;
+        $offeringId    = $batch['assessment_id'] !== null ? (new AssessmentModel())->offeringIdOf((int) $batch['assessment_id']) : null;
+        $link          = $offeringId !== null ? "courses/{$offeringId}/assessments" : null;
+        $quiz          = $batch['assessment_id'] !== null ? (string) ((new AssessmentModel())->find((int) $batch['assessment_id'])['title'] ?? 'your quiz') : 'your quiz';
+        $notes         = new NotificationService();
+
+        if ($batch['status'] === 'completed' && (int) $batch['generated_count'] > 0) {
+            $n = (int) $batch['generated_count'];
+
+            $notes->send(
+                (int) $row['created_by'], 'ai.questions_ready',
+                $n === 1 ? '1 question is ready to review' : "{$n} questions are ready to review",
+                "Questions for \"{$quiz}\" are waiting in the review tray.",
+                false, "ai-batch-{$batchId}", $institutionId, $link, $now
+            );
+        } elseif ($batch['status'] === 'failed') {
+            $notes->send(
+                (int) $row['created_by'], 'ai.questions_failed',
+                'The AI questions could not be written',
+                $this->message((string) ($row['error_code'] ?? '')),
+                false, "ai-batch-{$batchId}", $institutionId, $link, $now
+            );
+        }
     }
 
     public function message(string $code): string

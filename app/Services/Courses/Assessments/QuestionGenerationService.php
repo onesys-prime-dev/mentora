@@ -292,7 +292,13 @@ class QuestionGenerationService
 
         $batch = $this->jobGeneration->pendingBatch((int) $user->id, $assessmentId);
 
-        return $batch === null ? null : $this->getBatch((int) $batch['id']);
+        if ($batch === null) {
+            return null;
+        }
+
+        return $this->getBatch((int) $batch['id']) + [
+            'other_sets' => $this->jobGeneration->otherWaiting((int) $user->id, $assessmentId, (int) $batch['id']),
+        ];
     }
 
     public function updateGeneratedQuestion(int $id, array $data): array
