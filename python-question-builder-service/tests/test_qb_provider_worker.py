@@ -220,3 +220,38 @@ def test_php_client_sends_the_secret_and_worker_id_and_refuses_bad_answers():
 
     with pytest.raises(PhpUnavailable):
         PhpClient("http://x", "s", "w", post=lambda *a: (_ for _ in ()).throw(OSError())).claim()
+
+
+def test_every_provider_call_sends_a_real_user_agent():
+    seen = {}
+
+    def transport(url, headers, body, timeout):
+        seen.update(headers)
+
+        return 200, {}, json.dumps(GOOD).encode()
+
+    OpenAICompatProvider("k", transport=transport).complete("m", "s", "u")
+
+    assert seen["User-Agent"].startswith("mentora-question-builder/")
+    assert "urllib" not in seen["User-Agent"].lower()
+
+
+def test_a_refusal_that_is_not_json_still_says_what_the_gateway_said():
+    provider = OpenAICompatProvider("k", transport=lambda *a: (403, {}, b"error code: 1010"))
+
+    with pytest.raises(ProviderAuth) as info:
+        provider.complete("m", "s", "u")
+
+    assert "1010" in info.value.message
+
+
+def test_a_failed_job_logs_its_code_and_reason(caplog):
+    def handler(j, ctx):
+        raise ProviderAuth("The provider refused the key.")
+
+    php = FakePhp([job()])
+
+    with caplog.at_level("WARNING", logger="qb.worker"):
+        Worker(php, {"generate": handler}).run_once()
+
+    assert "provider_auth" in caplog.text and "refused the key" in caplog.text
