@@ -88,8 +88,10 @@ class ModelPool:
             tried.append(model)
 
             try:
+                # The model's hidden reasoning is spent from the same budget as
+                # its answer; without room for both, the JSON is cut off.
                 completion = self.provider.complete(
-                    model, system, user, json_mode=json_mode, max_output_tokens=max_output_tokens
+                    model, system, user, json_mode=json_mode, max_output_tokens=max_output_tokens + REASONING_ALLOWANCE
                 )
             except ProviderRateLimited as exc:
                 self.governor.penalise(model, exc.retry_after, self.clock())

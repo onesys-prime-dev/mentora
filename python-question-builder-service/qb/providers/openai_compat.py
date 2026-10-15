@@ -83,6 +83,11 @@ class OpenAICompatProvider:
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
 
+        # Reasoning models think before they answer; a low effort keeps the
+        # thinking from using up the budget the JSON needs.
+        if "gpt-oss" in model:
+            payload["reasoning_effort"] = "low"
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -141,6 +146,12 @@ class OpenAICompatProvider:
 
         if status == 404:
             return ProviderModelMissing(detail or "The model is not available.")
+
+        # The model answered, but not with valid JSON (often cut off by its
+        # token budget). That is the model's fault, not the request's: another
+        # model, or another try, may do better.
+        if status == 400 and ("failed_generation" in detail or "validate JSON" in detail):
+            return ProviderError(detail or "The model did not produce valid JSON.")
 
         if status in (400, 413, 422):
             return InvalidRequest(detail or "The provider rejected the request.")

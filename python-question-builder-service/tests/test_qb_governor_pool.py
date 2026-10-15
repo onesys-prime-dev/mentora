@@ -159,3 +159,14 @@ def test_every_model_out_of_allowance_is_a_free_quota_failure():
         p.complete("s", "u")
 
     assert info.value.code == "free_quota"
+
+
+def test_the_provider_is_given_room_for_hidden_reasoning_on_top_of_the_answer():
+    from qb.pool import REASONING_ALLOWANCE
+
+    provider = FakeProvider(["{}"])
+    p, _, _ = pool(provider)
+
+    p.complete("s", "u", max_output_tokens=300)
+
+    assert provider.calls[0]["max_output_tokens"] == 300 + REASONING_ALLOWANCE
