@@ -94,7 +94,7 @@ def test_verification_is_blind_and_batched():
     assert [v.ok for v in result.verdicts] == [True, True, True]
     assert result.calls == 1
     assert "correct" not in sent.lower() and "is_correct" not in sent
-    assert "Fact: Routers forward packets." in sent
+    assert "- Routers forward packets." in sent
 
 
 def test_unreadable_verifier_output_fails_closed():
@@ -279,3 +279,24 @@ def test_page_markers_in_the_source_give_questions_their_real_page():
 
     assert result["questions"][0]["page"] == 4
     assert result["digest"]["window_count"] == 1
+
+
+def test_two_choices_the_facts_support_make_the_question_ambiguous_even_if_the_key_matches():
+    verdict = judge(mc(), {"choice": "A", "supported": ["A", "C"]})
+
+    assert not verdict.ok and verdict.reason == "ambiguous"
+
+
+def test_a_key_the_facts_do_not_support_is_a_disagreement():
+    assert judge(mc(), {"choice": "A", "supported": ["B"]}).reason == "solver_disagrees"
+    assert judge(mc(), {"choice": "A", "supported": ["A"]}).ok
+
+
+def test_the_verifier_sees_every_fact_of_the_concept_not_only_the_cited_one():
+    question = mc()
+    question.context_facts = ["Routers forward packets.", "Switches forward frames inside a network."]
+    provider, pool = make_pool([answers({"choice": "A", "supported": ["A"]})])
+
+    verify([question], pool)
+
+    assert "Switches forward frames inside a network." in provider.calls[0]["user"]

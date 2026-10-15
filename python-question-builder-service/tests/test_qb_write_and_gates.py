@@ -184,3 +184,104 @@ def test_the_prompt_carries_the_facts_and_the_avoid_list_but_the_facts_are_data(
     prompt = build_prompt(plan.assignments, ["An earlier question about routers?"])
 
     assert "[0.0.0]" in prompt and "earlier question" in prompt
+
+
+# ------------------------------------------------------------ supply and distractors
+
+
+def test_a_concept_with_several_facts_supplies_several_questions_spread_across_concepts():
+    concepts = [
+        {"id": "c1", "name": "A", "facts": [{"id": "a1", "text": "Alpha one", "page": 1}, {"id": "a2", "text": "Alpha two", "page": 1}, {"id": "a3", "text": "Alpha three", "page": 1}]},
+        {"id": "c2", "name": "B", "facts": [{"id": "b1", "text": "Beta one", "page": 2}, {"id": "b2", "text": "Beta two", "page": 2}]},
+    ]
+
+    plan = make_plan(concepts, 5, {"multiple_choice": 5})
+
+    assert [a.fact["id"] for a in plan.assignments] == ["a1", "b1", "a2", "b2", "a3"]
+    assert plan.shortfall == 0
+
+
+def test_the_plan_is_still_short_only_when_the_facts_run_out():
+    concepts = [{"id": "c1", "name": "A", "facts": [{"id": "a1", "text": "Alpha one", "page": 1}]}]
+
+    plan = make_plan(concepts, 4, {"multiple_choice": 4})
+
+    assert len(plan.assignments) == 1 and plan.shortfall == 3
+
+
+def test_a_covered_fact_is_skipped_but_its_concept_still_supplies_its_other_facts():
+    concepts = [{"id": "c1", "name": "A", "facts": [
+        {"id": "a1", "text": "Routers forward packets using the destination address", "page": 1},
+        {"id": "a2", "text": "Switches forward frames inside one network segment", "page": 1}]}]
+
+    plan = make_plan(concepts, 2, {"multiple_choice": 2}, ["Which device forwards packets using the destination address?"])
+
+    assert [a.fact["id"] for a in plan.assignments] == ["a2"] and plan.skipped_covered == 1
+
+
+def test_a_wrong_choice_that_is_another_true_statement_from_the_facts_is_dropped():
+    facts = {"f": {"id": "f", "text": "Fixed-point data types are convenient for representing monetary values and are often implemented as integers.", "page": 1}}
+    question = Question(
+        "Multiple Choice", "Which statement correctly describes floating-point data types?", "c", fact_id="f",
+        choices=[
+            Choice("Floating-point types represent fractional values with limited precision", True),
+            Choice("Fixed-point data types are convenient for representing monetary values and are often implemented internally as integers", False),
+            Choice("They always store whole numbers exactly", False),
+            Choice("They cannot be used in arithmetic", False),
+        ],
+    )
+
+    assert "mc_distractor_is_a_fact" in gates.check(question, facts)
+
+
+def test_a_false_or_negated_choice_that_borrows_the_facts_words_is_kept():
+    facts = {"f": {"id": "f", "text": "TCP provides reliable ordered delivery using acknowledgements and retransmission.", "page": 1}}
+    question = Question(
+        "Multiple Choice", "What does TCP provide?", "c", fact_id="f",
+        choices=[
+            Choice("Reliable ordered delivery using acknowledgements", True),
+            Choice("Unreliable unordered delivery without acknowledgements or retransmission", False),
+            Choice("Encryption of every packet", False),
+            Choice("Routing between networks", False),
+        ],
+    )
+
+    assert "mc_distractor_is_a_fact" not in gates.check(question, facts)
+
+
+def test_the_writing_prompt_names_the_assigned_fact_and_marks_the_others_as_context():
+    concept = {"id": "c1", "name": "TCP", "facts": [
+        {"id": "f1", "text": "TCP is reliable", "page": 1}, {"id": "f2", "text": "TCP is ordered", "page": 1}]}
+    plan = make_plan([concept], 2, {"multiple_choice": 2})
+
+    prompt = build_prompt(plan.assignments[:1], [])
+
+    assert "about this fact" in prompt and "[f1] TCP is reliable" in prompt
+    assert "never use one as a wrong choice" in prompt and "TCP is ordered" in prompt
+
+
+def test_a_citation_of_a_real_fact_from_another_concept_is_dropped():
+    c1 = {"id": "0.0", "name": "Routing", "facts": [FACTS["0.0.0"]]}
+    c2 = {"id": "0.1", "name": "TCP", "facts": [FACTS["0.1.0"]]}
+    plan = make_plan([c1, c2], 1, {"multiple_choice": 1})
+    item = dict(GOOD_MC, concept_id="0.0", fact_id="0.1.0")
+    _, pool = make_pool([json.dumps({"questions": [item]})])
+
+    result = write_questions(plan.assignments, FACTS, pool)
+
+    assert result.questions == [] and result.dropped["wrong_fact"] == 1
+
+
+def test_a_negated_copy_of_a_fact_is_a_false_statement_and_is_kept():
+    facts = {"f": {"id": "f", "text": "TCP provides reliable ordered delivery using acknowledgements and retransmission.", "page": 1}}
+    question = Question(
+        "Multiple Choice", "What does TCP provide?", "c", fact_id="f",
+        choices=[
+            Choice("Reliable ordered delivery", True),
+            Choice("TCP does not provide reliable ordered delivery using acknowledgements and retransmission", False),
+            Choice("Encryption of every packet", False),
+            Choice("Routing between networks", False),
+        ],
+    )
+
+    assert "mc_distractor_is_a_fact" not in gates.check(question, facts)

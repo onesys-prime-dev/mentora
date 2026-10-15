@@ -5,7 +5,7 @@ and a failing case."""
 import re
 import statistics
 
-from .questions import ESSAY, FILE_UPLOAD, MULTIPLE_CHOICE, SHORT_ANSWER, Question, normalise, overlap
+from .questions import ESSAY, FILE_UPLOAD, MULTIPLE_CHOICE, SHORT_ANSWER, Question, content_words, normalise, overlap
 
 DUPLICATE_OVERLAP = 0.75
 SHORT_ANSWER_MAX_WORDS = 8
@@ -25,7 +25,7 @@ def check(question: Question, facts: dict[str, dict], seen_texts: list[str] | No
         return ["empty_text"]
 
     if question.type == MULTIPLE_CHOICE:
-        reasons += _multiple_choice(question)
+        reasons += _multiple_choice(question, facts)
     elif question.type == SHORT_ANSWER:
         reasons += _short_answer(question)
     elif question.type in (ESSAY, FILE_UPLOAD):
@@ -43,7 +43,24 @@ def check(question: Question, facts: dict[str, dict], seen_texts: list[str] | No
     return reasons
 
 
-def _multiple_choice(q: Question) -> list[str]:
+# A wrong choice made only of words from one source fact is another true
+# statement, not a wrong answer: the question then has two right choices.
+DISTRACTOR_MIN_WORDS = 5
+DISTRACTOR_RESTATES = 0.85
+_NEGATIONS = {"not", "no", "never", "cannot", "without", "neither", "nor", "none", "unable"}
+
+
+def _restates(choice_words: set[str], fact_words: set[str]) -> bool:
+    """Nearly all of the choice's words are the fact's, and it does not turn
+    the fact around with a negation the fact does not have."""
+
+    if len(choice_words & fact_words) / len(choice_words) < DISTRACTOR_RESTATES:
+        return False
+
+    return (choice_words & _NEGATIONS) <= (fact_words & _NEGATIONS)
+
+
+def _multiple_choice(q: Question, facts: dict[str, dict]) -> list[str]:
     reasons = []
     texts = [c.text.strip() for c in q.choices]
 
@@ -63,6 +80,18 @@ def _multiple_choice(q: Question) -> list[str]:
 
     if _POSITIONAL.search(q.text) or any(_POSITIONAL.search(t) for t in texts):
         reasons.append("mc_positional")
+
+    fact_words = [content_words(f["text"]) for f in facts.values()]
+
+    for choice in q.choices:
+        if choice.is_correct:
+            continue
+
+        words = content_words(choice.text)
+
+        if len(words) >= DISTRACTOR_MIN_WORDS and any(_restates(words, known) for known in fact_words):
+            reasons.append("mc_distractor_is_a_fact")
+            break
 
     answer = normalise(correct[0].text)
 

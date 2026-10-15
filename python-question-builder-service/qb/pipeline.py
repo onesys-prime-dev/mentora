@@ -182,7 +182,7 @@ def make_generate_handler(pool: ModelPool):
         needed = math.ceil(count * CONCEPT_MARGIN)
 
         ctx.progress(stage="digest", done=0, of=1, note="Finding the key ideas")
-        digest = build_digest(pages, pool, store, needed_concepts=needed, rotation=int(payload.get("rotation", 0)))
+        digest = build_digest(pages, pool, store, needed_facts=needed, rotation=int(payload.get("rotation", 0)))
 
         ctx.progress(stage="plan", done=0, of=count, note="Choosing what to ask about")
         plan = make_plan(digest.concepts(), count, type_mix, existing)
