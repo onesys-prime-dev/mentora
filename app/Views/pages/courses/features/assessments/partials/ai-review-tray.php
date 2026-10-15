@@ -79,6 +79,19 @@
         </span>
     </div>
 
+    <div data-ai-tray-coverage class="hidden flex-col gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs text-gray-700">
+        <span class="font-semibold text-gray-800">Questions per reading</span>
+        <ul data-ai-tray-coverage-list class="flex flex-col gap-0.5"></ul>
+        <p data-ai-tray-truncated class="hidden text-amber-800">This unit is very long, so only the first part was read.</p>
+    </div>
+
+    <div data-ai-tray-shortfall class="hidden flex-col gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+        <span data-ai-tray-shortfall-text></span>
+        <button type="button" data-ai-tray-top-up class="self-start rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+            Write more
+        </button>
+    </div>
+
     <p data-ai-tray-message role="status" class="hidden rounded-xl bg-white px-3 py-2 text-xs font-medium text-gray-700"></p>
 
     <div data-ai-tray-list class="flex flex-col gap-2"></div>

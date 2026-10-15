@@ -935,6 +935,29 @@ export async function discardGeneratedQuestion(offeringId, generatedQuestionId) 
 
 }
 
+/** Asks for more questions to add to a finished set. */
+export async function topUpGeneration(offeringId, batchId, count) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/top-up`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ count }),
+        }
+    );
+
+    try {
+        return await response.json();
+    } catch {
+        throw new Error("Unable to ask for more questions.");
+    }
+
+}
+
 /**
  * Writes a different question in place of a staged one.
  *

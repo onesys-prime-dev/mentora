@@ -216,6 +216,8 @@ class LearningUnitContentExtractor
             'skipped' => $skipped,
             'failure' => $failure,
             'items' => $readItems,
+            // The unit was longer than is read at once: the rest was left out.
+            'truncated' => $length >= self::MAX_SOURCE_LENGTH,
         ];
     }
 

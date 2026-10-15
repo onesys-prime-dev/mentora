@@ -77,3 +77,40 @@ describe("replace choices", () => {
     });
 
 });
+
+import { coverageRows, shortfallText } from "../../../resources/js/pages/courses/features/assessments/ai-generation/review-helpers.js";
+
+describe("shortfallText", () => {
+
+    it("says nothing when nothing is missing", () => {
+        expect(shortfallText({ missing: 0, reasons: [], not_enough_material: false })).toBe("");
+        expect(shortfallText(undefined)).toBe("");
+    });
+
+    it("names what is missing and why, in plain words", () => {
+        const text = shortfallText({
+            missing: 3,
+            reasons: [{ count: 2, text: "a second check did not agree with the marked answer" }, { count: 1, text: "it repeated another question" }],
+            not_enough_material: true,
+        });
+
+        expect(text).toBe(
+            "3 questions are missing: there was not enough distinct material to write more; "
+            + "2 were dropped because a second check did not agree with the marked answer; "
+            + "1 was dropped because it repeated another question."
+        );
+    });
+
+});
+
+describe("coverageRows", () => {
+
+    it("says how many questions came from each reading and flags the empty ones", () => {
+        expect(coverageRows([{ title: "Routing", count: 5 }, { title: "Slides", count: 0 }, { title: "One", count: 1 }])).toEqual([
+            { title: "Routing", text: "5 questions", empty: false },
+            { title: "Slides", text: "no questions", empty: true },
+            { title: "One", text: "1 question", empty: false },
+        ]);
+    });
+
+});

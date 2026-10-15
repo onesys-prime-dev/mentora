@@ -185,7 +185,7 @@ final class LearningUnitContentExtractorTest extends DatabaseTestCase
 
     public function testAnEmptyUnitGivesNothing(): void
     {
-        $this->assertSame(['text' => '', 'skipped' => [], 'failure' => null, 'items' => []], $this->extract());
+        $this->assertSame(['text' => '', 'skipped' => [], 'failure' => null, 'items' => [], 'truncated' => false], $this->extract());
     }
 
     public function testTheTextIsCutAtTheSourceLimitAndLaterItemsAreNotRead(): void

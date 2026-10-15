@@ -210,6 +210,7 @@ class AiJobGeneration
             ->where('assessment_id', $assessmentId)
             ->where('created_by', $userId)
             ->where('replaces_question_id IS NULL', null, false)
+            ->where('extends_batch_id IS NULL', null, false)
             ->whereIn('status', ['generating', 'completed'])
             ->orderBy('id', 'DESC')
             ->get(5)->getResultArray();
@@ -315,7 +316,10 @@ class AiJobGeneration
             $count++;
         }
 
-        $this->batches->update($batchId, ['generated_count' => $count]);
+        $this->batches->update($batchId, [
+            'generated_count' => $count,
+            'diagnostics'     => $this->mergedDiagnostics($batch, $result),
+        ]);
 
         $this->settleReplacement($batch, $count);
 
@@ -338,6 +342,14 @@ class AiJobGeneration
      */
     public function settleReplacement(array $batch, int $inserted): void
     {
+        // A top-up adds its questions to the batch it extends.
+        if (! empty($batch['extends_batch_id']) && $inserted > 0) {
+            $this->questions->where('batch_id', (int) $batch['id'])->set(['batch_id' => (int) $batch['extends_batch_id']])->update();
+            $this->batches->where('id', (int) $batch['extends_batch_id'])->set('generated_count', 'generated_count + ' . $inserted, false)->update();
+
+            return;
+        }
+
         if (empty($batch['replaces_question_id']) || $inserted < 1) {
             return;
         }
@@ -424,6 +436,29 @@ class AiJobGeneration
         $texts = array_map(static fn (array $r): string => mb_substr((string) $r['question_text'], 0, 160), array_merge($replaced, $live, $staged));
 
         return array_values(array_unique($texts));
+    }
+
+    /**
+     * What the start of the batch noted (a unit too long to read whole) with
+     * what the worker reports back: coverage, what was dropped and why.
+     *
+     * @param array<string, mixed> $batch
+     * @param array<string, mixed> $result
+     */
+    private function mergedDiagnostics(array $batch, array $result): string
+    {
+        $before = json_decode((string) ($batch['diagnostics'] ?? ''), true);
+        $before = is_array($before) ? $before : [];
+        $worker = is_array($result['diagnostics'] ?? null) ? $result['diagnostics'] : [];
+
+        return (string) json_encode($before + [
+            'dropped'     => is_array($worker['dropped'] ?? null) ? $worker['dropped'] : [],
+            'coverage'    => is_array($worker['coverage'] ?? null) ? $worker['coverage'] : [],
+            'topped_up'   => (int) ($worker['topped_up'] ?? 0),
+            'regenerated' => (int) ($worker['regenerated'] ?? 0),
+            'stop_reason' => (string) ($result['stop_reason'] ?? ''),
+            'notes'       => array_values(array_map('strval', (array) ($result['notes'] ?? []))),
+        ]);
     }
 
     /**

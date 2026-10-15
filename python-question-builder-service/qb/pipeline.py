@@ -253,6 +253,45 @@ def make_generate_handler(pool: ModelPool):
         assignments = {a.concept["id"]: a for a in plan.assignments}
         checked = check_questions(written.questions, assignments, facts, pool, existing + [q.text for q in written.questions])
 
+        # Short of the number asked for: write the rest from facts that were
+        # never used, once. A question that failed its check is not retried
+        # here (its fact already produced one); only unused facts are.
+        topped_up = 0
+
+        if len(checked.accepted) < count:
+            used = {a.fact["id"] for a in plan.assignments if a.fact}
+            spare = []
+
+            for concept in concepts:
+                rest = [f for f in concept["facts"] if f["id"] not in used]
+
+                if rest:
+                    spare.append({**concept, "facts": rest})
+
+            missing = count - len(checked.accepted)
+            seen = existing + [q.text for q in checked.accepted]
+            more_plan = make_plan(spare, missing, type_mix, seen) if spare else None
+
+            if more_plan is not None and more_plan.assignments:
+                ctx.progress(stage="write", done=0, of=len(more_plan.assignments), note="Writing a few more questions")
+                more_written = write_questions(
+                    more_plan.assignments, facts, pool, seen_texts=seen,
+                    instruction=str(payload.get("instruction") or ""),
+                    choice_count=choice_count_from(payload),
+                )
+                more_by_concept = {a.concept["id"]: a for a in more_plan.assignments}
+                more_checked = check_questions(
+                    more_written.questions, more_by_concept, facts, pool, seen + [q.text for q in more_written.questions]
+                )
+
+                topped_up = len(more_checked.accepted)
+                checked.accepted.extend(more_checked.accepted)
+                checked.dropped.update(more_checked.dropped)
+                checked.tokens_in += more_written.tokens_in + more_checked.tokens_in
+                checked.tokens_out += more_written.tokens_out + more_checked.tokens_out
+                checked.calls += more_written.calls + more_checked.calls
+                written.dropped.update(more_written.dropped)
+
         shuffle_choices(checked.accepted, int(payload.get("seed", 0)))
 
         model = pool.models[0]
@@ -264,9 +303,17 @@ def make_generate_handler(pool: ModelPool):
         dropped = Counter(written.dropped) + checked.dropped
         produced = len(checked.accepted)
 
+        by_item: Counter = Counter(q.source_item_id for q in checked.accepted if q.source_item_id is not None)
+        coverage = [
+            {"item_id": item.get("id"), "title": str(item.get("title", "")), "count": by_item.get(item.get("id"), 0)}
+            for item in items
+        ]
+
         diagnostics = {
             "requested": count,
             "produced": produced,
+            "topped_up": topped_up,
+            "coverage": coverage,
             "dropped": dict(dropped),
             "regenerated": checked.regenerated,
             "calls": calls + written.calls + checked.calls,

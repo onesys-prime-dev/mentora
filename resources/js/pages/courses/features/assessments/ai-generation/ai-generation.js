@@ -17,11 +17,12 @@ import {
     discardGeneratedQuestion,
     acceptAllGeneratedQuestions,
     replaceGeneratedQuestion,
+    topUpGeneration,
 } from "../api.js";
 
 import { insertLiveQuestionCard } from "../questions/questions.js";
 
-import { acceptCounts, acceptReport, cardChips, otherTypes, REPLACE_CHOICES, sourceLine } from "./review-helpers.js";
+import { acceptCounts, acceptReport, cardChips, coverageRows, otherTypes, REPLACE_CHOICES, shortfallText, sourceLine } from "./review-helpers.js";
 import { DEFAULTS, fineTuneSummary, recall, remember } from "./generate-settings.js";
 
 import {
@@ -923,9 +924,62 @@ function renderBatch(result) {
 
     updateProgress(result.batch);
 
+    renderCoverage(result);
+
     refreshAcceptButtons();
 
     updateStoppedEarlyBanner(result.stopped_early, result.batch);
+
+}
+
+/** Which readings the questions came from, and why fewer came back than asked for. */
+function renderCoverage(result) {
+
+    const box = document.querySelector("[data-ai-tray-coverage]");
+    const list = document.querySelector("[data-ai-tray-coverage-list]");
+
+    if (box && list) {
+
+        const rows = coverageRows(result.coverage);
+
+        list.replaceChildren();
+
+        rows.forEach((row) => {
+
+            const item = document.createElement("li");
+
+            item.textContent = `${row.title}: ${row.text}`;
+            item.className = row.empty ? "text-amber-800" : "";
+            list.appendChild(item);
+
+        });
+
+        const show = rows.length > 1 || result.truncated;
+
+        box.classList.toggle("hidden", !show);
+        box.classList.toggle("flex", show);
+
+        document.querySelector("[data-ai-tray-truncated]")?.classList.toggle("hidden", !result.truncated);
+
+    }
+
+    const block = document.querySelector("[data-ai-tray-shortfall]");
+    const text = shortfallText(result.shortfall);
+
+    if (block) {
+
+        block.classList.toggle("hidden", text === "");
+        block.classList.toggle("flex", text !== "");
+        document.querySelector("[data-ai-tray-shortfall-text]").textContent = text;
+
+        const button = document.querySelector("[data-ai-tray-top-up]");
+
+        if (button && result.shortfall) {
+            button.dataset.count = String(result.shortfall.missing);
+            button.textContent = `Write ${result.shortfall.missing} more`;
+        }
+
+    }
 
 }
 
@@ -1539,6 +1593,66 @@ function bindTrayActions() {
         }
 
     }
+
+    document
+        .querySelector("[data-ai-tray-top-up]")
+        ?.addEventListener("click", async (event) => {
+
+            const button = event.currentTarget;
+            const count = Number(button.dataset.count || 0);
+
+            if (!activeBatchId || count < 1) {
+                return;
+            }
+
+            const label = button.textContent;
+
+            button.disabled = true;
+            button.textContent = "Writing...";
+
+            try {
+
+                let result = await topUpGeneration(state.offeringId, activeBatchId, count);
+
+                if (!result.success) {
+
+                    showTrayMessage(result.message || "More questions could not be written. Try again.");
+
+                    return;
+
+                }
+
+                const extension = result.batch_id;
+
+                for (let attempt = 0; result.batch.status === "generating" && attempt < JOB_POLL_LIMIT; attempt++) {
+
+                    await wait(JOB_POLL_MS);
+
+                    result = await fetchGenerationBatch(state.offeringId, extension);
+
+                }
+
+                // The new questions now sit in the original set.
+                const original = await fetchGenerationBatch(state.offeringId, activeBatchId);
+
+                renderBatch(original);
+
+                showTrayMessage("");
+
+            } catch (error) {
+
+                console.error(error);
+
+                showTrayMessage("More questions could not be written. Check your connection and try again.");
+
+            } finally {
+
+                button.disabled = false;
+                button.textContent = label;
+
+            }
+
+        });
 
     document
         .querySelector("[data-ai-tray-accept-all]")

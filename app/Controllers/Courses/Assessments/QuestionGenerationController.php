@@ -177,6 +177,19 @@ class QuestionGenerationController extends BaseController
         return $this->response->setStatusCode($result['success'] ? 200 : 422)->setJSON($result);
     }
 
+    /** Asks for more questions to add to a finished set. */
+    public function topUp(int $offeringId, int $batchId)
+    {
+        $this->ownBatch($offeringId, $batchId);
+
+        $body = $this->request->getJSON(true);
+        $count = is_array($body) ? (int) ($body['count'] ?? 0) : 0;
+
+        $result = $this->generationService->topUp(auth()->user(), $batchId, $count);
+
+        return $this->response->setStatusCode($result['success'] ? 200 : 422)->setJSON($result);
+    }
+
     public function discardQuestion(int $offeringId, int $generatedQuestionId)
     {
         $this->ownQuestion($offeringId, $generatedQuestionId);

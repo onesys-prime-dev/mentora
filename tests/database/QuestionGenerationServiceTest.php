@@ -640,6 +640,67 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
         $asked = $this->generator->calls[count($this->generator->calls) - 1];
         $this->assertSame(['essay' => 1], $asked['type_mix']);
     }
+    /*
+    |--------------------------------------------------------------------------
+    | Asking for more
+    |--------------------------------------------------------------------------
+    */
+
+    public function testMoreQuestionsAreWrittenIntoTheSameSet(): void
+    {
+        $this->generator->chunk = 1;
+        $started = $this->start(['count' => 3]);
+        $batchId = (int) $started['batch']['id'];
+
+        // The set ended short: one of three.
+        $this->service->nextChunk($batchId);
+        db_connect()->table('ai_generation_batches')->where('id', $batchId)->update(['status' => 'completed']);
+
+        $this->generator->chunk = 2;
+        $result = $this->service->topUp($this->instructor, $batchId, 2);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($batchId, $result['extends']);
+
+        $pending = db_connect()->table('ai_generated_questions')->where('batch_id', $batchId)->where('status', 'pending')->countAllResults();
+        $this->assertGreaterThanOrEqual(3, $pending, 'the new questions sit in the original set');
+    }
+
+    public function testAnUnfinishedOrUnknownSetCannotBeToppedUp(): void
+    {
+        $this->generator->chunk = 1;
+        $started = $this->start(['count' => 3]);
+
+        $this->assertFalse($this->service->topUp($this->instructor, (int) $started['batch']['id'], 2)['success'], 'still generating');
+        $this->assertFalse($this->service->topUp($this->instructor, 999999, 2)['success']);
+    }
+
+    public function testASetSaysWhatIsMissingAndWhy(): void
+    {
+        $this->generator->chunk = 1;
+        $started = $this->start(['count' => 3]);
+        $batchId = (int) $started['batch']['id'];
+
+        db_connect()->table('ai_generation_batches')->where('id', $batchId)->update([
+            'status' => 'completed', 'generated_count' => 1,
+            'diagnostics' => json_encode([
+                'dropped' => ['solver_disagrees' => 1, 'mc_choice_count' => 1],
+                'coverage' => [['item_id' => 1, 'title' => 'Planets', 'count' => 1]],
+                'stop_reason' => 'exhausted_topic', 'truncated' => true,
+            ]),
+        ]);
+
+        $view = $this->service->getBatch($batchId);
+
+        $this->assertSame(2, $view['shortfall']['missing']);
+        $this->assertTrue($view['shortfall']['not_enough_material']);
+        $this->assertTrue($view['truncated']);
+        $this->assertSame('Planets', $view['coverage'][0]['title']);
+
+        $texts = array_column($view['shortfall']['reasons'], 'text');
+        $this->assertContains('a second check did not agree with the marked answer', $texts);
+        $this->assertContains('it did not meet the question rules', $texts);
+    }
 }
 
 /** A stand-in for the question generator that hands back canned questions. */

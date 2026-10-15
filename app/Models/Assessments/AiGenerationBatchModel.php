@@ -33,5 +33,7 @@ class AiGenerationBatchModel extends Model
         'replaces_question_id',
         'instruction',
         'options',
+        'diagnostics',
+        'extends_batch_id',
     ];
 }

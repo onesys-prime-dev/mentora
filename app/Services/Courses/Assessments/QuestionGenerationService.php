@@ -189,6 +189,7 @@ class QuestionGenerationService
             'source_items' => json_encode($extracted['items'], JSON_UNESCAPED_UNICODE),
             'type_mix' => ($mix = GenerationOptions::typeMix($data['type_mix'] ?? null)) !== null ? json_encode($mix) : null,
             'options' => json_encode(GenerationOptions::normalise($data['options'] ?? null)),
+            'diagnostics' => ! empty($extracted['truncated']) ? json_encode(['truncated' => true]) : null,
             'requested_count' => $data['count'] ?? 10,
             'generated_count' => 0,
             'points_per_question' => $data['points_per_question'] ?? null,
@@ -282,6 +283,11 @@ class QuestionGenerationService
         foreach ($this->batchModel->where('assessment_id', $assessmentId)->where('created_by', (int) $user->id)
             ->where('replaces_question_id IS NOT NULL', null, false)->where('status', 'generating')->findAll() as $replacement) {
             $this->jobGeneration->sync((int) $replacement['id']);
+        }
+
+        foreach ($this->batchModel->where('assessment_id', $assessmentId)->where('created_by', (int) $user->id)
+            ->where('extends_batch_id IS NOT NULL', null, false)->where('status', 'generating')->findAll() as $extension) {
+            $this->jobGeneration->sync((int) $extension['id']);
         }
 
         $batch = $this->jobGeneration->pendingBatch((int) $user->id, $assessmentId);
@@ -810,7 +816,132 @@ class QuestionGenerationService
             'stopped_early' => $batch['status'] === 'completed'
                 && (int) $batch['generated_count'] < (int) $batch['requested_count'],
             'questions' => $this->reviewList($batch),
+        ] + $this->shortfallView($batch);
+    }
+
+    /** What each worker drop code means to a teacher. */
+    private const DROP_WORDS = [
+        'solver_disagrees' => 'a second check did not agree with the marked answer',
+        'ambiguous'        => 'more than one choice could be right',
+        'no_answer'        => 'a second check could not answer it',
+        'math_mismatch'    => 'the answer did not match the calculation',
+        'duplicate'        => 'it repeated another question',
+        'ungrounded'       => 'it was not found in the material',
+        'wrong_fact'       => 'it was not about the idea it was meant for',
+        'wrong_concept'    => 'it was not about the idea it was meant for',
+        'regeneration_failed_gates' => 'its second attempt did not meet the question rules',
+    ];
+
+    /**
+     * Coverage per item and, when fewer came back than were asked for, why
+     * and whether more can be asked for.
+     *
+     * @param array<string, mixed> $batch
+     *
+     * @return array<string, mixed>
+     */
+    private function shortfallView(array $batch): array
+    {
+        $diagnostics = json_decode((string) ($batch['diagnostics'] ?? ''), true);
+        $diagnostics = is_array($diagnostics) ? $diagnostics : [];
+
+        $missing = max(0, (int) $batch['requested_count'] - (int) $batch['generated_count']);
+        $reasons = [];
+
+        foreach ((array) ($diagnostics['dropped'] ?? []) as $code => $count) {
+            if ((int) $count < 1) {
+                continue;
+            }
+
+            $word = self::DROP_WORDS[$code] ?? (str_starts_with((string) $code, 'mc_') || str_starts_with((string) $code, 'sa_') || str_starts_with((string) $code, 'tf_') || str_starts_with((string) $code, 'ma_')
+                ? 'it did not meet the question rules' : 'it did not pass the checks');
+            $reasons[$word] = ($reasons[$word] ?? 0) + (int) $count;
+        }
+
+        $why = [];
+
+        foreach ($reasons as $word => $count) {
+            $why[] = ['count' => $count, 'text' => $word];
+        }
+
+        $exhausted = ($diagnostics['stop_reason'] ?? '') === 'exhausted_topic';
+
+        return [
+            'coverage' => array_values((array) ($diagnostics['coverage'] ?? [])),
+            'truncated' => ! empty($diagnostics['truncated']),
+            'topped_up' => (int) ($diagnostics['topped_up'] ?? 0),
+            'shortfall' => [
+                'missing' => $batch['status'] === 'completed' ? $missing : 0,
+                'reasons' => $why,
+                'not_enough_material' => $exhausted,
+            ],
         ];
+    }
+
+    /**
+     * Asks for more questions to add to a finished batch: a new job from the
+     * same material and settings, whose questions land in the same tray. The
+     * material that was already used is avoided, so it reaches other parts.
+     *
+     * @return array<string, mixed>
+     */
+    public function topUp(User $user, int $batchId, int $count): array
+    {
+        $original = $this->batchModel->find($batchId);
+
+        if (! $original || $original['status'] !== 'completed') {
+            return ['success' => false, 'message' => 'That set is not ready for more questions.'];
+        }
+
+        $missing = (int) $original['requested_count'] - (int) $original['generated_count'];
+
+        if ($count < 1) {
+            return ['success' => false, 'message' => 'Choose how many more questions to write.'];
+        }
+
+        $count = min($count, 100);
+
+        if (! $this->generationEnabled($user)) {
+            return ['success' => false, 'code' => 'disabled', 'message' => 'AI question generation is turned off for your institution.'];
+        }
+
+        $blocked = (new PlanLimits())->generationBlock($user, $count);
+
+        if ($blocked !== null) {
+            return ['success' => false, 'message' => $blocked];
+        }
+
+        $this->batchModel->insert([
+            'assessment_id'       => $original['assessment_id'],
+            'course_id'           => $original['course_id'],
+            'source_type'         => 'learning_unit',
+            'learning_unit_id'    => $original['learning_unit_id'],
+            'source_text'         => $original['source_text'],
+            'source_items'        => $original['source_items'],
+            'type_mix'            => $original['type_mix'],
+            'options'             => $original['options'],
+            'requested_count'     => $count,
+            'generated_count'     => 0,
+            'points_per_question' => $original['points_per_question'],
+            'status'              => 'generating',
+            'created_by'          => $user->id,
+            'created_at'          => date('Y-m-d H:i:s'),
+            'extends_batch_id'    => $batchId,
+        ]);
+
+        $newId = (int) $this->batchModel->getInsertID();
+
+        $this->audit($user, 'ai.batch.topped_up', $newId, ['extends' => $batchId, 'requested' => $count, 'missing' => $missing]);
+
+        if ($this->useJobs) {
+            $this->jobGeneration->enqueue($this->batchModel->find($newId), (int) $user->id);
+        } else {
+            $this->generateChunk($newId);
+            $done = $this->batchModel->find($newId);
+            $this->jobGeneration->settleReplacement($done, (int) $done['generated_count']);
+        }
+
+        return $this->getBatch($newId) + ['extends' => $batchId, 'batch_id' => $newId];
     }
 
     /**

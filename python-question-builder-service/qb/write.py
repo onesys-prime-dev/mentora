@@ -93,6 +93,60 @@ def build_prompt(
     return text
 
 
+def _salvage(raw: str) -> list[dict]:
+    """The complete question objects of a reply that was cut off: an answer
+    that stopped in the middle of its fourth question still has three good
+    ones, which are kept rather than lost with the rest."""
+
+    marker = raw.find('"questions"')
+    bracket = raw.find("[", marker if marker >= 0 else 0)
+
+    if bracket < 0:
+        return []
+
+    found: list[dict] = []
+    depth = 0
+    start = -1
+    in_string = False
+    escaped = False
+
+    for index in range(bracket + 1, len(raw)):
+        char = raw[index]
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            if depth == 0:
+                start = index
+
+            depth += 1
+        elif char == "}" and depth > 0:
+            depth -= 1
+
+            if depth == 0 and start >= 0:
+                try:
+                    item = json.loads(raw[start : index + 1])
+                except ValueError:
+                    item = None
+
+                if isinstance(item, dict):
+                    found.append(item)
+
+                start = -1
+
+    return found
+
+
 def parse_questions(raw: str) -> list[dict]:
     start, end = raw.find("{"), raw.rfind("}")
 
@@ -102,7 +156,7 @@ def parse_questions(raw: str) -> list[dict]:
     try:
         value = json.loads(raw[start : end + 1])
     except ValueError:
-        return []
+        return _salvage(raw)
 
     items = value.get("questions") if isinstance(value, dict) else None
 

@@ -74,6 +74,49 @@ export function sourceLine(question) {
 
 }
 
+/**
+ * What to say under the tray when fewer questions came back than asked for.
+ *
+ * @param {{missing: number, reasons: {count: number, text: string}[], not_enough_material: boolean}} shortfall
+ * @returns {string} empty when nothing is missing
+ */
+export function shortfallText(shortfall) {
+
+    if (!shortfall || shortfall.missing < 1) {
+        return "";
+    }
+
+    const asked = shortfall.missing === 1 ? "1 question is missing" : `${shortfall.missing} questions are missing`;
+    const parts = [];
+
+    if (shortfall.not_enough_material) {
+        parts.push("there was not enough distinct material to write more");
+    }
+
+    shortfall.reasons.forEach((reason) => {
+        parts.push(`${reason.count} ${reason.count === 1 ? "was dropped because" : "were dropped because"} ${reason.text}`);
+    });
+
+    return parts.length === 0 ? `${asked}.` : `${asked}: ${parts.join("; ")}.`;
+
+}
+
+/**
+ * One line per selected item: how many questions came from it.
+ *
+ * @param {{title: string, count: number}[]} coverage
+ * @returns {{title: string, text: string, empty: boolean}[]}
+ */
+export function coverageRows(coverage) {
+
+    return (coverage || []).map((row) => ({
+        title: row.title || "Untitled",
+        text: row.count === 0 ? "no questions" : `${row.count} ${row.count === 1 ? "question" : "questions"}`,
+        empty: row.count === 0,
+    }));
+
+}
+
 /** The ways a staged question can be replaced, in the order the menu shows them. */
 export const REPLACE_CHOICES = [
     { mode: "different", label: "A different question" },
