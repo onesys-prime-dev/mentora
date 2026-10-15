@@ -188,3 +188,18 @@ A pull request that adds or changes a screen is not done until:
 - Dark mode re-maps the colours the pages use most (see the dark appearance in `resources/css/app.css`); a colour a page invents for itself is not covered and shows in its light form. Charts draw on a canvas with their own colours and stay light.
 - The header prints the page title beside the logo and the page's `<h1>` repeats it; the header text is decorative and should be removed once every page has a head.
 - A few literal greens (`#2E7D4F`) remain where a token would be better (`bg-accent`); new code should use the token.
+
+## How pages load (one experience everywhere)
+
+There are two kinds of page load in Mentora, and each has its own loading cue.
+
+- **Server page reload**: the browser fetches a whole new document. It happens on any link to another page (header, app menu, dashboard, admin tables), on a form that posts and redirects, on a script that assigns `window.location`, and on the browser's reload and back/forward. Every layout writes the slim bar into the HTML (`layouts/partials/page-progress.php`), already running, so it is on screen from the first paint; `shared/spa/page-progress.js` also starts it the moment a link is clicked or a form submitted, and clears it when the page is restored from the back/forward cache.
+- **Client page load**: the document does not reload. Inside a course, a tab or screen click changes the address with `pushState`, fetches the screen's HTML and swaps it into `#course-content` with a skeleton and `swapContent`. It uses the same bar (`shared/spa/progress.js`) when it takes long.
+
+Rules for new pages and scripts:
+
+1. Use a normal link or form for moving between pages; the bar is automatic.
+2. If a script changes the page (`window.location.assign/href/reload`), call `startPageProgress()` from `shared/spa/page-progress.js` first.
+3. If a screen fills itself by fetching after load, put its skeleton in the server HTML and replace only the inner content, never the whole region.
+4. Never show your own spinner for a page load; use the bar and the skeleton.
+

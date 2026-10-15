@@ -198,6 +198,21 @@
         animation: spa-progress 2.5s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
     }
 
+    /* The wait is over: run to the end and fade. */
+    .spa-progress.is-active.is-done {
+        width: 100%;
+        opacity: 0;
+        animation: none;
+        transition: width 160ms ease-out, opacity 260ms ease 160ms;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .spa-progress.is-active {
+            width: 70%;
+            animation: none;
+        }
+    }
+
     .spa-notice {
         position: fixed;
         right: 1.5rem;

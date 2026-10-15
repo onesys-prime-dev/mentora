@@ -22,6 +22,8 @@
 |
 */
 
+import { endProgress, startProgress } from "./progress.js";
+
 const DIM_DELAY_MS = 150;
 
 let latestSwap = 0;
@@ -56,6 +58,8 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
 
     const scrollY = window.scrollY;
 
+    let barOn = false;
+
     const pending = setTimeout(() => {
 
         if (swapId !== latestSwap) {
@@ -70,6 +74,8 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
         if (mode === "navigate" && hasContent) {
             container.classList.add("spa-loading");
         }
+
+        barOn = true;
 
         progress(true);
 
@@ -91,7 +97,9 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
 
         if (swapId === latestSwap) {
 
-            progress(false);
+            if (barOn) {
+                progress(false);
+            }
 
             container.classList.remove("spa-loading");
 
@@ -118,7 +126,9 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
         return false;
     }
 
-    progress(false);
+    if (barOn) {
+        progress(false);
+    }
 
     const apply = () => {
 
@@ -197,27 +207,14 @@ function prefersReducedMotion() {
 |--------------------------------------------------------------------------
 */
 
+// One swap is one wait on the shared bar (see progress.js); it ends only what it started.
 function progress(active) {
 
-    let bar = document.querySelector("[data-spa-progress]");
-
-    if (!bar) {
-
-        bar = document.createElement("div");
-
-        bar.className = "spa-progress";
-
-        bar.dataset.spaProgress = "";
-
-        bar.setAttribute("role", "progressbar");
-
-        bar.setAttribute("aria-label", "Loading");
-
-        document.body.append(bar);
-
+    if (active) {
+        startProgress();
+    } else {
+        endProgress();
     }
-
-    bar.classList.toggle("is-active", active);
 
 }
 

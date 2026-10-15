@@ -8,6 +8,7 @@ import "./shared/toast";
 import "./shared/theme";
 import "./shared/dialog";
 import "./shared/data-table";
+import "./shared/spa/page-progress";
 
 const page = document.body.dataset.page;
 
