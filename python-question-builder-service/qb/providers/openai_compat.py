@@ -19,6 +19,10 @@ from .base import Capabilities, Completion
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
+# Groq sits behind Cloudflare, which refuses Python's default "Python-urllib"
+# agent with a 403 (error 1010) even for a valid key.
+USER_AGENT = "mentora-question-builder/0.1"
+
 # Published free-tier limits per model (the console table of 2026-10-14). The
 # console is authoritative; these only seed the governor, which also reads the
 # x-ratelimit-* headers on every response.
@@ -82,6 +86,7 @@ class OpenAICompatProvider:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
+            "User-Agent": USER_AGENT,
         }
 
         try:
@@ -120,7 +125,8 @@ class OpenAICompatProvider:
         try:
             detail = str((json.loads(raw).get("error") or {}).get("message", ""))[:200]
         except Exception:
-            pass
+            # Not JSON (a gateway or Cloudflare page): keep a short, printable start of it.
+            detail = " ".join(raw.decode("utf-8", "replace").split())[:120]
 
         if status == 429:
             try:

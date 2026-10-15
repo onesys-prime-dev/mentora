@@ -97,6 +97,9 @@ class Worker:
             return self._report_failure(job_id, "provider_error", "The question builder hit an unexpected error.")
 
     def _report_failure(self, job_id: int, code: str, message: str) -> str:
+        # The code and the provider's own reason; never a key or a source text.
+        log.warning("Job %s failed: %s: %s", job_id, code, message)
+
         try:
             self.php.fail(job_id, code, message)
         except PhpUnavailable:
