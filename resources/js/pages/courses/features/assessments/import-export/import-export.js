@@ -91,6 +91,25 @@ function bindExportButton() {
 
     });
 
+    // The print settings only apply to the printable test.
+    function syncPrintOptions() {
+
+        const format = document.querySelector("[data-export-format-option]:checked")?.value || "docx";
+        const options = document.querySelector("[data-print-options]");
+        const versions = Number(document.querySelector("[data-print-versions]")?.value || 1);
+
+        options?.classList.toggle("hidden", !format.startsWith("test-"));
+        options?.classList.toggle("flex", format.startsWith("test-"));
+        document.querySelector("[data-print-hint]")?.classList.toggle("hidden", versions < 2);
+
+    }
+
+    document.querySelectorAll("[data-export-format-option], [data-print-versions]").forEach((control) => {
+        control.addEventListener("change", syncPrintOptions);
+    });
+
+    syncPrintOptions();
+
     document
         .querySelector("[data-export-questions]")
         ?.addEventListener("click", () => {
@@ -99,11 +118,23 @@ function bindExportButton() {
                 document.querySelector("[data-export-format-option]:checked")?.value
                 || "docx";
 
-            window.location.href = exportQuestionsUrl(state.offeringId, state.assessmentId, format);
+            window.location.href = exportQuestionsUrl(state.offeringId, state.assessmentId, format, printSettings());
 
             closePanel();
 
         });
+
+}
+
+function printSettings() {
+
+    return {
+        versions: Number(document.querySelector("[data-print-versions]")?.value || 1),
+        paper: document.querySelector("[data-print-paper]")?.value || "A4",
+        shuffleQuestions: !!document.querySelector("[data-print-shuffle-questions]")?.checked,
+        shuffleChoices: !!document.querySelector("[data-print-shuffle-choices]")?.checked,
+        keyOnly: !!document.querySelector("[data-print-key-only]")?.checked,
+    };
 
 }
 

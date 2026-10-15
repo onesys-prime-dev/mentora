@@ -94,6 +94,49 @@
 
                     </div>
 
+                    <div data-print-options class="flex flex-col gap-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex flex-col gap-1 font-medium">
+                                Versions
+                                <select data-print-versions class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal">
+                                    <option value="1">1 (A only)</option>
+                                    <option value="2">2 (A, B)</option>
+                                    <option value="3">3 (A to C)</option>
+                                    <option value="4">4 (A to D)</option>
+                                </select>
+                            </label>
+                            <label class="flex flex-col gap-1 font-medium">
+                                Paper
+                                <select data-print-paper class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal">
+                                    <option value="A4">A4</option>
+                                    <option value="Letter">Letter</option>
+                                    <option value="Legal">Legal</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" data-print-shuffle-questions class="h-4 w-4 accent-brand">
+                            Shuffle the order of questions
+                        </label>
+
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" data-print-shuffle-choices class="h-4 w-4 accent-brand">
+                            Shuffle the choices
+                        </label>
+
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" data-print-key-only class="h-4 w-4 accent-brand">
+                            Answer key only
+                        </label>
+
+                        <p data-print-hint class="hidden text-[#767676]">
+                            With several versions, A is the quiz as written and the others are shuffled. Reprinting gives the same papers.
+                        </p>
+
+                    </div>
+
                     <div class="h-px bg-gray-200"></div>
 
                     <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">

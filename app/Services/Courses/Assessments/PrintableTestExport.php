@@ -24,7 +24,100 @@ final class PrintableTestExport
 {
     public const FORMATS = ['pdf', 'docx', 'rtf'];
 
+    /** Paper sizes offered, as PhpWord and Dompdf both name them. */
+    public const PAPERS = ['A4' => 'A4', 'Letter' => 'Letter', 'Legal' => 'Legal'];
+
+    public const MAX_VERSIONS = 4;
+
     private const BLANK_LINES_FOR_ESSAY = 6;
+
+    /**
+     * The paper to print: one model per version. A single version keeps the
+     * quiz's own order unless shuffling is asked for; with several, version A
+     * is the quiz as written and the others are shuffled, each the same every
+     * time it is printed (the shuffle is seeded by quiz, version and position).
+     *
+     * @param array<string, mixed>       $assessment
+     * @param list<array<string, mixed>> $questions
+     * @param array{versions?: int, shuffle_questions?: bool, shuffle_choices?: bool} $options
+     *
+     * @return list<array<string, mixed>> models from model(), each with 'version' ('' when there is only one)
+     */
+    public function versions(array $assessment, array $questions, array $options = []): array
+    {
+        $count    = max(1, min(self::MAX_VERSIONS, (int) ($options['versions'] ?? 1)));
+        $shuffleQ = ! empty($options['shuffle_questions']);
+        $shuffleC = ! empty($options['shuffle_choices']);
+        $seed     = (string) ($assessment['id'] ?? '0');
+        $models   = [];
+
+        for ($v = 0; $v < $count; $v++) {
+            $letter  = $count === 1 ? '' : chr(ord('A') + $v);
+            $shuffle = $count === 1 || $v > 0;
+            $set     = array_values($questions);
+
+            if ($shuffle && $shuffleC) {
+                foreach ($set as $i => $question) {
+                    $set[$i] = $this->withShuffledChoices($question, $seed . '|' . $v . '|c' . $i);
+                }
+            }
+
+            if ($shuffle && $shuffleQ) {
+                $set = $this->seededOrder($set, $seed . '|' . $v . '|q');
+            }
+
+            $model            = $this->model($assessment, $set);
+            $model['version'] = $letter;
+            $models[]         = $model;
+        }
+
+        return $models;
+    }
+
+    /**
+     * @param list<mixed> $items
+     *
+     * @return list<mixed>
+     */
+    private function seededOrder(array $items, string $seed): array
+    {
+        $keyed = [];
+
+        foreach ($items as $i => $item) {
+            $keyed[] = [md5($seed . '|' . $i), $item];
+        }
+
+        usort($keyed, static fn (array $a, array $b): int => strcmp($a[0], $b[0]));
+
+        return array_column($keyed, 1);
+    }
+
+    /**
+     * Choices that refer to each other ("all of the above", "both A and B")
+     * keep their order.
+     *
+     * @param array<string, mixed> $question
+     *
+     * @return array<string, mixed>
+     */
+    private function withShuffledChoices(array $question, string $seed): array
+    {
+        $choices = array_values($question['choices'] ?? []);
+
+        if (($question['question_type'] ?? '') !== 'Multiple Choice' || count($choices) < 2) {
+            return $question;
+        }
+
+        foreach ($choices as $choice) {
+            if (preg_match('/\b(all|none) of the above\b|\b(both|neither)\b.*\b[a-d]\b|\b[a-d] and [a-d]\b/i', (string) $choice['choice_text']) === 1) {
+                return $question;
+            }
+        }
+
+        $question['choices'] = $this->seededOrder($choices, $seed);
+
+        return $question;
+    }
 
     /**
      * @param array<string, mixed>       $assessment
@@ -92,15 +185,27 @@ final class PrintableTestExport
      */
     public function save(array $model, string $format, string $path): void
     {
+        $this->saveMany([$model], $format, $path);
+    }
+
+    /**
+     * @param list<array<string, mixed>>             $models  from versions()
+     * @param array{key_only?: bool, paper?: string} $options
+     */
+    public function saveMany(array $models, string $format, string $path, array $options = []): void
+    {
+        $paper   = self::PAPERS[$options['paper'] ?? 'A4'] ?? 'A4';
+        $keyOnly = ! empty($options['key_only']);
+
         if ($format === 'pdf') {
-            file_put_contents($path, $this->pdf($this->html($model)));
+            file_put_contents($path, $this->pdf($this->htmlMany($models, $keyOnly), $paper));
 
             return;
         }
 
         $writer = $format === 'rtf' ? 'RTF' : 'Word2007';
 
-        IOFactory::createWriter($this->word($model), $writer)->save($path);
+        IOFactory::createWriter($this->wordMany($models, $keyOnly, $paper), $writer)->save($path);
     }
 
     /*
@@ -112,13 +217,54 @@ final class PrintableTestExport
     /** @param array<string, mixed> $model */
     public function word(array $model): PhpWord
     {
+        return $this->wordMany([$model], false, 'A4');
+    }
+
+    /**
+     * Every version's test, each on pages of its own, then every key together.
+     *
+     * @param list<array<string, mixed>> $models
+     */
+    public function wordMany(array $models, bool $keyOnly, string $paper): PhpWord
+    {
         $word = new PhpWord();
         $word->setDefaultFontName('Arial');
         $word->setDefaultFontSize(11);
 
-        $section = $word->addSection(['marginTop' => 1000, 'marginBottom' => 1000, 'marginLeft' => 1200, 'marginRight' => 1200]);
+        $settings = ['marginTop' => 1000, 'marginBottom' => 1000, 'marginLeft' => 1200, 'marginRight' => 1200, 'paperSize' => $paper];
 
-        $section->addText($model['title'], ['bold' => true, 'size' => 16], ['alignment' => Jc::CENTER, 'spaceAfter' => 80]);
+        if (! $keyOnly) {
+            foreach ($models as $model) {
+                $section = $word->addSection($settings);
+                $label   = ($model['version'] ?? '') !== '' ? 'Version ' . $model['version'] . ' · ' : '';
+
+                $section->addFooter()->addPreserveText(
+                    $label . $model['title'] . ' · Page {PAGE} of {NUMPAGES}',
+                    ['size' => 8, 'color' => '777777'],
+                    ['alignment' => Jc::CENTER]
+                );
+
+                $this->wordTest($section, $model);
+            }
+        }
+
+        $section = $word->addSection($settings);
+
+        $section->addFooter()->addPreserveText('Answer key · Page {PAGE} of {NUMPAGES}', ['size' => 8, 'color' => '777777'], ['alignment' => Jc::CENTER]);
+
+        foreach (array_values($models) as $i => $model) {
+            $this->wordKey($section, $model, $i > 0);
+        }
+
+        return $word;
+    }
+
+    /** @param array<string, mixed> $model */
+    private function wordTest(\PhpOffice\PhpWord\Element\Section $section, array $model): void
+    {
+        $heading = ($model['version'] ?? '') !== '' ? $model['title'] . ' — Version ' . $model['version'] : $model['title'];
+
+        $section->addText($heading, ['bold' => true, 'size' => 16], ['alignment' => Jc::CENTER, 'spaceAfter' => 80]);
         $section->addText(
             $model['question_count'] . ' ' . ($model['question_count'] === 1 ? 'question' : 'questions') . ' · ' . $model['total_points'] . ' points',
             ['size' => 10, 'color' => '555555'],
@@ -170,10 +316,20 @@ final class PrintableTestExport
             $section->addText('This test has no questions yet.', ['italic' => true]);
         }
 
-        // The key starts on a page of its own, so the questions can be printed
-        // and handed out without it.
-        $section->addPageBreak();
-        $section->addText('Answer Key', ['bold' => true, 'size' => 16], ['spaceAfter' => 60]);
+    }
+
+    /** @param array<string, mixed> $model */
+    private function wordKey(\PhpOffice\PhpWord\Element\Section $section, array $model, bool $newPage): void
+    {
+        // The keys sit in a section of their own, so the questions can be
+        // printed and handed out without them.
+        if ($newPage) {
+            $section->addPageBreak();
+        }
+
+        $heading = ($model['version'] ?? '') !== '' ? 'Answer Key — Version ' . $model['version'] : 'Answer Key';
+
+        $section->addText($heading, ['bold' => true, 'size' => 16], ['spaceAfter' => 60]);
         $section->addText($model['title'], ['size' => 10, 'color' => '555555'], ['spaceAfter' => 200]);
 
         foreach ($model['key'] as $row) {
@@ -183,8 +339,6 @@ final class PrintableTestExport
                 ['spaceAfter' => 80]
             );
         }
-
-        return $word;
     }
 
     /*
@@ -196,9 +350,36 @@ final class PrintableTestExport
     /** @param array<string, mixed> $model */
     public function html(array $model): string
     {
+        return $this->htmlMany([$model], false);
+    }
+
+    /** @param list<array<string, mixed>> $models */
+    public function htmlMany(array $models, bool $keyOnly): string
+    {
+        $body = '';
+
+        if (! $keyOnly) {
+            foreach (array_values($models) as $i => $model) {
+                $body .= '<div class="test' . ($i > 0 ? ' next' : '') . '">' . $this->htmlTest($model) . '</div>';
+            }
+        }
+
+        foreach (array_values($models) as $i => $model) {
+            $body .= $this->htmlKey($model, $i > 0 || ! $keyOnly);
+        }
+
+        return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' . $this->css() . '</style></head><body>'
+            . '<div class="footer"></div>' . $body . '</body></html>';
+    }
+
+    /** @param array<string, mixed> $model */
+    private function htmlTest(array $model): string
+    {
         $e = static fn (string $text): string => htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-        $body  = '<h1>' . $e($model['title']) . '</h1>';
+        $heading = ($model['version'] ?? '') !== '' ? $model['title'] . ' — Version ' . $model['version'] : $model['title'];
+
+        $body  = '<h1>' . $e($heading) . '</h1>';
         $body .= '<p class="sub">' . $model['question_count'] . ' ' . ($model['question_count'] === 1 ? 'question' : 'questions')
             . ' &middot; ' . $e($model['total_points']) . ' points</p>';
         $body .= '<table class="who"><tr><td>Name: <span class="fill">&nbsp;</span></td><td>Date: <span class="fill">&nbsp;</span></td></tr>'
@@ -235,16 +416,29 @@ final class PrintableTestExport
             $body .= '<p class="note">This test has no questions yet.</p>';
         }
 
-        $body .= '<div class="key"><h1>Answer Key</h1><p class="sub">' . $e($model['title']) . '</p>';
+        return $body;
+    }
+
+    /** @param array<string, mixed> $model */
+    private function htmlKey(array $model, bool $newPage): string
+    {
+        $e = static fn (string $text): string => htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        $heading = ($model['version'] ?? '') !== '' ? 'Answer Key — Version ' . $model['version'] : 'Answer Key';
+
+        $body = '<div class="key' . ($newPage ? ' next' : '') . '"><h1>' . $e($heading) . '</h1><p class="sub">' . $e($model['title']) . '</p>';
 
         foreach ($model['key'] as $row) {
             $body .= '<p class="answer"><strong>' . $row['number'] . '.</strong> ' . nl2br($e($row['answer']))
                 . ' <span class="pts">(' . $e($row['points']) . ' ' . ($row['points'] === '1' ? 'pt' : 'pts') . ')</span></p>';
         }
 
-        $body .= '</div>';
+        return $body . '</div>';
+    }
 
-        $css = <<<'CSS'
+    private function css(): string
+    {
+        return <<<'CSS'
             @page { margin: 22mm 18mm; }
             body { font-family: "DejaVu Sans", sans-serif; font-size: 10.5pt; color: #111; }
             h1 { font-size: 17pt; text-align: center; margin: 0 0 4pt; }
@@ -261,14 +455,14 @@ final class PrintableTestExport
             .note { color: #555; font-style: italic; font-size: 9pt; margin: 0 0 3pt; }
             .choice { margin: 0 0 3pt 18pt; }
             .line { border-bottom: 1px solid #000; height: 20pt; }
-            .key { page-break-before: always; }
+            .next { page-break-before: always; }
             .answer { margin: 0 0 7pt; }
+            .footer { position: fixed; bottom: -12mm; left: 0; right: 0; text-align: center; color: #777; font-size: 8pt; }
+            .footer:after { content: "Page " counter(page); }
             CSS;
-
-        return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' . $css . '</style></head><body>' . $body . '</body></html>';
     }
 
-    private function pdf(string $html): string
+    private function pdf(string $html, string $paper = 'A4'): string
     {
         $cache = WRITEPATH . 'cache/dompdf';
 
@@ -287,7 +481,7 @@ final class PrintableTestExport
 
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4');
+        $dompdf->setPaper($paper);
         $dompdf->render();
 
         return (string) $dompdf->output();

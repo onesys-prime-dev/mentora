@@ -28,7 +28,13 @@ class QuestionImportExportController extends BaseController
         $format = strtolower((string) $this->request->getGet('format'));
 
         if (str_starts_with($format, 'test-')) {
-            $result = $this->exportService->exportPrintable($assessmentId, substr($format, 5));
+            $result = $this->exportService->exportPrintable($assessmentId, substr($format, 5), [
+                'versions'          => (int) $this->request->getGet('versions'),
+                'shuffle_questions' => $this->request->getGet('shuffle_questions') === '1',
+                'shuffle_choices'   => $this->request->getGet('shuffle_choices') === '1',
+                'key_only'          => $this->request->getGet('key_only') === '1',
+                'paper'             => (string) $this->request->getGet('paper'),
+            ]);
         } else {
             $result = $format === 'rtf'
                 ? $this->exportService->exportToRtf($assessmentId)

@@ -137,7 +137,7 @@ final class PrintableTestExportTest extends DatabaseTestCase
         $this->assertGreaterThan($lastQuestion, $keyHeading, 'the key comes after every question');
         $this->assertGreaterThan($keyHeading, (int) strpos($text, 'B. Choice 2; C. Choice 3'));
         $this->assertStringNotContainsString('B. Choice 2; C. Choice 3', substr($text, 0, $keyHeading), 'no answer before the key');
-        $this->assertStringContainsString('w:br w:type="page"', $xml);
+        $this->assertGreaterThanOrEqual(2, substr_count($xml, '<w:sectPr'), 'the key is a section of its own, so it starts on a new page');
     }
 
     public function testWordCanBeOpenedAgainAsADocument(): void
@@ -153,7 +153,7 @@ final class PrintableTestExportTest extends DatabaseTestCase
 
         $this->assertStringStartsWith('{\rtf', $rtf);
         $this->assertGreaterThan((int) strrpos($rtf, 'Discuss floating point.'), (int) strpos($rtf, 'Answer Key'));
-        $this->assertStringContainsString('\page', $rtf, 'the key starts on a new page');
+        $this->assertStringContainsString('\sect', $rtf, 'the key is a section of its own, so it starts on a new page');
     }
 
     public function testPdfHasTheKeyOnLaterPagesThanTheQuestions(): void
@@ -191,6 +191,130 @@ final class PrintableTestExportTest extends DatabaseTestCase
 
         $this->assertStringNotContainsString('<script>', $html);
         $this->assertStringContainsString('&lt;script&gt;', $html);
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function versions(array $options): array
+    {
+        $assessment = db_connect()->table('assessments')->where('id', $this->quiz)->get()->getRowArray();
+        $questions = (new \App\Models\Assessments\AssessmentQuestionModel())->listForAssessment($this->quiz);
+
+        return (new PrintableTestExport())->versions($assessment, $questions, $options);
+    }
+
+    public function testOneVersionKeepsTheQuizOrderUnlessShufflingIsAsked(): void
+    {
+        $plain = $this->versions([]);
+
+        $this->assertCount(1, $plain);
+        $this->assertSame('', $plain[0]['version']);
+        $this->assertSame(['Which are even numbers?', 'What does CPU stand for?', 'Discuss floating point.'], array_column($plain[0]['questions'], 'text'));
+    }
+
+    public function testSeveralVersionsAreLettersAndAIsTheQuizAsWritten(): void
+    {
+        $models = $this->versions(['versions' => 3, 'shuffle_questions' => true, 'shuffle_choices' => true]);
+
+        $this->assertSame(['A', 'B', 'C'], array_column($models, 'version'));
+        $this->assertSame(['Which are even numbers?', 'What does CPU stand for?', 'Discuss floating point.'], array_column($models[0]['questions'], 'text'));
+
+        foreach ($models as $model) {
+            $texts = array_column($model['questions'], 'text');
+            sort($texts);
+            $this->assertSame(['Discuss floating point.', 'What does CPU stand for?', 'Which are even numbers?'], $texts, 'same questions in every version');
+        }
+    }
+
+    public function testTheShuffleIsTheSameEveryTimeItIsPrinted(): void
+    {
+        $options = ['versions' => 4, 'shuffle_questions' => true, 'shuffle_choices' => true];
+
+        $this->assertSame($this->versions($options), $this->versions($options));
+    }
+
+    public function testEachVersionsKeyFollowsItsOwnShuffledChoices(): void
+    {
+        foreach ($this->versions(['versions' => 4, 'shuffle_choices' => true]) as $model) {
+            $question = $model['questions'][0];
+            $this->assertSame('Which are even numbers?', $question['text']);
+
+            $letters = array_column($question['choices'], 'letter');
+            $this->assertSame(['A', 'B', 'C'], $letters);
+
+            // The key names the same two choices as the original, by their text, at their new letters.
+            $key = $model['key'][0]['answer'];
+            $texts = array_column($question['choices'], 'text', 'letter');
+
+            foreach (explode('; ', $key) as $part) {
+                [$letter, $text] = explode('. ', $part, 2);
+                $this->assertSame($text, $texts[$letter]);
+            }
+
+            $this->assertCount(2, explode('; ', $key));
+        }
+    }
+
+    public function testChoicesThatPointAtEachOtherAreNotShuffled(): void
+    {
+        $assessment = ['id' => 7, 'title' => 'T'];
+        $question = [
+            'question_type' => 'Multiple Choice', 'question_text' => 'Pick', 'points' => 1,
+            'choices' => [
+                ['choice_text' => 'Red', 'is_correct' => 0],
+                ['choice_text' => 'Blue', 'is_correct' => 1],
+                ['choice_text' => 'All of the above', 'is_correct' => 0],
+            ],
+        ];
+
+        foreach ((new PrintableTestExport())->versions($assessment, [$question], ['versions' => 4, 'shuffle_choices' => true]) as $model) {
+            $this->assertSame(['Red', 'Blue', 'All of the above'], array_column($model['questions'][0]['choices'], 'text'));
+        }
+    }
+
+    public function testTheCountIsCappedAtFour(): void
+    {
+        $this->assertCount(4, $this->versions(['versions' => 99]));
+        $this->assertCount(1, $this->versions(['versions' => 0]));
+    }
+
+    public function testAnExportOfSeveralVersionsHasEachVersionAndEveryKey(): void
+    {
+        $result = $this->export->exportPrintable($this->quiz, 'docx', ['versions' => 2, 'shuffle_questions' => true]);
+        $this->assertTrue($result['success']);
+        $this->files[] = $result['file_path'];
+
+        $zip = new ZipArchive();
+        $zip->open($result['file_path']);
+        $text = strip_tags(str_replace('</w:p>', "\n", (string) $zip->getFromName('word/document.xml')));
+        $zip->close();
+
+        $this->assertStringContainsString('Version A', $text);
+        $this->assertStringContainsString('Version B', $text);
+        $this->assertStringContainsString('Answer Key — Version A', $text);
+        $this->assertStringContainsString('Answer Key — Version B', $text);
+    }
+
+    public function testKeyOnlyLeavesOutTheQuestionPages(): void
+    {
+        $models = $this->versions(['versions' => 2]);
+        $html = (new PrintableTestExport())->htmlMany($models, true);
+
+        $this->assertStringNotContainsString('class="test', $html);
+        $this->assertStringContainsString('Answer Key — Version B', $html);
+    }
+
+    public function testPaperSizeIsAppliedAndAnUnknownOneFallsBackToA4(): void
+    {
+        $printable = new PrintableTestExport();
+        $models = $this->versions([]);
+
+        $legal = $printable->wordMany($models, false, 'Legal');
+        $this->assertSame('Legal', $legal->getSections()[0]->getStyle()->getPaperSize());
+
+        $path = tempnam(sys_get_temp_dir(), 'pt') ?: '';
+        $this->files[] = $path;
+        $printable->saveMany($models, 'pdf', $path, ['paper' => 'Tabloid']);
+        $this->assertStringStartsWith('%PDF', (string) file_get_contents($path));
     }
 
     public function testAnUnknownFormatOrAssessmentIsRefused(): void

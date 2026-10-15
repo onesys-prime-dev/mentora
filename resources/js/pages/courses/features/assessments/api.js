@@ -959,9 +959,34 @@ export async function acceptAllGeneratedQuestions(offeringId, batchId) {
 |--------------------------------------------------------------------------
 */
 
-export function exportQuestionsUrl(offeringId, assessmentId, format = "docx") {
+/**
+ * @param {{versions?: number, paper?: string, shuffleQuestions?: boolean, shuffleChoices?: boolean, keyOnly?: boolean}} [print]
+ *   only for the printable test
+ */
+export function exportQuestionsUrl(offeringId, assessmentId, format = "docx", print = {}) {
 
-    return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/export?format=${format}`;
+    const params = new URLSearchParams({ format });
+
+    if (format.startsWith("test-")) {
+
+        params.set("versions", String(print.versions || 1));
+        params.set("paper", print.paper || "A4");
+
+        if (print.shuffleQuestions) {
+            params.set("shuffle_questions", "1");
+        }
+
+        if (print.shuffleChoices) {
+            params.set("shuffle_choices", "1");
+        }
+
+        if (print.keyOnly) {
+            params.set("key_only", "1");
+        }
+
+    }
+
+    return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/export?${params.toString()}`;
 
 }
 

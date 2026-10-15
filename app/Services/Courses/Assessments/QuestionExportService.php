@@ -52,8 +52,9 @@ class QuestionExportService
      * that).
      *
      * @param string $format pdf, docx or rtf
+     * @param array{versions?: int, shuffle_questions?: bool, shuffle_choices?: bool, key_only?: bool, paper?: string} $options
      */
-    public function exportPrintable(int $assessmentId, string $format): array
+    public function exportPrintable(int $assessmentId, string $format, array $options = []): array
     {
         $format = strtolower($format);
 
@@ -68,12 +69,12 @@ class QuestionExportService
         }
 
         $printable = new PrintableTestExport();
-        $model = $printable->model($assessment, $this->questionModel->listForAssessment($assessmentId));
+        $models = $printable->versions($assessment, $this->questionModel->listForAssessment($assessmentId), $options);
 
         $filename = 'assessment-' . $assessmentId . '-test-' . date('Ymd-His') . '.' . $format;
         $path = $this->exportDirectory() . '/' . $filename;
 
-        $printable->save($model, $format, $path);
+        $printable->saveMany($models, $format, $path, $options);
 
         return ['success' => true, 'file_path' => $path, 'filename' => $filename];
     }
