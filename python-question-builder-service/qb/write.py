@@ -113,6 +113,8 @@ def to_question(item: dict, facts: dict[str, dict], context: list[str] | None = 
         fact_id=str(item.get("fact_id", "")) if fact else "",
         evidence=fact["text"] if fact else "",
         page=fact["page"] if fact else None,
+        source_title=str(fact.get("source_title", "")) if fact else "",
+        source_item_id=fact.get("source_item_id") if fact else None,
         math_spec=item.get("math_spec") if isinstance(item.get("math_spec"), dict) else None,
         context_facts=list(context or []),
     )

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 from . import ingest as ingest_mod
 from .digest import PayloadDigestStore, build_digest
+from .items import digest_items
 from .mathcheck import MISMATCH, VERIFIED, check_question
 from .plan import Assignment, make_plan
 from .pool import ModelPool
@@ -150,6 +151,8 @@ def to_payload(question: Question, model: str) -> dict:
         "explanation": question.explanation,
         "evidence_quote": question.evidence,
         "page": question.page,
+        "source_title": question.source_title,
+        "source_item_id": question.source_item_id,
         "math_check": question.verification.get("math_check", "not_applicable"),
         "verification": question.verification,
         "flags": question.flags,
@@ -166,27 +169,51 @@ def make_generate_handler(pool: ModelPool):
         count = max(1, int(payload.get("count", 10)))
         type_mix = payload.get("type_mix") or {"multiple_choice": count}
         existing = list(payload.get("existing_questions") or [])
-        topic_only = not payload.get("source_text")
+        items = [i for i in (payload.get("items") or []) if isinstance(i, dict)]
+        topic_only = not items and not payload.get("source_text")
+        needed = math.ceil(count * CONCEPT_MARGIN)
+        rotation = int(payload.get("rotation", 0))
 
         ctx.progress(stage="ingest", done=0, of=1, note="Reading the material")
 
-        if topic_only:
-            pages = ingest_mod.ingest_text(f"Topic: {payload.get('topic', '').strip()}").pages
+        extra: dict = {}
+
+        if items:
+            # The selected learning items, each digested and cached on its own.
+            def reading(index: int, total: int, title: str) -> None:
+                ctx.progress(stage="digest", done=index, of=total, note=f"Reading {title}")
+
+            many = digest_items(
+                items, dict(payload.get("digests") or {}), pool,
+                needed_facts=needed, rotation=rotation, on_progress=reading,
+            )
+            concepts, facts = many.concepts, many.facts
+            warnings, calls = many.warnings, many.calls
+            digest_in, digest_out = many.tokens_in, many.tokens_out
+            extra = {
+                "digests": many.digests,
+                "per_item": [vars(s) for s in many.stats],
+            }
         else:
-            # `[[page N]]` lines from a PDF keep their numbers, so a fact can
-            # say which page it came from; text with none is one page.
-            text = str(payload["source_text"])
-            pages = ingest_mod.split_marked(text) or ingest_mod.ingest_text(text).pages
+            if topic_only:
+                pages = ingest_mod.ingest_text(f"Topic: {payload.get('topic', '').strip()}").pages
+            else:
+                # `[[page N]]` lines from a PDF keep their numbers, so a fact can
+                # say which page it came from; text with none is one page.
+                text = str(payload["source_text"])
+                pages = ingest_mod.split_marked(text) or ingest_mod.ingest_text(text).pages
 
-        store = PayloadDigestStore(payload.get("digest"))
-        needed = math.ceil(count * CONCEPT_MARGIN)
+            store = PayloadDigestStore(payload.get("digest"))
 
-        ctx.progress(stage="digest", done=0, of=1, note="Finding the key ideas")
-        digest = build_digest(pages, pool, store, needed_facts=needed, rotation=int(payload.get("rotation", 0)))
+            ctx.progress(stage="digest", done=0, of=1, note="Finding the key ideas")
+            digest = build_digest(pages, pool, store, needed_facts=needed, rotation=rotation)
+            concepts, facts = digest.concepts(), digest.facts()
+            warnings, calls = digest.warnings, digest.calls
+            digest_in, digest_out = digest.tokens_in, digest.tokens_out
+            extra = {"digest": store.updated or store.cached}
 
         ctx.progress(stage="plan", done=0, of=count, note="Choosing what to ask about")
-        plan = make_plan(digest.concepts(), count, type_mix, existing)
-        facts = digest.facts()
+        plan = make_plan(concepts, count, type_mix, existing)
 
         ctx.progress(stage="write", done=0, of=len(plan.assignments), note="Writing questions")
         written = write_questions(plan.assignments, facts, pool, seen_texts=existing)
@@ -206,21 +233,26 @@ def make_generate_handler(pool: ModelPool):
         dropped = Counter(written.dropped) + checked.dropped
         produced = len(checked.accepted)
 
+        diagnostics = {
+            "requested": count,
+            "produced": produced,
+            "dropped": dict(dropped),
+            "regenerated": checked.regenerated,
+            "calls": calls + written.calls + checked.calls,
+            "tokens_in": digest_in + written.tokens_in + checked.tokens_in,
+            "tokens_out": digest_out + written.tokens_out + checked.tokens_out,
+            "prompt_version": PROMPT_VERSION,
+        }
+
+        if "per_item" in extra:
+            diagnostics["per_item"] = extra.pop("per_item")
+
         return {
             "questions": [to_payload(q, model) for q in checked.accepted],
-            "digest": store.updated or store.cached,
+            **extra,
             "stop_reason": "completed" if produced >= count else "exhausted_topic",
-            "notes": plan.notes + digest.warnings,
-            "diagnostics": {
-                "requested": count,
-                "produced": produced,
-                "dropped": dict(dropped),
-                "regenerated": checked.regenerated,
-                "calls": digest.calls + written.calls + checked.calls,
-                "tokens_in": digest.tokens_in + written.tokens_in + checked.tokens_in,
-                "tokens_out": digest.tokens_out + written.tokens_out + checked.tokens_out,
-                "prompt_version": PROMPT_VERSION,
-            },
+            "notes": plan.notes + warnings,
+            "diagnostics": diagnostics,
         }
 
     return handler

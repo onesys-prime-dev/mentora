@@ -57,6 +57,9 @@ class Question:
     # Every fact of the concept, so a check can tell a wrong choice from another true statement.
     context_facts: list[str] = field(default_factory=list)
     page: int | None = None
+    # Which of the selected learning items the fact came from.
+    source_title: str = ""
+    source_item_id: int | None = None
     math_spec: dict | None = None
     flags: list[str] = field(default_factory=list)
     verification: dict = field(default_factory=dict)
