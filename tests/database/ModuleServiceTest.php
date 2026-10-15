@@ -932,4 +932,42 @@ final class ModuleServiceTest extends DatabaseTestCase
         $this->assertFalse($result['success']);
         $this->assertSame('Choose a video file to upload.', $result['message']);
     }
+
+    /**
+     * The upload rules, on a stand-in for a valid upload (a real one needs a
+     * PHP-managed temporary file, which a test run does not have).
+     */
+    private function problemWith(int $size, string $mime, int $error = UPLOAD_ERR_OK): ?string
+    {
+        $file = new class ('', 'lecture.mp4', $mime, $size, $error) extends \CodeIgniter\HTTP\Files\UploadedFile {
+            public function isValid(): bool
+            {
+                return $this->error === UPLOAD_ERR_OK;
+            }
+
+            public function getMimeType(): string
+            {
+                return $this->getClientMimeType();
+            }
+        };
+
+        $method = new \ReflectionMethod($this->service, 'uploadProblem');
+
+        return $method->invoke($this->service, $file, ['video/mp4', 'video/webm'], 500 * 1048576, 'video');
+    }
+
+    public function testAnAcceptableVideoHasNoProblem(): void
+    {
+        $this->assertNull($this->problemWith(10 * 1048576, 'video/mp4'));
+    }
+
+    public function testAVideoOverTheLimitIsRefusedWithTheLimit(): void
+    {
+        $this->assertStringContainsString('larger than the 500 MB limit', (string) $this->problemWith(501 * 1048576, 'video/mp4'));
+    }
+
+    public function testAFileOfTheWrongKindIsRefused(): void
+    {
+        $this->assertStringContainsString('not a supported video type', (string) $this->problemWith(1048576, 'application/zip'));
+    }
 }

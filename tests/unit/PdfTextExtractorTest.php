@@ -161,4 +161,17 @@ final class PdfTextExtractorTest extends CIUnitTestCase
             $this->assertStringNotContainsString('Unable to reach', $e->getMessage());
         }
     }
+
+    public function testAFileOverTheSizeLimitIsRefusedBeforeItIsParsed(): void
+    {
+        $path = $this->file('');
+        $handle = fopen($path, 'wb');
+        ftruncate($handle, PdfTextExtractor::MAX_BYTES + 1);
+        fclose($handle);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('larger than');
+
+        (new PdfTextExtractor())->extract($path);
+    }
 }
