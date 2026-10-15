@@ -71,6 +71,29 @@
 # email.SMTPTimeout = 15
 
 #--------------------------------------------------------------------
+# QUESTION BUILDER (AI question generation)
+#--------------------------------------------------------------------
+# Generation runs in a separate worker process that asks Mentora for queued
+# jobs over loopback. Full setup: docs/deploy.md ("The question-builder worker").
+#
+# Both values below are optional while the feature is off. Nothing here is a
+# provider key: the Groq key lives only in the worker's own environment file.
+
+# The shared secret between this app and the worker. You make it up: a long
+# random string, e.g.  php -r "echo bin2hex(random_bytes(32));"
+# The SAME value goes in the worker's QB_WORKER_SECRET. Use a different one on
+# staging and production. While empty, /internal/ai/* answers 503 on purpose.
+# questionBuilder.workerSecret =
+
+# Set to true to generate questions as background jobs for the worker. False
+# (or unset) keeps the original in-request service, which needs the old
+# Python service running on questionBuilder.serviceUrl.
+# questionBuilder.useJobs = false
+
+# The original in-request service (also still used to read uploaded files).
+# questionBuilder.serviceUrl = http://127.0.0.1:8008
+
+#--------------------------------------------------------------------
 # ENCRYPTION
 #--------------------------------------------------------------------
 

@@ -154,6 +154,9 @@ pnpm-debug.log*
 
 # Question builder service
 python-question-builder-service/venv/
+# The worker's real settings: the provider key and the shared secret. Only the .example template is tracked.
+qb-worker.env
+python-question-builder-service/.env
 python-question-builder-service/**/__pycache__/
 python-question-builder-service/*.log
 python-question-builder-service/gen_result.json
