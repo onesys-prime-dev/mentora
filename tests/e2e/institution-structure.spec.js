@@ -773,7 +773,9 @@ test("TC-VCV-01 A course opens view only from the offerings list, shows its cont
     await page.locator("[data-view-course]").first().click();
 
     await expect(page.locator("[data-view-only]")).toContainText("View only");
-    await expect(page.locator("#course-content")).not.toBeEmpty({ timeout: 15000 });
+    // The page now arrives with a skeleton in the region; the screen is there once it is no longer busy.
+    await expect(page.locator("#course-content")).not.toHaveAttribute("aria-busy", "true", { timeout: 15000 });
+    await expect(page.locator("#course-content")).not.toBeEmpty();
 
     // Every tab of the workspace loads for the administrator, and none offers an authoring control.
     for (const tab of ["Announcements", "Modules", "Resources", "Discussions", "Assessments", "Grades"]) {

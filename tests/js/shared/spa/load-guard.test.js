@@ -115,3 +115,37 @@ describe("supersede", () => {
         expect(() => supersede(fresh)).not.toThrow();
     });
 });
+
+describe("a region the server already drew a skeleton in", () => {
+
+    it("does not draw a second skeleton over it after the delay", async () => {
+        vi.useFakeTimers();
+
+        const el = document.createElement("div");
+
+        el.dataset.serverSkeleton = "";
+        el.innerHTML = "<p>server shape</p>";
+
+        const { beginLoad, SKELETON_DELAY_MS } = await import("../../../../resources/js/shared/spa/load-guard.js");
+
+        beginLoad(el, "<p>js shape</p>");
+        vi.advanceTimersByTime(SKELETON_DELAY_MS + 10);
+
+        expect(el.innerHTML).toBe("<p>server shape</p>");
+
+        vi.useRealTimers();
+    });
+
+    it("still draws at once when asked to (a child screen)", async () => {
+        const el = document.createElement("div");
+
+        el.dataset.serverSkeleton = "";
+
+        const { beginLoad } = await import("../../../../resources/js/shared/spa/load-guard.js");
+
+        beginLoad(el, "<p>child shape</p>", 0);
+
+        expect(el.innerHTML).toBe("<p>child shape</p>");
+    });
+
+});

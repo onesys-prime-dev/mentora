@@ -83,11 +83,17 @@ $features = [
 
             <?php foreach ($features as $feature => $label): ?>
 
+                <?php
+                // The tab of the page being opened is marked here, in the server's HTML, so it is
+                // right from the first paint (featureLoader.highlightFeatureTab keeps it right after).
+                $isActiveTab = $feature === ($activeFeature ?? 'overview');
+                ?>
+
                 <button
                     type="button"
                     role="tab"
-                    aria-selected="false"
-                    class="course-feature shrink-0 whitespace-nowrap px-4 py-1.5 cursor-pointer text-white bg-blue-900 hover:bg-blue-800 rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:px-6"
+                    aria-selected="<?= $isActiveTab ? 'true' : 'false' ?>"
+                    class="course-feature shrink-0 whitespace-nowrap px-4 py-1.5 cursor-pointer rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:px-6 <?= $isActiveTab ? 'bg-white border-t border-black/15 !text-black' : 'text-white bg-blue-900 hover:bg-blue-800' ?>"
                     data-course-feature="<?= esc($feature) ?>"
                 >
                     <?= esc($label) ?>
@@ -97,13 +103,21 @@ $features = [
 
         </div>
 
-        <div 
+        <?php
+        // #course-content is always part of the server's HTML and arrives already showing the shape
+        // of the active tab. Only what is inside it is rendered by JavaScript: the first load adopts
+        // this skeleton and replaces it with the screen (featureLoader.js).
+        $skeletonShape = ($activeFeature ?? 'overview') === 'overview' ? 'overview' : 'list';
+        ?>
+        <div
             class="w-full bg-white rounded-3xl"
             id="course-content"
             role="tabpanel"
+            aria-busy="true"
+            data-server-skeleton
         >
-
-    </div>
+            <?= view('pages/courses/skeletons/' . $skeletonShape, ['role' => $userRole], ['saveData' => false]) ?>
+        </div>
 
     </div>
 

@@ -18,6 +18,43 @@ const loaders = {
 
 };
 
+// The server's skeleton is only adopted for the load that belongs to the tab
+// the page was opened on; the first tab click gives it up.
+let firstLoadOfThePage = true;
+
+function adoptServerSkeleton(content) {
+
+    const adopt = firstLoadOfThePage
+        && content.dataset.serverSkeleton !== undefined
+        && content.dataset.serverSkeleton !== "released";
+
+    firstLoadOfThePage = false;
+
+    if (!adopt) {
+        releaseServerSkeleton(content);
+    } else {
+        // swapContent treats a region marked like this as "still a skeleton".
+        content.dataset.spaSkeleton = "";
+    }
+
+    return adopt;
+
+}
+
+/** The server's skeleton has served its purpose (content arrived, or a tab click replaced it). */
+function releaseServerSkeleton(content) {
+
+    if (content) {
+        delete content.dataset.serverSkeleton;
+
+        // Left over only when the screen filled the region without swapContent.
+        if (content.dataset.spaSkeleton !== undefined && content.querySelector("[data-server-skeleton-shape]") === null) {
+            delete content.dataset.spaSkeleton;
+        }
+    }
+
+}
+
 // Bumped on every tab change so a slower, older tab can't start (or keep
 // painting its shell) after the user has already moved on.
 let latestLoad = 0;
@@ -89,7 +126,12 @@ export async function loadFeature(feature)
         // one, and its (now wrong) content shouldn't linger under the new tab.
         supersede(content);
 
-        content.replaceChildren();
+        // On the page's first load the server already put this tab's skeleton in
+        // place: keep it (so nothing blinks to empty) and let the screen replace it.
+        // Any later load is a client navigation and starts from an empty region.
+        if (!adoptServerSkeleton(content)) {
+            content.replaceChildren();
+        }
 
     }
 
@@ -100,6 +142,7 @@ export async function loadFeature(feature)
     } catch (error) {
         console.error(error);
         content?.removeAttribute("aria-busy");
+        releaseServerSkeleton(content);
         return;
     }
 
@@ -113,6 +156,7 @@ export async function loadFeature(feature)
         .finally(() => {
             if (loadId === latestLoad) {
                 content?.removeAttribute("aria-busy");
+                releaseServerSkeleton(content);
             }
         });
 
