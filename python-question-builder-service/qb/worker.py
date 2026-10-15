@@ -136,6 +136,9 @@ def main() -> None:  # pragma: no cover - process entry point
     if settings.backend == "groq" and not settings.key_configured:
         log.warning("GROQ_API_KEY is not set: every job will fail with provider_auth until it is.")
 
+    if not settings.php_verify_tls:
+        log.warning("Certificate checking for Mentora is OFF (QB_PHP_VERIFY_TLS=false). Use this on staging only.")
+
     log.info("Worker %s starting (backend %s, models %s)", settings.worker_id, settings.backend, ", ".join(settings.models))
 
     build_worker(settings).run_forever()

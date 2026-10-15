@@ -55,3 +55,45 @@ def test_the_assembled_worker_has_the_generate_handler_and_reports_a_missing_key
     fails = [body for path, body in posted if path == "fail"]
     assert fails and fails[0]["code"] == "provider_auth"
     assert any(path == "progress" for path, _ in posted)
+
+
+def test_certificate_checking_is_on_unless_explicitly_turned_off():
+    assert config.from_env(env()).php_verify_tls is True
+    assert config.from_env(env(QB_PHP_VERIFY_TLS="true")).php_verify_tls is True
+
+    for off in ("false", "0", "No", "OFF"):
+        assert config.from_env(env(QB_PHP_VERIFY_TLS=off)).php_verify_tls is False
+
+
+def test_the_http_call_carries_an_unverified_context_only_when_asked(monkeypatch):
+    import ssl
+    import urllib.request
+
+    seen = {}
+
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    def fake_urlopen(request, timeout=None, context=None):
+        seen["context"] = context
+
+        return Response()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    from qb.php_client import make_post
+
+    make_post(True)("https://x/y", {}, b"{}", 5)
+    assert seen["context"] is None
+
+    make_post(False)("https://x/y", {}, b"{}", 5)
+    assert isinstance(seen["context"], ssl.SSLContext) and seen["context"].verify_mode == ssl.CERT_NONE
