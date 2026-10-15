@@ -36,9 +36,9 @@ class QuestionImportService
     public const DOCUMENT_EXTENSIONS = ['docx', 'rtf'];
 
     /** Spreadsheets and plain-text formats from other systems (Excel/CSV, Aiken, GIFT). */
-    public const FORMAT_EXTENSIONS = ['csv', 'xlsx', 'txt'];
+    public const FORMAT_EXTENSIONS = ['csv', 'xlsx', 'txt', 'pdf', 'html', 'htm'];
 
-    public const EXTENSIONS = ['docx', 'rtf', 'csv', 'xlsx', 'txt'];
+    public const EXTENSIONS = ['docx', 'rtf', 'csv', 'xlsx', 'txt', 'pdf', 'html', 'htm'];
 
     // A Short Answer's answer key: "Accepted answers: CPU | Central
     // Processing Unit" (see QuestionExportService::ACCEPTED_ANSWERS_LABEL).
@@ -97,6 +97,33 @@ class QuestionImportService
      *
      * @return array<string, mixed>
      */
+    /** The text of a PDF with its page markers removed, or null when it has no text layer. */
+    private function pdfText(string $filePath): ?string
+    {
+        try {
+            $read = (new \App\Services\AI\PdfTextExtractor())->extract($filePath);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return trim((string) preg_replace('/^\[\[page \d+\]\]$/m', '', $read['text']));
+    }
+
+    /** The visible text of an HTML export: cells, paragraphs and line breaks become lines. */
+    private function htmlText(string $filePath): string
+    {
+        $html = (string) file_get_contents($filePath);
+
+        // TestGen writes ISO-8859-1; say so unless the file says otherwise.
+        $encoding = preg_match('/charset=([\w-]+)/i', $html, $m) === 1 ? strtoupper($m[1]) : 'ISO-8859-1';
+        $html = (string) mb_convert_encoding($html, 'UTF-8', $encoding);
+        $html = (string) preg_replace(['~<(script|style)\b.*?</\1>~is', '~</(td|th|tr|p|div|li|h\d)>|<br\s*/?>~i'], ['', "\n"], $html);
+
+        $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim($text);
+    }
+
     private function parseFormat(int $assessmentId, string $filePath, string $extension): array
     {
         if (! $this->assessmentModel->find($assessmentId)) {
@@ -104,10 +131,24 @@ class QuestionImportService
         }
 
         try {
-            if ($extension === 'txt') {
+            if (in_array($extension, ['pdf', 'html', 'htm'], true)) {
+                $text = $extension === 'pdf' ? $this->pdfText($filePath) : $this->htmlText($filePath);
+
+                if ($text === null) {
+                    return ['success' => false, 'message' => 'This PDF has no selectable text (it looks like a scan), so it cannot be read here. Export the exam as Word, text or Moodle XML instead.'];
+                }
+
+                $read = (new PrintedExamParser())->parse($text);
+
+                if ($read['questions'] === []) {
+                    return ['success' => false, 'message' => 'No questions were found. A printed exam has numbered questions ("1)") with lettered choices ("A)") and an answer key at the end.'];
+                }
+            } elseif ($extension === 'txt') {
                 $text = (string) file_get_contents($filePath);
 
-                if (GiftParser::looks($text)) {
+                if (PrintedExamParser::looks($text)) {
+                    $read = (new PrintedExamParser())->parse($text);
+                } elseif (GiftParser::looks($text)) {
                     $read = (new GiftParser())->parse($text);
                 } elseif (AikenParser::looks($text)) {
                     $read = (new AikenParser())->parse($text);
@@ -125,6 +166,19 @@ class QuestionImportService
             return ['success' => false, 'message' => 'This file could not be read. Check that it is not damaged.'];
         }
 
+        return $this->finishFormat($assessmentId, $read);
+    }
+
+    /**
+     * The preview of questions read from another system's file. Like an
+     * ordinary document it only adds questions.
+     *
+     * @param array{questions: list<array<string, mixed>>, skipped: list<array{line: int, reason: string, severity?: string}>} $read
+     *
+     * @return array<string, mixed>
+     */
+    private function finishFormat(int $assessmentId, array $read): array
+    {
         if (count($read['questions']) + count($read['skipped']) > self::MAX_QUESTIONS) {
             return ['success' => false, 'message' => 'This file has more than ' . self::MAX_QUESTIONS . ' questions. Import it in smaller parts.'];
         }
@@ -146,15 +200,20 @@ class QuestionImportService
 
         // Rows the reader could not turn into a question are listed, with their line.
         foreach ($read['skipped'] as $row) {
+            $severity = ($row['severity'] ?? '') === 'warning' ? QuestionImportValidator::WARNING : QuestionImportValidator::ERROR;
+
             $result['problems'][] = [
-                'severity'      => QuestionImportValidator::ERROR,
+                'severity'      => $severity,
                 'message'       => $row['reason'],
                 'line'          => $row['line'],
                 'question_text' => '',
             ];
+
+            if ($severity === QuestionImportValidator::ERROR) {
+                $result['counts']['problems']++;
+            }
         }
 
-        $result['counts']['problems'] += count($read['skipped']);
         $result['success']             = true;
         $result['source']              = 'plain';
         $result['responses_affected']  = 0;
@@ -264,6 +323,17 @@ class QuestionImportService
      */
     private function parsePlain(int $assessmentId, array $paragraphs): array
     {
+        // An exam printed from a test-bank tool has its choices inline: read it as one stream.
+        $stream = implode("\n", array_column($paragraphs, 'text'));
+
+        if (PrintedExamParser::looks($stream)) {
+            $printed = (new PrintedExamParser())->parse($stream);
+
+            if ($printed['questions'] !== []) {
+                return $this->finishFormat($assessmentId, $printed);
+            }
+        }
+
         $questions = (new PlainQuestionParser())->parse($paragraphs);
 
         if ($questions === []) {

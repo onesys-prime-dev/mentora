@@ -51,14 +51,14 @@
                 <input
                     type="file"
                     data-import-file-input
-                    accept=".docx,.rtf,.xlsx,.csv,.txt"
+                    accept=".docx,.rtf,.xlsx,.csv,.txt,.pdf,.html,.htm"
                     aria-label="Quiz file to import"
                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
 
                 <p data-import-file-name class="hidden text-xs font-semibold text-gray-700" aria-live="polite"></p>
                 <p class="text-xs text-[#767676]">Drag a file here, or choose one.</p>
                 <p class="text-xs text-[#767676]">
-                    Word (.docx), Rich Text (.rtf), Excel (.xlsx), CSV (.csv) or Aiken/GIFT text (.txt), up to 5 MB.
+                    Word, Rich Text, PDF (with selectable text), HTML, Excel, CSV, or Aiken/GIFT/printed-exam text, up to 5 MB.
                     <a data-import-template-link href="#" class="font-semibold text-brand hover:underline">Download the Excel template</a>
                 </p>
             </div>

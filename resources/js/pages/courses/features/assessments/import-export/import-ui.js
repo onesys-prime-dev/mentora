@@ -8,7 +8,7 @@
 | what the import button says, and what the export panel remembers.
 */
 
-export const ACCEPTED_EXTENSIONS = ["docx", "rtf", "xlsx", "csv", "txt"];
+export const ACCEPTED_EXTENSIONS = ["docx", "rtf", "xlsx", "csv", "txt", "pdf", "html", "htm"];
 
 export const STEPS = ["upload", "review", "done"];
 
