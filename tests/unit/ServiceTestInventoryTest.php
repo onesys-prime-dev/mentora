@@ -29,7 +29,6 @@ final class ServiceTestInventoryTest extends CIUnitTestCase
     private const NOT_NAMED_IN_A_TEST = [
         'AssessmentScopeService' => 'Exercised through the assessmentscope route filter in tests/feature/AssessmentRoutesScopeTest.php.',
         'SimilarityChecker'      => 'Exercised through QuestionGenerationService tests, which use a fake generator.',
-        'LocalQuestionBuilderClient' => 'The real HTTP client for the Python question service. Tests never call it by design (see docs/testing.md, "The AI question-generation boundary").',
     ];
 
     /**

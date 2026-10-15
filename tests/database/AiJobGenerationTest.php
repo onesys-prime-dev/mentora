@@ -229,4 +229,30 @@ final class AiJobGenerationTest extends DatabaseTestCase
             $this->assertStringNotContainsString('_', $generation->message($code));
         }
     }
+
+    public function testTheSourceHashMatchesTheWorkersForPagedAndPlainText(): void
+    {
+        // Vectors computed by the worker's own source_hash() (qb/digest.py).
+        $this->assertSame(
+            '2cdc7df6715924c380d2e399e1f1d9a379410e932250a6a0b3cc34539a9379de',
+            AiJobGeneration::sourceHash("[[page 1]]
+Alpha beta
+
+[[page 2]]
+Gamma")
+        );
+        $this->assertSame(
+            'da5b975f1be7805ad7f435eac7d70edbd5f3473291a839e2fb6000c3c22361ac',
+            AiJobGeneration::sourceHash("a  b
+ c")
+        );
+        $this->assertSame(
+            '8e8b30bf020132b128d1912af1da110da1e0532b0d36478f189226f8d8ac0b24',
+            AiJobGeneration::sourceHash("intro
+[[page 3]]
+x y
+[[page 4]]
+")
+        );
+    }
 }

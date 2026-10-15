@@ -2046,6 +2046,22 @@ class ModuleService
                     'video'
                 );
 
+            // A file that was sent but failed (too large for the server, cut off,
+            // the wrong kind) is an error to report, never a silent "updated".
+            if ($video && $video->getError() !== UPLOAD_ERR_NO_FILE) {
+
+                $problem = $this->uploadProblem($video, self::VIDEO_TYPES, self::MAX_VIDEO_BYTES, 'video');
+
+                if ($problem !== null) {
+                    return ['success' => false, 'message' => $problem];
+                }
+
+            } elseif (! $previousFileId) {
+
+                return ['success' => false, 'message' => 'Choose a video file to upload.'];
+
+            }
+
             if (
 
                 $video &&
@@ -2116,6 +2132,15 @@ class ModuleService
 
                     );
 
+                // The file is on disk but its record was not saved: remove it rather than leave it unreachable.
+                if (! $fileId) {
+
+                    $this->storageService->delete($stored['storage_key']);
+
+                    return ['success' => false, 'message' => 'The video could not be saved. Please try again.'];
+
+                }
+
                 /*
                 |--------------------------------------------------------------------------
                 | Update Learning Resource
@@ -2169,6 +2194,39 @@ class ModuleService
     */
 
     private const MAX_PDF_BYTES = 25 * 1024 * 1024;
+
+    private const MAX_VIDEO_BYTES = 500 * 1024 * 1024;
+
+    private const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-m4v'];
+
+    /**
+     * Why an uploaded file cannot be used, in plain words, or null when it can.
+     *
+     * @param list<string> $types allowed MIME types
+     */
+    private function uploadProblem(\CodeIgniter\HTTP\Files\UploadedFile $file, array $types, int $maxBytes, string $label): ?string
+    {
+        if (! $file->isValid()) {
+
+            // The server's own limit (php.ini) is the usual reason a large video never arrives.
+            if (in_array($file->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+                return "That {$label} is larger than this server accepts (" . ini_get('upload_max_filesize') . '). Choose a smaller file, or ask your administrator to raise the limit.';
+            }
+
+            return "The {$label} could not be uploaded: " . $file->getErrorString();
+
+        }
+
+        if ($file->getSize() > $maxBytes) {
+            return "The {$label} is larger than the " . (int) ($maxBytes / 1048576) . ' MB limit.';
+        }
+
+        if (! in_array($file->getMimeType(), $types, true)) {
+            return "That file is not a supported {$label} type.";
+        }
+
+        return null;
+    }
 
     public function updatePdfItem(
         User $user,

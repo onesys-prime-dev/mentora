@@ -54,13 +54,34 @@ class AiJobGeneration
     }
 
     /**
-     * Same text, same hash as the worker computes for a single-page source.
+     * The same hash the worker computes for the same text: pages are the
+     * `[[page N]]` sections (or one page when there are none), each reduced
+     * to its words, so a repeat of the same source finds its stored digest.
      */
     public static function sourceHash(string $text): string
     {
-        $words = preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $pages = [];
+        $parts = preg_split('/^\[\[page (\d+)\]\]$/m', $text, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$text];
 
-        return hash('sha256', "1\x1f" . implode(' ', $words));
+        if (count($parts) === 1) {
+            if (trim($text) !== '') {
+                $pages[] = [1, trim($text)];
+            }
+        } else {
+            // parts[0] is whatever came before the first marker, which is not a page.
+            for ($i = 1; $i + 1 < count($parts); $i += 2) {
+                $pages[] = [(int) $parts[$i], trim($parts[$i + 1])];
+            }
+        }
+
+        $lines = [];
+
+        foreach ($pages as [$number, $body]) {
+            $words   = preg_split('/\s+/u', $body, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $lines[] = $number . "\x1f" . implode(' ', $words);
+        }
+
+        return hash('sha256', implode("\n", $lines));
     }
 
     /**

@@ -882,4 +882,54 @@ final class ModuleServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('No Feedback Yet', $html);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | A video upload that did not arrive is an error, not a silent "updated"
+    |--------------------------------------------------------------------------
+    */
+
+    /** @return array<string, mixed> */
+    private function uploadVideo(int $item, array $file, array $post = []): array
+    {
+        // The framework reads uploads through its superglobals service, not $_FILES directly.
+        service('superglobals')->setFilesArray(['video' => $file]);
+
+        try {
+            return $this->service->updateVideoItem($this->instructor, $this->offeringId, $item, $this->request(['source' => 'upload'] + $post));
+        } finally {
+            service('superglobals')->setFilesArray([]);
+        }
+    }
+
+    public function testAVideoTooLargeForTheServerIsReportedWithItsLimit(): void
+    {
+        [, , $item] = $this->tree('video');
+
+        $result = $this->uploadVideo($item, ['name' => 'lecture.mp4', 'type' => 'video/mp4', 'tmp_name' => '', 'error' => UPLOAD_ERR_INI_SIZE, 'size' => 0]);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('larger than this server accepts', $result['message']);
+        $this->assertStringContainsString((string) ini_get('upload_max_filesize'), $result['message']);
+        $this->assertSame(0, $this->rows('files', []), 'nothing was stored');
+    }
+
+    public function testAnInterruptedVideoUploadIsReported(): void
+    {
+        [, , $item] = $this->tree('video');
+
+        $result = $this->uploadVideo($item, ['name' => 'lecture.mp4', 'type' => 'video/mp4', 'tmp_name' => '', 'error' => UPLOAD_ERR_PARTIAL, 'size' => 0]);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('could not be uploaded', $result['message']);
+    }
+
+    public function testChoosingUploadWithoutAFileIsReportedWhenNothingWasUploadedBefore(): void
+    {
+        [, , $item] = $this->tree('video');
+
+        $result = $this->service->updateVideoItem($this->instructor, $this->offeringId, $item, $this->request(['source' => 'upload']));
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Choose a video file to upload.', $result['message']);
+    }
 }

@@ -259,3 +259,23 @@ def test_payload_shape_never_exposes_a_correct_flag_name_the_php_side_does_not_e
 
     assert out["choices"][0] == {"text": "Router", "is_correct": True}
     assert out["model_used"] == "model-x" and out["prompt_version"].startswith("write-")
+
+
+def test_page_markers_in_the_source_give_questions_their_real_page():
+    source = (
+        "[[page 4]]\nRouters forward packets using the destination address in a routing table.\n\n"
+        "[[page 5]]\nTCP gives reliable ordered delivery with acknowledgements."
+    )
+    digest = json.dumps({"concepts": [
+        {"name": "Routing", "facts": [{"text": "Routers forward packets using the destination address", "page": 4}]}]})
+    write = json.dumps({"questions": [
+        {"concept_id": "0.0", "type": "Short Answer", "text": "What do routers use to forward packets?",
+         "fact_id": "0.0.0", "explanation": "x", "accepted_answers": ["destination address"]}]})
+    _, pool = make_pool([digest, write, answers({"answer": "destination address"})])
+
+    result = make_generate_handler(pool)(
+        {"payload": {"source_text": source, "count": 1, "type_mix": {"short_answer": 1}}}, Ctx()
+    )
+
+    assert result["questions"][0]["page"] == 4
+    assert result["digest"]["window_count"] == 1

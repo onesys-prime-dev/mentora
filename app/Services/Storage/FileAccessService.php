@@ -3,6 +3,8 @@
 namespace App\Services\Storage;
 
 use App\Models\Files\FileModel;
+use App\Services\Courses\ChairpersonAccessService;
+use App\Services\Courses\DeanAccessService;
 use App\Services\Courses\LearningProgressService;
 use CodeIgniter\Shield\Entities\User;
 
@@ -76,7 +78,13 @@ class FileAccessService
             return true;
         }
 
-        $isInstructor = $user->inGroup('instructor');
+        // Staff: the people who teach the section, the chairperson of its
+        // sub-department (full instructor rights on it) and the dean of its
+        // department (looking, never changing). Everyone else is treated as
+        // a student of the section.
+        $isInstructor = $user->inGroup('instructor')
+            || $user->inGroup('chairperson')
+            || $user->inGroup('dean');
 
         /*
         |--------------------------------------------------------------------------
@@ -105,7 +113,7 @@ class FileAccessService
 
             if ($isInstructor) {
 
-                if ($this->teachesOffering($userId, $offeringId)) {
+                if ($this->teachesOffering($user, $offeringId)) {
                     return true;
                 }
 
@@ -164,8 +172,8 @@ class FileAccessService
             // in no module falls back to any section of the course.
             if ($isInstructor && (
                 $row['offering_id'] !== null
-                    ? $this->teachesOffering($userId, (int) $row['offering_id'])
-                    : $this->teachesCourse($userId, (int) $row['course_id'])
+                    ? $this->teachesOffering($user, (int) $row['offering_id'])
+                    : $this->teachesCourse($user, (int) $row['course_id'])
             )) {
                 return true;
             }
@@ -187,7 +195,7 @@ class FileAccessService
                 ->getResultArray();
 
             foreach ($batches as $batch) {
-                if ($this->teachesCourse($userId, (int) $batch['course_id'])) {
+                if ($this->teachesCourse($user, (int) $batch['course_id'])) {
                     return true;
                 }
             }
@@ -222,7 +230,7 @@ class FileAccessService
 
             $offeringId = (int) $row['offering_id'];
 
-            if ($isInstructor ? $this->teachesOffering($userId, $offeringId) : $this->enrolledInOffering($userId, $offeringId)) {
+            if ($isInstructor ? $this->teachesOffering($user, $offeringId) : $this->enrolledInOffering($userId, $offeringId)) {
                 return true;
             }
 
@@ -231,21 +239,32 @@ class FileAccessService
         return false;
     }
 
-    private function teachesOffering(int $instructorId, int $offeringId): bool
+    /** Does this staff member reach the section: teaches it, chairs its sub-department, or is its department's dean? */
+    private function teachesOffering(User $staff, int $offeringId): bool
     {
-        return db_connect()->table('instructor_assignments')
-            ->where('instructor_user_id', $instructorId)
+        if (db_connect()->table('instructor_assignments')
+            ->where('instructor_user_id', (int) $staff->id)
             ->where('offering_id', $offeringId)
-            ->countAllResults() > 0;
+            ->countAllResults() > 0) {
+            return true;
+        }
+
+        return ($staff->inGroup('chairperson') && (new ChairpersonAccessService())->canAccess($staff, $offeringId))
+            || ($staff->inGroup('dean') && (new DeanAccessService())->canAccessOffering($staff, $offeringId));
     }
 
-    private function teachesCourse(int $instructorId, int $courseId): bool
+    /** The same for a course: any section of it. */
+    private function teachesCourse(User $staff, int $courseId): bool
     {
-        return db_connect()->table('instructor_assignments')
-            ->join('course_offerings', 'course_offerings.id = instructor_assignments.offering_id')
-            ->where('instructor_assignments.instructor_user_id', $instructorId)
-            ->where('course_offerings.course_id', $courseId)
-            ->countAllResults() > 0;
+        $sections = db_connect()->table('course_offerings')->select('id')->where('course_id', $courseId)->get()->getResultArray();
+
+        foreach ($sections as $section) {
+            if ($this->teachesOffering($staff, (int) $section['id'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function enrolledInOffering(int $studentId, int $offeringId): bool

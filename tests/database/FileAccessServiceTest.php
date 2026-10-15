@@ -314,4 +314,93 @@ final class FileAccessServiceTest extends DatabaseTestCase
         $this->assertTrue($this->allowed($this->classmate, $file));
         $this->assertFalse($this->allowed($this->outsider, $file));
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chairperson and dean
+    |--------------------------------------------------------------------------
+    */
+
+    /** @return array{sub: int, department: int} the sub-department and department of this test's offering */
+    private function hierarchyOf(int $offeringId): array
+    {
+        $row = db_connect()->table('course_offerings co')
+            ->select('sd.id AS sub, sd.department_id AS department')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->where('co.id', $offeringId)->get()->getRowArray();
+
+        return ['sub' => (int) $row['sub'], 'department' => (int) $row['department']];
+    }
+
+    private function chairOf(int $offeringId): User
+    {
+        $chair = CourseFactory::user('chairperson');
+        db_connect()->table('chairperson_assignments')->insert([
+            'sub_department_id' => $this->hierarchyOf($offeringId)['sub'],
+            'chairperson_user_id' => $chair->id,
+            'status' => 'active',
+            'assigned_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $chair;
+    }
+
+    private function deanOf(int $offeringId): User
+    {
+        $dean = CourseFactory::user('dean');
+        db_connect()->table('dean_assignments')->insert([
+            'department_id' => $this->hierarchyOf($offeringId)['department'],
+            'dean_user_id' => $dean->id,
+            'status' => 'active',
+            'active_marker' => 1,
+            'assigned_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $dean;
+    }
+
+    public function testTheChairpersonOfTheSubDepartmentOpensItsCourseFilesWithoutTeachingIt(): void
+    {
+        $chair = $this->chairOf($this->offering);
+        $file = $this->file($this->instructor);
+        $this->resourceIn($file, ['item' => 'draft']);
+
+        $this->assertTrue($this->allowed($chair, $file), 'even an unpublished resource: the chairperson has instructor rights');
+    }
+
+    public function testAChairpersonOfAnotherSubDepartmentIsRefused(): void
+    {
+        $otherSection = CourseFactory::offering();
+        $elsewhere = $this->chairOf($otherSection);
+        $file = $this->file($this->instructor);
+        $this->resourceIn($file);
+
+        $this->assertFalse($this->allowed($elsewhere, $file));
+    }
+
+    public function testTheDeanOfTheDepartmentOpensItsCourseFilesAndStudentWork(): void
+    {
+        $dean = $this->deanOf($this->offering);
+        $resource = $this->file($this->instructor);
+        $this->resourceIn($resource);
+
+        $this->assertTrue($this->allowed($dean, $resource));
+
+        $quiz = CourseFactory::assessment($this->offering, $this->instructor);
+        $work = $this->file($this->student);
+        AssessmentFactory::attempt($quiz, $this->student, 'Submitted', 0.0, ['submission_file_id' => $work]);
+
+        $this->assertTrue($this->allowed($dean, $work));
+    }
+
+    public function testADeanOfAnotherDepartmentIsRefused(): void
+    {
+        $other = $this->deanOf(CourseFactory::offering());
+        $file = $this->file($this->instructor);
+        $this->resourceIn($file);
+
+        $this->assertFalse($this->allowed($other, $file));
+    }
 }
