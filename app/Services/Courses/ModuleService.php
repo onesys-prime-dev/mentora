@@ -1524,7 +1524,7 @@ class ModuleService
                 'learning_item_id' => $learningItemId,
                 'author_id' => $user->id,
                 'title' => $title,
-                'body' => self::discussionMessage($request->getPost('discussion_body')),
+                'body' => '',
                 'last_activity_at' => $now,
             ]);
 

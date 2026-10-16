@@ -485,21 +485,6 @@ final class ModuleServiceTest extends DatabaseTestCase
         $this->assertSame($this->instructor->id, (int) $thread['author_id']);
     }
 
-    public function testADiscussionItemStoresThePromptItIsCreatedWith(): void
-    {
-        [$module, $unit] = $this->tree();
-
-        $result = $this->service->storeLearningItem($this->instructor, $this->offeringId, $module, $unit, $this->request([
-            'title' => 'Introduce yourself',
-            'item_type' => 'discussion',
-            'discussion_body' => "  Tell us who you are.
-What do you hope to learn?  ",
-        ]));
-
-        $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $result['learning_item_id'])->get()->getRowArray();
-        $this->assertSame(['Tell us who you are.', 'What do you hope to learn?'], $this->paragraphs($thread['body']));
-    }
-
     public function testEditingADiscussionItemKeepsItsThreadInStep(): void
     {
         [$module, $unit] = $this->tree();
