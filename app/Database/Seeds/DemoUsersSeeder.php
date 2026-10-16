@@ -164,12 +164,12 @@ class DemoUsersSeeder extends Seeder
                 'institution_id' => 1,
             ],
 
-            // Dual-role: oversees CBM, chairs its IT sub-department, and teaches.
+            // Dual-role: oversees CBM and also teaches (a dean cannot also be a chairperson).
             [
                 'username'       => 'dean.demo2',
                 'email'          => 'dean2@mentora.test',
                 'password'       => 'Dean123!',
-                'group'          => ['dean', 'chairperson', 'instructor'],
+                'group'          => ['dean', 'instructor'],
                 'first_name'     => 'Diana',
                 'middle_name'    => 'Torres',
                 'last_name'      => 'Mendoza',
