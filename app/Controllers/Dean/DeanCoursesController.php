@@ -10,8 +10,8 @@ use App\Services\Courses\DeanCourseFilters;
 use App\Services\Courses\DeanCourseSearch;
 
 /**
- * The dean's Courses page: every course in their department, read-only.
- * Opening a course is a later branch; for now the cards are not links.
+ * The dean's Courses page: every course in their department. A card opens
+ * the course in its read-only view (the dean/courses/{id} routes).
  */
 class DeanCoursesController extends BaseController
 {

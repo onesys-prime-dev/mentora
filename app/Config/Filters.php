@@ -55,6 +55,7 @@ class Filters extends BaseFilters
         'readonly'      => ReadOnlyFilter::class,
         'closedoffering' => ClosedOfferingFilter::class,
         'institutioncourse' => InstitutionCourseFilter::class,
+        'deancourse'    => InstitutionCourseFilter::class,
         'role'          => RoleFilter::class,
         'accountstate'  => AccountStateFilter::class,
         'impersonation' => ImpersonationFilter::class,

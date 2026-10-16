@@ -113,7 +113,6 @@ foreach ($statuses as $status) {
                         'course'       => $course + ['slug' => url_title((string) $course['course_title'], '-', true)],
                         'userRole'     => 'dean',
                         'isInstructor' => true,
-                        'linked'       => false,
                     ], ['saveData' => false]) ?>
                 </li>
             <?php endforeach; ?>

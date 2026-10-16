@@ -74,7 +74,7 @@ class FileAccessService
 
         // The institutional administrator's read-only view: what the course shares (its
         // resources and announcement attachments), never a student's work.
-        if (\App\Services\Courses\CourseViewer::isReadOnlyViewer($user) && (new \App\Services\Institutions\InstitutionCourseAccess())->canReadFile($user, $fileId)) {
+        if (\App\Services\Courses\CourseViewer::isReadOnlyViewer($user) && (new \App\Services\Courses\CourseReadAccess())->canReadFile($user, $fileId)) {
             return true;
         }
 

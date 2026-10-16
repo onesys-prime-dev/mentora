@@ -280,6 +280,40 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
     $routes->get('courses', 'Dean\DeanCoursesController::index');
+
+    // A read-only view of every course of the department (courses.view), exactly what its
+    // instructor sees: the same controllers as the instructor's, but only the reading routes.
+    // There is no route to post, patch or delete anything in a course here, so nothing can be
+    // changed from this view; the editors, the grading screens and the question-generation
+    // tools are left out, as in the institution's view. The offering must be in the dean's
+    // department, else 404 (deancourse).
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'deancourse']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3', ['filter' => ['permission:courses.view', 'deancourse']]);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'deancourse']]);
+
+    $routes->group('api/courses', ['filter' => ['permission:courses.view', 'deancourse', 'assessmentscope']], function ($routes) {
+        $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
+        $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
+        $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
+        $routes->get('(:num)/modules', 'Courses\ModuleController::show/$1');
+        $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
+        $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
+        $routes->get('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::learningItemDependencies/$1/$2');
+        $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
+        $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
+        $routes->get('(:num)/discussions/more', 'Courses\DiscussionController::loadMore/$1');
+        $routes->get('(:num)/discussions/(:num)', 'Courses\DiscussionController::thread/$1/$2');
+        $routes->get('(:num)/assessments', 'Courses\Assessments\AssessmentController::show/$1');
+        $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/rubrics', 'Courses\Assessments\RubricController::index/$2');
+        $routes->get('(:num)/rubrics/(:num)', 'Courses\Assessments\RubricController::show/$2');
+        $routes->get('(:num)/assessments/(:num)/questions', 'Courses\Assessments\QuestionController::index/$2');
+        $routes->get('(:num)/questions/(:num)', 'Courses\Assessments\QuestionController::show/$2');
+        $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
+        $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
+        $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
+        $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+    });
 });
 
 // A chairperson has full instructor rights on every course in their

@@ -84,6 +84,20 @@ final class OfferingDetail
     }
 
     /**
+     * One offering in the shared shape, or null when it does not exist. Not a
+     * permission check: whoever calls this has already decided the person may
+     * look at it.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function find(int $offeringId): ?array
+    {
+        $programId = (int) db_connect()->table('course_offerings o')->select('c.program_id')->join('courses c', 'c.id = o.course_id')->where('o.id', $offeringId)->get()->getRow('program_id');
+
+        return self::inPrograms([$programId])->where('course_offerings.id', $offeringId)->get()->getRowArray();
+    }
+
+    /**
      * Offerings in a set of programs, in the shared shape. Not narrowed by
      * status or term: the caller does that. An empty set is no offerings,
      * never "all of them".
