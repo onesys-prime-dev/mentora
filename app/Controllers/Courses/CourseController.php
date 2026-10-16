@@ -124,6 +124,9 @@ class CourseController extends BaseController
 
                 // The institutional administrator looks at courses; the page says so and addresses the read-only routes.
                 'readOnlyView' => \App\Services\Courses\CourseViewer::isReadOnlyViewer($user),
+                'readOnlyAs' => \App\Services\Courses\CourseViewer::isDeanViewer($user)
+                    ? 'the dean of ' . ($course['department_name'] ?? 'this department')
+                    : 'an administrator of this institution',
                 'courseUrlPrefix' => \App\Services\Courses\CourseViewer::urlPrefix($user, (string) ($user->getGroups()[0] ?? '')),
 
                 // A completed or archived offering can be looked at, not changed.

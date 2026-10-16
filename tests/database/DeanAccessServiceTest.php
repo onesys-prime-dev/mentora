@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\Courses\DeanAccessService;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 final class DeanAccessServiceTest extends DatabaseTestCase
@@ -52,6 +53,35 @@ final class DeanAccessServiceTest extends DatabaseTestCase
         $service = new DeanAccessService();
 
         $this->assertFalse($service->canAccessPerson($dean, (int) $dean->id));
+    }
+
+    public function testADeanWithoutAnActiveAssignmentReachesNoOfferingProgramOrPerson(): void
+    {
+        $offering = CourseFactory::offering('N');
+        $program  = (int) db_connect()->table('courses c')->select('c.program_id')->join('course_offerings co', 'co.course_id = c.id')->where('co.id', $offering)->get()->getRowArray()['program_id'];
+        $dean     = PeopleFactory::person('dean', 'Un', 'Assigned');
+        $service  = new DeanAccessService();
+
+        $this->assertFalse($service->canAccessOffering($dean, $offering));
+        $this->assertFalse($service->canAccessProgram($dean, $program));
+        $this->assertFalse($service->canAccessPerson($dean, (int) $dean->id));
+        $this->assertSame([], $service->programIds($dean));
+    }
+
+    public function testProgramIdsAreEveryProgramUnderTheDepartmentAndNoOther(): void
+    {
+        $home      = DeanFactory::department('PI');
+        $sub       = DeanFactory::subDepartment($home['department'], 'PI');
+        $first     = DeanFactory::program($sub, 'P1');
+        $second    = DeanFactory::program(DeanFactory::subDepartment($home['department'], 'PJ'), 'P2');
+        $elsewhere = DeanFactory::department('PX');
+        DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'PX'), 'P3');
+        $dean = DeanFactory::dean($home['institution'], $home['department']);
+
+        $ids = (new DeanAccessService())->programIds($dean);
+        sort($ids);
+
+        $this->assertSame([$first, $second], $ids);
     }
 
     public function testDepartmentAndOfferingAccessAreAvailableForAnActiveDean(): void

@@ -41,6 +41,45 @@ final class DeanAssignmentServiceTest extends DatabaseTestCase
         ])->countAllResults());
     }
 
+    public function testAChairpersonCannotBeMadeDean(): void
+    {
+        $chair = PeopleFactory::person('chairperson', 'Cho', 'Chair', null, $this->institution);
+
+        try {
+            $this->service->assign($this->institution, $this->department, (int) $chair->id);
+            $this->fail('Expected the assignment to be refused.');
+        } catch (StructureException $e) {
+            $this->assertArrayHasKey('user_id', $e->errors());
+            $this->assertStringContainsString('cannot also be a chairperson', $e->getMessage());
+        }
+
+        $this->assertNull($this->service->currentDeanOfDepartment($this->department));
+        $this->assertSame(0, db_connect()->table('auth_groups_users')->where(['user_id' => $chair->id, 'group' => 'dean'])->countAllResults());
+    }
+
+    public function testSomeoneWithAnActiveChairpersonAssignmentCannotBeMadeDeanEvenWithoutTheRole(): void
+    {
+        $person = PeopleFactory::person('instructor', 'Ivy', 'Teacher', null, $this->institution);
+        $sub    = Tests\Support\DeanFactory::subDepartment($this->department, 'CA');
+        db_connect()->table('chairperson_assignments')->insert([
+            'sub_department_id' => $sub, 'chairperson_user_id' => $person->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->expectException(StructureException::class);
+
+        $this->service->assign($this->institution, $this->department, (int) $person->id);
+    }
+
+    public function testAnInstructorCanBeMadeDeanAndKeepsTeaching(): void
+    {
+        $person = PeopleFactory::person('instructor', 'Ivy', 'Teacher', null, $this->institution);
+
+        $this->service->assign($this->institution, $this->department, (int) $person->id);
+
+        $groups = array_column(db_connect()->table('auth_groups_users')->where('user_id', $person->id)->get()->getResultArray(), 'group');
+        $this->assertEqualsCanonicalizing(['instructor', 'dean'], $groups);
+    }
+
     public function testReplacingDeanEndsTheEarlierAssignmentAndKeepsHistory(): void
     {
         $first = PeopleFactory::person('instructor', 'First', 'Dean', null, $this->institution);

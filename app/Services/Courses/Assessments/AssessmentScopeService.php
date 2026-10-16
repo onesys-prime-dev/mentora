@@ -105,7 +105,7 @@ class AssessmentScopeService
     public function canAccess(User $user, int $offeringId): bool
     {
         if (\App\Services\Courses\CourseViewer::isReadOnlyViewer($user)) {
-            return (new \App\Services\Institutions\InstitutionCourseAccess())->canAccess($user, $offeringId);
+            return (new \App\Services\Courses\CourseReadAccess())->canAccess($user, $offeringId);
         }
 
         return (new \App\Services\Courses\CourseMembership())->canAccess($user, $offeringId);

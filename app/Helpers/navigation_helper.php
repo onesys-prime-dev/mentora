@@ -59,6 +59,7 @@ if (! function_exists('global_apps')) {
         if ($role === 'dean') {
             return [
                 ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('dean/dashboard')],
+                ['key' => 'courses', 'label' => 'Courses', 'icon' => 'hat', 'url' => site_url('dean/courses')],
             ];
         }
 

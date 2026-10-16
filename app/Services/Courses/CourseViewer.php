@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Courses;
 
+use App\Services\Auth\ActiveRoleService;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -33,18 +34,42 @@ final class CourseViewer
             || self::isReadOnlyViewer($user);
     }
 
-    /** The institutional administrator: looks at courses, never changes them. */
+    /**
+     * Someone looking at courses, never changing them: the institutional
+     * administrator, or the dean while acting as dean.
+     */
     public static function isReadOnlyViewer(User $user): bool
+    {
+        return self::isInstitutionViewer($user) || self::isDeanViewer($user);
+    }
+
+    /** The institutional administrator (who does not also teach). */
+    public static function isInstitutionViewer(User $user): bool
     {
         return $user->inGroup('institutional_admin') && ! $user->inGroup('instructor');
     }
 
     /**
+     * A dean acting as dean. A dean who also teaches and is acting as an
+     * instructor is not a viewer: they see their own courses as their
+     * instructor does.
+     */
+    public static function isDeanViewer(User $user): bool
+    {
+        return $user->inGroup('dean') && (new ActiveRoleService())->resolve($user) === 'dean';
+    }
+
+    /**
      * The first segment of the course page and API addresses for this person:
-     * `institution` for the read-only viewer, else the given role name.
+     * `institution` for the institution's administrator, `dean` for a dean
+     * acting as dean, else the given role name.
      */
     public static function urlPrefix(User $user, string $role): string
     {
-        return self::isReadOnlyViewer($user) ? 'institution' : $role;
+        return match (true) {
+            self::isInstitutionViewer($user) => 'institution',
+            self::isDeanViewer($user)        => 'dean',
+            default                          => $role,
+        };
     }
 }

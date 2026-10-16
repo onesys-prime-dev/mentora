@@ -67,7 +67,7 @@ $features = [
 
     <?php if (! empty($readOnlyView)): ?>
         <div class="px-4 sm:px-10" data-view-only>
-            <?= view('components/lock-note', ['kind' => 'closed', 'text' => 'View only. You are looking at ' . $course['course_code'] . ' ' . $course['section_code'] . ' as an administrator of this institution: everything is shown as its instructor sees it, and nothing can be changed here.'], ['saveData' => false]) ?>
+            <?= view('components/lock-note', ['kind' => 'closed', 'text' => 'View only. You are looking at ' . $course['course_code'] . ' ' . $course['section_code'] . ' as ' . ($readOnlyAs ?? 'an administrator of this institution') . ': everything is shown as its instructor sees it, and nothing can be changed here.'], ['saveData' => false]) ?>
         </div>
     <?php endif; ?>
 

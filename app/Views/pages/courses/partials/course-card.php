@@ -2,7 +2,8 @@
 /*
 |--------------------------------------------------------------------------
 | Course card — the one way a course is shown on the Courses page.
-| Params: course, userRole, isInstructor.
+| Params: course, userRole, isInstructor, linked (default true: false shows
+| the same card as plain, non-clickable content).
 |
 | The cover is purely decorative and no text sits on it, so readability
 | never depends on the artwork. It uses the same banner image as the Course
@@ -14,17 +15,19 @@ $progress = max(0, min(100, (int) ($course['progress'] ?? 0)));
 $cover = $course['banner_image'] ?? base_url('assets/images/placeholder/course-tech-1-card.jpg');
 $progressLabel = $isInstructor ? 'Class progress' : 'Your progress';
 $titleId = 'course-title-' . (int) $course['offering_id'];
-?>
-
-<a
-    href="<?= site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']) ?>"
-    aria-labelledby="<?= $titleId ?>"
-    class="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm
-           transition duration-200 ease-out
+$linked = $linked ?? true;
+$cardClass = 'group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm';
+$linkClass = 'transition duration-200 ease-out
            hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg
            active:translate-y-0 active:scale-[0.99]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2
-           motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100">
+           motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100';
+?>
+
+<<?= $linked ? 'a' : 'div' ?>
+    <?php if ($linked): ?>href="<?= site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']) ?>"<?php endif; ?>
+    aria-labelledby="<?= $titleId ?>"
+    class="<?= $cardClass ?> <?= $linked ? $linkClass : '' ?>">
 
     <img
         src="<?= esc($cover, 'attr') ?>"
@@ -45,7 +48,9 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
                 <span id="<?= $titleId ?>" class="line-clamp-2 min-h-14 text-xl font-bold leading-7 text-[#1A1C1E]">
                     <?= esc($course['course_title']) ?>
                 </span>
+                <?php if ($linked): ?>
                 <svg class="mt-1.5 h-5 w-5 shrink-0 text-[#767676] transition group-hover:translate-x-0.5 group-hover:text-brand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                <?php endif; ?>
             </div>
 
         </div>
@@ -59,6 +64,9 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
                 </span>
             <?php elseif (array_key_exists('instructor_count', $course)): ?>
                 <span class="text-xs text-[#646464]">No instructor assigned</span>
+            <?php endif; ?>
+            <?php if (!empty($course['chairperson_name'])): ?>
+                <span class="text-xs text-[#646464]">Chair <?= esc($course['chairperson_name']) ?></span>
             <?php endif; ?>
         </div>
 
@@ -79,5 +87,4 @@ $titleId = 'course-title-' . (int) $course['offering_id'];
         </div>
 
     </div>
-
-</a>
+</<?= $linked ? 'a' : 'div' ?>>

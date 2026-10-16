@@ -35,6 +35,23 @@ class InstitutionCourseAccess
      */
     public function canReadFile(User $user, int $fileId): bool
     {
+        foreach ($this->offeringsSharing($fileId) as $offeringId) {
+            if ($this->canAccess($user, $offeringId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The offerings that share this file with their course: a resource of one
+     * of its learning items, or an attachment of one of its announcements.
+     *
+     * @return list<int>
+     */
+    public function offeringsSharing(int $fileId): array
+    {
         $db = db_connect();
 
         $offerings = array_merge(
@@ -50,13 +67,7 @@ class InstitutionCourseAccess
                 ->where('aa.file_id', $fileId)->get()->getResultArray(), 'offering_id'),
         );
 
-        foreach ($offerings as $offeringId) {
-            if ($this->canAccess($user, (int) $offeringId)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_values(array_unique(array_map('intval', $offerings)));
     }
 
     /**
@@ -67,12 +78,6 @@ class InstitutionCourseAccess
      */
     public function offering(User $user, int $offeringId): ?array
     {
-        if (! $this->canAccess($user, $offeringId)) {
-            return null;
-        }
-
-        $programId = (int) db_connect()->table('course_offerings o')->select('c.program_id')->join('courses c', 'c.id = o.course_id')->where('o.id', $offeringId)->get()->getRow('program_id');
-
-        return OfferingDetail::inPrograms([$programId])->where('course_offerings.id', $offeringId)->get()->getRowArray();
+        return $this->canAccess($user, $offeringId) ? OfferingDetail::find($offeringId) : null;
     }
 }
