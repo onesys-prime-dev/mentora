@@ -222,18 +222,26 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->post('(:num)/generate-questions', 'Courses\Assessments\QuestionGenerationController::start/$1');
-        $routes->post('(:num)/generation-batches/(:num)/next-chunk', 'Courses\Assessments\QuestionGenerationController::nextChunk/$2');
-        $routes->get('(:num)/generation-batches/(:num)', 'Courses\Assessments\QuestionGenerationController::show/$2');
-        $routes->patch('(:num)/generated-questions/(:num)', 'Courses\Assessments\QuestionGenerationController::updateQuestion/$2');
-        $routes->post('(:num)/generated-questions/(:num)/accept', 'Courses\Assessments\QuestionGenerationController::acceptQuestion/$2');
-        $routes->post('(:num)/generated-questions/(:num)/discard', 'Courses\Assessments\QuestionGenerationController::discardQuestion/$2');
-        $routes->post('(:num)/generation-batches/(:num)/accept-all', 'Courses\Assessments\QuestionGenerationController::acceptAll/$2');
-        $routes->post('(:num)/generation-batches/(:num)/cancel', 'Courses\Assessments\QuestionGenerationController::cancel/$2');
-        $routes->get('(:num)/assessments/(:num)/pending-generation', 'Courses\Assessments\QuestionGenerationController::pending/$2');
+        $routes->post('(:num)/generation-batches/(:num)/next-chunk', 'Courses\Assessments\QuestionGenerationController::nextChunk/$1/$2');
+        $routes->get('(:num)/generation-batches/(:num)', 'Courses\Assessments\QuestionGenerationController::show/$1/$2');
+        $routes->patch('(:num)/generated-questions/(:num)', 'Courses\Assessments\QuestionGenerationController::updateQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/accept', 'Courses\Assessments\QuestionGenerationController::acceptQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/discard', 'Courses\Assessments\QuestionGenerationController::discardQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/replace', 'Courses\Assessments\QuestionGenerationController::replaceQuestion/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/accept-all', 'Courses\Assessments\QuestionGenerationController::acceptAll/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/cancel', 'Courses\Assessments\QuestionGenerationController::cancel/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/discard-all', 'Courses\Assessments\QuestionGenerationController::discardAll/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/top-up', 'Courses\Assessments\QuestionGenerationController::topUp/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/pending-generation', 'Courses\Assessments\QuestionGenerationController::pending/$1/$2');
 
         $routes->get('(:num)/assessments/(:num)/export', 'Courses\Assessments\QuestionImportExportController::export/$2');
         $routes->post('(:num)/assessments/(:num)/import/preview', 'Courses\Assessments\QuestionImportExportController::preview/$2');
         $routes->post('(:num)/assessments/(:num)/import/apply', 'Courses\Assessments\QuestionImportExportController::apply/$2');
+        $routes->post('(:num)/assessments/(:num)/import/undo', 'Courses\Assessments\QuestionImportExportController::undo/$2');
+        $routes->get('(:num)/assessments/(:num)/import/sample', 'Courses\Assessments\QuestionImportExportController::sample/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources', 'Courses\Assessments\QuestionPickerController::sources/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources/(:num)', 'Courses\Assessments\QuestionPickerController::questions/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/question-sources/copy', 'Courses\Assessments\QuestionPickerController::copy/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
 
@@ -396,18 +404,26 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->post('(:num)/generate-questions', 'Courses\Assessments\QuestionGenerationController::start/$1');
-        $routes->post('(:num)/generation-batches/(:num)/next-chunk', 'Courses\Assessments\QuestionGenerationController::nextChunk/$2');
-        $routes->get('(:num)/generation-batches/(:num)', 'Courses\Assessments\QuestionGenerationController::show/$2');
-        $routes->patch('(:num)/generated-questions/(:num)', 'Courses\Assessments\QuestionGenerationController::updateQuestion/$2');
-        $routes->post('(:num)/generated-questions/(:num)/accept', 'Courses\Assessments\QuestionGenerationController::acceptQuestion/$2');
-        $routes->post('(:num)/generated-questions/(:num)/discard', 'Courses\Assessments\QuestionGenerationController::discardQuestion/$2');
-        $routes->post('(:num)/generation-batches/(:num)/accept-all', 'Courses\Assessments\QuestionGenerationController::acceptAll/$2');
-        $routes->post('(:num)/generation-batches/(:num)/cancel', 'Courses\Assessments\QuestionGenerationController::cancel/$2');
-        $routes->get('(:num)/assessments/(:num)/pending-generation', 'Courses\Assessments\QuestionGenerationController::pending/$2');
+        $routes->post('(:num)/generation-batches/(:num)/next-chunk', 'Courses\Assessments\QuestionGenerationController::nextChunk/$1/$2');
+        $routes->get('(:num)/generation-batches/(:num)', 'Courses\Assessments\QuestionGenerationController::show/$1/$2');
+        $routes->patch('(:num)/generated-questions/(:num)', 'Courses\Assessments\QuestionGenerationController::updateQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/accept', 'Courses\Assessments\QuestionGenerationController::acceptQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/discard', 'Courses\Assessments\QuestionGenerationController::discardQuestion/$1/$2');
+        $routes->post('(:num)/generated-questions/(:num)/replace', 'Courses\Assessments\QuestionGenerationController::replaceQuestion/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/accept-all', 'Courses\Assessments\QuestionGenerationController::acceptAll/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/cancel', 'Courses\Assessments\QuestionGenerationController::cancel/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/discard-all', 'Courses\Assessments\QuestionGenerationController::discardAll/$1/$2');
+        $routes->post('(:num)/generation-batches/(:num)/top-up', 'Courses\Assessments\QuestionGenerationController::topUp/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/pending-generation', 'Courses\Assessments\QuestionGenerationController::pending/$1/$2');
 
         $routes->get('(:num)/assessments/(:num)/export', 'Courses\Assessments\QuestionImportExportController::export/$2');
         $routes->post('(:num)/assessments/(:num)/import/preview', 'Courses\Assessments\QuestionImportExportController::preview/$2');
         $routes->post('(:num)/assessments/(:num)/import/apply', 'Courses\Assessments\QuestionImportExportController::apply/$2');
+        $routes->post('(:num)/assessments/(:num)/import/undo', 'Courses\Assessments\QuestionImportExportController::undo/$2');
+        $routes->get('(:num)/assessments/(:num)/import/sample', 'Courses\Assessments\QuestionImportExportController::sample/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources', 'Courses\Assessments\QuestionPickerController::sources/$2');
+        $routes->get('(:num)/assessments/(:num)/question-sources/(:num)', 'Courses\Assessments\QuestionPickerController::questions/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/question-sources/copy', 'Courses\Assessments\QuestionPickerController::copy/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
 

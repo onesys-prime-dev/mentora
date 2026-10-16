@@ -20,10 +20,10 @@ class QuestionGenerationController extends BaseController
     }
 
     /**
-     * Always multipart/form-data (even when there's no file) so the same
-     * endpoint handles topic / pasted-text / uploaded-file sources without
-     * the frontend switching content types. `type_mix` arrives as a
-     * JSON-encoded string field since HTML FormData can't nest objects.
+     * The only source is the learning unit the quiz sits under; the unit is
+     * derived from the assessment, never read from the request. `type_mix`
+     * and `learning_item_ids` arrive as JSON-encoded string fields since HTML
+     * FormData can't nest objects.
      */
     public function start(int $offeringId)
     {
@@ -48,55 +48,98 @@ class QuestionGenerationController extends BaseController
             // Derived from the URL's offering, never trusted from the client.
             'course_id' => (int) ($offering['course_id'] ?? 0),
             'offering_id' => $offeringId,
-            'source_type' => $post['source_type'] ?? 'topic',
-            'topic' => $post['topic'] ?? null,
-            'source_text' => $post['source_text'] ?? null,
+            'learning_item_ids' => $this->itemIds($post['learning_item_ids'] ?? null),
             'count' => (int) ($post['count'] ?? 10),
-            'type_mix' => isset($post['type_mix']) ? json_decode($post['type_mix'], true) : null,
+            'type_mix' => isset($post['type_mix']) ? json_decode((string) $post['type_mix'], true) : null,
+            'options' => isset($post['options']) ? json_decode((string) $post['options'], true) : null,
             'points_per_question' => isset($post['points_per_question']) && $post['points_per_question'] !== ''
                 ? (float) $post['points_per_question']
                 : null,
         ];
 
-        $file = $this->request->getFile('file');
-
         return $this->response->setJSON(
-            $this->generationService->startBatch($user, $data, $file)
+            $this->generationService->startBatch($user, $data)
         );
     }
 
-    public function nextChunk(int $batchId)
+    /**
+     * The chosen item ids from a JSON string or a repeated field; null when
+     * the request names none (the service then uses every reading and PDF).
+     *
+     * @return list<int>|null
+     */
+    private function itemIds(mixed $raw): ?array
     {
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+
+        return is_array($raw) ? array_values(array_map('intval', $raw)) : null;
+    }
+
+    /**
+     * A batch is its creator's, and belongs to a quiz of the offering in the
+     * URL. Anything else answers 404, so an id from another teacher or another
+     * course does not even confirm that it exists.
+     */
+    private function ownBatch(int $offeringId, int $batchId): void
+    {
+        if (! $this->generationService->ownsBatch(auth()->user(), $batchId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Batch not found.');
+        }
+    }
+
+    private function ownQuestion(int $offeringId, int $generatedQuestionId): void
+    {
+        if (! $this->generationService->ownsGeneratedQuestion(auth()->user(), $generatedQuestionId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Question not found.');
+        }
+    }
+
+    public function nextChunk(int $offeringId, int $batchId)
+    {
+        $this->ownBatch($offeringId, $batchId);
+
         return $this->response->setJSON(
             $this->generationService->nextChunk($batchId)
         );
     }
 
-    public function show(int $batchId)
+    public function show(int $offeringId, int $batchId)
     {
+        $this->ownBatch($offeringId, $batchId);
+
         return $this->response->setJSON(
             $this->generationService->getBatch($batchId)
         );
     }
 
-    public function cancel(int $batchId)
+    public function cancel(int $offeringId, int $batchId)
     {
+        $this->ownBatch($offeringId, $batchId);
+
         return $this->response->setJSON(
             $this->generationService->cancelBatch(auth()->user(), $batchId)
         );
     }
 
     /** The signed-in person's batch for this quiz that is still running or unreviewed, or null. */
-    public function pending(int $assessmentId)
+    public function pending(int $offeringId, int $assessmentId)
     {
+        if (! (new AssessmentScopeService())->assessmentBelongsTo($assessmentId, $offeringId)) {
+            throw PageNotFoundException::forPageNotFound('Assessment not found.');
+        }
+
         return $this->response->setJSON([
             'success' => true,
             'pending' => $this->generationService->pendingBatch(auth()->user(), $assessmentId),
         ]);
     }
 
-    public function updateQuestion(int $generatedQuestionId)
+    public function updateQuestion(int $offeringId, int $generatedQuestionId)
     {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
         $data = $this->request->getJSON(true) ?? [];
 
         return $this->response->setJSON(
@@ -104,8 +147,10 @@ class QuestionGenerationController extends BaseController
         );
     }
 
-    public function acceptQuestion(int $generatedQuestionId)
+    public function acceptQuestion(int $offeringId, int $generatedQuestionId)
     {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
         $user = auth()->user();
 
         return $this->response->setJSON(
@@ -113,19 +158,64 @@ class QuestionGenerationController extends BaseController
         );
     }
 
-    public function discardQuestion(int $generatedQuestionId)
+    /** Writes a different question in place of a staged one. */
+    public function replaceQuestion(int $offeringId, int $generatedQuestionId)
     {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
+        $body = $this->request->getJSON(true);
+        $body = is_array($body) ? $body : [];
+
+        $result = $this->generationService->replaceQuestion(
+            auth()->user(),
+            $generatedQuestionId,
+            (string) ($body['mode'] ?? 'different'),
+            (string) ($body['instruction'] ?? ''),
+            isset($body['type']) ? (string) $body['type'] : null
+        );
+
+        return $this->response->setStatusCode($result['success'] ? 200 : 422)->setJSON($result);
+    }
+
+    /** Asks for more questions to add to a finished set. */
+    public function topUp(int $offeringId, int $batchId)
+    {
+        $this->ownBatch($offeringId, $batchId);
+
+        $body = $this->request->getJSON(true);
+        $count = is_array($body) ? (int) ($body['count'] ?? 0) : 0;
+
+        $result = $this->generationService->topUp(auth()->user(), $batchId, $count);
+
+        return $this->response->setStatusCode($result['success'] ? 200 : 422)->setJSON($result);
+    }
+
+    /** Discards every question still waiting in a set. */
+    public function discardAll(int $offeringId, int $batchId)
+    {
+        $this->ownBatch($offeringId, $batchId);
+
+        return $this->response->setJSON($this->generationService->discardAll(auth()->user(), $batchId));
+    }
+
+    public function discardQuestion(int $offeringId, int $generatedQuestionId)
+    {
+        $this->ownQuestion($offeringId, $generatedQuestionId);
+
         return $this->response->setJSON(
             $this->generationService->discardGeneratedQuestion($generatedQuestionId)
         );
     }
 
-    public function acceptAll(int $batchId)
+    public function acceptAll(int $offeringId, int $batchId)
     {
+        $this->ownBatch($offeringId, $batchId);
+
         $user = auth()->user();
+        $body = $this->request->getJSON(true);
 
         return $this->response->setJSON(
-            $this->generationService->acceptAll($user, $batchId)
+            $this->generationService->acceptAll($user, $batchId, is_array($body) && ! empty($body['only_clear']))
         );
     }
 }

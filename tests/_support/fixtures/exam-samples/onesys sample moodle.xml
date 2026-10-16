@@ -1,0 +1,3828 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+	<question type="category">
+		<category>
+			<text><![CDATA[$course$/Onesys Sample]]></text>
+		</category>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-22]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The term ________ can be used to describe anything that uses binary numbers.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[mnemonic]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[processor]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[computer]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[digital]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-19]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is the largest value that can be stored in one byte?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[255]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[8]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[128]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[16]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-32]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Each different type of CPU has its own ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[software]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[machine language ]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[syntax]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[high-level language]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-13]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The computer language that uses mnemonics for writing programs is ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Java]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Assembly]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Ada]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Pascal]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-9]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Which of the following is <span style="font-weight: bold;font-style: italic;">not</span> an example of application software?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Windows]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Microsoft Word]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[PowerPoint]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[a web browser]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-29]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[________ refers to the physical components that a computer is made of.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Software]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[The system]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[The device]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Hardware]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-11]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[________ is the term used for a set of rules that must be strictly followed when writing a program.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Key words]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Semantics]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Grammar]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Syntax]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-3]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[________ is used to encode real numbers to store them in the computer's memory.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Floating-point notation]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[RAM]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Assembly language]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Unicode]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-26]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Computers can do many different jobs because they are ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[reliable]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[automated]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[electronic]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[programmable]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-8]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Which of the following is <span style="font-weight: bold;font-style: italic;">not</span> an example of operating system software?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Windows]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Microsoft Word]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Linux]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Mac OS X]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-1]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A(n) ________ is a program that translates a high-level language into a machine language program.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[IDE]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[CPU]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[compiler]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[storage device]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-15]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Which of the following companies does <span style="font-weight: bold;font-style: italic;">not</span> manufacture microprocessors?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Dell]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Motorola]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Intel]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[AMD]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-10]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Which of the following functions does an interpreter perform with the instructions from a high-level language?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[It compiles and translates.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[It translates.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[It translates and executes.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[It executes.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[It compiles and executes.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[It compiles.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-6]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Software refers to ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[physical components of a computer]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[programs]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[data stored in RAM]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the CPU]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-30]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A computer program is ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[only used for desktop computers]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the same as main memory]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[a set of instructions that allow the computer to solve a problem or perform a task]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[another name for an operating system]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-28]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is syntax?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the words that have a special meaning in the programming language]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the symbols or words that perform operations in a program]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the words or characters that are defined by the programmer]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[the rules that must be followed when writing a program]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-14]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The ________ cycle is used by the CPU to execute instructions in a program.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[decode - fetch - execute]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[fetch - decode - execute]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[decode - execute - fetch]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[execute - fetch - decode]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-31]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A program is a sequence of instructions stored in ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[the computer's memory]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[software]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the CPU]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the operating system]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-20]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The smallest storage location in a computer's memory is known as a ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[bit]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[switch]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[word]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[byte]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-2]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A(n) ________ is a software package that usually consists of a text editor, a compiler or interpreter, and tools to test and debug programs.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[CPU]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[storage device]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[compiler]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[IDE]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-7]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Programs that make a computer useful for everyday tasks are known as ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[IDEs]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[operating systems]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[system software]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[application software]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-25]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[USB drives store data in a special type of memory known as ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[flash memory]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[disks]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[optical server memory]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[magnetic memory]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-18]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[________ is the coding scheme that contains a set of 128 numeric codes which are used to represent characters in a computer's memory.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Two's complement]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Unicode]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[ASCII]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Binary numbering]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-5]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The physical devices that make up a computer are its ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[hardware]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[applications]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[CPU]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[software]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-23]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The statements that a programmer writes in a high-level language are called ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[binary code]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[source code]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[processor code]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[pseudocode]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-2]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The program development cycle is made up of ________ steps that are repeated until no errors can be found in the program.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[four]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[two]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[five]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[three]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-4]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A(n) ________ is a diagram that graphically depicts the steps that take place in a program.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[pseudocode document]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[flowchart]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[code list]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[algorithm]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-11]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A(n) ________ is a name that represents a value which cannot be changed during the program's execution.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[input variable]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[uninitialized variable]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[named variable]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[named constant]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-6]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A(n) ________ symbol is used for an assignment statement in a flowchart.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[oval]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[parallelogram]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[processing]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[triangle]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-1]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Which of the following error types produces incorrect results but does not prevent the program from running?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[syntax]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[human]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[logic]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[grammar]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-23]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is the error in the following pseudocode?<br /><br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.36in;"> </span>Display &quot;What is your name?&quot;<br /><span style="display: inline-block;width: 0.36in;"> </span>Input userName<br /><span style="display: inline-block;width: 0.36in;"> </span>Declare String userName<br /></span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>false</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">userName </span>has been used before it is declared.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[The <span style="font-family: Courier New;font-size: 110.0%;">Input </span>statement should be the first statement.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">userName </span>is an invalid variable name.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[There is no error.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-3]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[________ is the informal language used by programmers to create models of programs.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Pseudocode]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Algorithm]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Source code]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Flowcharting]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-16]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What term is used for a string that appears in the actual code of a program?]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>false</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[string literal]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[str]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[virtual string]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[any of these]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-22]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is the value of the variable <span style="font-family: Courier New;font-size: 110.0%;">result</span> in the following expression?<br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.38in;"> </span>Set result = (6 + 8) &#47; 4 * 2</span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">22</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">10</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">7</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">28</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-20]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is the value of the variable <span style="font-family: Courier New;font-size: 110.0%;">result</span> in the following expression?<br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.4in;"> </span>Set result = 6 + 8 * 4 &#47; 2</span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">7</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">28</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">22</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">10</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-7]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The ________ operator is used to raise 5 to the second power.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">*</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">MOD</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">&#47;</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">^</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-25]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is the error in the following pseudocode?<br /><br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.38in;"> </span>Declare Integer widgets<br /><span style="display: inline-block;width: 0.38in;"> </span>Declare Real cost<br /><span style="display: inline-block;width: 0.38in;"> </span>Set widgets = 3.5<br /><span style="display: inline-block;width: 0.38in;"> </span>Set cost = widgets * 5<br /></span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>false</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">widgets </span>is an invalid variable name for this code.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">widgets </span>has been declared as an <span style="font-family: Courier New;font-size: 110.0%;">Integer</span> and cannot hold a floating-point value.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[You cannot mix a <span style="font-family: Courier New;font-size: 110.0%;">Real </span>variable and an <span style="font-family: Courier New;font-size: 110.0%;">Integer</span> variable in a program.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[There is no error.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-17]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[________ is the encoding technique used to store negative numbers in the computer's memory.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[ASCII]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Two's complement]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Floating-point notation]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Unicode]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-21]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A computer system consists of all of the following <span style="font-weight: bold;font-style: italic;">except</span> ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[main memory]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[the operating system]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[input and output devices]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the CPU]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-12]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The first high-level programming language that could perform complex mathematical calculations was ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[C++]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[COBOL]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[FORTRAN]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Ada]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-24]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Main memory is also called ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[RAM]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[secondary storage]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the hard drive]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[ROM]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-16]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The following is an example of an instruction written in the ________ computer language.<br /><br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.39in;"> </span>1011000 010100110<br /></span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Assembly]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[machine language]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[C++]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Java]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-27]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[Application software refers to ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[mobile devices]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[key words]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[the operating system]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[programs that make the computer useful to a user]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-12]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The process of stepping through each of a program's statements, one by one, to see what each statement does is known as ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[bug checking]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[executing]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[debugging]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[hand tracing]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-5]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The ________ structure consists of a set of statements that execute in the order in which they appear.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[sequence]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[decision]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[repetition]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[control]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-18]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[A variable declaration typically specifies the variable's ________ and ________.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[number, name]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[name, value]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[data type, value]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[name, data type]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 1.2-4]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[________ is an extensive encoding scheme that is compatible with ASCII.]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Assembly language]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[Floating-point notation]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[RAM]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[Unicode]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-13]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[The following is an example of a(n) ________ statement.<br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.38in;"> </span>Set rate = 6.25</span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[assignment]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[output]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[declaration]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[input]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-8]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is the value of the following expression?<br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.36in;"> </span>12 - 4 * 3 &#47; 2 + 9</span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">21</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">-6</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">2.18</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">15</span>]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+	<question type="multichoice">
+		<name>
+			<text>
+				<![CDATA[pld6g 2.2-24]]>
+			</text>
+		</name>
+		<questiontext format="html">
+			<text>
+				<![CDATA[What is the error in the following pseudocode?<br /><br /><span style="font-family: Courier New;font-size: 110.0%;"><span style="display: inline-block;width: 0.38in;"> </span>Declare String user<br /><span style="display: inline-block;width: 0.38in;"> </span>Display &quot;How many widgets do you want to buy?&quot;<br /><span style="display: inline-block;width: 0.38in;"> </span>Input user<br /></span>]]>
+			</text>
+		</questiontext>
+		<generalfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</generalfeedback>
+		<defaultgrade>1</defaultgrade>
+		<penalty>0.0000000</penalty>
+		<hidden>0</hidden>
+		<shuffleanswers>true</shuffleanswers>
+		<answernumbering>ABCD</answernumbering>
+		<single>true</single>
+		<correctfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</correctfeedback>
+		<partiallycorrectfeedback format="html">
+			<text></text>
+		</partiallycorrectfeedback>
+		<incorrectfeedback format="html">
+			<text>
+				<![CDATA[]]>
+			</text>
+		</incorrectfeedback>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">user </span>is an invalid variable name for this code.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[<span style="font-family: Courier New;font-size: 110.0%;">user </span>has been used before it is declared.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="100" format="html">
+			<text>
+				<![CDATA[The input is a number, not a string.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+		<answer fraction="0" format="html">
+			<text>
+				<![CDATA[The <span style="font-family: Courier New;font-size: 110.0%;">Input </span>statement should be the first statement.]]>
+			</text>
+			<feedback format="html">
+				<text>
+					<![CDATA[]]>
+				</text>
+			</feedback>
+		</answer>
+	</question>
+</quiz>

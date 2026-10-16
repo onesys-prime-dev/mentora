@@ -13,10 +13,18 @@ from dataclasses import dataclass, field
 
 from . import ingest as ingest_mod
 from .digest import PayloadDigestStore, build_digest
+from .items import digest_items
 from .mathcheck import MISMATCH, VERIFIED, check_question
 from .plan import Assignment, make_plan
 from .pool import ModelPool
-from .questions import MULTIPLE_CHOICE, Question
+from .questions import (
+    CHOICE_COUNT_DEFAULT,
+    CHOICE_COUNT_RANGE,
+    MULTIPLE_ANSWER,
+    MULTIPLE_CHOICE,
+    TRUE_FALSE,
+    Question,
+)
 from .verify import needs_verification, verify
 from .write import PROMPT_VERSION, write_questions
 
@@ -137,19 +145,41 @@ def shuffle_choices(questions: list[Question], seed: int) -> None:
     rng = random.Random(seed)
 
     for question in questions:
-        if question.type == MULTIPLE_CHOICE:
+        # True/False keeps True first; every other choice question is shuffled.
+        if question.type in (MULTIPLE_CHOICE, MULTIPLE_ANSWER):
             rng.shuffle(question.choices)
 
 
+def choice_count_from(payload: dict) -> int:
+    """How many choices the teacher asked for, kept in range."""
+
+    try:
+        value = int((payload.get("options") or {}).get("choices", CHOICE_COUNT_DEFAULT))
+    except (TypeError, ValueError):
+        return CHOICE_COUNT_DEFAULT
+
+    low, high = CHOICE_COUNT_RANGE
+
+    return max(low, min(high, value))
+
+
 def to_payload(question: Question, model: str) -> dict:
+    correct = sum(1 for c in question.choices if c.is_correct)
+    several = question.type == MULTIPLE_ANSWER
+
     return {
-        "type": question.type,
+        # True/False and Multiple Answer are multiple choice in the quiz.
+        "type": MULTIPLE_CHOICE if question.type in (TRUE_FALSE, MULTIPLE_ANSWER) else question.type,
+        "allow_multiple_answers": several,
+        "answers_count": correct if several else None,
         "text": question.text,
         "choices": [{"text": c.text, "is_correct": c.is_correct} for c in question.choices],
         "accepted_answers": question.accepted_answers,
         "explanation": question.explanation,
         "evidence_quote": question.evidence,
         "page": question.page,
+        "source_title": question.source_title,
+        "source_item_id": question.source_item_id,
         "math_check": question.verification.get("math_check", "not_applicable"),
         "verification": question.verification,
         "flags": question.flags,
@@ -166,34 +196,101 @@ def make_generate_handler(pool: ModelPool):
         count = max(1, int(payload.get("count", 10)))
         type_mix = payload.get("type_mix") or {"multiple_choice": count}
         existing = list(payload.get("existing_questions") or [])
-        topic_only = not payload.get("source_text")
+        items = [i for i in (payload.get("items") or []) if isinstance(i, dict)]
+        topic_only = not items and not payload.get("source_text")
+        needed = math.ceil(count * CONCEPT_MARGIN)
+        rotation = int(payload.get("rotation", 0))
 
         ctx.progress(stage="ingest", done=0, of=1, note="Reading the material")
 
-        if topic_only:
-            pages = ingest_mod.ingest_text(f"Topic: {payload.get('topic', '').strip()}").pages
+        extra: dict = {}
+
+        if items:
+            # The selected learning items, each digested and cached on its own.
+            def reading(index: int, total: int, title: str) -> None:
+                ctx.progress(stage="digest", done=index, of=total, note=f"Reading {title}")
+
+            many = digest_items(
+                items, dict(payload.get("digests") or {}), pool,
+                needed_facts=needed, rotation=rotation, on_progress=reading,
+            )
+            concepts, facts = many.concepts, many.facts
+            warnings, calls = many.warnings, many.calls
+            digest_in, digest_out = many.tokens_in, many.tokens_out
+            extra = {
+                "digests": many.digests,
+                "per_item": [vars(s) for s in many.stats],
+            }
         else:
-            # `[[page N]]` lines from a PDF keep their numbers, so a fact can
-            # say which page it came from; text with none is one page.
-            text = str(payload["source_text"])
-            pages = ingest_mod.split_marked(text) or ingest_mod.ingest_text(text).pages
+            if topic_only:
+                pages = ingest_mod.ingest_text(f"Topic: {payload.get('topic', '').strip()}").pages
+            else:
+                # `[[page N]]` lines from a PDF keep their numbers, so a fact can
+                # say which page it came from; text with none is one page.
+                text = str(payload["source_text"])
+                pages = ingest_mod.split_marked(text) or ingest_mod.ingest_text(text).pages
 
-        store = PayloadDigestStore(payload.get("digest"))
-        needed = math.ceil(count * CONCEPT_MARGIN)
+            store = PayloadDigestStore(payload.get("digest"))
 
-        ctx.progress(stage="digest", done=0, of=1, note="Finding the key ideas")
-        digest = build_digest(pages, pool, store, needed_facts=needed, rotation=int(payload.get("rotation", 0)))
+            ctx.progress(stage="digest", done=0, of=1, note="Finding the key ideas")
+            digest = build_digest(pages, pool, store, needed_facts=needed, rotation=rotation)
+            concepts, facts = digest.concepts(), digest.facts()
+            warnings, calls = digest.warnings, digest.calls
+            digest_in, digest_out = digest.tokens_in, digest.tokens_out
+            extra = {"digest": store.updated or store.cached}
 
         ctx.progress(stage="plan", done=0, of=count, note="Choosing what to ask about")
-        plan = make_plan(digest.concepts(), count, type_mix, existing)
-        facts = digest.facts()
+        plan = make_plan(concepts, count, type_mix, existing)
 
         ctx.progress(stage="write", done=0, of=len(plan.assignments), note="Writing questions")
-        written = write_questions(plan.assignments, facts, pool, seen_texts=existing)
+        written = write_questions(
+            plan.assignments, facts, pool, seen_texts=existing,
+            instruction=str(payload.get("instruction") or ""),
+            choice_count=choice_count_from(payload),
+        )
 
         ctx.progress(stage="check", done=0, of=len(written.questions), note="Checking each answer")
         assignments = {a.concept["id"]: a for a in plan.assignments}
         checked = check_questions(written.questions, assignments, facts, pool, existing + [q.text for q in written.questions])
+
+        # Short of the number asked for: write the rest from facts that were
+        # never used, once. A question that failed its check is not retried
+        # here (its fact already produced one); only unused facts are.
+        topped_up = 0
+
+        if len(checked.accepted) < count:
+            used = {a.fact["id"] for a in plan.assignments if a.fact}
+            spare = []
+
+            for concept in concepts:
+                rest = [f for f in concept["facts"] if f["id"] not in used]
+
+                if rest:
+                    spare.append({**concept, "facts": rest})
+
+            missing = count - len(checked.accepted)
+            seen = existing + [q.text for q in checked.accepted]
+            more_plan = make_plan(spare, missing, type_mix, seen) if spare else None
+
+            if more_plan is not None and more_plan.assignments:
+                ctx.progress(stage="write", done=0, of=len(more_plan.assignments), note="Writing a few more questions")
+                more_written = write_questions(
+                    more_plan.assignments, facts, pool, seen_texts=seen,
+                    instruction=str(payload.get("instruction") or ""),
+                    choice_count=choice_count_from(payload),
+                )
+                more_by_concept = {a.concept["id"]: a for a in more_plan.assignments}
+                more_checked = check_questions(
+                    more_written.questions, more_by_concept, facts, pool, seen + [q.text for q in more_written.questions]
+                )
+
+                topped_up = len(more_checked.accepted)
+                checked.accepted.extend(more_checked.accepted)
+                checked.dropped.update(more_checked.dropped)
+                checked.tokens_in += more_written.tokens_in + more_checked.tokens_in
+                checked.tokens_out += more_written.tokens_out + more_checked.tokens_out
+                checked.calls += more_written.calls + more_checked.calls
+                written.dropped.update(more_written.dropped)
 
         shuffle_choices(checked.accepted, int(payload.get("seed", 0)))
 
@@ -206,21 +303,34 @@ def make_generate_handler(pool: ModelPool):
         dropped = Counter(written.dropped) + checked.dropped
         produced = len(checked.accepted)
 
+        by_item: Counter = Counter(q.source_item_id for q in checked.accepted if q.source_item_id is not None)
+        coverage = [
+            {"item_id": item.get("id"), "title": str(item.get("title", "")), "count": by_item.get(item.get("id"), 0)}
+            for item in items
+        ]
+
+        diagnostics = {
+            "requested": count,
+            "produced": produced,
+            "topped_up": topped_up,
+            "coverage": coverage,
+            "dropped": dict(dropped),
+            "regenerated": checked.regenerated,
+            "calls": calls + written.calls + checked.calls,
+            "tokens_in": digest_in + written.tokens_in + checked.tokens_in,
+            "tokens_out": digest_out + written.tokens_out + checked.tokens_out,
+            "prompt_version": PROMPT_VERSION,
+        }
+
+        if "per_item" in extra:
+            diagnostics["per_item"] = extra.pop("per_item")
+
         return {
             "questions": [to_payload(q, model) for q in checked.accepted],
-            "digest": store.updated or store.cached,
+            **extra,
             "stop_reason": "completed" if produced >= count else "exhausted_topic",
-            "notes": plan.notes + digest.warnings,
-            "diagnostics": {
-                "requested": count,
-                "produced": produced,
-                "dropped": dict(dropped),
-                "regenerated": checked.regenerated,
-                "calls": digest.calls + written.calls + checked.calls,
-                "tokens_in": digest.tokens_in + written.tokens_in + checked.tokens_in,
-                "tokens_out": digest.tokens_out + written.tokens_out + checked.tokens_out,
-                "prompt_version": PROMPT_VERSION,
-            },
+            "notes": plan.notes + warnings,
+            "diagnostics": diagnostics,
         }
 
     return handler

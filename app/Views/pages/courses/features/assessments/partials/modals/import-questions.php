@@ -2,7 +2,7 @@
     id="import-questions-modal"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
 
-    <div class="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
+    <div class="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
 
         <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
 
@@ -13,6 +13,7 @@
             <button
                 type="button"
                 class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close"
                 data-close-import-questions-modal>
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,39 +24,156 @@
 
         </div>
 
-        <!-- Step 1: upload -->
-        <div data-import-step="upload" class="flex flex-col gap-4 p-8">
+        <ol class="flex items-center gap-2 border-b border-gray-100 px-8 py-3 text-xs font-semibold" aria-label="Import steps">
+            <li data-import-stepper="upload" class="flex items-center gap-2"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] text-white">1</span> Choose</li>
+            <li class="h-px w-6 bg-gray-300" aria-hidden="true"></li>
+            <li data-import-stepper="review" class="flex items-center gap-2 text-gray-400"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">2</span> Review</li>
+            <li class="h-px w-6 bg-gray-300" aria-hidden="true"></li>
+            <li data-import-stepper="done" class="flex items-center gap-2 text-gray-400"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">3</span> Done</li>
+        </ol>
 
-            <p class="text-sm text-gray-500">
-                Upload a .docx exported from this quiz builder to re-import edits, or upload any other document
-                to generate new questions from it with AI (reviewed before anything is added).
+        <!-- Step 1: choose the file -->
+        <div data-import-step="upload" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-8">
+
+            <p class="text-sm text-gray-600">
+                Bring in questions from a file, from pasted text, or from another of your quizzes. You see every question,
+                can correct it or skip it, and nothing is saved until you confirm. You can undo an import for 10 minutes.
             </p>
 
-            <input
-                type="file"
-                data-import-file-input
-                accept=".docx"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+            <div class="inline-flex w-fit rounded-xl bg-gray-100 p-1" role="tablist">
+                <button type="button" role="tab" data-import-source-tab="file" class="rounded-lg bg-white px-4 py-1.5 text-sm font-semibold text-brand shadow transition">Upload a file</button>
+                <button type="button" role="tab" data-import-source-tab="text" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">Paste text</button>
+                <button type="button" role="tab" data-import-source-tab="quiz" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">From another quiz</button>
+            </div>
 
-            <div data-import-error class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>
+            <div data-import-source-panel="file" data-import-dropzone class="flex flex-col gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition">
+                <input
+                    type="file"
+                    data-import-file-input
+                    accept=".docx,.rtf,.xlsx,.csv,.txt,.pdf,.html,.htm,.xml,.dat,.zip,.tst"
+                    aria-label="Quiz file to import"
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+
+                <p data-import-file-name class="hidden text-xs font-semibold text-gray-700" aria-live="polite"></p>
+                <p class="text-xs font-medium text-gray-700">Drag a file here, or choose one. Up to 5 MB.</p>
+                <p class="text-xs text-[#767676]">
+                    <strong>Documents:</strong> Word (.docx), Rich Text (.rtf), PDF with selectable text, HTML, plain text (.txt).<br>
+                    <strong>Spreadsheets:</strong> Excel (.xlsx), CSV.
+                    <a data-import-template-link href="#" class="font-semibold text-brand hover:underline">Download the Excel template</a><br>
+                    <strong>Other systems:</strong> Moodle XML (.xml), Aiken and GIFT (.txt), and packages from Blackboard, D2L, Sakai and WebCT (.zip).
+                </p>
+            </div>
+
+            <div data-import-source-panel="text" class="hidden flex-col gap-2">
+                <textarea
+                    data-import-text-input
+                    rows="8"
+                    aria-label="Questions to import"
+                    placeholder="1. Which layer routes packets?&#10;a) Transport&#10;b) Network&#10;Answer: b"
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand"></textarea>
+            </div>
+
+            <div data-import-source-panel="quiz" class="hidden flex-col gap-3">
+
+                <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                    Quiz to take questions from
+                    <select
+                        data-picker-source
+                        disabled
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-normal text-gray-800 outline-none transition focus:border-brand disabled:bg-gray-50">
+                    </select>
+                </label>
+
+                <div data-picker-tools class="hidden items-center gap-3">
+                    <input
+                        type="search"
+                        data-picker-search
+                        aria-label="Search these questions"
+                        placeholder="Search these questions"
+                        class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                    <button type="button" data-picker-select-all class="shrink-0 text-xs font-semibold text-brand hover:underline">Select all</button>
+                </div>
+
+                <div data-picker-list class="flex max-h-72 flex-col gap-1.5 overflow-y-auto"></div>
+
+                <p data-picker-message class="hidden text-xs text-[#767676]" aria-live="polite"></p>
+
+                <button
+                    type="button"
+                    data-picker-add
+                    disabled
+                    class="self-end rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                    Add questions
+                </button>
+
+            </div>
+
+            <details data-import-layout-guide class="rounded-xl border border-gray-200 p-3 text-xs text-gray-600">
+                <summary class="cursor-pointer font-semibold text-gray-700">What layout can I use?</summary>
+                <div class="mt-3 flex flex-col gap-3">
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">A typed or pasted exam (Word, RTF, text)</p>
+                        <p><strong>Questions</strong> start with a number: <code>1.</code> <code>1)</code> <code>Q1:</code> <code>Question 1</code>.
+                        <strong>Choices</strong> start with a letter: <code>a)</code> <code>A.</code> <code>(a)</code>, one per line or side by side.</p>
+                        <p><strong>The answer</strong> is a line like <code>Answer: b</code> (or <code>Answer: a, c</code>), a <code>*</code> after the right choice,
+                        or a list such as <code>1) D</code> under &ldquo;Answer Key&rdquo; at the end.
+                        <strong>Points</strong> can be written <code>(2 pts)</code> or <code>Points: 2</code>.</p>
+                        <p>No choices and an answer makes a short answer; no choices and no answer makes an essay. Headings such as
+                        <code>TRUE/FALSE.</code> or <code>ESSAY.</code> set the type of what follows.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">An exam printed from a test-bank tool (text, RTF, PDF, HTML)</p>
+                        <p>The layout of TestGen and similar tools is read as it is: <code>1) question ... 1) ____</code>, choices <code>A) ... B) ...</code>
+                        on one line, and the key at the end. A PDF must have selectable text; a scan cannot be read.
+                        An HTML export has no key, so each answer is left for you to choose.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">Spreadsheets and other systems</p>
+                        <p><strong>Excel or CSV:</strong> one question per row with the columns Type, Question, A to H, Answer, Points, Required.
+                        <strong>Aiken</strong> ends each question with <code>ANSWER: B</code>; <strong>GIFT</strong> puts answers in braces.
+                        <strong>Moodle XML</strong> and the <strong>.zip packages</strong> of Blackboard, D2L, Sakai and WebCT are read as exported.</p>
+                        <p>A Pearson TestGen <code>.tst</code> file cannot be read directly: export the test from TestGen as Word, PDF, Moodle XML or QTI.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <p class="font-semibold text-gray-800">What happens to a question</p>
+                        <p>Imports add questions to the quiz and flag likely repeats. Only a file exported from this quiz by Mentora can update or remove
+                        existing questions, and only after you confirm. Images and explanations are not carried.</p>
+                    </div>
+
+                    <p>
+                        <a data-import-sample-link href="#" class="font-semibold text-brand hover:underline">Download a sample file</a>
+                    </p>
+
+                </div>
+            </details>
+
+            <div data-import-error role="alert" class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>
 
             <button
                 type="button"
                 data-import-preview-button
                 class="self-end rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
-                Preview Changes
+                Review questions
             </button>
 
         </div>
 
-        <!-- Step 2: diff preview -->
-        <div data-import-step="diff" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-8">
+        <!-- Step 2: review -->
+        <div data-import-step="review" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-8">
 
-            <div class="grid grid-cols-3 gap-3 text-center">
+            <p class="text-xs font-medium text-[#767676]">Nothing has been saved yet.</p>
+
+            <p data-import-detected class="hidden w-fit rounded-full bg-brand-tint px-3 py-1 text-xs font-semibold text-brand"></p>
+
+            <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
 
                 <div class="rounded-xl bg-emerald-50 p-3">
                     <span class="block text-2xl font-bold text-emerald-600" data-import-added-count>0</span>
-                    <span class="text-xs font-semibold text-emerald-700">Added</span>
+                    <span class="text-xs font-semibold text-emerald-700">New</span>
                 </div>
 
                 <div class="rounded-xl bg-amber-50 p-3">
@@ -63,25 +181,69 @@
                     <span class="text-xs font-semibold text-amber-700">Changed</span>
                 </div>
 
+                <div class="rounded-xl bg-gray-100 p-3">
+                    <span class="block text-2xl font-bold text-gray-700" data-import-removed-count>0</span>
+                    <span class="text-xs font-semibold text-gray-600">Not in the file</span>
+                </div>
+
                 <div class="rounded-xl bg-red-50 p-3">
-                    <span class="block text-2xl font-bold text-red-600" data-import-removed-count>0</span>
-                    <span class="text-xs font-semibold text-red-700">Missing</span>
+                    <span class="block text-2xl font-bold text-red-600" data-import-problem-count>0</span>
+                    <span class="text-xs font-semibold text-red-700">Can't import</span>
                 </div>
 
             </div>
 
+            <div data-import-problems class="hidden flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"></div>
+
             <div data-import-diff-list class="flex flex-col gap-2"></div>
 
-            <p class="text-xs text-[#767676]">
-                Added and changed questions are always applied. For questions no longer found in the document,
-                check the ones you want to actually delete — anything left unchecked stays in the quiz.
-            </p>
+            <div data-import-removed-section class="hidden flex-col gap-2 rounded-xl border border-gray-200 p-3">
+
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-xs font-semibold text-gray-700">In the quiz but not in the file</span>
+                    <button type="button" data-import-remove-all class="text-xs font-semibold text-brand hover:underline">Select all</button>
+                </div>
+
+                <p class="text-xs text-[#767676]">
+                    These stay in the quiz unless you tick them. Ticked questions are deleted when you confirm.
+                </p>
+
+                <div data-import-removed-list class="flex flex-col gap-1"></div>
+
+            </div>
+
+            <label data-import-responses-warning class="hidden items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                <input type="checkbox" data-import-acknowledge class="mt-0.5 h-4 w-4 shrink-0 accent-red-600">
+                <span data-import-responses-text></span>
+            </label>
 
         </div>
 
-        <div class="flex items-center justify-between border-t border-gray-200 px-8 py-6">
+        <!-- Step 3: done -->
+        <div data-import-step="done" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-8">
 
-            <span data-import-status class="text-xs text-[#767676]"></span>
+            <p class="text-base font-semibold text-gray-800" data-import-result-message></p>
+
+            <div data-import-skipped class="hidden flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"></div>
+
+            <div class="flex flex-wrap items-center gap-3">
+
+                <button
+                    type="button"
+                    data-import-undo-button
+                    class="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60">
+                    Undo this import
+                </button>
+
+                <span class="text-xs text-[#767676]">You can undo for the next 10 minutes.</span>
+
+            </div>
+
+        </div>
+
+        <div class="flex items-center justify-between gap-3 border-t border-gray-200 px-8 py-6">
+
+            <span data-import-status class="text-xs text-[#767676]" aria-live="polite"></span>
 
             <div class="flex gap-3">
 
@@ -89,14 +251,14 @@
                     type="button"
                     class="rounded-xl border border-gray-300 px-6 py-3 font-medium transition hover:bg-gray-100"
                     data-close-import-questions-modal>
-                    Cancel
+                    Close
                 </button>
 
                 <button
                     type="button"
                     data-import-apply-button
-                    class="hidden rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark">
-                    Apply Import
+                    class="hidden rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                    Import
                 </button>
 
             </div>

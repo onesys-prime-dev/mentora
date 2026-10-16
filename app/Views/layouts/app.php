@@ -49,6 +49,8 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
     data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >
 
+    <?= $this->include('layouts/partials/page-progress') ?>
+
     <div class="flex flex-col <?= $shellHeight ?>">
 
         <?= $this->include('layouts/partials/header') ?>

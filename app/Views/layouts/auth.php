@@ -13,6 +13,8 @@
     data-page="<?= esc($this->renderSection('page') ?: ($page ?? '')) ?>"
 >
 
+    <?= $this->include('layouts/partials/page-progress') ?>
+
     <?= $this->renderSection('content') ?>
 
 </body>

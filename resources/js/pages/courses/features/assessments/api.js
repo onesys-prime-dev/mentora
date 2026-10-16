@@ -935,13 +935,89 @@ export async function discardGeneratedQuestion(offeringId, generatedQuestionId) 
 
 }
 
-export async function acceptAllGeneratedQuestions(offeringId, batchId) {
+/** Discards every question still waiting in a set. */
+export async function discardAllGeneratedQuestions(offeringId, batchId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/discard-all`,
+        {
+            method: "POST",
+            headers: defaultHeaders(),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to discard these questions.");
+    }
+
+    return response.json();
+
+}
+
+/** Asks for more questions to add to a finished set. */
+export async function topUpGeneration(offeringId, batchId, count) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/top-up`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ count }),
+        }
+    );
+
+    try {
+        return await response.json();
+    } catch {
+        throw new Error("Unable to ask for more questions.");
+    }
+
+}
+
+/**
+ * Writes a different question in place of a staged one.
+ *
+ * @param {{mode: "different"|"easier"|"harder"|"type", instruction?: string, type?: string}} options
+ */
+export async function replaceGeneratedQuestion(offeringId, generatedQuestionId, options) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/generated-questions/${generatedQuestionId}/replace`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(options),
+        }
+    );
+
+    try {
+        return await response.json();
+    } catch {
+        throw new Error("Unable to replace this question.");
+    }
+
+}
+
+/**
+ * @param {boolean} [onlyClear] leave out the questions that need a look
+ */
+export async function acceptAllGeneratedQuestions(offeringId, batchId, onlyClear = false) {
 
     const response = await fetch(
         `${window.coursesConfig.apiBaseUrl}/generation-batches/${batchId}/accept-all`,
         {
             method: "POST",
-            headers: defaultHeaders(),
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ only_clear: onlyClear }),
         }
     );
 
@@ -959,9 +1035,67 @@ export async function acceptAllGeneratedQuestions(offeringId, batchId) {
 |--------------------------------------------------------------------------
 */
 
-export function exportQuestionsUrl(offeringId, assessmentId, format = "docx") {
+/**
+ * @param {{versions?: number, paper?: string, shuffleQuestions?: boolean, shuffleChoices?: boolean, keyOnly?: boolean}} [print]
+ *   only for the printable test
+ */
+export function exportQuestionsUrl(offeringId, assessmentId, format = "docx", print = {}) {
 
-    return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/export?format=${format}`;
+    const params = new URLSearchParams({ format });
+
+    if (format.startsWith("test-")) {
+
+        params.set("versions", String(print.versions || 1));
+        params.set("paper", print.paper || "A4");
+
+        if (print.shuffleQuestions) {
+            params.set("shuffle_questions", "1");
+        }
+
+        if (print.shuffleChoices) {
+            params.set("shuffle_choices", "1");
+        }
+
+        if (print.keyOnly) {
+            params.set("key_only", "1");
+        }
+
+    }
+
+    return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/export?${params.toString()}`;
+
+}
+
+/**
+ * The server answers 200 with {success:false, message} for an import it
+ * understood but refuses, and 422 with the same body for a file it will not
+ * read; either way the teacher is shown the server's own sentence.
+ */
+async function importJson(response, fallback) {
+
+    try {
+        const body = await response.json();
+
+        if (body && typeof body === "object") {
+            return body;
+        }
+    } catch {
+        // Not JSON (a server error page): fall through to the fallback sentence.
+    }
+
+    throw new Error(fallback);
+
+}
+
+export function importTemplateUrl(offeringId, assessmentId) {
+
+    return exportQuestionsUrl(offeringId, assessmentId, "template-xlsx");
+
+}
+
+export function importSampleUrl(offeringId, assessmentId) {
+
+    return `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/sample`;
 
 }
 
@@ -976,15 +1110,14 @@ export async function previewImport(offeringId, assessmentId, formData) {
         }
     );
 
-    if (!response.ok) {
-        throw new Error("Unable to preview this import.");
-    }
-
-    return response.json();
+    return importJson(response, "Unable to read this file.");
 
 }
 
-export async function applyImport(offeringId, assessmentId, changes) {
+/**
+ * @param {{token: string, skip_keys: string[], remove_ids: number[], acknowledge_responses: boolean}} choices
+ */
+export async function applyImport(offeringId, assessmentId, choices) {
 
     const response = await fetch(
         `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/apply`,
@@ -994,14 +1127,74 @@ export async function applyImport(offeringId, assessmentId, changes) {
                 ...defaultHeaders(),
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(changes),
+            body: JSON.stringify(choices),
         }
     );
 
-    if (!response.ok) {
-        throw new Error("Unable to apply this import.");
-    }
+    return importJson(response, "Unable to apply this import.");
 
-    return response.json();
+}
+
+export async function undoImport(offeringId, assessmentId, token) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/import/undo`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ token }),
+        }
+    );
+
+    return importJson(response, "Unable to undo this import.");
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Add from another quiz
+|--------------------------------------------------------------------------
+*/
+
+export async function fetchQuestionSources(offeringId, assessmentId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/question-sources`,
+        { headers: defaultHeaders() }
+    );
+
+    return importJson(response, "Unable to load your other quizzes.");
+
+}
+
+export async function fetchSourceQuestions(offeringId, assessmentId, sourceId) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/question-sources/${sourceId}`,
+        { headers: defaultHeaders() }
+    );
+
+    return importJson(response, "Unable to load the questions of that quiz.");
+
+}
+
+export async function copyQuestions(offeringId, assessmentId, sourceId, questionIds) {
+
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/question-sources/copy`,
+        {
+            method: "POST",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ source_assessment_id: sourceId, question_ids: questionIds }),
+        }
+    );
+
+    return importJson(response, "Unable to add those questions.");
 
 }

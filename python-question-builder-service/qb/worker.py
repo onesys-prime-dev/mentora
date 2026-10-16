@@ -126,9 +126,17 @@ class Worker:
 
 
 def main() -> None:  # pragma: no cover - process entry point
+    from . import envfile
     from .config import ConfigError, build_worker, from_env
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+
+    # On a developer machine the settings come from python-question-builder-service/.env;
+    # anything already in the environment (a service unit's, say) wins over it.
+    applied = envfile.load()
+
+    if applied:
+        log.info("Read %d setting(s) from the .env file: %s", len(applied), ", ".join(applied))
 
     try:
         settings = from_env()

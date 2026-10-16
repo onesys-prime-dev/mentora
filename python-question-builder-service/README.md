@@ -1,8 +1,52 @@
 # Mentora Question Builder Service
 
-Local AI question-generation service for Mentora's quiz builder. Runs entirely
-on this machine — course content and any uploaded reference material never
-leave the local network.
+AI question generation for Mentora's quiz builder. It has two parts:
+
+- **The worker** (`qb/`, run with `python -m qb.worker` or `.\run-worker.ps1`)
+  is the current design. It pulls queued jobs from Mentora, reads the selected
+  learning-unit material, and writes and checks questions with a hosted model
+  (Groq's free tier by default). The text of the selected material **is sent to
+  the provider**.
+- **The original HTTP service** (`app/`, `uvicorn app.main:app`) is the older
+  design that runs a model locally through Ollama. It is kept for now (it also
+  reads scanned files with OCR) and is removed once nothing calls it.
+
+## Run the worker on this machine with Groq
+
+Use this to test the real pipeline locally, against your local site.
+
+1. Get a Groq API key at <https://console.groq.com> (API Keys). Use a key of
+   your own for local work, separate from staging's, so tests here cannot use
+   up the staging allowance.
+2. In this folder, create the settings file from the template and fill in the
+   two secrets (the file is git-ignored; never commit it):
+   ```
+   copy deploy\qb-worker.local.env.example .env
+   ```
+   - `GROQ_API_KEY`: the key from step 1.
+   - `QB_WORKER_SECRET`: any long random string, **the same value** as
+     `questionBuilder.workerSecret` in the site's own `.env`.
+   - `QB_PHP_URL` and `QB_PHP_VERIFY_TLS=false` are already right for XAMPP at
+     `https://localhost/mentora/public` (its certificate is self-signed).
+3. In the site's `.env`, set `questionBuilder.useJobs = true` and the same
+   `questionBuilder.workerSecret`. Start Apache and MySQL in XAMPP.
+4. Create the virtual environment once (skip if `venv` exists):
+   ```
+   python -m venv venv
+   venv\Scripts\pip install -r requirements.txt
+   ```
+5. Start the worker and leave it running:
+   ```
+   .\run-worker.ps1
+   ```
+   It prints which settings it will use (never the key). Stop it with Ctrl+C.
+6. Check it is connected: sign in as a system administrator and open the
+   monitoring page; it should say the worker was last seen a few seconds ago.
+   Then generate questions from a quiz in the builder.
+
+If a job fails, the reason is in the worker's console (for example
+`provider_auth` for a refused key). Settings already present in the real
+environment override the `.env` file.
 
 ## Why this exists
 
@@ -13,7 +57,7 @@ rationale and trade-offs (notably: this machine has ~4GB VRAM, which is tight
 for a 7B model — expect generation to take tens of seconds per chunk of
 questions, not be instant).
 
-## One-time setup
+## One-time setup (original HTTP service, Ollama)
 
 1. **Ollama** (model server) — <https://ollama.com/download>, or via winget:
    ```
@@ -108,3 +152,15 @@ an example, which cuts prefill cost on every call.
 This runs as a manually-started local process for now. Process supervision
 (Windows service, Docker, etc.) for anything beyond local dev is a follow-up,
 not covered here.
+
+## Evaluating quality
+
+`eval/` measures the worker pipeline against a golden set of passages (`eval/golden_qb.json`; extend it with real course material, including a scanned PDF and a document of existing questions). It runs the same handler the worker runs, against the configured model, so it uses the free allowance: run it by hand with a separate key, never in per-PR CI.
+
+```
+python -m eval.qb_run --out eval/qb-report.json --ratings eval/qb-ratings.csv
+python -m eval.qb_run --only net-two-items
+python -m eval.qb_run --score-ratings eval/qb-ratings.csv
+```
+
+The report gives, per case and overall: how many of the questions asked for came back, whether each is tied to the material, how many the second check agreed with, repeats, whether the type and number of choices asked for were written, what was dropped and why, and tokens. A proxy cannot judge whether a stem is clear or the wrong choices are good, so `--ratings` writes a sheet for a named reviewer to score a sample (clarity, distractors, difficulty fit, keep) and `--score-ratings` averages it. Compare the report of every prompt or pipeline change with the one before it.

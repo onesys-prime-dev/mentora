@@ -6,8 +6,11 @@ namespace App\Services\Courses\Assessments;
 
 use App\Models\Assessments\AiGeneratedQuestionModel;
 use App\Models\Assessments\AiGenerationBatchModel;
+use App\Models\Assessments\AssessmentModel;
+use DateTimeImmutable;
 use App\Services\AI\AiJobService;
 use App\Services\AI\SimilarityChecker;
+use App\Services\Notifications\NotificationService;
 use App\Services\Subscriptions\PlanLimits;
 
 /**
@@ -24,6 +27,12 @@ class AiJobGeneration
     public const DIGEST_DAYS = 30;
 
     private const EXISTING_QUESTIONS = 30;
+
+    /** A queued job older than this means the question builder is not picking work up. */
+    public const STALLED_AFTER_SECONDS = 90;
+
+    /** A set nobody reviewed for this long is left alone rather than reopened. */
+    public const PENDING_DAYS = 14;
 
     private const MESSAGES = [
         'free_quota'             => "Today's free allowance for AI questions is used up. It resets tomorrow, and nothing already made is lost.",
@@ -99,18 +108,46 @@ class AiJobGeneration
 
         $sourceText = (string) ($batch['source_text'] ?? '');
         $hash       = $sourceText !== '' ? self::sourceHash($sourceText) : null;
+        $items      = json_decode((string) ($batch['source_items'] ?? ''), true);
+        $items      = is_array($items) ? array_values(array_filter($items, 'is_array')) : [];
 
         $payload = [
             'topic'               => $batch['topic'],
-            'source_text'         => $sourceText !== '' ? $sourceText : null,
             'count'               => (int) $batch['requested_count'],
             'type_mix'            => $batch['type_mix'] ? json_decode((string) $batch['type_mix'], true) : null,
             'points_per_question' => $batch['points_per_question'],
             'existing_questions'  => $this->existingQuestions($batch),
+            'instruction'         => $this->instructionFor($batch),
+            'options'             => GenerationOptions::normalise(json_decode((string) ($batch['options'] ?? ''), true)),
             'rotation'            => $this->priorBatches($batch),
             'seed'                => (int) $batch['id'],
-            'digest'              => $hash === null ? null : $this->storedDigest($institutionId, $hash, $now),
         ];
+
+        if ($items !== []) {
+            // The selected learning items, each with the digest already kept
+            // for its own text: the worker reads only what is new.
+            $digests = [];
+
+            foreach ($items as $item) {
+                $itemHash = self::sourceHash((string) ($item['text'] ?? ''));
+                $kept     = $this->storedDigest($institutionId, $itemHash, $now);
+
+                if ($kept !== null) {
+                    $digests[$itemHash] = $kept;
+                }
+            }
+
+            $payload['items']   = $items;
+            $payload['digests'] = (object) $digests;
+
+            // The combined text goes too: a worker that does not know `items` yet
+            // (not redeployed) reads that instead, so the two can ship in either order.
+            $payload['source_text'] = $sourceText !== '' ? $sourceText : null;
+        } else {
+            // A batch started before items were kept: the single combined source.
+            $payload['source_text'] = $sourceText !== '' ? $sourceText : null;
+            $payload['digest']      = $hash === null ? null : $this->storedDigest($institutionId, $hash, $now);
+        }
 
         return $this->jobs->enqueue([
             'institution_id' => $institutionId,
@@ -181,6 +218,9 @@ class AiJobGeneration
         $batch = $db->table('ai_generation_batches')
             ->where('assessment_id', $assessmentId)
             ->where('created_by', $userId)
+            ->where('replaces_question_id IS NULL', null, false)
+            ->where('extends_batch_id IS NULL', null, false)
+            ->where('created_at >=', date('Y-m-d H:i:s', time() - self::PENDING_DAYS * 86400))
             ->whereIn('status', ['generating', 'completed'])
             ->orderBy('id', 'DESC')
             ->get(5)->getResultArray();
@@ -199,6 +239,33 @@ class AiJobGeneration
     }
 
     /**
+     * How many of the person's other sets for this quiz are waiting for
+     * review, besides the one shown.
+     */
+    public function otherWaiting(int $userId, int $assessmentId, int $exceptBatchId): int
+    {
+        $count = 0;
+
+        $rows = db_connect()->table('ai_generation_batches')
+            ->where('assessment_id', $assessmentId)
+            ->where('created_by', $userId)
+            ->where('id !=', $exceptBatchId)
+            ->where('replaces_question_id IS NULL', null, false)
+            ->where('extends_batch_id IS NULL', null, false)
+            ->where('status', 'completed')
+            ->where('created_at >=', date('Y-m-d H:i:s', time() - self::PENDING_DAYS * 86400))
+            ->get()->getResultArray();
+
+        foreach ($rows as $row) {
+            if ($this->questions->where('batch_id', (int) $row['id'])->where('status', 'pending')->countAllResults() > 0) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * @param array<string, mixed> $job
      *
      * @return array<string, mixed>
@@ -208,18 +275,74 @@ class AiJobGeneration
         $status = (string) $job['status'];
         $code   = $job['error_code'] ?? null;
 
+        $age     = isset($job['created_at']) ? time() - (int) strtotime((string) $job['created_at']) : 0;
+        $stalled = $status === AiJobService::QUEUED && $age >= self::STALLED_AFTER_SECONDS;
+
         return [
             'id'              => (int) $job['id'],
             'status'          => $status,
             'stage'           => $job['stage'],
             'done'            => (int) $job['progress_done'],
             'of'              => (int) $job['progress_of'],
-            'note'            => $status === AiJobService::QUEUED ? 'Waiting for the question builder' : $job['progress_note'],
+            'stalled'         => $stalled,
+            'note'            => $status === AiJobService::QUEUED
+                ? ($stalled ? 'The question builder is slow to start. Your request is saved and will run as soon as it is free' : 'Waiting for the question builder')
+                : $job['progress_note'],
             'waiting_seconds' => $job['waiting_seconds'] !== null ? (int) $job['waiting_seconds'] : null,
             'error_code'      => $code,
             'message'         => $status === AiJobService::FAILED ? $this->message((string) $code) : null,
             'retryable'       => in_array($code, ['provider_rate_limited', 'provider_error', 'provider_model_missing', 'worker_lost'], true),
         ];
+    }
+
+    /**
+     * A job finished (or failed) while nobody was watching: apply it now and
+     * tell the person who asked, so the questions are not found only by luck.
+     * Safe to run more than once: the batch is applied once and a person is
+     * told once per batch.
+     */
+    public function settleFinished(int $jobId, ?DateTimeImmutable $now = null): void
+    {
+        $row = db_connect()->table('ai_jobs')->where('id', $jobId)->get()->getRowArray();
+
+        if ($row === null || empty($row['batch_id']) || empty($row['created_by'])) {
+            return;
+        }
+
+        $batchId = (int) $row['batch_id'];
+
+        $this->sync($batchId);
+
+        $batch = $this->batches->find($batchId);
+
+        // Replacements and top-ups are watched in the tray that asked for them.
+        if (! $batch || ! empty($batch['replaces_question_id']) || ! empty($batch['extends_batch_id'])) {
+            return;
+        }
+
+        $institutionId = $row['institution_id'] !== null ? (int) $row['institution_id'] : null;
+        $offeringId    = $batch['assessment_id'] !== null ? (new AssessmentModel())->offeringIdOf((int) $batch['assessment_id']) : null;
+        $link          = $offeringId !== null ? "courses/{$offeringId}/assessments" : null;
+        $quiz          = $batch['assessment_id'] !== null ? (string) ((new AssessmentModel())->find((int) $batch['assessment_id'])['title'] ?? 'your quiz') : 'your quiz';
+        $notes         = new NotificationService();
+
+        if ($batch['status'] === 'completed' && (int) $batch['generated_count'] > 0) {
+            $n = (int) $batch['generated_count'];
+
+            $notes->send(
+                (int) $row['created_by'], 'ai.questions_ready',
+                $n === 1 ? '1 question is ready to review' : "{$n} questions are ready to review",
+                "Questions for \"{$quiz}\" are waiting in the review tray.",
+                false, "ai-batch-{$batchId}", $institutionId, $link, $now
+            );
+        } elseif ($batch['status'] === 'failed') {
+            $notes->send(
+                (int) $row['created_by'], 'ai.questions_failed',
+                'The AI questions could not be written',
+                $this->message((string) ($row['error_code'] ?? '')),
+                false, "ai-batch-{$batchId}", $institutionId, $link, $now
+            );
+        }
     }
 
     public function message(string $code): string
@@ -272,17 +395,69 @@ class AiJobGeneration
                 'accepted_answers' => $q['type'] === 'Short Answer' ? ShortAnswerGrader::encode($q['accepted_answers'] ?? []) : null,
                 'similarity_score' => $checker->score((string) $q['text'], array_column($choices, 'text'), $batch['source_text']),
                 'math_check'       => in_array($q['math_check'] ?? '', ['verified', 'mismatch', 'not_applicable'], true) ? $q['math_check'] : 'not_applicable',
+                'allow_multiple_answers' => ! empty($q['allow_multiple_answers']),
+                'answers_count'    => ! empty($q['allow_multiple_answers']) && is_numeric($q['answers_count'] ?? null) ? (int) $q['answers_count'] : null,
+                'explanation'      => isset($q['explanation']) ? mb_substr((string) $q['explanation'], 0, 2000) : null,
+                'evidence_quote'   => isset($q['evidence_quote']) ? mb_substr((string) $q['evidence_quote'], 0, 2000) : null,
+                'source_title'     => isset($q['source_title']) ? mb_substr((string) $q['source_title'], 0, 255) : null,
+                'source_page'      => isset($q['page']) && is_numeric($q['page']) ? (int) $q['page'] : null,
+                'verification'     => isset($q['verification']) && is_array($q['verification']) ? json_encode($q['verification']) : null,
+                'flags'            => isset($q['flags']) && is_array($q['flags']) ? json_encode(array_values(array_map('strval', $q['flags']))) : null,
                 'status'           => 'pending',
                 'created_at'       => $stamp,
             ]);
             $count++;
         }
 
-        $this->batches->update($batchId, ['generated_count' => $count]);
+        $this->batches->update($batchId, [
+            'generated_count' => $count,
+            'diagnostics'     => $this->mergedDiagnostics($batch, $result),
+        ]);
+
+        $this->settleReplacement($batch, $count);
 
         $this->storeDigest((int) $job['institution_id'], $result['digest'] ?? null, $now);
 
+        // Per-item digests: only the new or updated ones come back.
+        foreach ((array) ($result['digests'] ?? []) as $digest) {
+            $this->storeDigest((int) $job['institution_id'], $digest, $now);
+        }
+
         $db->transComplete();
+    }
+
+    /**
+     * A one-question batch that stands in for a staged question: its question
+     * moves into the original batch (so the tray shows it there) and the one
+     * it replaces is discarded. Nothing is discarded when no question came.
+     *
+     * @param array<string, mixed> $batch
+     */
+    public function settleReplacement(array $batch, int $inserted): void
+    {
+        // A top-up adds its questions to the batch it extends.
+        if (! empty($batch['extends_batch_id']) && $inserted > 0) {
+            $this->questions->where('batch_id', (int) $batch['id'])->set(['batch_id' => (int) $batch['extends_batch_id']])->update();
+            $this->batches->where('id', (int) $batch['extends_batch_id'])->set('generated_count', 'generated_count + ' . $inserted, false)->update();
+
+            return;
+        }
+
+        if (empty($batch['replaces_question_id']) || $inserted < 1) {
+            return;
+        }
+
+        $old = $this->questions->find((int) $batch['replaces_question_id']);
+
+        if ($old === null) {
+            return;
+        }
+
+        $this->questions->where('batch_id', (int) $batch['id'])->set(['batch_id' => (int) $old['batch_id']])->update();
+
+        if ($old['status'] === 'pending') {
+            $this->questions->update((int) $old['id'], ['status' => 'discarded', 'updated_at' => date('Y-m-d H:i:s')]);
+        }
     }
 
     /** @return array<string, mixed>|null */
@@ -341,9 +516,60 @@ class AiJobGeneration
             ->where('b.id !=', (int) $batch['id'])
             ->orderBy('q.id', 'DESC')->get(self::EXISTING_QUESTIONS)->getResultArray();
 
-        $texts = array_map(static fn (array $r): string => mb_substr((string) $r['question_text'], 0, 160), array_merge($live, $staged));
+        $replaced = [];
+
+        if (! empty($batch['replaces_question_id'])) {
+            $old = $this->questions->find((int) $batch['replaces_question_id']);
+
+            if ($old !== null) {
+                $replaced[] = ['question_text' => $old['question_text']];
+            }
+        }
+
+        $texts = array_map(static fn (array $r): string => mb_substr((string) $r['question_text'], 0, 160), array_merge($replaced, $live, $staged));
 
         return array_values(array_unique($texts));
+    }
+
+    /**
+     * What the start of the batch noted (a unit too long to read whole) with
+     * what the worker reports back: coverage, what was dropped and why.
+     *
+     * @param array<string, mixed> $batch
+     * @param array<string, mixed> $result
+     */
+    private function mergedDiagnostics(array $batch, array $result): string
+    {
+        $before = json_decode((string) ($batch['diagnostics'] ?? ''), true);
+        $before = is_array($before) ? $before : [];
+        $worker = is_array($result['diagnostics'] ?? null) ? $result['diagnostics'] : [];
+
+        return (string) json_encode($before + [
+            'dropped'     => is_array($worker['dropped'] ?? null) ? $worker['dropped'] : [],
+            'coverage'    => is_array($worker['coverage'] ?? null) ? $worker['coverage'] : [],
+            'topped_up'   => (int) ($worker['topped_up'] ?? 0),
+            'regenerated' => (int) ($worker['regenerated'] ?? 0),
+            'stop_reason' => (string) ($result['stop_reason'] ?? ''),
+            'notes'       => array_values(array_map('strval', (array) ($result['notes'] ?? []))),
+        ]);
+    }
+
+    /**
+     * What the writer is told about how to write: the teacher's steering
+     * (difficulty, level, language, focus) and, for a replacement, what they
+     * asked for.
+     *
+     * @param array<string, mixed> $batch
+     */
+    private function instructionFor(array $batch): ?string
+    {
+        $steering = GenerationOptions::instruction(
+            GenerationOptions::normalise(json_decode((string) ($batch['options'] ?? ''), true))
+        );
+
+        $text = trim(((string) ($batch['instruction'] ?? '')) . ' ' . $steering);
+
+        return $text === '' ? null : $text;
     }
 
     /** @param array<string, mixed> $batch */

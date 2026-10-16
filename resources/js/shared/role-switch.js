@@ -1,3 +1,5 @@
+import { startPageProgress } from "./spa/page-progress.js";
+
 const switcher = document.querySelector("[data-role-switch]");
 
 if (switcher) {
@@ -63,6 +65,7 @@ if (switcher) {
                 if (typeof window.__roleSwitchNavigate === "function") {
                     window.__roleSwitchNavigate(result.redirect);
                 } else {
+                    startPageProgress();
                     window.location.assign(result.redirect);
                 }
             } catch (error) {

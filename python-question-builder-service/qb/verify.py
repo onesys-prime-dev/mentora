@@ -8,10 +8,12 @@ import json
 from dataclasses import dataclass, field
 
 from .pool import ModelPool
-from .questions import MULTIPLE_CHOICE, SHORT_ANSWER, Question, normalise, overlap
+from .questions import MULTIPLE_ANSWER, MULTIPLE_CHOICE, SHORT_ANSWER, TRUE_FALSE, Question, normalise, overlap
 
 BATCH = 5
-LETTERS = "ABCD"
+LETTERS = "ABCDE"
+
+_CHOICE_TYPES = (MULTIPLE_CHOICE, TRUE_FALSE, MULTIPLE_ANSWER)
 
 SYSTEM_PROMPT = (
     "You answer quiz questions using only the facts given with each one. The "
@@ -19,8 +21,11 @@ SYSTEM_PROMPT = (
     "a multiple-choice question reply with the letter of the single best "
     "choice, and list in \"supported\" EVERY choice the facts support (a choice "
     "that merely repeats a true statement from the facts counts as supported). "
+    "A true/false question has the choices A and B: pick the one the facts support. "
+    "A multiple-answer question is one where several choices are right: list "
+    'EVERY supported choice in "supported" and do not mark it ambiguous for that. '
     "For a short-answer question reply with the answer in a few words. If more "
-    'than one choice is supported, or none is, set "ambiguous" to true. Reply '
+    'than one choice is supported (other than in a multiple-answer question), or none is, set "ambiguous" to true. Reply '
     'with JSON only: {"answers":[{"n":1,"choice":"B","supported":["B"],'
     '"answer":"short text","ambiguous":false}]}.'
 )
@@ -44,14 +49,15 @@ class VerifyResult:
 
 
 def needs_verification(question: Question) -> bool:
-    return question.type in (MULTIPLE_CHOICE, SHORT_ANSWER)
+    return question.type in _CHOICE_TYPES + (SHORT_ANSWER,)
 
 
 def _render(n: int, question: Question) -> str:
     facts = [question.evidence] + [f for f in question.context_facts if f != question.evidence]
-    lines = [f"Question {n}: {question.text}", "Facts:"] + [f"- {f}" for f in facts[:6] if f]
+    kind = {TRUE_FALSE: " (true/false)", MULTIPLE_ANSWER: " (multiple-answer)"}.get(question.type, "")
+    lines = [f"Question {n}{kind}: {question.text}", "Facts:"] + [f"- {f}" for f in facts[:6] if f]
 
-    if question.type == MULTIPLE_CHOICE:
+    if question.type in _CHOICE_TYPES:
         lines += [f"  {LETTERS[i]}. {c.text}" for i, c in enumerate(question.choices)]
     else:
         lines.append("  (short answer)")
@@ -77,10 +83,17 @@ def judge(question: Question, answer: dict | None) -> Verdict:
     if answer is None:
         return Verdict(False, "no_answer")
 
+    if question.type == MULTIPLE_ANSWER:
+        # The facts must support exactly the choices the key marks.
+        correct = {LETTERS[i] for i, c in enumerate(question.choices) if c.is_correct}
+        supported = {str(s).strip().upper()[:1] for s in (answer.get("supported") or []) if str(s).strip()}
+
+        return Verdict(True) if supported == correct else Verdict(False, "solver_disagrees")
+
     if answer.get("ambiguous") is True:
         return Verdict(False, "ambiguous")
 
-    if question.type == MULTIPLE_CHOICE:
+    if question.type in (MULTIPLE_CHOICE, TRUE_FALSE):
         picked = str(answer.get("choice", "")).strip().upper()[:1]
         correct = next((LETTERS[i] for i, c in enumerate(question.choices) if c.is_correct), None)
         supported = {str(s).strip().upper()[:1] for s in (answer.get("supported") or []) if str(s).strip()}
