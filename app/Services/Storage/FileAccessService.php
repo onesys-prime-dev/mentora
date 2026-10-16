@@ -4,7 +4,6 @@ namespace App\Services\Storage;
 
 use App\Models\Files\FileModel;
 use App\Services\Courses\ChairpersonAccessService;
-use App\Services\Courses\DeanAccessService;
 use App\Services\Courses\LearningProgressService;
 use CodeIgniter\Shield\Entities\User;
 
@@ -78,13 +77,14 @@ class FileAccessService
             return true;
         }
 
-        // Staff: the people who teach the section, the chairperson of its
-        // sub-department (full instructor rights on it) and the dean of its
-        // department (looking, never changing). Everyone else is treated as
-        // a student of the section.
-        $isInstructor = $user->inGroup('instructor')
-            || $user->inGroup('chairperson')
-            || $user->inGroup('dean');
+        // Staff: the people who teach the section and the chairperson of its
+        // sub-department (full instructor rights on it). Everyone else is
+        // treated as a student of the section. A dean acting as dean is not
+        // staff here: they look at what the course shares (above), never at a
+        // student's work. A dean who also teaches has an instructor's access
+        // to the sections they teach, but only while acting as an instructor.
+        $isInstructor = ($user->inGroup('instructor') && ! \App\Services\Courses\CourseViewer::isDeanViewer($user))
+            || $user->inGroup('chairperson');
 
         /*
         |--------------------------------------------------------------------------
@@ -239,7 +239,7 @@ class FileAccessService
         return false;
     }
 
-    /** Does this staff member reach the section: teaches it, chairs its sub-department, or is its department's dean? */
+    /** Does this staff member reach the section: teaches it, or chairs its sub-department? */
     private function teachesOffering(User $staff, int $offeringId): bool
     {
         if (db_connect()->table('instructor_assignments')
@@ -249,8 +249,7 @@ class FileAccessService
             return true;
         }
 
-        return ($staff->inGroup('chairperson') && (new ChairpersonAccessService())->canAccess($staff, $offeringId))
-            || ($staff->inGroup('dean') && (new DeanAccessService())->canAccessOffering($staff, $offeringId));
+        return $staff->inGroup('chairperson') && (new ChairpersonAccessService())->canAccess($staff, $offeringId);
     }
 
     /** The same for a course: any section of it. */

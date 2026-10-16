@@ -380,19 +380,63 @@ final class FileAccessServiceTest extends DatabaseTestCase
         $this->assertFalse($this->allowed($elsewhere, $file));
     }
 
-    public function testTheDeanOfTheDepartmentOpensItsCourseFilesAndStudentWork(): void
+    public function testTheDeanOfTheDepartmentOpensItsCourseFilesButNotStudentWork(): void
     {
         $dean = $this->deanOf($this->offering);
         $resource = $this->file($this->instructor);
         $this->resourceIn($resource);
+        $draft = $this->file($this->instructor);
+        $this->resourceIn($draft, ['item' => 'draft']);
 
         $this->assertTrue($this->allowed($dean, $resource));
+        $this->assertTrue($this->allowed($dean, $draft), 'the dean sees the course as its instructor does, drafts included');
 
         $quiz = CourseFactory::assessment($this->offering, $this->instructor);
         $work = $this->file($this->student);
         AssessmentFactory::attempt($quiz, $this->student, 'Submitted', 0.0, ['submission_file_id' => $work]);
 
-        $this->assertTrue($this->allowed($dean, $work));
+        $this->assertFalse($this->allowed($dean, $work), "a student's work is not the dean's to open");
+    }
+
+    public function testADeanWhoAlsoTeachesOpensStudentWorkOnlyOfTheirOwnSectionAndOnlyAsAnInstructor(): void
+    {
+        $dean = $this->deanOf($this->offering);
+        $dean->addGroup('instructor');
+        $dean = model(CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
+        CourseFactory::assignInstructor($this->offering, $dean);
+
+        $quiz = CourseFactory::assessment($this->offering, $this->instructor);
+        $work = $this->file($this->student);
+        AssessmentFactory::attempt($quiz, $this->student, 'Submitted', 0.0, ['submission_file_id' => $work]);
+
+        $otherSection = CourseFactory::offering();
+        $otherQuiz    = CourseFactory::assessment($otherSection, $this->instructor);
+        $otherStudent = CourseFactory::user('student');
+        $otherWork    = $this->file($otherStudent);
+        AssessmentFactory::attempt($otherQuiz, $otherStudent, 'Submitted', 0.0, ['submission_file_id' => $otherWork]);
+
+        $roles = new \App\Services\Auth\ActiveRoleService();
+
+        $roles->switchTo($dean, 'dean');
+        $this->assertFalse($this->allowed($dean, $work), 'acting as dean, even a section they also teach');
+
+        $roles->switchTo($dean, 'instructor');
+        $this->assertTrue($this->allowed($dean, $work), 'acting as instructor of that section');
+        $this->assertFalse($this->allowed($dean, $otherWork), 'an instructor does not reach sections they do not teach');
+    }
+
+    public function testADeanActingAsAnInstructorGainsNoDepartmentWideFileReach(): void
+    {
+        $dean = $this->deanOf($this->offering);
+        $dean->addGroup('instructor');
+        $dean = model(CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
+
+        $draft = $this->file($this->instructor);
+        $this->resourceIn($draft, ['item' => 'draft']);
+
+        (new \App\Services\Auth\ActiveRoleService())->switchTo($dean, 'instructor');
+
+        $this->assertFalse($this->allowed($dean, $draft), 'as an instructor they only reach the sections they teach');
     }
 
     public function testADeanOfAnotherDepartmentIsRefused(): void
