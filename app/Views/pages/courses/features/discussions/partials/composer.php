@@ -5,15 +5,21 @@
 | discussion and editing the opening post of an existing one.
 |--------------------------------------------------------------------------
 */
+
+// Param: embedded. A discussion learning item's editor shows this same composer
+// always open; the item's own autosave replaces Cancel and Post.
+$embedded = !empty($embedded);
 ?>
 
-<div class="hidden flex-col rounded-2xl border border-gray-200 bg-white shadow-sm" data-discussion-composer>
+<div class="<?= $embedded ? 'flex' : 'hidden' ?> flex-col rounded-2xl border border-gray-200 bg-white shadow-sm" data-discussion-composer<?= $embedded ? ' data-composer-embedded' : '' ?>>
 
     <div class="flex items-center justify-between px-5 py-4">
-        <h2 class="text-lg font-bold text-brand" data-composer-heading>New discussion</h2>
-        <button type="button" data-composer-cancel aria-label="Close" class="rounded-lg p-1.5 text-[#646464] transition hover:bg-gray-100">
-            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <h2 class="text-lg font-bold text-brand" data-composer-heading><?= $embedded ? 'Discussion' : 'New discussion' ?></h2>
+        <?php if (!$embedded): ?>
+            <button type="button" data-composer-cancel aria-label="Close" class="rounded-lg p-1.5 text-[#646464] transition hover:bg-gray-100">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        <?php endif; ?>
     </div>
 
     <div class="border-t border-gray-100 px-5 py-3">
@@ -49,10 +55,12 @@
             <input type="file" data-composer-file-input class="hidden" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
         </div>
 
-        <div class="flex items-center gap-2">
-            <button type="button" data-composer-cancel class="rounded-full px-4 py-2 text-sm font-semibold text-[#646464] transition hover:bg-gray-100">Cancel</button>
-            <button type="button" data-composer-submit disabled class="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">Post</button>
-        </div>
+        <?php if (!$embedded): ?>
+            <div class="flex items-center gap-2">
+                <button type="button" data-composer-cancel class="rounded-full px-4 py-2 text-sm font-semibold text-[#646464] transition hover:bg-gray-100">Cancel</button>
+                <button type="button" data-composer-submit disabled class="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">Post</button>
+            </div>
+        <?php endif; ?>
 
     </div>
 

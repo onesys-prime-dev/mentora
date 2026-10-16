@@ -333,20 +333,31 @@ class DiscussionService
 
         if (array_key_exists('attachment_file_ids', $data)) {
 
-            $existing = $this->db()->table('discussion_attachments')
-                ->where('thread_id', $threadId)->where('reply_id IS NULL', null, false)
-                ->get()->getResultArray();
-
-            $this->db()->table('discussion_attachments')
-                ->where('thread_id', $threadId)->where('reply_id IS NULL', null, false)->delete();
-
-            $this->attachmentModel->attach($threadId, null, $data['attachment_file_ids']);
-
-            $this->storageService->purgeFiles(array_column($existing, 'file_id'));
+            $this->replaceThreadAttachments($threadId, (array) $data['attachment_file_ids']);
 
         }
 
         return ['success' => true, 'message' => 'Discussion updated.'];
+    }
+
+    /**
+     * Makes the opening post's attachments exactly these files. Also used by
+     * a discussion learning item, whose editor shares the composer.
+     *
+     * @param list<int|string> $fileIds
+     */
+    public function replaceThreadAttachments(int $threadId, array $fileIds): void
+    {
+        $existing = $this->db()->table('discussion_attachments')
+            ->where('thread_id', $threadId)->where('reply_id IS NULL', null, false)
+            ->get()->getResultArray();
+
+        $this->db()->table('discussion_attachments')
+            ->where('thread_id', $threadId)->where('reply_id IS NULL', null, false)->delete();
+
+        $this->attachmentModel->attach($threadId, null, $fileIds);
+
+        $this->storageService->purgeFiles(array_column($existing, 'file_id'));
     }
 
     public function deleteThread(User $user, int $offeringId, int $threadId): array

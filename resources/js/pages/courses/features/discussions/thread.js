@@ -117,6 +117,7 @@ export function bindThread(root, backToList) {
                 title: body.dataset.threadTitle,
                 message: body.dataset.threadMessage,
                 attachments,
+                replace: edit.closest("article"),
             });
         }
 
