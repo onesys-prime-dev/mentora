@@ -280,6 +280,7 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
     $routes->get('courses', 'Dean\DeanCoursesController::index');
+    $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index');
 
     // A read-only view of every course of the department (courses.view), exactly what its
     // instructor sees: the same controllers as the instructor's, but only the reading routes.
