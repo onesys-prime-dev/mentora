@@ -37,6 +37,7 @@ $routes->group('internal/ai', ['filter' => 'aiworker'], function ($routes) {
 
 // A signed-in person's own notifications, for every role.
 $routes->get('notifications', 'NotificationController::index', ['filter' => 'session']);
+$routes->get('notifications/feed', 'NotificationController::feed', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served

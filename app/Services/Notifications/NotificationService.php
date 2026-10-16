@@ -59,6 +59,30 @@ class NotificationService
     }
 
     /**
+     * One batch of a person's notifications for the bell's panel, newest
+     * first. Pass the id of the last row already shown to get the next batch.
+     *
+     * @return array{rows: list<array<string, mixed>>, has_more: bool}
+     */
+    public function page(int $userId, ?int $beforeId = null, int $limit = 7): array
+    {
+        $limit = max(1, min(50, $limit));
+
+        $builder = db_connect()->table('notifications')->where('user_id', $userId);
+
+        if ($beforeId !== null && $beforeId > 0) {
+            $builder->where('id <', $beforeId);
+        }
+
+        // One extra row tells whether another batch exists.
+        $rows = $builder->orderBy('id', 'desc')->limit($limit + 1)->get()->getResultArray();
+
+        $hasMore = count($rows) > $limit;
+
+        return ['rows' => array_slice($rows, 0, $limit), 'has_more' => $hasMore];
+    }
+
+    /**
      * Newest first.
      *
      * @return list<array<string, mixed>>
