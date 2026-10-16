@@ -37,6 +37,13 @@ export function initializeDiscussionEditor() {
 
     const learningItemId = Number(editor.dataset.learningItemId);
 
+    // The course's own address (role prefix and slug), as the tabs use.
+    const threadLink = editor.querySelector("[data-discussion-thread-link]");
+
+    if (threadLink) {
+        threadLink.href = `${window.coursesConfig.browserBaseUrl}/discussions?thread=${threadLink.dataset.threadId}`;
+    }
+
     const errorLabel = editor.querySelector("[data-discussion-error]");
 
     const showError = (message) => {

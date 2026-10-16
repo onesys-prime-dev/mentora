@@ -10,7 +10,6 @@ $thread = $discussion['thread'] ?? null;
 $replyCount = is_array($discussion['replies'] ?? null)
     ? count($discussion['replies'])
     : (int) ($thread['reply_count'] ?? 0);
-$threadOfferingId = (int) ($thread['offering_id'] ?? 0);
 
 // A body saved as plain text (older items) is shown as paragraphs.
 $message = ModuleService::discussionMessage($thread['body'] ?? '') ?: '{}';
@@ -44,7 +43,9 @@ $attachments = array_map(
 
         <?php if ($thread): ?>
             <a
-                href="<?= base_url('courses/' . $threadOfferingId . '/discussions?thread=' . (int) $thread['id']) ?>"
+                href="#"
+                data-discussion-thread-link
+                data-thread-id="<?= (int) $thread['id'] ?>"
                 class="text-sm font-semibold text-brand hover:underline">
                 Open in Discussions tab
             </a>
