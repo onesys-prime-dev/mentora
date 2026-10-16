@@ -240,6 +240,18 @@ final class DeanCourseViewTest extends RouteTestCase
         $this->assertSame(200, $this->step('GET', 'files/' . $teacherFile['id'])->response()->getStatusCode());
     }
 
+    public function testAStudentsSubmissionFileDoesNotOpenForTheDean(): void
+    {
+        $workFile = CourseFactory::file($this->student, 'my homework');
+        db_connect()->table('files')->where('id', $workFile['id'])->update(['status' => 'active']);
+
+        $module     = CourseFactory::module($this->offering);
+        $assessment = CourseFactory::assessment($this->offering, $this->teacher, $module);
+        db_connect()->table('assessment_submissions')->insert(['assessment_id' => $assessment, 'student_id' => $this->student->id, 'attempt_number' => 1, 'started_at' => date('Y-m-d H:i:s'), 'submission_file_id' => $workFile['id'], 'status' => 'Submitted']);
+
+        $this->assertNotFound(fn () => $this->call('GET', 'files/' . $workFile['id']), "a student's submission");
+    }
+
     public function testTheDeanOfAnotherDepartmentCannotOpenTheCourseFile(): void
     {
         $file = CourseFactory::file($this->teacher, 'lecture notes');
