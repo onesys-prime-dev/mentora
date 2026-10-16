@@ -485,6 +485,74 @@ final class ModuleServiceTest extends DatabaseTestCase
         $this->assertSame($this->instructor->id, (int) $thread['author_id']);
     }
 
+    public function testEditingADiscussionItemKeepsItsThreadInStep(): void
+    {
+        [$module, $unit] = $this->tree();
+        $created = $this->storeItem($module, $unit, 'Old title', 'discussion');
+        $item = $created['learning_item_id'];
+
+        $result = $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, [
+            'title' => ' New title ',
+            'discussion_body' => 'What did chapter 2 change for you?',
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('New title', $this->row('learning_items', $item)['title']);
+
+        $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $item)->get()->getRowArray();
+        $this->assertSame('New title', $thread['title']);
+        $this->assertSame(['What did chapter 2 change for you?'], $this->paragraphs($thread['body']));
+    }
+
+    /** @return list<string> the text of each paragraph of a stored message */
+    private function paragraphs(string $message): array
+    {
+        $blocks = json_decode($message, true)['blocks'] ?? [];
+
+        return array_map(static fn ($b) => implode('', array_column($b['content'] ?? [], 'text')), $blocks);
+    }
+
+    public function testAComposerMessageIsStoredAsItIs(): void
+    {
+        [$module, $unit] = $this->tree();
+        $item = $this->storeItem($module, $unit, 'Rich', 'discussion')['learning_item_id'];
+
+        $message = json_encode(['version' => 1, 'blocks' => [[
+            'id' => 'block_001',
+            'type' => 'paragraph',
+            'align' => 'left',
+            'content' => [['text' => 'Bold idea', 'marks' => ['bold']]],
+        ]]]);
+
+        $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['discussion_body' => $message]);
+
+        $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $item)->get()->getRowArray();
+        $this->assertSame($message, $thread['body']);
+    }
+
+    public function testChangingOnlyTheStatusLeavesTheThreadAlone(): void
+    {
+        [$module, $unit] = $this->tree();
+        $item = $this->storeItem($module, $unit, 'Keep me', 'discussion')['learning_item_id'];
+
+        $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['discussion_body' => 'Prompt']);
+        $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['status' => 'published']);
+
+        $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $item)->get()->getRowArray();
+        $this->assertSame('Keep me', $thread['title']);
+        $this->assertSame(['Prompt'], $this->paragraphs($thread['body']));
+    }
+
+    public function testAPromptSentForANonDiscussionItemIsIgnored(): void
+    {
+        [, , $item] = $this->tree('reading', 'draft');
+
+        $result = $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['discussion_body' => 'Nope']);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, $this->rows('discussion_threads', ['learning_item_id' => $item]));
+    }
+
     public function testEditingAnItemsTitleStatusAndContent(): void
     {
         [, , $item] = $this->tree('reading', 'draft');

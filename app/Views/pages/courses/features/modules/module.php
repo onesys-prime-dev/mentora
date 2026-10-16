@@ -20,6 +20,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 <div class="p-10 flex flex-col gap-8">
 
     <?php $isDraft = $isInstructor && $module['status'] === 'draft'; ?>
+    <?php $moduleIsDraft = $module['status'] !== 'published'; ?>
 
     <!-- top bar -->
     <div class="flex items-start justify-between gap-5 pb-6 border-b border-black/10">
@@ -43,6 +44,8 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                         <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                             Draft
                         </span>
+                    <?php elseif ($isInstructor): ?>
+                        <?= view('pages/courses/features/modules/partials/publish-chip', ['status' => 'published'], ['saveData' => false]) ?>
                     <?php endif; ?>
                 </div>
                 <span class="text-sm font-normal text-[#A3A3A3]">
@@ -165,6 +168,11 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                 <span class="shrink-0 rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                                     Draft
                                 </span>
+                            <?php elseif ($isInstructor): ?>
+                                <?= view('pages/courses/features/modules/partials/publish-chip', [
+                                    'status' => $learning_unit['status'],
+                                    'hiddenBy' => $moduleIsDraft ? 'module' : null,
+                                ], ['saveData' => false]) ?>
                             <?php endif; ?>
                         </div>
 
@@ -265,10 +273,10 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                                             </span>
                                                         <?php endif; ?>
 
-                                                        <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium <?= $learning_item['status'] === 'published' ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-500' ?>">
-                                                            <span class="h-1.5 w-1.5 rounded-full <?= $learning_item['status'] === 'published' ? 'bg-brand' : 'bg-gray-400' ?>"></span>
-                                                            <?= $learning_item['status'] === 'published' ? 'Published' : 'Draft' ?>
-                                                        </span>
+                                                        <?= view('pages/courses/features/modules/partials/publish-chip', [
+                                                            'status' => $learning_item['status'],
+                                                            'hiddenBy' => $moduleIsDraft ? 'module' : ($learning_unit['status'] !== 'published' ? 'unit' : null),
+                                                        ], ['saveData' => false]) ?>
 
                                                     <?php endif; ?>
 

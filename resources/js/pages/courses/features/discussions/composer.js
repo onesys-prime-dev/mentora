@@ -16,7 +16,7 @@ import { serializeMessage } from "../announcements/composer/serializer.js";
  * @param {HTMLElement} root
  * @param {(mode: "create"|"edit", threadId: number) => void} onSaved
  */
-export function setupComposer(root, onSaved) {
+export function setupComposer(root, onSaved, { onChange = null } = {}) {
 
     const host = root.querySelector("[data-discussion-composer]");
 
@@ -32,12 +32,39 @@ export function setupComposer(root, onSaved) {
     const attach = host.querySelector("[data-composer-attach]");
     const submit = host.querySelector("[data-composer-submit]");
 
+    // Embedded (a discussion item's editor): always open, no Post button;
+    // the caller saves on onChange and reads payload().
+    const embedded = host.hasAttribute("data-composer-embedded");
+
     let mode = "create";
     let threadId = null;
     let attachments = [];
 
+    // Editing an opening post swaps the composer in for it; closing puts both back.
+    const home = document.createComment("composer-home");
+    host.before(home);
+
+    let replaced = null;
+
+    const restore = () => {
+
+        if (replaced) {
+            replaced.classList.remove("hidden");
+            replaced = null;
+        }
+
+        if (home.parentNode && host.previousSibling !== home) {
+            home.after(host);
+        }
+
+    };
+
     const refresh = () => {
-        submit.disabled = titleInput.value.trim() === "";
+
+        if (submit) {
+            submit.disabled = titleInput.value.trim() === "";
+        }
+
     };
 
     const renderChips = () => {
@@ -61,6 +88,7 @@ export function setupComposer(root, onSaved) {
             remove.onclick = () => {
                 attachments.splice(index, 1);
                 renderChips();
+                onChange?.();
             };
 
             chip.append(name, remove);
@@ -74,6 +102,8 @@ export function setupComposer(root, onSaved) {
 
         destroyComposerEditor();
 
+        restore();
+
         host.classList.add("hidden");
         host.classList.remove("flex");
 
@@ -82,7 +112,10 @@ export function setupComposer(root, onSaved) {
     };
 
     // Assigned (not added) so reopening never stacks duplicate listeners.
-    titleInput.oninput = refresh;
+    titleInput.oninput = () => {
+        refresh();
+        onChange?.();
+    };
 
     host.querySelectorAll("[data-composer-cancel]").forEach((button) => {
         button.onclick = close;
@@ -110,6 +143,7 @@ export function setupComposer(root, onSaved) {
 
                 attachments.push(result);
                 renderChips();
+                onChange?.();
 
             } catch (error) {
                 console.error(error);
@@ -121,7 +155,7 @@ export function setupComposer(root, onSaved) {
 
     };
 
-    submit.onclick = async () => {
+    if (submit) submit.onclick = async () => {
 
         const title = titleInput.value.trim();
 
@@ -170,15 +204,25 @@ export function setupComposer(root, onSaved) {
 
     return {
 
-        /** @param {{ mode?: "create"|"edit", threadId?: number, title?: string, message?: string, attachments?: array }} options */
-        open({ mode: m = "create", threadId: id = null, title = "", message = "{}", attachments: existing = [] } = {}) {
+        /** @param {{ mode?: "create"|"edit", threadId?: number, title?: string, message?: string, attachments?: array, replace?: HTMLElement|null }} options */
+        open({ mode: m = "create", threadId: id = null, title = "", message = "{}", attachments: existing = [], replace = null } = {}) {
+
+            restore();
+
+            if (replace) {
+                replaced = replace;
+                replace.classList.add("hidden");
+                replace.after(host);
+            }
 
             mode = m;
             threadId = id;
             attachments = existing.map((a) => ({ file_id: a.file_id, original_filename: a.original_filename }));
 
-            heading.textContent = mode === "edit" ? "Edit discussion" : "New discussion";
-            submit.textContent = mode === "edit" ? "Save" : "Post";
+            if (!embedded) {
+                heading.textContent = mode === "edit" ? "Edit discussion" : "New discussion";
+                submit.textContent = mode === "edit" ? "Save" : "Post";
+            }
 
             titleInput.value = title;
 
@@ -187,9 +231,11 @@ export function setupComposer(root, onSaved) {
             host.classList.remove("hidden");
             host.classList.add("flex");
 
-            root.querySelector("[data-composer-open]")?.classList.add("hidden");
+            if (!embedded) {
+                root.querySelector("[data-composer-open]")?.classList.add("hidden");
+            }
 
-            initializeComposerEditor("discussion-editor");
+            initializeComposerEditor("discussion-editor")?.on("update", () => onChange?.());
 
             // The toolbar closes over the editor it was bound to; a fresh copy
             // drops the previous editor's listeners before binding the new one.
@@ -201,13 +247,24 @@ export function setupComposer(root, onSaved) {
             renderChips();
             refresh();
 
-            host.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            if (!embedded) {
+                host.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
-            titleInput.focus();
+                titleInput.focus();
+            }
 
         },
 
         close,
+
+        /** What the composer holds now, in the shape the discussion API takes. */
+        payload() {
+            return {
+                title: titleInput.value.trim(),
+                body: JSON.stringify(serializeMessage(getComposerEditor())),
+                attachment_file_ids: attachments.map((a) => a.file_id),
+            };
+        },
 
     };
 
