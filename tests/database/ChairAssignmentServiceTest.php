@@ -136,6 +136,20 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
         $this->assertSame(0, db_connect()->table('chairperson_assignments')->countAllResults());
     }
 
+    public function testADeanIsNotOfferedAndCannotBeMadeChairperson(): void
+    {
+        $dean = PeopleFactory::person('chairperson', 'Dee', 'Dean', null, $this->institution);
+        $dean->addGroup('dean');
+
+        $this->assertSame([(int) $this->chair->id], array_column($this->service->candidates($this->institution), 'id'));
+
+        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->sub, (int) $dean->id, $this->admin));
+
+        $this->assertArrayHasKey('user_id', $e->errors());
+        $this->assertStringContainsString('dean cannot also be a chairperson', $e->getMessage());
+        $this->assertSame(0, db_connect()->table('chairperson_assignments')->where('chairperson_user_id', $dean->id)->countAllResults());
+    }
+
     public function testNobodyIsAssignedToAnInactiveSubDepartment(): void
     {
         db_connect()->table('sub_departments')->where('id', $this->sub)->update(['is_active' => 0]);

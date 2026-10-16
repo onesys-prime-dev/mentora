@@ -71,7 +71,7 @@ final class ActiveRoleServiceTest extends DatabaseTestCase
         $this->assertSame('chairperson', $this->service->resolve($user));
     }
 
-    /** A person who is dean, chairperson and instructor, with or without an active deanship. */
+    /** A person who is dean and instructor (a dean cannot also be a chairperson), with or without an active deanship. */
     private function deanWithOtherRoles(bool $assigned): User
     {
         $institution = PeopleFactory::institution('ARS');
@@ -79,7 +79,6 @@ final class ActiveRoleServiceTest extends DatabaseTestCase
         $department = (int) db_connect()->insertID();
 
         $user = PeopleFactory::person('instructor', 'Dana', 'Dean', null, $institution);
-        $user->addGroup('chairperson');
 
         if ($assigned) {
             (new DeanAssignmentService())->assign($institution, $department, (int) $user->id);
@@ -90,7 +89,7 @@ final class ActiveRoleServiceTest extends DatabaseTestCase
         return model(CodeIgniter\Shield\Models\UserModel::class)->findById($user->id);
     }
 
-    public function testADeanWhoIsAlsoAChairpersonAndInstructorDefaultsToDean(): void
+    public function testADeanWhoIsAlsoAnInstructorDefaultsToDean(): void
     {
         $user = $this->deanWithOtherRoles(true);
 
@@ -111,7 +110,7 @@ final class ActiveRoleServiceTest extends DatabaseTestCase
     {
         $user = $this->deanWithOtherRoles(false);
 
-        $this->assertSame('chairperson', $this->service->resolve($user));
+        $this->assertSame('instructor', $this->service->resolve($user));
         $this->assertFalse($this->service->switchTo($user, 'dean'));
     }
 
@@ -129,7 +128,7 @@ final class ActiveRoleServiceTest extends DatabaseTestCase
 
         db_connect()->table('dean_assignments')->where('dean_user_id', $user->id)->update(['status' => 'ended', 'active_marker' => null]);
 
-        $this->assertSame('chairperson', $this->service->resolve($user), 'the session still says dean, but the deanship has ended');
+        $this->assertSame('instructor', $this->service->resolve($user), 'the session still says dean, but the deanship has ended');
     }
 
     public function testSwitchingToARoleTheUserDoesNotHoldIsRefusedForDeanToo(): void

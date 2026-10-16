@@ -18,6 +18,7 @@ use CodeIgniter\Shield\Entities\User;
  *    chair more than one sub-department.
  *  - Only a member of this institution who holds the chairperson role, and
  *    only into an active sub-department of this institution.
+ *  - A dean cannot also be a chairperson (they may still teach).
  *  - Revoking keeps the row (status "revoked"); assigning again reuses it.
  */
 class ChairAssignmentService
@@ -71,6 +72,8 @@ class ChairAssignmentService
             ->join('user_profiles up', 'up.user_id = u.id', 'left')
             ->join('auth_identities ai', "ai.user_id = u.id AND ai.type = 'email_password'", 'left', false)
             ->where('iu.institution_id', $institutionId)
+            // A dean can also teach, but cannot also be a chairperson.
+            ->where("NOT EXISTS (SELECT 1 FROM auth_groups_users dean_group WHERE dean_group.user_id = u.id AND dean_group.`group` = 'dean')", null, false)
             ->orderBy('up.last_name')
             ->orderBy('up.first_name')
             ->get()->getResultArray();
@@ -96,6 +99,10 @@ class ChairAssignmentService
 
         if ((int) $sub['is_active'] !== 1) {
             throw new StructureException("{$sub['name']} is inactive. Reactivate it before assigning a chairperson.");
+        }
+
+        if ($db->table('auth_groups_users')->where(['user_id' => $userId, 'group' => 'dean'])->countAllResults() > 0) {
+            throw StructureException::field('user_id', 'That person is a dean. A dean cannot also be a chairperson.');
         }
 
         $candidate = null;
