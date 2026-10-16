@@ -303,6 +303,73 @@ final class MonitorDepartmentServiceTest extends DatabaseTestCase
         $this->assertSame([], $this->service->terms($this->dean));
     }
 
+    /** A chairperson's action on an offering, as ChairpersonCourseAudit records it. @return int audit id */
+    private function chairAction(User $chair, int $offering, string $method, string $at): int
+    {
+        \CodeIgniter\Config\Services::resetSingle('auditLogger');
+
+        $id = service('auditLogger')->log('course.chairperson_action', $chair, [
+            'target_type' => 'offering', 'target_id' => $offering, 'acting_role' => 'chairperson', 'new' => ['method' => $method],
+        ]);
+
+        db_connect()->table('audit_logs')->where('id', $id)->update(['created_at' => $at]);
+
+        return $id;
+    }
+
+    public function testTheAuditLogListsChairpersonActionsInTheDepartmentsCoursesOnly(): void
+    {
+        $chair = PeopleFactory::person('chairperson', 'Maria', 'Chair', 'maria@dept.example', $this->institution);
+        $this->chairAction($chair, $this->it101, 'POST', '2026-09-01 09:00:00');
+        $this->chairAction($chair, $this->lw100, 'PATCH', '2026-09-02 09:00:00');
+
+        $elsewhere = DeanFactory::department('N', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'N'), 'N'), $this->term, 'LAW900');
+        $this->chairAction($chair, $foreign, 'DELETE', '2026-09-03 09:00:00');
+
+        $log = $this->service->auditLog($this->dean, $this->filters());
+
+        $this->assertSame(2, $log['total'], "another department's course is not listed");
+        $this->assertSame(['LW100', 'IT101'], array_column($log['rows'], 'course_code'), 'newest first');
+        $this->assertSame('maria@dept.example', $log['rows'][0]['actor']);
+        $this->assertSame('chairperson', $log['rows'][0]['acting_role']);
+        $this->assertSame('Updated something', $log['rows'][0]['description']);
+        $this->assertSame('Created something', $log['rows'][1]['description']);
+        $this->assertSame('2026-09-02 09:00:00', $log['rows'][0]['created_at']);
+    }
+
+    public function testTheAuditLogFollowsTheFiltersAndPages(): void
+    {
+        $chair = PeopleFactory::person('chairperson', 'Maria', 'Chair', null, $this->institution);
+
+        foreach (['2026-09-01', '2026-09-02', '2026-09-03'] as $day) {
+            $this->chairAction($chair, $this->it101, 'POST', "{$day} 09:00:00");
+        }
+        $this->chairAction($chair, $this->lw100, 'POST', '2026-10-05 09:00:00');
+
+        $this->assertSame(4, $this->service->auditLog($this->dean, $this->filters())['total']);
+        $this->assertSame(1, $this->service->auditLog($this->dean, $this->filters(['program' => (string) $this->programB1]))['total']);
+        $this->assertSame(3, $this->service->auditLog($this->dean, $this->filters(['sub_department' => (string) $this->subA]))['total']);
+        $this->assertSame(2, $this->service->auditLog($this->dean, $this->filters(['from' => '2026-09-02', 'to' => '2026-09-03']))['total'], 'both end days count');
+
+        $second = $this->service->auditLog($this->dean, $this->filters(), 2, 3);
+
+        $this->assertSame(4, $second['total']);
+        $this->assertCount(1, $second['rows'], 'the fourth entry is alone on page two of three-a-page');
+    }
+
+    public function testTheAuditLogIsEmptyForADeanWithoutADepartmentAndAfterTheDeanshipEnds(): void
+    {
+        $chair = PeopleFactory::person('chairperson', 'Maria', 'Chair', null, $this->institution);
+        $this->chairAction($chair, $this->it101, 'POST', '2026-09-01 09:00:00');
+
+        $this->assertSame(0, $this->service->auditLog(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), $this->filters())['total']);
+
+        db_connect()->table('dean_assignments')->where('dean_user_id', $this->dean->id)->update(['status' => 'ended', 'active_marker' => null]);
+
+        $this->assertSame(0, $this->service->auditLog($this->dean, $this->filters())['total']);
+    }
+
     public function testTheTermFilterListsOnlyTheDepartmentsTerms(): void
     {
         $terms = array_column($this->service->terms($this->dean), 'name');

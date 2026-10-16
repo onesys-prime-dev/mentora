@@ -11,7 +11,19 @@
  */
 $loadError = $loadError ?? false;
 
-$link = static fn (array $override = []): string => site_url('chairperson/monitor-program')
+// The chairperson's page by default. The dean's drill-down into one program (Monitor
+// Department) renders this same page and sets these to its own address, course links and words.
+$monitorBase = $monitorBase ?? site_url('chairperson/monitor-program');
+$monitorCourseBase  = $monitorCourseBase ?? 'chairperson';
+$monitorHeading     = $monitorHeading ?? 'Monitor Program';
+$monitorSubheading  = $monitorSubheading ?? 'How the programs you chair are performing.';
+$monitorAuditTitle  = $monitorAuditTitle ?? 'Your recent actions';
+$monitorShowActor   = $monitorShowActor ?? false;
+$monitorEmptyText   = $monitorEmptyText ?? 'Courses in the programs you chair will appear here.';
+$monitorBackUrl     = $monitorBackUrl ?? null;
+$monitorBackLabel   = $monitorBackLabel ?? 'Back';
+
+$link = static fn (array $override = []): string => $monitorBase
     . (($query = http_build_query($filters->toQuery($override))) === '' ? '' : '?' . $query);
 
 $sortLink = static function (string $column) use ($filters, $sort, $dir, $link): string {
@@ -40,7 +52,16 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 <?= $this->section('content') ?>
 
 <div class="flex justify-between items-center">
-    <?= $this->include('components/back') ?>
+    <?php if ($monitorBackUrl !== null): ?>
+        <div class="mb-5 flex items-center gap-4 font-heading text-xs uppercase text-[#3D3D3D]">
+            <a class="-ml-1 flex min-h-10 items-center gap-2 rounded px-1 transition hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc($monitorBackUrl) ?>">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+                <?= esc($monitorBackLabel) ?>
+            </a>
+        </div>
+    <?php else: ?>
+        <?= $this->include('components/back') ?>
+    <?php endif; ?>
 </div>
 
 <div class="flex flex-col gap-6 py-3">
@@ -48,13 +69,13 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
             <?= icon('score', 'h-6 w-6 shrink-0 text-brand') ?>
-            Monitor Program
+            <?= esc($monitorHeading) ?>
         </h1>
-        <p class="text-sm text-[#3D3D3D]">How the programs you chair are performing.</p>
+        <p class="text-sm text-[#3D3D3D]"><?= esc($monitorSubheading) ?></p>
     </div>
 
     <!-- One-line filter toolbar (term · date range · apply), like an analytics report bar. -->
-    <form method="get" action="<?= site_url('chairperson/monitor-program') ?>" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm">
+    <form method="get" action="<?= esc($monitorBase) ?>" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm">
         <label class="flex min-w-48 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">Term
             <select class="<?= $input ?>" name="term">
                 <option value="">Any term</option>
@@ -77,7 +98,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
         <div class="flex items-end gap-2">
             <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Apply</button>
             <?php if ($filters->isFiltered()): ?>
-                <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= site_url('chairperson/monitor-program') ?>">Clear</a>
+                <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= esc($monitorBase) ?>">Clear</a>
             <?php endif; ?>
         </div>
     </form>
@@ -88,7 +109,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load Monitor Program</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has changed.</span>
-            <a href="<?= site_url('chairperson/monitor-program') ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($monitorBase) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php else: ?>
@@ -120,7 +141,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                     'title' => $filters->isFiltered() ? 'No courses match these filters' : 'Nothing to monitor yet',
                     'text' => $filters->isFiltered()
                         ? 'Try a different term or date range.'
-                        : 'Courses in the programs you chair will appear here.',
+                        : $monitorEmptyText,
                 ], ['saveData' => false]) ?>
             </div>
 
@@ -165,7 +186,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                             <?php foreach ($comparison as $row): ?>
                                 <tr class="border-b border-gray-50 hover:bg-gray-50">
                                     <td class="px-3 py-2">
-                                        <a data-course-comparison-link class="font-semibold text-brand hover:underline" href="<?= site_url('chairperson/courses/' . $row['offering_id'] . '/' . $row['slug']) ?>">
+                                        <a data-course-comparison-link class="font-semibold text-brand hover:underline" href="<?= site_url($monitorCourseBase . '/courses/' . $row['offering_id'] . '/' . $row['slug']) ?>">
                                             <?= esc($row['course_code']) ?> <?= esc($row['section_code']) ?>
                                         </a>
                                     </td>
@@ -201,7 +222,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                         <?php foreach ($atRisk as $student): ?>
                             <li class="flex items-center justify-between gap-3 py-2 text-sm">
                                 <div>
-                                    <a class="font-semibold text-brand hover:underline" href="<?= site_url('chairperson/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? '')) ?>">
+                                    <a class="font-semibold text-brand hover:underline" href="<?= site_url($monitorCourseBase . '/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? '')) ?>">
                                         <?= esc($student['name']) ?>
                                     </a>
                                     <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
@@ -219,7 +240,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
             <!-- Audit log -->
             <div class="rounded-2xl bg-white p-5 shadow-sm">
-                <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">Your recent actions</p>
+                <p class="mb-3 text-sm font-semibold text-[#1A1C1E]"><?= esc($monitorAuditTitle) ?></p>
                 <?php if ($audit['rows'] === []): ?>
                     <p class="text-sm text-[#646464]">No activity yet.</p>
                 <?php else: ?>
@@ -228,13 +249,13 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                             <li class="flex items-center justify-between gap-3 py-2 text-sm">
                                 <div>
                                     <?php if ($entry['offering_id'] !== null && $entry['slug'] !== null): ?>
-                                        <a class="font-semibold text-brand hover:underline" href="<?= site_url('chairperson/courses/' . $entry['offering_id'] . '/' . $entry['slug']) ?>">
+                                        <a class="font-semibold text-brand hover:underline" href="<?= site_url($monitorCourseBase . '/courses/' . $entry['offering_id'] . '/' . $entry['slug']) ?>">
                                             <?= esc($entry['course_code']) ?> <?= esc($entry['section_code']) ?>
                                         </a>
                                     <?php else: ?>
                                         <span class="font-semibold text-[#1A1C1E]">—</span>
                                     <?php endif; ?>
-                                    <span class="text-[#646464]"> · <?= esc($entry['description']) ?></span>
+                                    <span class="text-[#646464]"> · <?= $monitorShowActor && ! empty($entry['actor']) ? esc($entry['actor']) . ' · ' : '' ?><?= esc($entry['description']) ?></span>
                                 </div>
                                 <span class="text-xs text-[#646464]"><?= esc($entry['created_at']) ?></span>
                             </li>
