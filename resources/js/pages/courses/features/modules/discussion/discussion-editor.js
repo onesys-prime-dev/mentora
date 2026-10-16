@@ -3,13 +3,15 @@
 | Discussion Learning Item Editor
 |--------------------------------------------------------------------------
 |
-| Autosaves the item's title and the discussion prompt through
+| Uses the Discussions tab's own composer (title, rich-text prompt,
+| attachments), always open, and autosaves it through
 | PATCH …/modules/items/{id}; the server keeps the thread in step.
 | flushAutosave() lets Save as Draft / Publish save pending edits first.
 |
 */
 
 import { updateLearningItem } from "../api.js";
+import { setupComposer } from "../../discussions/composer.js";
 
 const DELAY_MS = 800;
 
@@ -35,10 +37,6 @@ export function initializeDiscussionEditor() {
 
     const learningItemId = Number(editor.dataset.learningItemId);
 
-    const titleInput = editor.querySelector("[data-discussion-title]");
-
-    const bodyInput = editor.querySelector("[data-discussion-body]");
-
     const errorLabel = editor.querySelector("[data-discussion-error]");
 
     const showError = (message) => {
@@ -49,38 +47,17 @@ export function initializeDiscussionEditor() {
 
     };
 
-    const setText = (selector, text) => {
+    let composer = null;
 
-        document.querySelectorAll(selector).forEach((element) => {
-            element.textContent = text;
-        });
-
-    };
-
-    // The header and the preview follow what is typed, before it is saved.
-    const mirror = () => {
-
-        const title = titleInput.value.trim();
-
-        if (title) {
-
-            setText("[data-item-header-title]", title);
-
-            setText("[data-discussion-preview-title]", title);
-
-        }
-
-        setText("[data-discussion-preview-body]", bodyInput.value.trim() || "No prompt yet.");
-
-    };
+    let ready = false;
 
     saveNow = async () => {
 
-        if (!dirty) {
+        if (!dirty || !composer) {
             return;
         }
 
-        const title = titleInput.value.trim();
+        const { title, body, attachment_file_ids: attachmentIds } = composer.payload();
 
         if (!title) {
 
@@ -100,7 +77,8 @@ export function initializeDiscussionEditor() {
 
             const result = await updateLearningItem(learningItemId, {
                 title,
-                discussion_body: bodyInput.value,
+                discussion_body: body,
+                attachment_file_ids: attachmentIds,
             });
 
             if (result.success === false) {
@@ -133,9 +111,22 @@ export function initializeDiscussionEditor() {
 
     const queue = () => {
 
+        // Loading the saved content into the editor is not an edit.
+        if (!ready || !composer) {
+            return;
+        }
+
         dirty = true;
 
-        mirror();
+        const { title } = composer.payload();
+
+        if (title) {
+
+            document.querySelectorAll("[data-item-header-title]").forEach((element) => {
+                element.textContent = title;
+            });
+
+        }
 
         setStatus("Unsaved changes", "bg-orange-500");
 
@@ -145,9 +136,27 @@ export function initializeDiscussionEditor() {
 
     };
 
-    titleInput.addEventListener("input", queue);
+    composer = setupComposer(editor, () => {}, { onChange: queue });
 
-    bodyInput.addEventListener("input", queue);
+    let attachments = [];
+
+    try {
+        attachments = JSON.parse(editor.dataset.discussionAttachments ?? "[]");
+    } catch (error) {
+        console.error(error);
+    }
+
+    composer?.open({
+        mode: "edit",
+        title: editor.dataset.discussionTitle ?? "",
+        message: editor.dataset.discussionMessage ?? "{}",
+        attachments,
+    });
+
+    // The editor fires update events while the saved content is being set.
+    setTimeout(() => {
+        ready = true;
+    }, 0);
 
 }
 

@@ -497,8 +497,7 @@ What do you hope to learn?  ",
         ]));
 
         $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $result['learning_item_id'])->get()->getRowArray();
-        $this->assertSame("Tell us who you are.
-What do you hope to learn?", $thread['body']);
+        $this->assertSame(['Tell us who you are.', 'What do you hope to learn?'], $this->paragraphs($thread['body']));
     }
 
     public function testEditingADiscussionItemKeepsItsThreadInStep(): void
@@ -517,7 +516,33 @@ What do you hope to learn?", $thread['body']);
 
         $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $item)->get()->getRowArray();
         $this->assertSame('New title', $thread['title']);
-        $this->assertSame('What did chapter 2 change for you?', $thread['body']);
+        $this->assertSame(['What did chapter 2 change for you?'], $this->paragraphs($thread['body']));
+    }
+
+    /** @return list<string> the text of each paragraph of a stored message */
+    private function paragraphs(string $message): array
+    {
+        $blocks = json_decode($message, true)['blocks'] ?? [];
+
+        return array_map(static fn ($b) => implode('', array_column($b['content'] ?? [], 'text')), $blocks);
+    }
+
+    public function testAComposerMessageIsStoredAsItIs(): void
+    {
+        [$module, $unit] = $this->tree();
+        $item = $this->storeItem($module, $unit, 'Rich', 'discussion')['learning_item_id'];
+
+        $message = json_encode(['version' => 1, 'blocks' => [[
+            'id' => 'block_001',
+            'type' => 'paragraph',
+            'align' => 'left',
+            'content' => [['text' => 'Bold idea', 'marks' => ['bold']]],
+        ]]]);
+
+        $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['discussion_body' => $message]);
+
+        $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $item)->get()->getRowArray();
+        $this->assertSame($message, $thread['body']);
     }
 
     public function testChangingOnlyTheStatusLeavesTheThreadAlone(): void
@@ -530,7 +555,7 @@ What do you hope to learn?", $thread['body']);
 
         $thread = db_connect()->table('discussion_threads')->where('learning_item_id', $item)->get()->getRowArray();
         $this->assertSame('Keep me', $thread['title']);
-        $this->assertSame('Prompt', $thread['body']);
+        $this->assertSame(['Prompt'], $this->paragraphs($thread['body']));
     }
 
     public function testAPromptSentForANonDiscussionItemIsIgnored(): void

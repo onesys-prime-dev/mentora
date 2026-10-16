@@ -1524,7 +1524,7 @@ class ModuleService
                 'learning_item_id' => $learningItemId,
                 'author_id' => $user->id,
                 'title' => $title,
-                'body' => self::discussionBody($request->getPost('discussion_body')),
+                'body' => self::discussionMessage($request->getPost('discussion_body')),
                 'last_activity_at' => $now,
             ]);
 
@@ -1698,10 +1698,45 @@ class ModuleService
 
     }
 
-    /** The prompt a discussion item opens with: plain text, trimmed, capped. */
-    private static function discussionBody(mixed $body): string
+    /**
+     * The prompt a discussion item opens with, as the message JSON the
+     * discussion composer and renderer use. Plain text (the create modal) is
+     * turned into paragraphs; an existing message is kept as it is.
+     */
+    public static function discussionMessage(mixed $body): string
     {
-        return mb_substr(trim((string) $body), 0, 10000);
+        $text = trim((string) $body);
+
+        if ($text === '') {
+            return '';
+        }
+
+        $decoded = json_decode($text, true);
+
+        if (is_array($decoded) && isset($decoded['blocks']) && is_array($decoded['blocks'])) {
+            return mb_substr($text, 0, 200000);
+        }
+
+        $blocks = [];
+
+        foreach (preg_split('/\R{1,}/', mb_substr($text, 0, 10000)) as $line) {
+
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            $blocks[] = [
+                'id' => sprintf('block_%03d', count($blocks) + 1),
+                'type' => 'paragraph',
+                'align' => 'left',
+                'content' => [['text' => $line]],
+            ];
+
+        }
+
+        return json_encode(['version' => 1, 'blocks' => $blocks], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -1718,10 +1753,14 @@ class ModuleService
         }
 
         if (array_key_exists('discussion_body', $payload)) {
-            $threadUpdate['body'] = self::discussionBody($payload['discussion_body']);
+            $threadUpdate['body'] = self::discussionMessage($payload['discussion_body']);
         }
 
-        if ($threadUpdate === []) {
+        $attachments = array_key_exists('attachment_file_ids', $payload)
+            ? array_values(array_filter(array_map('intval', (array) $payload['attachment_file_ids'])))
+            : null;
+
+        if ($threadUpdate === [] && $attachments === null) {
             return;
         }
 
@@ -1729,8 +1768,16 @@ class ModuleService
 
         $thread = $threads->where('learning_item_id', $learningItemId)->first();
 
-        if ($thread) {
+        if (!$thread) {
+            return;
+        }
+
+        if ($threadUpdate !== []) {
             $threads->update($thread['id'], $threadUpdate);
+        }
+
+        if ($attachments !== null) {
+            (new DiscussionService())->replaceThreadAttachments((int) $thread['id'], $attachments);
         }
     }
 
