@@ -162,6 +162,66 @@ final class ResourceServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Locked items
+    |--------------------------------------------------------------------------
+    */
+
+    /** A unit with a reading, then a PDF that needs it finished first. @return array{unit: int, intro: int, handout: int} */
+    private function gatedHandout(): array
+    {
+        $unit = $this->unit($this->module('Week One'), 'Basics Unit');
+
+        [$intro, $handout] = CourseFactory::items($unit, [
+            ['type' => 'reading', 'title' => 'Intro'],
+            ['type' => 'pdf', 'title' => 'Gated Handout', 'mode' => 'previous'],
+        ]);
+
+        $file = CourseFactory::file($this->instructor);
+        CourseFactory::resource($handout, 'pdf', null, $file['id']);
+        db_connect()->table('learning_resources')->where('learning_item_id', $handout)->update(['title' => '']);
+
+        return ['unit' => $unit, 'intro' => $intro, 'handout' => $handout];
+    }
+
+    public function testALockedResourceHasNoViewOrDownloadAddressForAStudent(): void
+    {
+        $gate = $this->gatedHandout();
+
+        $html = $this->html($this->student, ['unit' => $gate['unit']]);
+
+        $this->assertStringContainsString('Gated Handout', $html);
+        $this->assertStringContainsString('data-resource-locked', $html);
+        $this->assertStringContainsString('Complete “Intro” first.', $html);
+        $this->assertStringNotContainsString('data-resource-menu-toggle', $html);
+        $this->assertStringNotContainsString('data-resource-share', $html);
+        $this->assertStringNotContainsString('Download', $html);
+    }
+
+    public function testTheResourceOpensOnceThePrerequisiteIsDone(): void
+    {
+        $gate = $this->gatedHandout();
+
+        CourseFactory::progress($gate['intro'], $this->student);
+
+        $html = $this->html($this->student, ['unit' => $gate['unit']]);
+
+        $this->assertStringNotContainsString('data-resource-locked', $html);
+        $this->assertStringContainsString('data-resource-menu-toggle', $html);
+        $this->assertStringContainsString('Download', $html);
+    }
+
+    public function testInstructorsAreNeverLockedOutOfAResource(): void
+    {
+        $gate = $this->gatedHandout();
+
+        $html = $this->html($this->instructor, ['unit' => $gate['unit']]);
+
+        $this->assertStringNotContainsString('data-resource-locked', $html);
+        $this->assertStringContainsString('data-resource-menu-toggle', $html);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Folders
     |--------------------------------------------------------------------------
     */

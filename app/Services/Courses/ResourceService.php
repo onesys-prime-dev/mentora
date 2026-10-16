@@ -144,6 +144,7 @@ class ResourceService
 
             $resources = $this->learningResourceModel->retrieveForLearningUnit($unitId, $isInstructor, $search);
             $resources = array_map($this->decorate(...), $resources);
+            $resources = $this->applyLocks($user, $resources);
             $resources = $this->filterByType($resources, $type);
             $resources = $this->sortResources($resources, $sort);
 
@@ -227,6 +228,36 @@ class ResourceService
         $resource['added_label'] = $resource['created_at'] ? date('M j, Y', strtotime($resource['created_at'])) : '';
 
         return $resource;
+    }
+
+    /**
+     * A student cannot open a resource whose learning item is still locked
+     * behind an unfinished prerequisite (the file route refuses it too), so
+     * it is marked locked with the reason and given no view or download
+     * address. Instructors are never locked.
+     */
+    private function applyLocks(User $user, array $resources): array
+    {
+        $locks = (new LearningProgressService())->locksFor(
+            $user,
+            array_map(static fn (array $r) => (int) $r['item_id'], $resources)
+        );
+
+        return array_map(static function (array $resource) use ($locks) {
+
+            $lock = $locks[(int) $resource['item_id']] ?? null;
+
+            $resource['is_locked'] = $lock !== null;
+            $resource['lock_message'] = $lock['message'] ?? null;
+
+            if ($lock !== null) {
+                $resource['view_url'] = null;
+                $resource['download_url'] = null;
+            }
+
+            return $resource;
+
+        }, $resources);
     }
 
     private function typeBucketFromMime(string $mime, string $itemType): string
