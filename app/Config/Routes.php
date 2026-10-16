@@ -279,6 +279,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($routes) {
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
+    $routes->get('courses', 'Dean\DeanCoursesController::index');
 });
 
 // A chairperson has full instructor rights on every course in their

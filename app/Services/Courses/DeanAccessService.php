@@ -21,6 +21,19 @@ class DeanAccessService
         return $this->assignments->departmentOfDean((int) $user->id);
     }
 
+    /**
+     * Every program under the dean's department, read from the hierarchy on each call.
+     *
+     * @return list<int>
+     */
+    public function programIds(User $user): array
+    {
+        return array_map('intval', array_column(
+            $this->baseQuery($user)->select('p.id')->get()->getResultArray(),
+            'id'
+        ));
+    }
+
     public function canAccessOffering(User $user, int $offeringId): bool
     {
         return $this->baseQuery($user)
@@ -73,8 +86,14 @@ class DeanAccessService
 
     private function baseQuery(User $user): \CodeIgniter\Database\BaseBuilder
     {
-        return db_connect()->table('programs p')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->whereIn('sd.department_id', $this->departmentIds($user));
+        $departmentIds = $this->departmentIds($user);
+
+        $builder = db_connect()->table('programs p')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id');
+
+        // No active assignment reaches nothing: an empty IN () is an error, not "none".
+        return $departmentIds === []
+            ? $builder->where('1 = 0', null, false)
+            : $builder->whereIn('sd.department_id', $departmentIds);
     }
 }
