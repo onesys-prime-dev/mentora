@@ -36,6 +36,15 @@ class DeanAssignmentService
             throw StructureException::field('user_id', 'Choose a person who belongs to this institution.');
         }
 
+        // A dean can also teach, but cannot also be a chairperson: the one who oversees a department
+        // does not lead one of its sub-departments.
+        if (
+            $db->table('auth_groups_users')->where(['user_id' => $userId, 'group' => 'chairperson'])->countAllResults() > 0
+            || $db->table('chairperson_assignments')->where(['chairperson_user_id' => $userId, 'status' => 'active'])->countAllResults() > 0
+        ) {
+            throw StructureException::field('user_id', 'That person is a chairperson. A dean cannot also be a chairperson: remove the chairperson role and assignments first.');
+        }
+
         $now = date('Y-m-d H:i:s');
         $db->transStart();
 

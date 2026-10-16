@@ -32,27 +32,5 @@ class DeanAssignmentsSeeder extends Seeder
                 $service->assign(1, (int) $department['id'], (int) $user->id);
             }
         }
-
-        $dean = $users->findByCredentials(['email' => 'dean2@mentora.test']);
-        $subDepartment = $this->db->table('sub_departments sd')
-            ->select('sd.id')
-            ->join('departments d', 'd.id = sd.department_id')
-            ->where(['d.institution_id' => 1, 'd.code' => 'CBM', 'sd.code' => 'IT'])
-            ->get()->getRowArray();
-
-        if ($dean !== null && $subDepartment !== null && $this->db->table('chairperson_assignments')->where([
-            'sub_department_id' => $subDepartment['id'],
-            'chairperson_user_id' => $dean->id,
-            'status' => 'active',
-        ])->countAllResults() === 0) {
-            $now = date('Y-m-d H:i:s');
-            $this->db->table('chairperson_assignments')->insert([
-                'sub_department_id' => $subDepartment['id'],
-                'chairperson_user_id' => $dean->id,
-                'status' => 'active',
-                'assigned_at' => $now,
-                'updated_at' => $now,
-            ]);
-        }
     }
 }
