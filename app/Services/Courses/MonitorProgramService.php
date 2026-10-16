@@ -461,6 +461,7 @@ class MonitorProgramService
             return [
                 'id' => (int) $row['id'],
                 'created_at' => $row['created_at'],
+                'actor' => $row['actor_label'] ?? null,
                 'acting_role' => $row['acting_role'],
                 'offering_id' => $offeringId,
                 'course_code' => $offering['course_code'] ?? null,
