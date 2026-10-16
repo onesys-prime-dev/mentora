@@ -237,6 +237,52 @@ final class QuestionServiceTest extends DatabaseTestCase
         $this->assertSame([], $this->choices($id));
     }
 
+    public function testChangingTheCorrectChoiceKeepsWhatAStudentAnswered(): void
+    {
+        $id = (int) $this->add(['question_text' => 'Q', 'question_type' => 'Multiple Choice', 'choices' => [
+            ['text' => 'A'], ['text' => 'B'], ['text' => 'C'], ['text' => 'D', 'is_correct' => true],
+        ]])['question']['id'];
+
+        $choiceA = (int) $this->choices($id)[0]['id'];
+        $attempt = AssessmentFactory::attempt($this->quiz, CourseFactory::user('student'), 'Submitted');
+        AssessmentFactory::response($attempt, $id, ['selected_choice_id' => $choiceA]);
+
+        $this->service->updateQuestion($this->instructor, $id, ['choices' => [
+            ['text' => 'A'], ['text' => 'B', 'is_correct' => true], ['text' => 'C'], ['text' => 'D'],
+        ]]);
+
+        $response = db_connect()->table('assessment_question_responses')->where('question_id', $id)->get()->getRowArray();
+        $this->assertSame($choiceA, (int) $response['selected_choice_id'], "the student's answer is still on choice A");
+        $this->assertSame([0, 1, 0, 0], array_map('intval', array_column($this->choices($id), 'is_correct')));
+        $this->assertSame($choiceA, (int) $this->choices($id)[0]['id'], 'choice A is the same row');
+    }
+
+    public function testAnEditedChoiceTextAndAReorderKeepTheStudentsPick(): void
+    {
+        $id = (int) $this->add(['question_text' => 'Q', 'question_type' => 'Multiple Choice', 'choices' => [
+            ['text' => 'Red', 'is_correct' => true], ['text' => 'Blue'], ['text' => 'Green'],
+        ]])['question']['id'];
+
+        $byText = array_column($this->choices($id), 'id', 'choice_text');
+        $attempt = AssessmentFactory::attempt($this->quiz, CourseFactory::user('student'), 'Submitted');
+        AssessmentFactory::response($attempt, $id, ['selected_choice_id' => (int) $byText['Blue']]);
+
+        // Blue moves to the front (same text), Green gets a typo fix, Yellow is new, Red is removed.
+        $this->service->updateQuestion($this->instructor, $id, ['choices' => [
+            ['text' => 'Blue'], ['text' => 'Greene', 'is_correct' => true], ['text' => 'Yellow'],
+        ]]);
+
+        $rows = $this->choices($id);
+        $this->assertSame(['Blue', 'Greene', 'Yellow'], array_column($rows, 'choice_text'));
+        $this->assertSame((int) $byText['Blue'], (int) $rows[0]['id']);
+        $this->assertSame((int) $byText['Green'], (int) $rows[1]['id'], 'the typo fix stays on the same row');
+        $this->assertNotContains((int) $byText['Red'], array_map('intval', array_column($rows, 'id')), 'an unrelated new choice does not reuse a removed row');
+        $this->assertSame(3, count($rows));
+
+        $response = db_connect()->table('assessment_question_responses')->where('question_id', $id)->get()->getRowArray();
+        $this->assertSame((int) $byText['Blue'], (int) $response['selected_choice_id']);
+    }
+
     public function testAPartialUpdateKeepsTheShortAnswerKeyAndCanFlipJustTheCaseToggle(): void
     {
         $id = (int) $this->add(['question_text' => 'Q', 'question_type' => 'Short Answer', 'accepted_answers' => ['Paris', 'paris france']])['question']['id'];

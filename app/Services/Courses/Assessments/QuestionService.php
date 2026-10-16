@@ -318,34 +318,107 @@ class QuestionService
         return ['allow_multiple_answers' => true, 'answers_count' => max(2, $answersCount)];
     }
 
+    /**
+     * Makes the question's choices match the submitted list while keeping the
+     * rows (and so their ids) a student's answer points at. Deleting and
+     * re-inserting would orphan every saved answer. A submitted choice reuses
+     * the existing row with the same text first, then, for an edited text, the
+     * unused existing row it most resembles; rows left over are removed.
+     */
     private function syncChoices(int $questionId, array $choices): void
     {
-        $this->choiceModel
+        $existing = $this->choiceModel
             ->where('question_id', $questionId)
-            ->delete();
+            ->orderBy('order_index', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->findAll();
 
-        $order = 1;
-
-        $now = date('Y-m-d H:i:s');
+        $wanted = [];
 
         foreach ($choices as $choice) {
 
             $text = trim($choice['text'] ?? '');
 
-            if ($text === '') {
+            if ($text !== '') {
+                $wanted[] = ['text' => $text, 'is_correct' => !empty($choice['is_correct'])];
+            }
+
+        }
+
+        // Same text first, so reordering or inserting keeps each answer on its choice.
+        $assigned = [];
+        $used = [];
+
+        foreach ($wanted as $index => $choice) {
+
+            foreach ($existing as $row) {
+
+                if (!isset($used[$row['id']]) && trim((string) $row['choice_text']) === $choice['text']) {
+                    $assigned[$index] = $row['id'];
+                    $used[$row['id']] = true;
+                    break;
+                }
+
+            }
+
+        }
+
+        // An edited text (a typo fix) takes over the unmatched row it most
+        // resembles; a clearly different text is a new choice, so a student's
+        // answer never moves onto an unrelated choice.
+        $spare = array_values(array_filter($existing, static fn ($row) => !isset($used[$row['id']])));
+
+        foreach ($wanted as $index => $choice) {
+
+            if (isset($assigned[$index])) {
                 continue;
             }
 
-            $this->choiceModel->insert([
+            $best = null;
+            $bestScore = 0.0;
 
-                'question_id' => $questionId,
-                'choice_text' => $text,
-                'is_correct' => !empty($choice['is_correct']),
-                'order_index' => $order++,
-                'created_at' => $now,
+            foreach ($spare as $position => $row) {
 
-            ]);
+                similar_text(mb_strtolower((string) $row['choice_text']), mb_strtolower($choice['text']), $score);
 
+                if ($score > $bestScore) {
+                    $best = $position;
+                    $bestScore = $score;
+                }
+
+            }
+
+            if ($best !== null && $bestScore >= 50.0) {
+                $assigned[$index] = $spare[$best]['id'];
+                array_splice($spare, $best, 1);
+            }
+
+        }
+
+        $now = date('Y-m-d H:i:s');
+
+        foreach ($wanted as $index => $choice) {
+
+            $row = [
+                'choice_text' => $choice['text'],
+                'is_correct' => $choice['is_correct'],
+                'order_index' => $index + 1,
+            ];
+
+            if (isset($assigned[$index])) {
+
+                $this->choiceModel->update($assigned[$index], $row + ['updated_at' => $now]);
+
+                continue;
+
+            }
+
+            $this->choiceModel->insert($row + ['question_id' => $questionId, 'created_at' => $now]);
+
+        }
+
+        foreach ($spare as $row) {
+            $this->choiceModel->delete($row['id']);
         }
     }
 
