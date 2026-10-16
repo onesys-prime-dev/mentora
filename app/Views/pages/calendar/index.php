@@ -19,7 +19,7 @@
 |--------------------------------------------------------------------------
 */
 
-$userRole = esc($user->getGroups()[0]);
+$userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
 $isInstructor = $userRole === 'instructor';
 
