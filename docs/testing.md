@@ -30,32 +30,22 @@ named `*.test.js`.
 
 ### Automated pull-request checks
 
-Use `bash scripts/create-pr.sh` from Git Bash to run checks, push the current branch,
-and open a pull request using the repository template:
+Use `bash scripts/create-pr.sh` from Git Bash to push the current branch and open
+a pull request using the repository template:
 
 ```bash
 bash scripts/create-pr.sh main "feat: describe the change" "What and why"
-PR_CHECK_SCOPE=targeted bash scripts/create-pr.sh main "feat: describe the change"
 ```
 
-The default `full` scope runs the complete PHPUnit, PHPStan, Vitest, ESLint and
-Vite checks. `targeted` discovers changed PHP tests and application files, and
-runs frontend checks only when frontend files or configuration changed. Targeted
-checks are intended for local iteration; CI remains authoritative before merge.
+The script runs no checks. It fills the template from the branch (the summary you
+give, the commit list and the size of the change), pushes, and opens the pull
+request; if the branch already has an open one, it prints that instead. CI runs
+the complete suite on the pull request, and the "CI passed" check is what gates
+the merge. To check something locally before pushing, run the commands above
+yourself.
 
-For unusual layouts, targeted selections can be overridden with space-separated
-paths:
-
-```bash
-PR_TEST_FILES="tests/database/SomeTest.php" \
-PR_PHPSTAN_PATHS="app/Services/SomeService.php" \
-PR_VITEST_FILES="tests/js/some-feature.test.js" \
-PR_CHECK_SCOPE=targeted \
-bash scripts/create-pr.sh main "feat: describe the change"
-```
-
-The first run builds the whole schema from the migrations (App and Shield), so
-it takes a few seconds longer; later runs reuse it.
+The tests need a local database. The first run builds the whole schema from the
+migrations (App and Shield), so it takes a few seconds longer; later runs reuse it.
 
 Connection defaults are in `app/Config/Database.php` (`$tests`): host
 `127.0.0.1`, user `root`, no password, database `mentora_test`. If your XAMPP
