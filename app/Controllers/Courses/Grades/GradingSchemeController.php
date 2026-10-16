@@ -3,6 +3,7 @@
 namespace App\Controllers\Courses\Grades;
 
 use App\Controllers\BaseController;
+use App\Services\Courses\Grades\GradeOverrideRequestService;
 use App\Services\Courses\Grades\GradingSchemeService;
 
 /**
@@ -126,6 +127,14 @@ class GradingSchemeController extends BaseController
     {
         $data = $this->schemeService->roster($offeringId);
 
+        // How a change to a final grade is made here (a request, or at once) and where each open request stands.
+        $requests = new GradeOverrideRequestService();
+        $isRequest = $requests->appliesTo($offeringId);
+
+        $data['overrideMode']  = $isRequest ? 'request' : 'direct';
+        $data['overrideRoute'] = $isRequest ? $requests->routeText(auth()->user(), $offeringId) : '';
+        $data['openRequests']  = $isRequest ? $requests->openByStudent($offeringId) : [];
+
         return $this->response->setJSON([
             'success' => true,
             'html' => view('pages/courses/features/grades/roster', $data),
@@ -152,6 +161,16 @@ class GradingSchemeController extends BaseController
         $percentage = array_key_exists('percentage', $payload) && $payload['percentage'] !== null && $payload['percentage'] !== ''
             ? (float) $payload['percentage']
             : null;
+
+        // Where the institution has deans an override is a request that climbs the chain and the
+        // grade stays as calculated until it is approved; elsewhere it applies at once, as it always did.
+        $requests = new GradeOverrideRequestService();
+
+        if ($requests->appliesTo($offeringId)) {
+            return $this->response->setJSON(
+                $requests->request(auth()->user(), $offeringId, $studentId, $percentage, (string) ($payload['reason'] ?? ''))
+            );
+        }
 
         return $this->response->setJSON(
             $this->schemeService->overrideGrade(auth()->user(), $offeringId, $studentId, $percentage, (string) ($payload['reason'] ?? ''))

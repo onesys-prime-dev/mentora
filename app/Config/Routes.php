@@ -267,6 +267,11 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
 
+        // A request to override a final grade (where the institution has deans): edit one that was
+        // sent back, or take one back. Only the requester can; the service checks it.
+        $routes->patch('(:num)/grades/override-requests/(:num)', 'Courses\Grades\OverrideRequestController::update/$1/$2');
+        $routes->delete('(:num)/grades/override-requests/(:num)', 'Courses\Grades\OverrideRequestController::withdraw/$1/$2');
+
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
         $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
@@ -325,6 +330,11 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
 // chairperson's own too, over the program's courses (getCourseOfferings).
 $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], function ($routes) {
     $routes->get('/', 'Dashboard\DashboardController::index');
+
+    // Grade-override requests of the sub-departments they chair: endorse, or send back with a comment.
+    $routes->get('override-requests', 'Chairperson\OverrideRequestsController::index');
+    $routes->post('override-requests/(:num)/endorse', 'Chairperson\OverrideRequestsController::endorse/$1');
+    $routes->post('override-requests/(:num)/send-back', 'Chairperson\OverrideRequestsController::sendBack/$1');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
@@ -498,6 +508,11 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+
+        // A request to override a final grade (where the institution has deans): edit one that was
+        // sent back, or take one back. Only the requester can; the service checks it.
+        $routes->patch('(:num)/grades/override-requests/(:num)', 'Courses\Grades\OverrideRequestController::update/$1/$2');
+        $routes->delete('(:num)/grades/override-requests/(:num)', 'Courses\Grades\OverrideRequestController::withdraw/$1/$2');
 
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');

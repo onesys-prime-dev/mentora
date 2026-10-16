@@ -7,9 +7,16 @@
  * resources/js/pages/courses/features/grades/roster/roster.js.
  */
 $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+
+// Where the institution has deans a change to a final grade is a request, and each student may have
+// one open (GradeOverrideRequestService); elsewhere it applies at once.
+$overrideMode  = $overrideMode ?? 'direct';
+$overrideRoute = $overrideRoute ?? '';
+$openRequests  = $openRequests ?? [];
+$isRequestMode = $overrideMode === 'request';
 ?>
 
-<div class="p-10 flex flex-col gap-6" data-gradebook-roster>
+<div class="p-10 flex flex-col gap-6" data-gradebook-roster data-override-mode="<?= esc($overrideMode, 'attr') ?>" data-override-route="<?= esc($overrideRoute, 'attr') ?>">
 
     <div class="flex items-center gap-3 border-b border-gray-200 pb-4">
 
@@ -30,7 +37,7 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
 
     <p class="text-sm text-gray-500">
         Only manual items (<?= esc(implode(', ', array_map(static fn ($i) => $i['name'], $items)) ?: 'none yet') ?>) are editable here.
-        Quiz and assignment scores come from Grade Work — the <?= $uses_periods ? 'period' : 'category' ?> columns below are read-only, for context. Click a final grade to override it.
+        Quiz and assignment scores come from Grade Work — the <?= $uses_periods ? 'period' : 'category' ?> columns below are read-only, for context. Click a final grade to <?= $isRequestMode ? 'request an override of it: the grade stays as calculated until the request is approved' : 'override it' ?>.
     </p>
 
     <div class="overflow-x-auto rounded-2xl border border-[#A9A9A9]/50">
@@ -90,22 +97,40 @@ $points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.'
                             </td>
                         <?php endforeach; ?>
 
+                        <?php $openRequest = $openRequests[(int) $student['student_id']] ?? null; ?>
+
                         <td class="px-4 py-2">
                             <button
                                 type="button"
                                 data-open-override
+                                <?php if ($openRequest !== null): ?>
+                                    data-request-id="<?= (int) $openRequest['id'] ?>"
+                                    data-request-status="<?= esc($openRequest['status'], 'attr') ?>"
+                                    data-request-percentage="<?= $openRequest['requested_percentage'] !== null ? $points($openRequest['requested_percentage']) : '' ?>"
+                                    data-request-reason="<?= esc($openRequest['reason'], 'attr') ?>"
+                                    data-request-comment="<?= esc((string) ($openRequest['return_comment'] ?? ''), 'attr') ?>"
+                                    data-request-waiting="<?= esc($openRequest['waiting_for'], 'attr') ?>"
+                                <?php endif; ?>
                                 data-current-percentage="<?= $student['percentage'] !== null ? $points($student['percentage']) : '' ?>"
                                 data-calculated-percentage="<?= $student['calculated_percentage'] !== null ? $points($student['calculated_percentage']) : '' ?>"
                                 data-is-override="<?= $student['is_override'] ? '1' : '0' ?>"
                                 data-override-reason="<?= esc($student['override_reason'] ?? '', 'attr') ?>"
                                 data-student-name="<?= esc($student['student_name'], 'attr') ?>"
                                 class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-bold transition hover:bg-gray-100 <?= $student['is_override'] ? 'text-[#946200]' : 'text-brand' ?>"
-                                title="Click to override">
+                                title="<?= $isRequestMode ? ($openRequest !== null ? 'See your override request' : 'Click to request an override') : 'Click to override' ?>">
                                 <?= $student['percentage'] !== null ? $points($student['percentage']) . '%' : '—' ?>
                                 <?php if ($student['is_override']): ?>
                                     <span class="rounded-full bg-[#FFF1D6] px-1.5 py-0.5 text-[10px] font-bold text-[#946200]">Override</span>
                                 <?php endif; ?>
                             </button>
+
+                            <?php if ($openRequest !== null): ?>
+                                <p class="mt-1 text-[11px] font-semibold <?= $openRequest['returned'] ? 'text-[#C33939]' : 'text-[#946200]' ?>" data-request-state>
+                                    <?= $openRequest['returned']
+                                        ? 'Request sent back: edit or withdraw'
+                                        : 'Override requested (' . ($openRequest['requested_percentage'] !== null ? $points($openRequest['requested_percentage']) . '%' : 'remove') . '): waiting for ' . esc($openRequest['waiting_for']) ?>
+                                </p>
+                            <?php endif; ?>
                         </td>
 
                         <td class="px-4 py-2">
