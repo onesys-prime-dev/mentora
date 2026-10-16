@@ -71,6 +71,10 @@ import {
     initializeLinkEditor,
 } from "./link/link-editor.js";
 
+import {
+    initializeDiscussionEditor,
+} from "./discussion/discussion-editor.js";
+
 /*
 |--------------------------------------------------------------------------
 | Learning Items
@@ -403,6 +407,8 @@ export async function loadLearningItemEditor(
         initializePdfEditor();
 
         initializeLinkEditor();
+
+        initializeDiscussionEditor();
 
         bindAssessmentHandoffs();
 

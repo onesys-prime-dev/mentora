@@ -605,6 +605,8 @@ class ModuleService
                     ->getThread($user, (int) $threadRow['offering_id'], (int) $threadRow['id']);
 
                 // The thread belongs to the item: it is edited/removed with the item, not here.
+                $discussion['thread']['offering_id'] = (int) $threadRow['offering_id'];
+
                 $discussion['thread']['can_edit'] = false;
                 $discussion['thread']['can_delete'] = false;
 
@@ -1511,7 +1513,8 @@ class ModuleService
         }
 
         // A discussion item is backed by one thread the instructor opens
-        // (title now, prompt later); students reply inside it.
+        // (title and prompt now, both editable from the item afterwards);
+        // students reply inside it.
         if ($itemType === 'discussion') {
 
             $now = (new \DateTime())->format('Y-m-d H:i:s.u');
@@ -1662,16 +1665,27 @@ class ModuleService
 
         }
 
-        $this->learningItemModel
-            ->update(
+        // A prompt-only edit on a discussion item changes the thread, not the item.
+        if ($update !== []) {
 
-                $learningItemId,
+            $this->learningItemModel
+                ->update(
 
-                $update
+                    $learningItemId,
 
-            );
+                    $update
+
+                );
+
+        }
 
         $this->syncLinkedAssessment($learningItemId, $update);
+
+        if (strtolower((string) $learningItem['item_type']) === 'discussion') {
+
+            $this->syncDiscussionThread($learningItemId, $update, $payload);
+
+        }
 
         return [
 
@@ -1682,6 +1696,89 @@ class ModuleService
 
         ];
 
+    }
+
+    /**
+     * The prompt a discussion item opens with, as the message JSON the
+     * discussion composer and renderer use. Plain text (the create modal) is
+     * turned into paragraphs; an existing message is kept as it is.
+     */
+    public static function discussionMessage(mixed $body): string
+    {
+        $text = trim((string) $body);
+
+        if ($text === '') {
+            return '';
+        }
+
+        $decoded = json_decode($text, true);
+
+        if (is_array($decoded) && isset($decoded['blocks']) && is_array($decoded['blocks'])) {
+            return mb_substr($text, 0, 200000);
+        }
+
+        $blocks = [];
+
+        foreach (preg_split('/\R{1,}/', mb_substr($text, 0, 10000)) as $line) {
+
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            $blocks[] = [
+                'id' => sprintf('block_%03d', count($blocks) + 1),
+                'type' => 'paragraph',
+                'align' => 'left',
+                'content' => [['text' => $line]],
+            ];
+
+        }
+
+        return json_encode(['version' => 1, 'blocks' => $blocks], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * A discussion item and its thread are one thing to the instructor: the
+     * item's title is the thread's title and the item's prompt is the
+     * thread's body, edited from the item and shown in the Discussions tab.
+     */
+    private function syncDiscussionThread(int $learningItemId, array $itemUpdate, array $payload): void
+    {
+        $threadUpdate = [];
+
+        if (array_key_exists('title', $itemUpdate) && $itemUpdate['title'] !== '') {
+            $threadUpdate['title'] = mb_substr($itemUpdate['title'], 0, 255);
+        }
+
+        if (array_key_exists('discussion_body', $payload)) {
+            $threadUpdate['body'] = self::discussionMessage($payload['discussion_body']);
+        }
+
+        $attachments = array_key_exists('attachment_file_ids', $payload)
+            ? array_values(array_filter(array_map('intval', (array) $payload['attachment_file_ids'])))
+            : null;
+
+        if ($threadUpdate === [] && $attachments === null) {
+            return;
+        }
+
+        $threads = new DiscussionThreadModel();
+
+        $thread = $threads->where('learning_item_id', $learningItemId)->first();
+
+        if (!$thread) {
+            return;
+        }
+
+        if ($threadUpdate !== []) {
+            $threads->update($thread['id'], $threadUpdate);
+        }
+
+        if ($attachments !== null) {
+            (new DiscussionService())->replaceThreadAttachments((int) $thread['id'], $attachments);
+        }
     }
 
     /**

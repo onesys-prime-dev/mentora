@@ -120,11 +120,77 @@ class QuestionService
 
         $this->questionModel->recalculateAssessmentTotal($question['assessment_id']);
 
+        // The answer key, points or type may have changed: answers already
+        // handed in are marked against the key as it is now.
+        $this->regradeAnswers($questionId, (int) $question['assessment_id']);
+
         return [
             'success' => true,
             'message' => 'Question updated successfully.',
             'question' => $this->questionModel->getWithChoices($questionId),
         ];
+    }
+
+    /**
+     * Re-marks every handed-in answer to this question that was graded
+     * automatically, against the question as it is now, then brings each
+     * affected attempt's total (and the gradebook) in step. An answer the
+     * instructor graded by hand is left as they set it.
+     */
+    private function regradeAnswers(int $questionId, int $assessmentId): void
+    {
+        $question = $this->questionModel->getWithChoices($questionId);
+
+        $attempts = new QuizAttemptService();
+
+        if (!$question || !$attempts->isAutoGradable($question)) {
+            return;
+        }
+
+        $assessment = $this->assessmentModel->find($assessmentId);
+
+        $responseModel = new \App\Models\Assessments\AssessmentQuestionResponseModel();
+
+        $rows = $responseModel
+            ->select('assessment_question_responses.*, assessment_submissions.student_id AS student_id')
+            ->join('assessment_submissions', 'assessment_submissions.id = assessment_question_responses.submission_id')
+            ->where('assessment_question_responses.question_id', $questionId)
+            ->where('assessment_question_responses.is_auto_graded', 1)
+            ->whereIn('assessment_submissions.status', AssessmentResultService::FINISHED_STATUSES)
+            ->findAll();
+
+        if ($rows === []) {
+            return;
+        }
+
+        $submissions = new \App\Models\Assessments\AssessmentSubmissionModel();
+
+        $sync = new \App\Services\Courses\Grades\GradebookSyncService();
+
+        $totalPoints = (float) ($assessment['total_points'] ?? 0);
+
+        $now = date('Y-m-d H:i:s');
+
+        foreach ($rows as $row) {
+
+            $responseModel->update($row['id'], [
+                'score' => $attempts->computeAutoScore($question, $row),
+                'graded_at' => $now,
+            ]);
+
+            $score = (float) ($responseModel
+                ->selectSum('score')
+                ->where('submission_id', $row['submission_id'])
+                ->first()['score'] ?? 0);
+
+            $submissions->update($row['submission_id'], [
+                'score' => $score,
+                'percentage' => $totalPoints > 0 ? round(($score / $totalPoints) * 100, 2) : 0.0,
+            ]);
+
+            $sync->syncItemScore($assessmentId, (int) $row['student_id']);
+
+        }
     }
 
     public function duplicateQuestion(User $user, int $questionId): array
@@ -318,34 +384,107 @@ class QuestionService
         return ['allow_multiple_answers' => true, 'answers_count' => max(2, $answersCount)];
     }
 
+    /**
+     * Makes the question's choices match the submitted list while keeping the
+     * rows (and so their ids) a student's answer points at. Deleting and
+     * re-inserting would orphan every saved answer. A submitted choice reuses
+     * the existing row with the same text first, then, for an edited text, the
+     * unused existing row it most resembles; rows left over are removed.
+     */
     private function syncChoices(int $questionId, array $choices): void
     {
-        $this->choiceModel
+        $existing = $this->choiceModel
             ->where('question_id', $questionId)
-            ->delete();
+            ->orderBy('order_index', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->findAll();
 
-        $order = 1;
-
-        $now = date('Y-m-d H:i:s');
+        $wanted = [];
 
         foreach ($choices as $choice) {
 
             $text = trim($choice['text'] ?? '');
 
-            if ($text === '') {
+            if ($text !== '') {
+                $wanted[] = ['text' => $text, 'is_correct' => !empty($choice['is_correct'])];
+            }
+
+        }
+
+        // Same text first, so reordering or inserting keeps each answer on its choice.
+        $assigned = [];
+        $used = [];
+
+        foreach ($wanted as $index => $choice) {
+
+            foreach ($existing as $row) {
+
+                if (!isset($used[$row['id']]) && trim((string) $row['choice_text']) === $choice['text']) {
+                    $assigned[$index] = $row['id'];
+                    $used[$row['id']] = true;
+                    break;
+                }
+
+            }
+
+        }
+
+        // An edited text (a typo fix) takes over the unmatched row it most
+        // resembles; a clearly different text is a new choice, so a student's
+        // answer never moves onto an unrelated choice.
+        $spare = array_values(array_filter($existing, static fn ($row) => !isset($used[$row['id']])));
+
+        foreach ($wanted as $index => $choice) {
+
+            if (isset($assigned[$index])) {
                 continue;
             }
 
-            $this->choiceModel->insert([
+            $best = null;
+            $bestScore = 0.0;
 
-                'question_id' => $questionId,
-                'choice_text' => $text,
-                'is_correct' => !empty($choice['is_correct']),
-                'order_index' => $order++,
-                'created_at' => $now,
+            foreach ($spare as $position => $row) {
 
-            ]);
+                similar_text(mb_strtolower((string) $row['choice_text']), mb_strtolower($choice['text']), $score);
 
+                if ($score > $bestScore) {
+                    $best = $position;
+                    $bestScore = $score;
+                }
+
+            }
+
+            if ($best !== null && $bestScore >= 50.0) {
+                $assigned[$index] = $spare[$best]['id'];
+                array_splice($spare, $best, 1);
+            }
+
+        }
+
+        $now = date('Y-m-d H:i:s');
+
+        foreach ($wanted as $index => $choice) {
+
+            $row = [
+                'choice_text' => $choice['text'],
+                'is_correct' => $choice['is_correct'],
+                'order_index' => $index + 1,
+            ];
+
+            if (isset($assigned[$index])) {
+
+                $this->choiceModel->update($assigned[$index], $row + ['updated_at' => $now]);
+
+                continue;
+
+            }
+
+            $this->choiceModel->insert($row + ['question_id' => $questionId, 'created_at' => $now]);
+
+        }
+
+        foreach ($spare as $row) {
+            $this->choiceModel->delete($row['id']);
         }
     }
 

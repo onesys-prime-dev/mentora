@@ -5,7 +5,7 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 <!-- header -->
 <header class="flex flex-col gap-2 py-2">
     
-    <span class="text-3xl font-bold text-brand">
+    <span class="text-3xl font-bold text-brand" data-item-header-title>
         <?= esc($currentItem['title']) ?>
     </span>
 
@@ -41,13 +41,26 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
         
         <?php elseif ($userRole === 'instructor'): ?>
 
-            <span
-                class="capitalize rounded-full px-3 py-1 text-xs font-black
-                    <?= $currentItem['status'] === 'published'
-                        ? 'bg-[#E0E5F2] text-brand-dark'
-                        : 'bg-gray-100 text-gray-600' ?>">
-                <?= esc($currentItem['status']) ?>
-            </span>
+            <?php
+            $hiddenBy = ($module['status'] ?? 'published') !== 'published'
+                ? 'module'
+                : (($currentUnit['status'] ?? 'published') !== 'published' ? 'unit' : null);
+            ?>
+            <?php if ($currentItem['status'] === 'published' && $hiddenBy !== null): ?>
+                <span
+                    title="This item is published, but students cannot see it until its <?= esc($hiddenBy) ?> is published."
+                    class="rounded-full bg-[#FFF1D6] px-3 py-1 text-xs font-black text-[#946200]">
+                    Hidden · <?= esc($hiddenBy) ?> is a draft
+                </span>
+            <?php else: ?>
+                <span
+                    class="capitalize rounded-full px-3 py-1 text-xs font-black
+                        <?= $currentItem['status'] === 'published'
+                            ? 'bg-[#E0E5F2] text-brand-dark'
+                            : 'bg-gray-100 text-gray-600' ?>">
+                    <?= esc($currentItem['status']) ?>
+                </span>
+            <?php endif; ?>
 
         <?php endif; ?>
 

@@ -39,6 +39,12 @@ import {
 
 } from "./link/link-editor.js";
 
+import {
+
+    flushAutosave as flushDiscussionAutosave,
+
+} from "./discussion/discussion-editor.js";
+
 export function initializeLearningItemActions(
 
     learningItemId,
@@ -369,6 +375,16 @@ async function flushCurrentAutosave() {
     ) {
 
         await flushLinkAutosave();
+
+    }
+
+    else if (
+        document.querySelector(
+            "[data-discussion-editor]"
+        )
+    ) {
+
+        await flushDiscussionAutosave();
 
     }
 
