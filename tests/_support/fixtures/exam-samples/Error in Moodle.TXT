@@ -1,0 +1,29 @@
+
+
+
+
+Question # Seriousness Issue
+
+
+
+11 Alert The following strings will be converted to images in Moodle:  (y), (n), (h), (heart), (martin).
+
+
+
+20 Alert The following strings will be converted to images in Moodle:  (y), (n), (h), (heart), (martin).
+
+
+
+27 Alert The following strings will be converted to images in Moodle:  (y), (n), (h), (heart), (martin).
+
+
+
+28 Alert The following strings will be converted to images in Moodle:  (y), (n), (h), (heart), (martin).
+
+
+
+29 Alert The following strings will be converted to images in Moodle:  (y), (n), (h), (heart), (martin).
+
+
+
+48 Alert The following strings will be converted to images in Moodle:  (y), (n), (h), (heart), (martin).

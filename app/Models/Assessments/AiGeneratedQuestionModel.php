@@ -27,10 +27,31 @@ class AiGeneratedQuestionModel extends Model
         'choices',
         'similarity_score',
         'math_check',
+        'explanation',
+        'evidence_quote',
+        'source_title',
+        'source_page',
+        'verification',
+        'flags',
         'status',
         'created_at',
         'updated_at',
     ];
+
+    /**
+     * @param array<string, mixed> $row
+     *
+     * @return array<string, mixed>
+     */
+    private function decode(array $row): array
+    {
+        $row['choices'] = $row['choices'] ? (json_decode($row['choices'], true) ?? []) : [];
+        $row['accepted_answers'] = ShortAnswerGrader::decode($row['accepted_answers'] ?? null);
+        $row['verification'] = ! empty($row['verification']) ? (json_decode($row['verification'], true) ?: null) : null;
+        $row['flags'] = ! empty($row['flags']) ? (json_decode($row['flags'], true) ?: []) : [];
+
+        return $row;
+    }
 
     public function listForBatch(int $batchId): array
     {
@@ -40,15 +61,7 @@ class AiGeneratedQuestionModel extends Model
             ->orderBy('id', 'ASC')
             ->findAll();
 
-        foreach ($rows as &$row) {
-            $row['choices'] = $row['choices']
-                ? (json_decode($row['choices'], true) ?? [])
-                : [];
-
-            $row['accepted_answers'] = ShortAnswerGrader::decode($row['accepted_answers'] ?? null);
-        }
-
-        return $rows;
+        return array_map(fn (array $row): array => $this->decode($row), $rows);
     }
 
     public function getDecoded(int $id): ?array
@@ -59,12 +72,6 @@ class AiGeneratedQuestionModel extends Model
             return null;
         }
 
-        $row['choices'] = $row['choices']
-            ? (json_decode($row['choices'], true) ?? [])
-            : [];
-
-        $row['accepted_answers'] = ShortAnswerGrader::decode($row['accepted_answers'] ?? null);
-
-        return $row;
+        return $this->decode($row);
     }
 }

@@ -45,7 +45,10 @@ class LearningUnitContentExtractor
      * generation may read — with how many items extract() would read from
      * it. Null when the assessment isn't placed in a unit.
      *
-     * @return array{id: int, title: string, module_title: string, readings: int, pdfs: int}|null
+     * `items` is what the person can choose from: the unit's readings and
+     * PDFs (in unit order), as {id, title, type, status}.
+     *
+     * @return array{id: int, title: string, module_title: string, readings: int, pdfs: int, items: list<array{id: int, title: string, type: string, status: string}>}|null
      */
     public function unitForAssessment(array $assessment, User $user): ?array
     {
@@ -65,10 +68,8 @@ class LearningUnitContentExtractor
             return null;
         }
 
-        $types = array_count_values(array_column(
-            $this->itemModel->retrieveLearningItems((int) $unit['id'], $user),
-            'item_type'
-        ));
+        $items = $this->selectableItems((int) $unit['id'], $user);
+        $types = array_count_values(array_column($items, 'type'));
 
         return [
             'id' => (int) $unit['id'],
@@ -76,24 +77,86 @@ class LearningUnitContentExtractor
             'module_title' => $unit['module_title'],
             'readings' => $types['reading'] ?? 0,
             'pdfs' => $types['pdf'] ?? 0,
+            'items' => $items,
         ];
     }
 
     /**
-     * @return array{text: string, skipped: string[], failure: ?string}
-     *   `skipped` names items that exist but couldn't be read (so the
-     *   instructor knows the questions don't cover them); `failure` is the
-     *   first read error, for when nothing at all could be extracted.
+     * The readings and PDFs of a unit that this person can see, in unit
+     * order. A light query: it does not load the items' content.
+     *
+     * @return list<array{id: int, title: string, type: string, status: string}>
      */
-    public function extract(int $learningUnitId, User $user, QuestionGeneratorClientInterface $client): array
+    public function selectableItems(int $learningUnitId, User $user): array
+    {
+        $builder = db_connect()->table('learning_items')
+            ->select('id, title, item_type, status')
+            ->where('learning_unit_id', $learningUnitId)
+            ->whereIn('item_type', ['reading', 'pdf']);
+
+        if (! \App\Services\Courses\CourseViewer::seesInstructorView($user)) {
+            $builder->where('status', 'published');
+        }
+
+        return array_map(
+            static fn (array $row): array => [
+                'id' => (int) $row['id'],
+                'title' => (string) $row['title'],
+                'type' => (string) $row['item_type'],
+                'status' => (string) $row['status'],
+            ],
+            $builder->orderBy('order_index')->get()->getResultArray()
+        );
+    }
+
+    /**
+     * What a request may select: only ids that are readings or PDFs of this
+     * quiz's own unit and visible to the person, in unit order. A foreign or
+     * unknown id is dropped, never trusted. Null means "everything".
+     *
+     * @param array{id: int, items: list<array{id: int}>} $unit from unitForAssessment()
+     * @param mixed                                      $requested ids from the request
+     *
+     * @return list<int>
+     */
+    public function selection(array $unit, mixed $requested): array
+    {
+        $available = array_column($unit['items'], 'id');
+
+        if ($requested === null) {
+            return $available;
+        }
+
+        $wanted = array_map('intval', is_array($requested) ? $requested : []);
+
+        return array_values(array_filter($available, static fn (int $id): bool => in_array($id, $wanted, true)));
+    }
+
+    /**
+     * @param list<int>|null $itemIds read only these items (null: every reading and PDF)
+     *
+     * @return array{text: string, skipped: string[], failure: ?string, items: list<array{id: int, title: string, type: string, text: string}>}
+     *   `items` is each item that gave text, with its own text (PDF pages keep
+     *   their `[[page N]]` lines), so each can be digested on its own;
+     *   `text` is the same joined for the single-source path. `skipped` names
+     *   items that exist but couldn't be read (so the instructor knows the
+     *   questions don't cover them); `failure` is the first read error, for
+     *   when nothing at all could be extracted.
+     */
+    public function extract(int $learningUnitId, User $user, QuestionGeneratorClientInterface $client, ?array $itemIds = null): array
     {
         $sections = [];
+        $readItems = [];
         $skipped = [];
         $failure = null;
 
         $length = 0;
 
         foreach ($this->itemModel->retrieveLearningItems($learningUnitId, $user) as $item) {
+
+            if ($itemIds !== null && ! in_array((int) $item['id'], $itemIds, true)) {
+                continue;
+            }
 
             if ($length >= self::MAX_SOURCE_LENGTH) {
                 break;
@@ -107,7 +170,7 @@ class LearningUnitContentExtractor
 
                 try {
 
-                    $text = $this->pdfText((int) $item['id'], $client);
+                    $text = $this->pdfText((int) $item['id'], $client, true);
 
                 } catch (QuestionGeneratorUnavailableException $e) {
 
@@ -136,6 +199,13 @@ class LearningUnitContentExtractor
                 : $item['title'] . "\n\n" . $text;
 
             $sections[] = $section;
+            $readItems[] = [
+                'id' => (int) $item['id'],
+                'title' => (string) $item['title'],
+                'type' => (string) $item['item_type'],
+                // Each item is digested on its own, so its own text, without the unit's separators.
+                'text' => mb_substr($text, 0, self::MAX_SOURCE_LENGTH),
+            ];
 
             $length += strlen($section);
 
@@ -145,6 +215,9 @@ class LearningUnitContentExtractor
             'text' => mb_substr(implode(self::ITEM_SEPARATOR, $sections), 0, self::MAX_SOURCE_LENGTH),
             'skipped' => $skipped,
             'failure' => $failure,
+            'items' => $readItems,
+            // The unit was longer than is read at once: the rest was left out.
+            'truncated' => $length >= self::MAX_SOURCE_LENGTH,
         ];
     }
 
@@ -199,7 +272,7 @@ class LearningUnitContentExtractor
      * @throws QuestionGeneratorUnavailableException when the file is missing
      *   or the extraction service can't read it.
      */
-    private function pdfText(int $learningItemId, QuestionGeneratorClientInterface $client): string
+    private function pdfText(int $learningItemId, QuestionGeneratorClientInterface $client, bool $keepPageMarkers = false): string
     {
         $resource = $this->resourceModel->retrieveLearningResource($learningItemId);
 
@@ -215,8 +288,9 @@ class LearningUnitContentExtractor
 
         $text = $client->extractText($path, $file['mime_type'])['text'] ?? '';
 
-        // A unit joins several documents, so each one's own page numbers would
-        // collide; the item's title heading says which document a passage is from.
-        return (string) preg_replace('/^\[\[page \d+\]\]\R?/m', '', $text);
+        // Each item is digested on its own, so a PDF keeps its page numbers.
+        // The combined single-source text joins several documents, whose page
+        // numbers would collide, so there the markers are dropped.
+        return $keepPageMarkers ? $text : (string) preg_replace('/^\[\[page \d+\]\]\R?/m', '', $text);
     }
 }

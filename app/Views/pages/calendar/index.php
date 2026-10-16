@@ -117,7 +117,19 @@ $legend = [
 
         <!-- Grid -->
         <div class="flex-1 min-h-0 rounded-2xl border border-[#A9A9A9]/50 overflow-hidden">
-            <div id="calendar-body" class="h-full min-h-[420px] overflow-y-auto scroll-area bg-white"></div>
+            <?php // The grid arrives already showing a month's shape; calendar.js replaces it with the real grid. ?>
+            <div id="calendar-body" class="h-full min-h-[420px] overflow-y-auto scroll-area bg-white" aria-busy="true">
+                <div class="grid h-full grid-cols-7 animate-pulse" aria-hidden="true" data-server-skeleton-shape>
+                    <?php for ($i = 0; $i < 35; $i++): ?>
+                        <div class="min-h-[84px] border-b border-r border-gray-100 p-2">
+                            <div class="h-3 w-5 rounded bg-gray-200"></div>
+                            <?php if ($i % 4 === 1): ?>
+                                <div class="mt-2 h-4 w-4/5 rounded bg-gray-100"></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
         </div>
 
     </div>

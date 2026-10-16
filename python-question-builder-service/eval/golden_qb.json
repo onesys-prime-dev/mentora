@@ -1,0 +1,218 @@
+{
+  "_note": "Starter set of 12 synthetic passages for the qb pipeline (items, options and steering as the worker receives them). The owner extends this to 25-30 real course passages, including a scanned PDF and a document of existing questions.",
+  "cases": [
+    {
+      "id": "net-two-items",
+      "kind": "two readings",
+      "count": 6,
+      "type_mix": {
+        "multiple_choice": 4,
+        "short_answer": 2
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Network layer",
+          "type": "reading",
+          "text": "The network layer is responsible for routing packets from a source host to a destination host across one or more networks. The Internet Protocol (IP) is the main protocol at this layer. Each device is identified by an IP address. Routers read the destination address of a packet and forward it toward its destination using a routing table."
+        },
+        {
+          "id": 2,
+          "title": "Transport layer",
+          "type": "reading",
+          "text": "The transport layer provides end-to-end communication between processes. TCP offers reliable, ordered delivery by using acknowledgements and retransmission. UDP offers faster but unreliable delivery with no guarantee of order. Port numbers identify the process that should receive the data."
+        }
+      ]
+    },
+    {
+      "id": "photosynthesis",
+      "kind": "single reading",
+      "count": 6,
+      "type_mix": {
+        "multiple_choice": 5,
+        "short_answer": 1
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Photosynthesis",
+          "type": "reading",
+          "text": "Photosynthesis is the process by which green plants convert light energy into chemical energy. It takes place in the chloroplasts, which contain the pigment chlorophyll. During the light-dependent reactions, light energy splits water molecules, releasing oxygen and producing ATP and NADPH. In the Calvin cycle, which does not need light directly, ATP and NADPH are used to fix carbon dioxide into glucose."
+        }
+      ]
+    },
+    {
+      "id": "economics-definitions",
+      "kind": "definitions",
+      "count": 6,
+      "type_mix": {
+        "multiple_choice": 3,
+        "short_answer": 3
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Supply and demand",
+          "type": "reading",
+          "text": "Demand is the quantity of a good that consumers are willing and able to buy at each price. Supply is the quantity that producers are willing to sell at each price. The equilibrium price is the price at which the quantity demanded equals the quantity supplied. A shortage occurs when the price is below equilibrium; a surplus occurs when it is above. Price elasticity of demand measures how much the quantity demanded changes when the price changes."
+        }
+      ]
+    },
+    {
+      "id": "math-linear",
+      "kind": "formulas",
+      "count": 4,
+      "type_mix": {
+        "multiple_choice": 4
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Linear equations",
+          "type": "reading",
+          "text": "A linear equation in one variable has the form ax + b = c. To solve it, subtract b from both sides and then divide both sides by a, so x = (c - b) / a. For example, 3x + 5 = 20 gives 3x = 15 and therefore x = 5. A linear equation has exactly one solution when a is not zero."
+        }
+      ]
+    },
+    {
+      "id": "true-false",
+      "kind": "true/false",
+      "count": 4,
+      "type_mix": {
+        "true_false": 4
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "The water cycle",
+          "type": "reading",
+          "text": "Water evaporates from oceans and lakes, rises as vapour, condenses into clouds and falls as precipitation. Most of the Earth's water is stored in the oceans. Transpiration is the release of water vapour from plants. Groundwater is water stored underground in soil and rock."
+        }
+      ]
+    },
+    {
+      "id": "multiple-answer",
+      "kind": "multiple answer",
+      "count": 3,
+      "type_mix": {
+        "multiple_answer": 3
+      },
+      "options": {
+        "choices": 5
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Renewable energy",
+          "type": "reading",
+          "text": "Solar, wind and hydroelectric power are renewable sources because they are naturally replenished. Coal, oil and natural gas are fossil fuels formed over millions of years and are not renewable. Nuclear power uses uranium, which is mined and finite. Geothermal energy uses heat from beneath the Earth's surface and is considered renewable."
+        }
+      ]
+    },
+    {
+      "id": "table-like",
+      "kind": "table flattened",
+      "count": 4,
+      "type_mix": {
+        "multiple_choice": 3,
+        "short_answer": 1
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Planets",
+          "type": "reading",
+          "text": "Planet | Diameter (km) | Moons\nMercury | 4,879 | 0\nVenus | 12,104 | 0\nEarth | 12,742 | 1\nMars | 6,779 | 2\nJupiter | 139,820 | 95\nJupiter is the largest planet in the solar system. Mercury is the closest planet to the Sun."
+        }
+      ]
+    },
+    {
+      "id": "filipino",
+      "kind": "non-English (Latin script)",
+      "count": 4,
+      "type_mix": {
+        "multiple_choice": 3,
+        "short_answer": 1
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Ang Pilipinas",
+          "type": "reading",
+          "text": "Ang Pilipinas ay isang arkipelago na binubuo ng mahigit pitong libong pulo. Ang Maynila ang kabisera ng bansa. Ang tatlong pangunahing pangkat ng pulo ay ang Luzon, Visayas at Mindanao. Ang Mayon ay isang bulkang kilala sa halos perpektong hugis kono."
+        }
+      ]
+    },
+    {
+      "id": "short-passage",
+      "kind": "short",
+      "count": 3,
+      "type_mix": {
+        "multiple_choice": 3
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Binary",
+          "type": "reading",
+          "text": "Binary is a base-2 number system that uses only the digits 0 and 1. Computers use binary because electronic circuits have two states, on and off. Eight binary digits make one byte."
+        }
+      ]
+    },
+    {
+      "id": "pdf-pages",
+      "kind": "paged pdf",
+      "count": 5,
+      "type_mix": {
+        "multiple_choice": 3,
+        "short_answer": 2
+      },
+      "items": [
+        {
+          "id": 7,
+          "title": "Databases slides",
+          "type": "pdf",
+          "text": "[[page 1]]\nA database is an organised collection of data. A DBMS is software that manages a database.\n\n[[page 2]]\nA primary key uniquely identifies each row in a table. A foreign key links a row to a primary key in another table.\n\n[[page 3]]\nSQL is the standard language for querying relational databases. The SELECT statement retrieves rows; WHERE filters them."
+        }
+      ]
+    },
+    {
+      "id": "procedure",
+      "kind": "steps",
+      "count": 4,
+      "type_mix": {
+        "multiple_choice": 2,
+        "short_answer": 2
+      },
+      "items": [
+        {
+          "id": 1,
+          "title": "Scientific method",
+          "type": "reading",
+          "text": "The scientific method has five steps. First, make an observation. Second, ask a question. Third, form a hypothesis, which is a testable explanation. Fourth, run an experiment to test the hypothesis. Fifth, analyse the results and draw a conclusion. A control group is used for comparison in an experiment."
+        }
+      ]
+    },
+    {
+      "id": "harder-apply",
+      "kind": "steered",
+      "count": 4,
+      "type_mix": {
+        "multiple_choice": 4
+      },
+      "options": {
+        "difficulty": "harder",
+        "level": "apply"
+      },
+      "instruction": "Make the questions demanding: apply or compare ideas, with plausible close choices. Ask the student to apply the ideas to a new situation or example.",
+      "items": [
+        {
+          "id": 1,
+          "title": "Supply and demand",
+          "type": "reading",
+          "text": "Demand is the quantity of a good that consumers are willing and able to buy at each price. Supply is the quantity that producers are willing to sell at each price. When demand rises and supply stays the same, the equilibrium price rises. When supply rises and demand stays the same, the equilibrium price falls."
+        }
+      ]
+    }
+  ]
+}

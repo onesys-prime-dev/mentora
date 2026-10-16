@@ -83,7 +83,13 @@ class AiJobsController extends BaseController
             return $this->bad('worker_id, job_id and result are required.');
         }
 
-        return $this->response->setJSON(['accepted' => $this->jobs->complete((int) $in['job_id'], $worker, $in['result'])]);
+        $accepted = $this->jobs->complete((int) $in['job_id'], $worker, $in['result']);
+
+        if ($accepted) {
+            $this->settle((int) $in['job_id']);
+        }
+
+        return $this->response->setJSON(['accepted' => $accepted]);
     }
 
     /** POST internal/ai/fail {worker_id, job_id, code, message?} */
@@ -96,9 +102,26 @@ class AiJobsController extends BaseController
             return $this->bad('worker_id, job_id and code are required.');
         }
 
-        return $this->response->setJSON([
-            'accepted' => $this->jobs->fail((int) $in['job_id'], $worker, (string) $this->str($in, 'code'), (string) ($this->str($in, 'message') ?? '')),
-        ]);
+        $accepted = $this->jobs->fail((int) $in['job_id'], $worker, (string) $this->str($in, 'code'), (string) ($this->str($in, 'message') ?? ''));
+
+        if ($accepted) {
+            $this->settle((int) $in['job_id']);
+        }
+
+        return $this->response->setJSON(['accepted' => $accepted]);
+    }
+
+    /**
+     * Applies a finished job and tells the person who asked, even when no
+     * browser is watching. A failure here never fails the worker's report.
+     */
+    private function settle(int $jobId): void
+    {
+        try {
+            (new \App\Services\Courses\Assessments\AiJobGeneration($this->jobs))->settleFinished($jobId);
+        } catch (\Throwable $e) {
+            log_message('error', 'Could not settle AI job ' . $jobId . ': ' . $e->getMessage());
+        }
     }
 
     /**

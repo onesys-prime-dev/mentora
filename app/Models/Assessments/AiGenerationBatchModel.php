@@ -21,6 +21,7 @@ class AiGenerationBatchModel extends Model
         'source_file_id',
         'learning_unit_id',
         'source_text',
+        'source_items',
         'type_mix',
         'requested_count',
         'generated_count',
@@ -29,5 +30,10 @@ class AiGenerationBatchModel extends Model
         'error_message',
         'created_by',
         'created_at',
+        'replaces_question_id',
+        'instruction',
+        'options',
+        'diagnostics',
+        'extends_batch_id',
     ];
 }

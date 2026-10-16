@@ -64,22 +64,134 @@
 
                 <div
                     data-export-options-panel
-                    class="absolute right-0 top-full z-20 mt-2 hidden w-56 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
+                    class="absolute right-0 top-full z-20 mt-2 hidden w-72 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
 
+                    <!-- Each choice is "what" and "as which file"; the value is read as one format. -->
                     <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Export format
+                        Printable test
                     </span>
+
+                    <p class="-mt-2 text-xs text-gray-500">
+                        The questions to hand out, with the answer key on the last pages.
+                    </p>
 
                     <div class="flex flex-col gap-1">
 
                         <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
-                            <input type="radio" name="export-format" value="docx" data-export-format-option checked class="h-4 w-4 accent-brand">
+                            <input type="radio" name="export-format" value="test-pdf" data-export-format-option checked class="h-4 w-4 accent-brand">
+                            PDF (.pdf)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="test-docx" data-export-format-option class="h-4 w-4 accent-brand">
+                            Word document (.docx)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="test-rtf" data-export-format-option class="h-4 w-4 accent-brand">
+                            Rich Text (.rtf)
+                        </label>
+
+                    </div>
+
+                    <div data-print-options class="flex flex-col gap-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex flex-col gap-1 font-medium">
+                                Versions
+                                <select data-print-versions class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal">
+                                    <option value="1">1 (A only)</option>
+                                    <option value="2">2 (A, B)</option>
+                                    <option value="3">3 (A to C)</option>
+                                    <option value="4">4 (A to D)</option>
+                                </select>
+                            </label>
+                            <label class="flex flex-col gap-1 font-medium">
+                                Paper
+                                <select data-print-paper class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal">
+                                    <option value="A4">A4</option>
+                                    <option value="Letter">Letter</option>
+                                    <option value="Legal">Legal</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" data-print-shuffle-questions class="h-4 w-4 accent-brand">
+                            Shuffle the order of questions
+                        </label>
+
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" data-print-shuffle-choices class="h-4 w-4 accent-brand">
+                            Shuffle the choices
+                        </label>
+
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" data-print-key-only class="h-4 w-4 accent-brand">
+                            Answer key only
+                        </label>
+
+                        <p data-print-hint class="hidden text-[#767676]">
+                            With several versions, A is the quiz as written and the others are shuffled. Reprinting gives the same papers.
+                        </p>
+
+                    </div>
+
+                    <div class="h-px bg-gray-200"></div>
+
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Editable file
+                    </span>
+
+                    <p class="-mt-2 text-xs text-gray-500">
+                        Edit the questions and import the file back into this quiz.
+                    </p>
+
+                    <div class="flex flex-col gap-1">
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="docx" data-export-format-option class="h-4 w-4 accent-brand">
                             Word document (.docx)
                         </label>
 
                         <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
                             <input type="radio" name="export-format" value="rtf" data-export-format-option class="h-4 w-4 accent-brand">
                             Rich Text (.rtf)
+                        </label>
+
+                    </div>
+
+                    <div class="h-px bg-gray-200"></div>
+
+                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Other systems and spreadsheets
+                    </span>
+
+                    <p class="-mt-2 text-xs text-gray-500">
+                        Excel or CSV for departments; Aiken and GIFT for other quiz systems. Aiken holds
+                        single-answer multiple choice only.
+                    </p>
+
+                    <div class="flex flex-col gap-1">
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="xlsx" data-export-format-option class="h-4 w-4 accent-brand">
+                            Excel (.xlsx)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="csv" data-export-format-option class="h-4 w-4 accent-brand">
+                            CSV (.csv)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="gift" data-export-format-option class="h-4 w-4 accent-brand">
+                            GIFT (Moodle, .txt)
+                        </label>
+
+                        <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                            <input type="radio" name="export-format" value="aiken" data-export-format-option class="h-4 w-4 accent-brand">
+                            Aiken (.txt)
                         </label>
 
                     </div>
@@ -101,8 +213,8 @@
             <button
                 type="button"
                 data-open-import-questions
-                title="Import from Word"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-brand" aria-label="Import from Word">
+                title="Import questions"
+                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-brand" aria-label="Import questions">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 7.5L12 3m0 0l4.5 4.5M12 3v13.5" />

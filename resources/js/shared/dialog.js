@@ -22,6 +22,7 @@
  */
 
 import { showToast } from "./toast.js";
+import { startPageProgress } from "./spa/page-progress.js";
 
 const FOCUSABLE =
     'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -252,6 +253,7 @@ function bindReauthForm(form) {
             const body = await response.json().catch(() => ({}));
 
             if (response.status === 401) {
+                startPageProgress();
                 window.location.assign("/login");
 
                 return;
@@ -339,8 +341,10 @@ function bindDialogForm(form) {
                 }
 
                 if (body.redirect) {
+                    startPageProgress();
                     window.location.assign(body.redirect);
                 } else {
+                    startPageProgress();
                     window.location.reload();
                 }
 

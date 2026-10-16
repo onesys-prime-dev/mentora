@@ -32,6 +32,8 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
     data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >
 
+    <?= $this->include('layouts/partials/page-progress') ?>
+
     <div class="flex min-h-screen flex-col">
 
         <?= $this->include('layouts/partials/header') ?>

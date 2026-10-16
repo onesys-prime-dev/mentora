@@ -16,6 +16,7 @@
 */
 
 import { showLoadError } from "../../shared/spa/error-state.js";
+import { startPageProgress } from "../../shared/spa/page-progress.js";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = [
@@ -412,6 +413,7 @@ function bindCellClicks()
 
         chip.addEventListener("click", (e) => {
             e.stopPropagation();
+            startPageProgress();
             window.location.href = chip.dataset.calendarChipUrl;
         });
 
@@ -510,6 +512,7 @@ function bindEventRowClicks()
             const event = findEvent(kind, Number(id));
 
             if (event?.kind === "announcement" && event.url) {
+                startPageProgress();
                 window.location.href = event.url;
                 return;
             }

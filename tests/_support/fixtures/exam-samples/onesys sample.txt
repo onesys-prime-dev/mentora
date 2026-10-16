@@ -1,0 +1,325 @@
+﻿
+MULTIPLE CHOICE.  Choose the one alternative that best completes the statement or answers the question.
+1) The term ________ can be used to describe anything that uses binary numbers.      1) _______
+A) mnemonic      B) processor      C) computer      D) digital
+
+2) What is the largest value that can be stored in one byte?      2) _______
+A) 255      B) 8      C) 128      D) 16
+
+3) Each different type of CPU has its own ________.      3) _______
+A) software      B) machine language 
+C) syntax      D) high-level language
+
+4) The computer language that uses mnemonics for writing programs is ________.      4) _______
+A) Java      B) Assembly      C) Ada      D) Pascal
+
+5) Which of the following is not an example of application software?      5) _______
+A) Windows      B) Microsoft Word      C) PowerPoint      D) a web browser
+
+6) ________ refers to the physical components that a computer is made of.      6) _______
+A) Software      B) The system      C) The device      D) Hardware
+
+7) ________ is the term used for a set of rules that must be strictly followed when writing a program.      7) _______
+A) Key words      B) Semantics      C) Grammar      D) Syntax
+
+8) ________ is used to encode real numbers to store them in the computer's memory.      8) _______
+A) Floating-point notation      B) RAM
+C) Assembly language      D) Unicode
+
+9) Computers can do many different jobs because they are ________.      9) _______
+A) reliable      B) automated      C) electronic      D) programmable
+
+10) Which of the following is not an example of operating system software?      10) ______
+A) Windows      B) Microsoft Word      C) Linux      D) Mac OS X
+
+11) A(n) ________ is a program that translates a high-level language into a machine language program.      11) ______
+A) IDE      B) CPU      C) compiler      D) storage device
+
+12) Which of the following companies does not manufacture microprocessors?      12) ______
+A) Dell      B) Motorola      C) Intel      D) AMD
+
+13) Which of the following functions does an interpreter perform with the instructions from a high-level language?      13) ______
+
+A) It compiles and translates.      B) It translates.      C) It translates and executes.
+D) It executes.      E) It compiles and executes.      F) It compiles.
+
+14) Software refers to ________.      14) ______
+A) physical components of a computer      B) programs
+C) data stored in RAM      D) the CPU
+
+15) A computer program is ________.      15) ______
+A) only used for desktop computers
+B) the same as main memory
+C) a set of instructions that allow the computer to solve a problem or perform a task
+D) another name for an operating system
+
+16) What is syntax?      16) ______
+A) the words that have a special meaning in the programming language
+B) the symbols or words that perform operations in a program
+C) the words or characters that are defined by the programmer
+D) the rules that must be followed when writing a program
+
+17) The ________ cycle is used by the CPU to execute instructions in a program.      17) ______
+A) decode - fetch - execute      B) fetch - decode - execute
+C) decode - execute - fetch      D) execute - fetch - decode
+
+18) A program is a sequence of instructions stored in ________.      18) ______
+A) the computer's memory      B) software
+C) the CPU      D) the operating system
+
+19) The smallest storage location in a computer's memory is known as a ________.      19) ______
+A) bit      B) switch      C) word      D) byte
+
+20) A(n) ________ is a software package that usually consists of a text editor, a compiler or interpreter, and tools to test and debug programs.      20) ______
+
+A) CPU      B) storage device      C) compiler      D) IDE
+
+21) Programs that make a computer useful for everyday tasks are known as ________.      21) ______
+A) IDEs      B) operating systems
+C) system software      D) application software
+
+22) USB drives store data in a special type of memory known as ________.      22) ______
+A) flash memory      B) disks
+C) optical server memory      D) magnetic memory
+
+23) ________ is the coding scheme that contains a set of 128 numeric codes which are used to represent characters in a computer's memory.      23) ______
+
+A) Two's complement      B) Unicode
+C) ASCII      D) Binary numbering
+
+24) The physical devices that make up a computer are its ________.      24) ______
+A) hardware      B) applications      C) CPU      D) software
+
+25) The statements that a programmer writes in a high-level language are called ________.      25) ______
+A) binary code      B) source code      C) processor code      D) pseudocode
+
+26) The program development cycle is made up of ________ steps that are repeated until no errors can be found in the program.      26) ______
+
+A) four      B) two      C) five      D) three
+
+27) A(n) ________ is a diagram that graphically depicts the steps that take place in a program.      27) ______
+A) pseudocode document      B) flowchart
+C) code list      D) algorithm
+
+28) A(n) ________ is a name that represents a value which cannot be changed during the program's execution.      28) ______
+A) input variable      B) uninitialized variable
+C) named variable      D) named constant
+
+29) A(n) ________ symbol is used for an assignment statement in a flowchart.      29) ______
+A) oval      B) parallelogram      C) processing      D) triangle
+
+30) Which of the following error types produces incorrect results but does not prevent the program from running?      30) ______
+
+A) syntax      B) human      C) logic      D) grammar
+
+31) What is the error in the following pseudocode?
+
+	Display "What is your name?"
+	Input userName
+	Declare String userName
+      31) ______
+
+A) userName has been used before it is declared.
+B) The Input statement should be the first statement.
+C) userName is an invalid variable name.
+D) There is no error.
+
+32) ________ is the informal language used by programmers to create models of programs.      32) ______
+A) Pseudocode      B) Algorithm      C) Source code      D) Flowcharting
+
+33) What term is used for a string that appears in the actual code of a program?      33) ______
+A) string literal      B) str      C) virtual string      D) any of these
+
+34) What is the value of the variable result in the following expression?
+	Set result = (6 + 8) / 4 * 2      34) ______
+
+A) 22      B) 10      C) 7      D) 28
+
+35) What is the value of the variable result in the following expression?
+	Set result = 6 + 8 * 4 / 2      35) ______
+
+A) 7      B) 28      C) 22      D) 10
+
+36) The ________ operator is used to raise 5 to the second power.      36) ______
+A) *      B) MOD      C) /      D) ^
+
+37) What is the error in the following pseudocode?
+
+	Declare Integer widgets
+	Declare Real cost
+	Set widgets = 3.5
+	Set cost = widgets * 5
+      37) ______
+
+A) widgets is an invalid variable name for this code.
+B) widgets has been declared as an Integer and cannot hold a floating-point value.
+C) You cannot mix a Real variable and an Integer variable in a program.
+D) There is no error.
+
+38) ________ is the encoding technique used to store negative numbers in the computer's memory.      38) ______
+A) ASCII      B) Two's complement
+C) Floating-point notation      D) Unicode
+
+39) A computer system consists of all of the following except ________.      39) ______
+A) main memory      B) the operating system
+C) input and output devices      D) the CPU
+
+40) The first high-level programming language that could perform complex mathematical calculations was ________.      40) ______
+
+A) C++      B) COBOL      C) FORTRAN      D) Ada
+
+41) Main memory is also called ________.      41) ______
+A) RAM      B) secondary storage
+C) the hard drive      D) ROM
+
+42) The following is an example of an instruction written in the ________ computer language.
+
+	1011000 010100110
+      42) ______
+
+A) Assembly      B) machine language
+C) C++      D) Java
+
+43) Application software refers to ________.      43) ______
+A) mobile devices
+B) key words
+C) the operating system
+D) programs that make the computer useful to a user
+
+44) The process of stepping through each of a program's statements, one by one, to see what each statement does is known as ________.      44) ______
+
+A) bug checking      B) executing      C) debugging      D) hand tracing
+
+45) The ________ structure consists of a set of statements that execute in the order in which they appear.      45) ______
+A) sequence      B) decision      C) repetition      D) control
+
+46) A variable declaration typically specifies the variable's ________ and ________.      46) ______
+A) number, name      B) name, value      C) data type, value      D) name, data type
+
+47) ________ is an extensive encoding scheme that is compatible with ASCII.      47) ______
+A) Assembly language      B) Floating-point notation
+C) RAM      D) Unicode
+
+48) The following is an example of a(n) ________ statement.
+	Set rate = 6.25      48) ______
+
+A) assignment      B) output      C) declaration      D) input
+
+49) What is the value of the following expression?
+	12 - 4 * 3 / 2 + 9      49) ______
+
+A) 21      B) -6      C) 2.18      D) 15
+
+50) What is the error in the following pseudocode?
+
+	Declare String user
+	Display "How many widgets do you want to buy?"
+	Input user
+      50) ______
+
+A) user is an invalid variable name for this code.
+B) user has been used before it is declared.
+C) The input is a number, not a string.
+D) The Input statement should be the first statement.
+
+
+
+1) D
+
+2) A
+
+3) B
+
+4) B
+
+5) A
+
+6) D
+
+7) D
+
+8) A
+
+9) D
+
+10) B
+
+11) C
+
+12) A
+
+13) C
+
+14) B
+
+15) C
+
+16) D
+
+17) B
+
+18) A
+
+19) A
+
+20) D
+
+21) D
+
+22) A
+
+23) C
+
+24) A
+
+25) B
+
+26) C
+
+27) B
+
+28) D
+
+29) C
+
+30) C
+
+31) A
+
+32) A
+
+33) A
+
+34) C
+
+35) C
+
+36) D
+
+37) B
+
+38) B
+
+39) B
+
+40) C
+
+41) A
+
+42) B
+
+43) D
+
+44) D
+
+45) A
+
+46) D
+
+47) D
+
+48) A
+
+49) D
+
+50) C

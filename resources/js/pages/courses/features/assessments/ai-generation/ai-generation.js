@@ -16,9 +16,15 @@ import {
     acceptGeneratedQuestion,
     discardGeneratedQuestion,
     acceptAllGeneratedQuestions,
+    replaceGeneratedQuestion,
+    topUpGeneration,
+    discardAllGeneratedQuestions,
 } from "../api.js";
 
 import { insertLiveQuestionCard } from "../questions/questions.js";
+
+import { acceptCounts, acceptReport, cardChips, coverageRows, otherTypes, REPLACE_CHOICES, shortfallText, sourceLine } from "./review-helpers.js";
+import { DEFAULTS, fineTuneSummary, recall, remember } from "./generate-settings.js";
 
 import {
     renderAcceptedAnswersEditor,
@@ -53,8 +59,6 @@ let trayProgressRing = null;
 const saveTimers = new Map();
 const pendingPayloads = new Map();
 
-const SIMILARITY_FLAG_THRESHOLD = 0.4;
-
 // How often a background job is asked how far it has got.
 const JOB_POLL_MS = 3000;
 const JOB_POLL_LIMIT = 400;
@@ -80,9 +84,10 @@ export function initializeAiGeneration(offeringId, assessmentId) {
     });
 
     bindOpenButton();
-    bindSourceTabs();
+    bindItemSelection();
     typeMixValidate = bindTypeMixValidation();
     bindForm();
+    bindFineTune();
     bindTrayActions();
     bindAiSettingsModal();
     initTrayProgressRing();
@@ -244,51 +249,17 @@ async function restorePending() {
 
         renderBatch(result.pending);
 
+        // Other sets of this quiz are still waiting: say so, they open one after another.
+        const others = Number(result.pending.other_sets || 0);
+
+        showTrayMessage(others > 0
+            ? `${others} more ${others === 1 ? "set of questions is" : "sets of questions are"} waiting for review. They open when you finish this one.`
+            : "");
+
         if (jobIsRunning(result.pending)) {
             setGeneratingIndicator(true);
             await followJob(activeBatchId, result.pending);
             setGeneratingIndicator(false);
-        }
-
-    } catch (error) {
-
-        console.error(error);
-
-    }
-
-}
-
-/**
- * Used by the import flow's AI fallback: a document that isn't one of this
- * app's own exports gets its text handed straight here rather than
- * attempting a structural diff.
- */
-export async function generateFromExtractedText(sourceText, count = 10) {
-
-    const formData = new FormData();
-
-    formData.set("assessment_id", state.assessmentId);
-    formData.set("source_type", "text");
-    formData.set("source_text", sourceText);
-    formData.set("count", String(count));
-    formData.set("type_mix", JSON.stringify({ multiple_choice: count }));
-
-    try {
-
-        const result = await startGeneration(state.offeringId, formData);
-
-        if (!result.success) {
-            throw new Error(result.message || "Unable to start generation.");
-        }
-
-        activeBatchId = result.batch.id;
-
-        showTray();
-
-        renderBatch(result);
-
-        if (result.batch.status === "generating") {
-            await continueGenerating(result.batch.id);
         }
 
     } catch (error) {
@@ -319,44 +290,71 @@ function bindOpenButton() {
 
 }
 
-function bindSourceTabs() {
+/**
+ * The ids of the ticked learning items, in the order they are listed.
+ *
+ * @param {ParentNode} root
+ * @returns {number[]}
+ */
+export function selectedItemIds(root = document) {
 
-    const tabs = document.querySelectorAll("[data-ai-source-tab]");
+    return Array.from(root.querySelectorAll("[data-ai-item]"))
+        .filter((box) => box.checked)
+        .map((box) => Number(box.value));
 
-    function activate(source) {
+}
 
-        tabs.forEach((tab) => {
+/**
+ * "3 of 5 selected", with the words for none and all.
+ *
+ * @param {number} selected
+ * @param {number} total
+ * @returns {string}
+ */
+export function selectionSummary(selected, total) {
 
-            const isActive = tab.dataset.aiSourceTab === source;
+    if (total === 0) {
+        return "Nothing to choose from";
+    }
 
-            tab.classList.toggle("bg-white", isActive);
-            tab.classList.toggle("shadow", isActive);
-            tab.classList.toggle("text-brand", isActive);
-            tab.classList.toggle("text-gray-500", !isActive);
+    if (selected === 0) {
+        return `None of ${total} selected`;
+    }
 
-        });
+    return `${selected} of ${total} selected`;
 
-        document.querySelectorAll("[data-ai-source-panel]").forEach((panel) => {
+}
 
-            const isActive = panel.dataset.aiSourcePanel === source;
+function bindItemSelection() {
 
-            panel.classList.toggle("hidden", !isActive);
-            panel.classList.toggle("flex", isActive);
+    const boxes = () => Array.from(document.querySelectorAll("[data-ai-item]"));
+    const summary = document.querySelector("[data-ai-selected-summary]");
 
-        });
+    function refresh() {
 
-        document.querySelector("#ai-generate-form").dataset.activeSource = source;
+        if (summary) {
+            summary.textContent = selectionSummary(selectedItemIds().length, boxes().length);
+        }
 
-        // The Learning Unit tab can be unusable (unit has nothing to read).
+        // The Generate button follows the selection.
         typeMixValidate?.();
 
     }
 
-    tabs.forEach((tab) => {
-        tab.addEventListener("click", () => activate(tab.dataset.aiSourceTab));
-    });
+    function setAll(checked) {
 
-    activate("topic");
+        boxes().forEach((box) => {
+            box.checked = checked;
+        });
+
+        refresh();
+
+    }
+
+    boxes().forEach((box) => box.addEventListener("change", refresh));
+
+    document.querySelector("[data-ai-select-all]")?.addEventListener("click", () => setAll(true));
+    document.querySelector("[data-ai-select-none]")?.addEventListener("click", () => setAll(false));
 
 }
 
@@ -368,6 +366,88 @@ function bindSourceTabs() {
 | teacher sees the mismatch as they type instead of after clicking Generate.
 |--------------------------------------------------------------------------
 */
+
+/** The generate form's current choices, as the remembered settings keep them. */
+function readSettings(form) {
+
+    const types = {};
+
+    form.querySelectorAll("[data-ai-type-mix-count]").forEach((input) => {
+
+        const count = Number(input.value || 0);
+
+        if (count > 0) {
+            types[input.dataset.typeKey] = count;
+        }
+
+    });
+
+    return {
+        count: Number(form.querySelector('[name="count"]').value || DEFAULTS.count),
+        points: form.querySelector('[name="points_per_question"]').value,
+        types,
+        difficulty: form.querySelector('[name="ai_difficulty"]').value,
+        level: form.querySelector('[name="ai_level"]').value,
+        choices: Number(form.querySelector('[name="ai_choices"]').value),
+        language: form.querySelector('[name="ai_language"]').value.trim(),
+        focus: form.querySelector('[name="ai_focus"]').value.trim(),
+    };
+
+}
+
+function writeSettings(form, settings) {
+
+    form.querySelector('[name="count"]').value = String(settings.count);
+    form.querySelector('[name="points_per_question"]').value = settings.points;
+    form.querySelector('[name="ai_difficulty"]').value = settings.difficulty;
+    form.querySelector('[name="ai_level"]').value = settings.level;
+    form.querySelector('[name="ai_choices"]').value = String(settings.choices);
+    form.querySelector('[name="ai_language"]').value = settings.language;
+    form.querySelector('[name="ai_focus"]').value = settings.focus;
+
+    form.querySelectorAll("[data-ai-type-mix-count]").forEach((input) => {
+        input.value = String(settings.types[input.dataset.typeKey] || 0);
+    });
+
+    // The "n of N allocated" line follows the values just set.
+    typeMixValidate?.();
+
+}
+
+/** Starts the form from the teacher's last choices for this course, and keeps the fine-tune summary current. */
+function bindFineTune() {
+
+    const form = document.querySelector("#ai-generate-form");
+
+    if (!form || !form.querySelector('[name="ai_difficulty"]')) {
+        return;
+    }
+
+    const summary = form.querySelector("[data-ai-fine-tune-summary]");
+    const refresh = () => {
+
+        if (summary) {
+            summary.textContent = fineTuneSummary(readSettings(form));
+        }
+
+    };
+
+    writeSettings(form, recall(state.offeringId));
+    refresh();
+
+    form.querySelectorAll('[name^="ai_"]').forEach((control) => {
+        control.addEventListener("input", refresh);
+        control.addEventListener("change", refresh);
+    });
+
+    form.querySelector("[data-ai-fine-tune-reset]")?.addEventListener("click", () => {
+
+        writeSettings(form, DEFAULTS);
+        refresh();
+
+    });
+
+}
 
 function bindTypeMixValidation() {
 
@@ -392,11 +472,8 @@ function bindTypeMixValidation() {
 
         const isValid = target > 0 && sum === target;
 
-        // Learning Unit source with no readings or PDFs: nothing to read.
-        const activeSource = document.querySelector("#ai-generate-form")?.dataset.activeSource;
-
-        const sourceIsUsable = activeSource !== "learning_unit"
-            || document.querySelector('[data-ai-source-panel="learning_unit"]')?.dataset.aiSourceReadable === "1";
+        // There has to be something to read, and at least one item ticked.
+        const sourceIsUsable = form.dataset.aiSourceUsable === "1" && selectedItemIds().length > 0;
 
         if (statusEl) {
 
@@ -458,40 +535,20 @@ function bindForm() {
 
         errorBox.classList.add("hidden");
 
-        const activeSource = form.dataset.activeSource || "topic";
-
         const formData = new FormData();
 
         formData.set("assessment_id", state.assessmentId);
-        formData.set("source_type", activeSource);
         formData.set("count", form.querySelector('[name="count"]').value || "10");
+
+        // The unit is the quiz's own, decided on the server; only the chosen
+        // items are sent.
+        formData.set("learning_item_ids", JSON.stringify(selectedItemIds()));
 
         const pointsField = form.querySelector('[name="points_per_question"]');
 
         if (pointsField.value !== "") {
             formData.set("points_per_question", pointsField.value);
         }
-
-        if (activeSource === "topic") {
-
-            formData.set("topic", form.querySelector('[name="topic"]').value);
-
-        } else if (activeSource === "text") {
-
-            formData.set("source_text", form.querySelector('[name="source_text"]').value);
-
-        } else if (activeSource === "file") {
-
-            const fileInput = form.querySelector('[name="file"]');
-
-            if (fileInput.files[0]) {
-                formData.set("file", fileInput.files[0]);
-            }
-
-        }
-
-        // "learning_unit" needs nothing more — the server always reads the
-        // unit this quiz sits under.
 
         const typeMix = {};
 
@@ -506,6 +563,19 @@ function bindForm() {
         });
 
         formData.set("type_mix", JSON.stringify(typeMix));
+
+        const settings = readSettings(form);
+
+        formData.set("options", JSON.stringify({
+            difficulty: settings.difficulty,
+            level: settings.level,
+            choices: settings.choices,
+            language: settings.language,
+            focus: settings.focus,
+        }));
+
+        // Next time the form starts from what was asked for now.
+        remember(state.offeringId, settings);
 
         const requestedTotal = Number(formData.get("count") || 0);
         const firstChunkCount = Math.min(requestedTotal || 1, MAX_QUESTIONS_PER_CALL);
@@ -847,19 +917,218 @@ function renderBatch(result) {
             .map((el) => el.dataset.aiQuestionId)
     );
 
-    result.questions.forEach((question) => {
+    // Questions that need a look come first, so they are not missed below the fold.
+    [...result.questions]
+        .sort((a, b) => Number(!!b.needs_look) - Number(!!a.needs_look))
+        .forEach((question) => {
 
-        if (existingIds.has(String(question.id))) {
-            return;
-        }
+            if (existingIds.has(String(question.id))) {
+                return;
+            }
 
-        list.appendChild(createCard(question));
+            list.appendChild(createCard(question));
 
-    });
+        });
 
     updateProgress(result.batch);
 
+    renderCoverage(result);
+
+    refreshAcceptButtons();
+
     updateStoppedEarlyBanner(result.stopped_early, result.batch);
+
+}
+
+/** Which readings the questions came from, and why fewer came back than asked for. */
+function renderCoverage(result) {
+
+    const box = document.querySelector("[data-ai-tray-coverage]");
+    const list = document.querySelector("[data-ai-tray-coverage-list]");
+
+    if (box && list) {
+
+        const rows = coverageRows(result.coverage);
+
+        list.replaceChildren();
+
+        rows.forEach((row) => {
+
+            const item = document.createElement("li");
+
+            item.textContent = `${row.title}: ${row.text}`;
+            item.className = row.empty ? "text-amber-800" : "";
+            list.appendChild(item);
+
+        });
+
+        const show = rows.length > 1 || result.truncated;
+
+        box.classList.toggle("hidden", !show);
+        box.classList.toggle("flex", show);
+
+        document.querySelector("[data-ai-tray-truncated]")?.classList.toggle("hidden", !result.truncated);
+
+    }
+
+    const block = document.querySelector("[data-ai-tray-shortfall]");
+    const text = shortfallText(result.shortfall);
+
+    if (block) {
+
+        block.classList.toggle("hidden", text === "");
+        block.classList.toggle("flex", text !== "");
+        document.querySelector("[data-ai-tray-shortfall-text]").textContent = text;
+
+        const button = document.querySelector("[data-ai-tray-top-up]");
+
+        if (button && result.shortfall) {
+            button.dataset.count = String(result.shortfall.missing);
+            button.textContent = `Write ${result.shortfall.missing} more`;
+        }
+
+    }
+
+}
+
+/** The tray's two accept buttons say how many each will add. */
+function refreshAcceptButtons() {
+
+    const cards = Array.from(document.querySelectorAll("[data-ai-question-card]"));
+    const counts = acceptCounts(cards.map((card) => ({ needs_look: card.dataset.aiNeedsLook === "1" })));
+
+    const clear = document.querySelector("[data-ai-tray-accept-clear]");
+    const all = document.querySelector("[data-ai-tray-accept-all]");
+
+    if (clear) {
+        clear.textContent = `Accept all verified (${counts.clear})`;
+        clear.disabled = counts.clear === 0;
+        clear.classList.toggle("hidden", counts.needLook === 0);
+    }
+
+    if (all) {
+        all.textContent = counts.needLook === 0 ? `Accept all (${counts.total})` : "Accept all, including flagged";
+        all.classList.toggle("bg-brand", counts.needLook === 0);
+        all.classList.toggle("text-white", counts.needLook === 0);
+        all.classList.toggle("border", counts.needLook > 0);
+        all.classList.toggle("border-gray-300", counts.needLook > 0);
+        all.classList.toggle("text-gray-700", counts.needLook > 0);
+    }
+
+}
+
+function showTrayMessage(text) {
+
+    const box = document.querySelector("[data-ai-tray-message]");
+
+    if (!box) {
+        return;
+    }
+
+    box.textContent = text;
+    box.classList.toggle("hidden", text === "");
+
+}
+
+/**
+ * Asks for a replacement and swaps the card when it arrives. The old card
+ * stays (greyed) until then, so a failure loses nothing.
+ */
+async function replaceCard(card, options) {
+
+    const questionId = card.dataset.aiQuestionId;
+
+    card.querySelector("[data-ai-replace-menu]")?.classList.add("hidden");
+    card.querySelector("[data-ai-replace-menu]")?.classList.remove("flex");
+    showCardError(card, "");
+    card.classList.add("opacity-60");
+
+    const button = card.querySelector("[data-ai-open-replace]");
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Replacing...";
+    }
+
+    function restore(message) {
+
+        card.classList.remove("opacity-60");
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Replace";
+        }
+
+        if (message) {
+            showCardError(card, message);
+        }
+
+    }
+
+    try {
+
+        await flushPendingSave(questionId);
+
+        let result = await replaceGeneratedQuestion(state.offeringId, questionId, options);
+
+        if (!result.success) {
+
+            restore(result.message || "A replacement could not be written. Try again.");
+
+            return;
+
+        }
+
+        const replacementBatch = result.batch_id;
+
+        // A background job takes a while: ask until it has finished.
+        for (let attempt = 0; result.batch.status === "generating" && attempt < JOB_POLL_LIMIT; attempt++) {
+
+            await new Promise((resolve) => setTimeout(resolve, JOB_POLL_MS));
+
+            result = await fetchGenerationBatch(state.offeringId, replacementBatch);
+
+        }
+
+        if (result.batch.status !== "completed" || (result.batch.generated_count || 0) < 1) {
+
+            restore("A replacement could not be written this time. This question is unchanged.");
+
+            return;
+
+        }
+
+        // The new question now sits in the original batch.
+        const original = await fetchGenerationBatch(state.offeringId, activeBatchId);
+        const list = document.querySelector("[data-ai-tray-list]");
+        const known = new Set(Array.from(list.querySelectorAll("[data-ai-question-card]")).map((el) => el.dataset.aiQuestionId));
+
+        const fresh = (original.questions || []).filter((q) => !known.has(String(q.id)));
+
+        fresh.forEach((question) => list.insertBefore(createCard(question), card));
+
+        card.remove();
+
+        refreshAcceptButtons();
+
+    } catch (error) {
+
+        console.error(error);
+
+        restore("A replacement could not be written. Check your connection and try again.");
+
+    }
+
+}
+
+function showCardError(card, text) {
+
+    const line = card.querySelector("[data-ai-card-error]");
+
+    if (line) {
+        line.textContent = text;
+        line.classList.toggle("hidden", text === "");
+    }
 
 }
 
@@ -908,21 +1177,32 @@ function createCard(question) {
     card.dataset.aiAnswersCount = question.answers_count ?? 2;
     card.dataset.aiCaseSensitive = isFlagTrue(question.case_sensitive) ? "1" : "0";
 
+    card.dataset.aiNeedsLook = question.needs_look ? "1" : "0";
+
     card.className =
-        "flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3";
+        `flex flex-col gap-2 rounded-xl border bg-white p-3 ${question.needs_look ? "border-amber-300" : "border-gray-200"}`;
 
-    const similarityBadge =
-        question.similarity_score !== null && question.similarity_score > SIMILARITY_FLAG_THRESHOLD
-            ? `<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Similar to source — review before accepting</span>`
-            : "";
+    // What the builder knows about this question, most serious first. The
+    // answer check of a math question is computed, never guessed.
+    const chipTones = {
+        danger: "bg-red-100 text-red-700",
+        warning: "bg-amber-100 text-amber-800",
+        ok: "bg-emerald-100 text-emerald-800",
+    };
 
-    // Deterministic sympy cross-check of the marked-correct answer for
-    // math questions — the model is not reliable at arithmetic/algebra,
-    // this is never a guess (see verification.py).
-    const mathCheckBadge =
-        question.math_check === "mismatch"
-            ? `<span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ Marked answer looks wrong — verify before accepting</span>`
-            : "";
+    const chipsHtml = cardChips(question)
+        .map((chip) => `<span class="rounded-full px-2 py-0.5 text-[10px] font-bold ${chipTones[chip.tone]}">${escapeHtml(chip.label)}</span>`)
+        .join("");
+
+    const origin = sourceLine(question);
+
+    const evidenceHtml = origin !== "" || question.evidence_quote
+        ? `<details class="text-[11px] text-gray-600">
+                <summary class="cursor-pointer font-semibold text-gray-700">${escapeHtml(origin || "Where this came from")}</summary>
+                ${question.evidence_quote ? `<blockquote class="mt-1 border-l-2 border-gray-200 pl-2 italic">${escapeHtml(question.evidence_quote)}</blockquote>` : ""}
+                ${question.explanation ? `<p class="mt-1"><span class="font-semibold">Why:</span> ${escapeHtml(question.explanation)}</p>` : ""}
+           </details>`
+        : "";
 
     const isMultipleAnswer = isFlagTrue(question.allow_multiple_answers);
 
@@ -944,8 +1224,7 @@ function createCard(question) {
             <input type="number" data-ai-points-input min="0" step="0.5" value="${question.points}" class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none focus:border-brand">
             <span class="text-[10px] text-[#767676]">pts</span>
             ${multipleBadge}
-            ${similarityBadge}
-            ${mathCheckBadge}
+            ${chipsHtml}
             <div class="ml-auto flex items-center gap-1">
                 <button type="button" data-ai-open-settings title="Question settings" class="rounded-lg p-1.5 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -953,6 +1232,16 @@ function createCard(question) {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </button>
+                <span class="relative">
+                    <button type="button" data-ai-open-replace title="Replace this question" class="rounded-lg px-2 py-1 text-xs font-semibold text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                        Replace
+                    </button>
+                    <div data-ai-replace-menu class="absolute right-0 top-full z-10 mt-1 hidden w-52 flex-col gap-0.5 rounded-xl border border-gray-200 bg-white p-2 text-xs shadow-xl">
+                        ${REPLACE_CHOICES.map((c) => `<button type="button" data-ai-replace-mode="${c.mode}" class="rounded-lg px-2 py-1.5 text-left text-gray-700 hover:bg-gray-50">${escapeHtml(c.label)}</button>`).join("")}
+                        ${otherTypes(question.question_type).map((t) => `<button type="button" data-ai-replace-mode="type" data-ai-replace-type="${escapeHtml(t)}" class="rounded-lg px-2 py-1.5 text-left text-gray-700 hover:bg-gray-50">As ${escapeHtml(t)}</button>`).join("")}
+                        <input type="text" data-ai-replace-note maxlength="200" placeholder="Or tell it what you want, then Enter" class="mt-1 rounded-lg border border-gray-200 px-2 py-1.5 outline-none focus:border-brand">
+                    </div>
+                </span>
                 <button type="button" data-ai-discard-question title="Discard" class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -963,6 +1252,8 @@ function createCard(question) {
         </div>
         <textarea data-ai-text-input rows="2" class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-sm outline-none transition focus:bg-gray-50">${escapeHtml(question.question_text)}</textarea>
         ${choicesHtml}
+        ${evidenceHtml}
+        <p data-ai-card-error role="alert" class="hidden text-xs font-medium text-red-600"></p>
     `;
 
     return card;
@@ -1131,6 +1422,30 @@ function bindTrayActions() {
 
         }
 
+        if (event.target.closest("[data-ai-open-replace]")) {
+
+            const menu = card.querySelector("[data-ai-replace-menu]");
+
+            menu.classList.toggle("hidden");
+            menu.classList.toggle("flex");
+
+            return;
+
+        }
+
+        const replaceChoice = event.target.closest("[data-ai-replace-mode]");
+
+        if (replaceChoice) {
+
+            await replaceCard(card, {
+                mode: replaceChoice.dataset.aiReplaceMode,
+                type: replaceChoice.dataset.aiReplaceType || undefined,
+            });
+
+            return;
+
+        }
+
         if (event.target.closest("[data-ai-accept-question]")) {
 
             await flushPendingSave(questionId);
@@ -1139,9 +1454,17 @@ function bindTrayActions() {
 
                 const result = await acceptGeneratedQuestion(state.offeringId, questionId);
 
+                if (!result.success) {
+
+                    showCardError(card, result.message || "This question could not be added. Try again.");
+
+                    return;
+
+                }
+
                 card.remove();
 
-                if (result.success && result.question) {
+                if (result.question) {
                     insertLiveQuestionCard(result.question);
                 }
 
@@ -1150,6 +1473,8 @@ function bindTrayActions() {
             } catch (error) {
 
                 console.error(error);
+
+                showCardError(card, "This question could not be added. Check your connection and try again.");
 
             }
 
@@ -1166,6 +1491,8 @@ function bindTrayActions() {
             } catch (error) {
 
                 console.error(error);
+
+                showCardError(card, "This question could not be discarded. Try again.");
 
             }
 
@@ -1194,40 +1521,202 @@ function bindTrayActions() {
 
     });
 
-    document
-        .querySelector("[data-ai-tray-accept-all]")
-        ?.addEventListener("click", async () => {
+    // "Or tell it what you want" in a card's replace menu: Enter sends it.
+    document.addEventListener("keydown", (event) => {
 
-            if (!activeBatchId) {
+        const note = event.target.closest?.("[data-ai-replace-note]");
+
+        if (!note || event.key !== "Enter") {
+            return;
+        }
+
+        event.preventDefault();
+
+        const text = note.value.trim();
+
+        if (text !== "") {
+            replaceCard(note.closest("[data-ai-question-card]"), { mode: "different", instruction: text });
+        }
+
+    });
+
+    async function acceptAllNow(onlyClear) {
+
+        if (!activeBatchId) {
+            return;
+        }
+
+        const counts = acceptCounts(
+            Array.from(document.querySelectorAll("[data-ai-question-card]"))
+                .map((card) => ({ needs_look: card.dataset.aiNeedsLook === "1" }))
+        );
+
+        if (!onlyClear && counts.needLook > 0
+            && !window.confirm(`${counts.needLook} of these ${counts.needLook === 1 ? "has" : "have"} a warning (a possible wrong answer, a repeat or a close copy). Add all ${counts.total} anyway?`)) {
+            return;
+        }
+
+        try {
+
+            const result = await acceptAllGeneratedQuestions(state.offeringId, activeBatchId, onlyClear);
+
+            if (!result.success) {
+
+                showTrayMessage(result.message || "The questions could not be added. Try again.");
+
                 return;
+
             }
 
-            try {
+            (result.questions || []).forEach((question) => {
+                insertLiveQuestionCard(question);
+            });
 
-                const result = await acceptAllGeneratedQuestions(state.offeringId, activeBatchId);
+            // Added ones leave the tray; any left are the ones that need a look.
+            if (result.skipped_count > 0) {
+
+                document.querySelectorAll("[data-ai-question-card]").forEach((card) => {
+
+                    if (card.dataset.aiNeedsLook !== "1") {
+                        card.remove();
+                    }
+
+                });
+
+                showTrayMessage(acceptReport(result));
+                refreshAcceptButtons();
+
+            } else {
 
                 hideTray();
 
-                if (result.success) {
+            }
 
-                    (result.questions || []).forEach((question) => {
-                        insertLiveQuestionCard(question);
-                    });
+        } catch (error) {
+
+            console.error(error);
+
+            showTrayMessage("The questions could not be added. Check your connection and try again.");
+
+        }
+
+    }
+
+    document
+        .querySelector("[data-ai-tray-top-up]")
+        ?.addEventListener("click", async (event) => {
+
+            const button = event.currentTarget;
+            const count = Number(button.dataset.count || 0);
+
+            if (!activeBatchId || count < 1) {
+                return;
+            }
+
+            const label = button.textContent;
+
+            button.disabled = true;
+            button.textContent = "Writing...";
+
+            try {
+
+                let result = await topUpGeneration(state.offeringId, activeBatchId, count);
+
+                if (!result.success) {
+
+                    showTrayMessage(result.message || "More questions could not be written. Try again.");
+
+                    return;
 
                 }
+
+                const extension = result.batch_id;
+
+                for (let attempt = 0; result.batch.status === "generating" && attempt < JOB_POLL_LIMIT; attempt++) {
+
+                    await wait(JOB_POLL_MS);
+
+                    result = await fetchGenerationBatch(state.offeringId, extension);
+
+                }
+
+                // The new questions now sit in the original set.
+                const original = await fetchGenerationBatch(state.offeringId, activeBatchId);
+
+                renderBatch(original);
+
+                showTrayMessage("");
 
             } catch (error) {
 
                 console.error(error);
+
+                showTrayMessage("More questions could not be written. Check your connection and try again.");
+
+            } finally {
+
+                button.disabled = false;
+                button.textContent = label;
 
             }
 
         });
 
     document
+        .querySelector("[data-ai-tray-accept-all]")
+        ?.addEventListener("click", () => acceptAllNow(false));
+
+    document
+        .querySelector("[data-ai-tray-accept-clear]")
+        ?.addEventListener("click", () => acceptAllNow(true));
+
+    document
         .querySelector("[data-ai-tray-dismiss]")
-        ?.addEventListener("click", () => {
-            hideTray();
+        ?.addEventListener("click", async () => {
+
+            const waiting = document.querySelectorAll("[data-ai-question-card]").length;
+
+            // Nothing is waiting (or still being written): there is nothing to lose.
+            if (!activeBatchId || waiting === 0) {
+
+                hideTray();
+
+                return;
+
+            }
+
+            const sentence = waiting === 1
+                ? "Discard the 1 question in the review tray?"
+                : `Discard all ${waiting} questions in the review tray?`;
+
+            if (!window.confirm(`${sentence} This cannot be undone. Questions you already accepted stay in the quiz.`)) {
+                return;
+            }
+
+            try {
+
+                const result = await discardAllGeneratedQuestions(state.offeringId, activeBatchId);
+
+                if (!result.success) {
+
+                    showTrayMessage(result.message || "The questions could not be discarded. Try again.");
+
+                    return;
+
+                }
+
+                document.querySelectorAll("[data-ai-question-card]").forEach((card) => card.remove());
+
+                hideTray();
+
+            } catch (error) {
+
+                console.error(error);
+
+                showTrayMessage("The questions could not be discarded. Check your connection and try again.");
+
+            }
+
         });
 
 }
@@ -1235,8 +1724,15 @@ function bindTrayActions() {
 function afterQuestionResolved() {
 
     if (document.querySelectorAll("[data-ai-question-card]").length === 0) {
+
         activeBatchId = null;
+
+        // An older unreviewed set of this quiz opens next, if there is one.
+        restorePending();
+
     }
+
+    refreshAcceptButtons();
 
 }
 

@@ -45,6 +45,9 @@ export function beginLoad(el, skeletonHtml, delay = SKELETON_DELAY_MS, into = el
 
     if (delay <= 0) {
         into.innerHTML = skeletonHtml;
+    } else if (into === el && el.dataset.serverSkeleton !== undefined) {
+        // The server already drew this region's loading shape; drawing another over it
+        // after a delay would only make it jump.
     } else {
         timers.set(el, setTimeout(() => {
             if (current()) {

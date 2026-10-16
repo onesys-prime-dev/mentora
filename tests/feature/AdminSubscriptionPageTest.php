@@ -350,7 +350,13 @@ final class AdminSubscriptionPageTest extends RouteTestCase
 
         $this->assertSame(3, substr_count($body, 'data-usage-line="unlimited"'));
         $this->assertStringContainsString('of unlimited', $body);
-        $this->assertStringNotContainsString('role="progressbar"', $body);
+
+        // Only the usage lines are in question: every page also carries the slim page-load bar.
+        $start = (int) strpos($body, 'data-usage>');
+        $usage = substr($body, $start, (int) strpos($body, '</dl>', $start) - $start);
+
+        $this->assertNotSame('', $usage);
+        $this->assertStringNotContainsString('role="progressbar"', $usage);
     }
 
     public function testFromNinetyPercentItIsAWarningAndAtOneHundredItIsFull(): void

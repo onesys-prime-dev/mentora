@@ -97,3 +97,28 @@ def test_the_http_call_carries_an_unverified_context_only_when_asked(monkeypatch
 
     make_post(False)("https://x/y", {}, b"{}", 5)
     assert isinstance(seen["context"], ssl.SSLContext) and seen["context"].verify_mode == ssl.CERT_NONE
+
+
+def test_a_job_with_nothing_to_read_fails_with_a_code_and_does_not_reach_the_pipeline():
+    reached = []
+
+    def handler(job, ctx):
+        reached.append(job)
+
+        return {}
+
+    guarded = config.with_material(handler)
+
+    for payload in ({}, {"topic": None}, {"items": [], "source_text": "  "}, {"items": [{"id": 1, "text": " "}]}):
+        with pytest.raises(config.InvalidRequest):
+            guarded({"payload": payload}, None)
+
+    assert reached == []
+
+
+def test_a_job_with_items_text_or_a_topic_goes_through():
+    guarded = config.with_material(lambda job, ctx: {"ok": True})
+
+    assert guarded({"payload": {"items": [{"id": 1, "text": "Some text"}]}}, None) == {"ok": True}
+    assert guarded({"payload": {"source_text": "Some text"}}, None) == {"ok": True}
+    assert guarded({"payload": {"topic": "Planets"}}, None) == {"ok": True}
