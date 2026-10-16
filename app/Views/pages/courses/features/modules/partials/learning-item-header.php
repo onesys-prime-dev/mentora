@@ -5,7 +5,7 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 <!-- header -->
 <header class="flex flex-col gap-2 py-2">
     
-    <span class="text-3xl font-bold text-brand">
+    <span class="text-3xl font-bold text-brand" data-item-header-title>
         <?= esc($currentItem['title']) ?>
     </span>
 

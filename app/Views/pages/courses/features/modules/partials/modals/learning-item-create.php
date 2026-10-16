@@ -185,6 +185,24 @@
 
             </div>
 
+            <!-- Discussion only: the opening prompt students reply to -->
+            <div class="hidden flex-col gap-2" data-discussion-prompt-field>
+
+                <label for="discussion-prompt" class="text-sm font-medium text-[#1A1C1E]">
+                    Discussion prompt
+                    <span class="font-normal text-[#767676]">(optional, editable later)</span>
+                </label>
+
+                <textarea
+                    id="discussion-prompt"
+                    name="discussion_body"
+                    rows="4"
+                    maxlength="10000"
+                    placeholder="What should students discuss?"
+                    class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-brand"></textarea>
+
+            </div>
+
         </form>
 
         <!-- Footer -->

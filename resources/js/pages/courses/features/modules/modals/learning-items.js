@@ -47,6 +47,8 @@ export function bindLearningItemCreateModal({
 
                     form.reset();
 
+                    syncDiscussionField();
+
                     moduleInput.value =
                         button.dataset.moduleId;
 
@@ -59,6 +61,30 @@ export function bindLearningItemCreateModal({
             );
 
         });
+
+    // The prompt field only applies to a discussion item.
+    const promptField =
+        form.querySelector("[data-discussion-prompt-field]");
+
+    function syncDiscussionField() {
+
+        const isDiscussion =
+            form.querySelector("[name='item_type']:checked")?.value === "discussion";
+
+        promptField?.classList.toggle("hidden", !isDiscussion);
+
+        promptField?.classList.toggle("flex", isDiscussion);
+
+    }
+
+    form
+        .querySelectorAll("[name='item_type']")
+        .forEach((radio) => radio.addEventListener("change", syncDiscussionField));
+
+    form.addEventListener(
+        "reset",
+        () => setTimeout(syncDiscussionField)
+    );
 
     form.addEventListener(
         "submit",

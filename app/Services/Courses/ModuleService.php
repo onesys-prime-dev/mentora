@@ -605,6 +605,8 @@ class ModuleService
                     ->getThread($user, (int) $threadRow['offering_id'], (int) $threadRow['id']);
 
                 // The thread belongs to the item: it is edited/removed with the item, not here.
+                $discussion['thread']['offering_id'] = (int) $threadRow['offering_id'];
+
                 $discussion['thread']['can_edit'] = false;
                 $discussion['thread']['can_delete'] = false;
 
@@ -1511,7 +1513,8 @@ class ModuleService
         }
 
         // A discussion item is backed by one thread the instructor opens
-        // (title now, prompt later); students reply inside it.
+        // (title and prompt now, both editable from the item afterwards);
+        // students reply inside it.
         if ($itemType === 'discussion') {
 
             $now = (new \DateTime())->format('Y-m-d H:i:s.u');
@@ -1521,7 +1524,7 @@ class ModuleService
                 'learning_item_id' => $learningItemId,
                 'author_id' => $user->id,
                 'title' => $title,
-                'body' => '',
+                'body' => self::discussionBody($request->getPost('discussion_body')),
                 'last_activity_at' => $now,
             ]);
 
@@ -1662,16 +1665,27 @@ class ModuleService
 
         }
 
-        $this->learningItemModel
-            ->update(
+        // A prompt-only edit on a discussion item changes the thread, not the item.
+        if ($update !== []) {
 
-                $learningItemId,
+            $this->learningItemModel
+                ->update(
 
-                $update
+                    $learningItemId,
 
-            );
+                    $update
+
+                );
+
+        }
 
         $this->syncLinkedAssessment($learningItemId, $update);
+
+        if (strtolower((string) $learningItem['item_type']) === 'discussion') {
+
+            $this->syncDiscussionThread($learningItemId, $update, $payload);
+
+        }
 
         return [
 
@@ -1682,6 +1696,42 @@ class ModuleService
 
         ];
 
+    }
+
+    /** The prompt a discussion item opens with: plain text, trimmed, capped. */
+    private static function discussionBody(mixed $body): string
+    {
+        return mb_substr(trim((string) $body), 0, 10000);
+    }
+
+    /**
+     * A discussion item and its thread are one thing to the instructor: the
+     * item's title is the thread's title and the item's prompt is the
+     * thread's body, edited from the item and shown in the Discussions tab.
+     */
+    private function syncDiscussionThread(int $learningItemId, array $itemUpdate, array $payload): void
+    {
+        $threadUpdate = [];
+
+        if (array_key_exists('title', $itemUpdate) && $itemUpdate['title'] !== '') {
+            $threadUpdate['title'] = mb_substr($itemUpdate['title'], 0, 255);
+        }
+
+        if (array_key_exists('discussion_body', $payload)) {
+            $threadUpdate['body'] = self::discussionBody($payload['discussion_body']);
+        }
+
+        if ($threadUpdate === []) {
+            return;
+        }
+
+        $threads = new DiscussionThreadModel();
+
+        $thread = $threads->where('learning_item_id', $learningItemId)->first();
+
+        if ($thread) {
+            $threads->update($thread['id'], $threadUpdate);
+        }
     }
 
     /**
