@@ -73,7 +73,8 @@ class CalendarEventService
 
         $labels = $this->courseLabels($courses);
 
-        $isInstructor = $user->inGroup('instructor');
+        // The chairperson sees what an instructor does: every course of the program, drafts included.
+        $isInstructor = $user->inGroup('instructor') || $user->inGroup('chairperson');
 
         $builder = db_connect()->table('assessments a')
             ->select([
@@ -139,7 +140,14 @@ class CalendarEventService
     {
         $labels = $this->courseLabels($courses);
 
-        $role = $user->inGroup('instructor') ? 'instructor' : 'student';
+        $active = (new \App\Services\Auth\ActiveRoleService())->resolve($user);
+
+        $role = match (true) {
+            in_array($active, ['instructor', 'chairperson'], true) => $active,
+            $user->inGroup('instructor')  => 'instructor',
+            $user->inGroup('chairperson') => 'chairperson',
+            default                       => 'student',
+        };
 
         $slugs = [];
 

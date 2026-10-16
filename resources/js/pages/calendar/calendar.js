@@ -64,6 +64,12 @@ function initialize()
     render();
 }
 
+/** Instructors and chairpersons both manage deadlines and announcements from the calendar. */
+function isCourseStaff()
+{
+    return role === "instructor" || role === "chairperson";
+}
+
 /*
 |--------------------------------------------------------------------------
 | Date helpers
@@ -673,7 +679,7 @@ function openDateMenu(dateStr)
 {
     const events = eventsByDate.get(dateStr) || [];
 
-    const isInstructor = role === "instructor";
+    const isInstructor = isCourseStaff();
 
     const actionButton = (action, label, iconPath) => `
         <button
@@ -750,7 +756,7 @@ function openDateMenu(dateStr)
 
 function openEventDetail(event)
 {
-    if (event.kind === "assessment" && role === "instructor") {
+    if (event.kind === "assessment" && isCourseStaff()) {
         openEditDeadlineForm(event);
         return;
     }

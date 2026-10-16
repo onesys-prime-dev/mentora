@@ -321,11 +321,25 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
 // A chairperson has full instructor rights on every course in their
 // program (R7 of the chairperson plan) — this block mirrors instructor's
 // course routes exactly, same controllers, scoped by ChairpersonAccessService
-// instead of InstructorAssignmentModel. Calendar/schedule aren't part of
-// that course-access parity requirement, so they're left out here.
+// instead of InstructorAssignmentModel. Calendar and schedule are the
+// chairperson's own too, over the program's courses (getCourseOfferings).
 $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], function ($routes) {
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
+
+    $routes->get('calendar', 'Calendar\CalendarController::index');
+
+    $routes->group('api/calendar', ['filter' => 'closedoffering'], function ($routes) {
+        $routes->get('events', 'Calendar\CalendarController::events');
+
+        $routes->post('reminders', 'Calendar\ReminderController::store');
+        $routes->patch('reminders/(:num)/done', 'Calendar\ReminderController::markDone/$1');
+        $routes->delete('reminders/(:num)', 'Calendar\ReminderController::destroy/$1');
+
+        $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar');
+    });
+
+    $routes->get('schedule', 'Schedule\ScheduleController::index');
 
     $routes->get('courses', 'Courses\ChairpersonCoursesController::index');
     $routes->get('monitor-program', 'Courses\MonitorProgramController::index');
