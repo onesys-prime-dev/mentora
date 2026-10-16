@@ -376,10 +376,10 @@ class GradeSheetImportService
         }
 
         // Same rule as live grading: final grades follow while the scheme is
-        // published and not waiting on a recalculation.
+        // published.
         $scheme = (new GradingSchemeModel())->find($scheme['id']);
 
-        $refreshed = $scheme['status'] === 'Published' && empty($scheme['needs_recalculation']);
+        $refreshed = $scheme['status'] === 'Published';
 
         if ($refreshed) {
             foreach (array_unique(array_column($valid, 0)) as $studentId) {
@@ -392,7 +392,7 @@ class GradeSheetImportService
         return [
             'success' => true,
             'message' => "{$count} " . ($count === 1 ? 'score' : 'scores') . ' imported.'
-                . ($refreshed ? '' : ' Recalculate to update final grades.'),
+                . ($refreshed ? '' : ' Final grades update once the grading is published.'),
         ];
     }
 

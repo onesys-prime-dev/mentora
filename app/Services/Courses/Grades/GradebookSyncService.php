@@ -37,9 +37,10 @@ class GradebookSyncService
 
     /**
      * After a student's work on an assessment is graded (or a grade is
-     * reopened): update their gradebook score, then their final grade — but
-     * only while the scheme is published and not waiting on a recalculation
-     * (a scheme mid-edit isn't papered over by per-student updates).
+     * reopened): update their gradebook score, then their final grade while
+     * the scheme is published. A scheme flagged for recalculation is refreshed
+     * all the same: the flag only says the configuration changed, and the
+     * student's grade is always computed from the configuration as it is now.
      */
     public function syncItemScore(int $assessmentId, int $studentId): void
     {
@@ -57,7 +58,7 @@ class GradebookSyncService
 
         $this->writeScore($item, $scheme, $studentId);
 
-        if ($scheme['status'] === 'Published' && empty($scheme['needs_recalculation'])) {
+        if ($scheme['status'] === 'Published') {
             (new GradingEngineService())->recalculateStudent((int) $scheme['course_offering_id'], $studentId);
         }
     }

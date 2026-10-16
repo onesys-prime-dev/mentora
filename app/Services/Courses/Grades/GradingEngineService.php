@@ -132,7 +132,7 @@ class GradingEngineService
 
         $categories = $this->categoryModel->listForScheme((int) $scheme['id']);
 
-        $items = $this->itemModel->listForScheme((int) $scheme['id']);
+        $items = $this->itemModel->listForScheme((int) $scheme['id'], true);
 
         return [
             'offeringId' => $offeringId,

@@ -325,7 +325,7 @@ class GradingSchemeService
 
         (new GradebookSyncService())->setManualScore($offeringId, $itemId, $studentId, $score, $user->id);
 
-        $refreshed = $scheme['status'] === 'Published' && empty($scheme['needs_recalculation']);
+        $refreshed = $scheme['status'] === 'Published';
 
         if ($refreshed) {
             (new GradingEngineService())->recalculateStudent($offeringId, $studentId);
@@ -335,7 +335,7 @@ class GradingSchemeService
 
         return [
             'success' => true,
-            'message' => $refreshed ? 'Score saved.' : 'Score saved. Recalculate to update final grades.',
+            'message' => $refreshed ? 'Score saved.' : 'Score saved. Final grades update once the grading is published.',
             'percentage' => \App\Models\Assessments\GradebookRecordModel::effectivePercentage($recordModel->findForStudent($offeringId, $studentId)),
         ];
     }

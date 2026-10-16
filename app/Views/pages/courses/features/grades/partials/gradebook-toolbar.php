@@ -27,7 +27,7 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 
             <span class="text-sm text-[#767676]">
                 <?= esc($scheme['name'] ?? 'Grading Scheme') ?>
-                · Passing <?= esc(rtrim(rtrim(number_format((float) ($scheme['passing_percentage'] ?? 75), 2), '0'), '.')) ?>%
+                · Passing <?= esc(rtrim(rtrim(number_format((float) ($scheme['passing_percentage'] ?? \App\Services\Institutions\AcademicDefaults::PLATFORM_PASSING), 2), '0'), '.')) ?>%
                 <?php if (!empty($scheme['last_recalculated_at'])): ?>
                     · Last calculated <?= esc(date('M j, g:i A', strtotime($scheme['last_recalculated_at']))) ?>
                 <?php endif; ?>

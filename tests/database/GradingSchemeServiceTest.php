@@ -557,7 +557,7 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
         $this->assertSame(75.0, $result['percentage'], 'quizzes are the only graded category: 15/20');
     }
 
-    public function testAScoreWhileARecalculationIsPendingDoesNotTouchFinalGrades(): void
+    public function testAScoreWhileARecalculationIsPendingStillUpdatesTheStudentsGrade(): void
     {
         $itemId = $this->quizItem();
         $this->service->updateCategory($this->offering, $this->categoryId('Exams'), ['weight_percentage' => 60]);
@@ -565,8 +565,8 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
 
         $result = $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 15);
 
-        $this->assertSame('Score saved. Recalculate to update final grades.', $result['message']);
-        $this->assertNull($result['percentage']);
+        $this->assertSame('Score saved.', $result['message']);
+        $this->assertNotNull($result['percentage']);
         $this->assertSame(1, db_connect()->table('gradebook_item_scores')->where('grade_item_id', $itemId)->countAllResults());
     }
 
@@ -577,7 +577,7 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
 
         $result = $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 15);
 
-        $this->assertSame('Score saved. Recalculate to update final grades.', $result['message']);
+        $this->assertSame('Score saved. Final grades update once the grading is published.', $result['message']);
     }
 
     public function testClearingAScoreLeavesTheItemUngraded(): void

@@ -713,24 +713,24 @@ final class GradeSheetTest extends DatabaseTestCase
         $this->assertEquals(100.0, $record['calculated_percentage']);
     }
 
-    public function testAnUnpublishedSchemeAsksForARecalculationInstead(): void
+    public function testAnUnpublishedSchemeLeavesFinalGradesUntilItIsPublished(): void
     {
         db_connect()->table('grading_schemes')->where('id', $this->schemeId)->update(['status' => 'Active', 'needs_recalculation' => 0]);
 
         $result = $this->apply([$this->change($this->bob, $this->attendance, 10)]);
 
-        $this->assertStringContainsString('Recalculate to update final grades.', $result['message']);
+        $this->assertStringContainsString('Final grades update once the grading is published.', $result['message']);
         $this->assertSame(0, db_connect()->table('gradebook_records')->where('student_id', $this->bob->id)->countAllResults());
     }
 
-    public function testASchemeWaitingOnARecalculationIsNotRefreshedEither(): void
+    public function testASchemeWaitingOnARecalculationIsStillRefreshedPerStudent(): void
     {
         db_connect()->table('grading_schemes')->where('id', $this->schemeId)->update(['status' => 'Published', 'needs_recalculation' => 1]);
 
         $result = $this->apply([$this->change($this->bob, $this->attendance, 10)]);
 
-        $this->assertStringContainsString('Recalculate', $result['message']);
-        $this->assertSame(0, db_connect()->table('gradebook_records')->where('student_id', $this->bob->id)->countAllResults());
+        $this->assertStringNotContainsString('Recalculate', $result['message']);
+        $this->assertSame(1, db_connect()->table('gradebook_records')->where('student_id', $this->bob->id)->countAllResults());
     }
 
     public function testPreviewThenApplyRoundTrip(): void
