@@ -84,7 +84,7 @@ describe("a fast load", () => {
 });
 
 describe("a slow load", () => {
-    it("dims the old screen and shows the progress bar only after 150 ms", async () => {
+    it("keeps the old screen as it is and shows the progress bar only after 150 ms", async () => {
         const load = deferred();
 
         const swap = swapContent(container, () => load.promise);
@@ -94,7 +94,7 @@ describe("a slow load", () => {
         expect(barShown()).toBe(false);
 
         vi.advanceTimersByTime(1);
-        expect(container.classList.contains("spa-loading")).toBe(true);
+        expect(container.classList.contains("spa-loading")).toBe(false);
         expect(bar().classList.contains("is-active")).toBe(true);
         expect(bar().getAttribute("role")).toBe("progressbar");
         expect(container.innerHTML).toBe("<p>old screen</p>");

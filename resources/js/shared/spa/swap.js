@@ -71,10 +71,8 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
             return;
         }
 
-        if (mode === "navigate" && hasContent) {
-            container.classList.add("spa-loading");
-        }
-
+        // The old screen is left as it is: the bar is the only signal on a slow swap,
+        // a skeleton is the only one when there is none to keep. Nothing is dimmed.
         barOn = true;
 
         progress(true);

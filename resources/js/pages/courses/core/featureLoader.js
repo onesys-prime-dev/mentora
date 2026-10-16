@@ -43,13 +43,11 @@ const skeletons = {
 
 /**
  * Replaces what is in the region with the tab's loading shape. The old screen
- * stays (dimmed) until the shape is ready, so the region never blinks empty.
- * Marked like a server skeleton so the screen's own loader does not draw a
- * second one over it.
+ * is left exactly as it is until the shape is ready (no dimming, no fading:
+ * the skeleton is the only loading effect). Marked like a server skeleton so
+ * the screen's own loader does not draw a second one over it.
  */
 async function drawTabSkeleton(feature, content, isCurrent) {
-
-    content.classList.add("spa-loading");
 
     let html = null;
 
@@ -66,8 +64,6 @@ async function drawTabSkeleton(feature, content, isCurrent) {
     if (!isCurrent()) {
         return;
     }
-
-    content.classList.remove("spa-loading");
 
     if (html === null) {
 
@@ -221,7 +217,6 @@ export async function loadFeature(feature)
     } catch (error) {
         console.error(error);
         content?.removeAttribute("aria-busy");
-        content?.classList.remove("spa-loading");
         releaseServerSkeleton(content);
         endProgress();
         return;
