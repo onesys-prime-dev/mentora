@@ -66,17 +66,17 @@ final class DeanCoursesPageTest extends RouteTestCase
         $this->assertStringContainsString('2 courses', $body);
     }
 
-    public function testACardNamesTheInstructorAndTheChairpersonAndIsNotALink(): void
+    public function testACardNamesTheInstructorAndTheChairpersonAndOpensTheViewOnlyCourse(): void
     {
         $offering = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
         CourseFactory::assignInstructor($offering, PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution));
         DeanFactory::chair($this->subA, 'Maria');
 
-        $body = $this->page();
+        $body = html_entity_decode($this->page());
 
         $this->assertStringContainsString('Instr. Tess Tan', $body);
         $this->assertStringContainsString('Chair Maria Chair', $body);
-        $this->assertStringNotContainsString('/courses/' . $offering, $body, 'opening a course is a later branch');
+        $this->assertStringContainsString('href="' . site_url("dean/courses/{$offering}/intro-to-computing") . '"', $body);
     }
 
     public function testFiltersInTheAddressNarrowTheListAndShowAClearLink(): void
