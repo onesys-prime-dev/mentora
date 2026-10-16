@@ -54,6 +54,20 @@ class MonitorDepartmentService
     }
 
     /**
+     * The department's audit log: what chairpersons changed in the department's courses, newest
+     * first, within the filters: who did it, what, when and as which role. Whoever took the
+     * action; the department's offerings are the boundary.
+     *
+     * @return array{rows: list<array<string, mixed>>, total: int}
+     */
+    public function auditLog(User $user, MonitorDepartmentFilters $filters, int $page = 1, int $perPage = 10): array
+    {
+        $offeringRows = $this->monitor->offeringRowsForPrograms($this->programIds($user, $filters), $filters->base);
+
+        return $this->monitor->auditEntries(null, $offeringRows, $filters->base, $page, $perPage);
+    }
+
+    /**
      * The terms the department's courses run in, for the term filter.
      *
      * @return list<array<string, mixed>>

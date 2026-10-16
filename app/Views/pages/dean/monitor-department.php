@@ -170,7 +170,11 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
                         <?php foreach ($groups as $group): ?>
                             <tr class="border-b border-gray-50 hover:bg-gray-50" data-group="<?= (int) $group['id'] ?>">
                                 <th scope="row" class="px-3 py-2 font-semibold text-[#1A1C1E]">
-                                    <?= esc($group['name']) ?>
+                                    <?php if ($filters->compare === 'program'): ?>
+                                        <a data-program-link class="text-brand hover:underline" href="<?= esc(site_url('dean/monitor-department/programs/' . (int) $group['id']) . (($carry = http_build_query($filters->base->toQuery())) === '' ? '' : '?' . $carry)) ?>"><?= esc($group['name']) ?></a>
+                                    <?php else: ?>
+                                        <?= esc($group['name']) ?>
+                                    <?php endif; ?>
                                     <?php if (! empty($group['context'])): ?><span class="block text-xs font-normal text-[#646464]"><?= esc($group['context']) ?></span><?php endif; ?>
                                 </th>
                                 <td class="px-3 py-2"><?= esc(number_format((int) $group['students'])) ?></td>
@@ -209,6 +213,61 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
                         </li>
                     <?php endforeach; ?>
                 </ul>
+            <?php endif; ?>
+        </section>
+
+        <section class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm" aria-labelledby="audit-heading" data-section="audit">
+            <div class="flex flex-col gap-0.5">
+                <h2 id="audit-heading" class="text-sm font-semibold text-[#1A1C1E]">Audit log</h2>
+                <p class="text-xs text-[#646464]">What chairpersons changed in your department's courses: who, what, when and as which role.</p>
+            </div>
+
+            <?php if ($audit['rows'] === []): ?>
+                <p class="text-sm text-[#646464]" data-audit-empty>No changes recorded<?= $filters->isFiltered() ? ' for these filters' : ' yet' ?>.</p>
+            <?php else: ?>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <caption class="sr-only">Changes chairpersons made in the department's courses, newest first</caption>
+                        <thead>
+                            <tr class="border-b border-gray-100 text-xs text-[#646464]">
+                                <th scope="col" class="px-3 py-2 font-semibold">Who</th>
+                                <th scope="col" class="px-3 py-2 font-semibold">What</th>
+                                <th scope="col" class="px-3 py-2 font-semibold">Course</th>
+                                <th scope="col" class="px-3 py-2 font-semibold">Acting as</th>
+                                <th scope="col" class="px-3 py-2 font-semibold">When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($audit['rows'] as $entry): ?>
+                                <tr class="border-b border-gray-50" data-audit-entry>
+                                    <td class="px-3 py-2"><?= esc($entry['actor'] ?? '—') ?></td>
+                                    <td class="px-3 py-2"><?= esc($entry['description']) ?></td>
+                                    <td class="px-3 py-2">
+                                        <?php if ($entry['offering_id'] !== null && $entry['slug'] !== null): ?>
+                                            <a class="font-semibold text-brand hover:underline" href="<?= esc(site_url('dean/courses/' . $entry['offering_id'] . '/' . $entry['slug'])) ?>"><?= esc($entry['course_code']) ?> <?= esc($entry['section_code']) ?></a>
+                                        <?php else: ?>
+                                            —
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="px-3 py-2"><?= esc(ucfirst((string) ($entry['acting_role'] ?? '—'))) ?></td>
+                                    <td class="px-3 py-2 text-[#646464]"><?= esc($entry['created_at']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <nav class="flex items-center justify-between text-sm" aria-label="Audit log pages">
+                    <span class="text-gray-600">Page <?= esc((string) $auditPage) ?> of <?= esc((string) $auditPages) ?> · <?= esc(number_format($audit['total'])) ?> in all</span>
+                    <span class="flex gap-3">
+                        <?php if ($auditPage > 1): ?>
+                            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['audit_page' => $auditPage > 2 ? $auditPage - 1 : null])) ?>">Previous</a>
+                        <?php endif; ?>
+                        <?php if ($auditPage < $auditPages): ?>
+                            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['audit_page' => $auditPage + 1])) ?>">Next</a>
+                        <?php endif; ?>
+                    </span>
+                </nav>
             <?php endif; ?>
         </section>
 
