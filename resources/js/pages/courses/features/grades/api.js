@@ -124,3 +124,15 @@ export async function previewGradeSheet(formData)
 }
 
 export const applyGradeSheet = (payload) => request(`${base()}/import/apply`, "POST", payload);
+
+/*
+|--------------------------------------------------------------------------
+| Requests to override a final grade (where the institution has deans)
+|--------------------------------------------------------------------------
+*/
+
+export const updateOverrideRequest = (requestId, percentage, reason) =>
+    request(`${base()}/override-requests/${requestId}`, "PATCH", { percentage, reason });
+
+export const withdrawOverrideRequest = (requestId) =>
+    request(`${base()}/override-requests/${requestId}`, "DELETE");

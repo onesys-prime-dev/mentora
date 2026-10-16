@@ -92,6 +92,8 @@ if (! function_exists('global_apps')) {
             ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
             // Chairperson-only; an inert tile everywhere else, same as grades/announcements/inbox above.
             ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => $role === 'chairperson' ? site_url($role . '/monitor-program') : null],
+            // Chairperson-only, like Monitor Program: grade-override requests to endorse. Not a tile for anyone else.
+            ...($role === 'chairperson' ? [['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')]] : []),
         ];
     }
 }

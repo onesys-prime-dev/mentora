@@ -71,7 +71,11 @@ final class DeanFactory
 
     public static function chair(int $subDepartment, string $first = 'Maria', string $status = 'active'): User
     {
-        $chair = PeopleFactory::person('chairperson', $first, 'Chair');
+        // A chairperson belongs to the institution of the sub-department they chair.
+        $institution = (int) db_connect()->table('sub_departments sd')->select('d.institution_id')
+            ->join('departments d', 'd.id = sd.department_id')->where('sd.id', $subDepartment)->get()->getRow('institution_id');
+
+        $chair = PeopleFactory::person('chairperson', $first, 'Chair', null, $institution);
 
         db_connect()->table('chairperson_assignments')->insert([
             'sub_department_id' => $subDepartment, 'chairperson_user_id' => $chair->id, 'status' => $status, 'assigned_at' => date('Y-m-d H:i:s'),
