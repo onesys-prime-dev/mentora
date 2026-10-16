@@ -120,11 +120,77 @@ class QuestionService
 
         $this->questionModel->recalculateAssessmentTotal($question['assessment_id']);
 
+        // The answer key, points or type may have changed: answers already
+        // handed in are marked against the key as it is now.
+        $this->regradeAnswers($questionId, (int) $question['assessment_id']);
+
         return [
             'success' => true,
             'message' => 'Question updated successfully.',
             'question' => $this->questionModel->getWithChoices($questionId),
         ];
+    }
+
+    /**
+     * Re-marks every handed-in answer to this question that was graded
+     * automatically, against the question as it is now, then brings each
+     * affected attempt's total (and the gradebook) in step. An answer the
+     * instructor graded by hand is left as they set it.
+     */
+    private function regradeAnswers(int $questionId, int $assessmentId): void
+    {
+        $question = $this->questionModel->getWithChoices($questionId);
+
+        $attempts = new QuizAttemptService();
+
+        if (!$question || !$attempts->isAutoGradable($question)) {
+            return;
+        }
+
+        $assessment = $this->assessmentModel->find($assessmentId);
+
+        $responseModel = new \App\Models\Assessments\AssessmentQuestionResponseModel();
+
+        $rows = $responseModel
+            ->select('assessment_question_responses.*, assessment_submissions.student_id AS student_id')
+            ->join('assessment_submissions', 'assessment_submissions.id = assessment_question_responses.submission_id')
+            ->where('assessment_question_responses.question_id', $questionId)
+            ->where('assessment_question_responses.is_auto_graded', 1)
+            ->whereIn('assessment_submissions.status', AssessmentResultService::FINISHED_STATUSES)
+            ->findAll();
+
+        if ($rows === []) {
+            return;
+        }
+
+        $submissions = new \App\Models\Assessments\AssessmentSubmissionModel();
+
+        $sync = new \App\Services\Courses\Grades\GradebookSyncService();
+
+        $totalPoints = (float) ($assessment['total_points'] ?? 0);
+
+        $now = date('Y-m-d H:i:s');
+
+        foreach ($rows as $row) {
+
+            $responseModel->update($row['id'], [
+                'score' => $attempts->computeAutoScore($question, $row),
+                'graded_at' => $now,
+            ]);
+
+            $score = (float) ($responseModel
+                ->selectSum('score')
+                ->where('submission_id', $row['submission_id'])
+                ->first()['score'] ?? 0);
+
+            $submissions->update($row['submission_id'], [
+                'score' => $score,
+                'percentage' => $totalPoints > 0 ? round(($score / $totalPoints) * 100, 2) : 0.0,
+            ]);
+
+            $sync->syncItemScore($assessmentId, (int) $row['student_id']);
+
+        }
     }
 
     public function duplicateQuestion(User $user, int $questionId): array

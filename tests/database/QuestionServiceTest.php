@@ -257,6 +257,58 @@ final class QuestionServiceTest extends DatabaseTestCase
         $this->assertSame($choiceA, (int) $this->choices($id)[0]['id'], 'choice A is the same row');
     }
 
+    public function testChangingTheCorrectChoiceRegradesAnswersAlreadyHandedIn(): void
+    {
+        $id = (int) $this->add(['question_text' => 'Q', 'question_type' => 'Multiple Choice', 'points' => 2, 'choices' => [
+            ['text' => 'A', 'is_correct' => true], ['text' => 'B'], ['text' => 'C'],
+        ]])['question']['id'];
+
+        $choiceA = (int) $this->choices($id)[0]['id'];
+        $student = CourseFactory::user('student');
+        $attempt = AssessmentFactory::attempt($this->quiz, $student, 'Graded', 2.0, ['percentage' => 100]);
+        $response = AssessmentFactory::response($attempt, $id, [
+            'selected_choice_id' => $choiceA,
+            'score' => 2.0,
+            'is_auto_graded' => 1,
+        ]);
+
+        $this->service->updateQuestion($this->instructor, $id, ['choices' => [
+            ['text' => 'A'], ['text' => 'B', 'is_correct' => true], ['text' => 'C'],
+        ]]);
+
+        $this->assertEquals(0.0, (float) $this->row('assessment_question_responses', $response)['score'], 'A is no longer the key');
+        $submission = $this->row('assessment_submissions', $attempt);
+        $this->assertEquals(0.0, (float) $submission['score']);
+        $this->assertEquals(0.0, (float) $submission['percentage']);
+
+        // And back again: the same answer is correct once more.
+        $this->service->updateQuestion($this->instructor, $id, ['choices' => [
+            ['text' => 'A', 'is_correct' => true], ['text' => 'B'], ['text' => 'C'],
+        ]]);
+
+        $this->assertEquals(2.0, (float) $this->row('assessment_question_responses', $response)['score']);
+        $this->assertEquals(2.0, (float) $this->row('assessment_submissions', $attempt)['score']);
+    }
+
+    public function testAnAnswerTheInstructorGradedByHandIsNotRegraded(): void
+    {
+        $id = (int) $this->add(['question_text' => 'Q', 'question_type' => 'Multiple Choice', 'points' => 2, 'choices' => [
+            ['text' => 'A', 'is_correct' => true], ['text' => 'B'],
+        ]])['question']['id'];
+
+        $choiceB = (int) $this->choices($id)[1]['id'];
+        $attempt = AssessmentFactory::attempt($this->quiz, CourseFactory::user('student'), 'Graded', 2.0);
+        $response = AssessmentFactory::response($attempt, $id, [
+            'selected_choice_id' => $choiceB,
+            'score' => 2.0,
+            'is_auto_graded' => 0,
+        ]);
+
+        $this->service->updateQuestion($this->instructor, $id, ['choices' => [['text' => 'A'], ['text' => 'B', 'is_correct' => false]]]);
+
+        $this->assertEquals(2.0, (float) $this->row('assessment_question_responses', $response)['score'], "the instructor's own mark stands");
+    }
+
     public function testAnEditedChoiceTextAndAReorderKeepTheStudentsPick(): void
     {
         $id = (int) $this->add(['question_text' => 'Q', 'question_type' => 'Multiple Choice', 'choices' => [
