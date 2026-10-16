@@ -36,6 +36,25 @@ export function setupComposer(root, onSaved) {
     let threadId = null;
     let attachments = [];
 
+    // Editing an opening post swaps the composer in for it; closing puts both back.
+    const home = document.createComment("composer-home");
+    host.before(home);
+
+    let replaced = null;
+
+    const restore = () => {
+
+        if (replaced) {
+            replaced.classList.remove("hidden");
+            replaced = null;
+        }
+
+        if (home.parentNode && host.previousSibling !== home) {
+            home.after(host);
+        }
+
+    };
+
     const refresh = () => {
         submit.disabled = titleInput.value.trim() === "";
     };
@@ -73,6 +92,8 @@ export function setupComposer(root, onSaved) {
     const close = () => {
 
         destroyComposerEditor();
+
+        restore();
 
         host.classList.add("hidden");
         host.classList.remove("flex");
@@ -170,8 +191,16 @@ export function setupComposer(root, onSaved) {
 
     return {
 
-        /** @param {{ mode?: "create"|"edit", threadId?: number, title?: string, message?: string, attachments?: array }} options */
-        open({ mode: m = "create", threadId: id = null, title = "", message = "{}", attachments: existing = [] } = {}) {
+        /** @param {{ mode?: "create"|"edit", threadId?: number, title?: string, message?: string, attachments?: array, replace?: HTMLElement|null }} options */
+        open({ mode: m = "create", threadId: id = null, title = "", message = "{}", attachments: existing = [], replace = null } = {}) {
+
+            restore();
+
+            if (replace) {
+                replaced = replace;
+                replace.classList.add("hidden");
+                replace.after(host);
+            }
 
             mode = m;
             threadId = id;
