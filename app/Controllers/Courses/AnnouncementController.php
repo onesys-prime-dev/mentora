@@ -62,6 +62,7 @@ class AnnouncementController extends BaseController
             'message' => isset($data['message'])
                 ? (string) $data['message']
                 : announcement_message_from_text((string) ($data['body'] ?? '')),
+            'attachment_file_ids' => $data['attachment_file_ids'] ?? [],
         ]);
 
         return $this->response

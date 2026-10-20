@@ -150,7 +150,7 @@ $legend = [
     role="dialog"
     aria-modal="true">
 
-    <div class="flex max-h-full w-full max-w-lg flex-col gap-5 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+    <div class="flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
 
         <div class="flex items-center justify-between">
             <span data-calendar-modal-title class="text-lg font-bold text-brand"></span>

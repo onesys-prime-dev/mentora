@@ -1032,7 +1032,7 @@ async function submitAssessmentForm(e)
 
 function openAnnouncementForm()
 {
-    openModal("Add Announcement");
+    openModal("Post Announcement");
 
     const template = document.getElementById("calendar-announcement-composer");
 
@@ -1064,11 +1064,9 @@ function openAnnouncementForm()
     const subjectInput = composer.querySelector("[data-composer-subject]");
     const submitButton = composer.querySelector("[data-composer-submit]");
 
-    // The page's own composer, minus what only makes sense on a course's page:
-    // discarding (the modal closes instead) and attachments (they upload per course).
+    // The page's own composer, minus discarding (the modal closes instead).
     composer.querySelector("[data-composer-dismiss]")?.classList.add("hidden");
-    composer.querySelector("[data-composer-attach]")?.classList.add("hidden");
-    submitButton.textContent = "Post Announcement";
+    composer.querySelector("#announcement-editor")?.classList.add("min-h-[180px]");
 
     initializeComposerEditor("announcement-editor");
     initializeComposerToolbar(composer);
@@ -1098,6 +1096,86 @@ function openAnnouncementForm()
 
     });
 
+    // Attachments: same endpoint, limit and chips as the course page, uploaded
+    // against whichever course is chosen in the dropdown.
+    const attachmentsBox = composer.querySelector("[data-composer-attachments]");
+    const fileInput = composer.querySelector("[data-composer-file-input]");
+    const attachments = [];
+
+    form._attachments = attachments;
+
+    const renderAttachments = () => {
+
+        attachmentsBox.innerHTML = "";
+
+        attachments.forEach((file, index) => {
+
+            const chip = document.createElement("div");
+            chip.className = "flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs text-gray-600";
+
+            const name = document.createElement("span");
+            name.className = "max-w-[140px] truncate";
+            name.textContent = file.original_filename;
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "text-[#767676] hover:text-red-500";
+            remove.textContent = "×";
+            remove.addEventListener("click", () => {
+                attachments.splice(index, 1);
+                renderAttachments();
+            });
+
+            chip.append(name, remove);
+            attachmentsBox.appendChild(chip);
+
+        });
+
+    };
+
+    composer.querySelector("[data-composer-attach]")?.addEventListener("click", () => fileInput?.click());
+
+    fileInput?.addEventListener("change", async () => {
+
+        for (const file of Array.from(fileInput.files ?? [])) {
+
+            if (attachments.length >= 10) {
+                alert("You can attach up to 10 files.");
+                break;
+            }
+
+            try {
+
+                const body = new FormData();
+                body.append("file", file);
+
+                const response = await fetch(`${coursesApiBase}/${form.offering_id.value}/announcements/attachments`, {
+                    method: "POST",
+                    headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" },
+                    body,
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    alert(result.message || "Unable to upload that file.");
+                    continue;
+                }
+
+                attachments.push(result);
+                renderAttachments();
+
+            } catch (error) {
+                console.error(error);
+                alert("Unable to upload that file.");
+            }
+
+        }
+
+        fileInput.value = "";
+
+    });
+
     form.addEventListener("submit", submitAnnouncementForm);
     submitButton.addEventListener("click", () => form.requestSubmit());
 
@@ -1124,6 +1202,7 @@ async function submitAnnouncementForm(e)
                 offering_id: form.offering_id.value,
                 subject: form.querySelector("[data-composer-subject]").value.trim(),
                 message: JSON.stringify(serializeMessage(getComposerEditor())),
+                attachment_file_ids: (form._attachments ?? []).map((file) => file.file_id),
             }),
         });
 
