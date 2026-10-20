@@ -83,18 +83,22 @@ if (! function_exists('global_apps')) {
             ];
         }
 
-        return [
+        $apps = [
             ['key' => 'courses',       'label' => 'Courses',       'icon' => 'hat',          'url' => site_url($role . '/courses')],
             ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],
             ['key' => 'schedule',      'label' => 'Schedule',      'icon' => 'clock',        'url' => site_url($role . '/schedule')],
             ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
             ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => null],
             ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
-            // Chairperson-only; an inert tile everywhere else, same as grades/announcements/inbox above.
-            ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => $role === 'chairperson' ? site_url($role . '/monitor-program') : null],
-            // Chairperson-only, like Monitor Program: grade-override requests to endorse. Not a tile for anyone else.
-            ...($role === 'chairperson' ? [['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')]] : []),
         ];
+
+        // Two of the chairperson's own pages. No other role is shown these tiles.
+        if ($role === 'chairperson') {
+            $apps[] = ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url($role . '/monitor-program')];
+            $apps[] = ['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')];
+        }
+
+        return $apps;
     }
 }
 

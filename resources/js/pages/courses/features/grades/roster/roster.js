@@ -14,6 +14,9 @@ import { renderGradebookSkeleton } from "../skeleton.js";
 import { fetchGradebookRoster, updateManualScore, overrideGrade, updateOverrideRequest, withdrawOverrideRequest } from "../api.js";
 import { bindModal } from "../../assessments/modals/index.js";
 import { overrideDialogState } from "./override-dialog.js";
+import { bindIncompleteDialog } from "./incomplete-dialog.js";
+import { bindReportTriggers } from "../reports/report-menu.js";
+import { bindRosterControls } from "./roster-view.js";
 
 let backToGrades = null;
 let overrideModal = null;
@@ -87,11 +90,19 @@ function bind(container)
 
             timers.set(key, setTimeout(async () => {
 
-                const value = input.value === "" ? null : Number(input.value);
+                const typed = input.value.trim();
+                const excused = /^ex(cused)?$/i.test(typed);
+                const value = typed === "" || excused ? null : Number(typed);
+
+                if (Number.isNaN(value)) {
+                    setStatus("error");
+                    input.title = "Enter a number, or EX to excuse the student from this item.";
+                    return;
+                }
 
                 try {
 
-                    const result = await updateManualScore(input.dataset.itemId, row.dataset.studentId, value);
+                    const result = await updateManualScore(input.dataset.itemId, row.dataset.studentId, value, excused);
 
                     if (result.success === false) {
                         setStatus("error");
@@ -100,6 +111,8 @@ function bind(container)
                     }
 
                     input.title = "";
+                    input.classList.toggle("bg-gray-50", excused);
+                    input.classList.toggle("font-semibold", excused);
                     setStatus("saved");
 
                     updateFinalCell(row, result.percentage);
@@ -127,6 +140,12 @@ function bind(container)
     });
 
     bindOverrideForm();
+
+    bindIncompleteDialog(container, () => loadGradebookRoster(backToGrades));
+
+    bindReportTriggers(container);
+
+    bindRosterControls(container);
 }
 
 function updateFinalCell(row, percentage)

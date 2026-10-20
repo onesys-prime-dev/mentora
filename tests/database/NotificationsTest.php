@@ -156,6 +156,41 @@ final class NotificationsTest extends DatabaseTestCase
         $this->assertSame(['Two', 'One'], array_column($service->listFor($this->boss), 'title'), 'newest first');
     }
 
+    public function testThePanelGetsSevenAtATimeNewestFirstAndSaysWhenThereAreMore(): void
+    {
+        $service = new NotificationService();
+
+        for ($i = 1; $i <= 10; $i++) {
+            $service->send($this->boss, 'x', 'Note ' . $i, 'b', false, 'k' . $i, null, null, $this->now);
+        }
+
+        $service->send($this->admin, 'x', 'Not yours', 'b', false, 'k1', null, null, $this->now);
+
+        $first = $service->page($this->boss);
+
+        $this->assertSame(['Note 10', 'Note 9', 'Note 8', 'Note 7', 'Note 6', 'Note 5', 'Note 4'], array_column($first['rows'], 'title'));
+        $this->assertTrue($first['has_more']);
+
+        $second = $service->page($this->boss, (int) end($first['rows'])['id']);
+
+        $this->assertSame(['Note 3', 'Note 2', 'Note 1'], array_column($second['rows'], 'title'));
+        $this->assertFalse($second['has_more']);
+    }
+
+    public function testAnExactlyFullLastBatchHasNoMore(): void
+    {
+        $service = new NotificationService();
+
+        for ($i = 1; $i <= 7; $i++) {
+            $service->send($this->boss, 'x', 'Note ' . $i, 'b', false, 'k' . $i, null, null, $this->now);
+        }
+
+        $page = $service->page($this->boss);
+
+        $this->assertCount(7, $page['rows']);
+        $this->assertFalse($page['has_more']);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Recipients

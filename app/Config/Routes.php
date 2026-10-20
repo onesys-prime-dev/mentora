@@ -37,6 +37,7 @@ $routes->group('internal/ai', ['filter' => 'aiworker'], function ($routes) {
 
 // A signed-in person's own notifications, for every role.
 $routes->get('notifications', 'NotificationController::index', ['filter' => 'session']);
+$routes->get('notifications/feed', 'NotificationController::feed', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
@@ -104,6 +105,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
+        $routes->get('(:num)/grades/report/mine', 'Courses\Grades\GradeReportController::mine/$1');
     });
 });
 
@@ -258,6 +260,10 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
 
         // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/categories/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreCategory/$1/$2');
+        $routes->post('(:num)/grades/scheme/items/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreItem/$1/$2');
+        $routes->patch('(:num)/grades/scheme/categories/order', 'Courses\Grades\GradingSchemeController::reorderCategories/$1');
+        $routes->patch('(:num)/grades/scheme/categories/(:num)/items/order', 'Courses\Grades\GradingSchemeController::reorderItems/$1/$2');
         $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
         $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
         $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');
@@ -266,6 +272,17 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+        $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
+
+        // Finalize the section's grades, or reopen them with a reason.
+        // Grading on a curve: what is in force, a preview, applying, and taking one off.
+        $routes->get('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::show/$1');
+        $routes->post('(:num)/grades/curve/preview', 'Courses\Grades\GradeAdjustmentController::preview/$1');
+        $routes->post('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::apply/$1');
+        $routes->delete('(:num)/grades/curve/(:num)', 'Courses\Grades\GradeAdjustmentController::undo/$1/$2');
+        $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
+        $routes->post('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::finalize/$1');
+        $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
 
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.
@@ -274,6 +291,9 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
@@ -320,6 +340,9 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
     });
 });
 
@@ -500,6 +523,10 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
 
         // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/categories/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreCategory/$1/$2');
+        $routes->post('(:num)/grades/scheme/items/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreItem/$1/$2');
+        $routes->patch('(:num)/grades/scheme/categories/order', 'Courses\Grades\GradingSchemeController::reorderCategories/$1');
+        $routes->patch('(:num)/grades/scheme/categories/(:num)/items/order', 'Courses\Grades\GradingSchemeController::reorderItems/$1/$2');
         $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
         $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
         $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');
@@ -508,6 +535,16 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+        $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
+
+        // The chairperson sees where the grades stand and may reopen them with a reason (finalizing is the instructor's).
+        // Grading on a curve: what is in force, a preview, applying, and taking one off.
+        $routes->get('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::show/$1');
+        $routes->post('(:num)/grades/curve/preview', 'Courses\Grades\GradeAdjustmentController::preview/$1');
+        $routes->post('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::apply/$1');
+        $routes->delete('(:num)/grades/curve/(:num)', 'Courses\Grades\GradeAdjustmentController::undo/$1/$2');
+        $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
+        $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
 
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.
@@ -516,6 +553,9 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
 
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
@@ -637,6 +677,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
             $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
             $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+            $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+            $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+            $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         });
 
         // The subscription, to read (institution.settings), and the SIS connection's runs (sis.run):

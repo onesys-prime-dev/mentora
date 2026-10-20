@@ -139,7 +139,7 @@ final class DeanCourseViewTest extends RouteTestCase
 
     public function testAnotherDepartmentsCourseIsNotFoundOnEveryReadingRouteInTheSameInstitutionOrAnother(): void
     {
-        $paths = ['overview', 'announcements', 'announcements/more', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster', 'grades/export'];
+        $paths = ['overview', 'announcements', 'announcements/more', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster', 'grades/export', 'grades/report/class', 'grades/report/summary'];
 
         foreach (['another department' => $this->sibling, 'another institution' => $this->foreign] as $where => $offering) {
             foreach ($paths as $path) {

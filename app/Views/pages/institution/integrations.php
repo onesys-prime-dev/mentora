@@ -35,6 +35,12 @@ foreach ($c['runs'] as $i => $run) {
     ];
 }
 
+$gradeIssueRows = [];
+
+foreach (($c['latestGrades']['issues'] ?? []) as $i => $issue) {
+    $gradeIssueRows[] = ['id' => $i, 'label' => $issue['item'], 'cells' => ['record' => $issue['item'], 'reason' => $issue['reason']]];
+}
+
 $issueRows = [];
 
 if ($c['latest'] !== null) {
@@ -134,7 +140,7 @@ if ($c['latest'] !== null) {
 
         <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="grades-heading" data-section="grades">
             <h2 id="grades-heading" class="text-sm font-bold text-brand">Final grades to the SIS</h2>
-            <p class="mt-1 text-sm text-[#3D3D3D]">Only final grades go out (course, student, percentage, remarks), and only those new or changed since they were last sent. Sending the same grades again replaces the delivery, so nothing is duplicated. Sending asks for your password.</p>
+            <p class="mt-1 text-sm text-[#3D3D3D]">Only final grades go out (course, student, percentage, remarks): a section's grades are final once its instructor finalizes them. Only those new or changed since they were last sent are included. Sending the same grades again replaces the delivery, so nothing is duplicated. Sending asks for your password.</p>
 
             <div class="mt-4 flex flex-wrap gap-3">
                 <form method="post" action="<?= esc(site_url($base . '/grades/preview')) ?>"><?= csrf_field() ?>
@@ -144,6 +150,25 @@ if ($c['latest'] !== null) {
                     <button type="submit" class="<?= $primary ?>" data-grades-send <?= $running ? '' : 'disabled' ?>>Send final grades now</button>
                 </form>
             </div>
+
+            <?php if (($c['latestGrades'] ?? null) !== null): ?>
+                <h3 class="mt-5 text-sm font-semibold text-[#1A1C1E]" data-latest-grades>
+                    Latest <?= $c['latestGrades']['dry_run'] ? 'preview' : 'send' ?>: <?= esc($c['latestGrades']['message']) ?>
+                </h3>
+
+                <?php if ($gradeIssueRows !== []): ?>
+                    <div class="mt-3" data-grade-issues>
+                        <?= view('components/data-table', [
+                            'caption' => 'Grades that were not sent',
+                            'columns' => [['key' => 'record', 'label' => 'Student or section'], ['key' => 'reason', 'label' => 'Why it was not sent']],
+                            'rows'    => $gradeIssueRows,
+                        ], ['saveData' => false]) ?>
+                        <?php if ($c['latestGrades']['truncated']): ?>
+                            <p class="mt-2 text-xs text-[#646464]">Only the first part is listed; the counts cover every grade.</p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
         </section>
 
     <?php endif; ?>

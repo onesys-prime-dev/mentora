@@ -343,7 +343,7 @@ class AcademicDefaults
                 'institution_id'      => $institutionId,
                 'name'                => 'Institution default',
                 'is_system_default'   => 0,
-                'passing_percentage'  => 75,
+                'passing_percentage'  => self::PLATFORM_PASSING,
                 'status'              => 'Published',
                 'needs_recalculation' => 0,
                 'created_at'          => $now,

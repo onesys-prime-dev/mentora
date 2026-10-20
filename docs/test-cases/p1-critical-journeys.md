@@ -352,8 +352,8 @@ works on a fresh seed. A full run needs a fresh seed.
 - **Data:** `student1@mentora.test`, course IT101-A (all work graded except Lab 1, which is submitted and waiting; the grading scheme is published by default, to confirm on the seeded data)
 - **Steps:** open IT101-A and its Grades.
 - **Expected:**
-  - The page shows the overall grade (**90.00%**), points earned (**63/70**, "3 of 4 graded") and the standing "On track: Passed".
-  - "How your grade is calculated" lists the categories, for example Quizzes 40%, 90.00%, 27 of 30 pts.
+  - The page shows the overall grade (**90%**, "So far, from your graded work"), points earned (**63/70**, "3 of 4 graded") and the standing **On track** (Passed or Failed is shown once the instructor finalizes the grades).
+  - "How your grade is calculated" lists the categories, for example Quizzes 40%, 90%, 27 of 30 pts.
   - Each graded assessment shows its own score (Course Pre-Test 8/10, Quiz 1 19/20, Assignment 1 27/30) and Lab 1 says "Waiting for grade".
   - Draft assessments (such as "Quiz 2: Database Basics") do not appear.
   - If the instructor had not published the grading scheme, the final grade would be hidden (not seeded; covered by the PHP tests).

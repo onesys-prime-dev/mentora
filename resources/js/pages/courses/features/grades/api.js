@@ -70,6 +70,23 @@ export const resyncGradeItem = (itemId) => request(`${base()}/scheme/items/${ite
 
 export const recalculateGrades = () => request(`${base()}/recalculate`, "POST");
 
+/** The address of a report file or print page of this section. */
+export const reportUrl = (path, format) => `${base()}/report/${path}?format=${encodeURIComponent(format)}`;
+
+export const fetchCurves = () => request(`${base()}/curve`);
+
+export const previewCurve = (payload) => request(`${base()}/curve/preview`, "POST", payload);
+
+export const applyCurve = (payload) => request(`${base()}/curve`, "POST", payload);
+
+export const undoCurve = (adjustmentId) => request(`${base()}/curve/${adjustmentId}`, "DELETE");
+
+export const fetchFinalization = () => request(`${base()}/finalization`);
+
+export const finalizeGrades = () => request(`${base()}/finalization`, "POST");
+
+export const reopenGrades = (reason) => request(`${base()}/finalization/reopen`, "POST", { reason });
+
 /*
 |--------------------------------------------------------------------------
 | Grading periods
@@ -91,8 +108,19 @@ export const deleteGradingPeriod = (periodId) => request(`${base()}/scheme/perio
 
 export const fetchGradebookRoster = () => request(`${base()}/roster`);
 
-export const updateManualScore = (itemId, studentId, score) =>
-    request(`${base()}/roster/items/${itemId}/students/${studentId}`, "PATCH", { score });
+export const updateManualScore = (itemId, studentId, score, excused = false) =>
+    request(`${base()}/roster/items/${itemId}/students/${studentId}`, "PATCH", { score, excused });
+
+export const restoreGradeCategory = (categoryId) => request(`${base()}/scheme/categories/${categoryId}/restore`, "POST");
+
+export const restoreGradeItem = (itemId) => request(`${base()}/scheme/items/${itemId}/restore`, "POST");
+
+export const reorderGradeCategories = (ids) => request(`${base()}/scheme/categories/order`, "PATCH", { ids });
+
+export const reorderGradeItems = (categoryId, ids) => request(`${base()}/scheme/categories/${categoryId}/items/order`, "PATCH", { ids });
+
+export const setIncomplete = (studentId, incomplete, reason = "", until = "") =>
+    request(`${base()}/roster/students/${studentId}/incomplete`, "PATCH", { incomplete, reason, until });
 
 export const overrideGrade = (studentId, percentage, reason) =>
     request(`${base()}/roster/students/${studentId}/override`, "PATCH", { percentage, reason });
