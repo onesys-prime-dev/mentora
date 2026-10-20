@@ -25,7 +25,7 @@ $gradeLabel = $summary['grade_label'] ?? null;
 ?>
 
 <?php
-$overallValue = $finalGrade !== null ? number_format((float) $finalGrade, 2) . '%' : '—';
+$overallValue = grade_percent($finalGrade);
 
 $overallHtml = esc($overallValue);
 
@@ -64,7 +64,7 @@ if ($gradeLabel !== null) {
         'label' => 'Points Earned',
         'icon' => 'score',
         'size' => 'prominent',
-        'value' => round((float) ($summary['points_earned'] ?? 0), 2) . '/' . round((float) ($summary['points_possible'] ?? 0), 2),
+        'value' => grade_number($summary['points_earned'] ?? 0) . '/' . grade_number($summary['points_possible'] ?? 0),
         'detail' => $gradedCount . ' of ' . $totalCount . ' graded',
         'detail_attrs' => 'data-grades-graded-count',
     ], ['saveData' => false]) ?>

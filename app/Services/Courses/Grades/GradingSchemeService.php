@@ -303,6 +303,8 @@ class GradingSchemeService
             'uses_periods' => $usesPeriods,
             'breakdown_groups' => $breakdownGroups,
             'students' => $students,
+            // The class at a glance: only students with a grade count, and how many that is is said.
+            'stats' => GradeStatistics::of(array_column($students, 'percentage'), (float) $scheme['passing_percentage']),
         ];
     }
 

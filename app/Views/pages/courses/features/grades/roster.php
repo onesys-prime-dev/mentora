@@ -6,7 +6,9 @@
  * Data: GradingSchemeService::roster(). Wired in
  * resources/js/pages/courses/features/grades/roster/roster.js.
  */
-$points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+$points = static fn ($value) => grade_number($value, '');
+
+$stats = $stats ?? ['students' => count($students), 'graded' => 0, 'mean' => null, 'median' => null, 'high' => null, 'low' => null, 'at_or_above_passing' => 0, 'passing_mark' => 0];
 
 // Where the institution has deans a change to a final grade is a request, and each student may have
 // one open (GradeOverrideRequestService); elsewhere it applies at once.
@@ -40,6 +42,63 @@ $isRequestMode = $overrideMode === 'request';
         Quiz and assignment scores come from Grade Work — the <?= $uses_periods ? 'period' : 'category' ?> columns below are read-only, for context. Click a final grade to <?= $isRequestMode ? 'request an override of it: the grade stays as calculated until the request is approved' : 'override it' ?>.
     </p>
 
+    <!-- The class at a glance. Only students with a grade count; how many that is is said. -->
+    <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4" data-roster-stats>
+        <div class="rounded-2xl border border-[#A9A9A9]/50 px-4 py-3">
+            <dt class="text-xs font-semibold uppercase text-[#767676]">Class average</dt>
+            <dd class="text-lg font-bold text-brand"><?= esc(grade_percent($stats['mean'])) ?></dd>
+            <dd class="text-xs text-[#767676]">Median <?= esc(grade_percent($stats['median'])) ?></dd>
+        </div>
+        <div class="rounded-2xl border border-[#A9A9A9]/50 px-4 py-3">
+            <dt class="text-xs font-semibold uppercase text-[#767676]">Highest / lowest</dt>
+            <dd class="text-lg font-bold text-brand"><?= esc(grade_percent($stats['high'])) ?> / <?= esc(grade_percent($stats['low'])) ?></dd>
+        </div>
+        <div class="rounded-2xl border border-[#A9A9A9]/50 px-4 py-3">
+            <dt class="text-xs font-semibold uppercase text-[#767676]">At or above <?= esc(grade_percent($stats['passing_mark'])) ?></dt>
+            <dd class="text-lg font-bold text-brand"><?= (int) $stats['at_or_above_passing'] ?> of <?= (int) $stats['graded'] ?></dd>
+            <dd class="text-xs text-[#767676]">students with a grade</dd>
+        </div>
+        <div class="rounded-2xl border border-[#A9A9A9]/50 px-4 py-3">
+            <dt class="text-xs font-semibold uppercase text-[#767676]">Not graded yet</dt>
+            <dd class="text-lg font-bold text-brand"><?= (int) $stats['students'] - (int) $stats['graded'] ?></dd>
+            <dd class="text-xs text-[#767676]">of <?= (int) $stats['students'] ?> enrolled</dd>
+        </div>
+    </dl>
+
+    <?php if ($students !== []): ?>
+        <div class="flex flex-wrap items-end gap-3" data-roster-controls>
+
+            <label class="flex min-w-48 flex-1 flex-col gap-1">
+                <span class="text-xs font-semibold text-gray-600">Search</span>
+                <input type="search" data-roster-search placeholder="Name or student number" autocomplete="off"
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+            </label>
+
+            <label class="flex flex-col gap-1">
+                <span class="text-xs font-semibold text-gray-600">Show</span>
+                <select data-roster-filter class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                    <option value="all">Everyone</option>
+                    <option value="attention">Needs a look (at risk, failed)</option>
+                    <option value="inc">Incomplete (INC)</option>
+                    <option value="ungraded">Not graded yet</option>
+                    <option value="override">Grade set by me</option>
+                </select>
+            </label>
+
+            <label class="flex flex-col gap-1">
+                <span class="text-xs font-semibold text-gray-600">Sort by</span>
+                <select data-roster-sort class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                    <option value="name">Name</option>
+                    <option value="grade-desc">Grade, highest first</option>
+                    <option value="grade-asc">Grade, lowest first</option>
+                </select>
+            </label>
+
+            <p class="pb-2 text-xs text-[#767676]" data-roster-count aria-live="polite"></p>
+
+        </div>
+    <?php endif; ?>
+
     <div class="overflow-x-auto rounded-2xl border border-[#A9A9A9]/50">
 
         <table class="w-full text-sm">
@@ -66,12 +125,25 @@ $isRequestMode = $overrideMode === 'request';
             <tbody>
 
                 <?php if ($students === []): ?>
-                    <tr><td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="px-4 py-8 text-center text-[#767676]">No students enrolled in this section.</td></tr>
+                    <tr><td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="p-4">
+                        <?= view('components/empty-state', ['icon' => 'user', 'title' => 'No students yet', 'text' => 'Students who enrol in this section will be listed here.'], ['saveData' => false]) ?>
+                    </td></tr>
                 <?php endif; ?>
+
+                <tr class="hidden" data-roster-no-match>
+                    <td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="p-4">
+                        <?= view('components/empty-state', ['icon' => 'user', 'title' => 'No one matches', 'text' => 'Try a different name, or show everyone.'], ['saveData' => false]) ?>
+                    </td>
+                </tr>
 
                 <?php foreach ($students as $student): ?>
 
-                    <tr class="border-b border-gray-100 last:border-0" data-roster-row data-student-id="<?= (int) $student['student_id'] ?>">
+                    <tr class="border-b border-gray-100 last:border-0" data-roster-row data-student-id="<?= (int) $student['student_id'] ?>"
+                        data-search="<?= esc(mb_strtolower($student['student_name'] . ' ' . $student['student_number']), 'attr') ?>"
+                        data-name="<?= esc(mb_strtolower($student['student_name']), 'attr') ?>"
+                        data-grade="<?= $student['percentage'] !== null ? esc((string) $student['percentage'], 'attr') : '' ?>"
+                        data-tag="<?= esc($student['tag'], 'attr') ?>"
+                        data-override="<?= $student['is_override'] ? '1' : '0' ?>">
 
                         <td class="px-4 py-2 whitespace-nowrap">
                             <div class="font-semibold text-[#646464]"><?= esc($student['student_name']) ?></div>
@@ -147,12 +219,10 @@ $isRequestMode = $overrideMode === 'request';
                                 data-inc-reason="<?= esc((string) ($student['inc_reason'] ?? ''), 'attr') ?>"
                                 data-inc-until="<?= esc((string) ($student['inc_until'] ?? ''), 'attr') ?>"
                                 title="<?= $isInc ? 'Incomplete: ' . esc((string) ($student['inc_reason'] ?? ''), 'attr') : 'Mark this grade Incomplete (INC)' ?>"
-                                class="rounded-full px-2 py-0.5 text-xs font-bold transition hover:ring-2 hover:ring-brand/30 <?= match ($student['tag']) {
-                                    'Passed', 'On track' => 'bg-[#E8F5EC] text-[#2E7D4F]',
-                                    'Failed', 'At risk' => 'bg-[#FDEDEC] text-[#C33939]',
-                                    'INC' => 'bg-[#FFF1D6] text-[#946200]',
-                                    default => 'bg-gray-100 text-gray-500',
-                                } ?>"><?= esc($student['tag']) ?></button>
+                                class="rounded-full transition hover:ring-2 hover:ring-brand/30">
+                                <?php $look = grade_tag_look($student['tag']); ?>
+                                <?= view('components/status-badge', ['label' => $student['tag'], 'tone' => $look['tone'], 'icon' => $look['icon']], ['saveData' => false]) ?>
+                            </button>
                             <?php if ($isInc && !empty($student['inc_until'])): ?>
                                 <p class="mt-1 text-[11px] text-[#946200]">Finish by <?= esc(date('M j, Y', strtotime((string) $student['inc_until']))) ?></p>
                             <?php endif; ?>

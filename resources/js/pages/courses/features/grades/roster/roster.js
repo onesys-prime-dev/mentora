@@ -16,6 +16,7 @@ import { bindModal } from "../../assessments/modals/index.js";
 import { overrideDialogState } from "./override-dialog.js";
 import { bindIncompleteDialog } from "./incomplete-dialog.js";
 import { bindReportTriggers } from "../reports/report-menu.js";
+import { bindRosterControls } from "./roster-view.js";
 
 let backToGrades = null;
 let overrideModal = null;
@@ -143,6 +144,8 @@ function bind(container)
     bindIncompleteDialog(container, () => loadGradebookRoster(backToGrades));
 
     bindReportTriggers(container);
+
+    bindRosterControls(container);
 }
 
 function updateFinalCell(row, percentage)

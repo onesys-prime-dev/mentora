@@ -148,6 +148,7 @@ class GradeService
                     ? array_sum($percentages) / count($percentages)
                     : null,
                 'passing_count'  => $passingCount,
+                'graded_students' => count($percentages),
                 'total_students' => $totalStudents,
                 'needs_review'   => $needsReview,
             ],

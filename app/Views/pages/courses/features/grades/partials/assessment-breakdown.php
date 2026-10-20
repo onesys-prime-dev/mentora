@@ -109,7 +109,7 @@ $chipClasses = [
                                         </span>
 
                                         <span class="text-xs text-[#767676]">
-                                            <?= $totalPoints > 0 ? esc(round($score / $totalPoints * 100)) . '%' : '' ?>
+                                            <?= $totalPoints > 0 ? esc(grade_percent($score / $totalPoints * 100)) : '' ?>
                                         </span>
 
                                     </div>

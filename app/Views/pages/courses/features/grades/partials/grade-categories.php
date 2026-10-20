@@ -11,7 +11,7 @@
 $categoryBreakdown = $categoryBreakdown ?? [];
 $periodBreakdown = $periodBreakdown ?? [];
 
-$points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2), '0'), '.');
+$points = static fn ($value) => grade_number($value);
 
 $categoryCard = static function (array $category) use ($points): string {
     ob_start(); ?>
@@ -25,12 +25,12 @@ $categoryCard = static function (array $category) use ($points): string {
         </div>
 
         <span class="font-bold text-lg text-brand">
-            <?= $category['percentage'] !== null ? esc(number_format($category['percentage'], 2)) . '%' : '—' ?>
+            <?= esc(grade_percent($category['percentage'])) ?>
         </span>
 
         <span class="text-xs text-[#767676]">
             <?= $category['graded_count'] > 0
-                ? esc(round($category['earned'], 2)) . ' of ' . esc(round($category['possible'], 2)) . ' pts'
+                ? esc(grade_number($category['earned'])) . ' of ' . esc(grade_number($category['possible'])) . ' pts'
                 : 'Nothing graded yet' ?>
         </span>
 
@@ -55,7 +55,7 @@ $categoryCard = static function (array $category) use ($points): string {
                     <span class="font-bold text-[#646464]"><?= esc($period['name']) ?></span>
                     <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600"><?= esc($points($period['weight'])) ?>%</span>
                     <span class="ml-auto font-bold text-brand">
-                        <?= $period['percentage'] !== null ? esc(number_format($period['percentage'], 2)) . '%' : '—' ?>
+                        <?= esc(grade_percent($period['percentage'])) ?>
                     </span>
                 </div>
 

@@ -778,6 +778,40 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
         $this->assertFalse($this->service->reorderItems($this->offering, 999999, [])['success']);
     }
 
+    public function testTheGradebookGridShowsTheClassFiguresControlsAndStandingBadges(): void
+    {
+        $itemId = $this->quizItem();
+        $this->service->updateScheme($this->instructor, $this->offering, ['status' => 'Published']);
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 15);
+
+        $data = $this->service->roster($this->offering);
+
+        $this->assertSame(1, $data['stats']['graded']);
+        $this->assertEquals(75.0, $data['stats']['mean']);
+
+        $html = view('pages/courses/features/grades/roster', $data, ['saveData' => false]);
+
+        $this->assertStringContainsString('data-roster-stats', $html);
+        $this->assertStringContainsString('data-roster-search', $html);
+        $this->assertStringContainsString('data-roster-filter', $html);
+        $this->assertStringContainsString('data-roster-sort', $html);
+        $this->assertStringContainsString('data-roster-no-match', $html);
+        $this->assertStringContainsString('data-grade="75"', $html);
+        $this->assertMatchesRegularExpression('/data-tag="On(&#x20;| )track"/', $html);
+        $this->assertStringContainsString('bg-[#E8F5EC]', $html, 'the standing is the shared status badge');
+        $this->assertStringContainsString('75%', $html);
+    }
+
+    public function testAnEmptyGradebookGridUsesTheSharedEmptyState(): void
+    {
+        $other = CourseFactory::offering('Q');
+
+        $html = view('pages/courses/features/grades/roster', $this->service->roster($other), ['saveData' => false]);
+
+        $this->assertStringContainsString('No students yet', $html);
+        $this->assertStringNotContainsString('data-roster-controls', $html, 'nothing to search');
+    }
+
     public function testClearingAScoreLeavesTheItemUngraded(): void
     {
         $itemId = $this->quizItem();

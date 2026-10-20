@@ -344,19 +344,11 @@ class GradeReportService
     /** @return array<string, mixed> */
     private function summary(array $rows, float $passing): array
     {
+        $stats = GradeStatistics::of(array_map(static fn (array $r): ?float => $r['percentage'], $rows), $passing);
+
         $graded = array_values(array_filter(array_map(static fn (array $r): ?float => $r['percentage'], $rows), static fn ($p): bool => $p !== null));
 
         sort($graded);
-
-        $count = count($graded);
-
-        $median = null;
-
-        if ($count > 0) {
-            $median = $count % 2 === 1
-                ? $graded[intdiv($count, 2)]
-                : ($graded[$count / 2 - 1] + $graded[$count / 2]) / 2;
-        }
 
         $tags = [];
 
@@ -377,18 +369,7 @@ class GradeReportService
 
         }
 
-        return [
-            'students' => count($rows),
-            'graded' => $count,
-            'mean' => $count > 0 ? round(array_sum($graded) / $count, 2) : null,
-            'median' => $median !== null ? round($median, 2) : null,
-            'high' => $count > 0 ? max($graded) : null,
-            'low' => $count > 0 ? min($graded) : null,
-            'at_or_above_passing' => count(array_filter($graded, static fn (float $p): bool => $p >= $passing)),
-            'passing_mark' => $passing,
-            'tags' => $tags,
-            'spread' => $spread,
-        ];
+        return $stats + ['tags' => $tags, 'spread' => $spread];
     }
 
     /** @return array{course_code: string, course_title: string, section: string, term: string} */

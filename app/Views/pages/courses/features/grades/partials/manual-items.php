@@ -7,7 +7,7 @@
  */
 $manualItems = $manualItems ?? [];
 
-$points = static fn ($value) => rtrim(rtrim(number_format((float) $value, 2), '0'), '.');
+$points = static fn ($value) => grade_number($value);
 
 $byCategory = [];
 
