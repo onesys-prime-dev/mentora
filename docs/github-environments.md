@@ -44,14 +44,16 @@ what those steps do and how to read a failure.
 
    | Variable | Value |
    |---|---|
-   | `DEPLOY_PATH` | `/home/mentora/htdocs/mentora` |
-   | `SITE_URL` | `https://mentora.srv1404227.hstgr.cloud` (no trailing slash) |
+   | `DEPLOY_PATH` | `/home/mentora-staging/htdocs/mentora.staging.srv1404227.hstgr.cloud` |
+   | `SITE_URL` | `https://mentora.staging.srv1404227.hstgr.cloud` (no trailing slash) |
    | `SSH_PORT` | `22` |
    | `PHP_BIN` | `php8.5` (the PHP binary the site runs on, used for `spark migrate`) |
    | `TLS_INSECURE` | `true` while the site has a self-signed certificate; set `false` once it has a real one |
+   | `QB_PATH` | `/opt/mentora-qb-staging` (where the question-builder worker's code lives; leave unset to not deploy the worker) |
+   | `QB_SERVICE` | *(optional)* the worker's systemd unit; defaults to `mentora-qb-worker-staging` |
 
-   Staging still works before you add the variables (it falls back to these
-   same values), but add them so the settings live in one visible place.
+   `DEPLOY_PATH` and `SITE_URL` have no fallback: the server is shared with
+   other sites, so a missing value stops the deploy instead of guessing.
 
 ## 2. Create the `production` environment
 
@@ -70,9 +72,9 @@ what those steps do and how to read a failure.
    `VPS_HOST`, `VPS_KNOWN_HOSTS`). Use a separate SSH key for production, so
    revoking one never affects the other.
 5. **Environment variables**: `DEPLOY_PATH`, `SITE_URL` (production's
-   `https://` address), `SSH_PORT`, `PHP_BIN`, and `TLS_INSECURE` = `false`.
-   Production has no fallback values: if one is missing the deploy stops at
-   its first step and says which one.
+   `https://` address), `SSH_PORT`, `PHP_BIN`, `TLS_INSECURE` = `false`, and
+   `QB_PATH` = `/opt/mentora-qb-production`. If `DEPLOY_PATH` or `SITE_URL` is
+   missing the deploy stops at its first step and says which one.
 
 ## 3. Remove the old repository-level secrets
 

@@ -31,18 +31,20 @@ jobs:
       group: deploy-${{ inputs.environment }}
       cancel-in-progress: false
 
-    # Settings come from the environment's variables. Staging falls back to
-    # the values it has always used, so it keeps working before its variables
-    # exist. Production has no fallback on purpose: a missing value stops the
-    # deploy (see "Check this environment is configured") rather than guessing.
+    # Settings come from the environment's variables. DEPLOY_PATH and SITE_URL
+    # have no fallback in either environment on purpose: a missing value stops
+    # the deploy (see "Check this environment is configured") rather than
+    # guessing a folder on a server shared with other sites.
     env:
       DEPLOY_ENV: ${{ inputs.environment }}
       SSH_PORT: ${{ vars.SSH_PORT || '22' }}
       PHP_BIN: ${{ vars.PHP_BIN || 'php8.5' }}
       # Where the question-builder worker lives on the server. Empty: the worker is not deployed from here.
       QB_PATH: ${{ vars.QB_PATH || '' }}
-      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || (inputs.environment == 'staging' && '/home/mentora/htdocs/mentora' || '') }}
-      SITE_URL: ${{ vars.SITE_URL || (inputs.environment == 'staging' && 'https://mentora.srv1404227.hstgr.cloud' || '') }}
+      # The worker's systemd unit. One per environment on the shared VPS.
+      QB_SERVICE: ${{ vars.QB_SERVICE || format('mentora-qb-worker-{0}', inputs.environment) }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '' }}
+      SITE_URL: ${{ vars.SITE_URL || '' }}
       # Staging uses a self-signed certificate, so its checks skip certificate
       # verification. Production must have a real one; set TLS_INSECURE=true
       # there only knowingly.
@@ -229,25 +231,29 @@ jobs:
             "$REMOTE:$DEPLOY_PATH"
 
       ########################################################
-      # Question-builder worker (optional)
+      # Question-builder worker: code (optional)
       ########################################################
 
       # Only when QB_PATH is set. The unit and its secrets file are placed once
       # by someone with root (python-question-builder-service/deploy/); this
-      # step only updates the code and restarts the unit. It never fails the
-      # deploy: the website does not depend on the worker, and a missed
-      # restart is reported as a warning to fix by hand.
-      - name: Deploy the question-builder worker
+      # step only copies the code and installs its libraries. The running worker
+      # keeps the old code until "Restart the question-builder worker", which
+      # runs after the migrations. It never fails the deploy: the website does
+      # not depend on the worker.
+      - name: Update the question-builder worker's code
         if: env.QB_PATH != ''
         run: |
-          rsync -az --delete             --exclude="/venv" --exclude="/tests" --exclude="/eval"             --exclude="__pycache__" --exclude="*.log"             -e "ssh $SSH_OPTS"             python-question-builder-service/             "$REMOTE:$QB_PATH/" || { echo "::warning::The worker code could not be copied."; exit 0; }
-          ssh $SSH_OPTS "$REMOTE" bash -s -- "$QB_PATH" <<'REMOTE_SCRIPT' || echo "::warning::The worker could not be updated or restarted; see docs/deploy.md."
+          rsync -az --delete \
+            --exclude="/venv" --exclude="/tests" --exclude="/eval" --exclude="/.env" \
+            --exclude="__pycache__" --exclude="*.log" \
+            -e "ssh $SSH_OPTS" \
+            python-question-builder-service/ \
+            "$REMOTE:$QB_PATH/" || { echo "::warning::The worker code could not be copied."; exit 0; }
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$QB_PATH" <<'REMOTE_SCRIPT' || echo "::warning::The worker's libraries could not be installed; see docs/deploy.md."
           set -euo pipefail
           cd "$1"
           [ -d venv ] || python3 -m venv venv
           venv/bin/pip install --quiet -r requirements.txt
-          sudo -n systemctl restart mentora-qb-worker
-          systemctl is-active --quiet mentora-qb-worker
           REMOTE_SCRIPT
 
       ########################################################
@@ -271,6 +277,61 @@ jobs:
           set -euo pipefail
           cd "$1"
           "$2" spark migrate --all
+          REMOTE_SCRIPT
+
+      # The PHP-FPM pools revalidate files every 2 s (opcache.validate_timestamps),
+      # so new code needs no FPM restart. The file cache is cleared so nothing
+      # computed by the old code or schema is served. Not worth failing a
+      # deploy over.
+      - name: Clear the application cache
+        run: |
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" "$PHP_BIN" <<'REMOTE_SCRIPT' || echo "::warning::The cache could not be cleared; see docs/deploy.md."
+          set -euo pipefail
+          cd "$1"
+          "$2" spark cache:clear
+          REMOTE_SCRIPT
+
+      ########################################################
+      # Question-builder worker: restart (optional)
+      ########################################################
+
+      # The deploy users have no sudo for systemctl on the shared VPS, so this
+      # first tries `sudo -n systemctl restart` (works if a sudoers rule was
+      # added) and otherwise sends the worker SIGUSR1: it finishes its current
+      # job, exits with status 75 and the unit's Restart=on-failure starts the
+      # new code. It then waits for a new process and checks it stays up.
+      # A warning, never a failure: a worker left on old code is fixed by hand
+      # (docs/deploy.md), and the website does not depend on it.
+      - name: Restart the question-builder worker
+        if: env.QB_PATH != ''
+        run: |
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$QB_SERVICE" <<'REMOTE_SCRIPT' || echo "::warning::The worker '$QB_SERVICE' was not confirmed restarted; it may still run the old code. See docs/deploy.md."
+          set -euo pipefail
+          unit="$1"
+          systemctl cat "$unit" > /dev/null 2>&1 || { echo "::error::No systemd unit named $unit. Set the QB_SERVICE variable or install the unit (docs/deploy.md)."; exit 1; }
+          before=$(systemctl show "$unit" -p MainPID --value)
+          if sudo -n systemctl restart "$unit" 2> /dev/null; then
+            echo "Restarted $unit with systemctl."
+          elif [ "$before" -gt 0 ]; then
+            kill -USR1 "$before"
+            echo "Asked $unit (pid $before) to restart itself."
+          else
+            echo "::error::$unit is not running and this user cannot start it."
+            exit 1
+          fi
+          pid=0
+          for _ in $(seq 1 30); do
+            pid=$(systemctl show "$unit" -p MainPID --value)
+            if [ "$pid" -gt 0 ] && [ "$pid" != "$before" ]; then break; fi
+            sleep 2
+          done
+          if [ "$pid" -le 0 ] || [ "$pid" = "$before" ]; then
+            echo "::error::$unit did not come back with a new process within a minute."
+            exit 1
+          fi
+          sleep 10
+          systemctl is-active --quiet "$unit" || { echo "::error::$unit stopped again after restarting."; journalctl -u "$unit" -n 15 --no-pager || true; exit 1; }
+          echo "$unit is running as pid $pid."
           REMOTE_SCRIPT
 
       ########################################################
@@ -302,3 +363,20 @@ jobs:
       # and that anonymous visitors are sent to login (.github/scripts/smoke-test.php).
       - name: Smoke test the site
         run: php .github/scripts/smoke-test.php "$SITE_URL" ${SMOKE_TLS:-}
+
+      ########################################################
+      # If anything above failed
+      ########################################################
+
+      - name: Rollback instructions
+        if: failure()
+        run: |
+          {
+            echo "### The $DEPLOY_ENV deploy failed"
+            echo
+            echo "The newest database backup is in \`~/backups\` on the server (made before anything changed)."
+            echo
+            echo "- **Code**: re-run the previous good version. Production: Actions > the production workflow > Run workflow > choose the previous tag. Staging: revert the merged PR."
+            echo "- **Database**: a failed migration is not undone by redeploying code. Restore the backup only if data was damaged (docs/deploy.md, \"Restoring a database backup\")."
+            echo "- The failed step is marked in the job log above."
+          } >> "$GITHUB_STEP_SUMMARY"

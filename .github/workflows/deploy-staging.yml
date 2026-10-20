@@ -1,4 +1,4 @@
-name: 🚀 Deploy Mentora
+name: 🚀 Deploy Mentora to staging
 
 # Every merge to main is built and deployed to the staging environment, but
 # only after the full CI workflow (ci.yml) has passed on that exact commit.

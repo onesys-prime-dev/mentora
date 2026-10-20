@@ -1,35 +1,59 @@
-# Mentora question-builder worker. It opens no port: it pulls jobs from Mentora
-# over loopback and calls the hosted model. Install once as root:
+# Mentora question-builder worker, one unit per environment. It opens no port:
+# it pulls jobs from Mentora over loopback and calls the hosted model.
 #
-#   cp mentora-qb-worker.service /etc/systemd/system/
-#   install -m 600 -o mentora -g mentora qb-worker.env.example /etc/mentora/qb-worker.env   # then edit it
-#   systemctl daemon-reload && systemctl enable --now mentora-qb-worker
+# <env> is staging or production. Install once per environment, as root:
+#
+#   sed 's/<env>/staging/g' mentora-qb-worker.service > /etc/systemd/system/mentora-qb-worker-staging.service
+#   install -m 600 -o root -g root qb-worker.env.example /etc/mentora/qb-worker-staging.env   # then edit it
+#   systemctl daemon-reload && systemctl enable --now mentora-qb-worker-staging
 #
 # The environment file holds the provider key and the shared secret. It lives
-# outside the repository and outside the web root, and is never logged.
+# outside the repository and the web root, is owned by root (systemd reads it
+# before dropping to the site user, so the site's PHP cannot read the Groq key)
+# and is never logged. Details and the checklist: docs/deploy.md.
 
 [Unit]
-Description=Mentora question-builder worker
+Description=Mentora <env> question-builder worker
 After=network-online.target
 Wants=network-online.target
+# A worker that cannot start (bad secret, missing venv) gives up after 10 tries
+# in 5 minutes instead of looping forever; fix it, then `systemctl reset-failed`.
+StartLimitIntervalSec=300
+StartLimitBurst=10
 
 [Service]
 Type=simple
-User=mentora
-Group=mentora
-WorkingDirectory=/opt/mentora-qb
-EnvironmentFile=/etc/mentora/qb-worker.env
-ExecStart=/opt/mentora-qb/venv/bin/python -m qb.worker
+User=mentora-<env>
+Group=mentora-<env>
+WorkingDirectory=/opt/mentora-qb-<env>
+EnvironmentFile=/etc/mentora/qb-worker-<env>.env
+ExecStart=/opt/mentora-qb-<env>/venv/bin/python -m qb.worker
+
+# Restart after a crash or after the deploy's `kill -USR1` (the worker exits 75
+# for that). A clean stop (`systemctl stop`, SIGTERM) stays stopped. The worker
+# finishes or hands back its current job before it exits; 30 s is plenty.
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=30
 
-# The VPS is shared with the website: keep the worker small and contained.
+# Logs go to the journal under a name that says which environment wrote them:
+# journalctl -u mentora-qb-worker-<env>. The worker never logs a key or a source text.
+SyslogIdentifier=mentora-qb-worker-<env>
+
+# Staging and production share one VPS with the websites: keep each worker small.
+# MemoryHigh slows it down before MemoryMax kills it.
+MemoryHigh=768M
 MemoryMax=1G
 CPUQuota=100%
+TasksMax=64
+
 NoNewPrivileges=true
 PrivateTmp=true
+PrivateDevices=true
 ProtectSystem=strict
 ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
 
 [Install]
 WantedBy=multi-user.target
