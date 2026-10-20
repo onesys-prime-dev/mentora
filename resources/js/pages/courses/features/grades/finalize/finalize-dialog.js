@@ -67,8 +67,13 @@ export function bindFinalizeDialog(reload)
 
             if (mode === "reopen") {
 
+                const sent = result.handoff
+                    ? `<p class="rounded-xl bg-[#FFF8E6] px-4 py-3 text-sm text-[#946200]">These grades were already sent to the student information system (${result.handoff.students} ${result.handoff.students === 1 ? "student" : "students"}). When you finalize them again, only what changed is sent.</p>`
+                    : "";
+
                 body.innerHTML = `
                     <p class="text-sm text-gray-600">Reopening lifts the lock and brings back running grades. Students will see their grade as "so far" again. The reason is kept in the audit log.</p>
+                    ${sent}
                     <div class="flex flex-col gap-2">
                         <label for="finalize-reopen-reason" class="text-sm font-semibold text-gray-700">Reason</label>
                         <textarea id="finalize-reopen-reason" rows="3" data-finalize-reason class="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-brand" placeholder="e.g. A score was entered wrongly"></textarea>

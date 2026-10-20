@@ -33,6 +33,24 @@ class GradeFinalizationService
         return $row ?: null;
     }
 
+    /**
+     * Whether this section's grades have been handed to the student
+     * information system, and when the last of them went.
+     *
+     * @return array{students: int, last_sent_at: string}|null null when none was sent
+     */
+    public function handoff(int $offeringId): ?array
+    {
+        $row = db_connect()->table('sis_grade_exports')
+            ->select('COUNT(*) AS students, MAX(sent_at) AS last_sent_at', false)
+            ->where('offering_id', $offeringId)
+            ->get()->getRowArray();
+
+        return $row && (int) $row['students'] > 0
+            ? ['students' => (int) $row['students'], 'last_sent_at' => (string) $row['last_sent_at']]
+            : null;
+    }
+
     public function isFinalized(int $offeringId): bool
     {
         return db_connect()->table('grade_finalizations')
@@ -242,9 +260,16 @@ class GradeFinalizationService
             return ['success' => false, 'message' => 'The grades could not be reopened. Nothing was changed.'];
         }
 
-        GradeAudit::record('grades.reopened', $offeringId, ['new' => ['reason' => $reason]], $user);
+        $sent = $this->handoff($offeringId);
 
-        return ['success' => true, 'message' => 'The grades are open again.'];
+        GradeAudit::record('grades.reopened', $offeringId, ['new' => ['reason' => $reason, 'already_sent_to_sis' => $sent !== null]], $user);
+
+        return [
+            'success' => true,
+            'message' => $sent !== null
+                ? 'The grades are open again. They were already sent to the SIS: after you finalize them again, only what changed is sent.'
+                : 'The grades are open again.',
+        ];
     }
 
     /** Handed-in work of the section's counted assessments that nobody has finished grading. */

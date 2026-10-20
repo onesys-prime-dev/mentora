@@ -270,6 +270,63 @@ final class SisGradeExporterTest extends DatabaseTestCase
         $this->assertCount(2, $this->theDelivery());
     }
 
+    /** @return array<string, string> record => reason of the latest run's left-out grades */
+    private function leftOut(\App\Services\Sis\SisImportResult $result): array
+    {
+        return array_column($result->issues, 'reason', 'item');
+    }
+
+    public function testAPreviewSaysWhoIsLeftOutAndWhy(): void
+    {
+        $gone = SisFixture::student($this->institution, 'S4', 'gone@example.com');
+        $open = SisFixture::student($this->institution, 'S5', 'open@example.com');
+        $late = SisFixture::student($this->institution, 'S6', 'late@example.com');
+        SisFixture::grade($this->offering, $gone, 60.0, null, 'Withdrawn');
+        SisFixture::grade($this->offering, $open, 55.0, null, 'INC');
+        SisFixture::grade($this->offering, $late, 72.0, null, 'Passed', false);
+
+        $result = $this->export(true);
+
+        $left = $this->leftOut($result);
+
+        $this->assertSame(3, $result->datasets['grades']['skipped']);
+        $this->assertSame('The student withdrew, so there is no final grade', $left['Stu S4 · IT101-A'] ?? null);
+        $this->assertSame('Marked Incomplete (INC), not settled yet', $left['Stu S5 · IT101-A'] ?? null);
+        $this->assertSame('The grades are not finalized yet', $left['IT101-A (1 student)'] ?? null, 'a section that is not final is one line with a count');
+    }
+
+    public function testGradesAlreadySentAndUnchangedAreNotListedAsProblems(): void
+    {
+        $this->export();
+
+        $result = $this->export(true);
+
+        $this->assertSame([], $result->issues);
+        $this->assertSame(2, $result->datasets['grades']['skipped'], 'still counted as left out');
+    }
+
+    public function testWhatWasLeftOutIsKeptWithTheRun(): void
+    {
+        $gone = SisFixture::student($this->institution, 'S4', 'gone@example.com');
+        SisFixture::grade($this->offering, $gone, 60.0, null, 'Withdrawn');
+
+        $result = $this->export(true);
+
+        $details = json_decode((string) db_connect()->table('sis_runs')->where('id', $result->runId)->get()->getRowArray()['details'], true);
+        $this->assertCount(1, $details['issues']);
+        $this->assertFalse($details['truncated']);
+    }
+
+    public function testAStudentTheSisDoesNotKnowIsListedToo(): void
+    {
+        $local = PeopleFactory::person('student', 'Local', 'Person', 'local2@example.com', $this->institution);
+        SisFixture::grade($this->offering, $local, 99.0);
+
+        $result = $this->export(true);
+
+        $this->assertContains('The course or student is not known to the SIS', array_column($result->issues, 'reason'));
+    }
+
     public function testAStudentOrCourseTheSisDoesNotKnowIsNotSent(): void
     {
         $local = PeopleFactory::person('student', 'Local', 'Person', 'local@example.com', $this->institution);

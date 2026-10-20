@@ -23,6 +23,7 @@ class GradeFinalizationController extends BaseController
         return $this->response->setJSON([
             'success' => true,
             'current' => $this->finalization->current($offeringId),
+            'handoff' => $this->finalization->handoff($offeringId),
             'readiness' => $this->finalization->readiness($offeringId),
         ]);
     }

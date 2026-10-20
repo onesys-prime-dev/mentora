@@ -320,6 +320,68 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Hand-off to the student information system
+    |--------------------------------------------------------------------------
+    */
+
+    public function testASectionNotSentYetHasNoHandoff(): void
+    {
+        $this->finalize();
+
+        $this->assertNull($this->service->handoff($this->offering));
+    }
+
+    public function testTheHandoffSaysHowManyWereSentAndWhenTheLastWent(): void
+    {
+        $this->finalize();
+
+        $institution = (int) db_connect()->table('course_offerings o')
+            ->select('d.institution_id AS id')->join('courses c', 'c.id = o.course_id')->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')->join('departments d', 'd.id = sd.department_id')
+            ->where('o.id', $this->offering)->get()->getRowArray()['id'];
+
+        foreach ([[$this->strong, '2026-10-20 08:00:00'], [$this->weak, '2026-10-21 09:30:00']] as [$student, $at]) {
+            db_connect()->table('sis_grade_exports')->insert([
+                'institution_id' => $institution, 'offering_id' => $this->offering, 'student_id' => $student->id,
+                'percentage' => 70, 'remarks' => 'Passed', 'batch_key' => 'g1-x', 'sent_at' => $at,
+            ]);
+        }
+
+        $handoff = $this->service->handoff($this->offering);
+
+        $this->assertSame(2, $handoff['students']);
+        $this->assertSame('2026-10-21 09:30:00', $handoff['last_sent_at']);
+    }
+
+    public function testReopeningGradesAlreadySentTellsTheInstructorWhatHappensNext(): void
+    {
+        $this->finalize();
+
+        $institution = (int) db_connect()->table('course_offerings o')
+            ->select('d.institution_id AS id')->join('courses c', 'c.id = o.course_id')->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')->join('departments d', 'd.id = sd.department_id')
+            ->where('o.id', $this->offering)->get()->getRowArray()['id'];
+
+        db_connect()->table('sis_grade_exports')->insert([
+            'institution_id' => $institution, 'offering_id' => $this->offering, 'student_id' => $this->strong->id,
+            'percentage' => 78, 'remarks' => 'Passed', 'batch_key' => 'g1-x', 'sent_at' => '2026-10-20 08:00:00',
+        ]);
+
+        $result = $this->service->reopen($this->instructor, $this->offering, 'A score was wrong');
+
+        $this->assertStringContainsString('already sent to the SIS', $result['message']);
+        $this->assertStringContainsString('only what changed is sent', $result['message']);
+    }
+
+    public function testReopeningGradesNeverSentSaysNothingAboutTheSis(): void
+    {
+        $this->finalize();
+
+        $this->assertStringNotContainsString('SIS', $this->service->reopen($this->instructor, $this->offering, 'A score was wrong')['message']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Excused
     |--------------------------------------------------------------------------
     */

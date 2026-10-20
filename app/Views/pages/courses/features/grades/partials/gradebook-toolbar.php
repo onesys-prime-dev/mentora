@@ -134,6 +134,12 @@ $finalization = $gradebook['finalization'] ?? null;
                 Finalized by <?= esc(trim((string) ($finalization['finalized_by_name'] ?? '')) !== '' ? $finalization['finalized_by_name'] : 'an instructor') ?>
                 on <?= esc(date('M j, Y, g:i A', strtotime((string) $finalization['finalized_at']))) ?>.
                 Scores, the grading scheme and imports are locked until you reopen them.
+                <?php $handoff = $gradebook['handoff'] ?? null; ?>
+                <?php if ($handoff !== null): ?>
+                    <span data-sis-handoff>Sent to the student information system on <?= esc(date('M j, Y', strtotime($handoff['last_sent_at']))) ?> (<?= (int) $handoff['students'] ?> <?= $handoff['students'] === 1 ? 'student' : 'students' ?>).</span>
+                <?php else: ?>
+                    <span data-sis-handoff class="opacity-80">Not sent to the student information system yet.</span>
+                <?php endif; ?>
             </span>
         </div>
     <?php endif; ?>
