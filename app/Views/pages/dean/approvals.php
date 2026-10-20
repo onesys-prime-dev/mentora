@@ -41,12 +41,12 @@ foreach ($requests as $r) {
     $cells = [
         'student'   => trim((string) $r['student_name']) ?: 'A student',
         'course'    => ['html' => esc($r['course_code'] . ' ' . $r['section_code']) . '<span class="block text-xs text-[#646464]">' . esc((string) $r['program_name']) . '</span>'],
-        'grade'     => ['html' => esc($pct($r['calculated_percentage'])) . ' → <strong>' . esc($asked) . '</strong>'],
+        'requested' => ['html' => esc($pct($r['calculated_percentage'])) . ' → <strong>' . esc($asked) . '</strong>'],
         'requester' => ['html' => esc(trim((string) $r['requester_name']) ?: '—') . '<span class="block text-xs text-[#646464]">' . esc(ucfirst((string) $r['requester_role'])) . '</span>'],
     ];
 
     if ($decided) {
-        $cells['outcome'] = ['html' => view('components/status-badge', ['label' => $r['status'] === OverrideRequestChain::APPROVED ? 'Approved' : 'Rejected', 'tone' => $r['status'] === OverrideRequestChain::APPROVED ? 'success' : 'danger'], ['saveData' => false])
+        $cells['age'] = ['html' => view('components/status-badge', ['label' => $r['status'] === OverrideRequestChain::APPROVED ? 'Approved' : 'Rejected', 'tone' => $r['status'] === OverrideRequestChain::APPROVED ? 'success' : 'danger'], ['saveData' => false])
             . '<span class="block text-xs text-[#646464]">' . esc(date('M j, Y', strtotime((string) $r['decided_at']))) . '</span>'];
     } else {
         $cells['age'] = $age((string) $r['created_at']);
@@ -60,12 +60,15 @@ foreach ($requests as $r) {
 }
 
 $columns = [
-    ['key' => 'student', 'label' => 'Student'],
-    ['key' => 'course', 'label' => 'Course'],
-    ['key' => 'grade', 'label' => 'Calculated → requested'],
-    ['key' => 'requester', 'label' => 'Requested by'],
-    ['key' => $decided ? 'outcome' : 'age', 'label' => $decided ? 'Outcome' : 'Age'],
+    ['key' => 'student', 'label' => 'Student', 'sortable' => true],
+    ['key' => 'course', 'label' => 'Course', 'sortable' => true],
+    ['key' => 'requested', 'label' => 'Calculated → requested', 'sortable' => true],
+    ['key' => 'requester', 'label' => 'Requested by', 'sortable' => true],
+    ['key' => 'age', 'label' => $decided ? 'Outcome' : 'Age', 'sortable' => true],
 ];
+
+// A header sorts by that column, keeping the tab and the filters; clicking it again reverses it.
+$sortUrl = static fn (string $column, string $next): string => $base . '?' . http_build_query($filters->toQuery(['sort' => $column === 'age' ? null : $column, 'dir' => $next]));
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -91,7 +94,7 @@ $columns = [
         'action'   => $base,
         'filtered' => $filters->isFiltered(),
         'clearUrl' => $decided ? $base . '?view=decided' : $base,
-        'hidden'   => $decided ? ['view' => 'decided'] : [],
+        'hidden'   => ($decided ? ['view' => 'decided'] : []) + ($filters->sort !== 'age' ? ['sort' => $filters->sort] : []) + ($filters->dir !== null ? ['dir' => $filters->dir] : []),
         'fields'   => [
             ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => 'Student or course', 'value' => $filters->q ?? '', 'span' => 'sm:col-span-2'],
             ['type' => 'select', 'name' => 'program', 'label' => 'Program', 'options' => $options($programs, 'Any program'), 'value' => (string) ($filters->programId ?? '')],
@@ -114,6 +117,9 @@ $columns = [
             'caption'    => $decided ? 'Grade-override requests you decided' : 'Grade-override requests waiting for you',
             'columns'    => $columns,
             'rows'       => $rows,
+            'sort'       => $filters->sort,
+            'dir'        => $filters->direction(),
+            'sortUrl'    => $sortUrl,
             'emptyTitle' => $filters->isFiltered() ? 'No requests match these filters' : ($decided ? 'Nothing decided yet' : 'Nothing waiting for you'),
             'emptyText'  => $filters->isFiltered() ? 'Try a different search, program or requester.' : ($decided ? 'Requests you approve or reject are listed here.' : 'When a chairperson endorses a request to change a final grade in your department, it appears here.'),
             'emptyIcon'  => 'tasks',

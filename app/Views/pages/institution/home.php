@@ -14,7 +14,7 @@ $statusTone  = ['active' => 'success', 'pending' => 'info', 'read_only' => 'warn
 $statusLabel = ['active' => 'Active', 'pending' => 'Pending', 'read_only' => 'Read-only', 'past' => 'Past'];
 $status      = (string) $homeInstitution['status'];
 
-$roleLabels = ['student' => 'Students', 'instructor' => 'Instructors', 'chairperson' => 'Chairpersons', 'institutional_admin' => 'Administrators', 'parent' => 'Parents'];
+$roleLabels = ['student' => 'Students', 'instructor' => 'Instructors', 'chairperson' => 'Chairpersons', 'dean' => 'Deans', 'institutional_admin' => 'Administrators', 'parent' => 'Parents'];
 $term       = $homeSnapshot['activeTerm'];
 $canExport  = in_array($status, ['read_only', 'past'], true);
 

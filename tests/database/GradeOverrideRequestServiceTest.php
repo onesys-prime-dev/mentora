@@ -644,6 +644,69 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         $this->assertSame(['Tess Teacher'], array_column($this->service->requestersForDean($this->dean), 'name'));
     }
 
+    /** Three students who each have a request waiting for the dean, asked at different times by two instructors. @return array<string, int> name => request id */
+    private function threeWaiting(): array
+    {
+        $second = PeopleFactory::person('instructor', 'Zed', 'Zane', null, $this->institution);
+        CourseFactory::assignInstructor($this->offering, $second);
+
+        $ids = [];
+
+        foreach ([['Ann', 'Lee', 80.0, 'Tess', $this->teacher, '2026-10-01 09:00:00'], ['Bob', 'Ray', 95.0, 'Zed', $second, '2026-10-03 09:00:00'], ['Cy', 'Day', 70.0, 'Tess', $this->teacher, '2026-10-02 09:00:00']] as [$first, $last, $asked, $by, $teacher, $at]) {
+            $student = $first === 'Ann' ? $this->student : PeopleFactory::person('student', $first, $last, null, $this->institution);
+
+            if ($first !== 'Ann') {
+                CourseFactory::enroll($this->offering, $student);
+                $this->record($student, 60.0);
+            }
+
+            $id = $this->service->request($teacher, $this->offering, (int) $student->id, $asked, 'Reason for ' . $first)['request']['id'];
+            $this->service->endorse($this->chair, $id, '');
+            db_connect()->table('grade_override_requests')->where('id', $id)->update(['created_at' => $at]);
+
+            $ids["{$first} {$last}"] = $id;
+        }
+
+        return $ids;
+    }
+
+    /** @return list<string> the students of the dean's list, in order */
+    private function sortedBy(array $input): array
+    {
+        $rows = $this->service->listForDean($this->dean, \App\Services\Courses\Grades\OverrideApprovalFilters::fromInput($input));
+
+        return array_map(static fn (array $row): string => trim((string) $row['student_name']), $rows);
+    }
+
+    public function testTheDeansListSortsByTheChosenColumnBothWays(): void
+    {
+        $this->threeWaiting();
+
+        $this->assertSame(['Ann Lee', 'Cy Day', 'Bob Ray'], $this->sortedBy([]), 'oldest request first by default');
+        $this->assertSame(['Bob Ray', 'Cy Day', 'Ann Lee'], $this->sortedBy(['dir' => 'desc']));
+        $this->assertSame(['Cy Day', 'Ann Lee', 'Bob Ray'], $this->sortedBy(['sort' => 'student', 'dir' => 'asc']), 'by last name: Day, Lee, Ray');
+        $this->assertSame(['Bob Ray', 'Ann Lee', 'Cy Day'], $this->sortedBy(['sort' => 'student', 'dir' => 'desc']));
+        $this->assertSame(['Cy Day', 'Ann Lee', 'Bob Ray'], $this->sortedBy(['sort' => 'requested']), 'by the percentage asked for: 70, 80, 95');
+        $this->assertSame(['Bob Ray', 'Ann Lee', 'Cy Day'], $this->sortedBy(['sort' => 'requested', 'dir' => 'desc']));
+        $this->assertSame('Bob Ray', $this->sortedBy(['sort' => 'requester', 'dir' => 'desc'])[0], 'by who asked: Zane after Teacher');
+        $this->assertSame('Bob Ray', $this->sortedBy(['sort' => 'requester'])[2]);
+    }
+
+    public function testTheSortKeepsTheFiltersAndTheDecidedListIsNewestFirst(): void
+    {
+        $ids = $this->threeWaiting();
+
+        $this->assertSame(['Cy Day', 'Ann Lee'], $this->sortedBy(['sort' => 'requested', 'requested_by' => (string) $this->teacher->id]), 'filtered to Tess, then sorted');
+
+        $this->service->reject($this->dean, $ids['Ann Lee'], 'No grounds');
+        $this->service->reject($this->dean, $ids['Bob Ray'], 'No grounds');
+        db_connect()->table('grade_override_requests')->where('id', $ids['Ann Lee'])->update(['decided_at' => '2026-10-05 09:00:00']);
+        db_connect()->table('grade_override_requests')->where('id', $ids['Bob Ray'])->update(['decided_at' => '2026-10-06 09:00:00']);
+
+        $this->assertSame(['Bob Ray', 'Ann Lee'], $this->sortedBy(['view' => 'decided']), 'newest decision first');
+        $this->assertSame(['Ann Lee', 'Bob Ray'], $this->sortedBy(['view' => 'decided', 'dir' => 'asc']));
+    }
+
     public function testTheBreakdownShowsHowTheGradeIsMadeUp(): void
     {
         $quizzes = GradeFactory::category($this->scheme, 'Quizzes', 30);

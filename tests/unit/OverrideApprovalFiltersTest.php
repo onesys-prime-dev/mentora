@@ -53,6 +53,37 @@ final class OverrideApprovalFiltersTest extends CIUnitTestCase
         $this->assertSame(100, mb_strlen(OverrideApprovalFilters::fromInput(['q' => str_repeat('a', 300)])->q));
     }
 
+    public function testASortAndDirectionAreReadSafely(): void
+    {
+        $filters = OverrideApprovalFilters::fromInput(['sort' => 'requested', 'dir' => 'DESC']);
+
+        $this->assertSame('requested', $filters->sort);
+        $this->assertSame('desc', $filters->dir);
+        $this->assertFalse($filters->isFiltered(), 'sorting is not filtering');
+        $this->assertEquals(['sort' => 'requested', 'dir' => 'desc'], $filters->toQuery());
+
+        $bad = OverrideApprovalFilters::fromInput(['sort' => 'password', 'dir' => 'sideways']);
+
+        $this->assertSame('age', $bad->sort);
+        $this->assertNull($bad->dir);
+        $this->assertSame([], $bad->toQuery(), 'the defaults are not written into the address');
+    }
+
+    public function testTheDefaultDirectionIsOldestFirstWhileWaitingAndNewestFirstOnceDecided(): void
+    {
+        $this->assertSame('asc', (new OverrideApprovalFilters('pending'))->direction());
+        $this->assertSame('desc', (new OverrideApprovalFilters('decided'))->direction());
+        $this->assertSame('asc', (new OverrideApprovalFilters('decided', dir: 'asc'))->direction(), 'a chosen direction wins');
+        $this->assertSame('desc', (new OverrideApprovalFilters('pending', dir: 'desc'))->direction());
+    }
+
+    public function testEverySortableColumnIsAccepted(): void
+    {
+        foreach (OverrideApprovalFilters::SORTABLE as $column) {
+            $this->assertSame($column, OverrideApprovalFilters::fromInput(['sort' => $column])->sort);
+        }
+    }
+
     public function testAnOverrideReplacesOrRemovesAParameter(): void
     {
         $filters = OverrideApprovalFilters::fromInput(['view' => 'decided', 'program' => '4']);

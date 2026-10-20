@@ -124,6 +124,27 @@ final class DeanSignoffPageTest extends RouteTestCase
         $this->assertStringContainsString('First (2026-2027)', $body);
     }
 
+    public function testABlockedSectionLinksToItsGradesAndToTheOpenRequests(): void
+    {
+        $body = $this->page();
+
+        $this->assertStringContainsString('See the grades (view only)', $body);
+        $this->assertStringContainsString("dean/courses/{$this->blocked}/course-it102/grades", $body);
+        $this->assertStringNotContainsString('Decide the open requests', $body, 'no request is open yet');
+
+        $student = (int) db_connect()->table('enrollments')->where('offering_id', $this->blocked)->get()->getRowArray()['student_user_id'];
+        db_connect()->table('grade_override_requests')->insert([
+            'offering_id' => $this->blocked, 'student_id' => $student, 'reason' => 'x', 'requested_by' => $this->teacher->id,
+            'requester_role' => 'instructor', 'status' => 'awaiting_dean', 'open_marker' => 1,
+        ]);
+
+        $withRequest = $this->page();
+
+        $this->assertStringContainsString('Decide the open requests', $withRequest);
+        $this->assertStringContainsString('dean/approvals', $withRequest);
+        $this->assertStringContainsString('1 grade-override request is still open.', $withRequest);
+    }
+
     public function testSigningOffNeedsThePasswordAgainThenWorks(): void
     {
         $this->loggedInAs($this->dean);

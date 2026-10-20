@@ -55,6 +55,7 @@ class InvitationService
 
     /** What each other role is called in a sentence ("as a student"). */
     private const ROLE_NAMES = [
+        'dean'        => 'a dean',
         'chairperson' => 'a chairperson',
         'instructor'  => 'an instructor',
         'student'     => 'a student',
