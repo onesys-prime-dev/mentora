@@ -33,6 +33,25 @@ final class SystemHealthTest extends CIUnitTestCase
         $this->assertSame($expected, SystemHealth::diskStatus($freeGb * self::GB, 100 * self::GB)['status']);
     }
 
+    public function testWithJobsOnOnlyTheWorkerHeartbeatCounts(): void
+    {
+        $neverCalled = static fn (): bool => self::fail('The original service must not be asked when jobs are on.');
+
+        $this->assertSame(SystemHealth::UP, SystemHealth::aiStatus(true, 1000, 1030, $neverCalled)['status']);
+        $this->assertSame(SystemHealth::DEGRADED, SystemHealth::aiStatus(true, 1000, 1200, $neverCalled)['status']);
+        $this->assertSame(SystemHealth::DEGRADED, SystemHealth::aiStatus(true, null, 1200, $neverCalled)['status']);
+    }
+
+    public function testWithJobsOffAFreshWorkerWinsOtherwiseTheServiceDecides(): void
+    {
+        $up   = static fn (): bool => true;
+        $down = static fn (): bool => false;
+
+        $this->assertStringContainsString('worker', SystemHealth::aiStatus(false, 1000, 1030, $down)['detail']);
+        $this->assertSame(SystemHealth::UP, SystemHealth::aiStatus(false, null, 1200, $up)['status']);
+        $this->assertSame(SystemHealth::DEGRADED, SystemHealth::aiStatus(false, 1000, 1200, $down)['status']);
+    }
+
     public function testAnUnreadableDiskIsDegradedNotDown(): void
     {
         $this->assertSame(SystemHealth::DEGRADED, SystemHealth::diskStatus(0.0, 0.0)['status']);
