@@ -135,7 +135,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             'lockoutAttempts'       => ['Failed sign-ins before a lockout', 'attempts', 'Fewer attempts than the platform.'],
             'lockoutMinutes'        => ['Lockout length', 'minutes', 'Longer than the platform.'],
         ];
-        $roleNames = ['institutional_admin' => 'Institutional administrators', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
+        $roleNames = ['institutional_admin' => 'Institutional administrators', 'dean' => 'Deans', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
         ?>
 
         <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm" data-security-form>

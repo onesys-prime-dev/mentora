@@ -97,6 +97,12 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
 
                                 <?php if ($section['state'] === GradeSignoffService::BLOCKED): ?>
                                     <span class="text-xs text-[#946200]" data-blockers><?= esc(implode(' ', $section['blockers'])) ?></span>
+                                    <span class="flex flex-wrap gap-3 text-xs font-semibold" data-blocker-links>
+                                        <a class="text-brand hover:underline" href="<?= esc($section['grades_url']) ?>">See the grades (view only)</a>
+                                        <?php if ((int) $section['counts']['open_requests'] > 0): ?>
+                                            <a class="text-brand hover:underline" href="<?= esc(site_url('dean/approvals')) ?>">Decide the open requests</a>
+                                        <?php endif; ?>
+                                    </span>
                                 <?php elseif ($section['state'] === GradeSignoffService::SIGNED_OFF): ?>
                                     <span class="text-xs text-[#2B7549]" data-signed-by>
                                         Signed off <?= esc(date('M j, Y', strtotime((string) $section['signed_at']))) ?><?= $section['signed_by_name'] ? ' by ' . esc($section['signed_by_name']) : '' ?>

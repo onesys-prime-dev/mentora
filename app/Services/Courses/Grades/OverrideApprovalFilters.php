@@ -13,6 +13,9 @@ final class OverrideApprovalFilters
 {
     public const VIEWS = ['pending', 'decided'];
 
+    /** What the list can be sorted by; 'age' is how long it has waited (on the Decided tab, when it was decided). */
+    public const SORTABLE = ['age', 'student', 'course', 'requested', 'requester'];
+
     private const TEXT_MAX = 100;
 
     public function __construct(
@@ -20,6 +23,8 @@ final class OverrideApprovalFilters
         public readonly ?string $q = null,
         public readonly ?int $programId = null,
         public readonly ?int $requesterId = null,
+        public readonly string $sort = 'age',
+        public readonly ?string $dir = null,
     ) {
     }
 
@@ -28,12 +33,16 @@ final class OverrideApprovalFilters
     {
         $view = is_string($input['view'] ?? null) ? $input['view'] : '';
         $q    = is_string($input['q'] ?? null) ? trim($input['q']) : '';
+        $sort = is_string($input['sort'] ?? null) ? $input['sort'] : '';
+        $dir  = is_string($input['dir'] ?? null) ? strtolower($input['dir']) : '';
 
         return new self(
             view: in_array($view, self::VIEWS, true) ? $view : 'pending',
             q: $q === '' ? null : mb_substr($q, 0, self::TEXT_MAX),
             programId: self::positiveInt($input['program'] ?? null),
             requesterId: self::positiveInt($input['requested_by'] ?? null),
+            sort: in_array($sort, self::SORTABLE, true) ? $sort : 'age',
+            dir: in_array($dir, ['asc', 'desc'], true) ? $dir : null,
         );
     }
 
@@ -49,12 +58,20 @@ final class OverrideApprovalFilters
             'q'            => $this->q,
             'program'      => $this->programId,
             'requested_by' => $this->requesterId,
+            'sort'         => $this->sort !== 'age' ? $this->sort : null,
+            'dir'          => $this->dir,
         ];
 
         return array_filter(array_merge($query, $override), static fn ($value) => $value !== null && $value !== '');
     }
 
-    /** True when something narrows the list (the tab does not count). */
+    /** The direction in force: the one asked for, else oldest first while waiting and newest first once decided. */
+    public function direction(): string
+    {
+        return $this->dir ?? ($this->view === 'decided' ? 'desc' : 'asc');
+    }
+
+    /** True when something narrows the list (the tab and the sort do not count). */
     public function isFiltered(): bool
     {
         return $this->q !== null || $this->programId !== null || $this->requesterId !== null;

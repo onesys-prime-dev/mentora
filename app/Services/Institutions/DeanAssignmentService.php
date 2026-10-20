@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Institutions;
 
 use App\Models\Assignments\DeanAssignmentModel;
+use App\Services\Courses\Grades\GradeOverrideRequestService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use RuntimeException;
@@ -78,6 +79,9 @@ class DeanAssignmentService
             throw new RuntimeException('The dean assignment could not be saved.');
         }
 
+        // Requests waiting for the department's dean now wait for this one (or, if it is their own, for the administrator).
+        (new GradeOverrideRequestService())->retargetDepartment($departmentId);
+
         service('auditLogger')->log('structure.dean_assigned', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $id, 'institution_id' => $institutionId,
             'new' => ['department_id' => $departmentId, 'dean_user_id' => $userId],
@@ -107,10 +111,30 @@ class DeanAssignmentService
             'status' => 'ended', 'active_marker' => null, 'ended_at' => $now, 'updated_at' => $now,
         ]);
 
+        // Requests waiting for this dean move up one level: nobody is left to decide them.
+        (new GradeOverrideRequestService())->retargetDepartment((int) $row['department_id']);
+
         service('auditLogger')->log('structure.dean_ended', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $assignmentId, 'institution_id' => $institutionId,
             'old' => ['department_id' => (int) $row['department_id'], 'dean_user_id' => (int) $row['dean_user_id']],
         ]);
+    }
+
+    /**
+     * Ends the person's deanship, if they have one: when their dean role is taken away or their account
+     * is deactivated. Their other roles are not touched, and their history stays.
+     */
+    public function endForPerson(int $userId, ?User $actor = null): bool
+    {
+        $row = $this->assignments->departmentOfDean($userId);
+
+        if ($row === null) {
+            return false;
+        }
+
+        $this->end((int) $row['institution_id'], (int) $row['id'], $actor);
+
+        return true;
     }
 
     public function currentDeanOfDepartment(int $departmentId): ?array
