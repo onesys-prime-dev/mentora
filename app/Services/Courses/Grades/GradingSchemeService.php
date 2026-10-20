@@ -179,6 +179,7 @@ class GradingSchemeService
             'out_of_sync_count' => count(array_filter($items, static fn ($item) => $item['is_out_of_sync'])),
             'finalization' => (new GradeFinalizationService())->current($offeringId),
             'handoff' => (new GradeFinalizationService())->handoff($offeringId),
+            'signoff' => (new GradeSignoffService())->current($offeringId),
             'removed' => [
                 'categories' => $this->categoryModel->where('grading_scheme_id', $scheme['id'])->where('status', 'Archived')->orderBy('updated_at', 'DESC')->findAll(),
                 'items' => $this->itemModel->where('grading_scheme_id', $scheme['id'])->where('status', 'Archived')->where('assessment_id IS NULL', null, false)->orderBy('updated_at', 'DESC')->findAll(),

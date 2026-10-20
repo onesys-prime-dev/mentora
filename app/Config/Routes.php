@@ -311,6 +311,13 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->post('approvals/(:num)/approve', 'Dean\ApprovalsController::approve/$1');
     $routes->post('approvals/(:num)/reject', 'Dean\ApprovalsController::reject/$1');
 
+    // Term-end sign-off of finalized grades, per section or for a program's ready sections. Signing off
+    // asks for the password again (reauth); the dean also reopens a sign-off, with a reason.
+    $routes->get('signoff', 'Dean\SignoffController::index');
+    $routes->post('signoff/program/(:num)/(:num)', 'Dean\SignoffController::signOffProgram/$1/$2', ['filter' => 'reauth']);
+    $routes->post('signoff/(:num)', 'Dean\SignoffController::signOff/$1', ['filter' => 'reauth']);
+    $routes->post('signoff/(:num)/reopen', 'Dean\SignoffController::reopen/$1');
+
     $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index');
     $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1');
 
@@ -570,8 +577,8 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
 // "Confirm your password" in front of dangerous actions, for every administrative area
 // except the system administrator's own address (admin/reauth, below). The ReauthFilter
 // sends people here.
-$routes->get('reauth', 'ReauthController::show', ['filter' => 'role:institutional_admin']);
-$routes->post('reauth', 'ReauthController::confirm', ['filter' => 'role:institutional_admin']);
+$routes->get('reauth', 'ReauthController::show', ['filter' => 'role:institutional_admin,dean']);
+$routes->post('reauth', 'ReauthController::confirm', ['filter' => 'role:institutional_admin,dean']);
 
 // A gallery of the shared interface components (app/Views/components), for the people
 // building and reviewing screens. Signed-in people only; not routed in production.

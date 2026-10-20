@@ -48,7 +48,12 @@ $finalization = $gradebook['finalization'] ?? null;
                 </button>
             <?php endif; ?>
 
-            <?php if ($finalization !== null): ?>
+            <?php if ($finalization !== null && ($gradebook['signoff'] ?? null) !== null): ?>
+                <span class="inline-flex items-center gap-2 rounded-xl border border-[#2B7549]/30 bg-[#E8F5EC] px-4 py-2 text-sm font-semibold text-[#1F5A38]" data-signed-off-tag>
+                    <?= icon('check', 'h-4 w-4 text-current') ?>
+                    Signed off by the dean
+                </span>
+            <?php elseif ($finalization !== null): ?>
                 <button
                     type="button"
                     data-open-reopen
@@ -145,7 +150,16 @@ $finalization = $gradebook['finalization'] ?? null;
                 <strong>Grades are final.</strong>
                 Finalized by <?= esc(trim((string) ($finalization['finalized_by_name'] ?? '')) !== '' ? $finalization['finalized_by_name'] : 'an instructor') ?>
                 on <?= esc(date('M j, Y, g:i A', strtotime((string) $finalization['finalized_at']))) ?>.
-                Scores, the grading scheme and imports are locked until you reopen them.
+                <?php $signoff = $gradebook['signoff'] ?? null; ?>
+                <?php if ($signoff !== null): ?>
+                    <span data-signoff-note>
+                        Signed off by <?= esc(trim((string) ($signoff['signed_by_name'] ?? '')) !== '' ? $signoff['signed_by_name'] : 'the dean') ?>
+                        on <?= esc(date('M j, Y', strtotime((string) $signoff['signed_at']))) ?>.
+                        Scores, the grading scheme and imports are locked, and only the dean can reopen the grades.
+                    </span>
+                <?php else: ?>
+                    Scores, the grading scheme and imports are locked until you reopen them.
+                <?php endif; ?>
                 <?php $handoff = $gradebook['handoff'] ?? null; ?>
                 <?php if ($handoff !== null): ?>
                     <span data-sis-handoff>Sent to the student information system on <?= esc(date('M j, Y', strtotime($handoff['last_sent_at']))) ?> (<?= (int) $handoff['students'] ?> <?= $handoff['students'] === 1 ? 'student' : 'students' ?>).</span>

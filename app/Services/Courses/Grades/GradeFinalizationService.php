@@ -21,6 +21,8 @@ class GradeFinalizationService
 {
     public const LOCKED_MESSAGE = 'The grades are finalized. Reopen them to make changes.';
 
+    public const SIGNED_OFF_MESSAGE = 'The dean has signed off these grades. Only the dean can reopen them.';
+
     /** @return array<string, mixed>|null the section's current finalization, who and when */
     public function current(int $offeringId): ?array
     {
@@ -219,6 +221,9 @@ class GradeFinalizationService
 
         GradeAudit::record('grades.finalized', $offeringId, ['new' => ['students' => $frozen]], $user);
 
+        // Where the institution has a dean, the finalized grades are now ready for the dean's sign-off.
+        (new GradeSignoffService())->announceReady($offeringId);
+
         return [
             'success' => true,
             'message' => "Grades finalized for {$frozen} " . ($frozen === 1 ? 'student' : 'students') . '.',
@@ -231,6 +236,11 @@ class GradeFinalizationService
 
         if (!$this->isFinalized($offeringId)) {
             return ['success' => false, 'message' => 'The grades are not finalized.'];
+        }
+
+        // Once the dean has signed the grades off, only the dean can reopen them (GradeSignoffService::reopen).
+        if ((new GradeSignoffService())->isSignedOff($offeringId)) {
+            return ['success' => false, 'message' => self::SIGNED_OFF_MESSAGE];
         }
 
         if ($reason === '') {
