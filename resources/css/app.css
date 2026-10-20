@@ -59,6 +59,7 @@
 }
 
 @import "./components/reading.css";
+@import "./components/composer.css";
 
 @layer components {
     /*
