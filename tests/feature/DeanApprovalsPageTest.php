@@ -239,6 +239,25 @@ final class DeanApprovalsPageTest extends RouteTestCase
         $this->assertStringNotContainsString('name="view"', $this->page(), 'and the waiting tab needs no marker');
     }
 
+    public function testTheColumnHeadersSortTheListKeepTheFiltersAndShowTheDirection(): void
+    {
+        $this->waiting();
+        $program = (int) db_connect()->table('programs')->where('sub_department_id', $this->sub)->get()->getRowArray()['id'];
+
+        $body = $this->page('?program=' . $program . '&sort=requested&dir=desc');
+
+        $this->assertMatchesRegularExpression('/<th[^>]*aria-sort="descending"[^>]*>.*?Calculated → requested/s', $body, 'the sorted column says which way');
+        $this->assertMatchesRegularExpression('#href="[^"]*dean/approvals\?[^"]*program=' . $program . '[^"]*sort=student#', $body, 'a header link keeps the filter');
+        $this->assertStringContainsString('name="sort" value="requested"', $body, 'applying a filter keeps the sort');
+        $this->assertStringContainsString('name="dir" value="desc"', $body);
+
+        $plain = $this->page();
+
+        $this->assertStringNotContainsString('name="sort"', $plain, 'the default order needs no marker');
+        $this->assertStringContainsString('aria-sort="ascending"', $plain, 'oldest first while waiting');
+        $this->assertStringContainsString('Ann Lee', $this->page('?sort=password&dir=up'), 'nonsense is ignored, not an error');
+    }
+
     public function testNoOtherRoleDecidesOrEvenReadsTheList(): void
     {
         $id = $this->waiting();

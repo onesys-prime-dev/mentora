@@ -14,12 +14,13 @@ final class UserFilters
     public const STATUSES = ['active', 'deactivated'];
 
     /** Role names a filter may use (the Shield groups). */
-    public const ROLES = ['admin', 'institutional_admin', 'chairperson', 'instructor', 'student', 'parent'];
+    public const ROLES = ['admin', 'institutional_admin', 'dean', 'chairperson', 'instructor', 'student', 'parent'];
 
     /** What each role is called on screen. */
     public const ROLE_LABELS = [
         'admin'               => 'System administrator',
         'institutional_admin' => 'Institutional administrator',
+        'dean'                => 'Dean',
         'chairperson'         => 'Chairperson',
         'instructor'          => 'Instructor',
         'student'             => 'Student',

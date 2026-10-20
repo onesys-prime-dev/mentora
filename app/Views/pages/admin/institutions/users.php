@@ -18,7 +18,7 @@ $invitationBadge = [
 ];
 
 $roleNames = [
-    'admin' => 'System administrator', 'institutional_admin' => 'Institutional administrator', 'chairperson' => 'Chairperson',
+    'admin' => 'System administrator', 'institutional_admin' => 'Institutional administrator', 'dean' => 'Dean', 'chairperson' => 'Chairperson',
     'instructor' => 'Instructor', 'student' => 'Student', 'parent' => 'Parent',
 ];
 

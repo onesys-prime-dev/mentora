@@ -479,6 +479,56 @@ class GradeOverrideRequestService
         return ['success' => true, 'message' => 'Rejected. The grade is unchanged.'];
     }
 
+    /**
+     * Sends the requests of a department that are past the chairperson to whoever is next now: the dean,
+     * or the institution's administrator when the department has no dean (or the dean asked themselves).
+     * Run when a dean is assigned or a deanship ends, so a request is never left waiting for someone who
+     * is gone: it moves up one level, and moves back when a new dean arrives. Idempotent.
+     *
+     * @return int how many requests moved
+     */
+    public function retargetDepartment(int $departmentId): int
+    {
+        $deanId = $this->deanId($departmentId);
+
+        $rows = db_connect()->table('grade_override_requests r')
+            ->select(['r.id', 'r.offering_id', 'r.requested_by', 'r.status'])
+            ->join('course_offerings co', 'co.id = r.offering_id')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->where('sd.department_id', $departmentId)
+            ->whereIn('r.status', [OverrideRequestChain::AWAITING_DEAN, OverrideRequestChain::AWAITING_INSTITUTION])
+            ->get()->getResultArray();
+
+        $moved = 0;
+
+        foreach ($rows as $row) {
+            $next = OverrideRequestChain::afterChair((int) $row['requested_by'], $deanId);
+
+            if ($next === $row['status']) {
+                continue;
+            }
+
+            $this->requests->update((int) $row['id'], ['status' => $next]);
+            $moved++;
+
+            $context = $this->context((int) $row['offering_id']);
+
+            service('auditLogger')->log('grade.override_rerouted', null, [
+                'actor_label' => 'system', 'acting_role' => 'system', 'target_type' => 'grade_override_request', 'target_id' => (int) $row['id'],
+                'institution_id' => isset($context['institution_id']) ? (int) $context['institution_id'] : null,
+                'old' => ['status' => $row['status']], 'new' => ['status' => $next],
+            ]);
+
+            if ($context !== null) {
+                $this->tellDeanIfWaiting((int) $row['id'], $next, $context, 'rerouted:' . date('YmdHis'));
+            }
+        }
+
+        return $moved;
+    }
+
     /** How many requests wait for this dean. */
     public function pendingCountForDean(User $dean): int
     {
@@ -519,9 +569,9 @@ class GradeOverrideRequestService
             ->where('sd.department_id', (int) $department['department_id']);
 
         if ($filters->view === 'decided') {
-            $builder->whereIn('r.status', [OverrideRequestChain::APPROVED, OverrideRequestChain::REJECTED])->orderBy('r.decided_at', 'DESC');
+            $builder->whereIn('r.status', [OverrideRequestChain::APPROVED, OverrideRequestChain::REJECTED]);
         } else {
-            $builder->where('r.status', OverrideRequestChain::AWAITING_DEAN)->where('r.requested_by !=', (int) $dean->id)->orderBy('r.created_at', 'ASC');
+            $builder->where('r.status', OverrideRequestChain::AWAITING_DEAN)->where('r.requested_by !=', (int) $dean->id);
         }
 
         if ($filters->programId !== null) {
@@ -542,7 +592,21 @@ class GradeOverrideRequestService
                 ->groupEnd();
         }
 
-        return $builder->orderBy('r.id', $filters->view === 'decided' ? 'DESC' : 'ASC')->limit(100)->get()->getResultArray();
+        // Sorted by the chosen column (ties by when it was asked, so the order never jumps between reloads).
+        $direction = strtoupper($filters->direction());
+        $columns   = match ($filters->sort) {
+            'student'   => ['sp.last_name', 'sp.first_name'],
+            'course'    => ['c.course_code', 'co.section_code'],
+            'requested' => ['r.requested_percentage'],
+            'requester' => ['rp.last_name', 'rp.first_name'],
+            default     => [$filters->view === 'decided' ? 'r.decided_at' : 'r.created_at'],
+        };
+
+        foreach ($columns as $column) {
+            $builder->orderBy($column, $direction);
+        }
+
+        return $builder->orderBy('r.id', $direction)->limit(100)->get()->getResultArray();
     }
 
     /**
