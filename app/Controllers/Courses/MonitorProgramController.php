@@ -7,6 +7,7 @@ namespace App\Controllers\Courses;
 use App\Controllers\BaseController;
 use App\Services\Courses\ChairpersonCourseSearch;
 use App\Services\Courses\MonitorProgramFilters;
+use App\Services\Courses\MonitorProgramPage;
 use App\Services\Courses\MonitorProgramService;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -44,67 +45,44 @@ class MonitorProgramController extends BaseController
 
         $loadError = false;
         $terms = [];
-        $snapshot = ['courses' => 0, 'instructors' => 0, 'students' => 0];
-        $comparison = [];
-        $atRisk = [];
-        $audit = ['rows' => [], 'total' => 0];
-        $gradeDistribution = array_fill_keys(array_keys(MonitorProgramService::GRADE_BUCKETS), 0);
+        $page = [
+            'snapshot' => ['courses' => 0, 'instructors' => 0, 'students' => 0],
+            'comparison' => [],
+            'atRisk' => [],
+            'audit' => ['rows' => [], 'total' => 0],
+            'auditPage' => $auditPage,
+            'auditPages' => 1,
+            'gradeDistribution' => array_fill_keys(array_keys(MonitorProgramService::GRADE_BUCKETS), 0),
+            'sort' => $sort,
+            'dir' => $dir,
+        ];
 
         try {
 
             $terms = (new ChairpersonCourseSearch())->terms($user);
             $offeringRows = $this->monitor->offeringRows($user, $filters);
-            $offeringIds = $this->offeringIds($offeringRows);
 
-            $snapshot = $this->monitor->snapshot($offeringRows);
-            $comparison = $this->monitor->courseComparison($offeringRows, $filters, $sort, $dir);
-            $atRisk = $this->monitor->atRisk($offeringIds);
-            $audit = $this->monitor->auditLog($user, $offeringRows, $filters, $auditPage, self::AUDIT_PER_PAGE);
-
-            foreach ($this->monitor->grades($offeringIds) as $grade) {
-                foreach ($grade['distribution'] as $bucket => $count) {
-                    $gradeDistribution[$bucket] += $count;
-                }
-            }
+            // The page's figures are built by MonitorProgramPage, the same builder the dean's
+            // drill-down into one program uses; this page lists the chairperson's own actions.
+            $page = (new MonitorProgramPage($this->monitor))->build($offeringRows, $filters, $sort, $dir, $auditPage, self::AUDIT_PER_PAGE, (int) $user->id);
 
         } catch (\Throwable $e) {
             log_message('error', 'Monitor Program page failed to load: ' . $e->getMessage());
             $loadError = true;
         }
 
-        foreach ($comparison as &$row) {
-            $row['slug'] = url_title((string) $row['course_title'], '-', true);
-        }
-        unset($row);
-
-        foreach ($atRisk as &$row) {
-            $offering = array_values(array_filter($comparison, static fn (array $c) => $c['offering_id'] === $row['offering_id']))[0] ?? null;
-            $row['course_code'] = $offering['course_code'] ?? null;
-            $row['section_code'] = $offering['section_code'] ?? null;
-            $row['slug'] = $offering['slug'] ?? null;
-        }
-        unset($row);
-
-        return view('pages/courses/monitor-program', [
+        return view('pages/courses/monitor-program', $page + [
             'title' => 'Monitor Program',
             'page' => 'monitor-program',
             'user' => $user,
             'loadError' => $loadError,
             'filters' => $filters,
             'terms' => $terms,
-            'snapshot' => $snapshot,
-            'comparison' => $comparison,
-            'atRisk' => $atRisk,
-            'audit' => $audit,
-            'auditPage' => $auditPage,
-            'auditPages' => max(1, (int) ceil($audit['total'] / self::AUDIT_PER_PAGE)),
-            'gradeDistribution' => $gradeDistribution,
-            'sort' => $sort,
-            'dir' => $dir,
             'mainGutter' => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
             'previousPage' => 'dashboard',
         ]);
     }
+
 
     public function snapshot(): ResponseInterface
     {

@@ -158,6 +158,156 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
     }
 
+    private function chairAction(string $label, int $offering, string $method, string $at): void
+    {
+        \CodeIgniter\Config\Services::resetSingle('auditLogger');
+
+        $chair = PeopleFactory::person('chairperson', 'Maria', 'Chair', $label, $this->institution);
+        $id    = service('auditLogger')->log('course.chairperson_action', $chair, [
+            'target_type' => 'offering', 'target_id' => $offering, 'acting_role' => 'chairperson', 'new' => ['method' => $method],
+        ]);
+
+        db_connect()->table('audit_logs')->where('id', $id)->update(['created_at' => $at]);
+    }
+
+    public function testTheAuditLogShowsWhoWhatWhenAndAsWhichRole(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->chairAction('maria@dept.example', $it, 'PATCH', '2026-09-02 09:00:00');
+
+        $elsewhere = DeanFactory::department('N', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'N'), 'N'), $this->term, 'LAW900', 'A', 'active', 'Foreign Law');
+        $this->chairAction('ines@elsewhere.example', $foreign, 'DELETE', '2026-09-03 09:00:00');
+
+        $body = html_entity_decode($this->page());
+
+        $this->assertStringContainsString('data-section="audit"', $body);
+        $this->assertStringContainsString('maria@dept.example', $body);
+        $this->assertStringContainsString('Updated something', $body);
+        $this->assertStringContainsString('Chairperson', $body);
+        $this->assertStringContainsString('2026-09-02 09:00:00', $body);
+        $this->assertStringContainsString('href="' . site_url("dean/courses/{$it}/intro-to-computing") . '"', $body);
+        $this->assertStringNotContainsString('ines@elsewhere.example', $body, 'another department is not in this log');
+        $this->assertSame(1, substr_count($body, 'data-audit-entry'));
+    }
+
+    public function testTheAuditLogPagesAndKeepsTheFilters(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101');
+
+        for ($i = 1; $i <= 12; $i++) {
+            $this->chairAction("chair{$i}@dept.example", $it, 'POST', sprintf('2026-09-%02d 09:00:00', $i));
+        }
+
+        $first  = html_entity_decode($this->page('?sub_department=' . $this->subA));
+        $second = html_entity_decode($this->page('?sub_department=' . $this->subA . '&audit_page=2'));
+
+        $this->assertSame(10, substr_count($first, 'data-audit-entry'));
+        $this->assertStringContainsString('Page 1 of 2', $first);
+        $this->assertMatchesRegularExpression('/href="[^"]*sub_department=' . $this->subA . '[^"]*audit_page=2[^"]*"/', $first);
+        $this->assertSame(2, substr_count($second, 'data-audit-entry'));
+        $this->assertStringContainsString('Previous', $second);
+    }
+
+    public function testAnEmptyAuditLogSaysSo(): void
+    {
+        DeanFactory::offering($this->programA, $this->term, 'IT101');
+
+        $this->assertStringContainsString('No changes recorded yet', $this->page());
+    }
+
+    public function testInProgramModeEachProgramLinksToItsPageCarryingTheFilters(): void
+    {
+        DeanFactory::offering($this->programA, $this->term, 'IT101');
+
+        $body = html_entity_decode($this->page('?compare=program&term=' . $this->term));
+
+        $this->assertStringContainsString('data-program-link', $body);
+        $this->assertStringContainsString("dean/monitor-department/programs/{$this->programA}?term={$this->term}", $body);
+
+        $subs = html_entity_decode($this->page());
+        $this->assertStringNotContainsString('data-program-link', $subs, 'a sub-department row has no drill-down');
+    }
+
+    public function testAProgramPageShowsThatProgramReadOnlyForTheDean(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        DeanFactory::offering($this->programB, $this->term, 'LW100', 'A', 'active', 'Intro to Law');
+        $this->enrolled($it, 2);
+        $this->chairAction('maria@dept.example', $it, 'POST', '2026-09-02 09:00:00');
+
+        $this->loggedInAs($this->dean);
+        $response = $this->call('GET', "/dean/monitor-department/programs/{$this->programA}")->response();
+        $body     = html_entity_decode($response->getBody());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('Program A', $body);
+        $this->assertStringContainsString('College H · Sub A', $body);
+        $this->assertStringContainsString('IT101', $body);
+        $this->assertStringNotContainsString('LW100', $body, 'only this program');
+        $this->assertStringContainsString('href="' . site_url("dean/courses/{$it}/intro-to-computing") . '"', $body, 'courses open in the dean read-only view');
+        $this->assertStringNotContainsString('chairperson/courses', $body);
+        $this->assertStringContainsString('Recent chairperson actions in this program', $body);
+        $this->assertStringContainsString('maria@dept.example', $body, 'the dean sees who');
+        $this->assertStringContainsString(site_url('dean/monitor-department?compare=program'), $body);
+        $this->assertStringContainsString('id="monitor-program-charts"', $body);
+    }
+
+    public function testAProgramPageKeepsItsOwnFiltersInItsLinks(): void
+    {
+        DeanFactory::offering($this->programA, $this->term, 'IT101');
+
+        $this->loggedInAs($this->dean);
+        $body = html_entity_decode($this->call('GET', "/dean/monitor-department/programs/{$this->programA}?term={$this->term}")->response()->getBody());
+
+        $this->assertMatchesRegularExpression('#dean/monitor-department/programs/' . $this->programA . '\?[^"]*sort=#', $body, 'sort links stay on the program page');
+        $this->assertStringContainsString('name="term"', $body);
+    }
+
+    public function testAnotherDepartmentsProgramIsNotFound(): void
+    {
+        $other   = DeanFactory::department('N', $this->institution);
+        $foreign = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'N'), 'N');
+        DeanFactory::offering($foreign, $this->term, 'LAW900');
+        $this->loggedInAs($this->dean);
+
+        foreach ([$foreign, 999999] as $id) {
+            try {
+                $status = $this->call('GET', "/dean/monitor-department/programs/{$id}")->response()->getStatusCode();
+                $this->fail("program {$id} must be a 404 (got {$status})");
+            } catch (\CodeIgniter\Exceptions\PageNotFoundException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testADeanWithoutADepartmentSeesTheExplanationOnAProgramPageToo(): void
+    {
+        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution));
+
+        $response = $this->call('GET', "/dean/monitor-department/programs/{$this->programA}")->response();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
+    }
+
+    public function testTheChairpersonsOwnMonitorProgramPageIsUnchanged(): void
+    {
+        // One PHP process renders every test, and the view renderer keeps data between renders;
+        // a real request is a fresh process. Start this page from a clean renderer.
+        \CodeIgniter\Config\Services::resetSingle('renderer');
+
+        $chair = CourseFactory::user('chairperson');
+        $this->loggedInAs($chair);
+
+        $body = $this->call('GET', '/chairperson/monitor-program')->response()->getBody();
+
+        $this->assertStringContainsString('Monitor Program', $body);
+        $this->assertStringContainsString('How the programs you chair are performing.', $body);
+        $this->assertStringContainsString('chairperson/monitor-program', $body);
+        $this->assertStringNotContainsString('dean/', $body);
+    }
+
     public function testTheAppsMenuHasAMonitorDepartmentTile(): void
     {
         $this->assertStringContainsString('dean/monitor-department', $this->page());

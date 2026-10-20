@@ -47,7 +47,14 @@ class ScheduleService
     /** Everything the view needs — the controller renders it, same split as CalendarController. */
     public function forUser(User $user): array
     {
-        $role = $user->inGroup('instructor') ? 'instructor' : 'student';
+        $active = (new \App\Services\Auth\ActiveRoleService())->resolve($user);
+
+        $role = match (true) {
+            in_array($active, ['instructor', 'chairperson'], true) => $active,
+            $user->inGroup('instructor')  => 'instructor',
+            $user->inGroup('chairperson') => 'chairperson',
+            default                       => 'student',
+        };
 
         $courses = $this->courseService->getCourseOfferings($user);
 

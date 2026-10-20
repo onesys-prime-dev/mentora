@@ -56,7 +56,11 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
             <div class="flex flex-col items-center justify-center gap-1 py-16 text-center">
                 <span class="text-sm font-bold text-[#646464]">
-                    <?= $role === 'instructor' ? "You aren't teaching any sections yet" : "You aren't enrolled in any courses yet" ?>
+                    <?= match ($role) {
+                        'instructor'  => "You aren't teaching any sections yet",
+                        'chairperson' => "There are no sections in your program yet",
+                        default       => "You aren't enrolled in any courses yet",
+                    } ?>
                 </span>
                 <span class="text-xs text-[#878787]">Your weekly timetable will show up here once that changes.</span>
             </div>
@@ -66,7 +70,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
             <div class="flex flex-col items-center justify-center gap-1 py-16 text-center">
                 <span class="text-sm font-bold text-[#646464]">No meeting times set yet</span>
                 <span class="text-xs text-[#878787]">
-                    <?= $role === 'instructor'
+                    <?= $role !== 'student'
                         ? "Your sections don't have a schedule set. Add one from the course's overview."
                         : "Your courses don't have a schedule set yet." ?>
                 </span>
