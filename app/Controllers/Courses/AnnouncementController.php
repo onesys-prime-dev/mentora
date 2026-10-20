@@ -46,7 +46,11 @@ class AnnouncementController extends BaseController
         );
     }
 
-    /** Posting from the Calendar's date-click menu: plain title/body, offering chosen in the form. */
+    /**
+     * Posting from the Calendar's date-click menu, offering chosen in the form.
+     * The calendar sends the composer's rich message (`subject` + `message`);
+     * plain `title` + `body` is still accepted.
+     */
     public function storeFromCalendar()
     {
         helper('announcement');
@@ -54,8 +58,10 @@ class AnnouncementController extends BaseController
         $data = $this->request->getJSON(true) ?? [];
 
         $result = $this->announcementService->create(auth()->user(), (int) ($data['offering_id'] ?? 0), [
-            'subject' => $data['title'] ?? '',
-            'message' => announcement_message_from_text((string) ($data['body'] ?? '')),
+            'subject' => $data['subject'] ?? $data['title'] ?? '',
+            'message' => isset($data['message'])
+                ? (string) $data['message']
+                : announcement_message_from_text((string) ($data['body'] ?? '')),
         ]);
 
         return $this->response

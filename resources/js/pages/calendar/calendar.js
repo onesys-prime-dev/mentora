@@ -17,6 +17,10 @@
 
 import { showLoadError } from "../../shared/spa/error-state.js";
 import { startPageProgress } from "../../shared/spa/page-progress.js";
+import { initializeComposerEditor, getComposerEditor, destroyComposerEditor } from "../courses/features/announcements/composer/tiptap.js";
+import { initializeComposerToolbar } from "../courses/features/announcements/composer/toolbar.js";
+import { serializeMessage } from "../courses/features/announcements/composer/serializer.js";
+import { mountEmojiPicker } from "../courses/features/announcements/emoji-picker.js";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = [
@@ -657,6 +661,7 @@ function openModal(title)
 
 function closeModal()
 {
+    destroyComposerEditor();
     document.getElementById("calendar-modal").classList.add("hidden");
     document.querySelector("[data-calendar-modal-body]").innerHTML = "";
 }
@@ -1027,13 +1032,14 @@ async function submitAssessmentForm(e)
 
 function openAnnouncementForm()
 {
-    if (courses.length === 0) {
-        openModal("Add Announcement");
+    openModal("Add Announcement");
+
+    const template = document.getElementById("calendar-announcement-composer");
+
+    if (courses.length === 0 || !template) {
         modalBody().innerHTML = feedback("You aren't teaching any sections yet.", true);
         return;
     }
-
-    openModal("Add Announcement");
 
     modalBody().innerHTML = `
 
@@ -1046,26 +1052,57 @@ function openAnnouncementForm()
                 </select>
             </label>
 
-            <label class="flex flex-col gap-1 text-sm">
-                Title
-                <input type="text" name="title" required maxlength="150" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2" placeholder="e.g. Lab session moved to Room 33A">
-            </label>
-
-            <label class="flex flex-col gap-1 text-sm">
-                Message
-                <textarea name="body" required rows="4" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2"></textarea>
-            </label>
-
-            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
-                Post
-            </button>
-
         </form>
 
     `;
 
-    modalBody().querySelector('[data-calendar-form="announcement"]')
-        .addEventListener("submit", submitAnnouncementForm);
+    const form = modalBody().querySelector('[data-calendar-form="announcement"]');
+
+    form.appendChild(template.content.cloneNode(true));
+
+    const composer = form.querySelector("[data-announcement-composer]");
+    const subjectInput = composer.querySelector("[data-composer-subject]");
+    const submitButton = composer.querySelector("[data-composer-submit]");
+
+    // The page's own composer, minus what only makes sense on a course's page:
+    // discarding (the modal closes instead) and attachments (they upload per course).
+    composer.querySelector("[data-composer-dismiss]")?.classList.add("hidden");
+    composer.querySelector("[data-composer-attach]")?.classList.add("hidden");
+    submitButton.textContent = "Post Announcement";
+
+    initializeComposerEditor("announcement-editor");
+    initializeComposerToolbar(composer);
+
+    const updateState = () => {
+        submitButton.disabled = subjectInput.value.trim() === "";
+    };
+
+    subjectInput.addEventListener("input", updateState);
+    getComposerEditor()?.on("update", updateState);
+
+    const emojiPanel = composer.querySelector("[data-composer-emoji-panel]");
+
+    composer.querySelector("[data-composer-emoji-toggle]")?.addEventListener("click", (event) => {
+
+        event.preventDefault();
+
+        const wasHidden = emojiPanel.classList.contains("hidden");
+
+        emojiPanel.classList.toggle("hidden", !wasHidden);
+
+        if (wasHidden) {
+            mountEmojiPicker(emojiPanel, (emoji) => {
+                getComposerEditor()?.chain().focus().insertContent(emoji).run();
+            });
+        }
+
+    });
+
+    form.addEventListener("submit", submitAnnouncementForm);
+    submitButton.addEventListener("click", () => form.requestSubmit());
+
+    updateState();
+    subjectInput.focus();
 }
 
 async function submitAnnouncementForm(e)
@@ -1074,7 +1111,7 @@ async function submitAnnouncementForm(e)
 
     const form = e.currentTarget;
 
-    const submitButton = form.querySelector('button[type="submit"]');
+    const submitButton = form.querySelector("[data-composer-submit]");
 
     submitButton.disabled = true;
 
@@ -1085,8 +1122,8 @@ async function submitAnnouncementForm(e)
             headers: jsonHeaders(),
             body: JSON.stringify({
                 offering_id: form.offering_id.value,
-                title: form.title.value,
-                body: form.body.value,
+                subject: form.querySelector("[data-composer-subject]").value.trim(),
+                message: JSON.stringify(serializeMessage(getComposerEditor())),
             }),
         });
 

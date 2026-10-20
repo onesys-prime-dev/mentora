@@ -193,6 +193,28 @@ final class AnnouncementRoutesTest extends RouteTestCase
         $this->assertSame('line one line two', announcement_plain_text($row['message']));
     }
 
+    public function testThePostFromTheCalendarKeepsTheComposersRichMessage(): void
+    {
+        $this->loggedInAs($this->instructor);
+
+        $message = json_encode(['version' => 1, 'blocks' => [
+            ['id' => 'block_001', 'type' => 'unordered-list', 'align' => 'left', 'items' => [
+                [['type' => 'text', 'text' => 'first']],
+                [['type' => 'text', 'text' => 'second']],
+            ]],
+        ]]);
+
+        $result = $this->withBody(json_encode(['offering_id' => $this->offering, 'subject' => 'Rich', 'message' => $message]))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->call('post', 'instructor/api/calendar/announcements');
+
+        $this->assertSame(201, $result->response()->getStatusCode());
+
+        $row = db_connect()->table('announcements')->get()->getRowArray();
+        $this->assertSame('Rich', $row['subject']);
+        $this->assertSame($message, $row['message']);
+    }
+
     public function testTheCalendarPostIsRefusedForOfferingsTheInstructorDoesNotTeach(): void
     {
         $other = CourseFactory::offering('B');
