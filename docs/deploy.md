@@ -11,7 +11,7 @@ their own; how to create the environments, their secrets and the approval rule
 is in `github-environments.md`. This page explains what a deploy does, what it
 needs, and what to do when it fails. No secrets belong in this file. Staging and
 production live on the **same VPS**, in separate site users; the table below
-lists both.
+lists both. Building an environment from scratch is in `server-setup.md`.
 
 ## Where it goes
 
