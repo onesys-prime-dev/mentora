@@ -305,6 +305,12 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
     $routes->get('courses', 'Dean\DeanCoursesController::index');
+    // Grade-override requests of the department that wait for the dean: approve (the grade is
+    // changed) or reject (with a reason). The only writes in this group besides the dean's own pages.
+    $routes->get('approvals', 'Dean\ApprovalsController::index');
+    $routes->post('approvals/(:num)/approve', 'Dean\ApprovalsController::approve/$1');
+    $routes->post('approvals/(:num)/reject', 'Dean\ApprovalsController::reject/$1');
+
     $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index');
     $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1');
 
