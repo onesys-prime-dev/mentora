@@ -9,6 +9,7 @@ $remarksMeta = match ($summary['remarks'] ?? null) {
     'Passed'     => ['label' => 'Passed',      'tone' => 'success', 'icon' => 'check'],
     'Failed'     => ['label' => 'Failed',      'tone' => 'danger',  'icon' => 'attention'],
     'Withdrawn'  => ['label' => 'Withdrawn',   'tone' => 'neutral', 'icon' => 'attention'],
+    'INC'        => ['label' => 'Incomplete (INC)', 'tone' => 'warning', 'icon' => 'in-progress'],
     default      => ['label' => 'In Progress', 'tone' => 'warning', 'icon' => 'in-progress'],
 };
 
@@ -59,7 +60,9 @@ if ($gradeLabel !== null) {
         'size' => 'prominent',
         'tone' => $remarksMeta['tone'],
         'value' => $remarksMeta['label'],
-        'detail' => '',
+        'detail' => ($summary['remarks'] ?? null) === 'INC'
+            ? trim((string) ($summary['inc_reason'] ?? '') . (!empty($summary['inc_until']) ? ' (finish by ' . date('M j, Y', strtotime((string) $summary['inc_until'])) . ')' : ''))
+            : '',
     ], ['saveData' => false]) ?>
 
 </div>

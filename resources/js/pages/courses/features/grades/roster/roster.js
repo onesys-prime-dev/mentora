@@ -14,6 +14,7 @@ import { renderGradebookSkeleton } from "../skeleton.js";
 import { fetchGradebookRoster, updateManualScore, overrideGrade, updateOverrideRequest, withdrawOverrideRequest } from "../api.js";
 import { bindModal } from "../../assessments/modals/index.js";
 import { overrideDialogState } from "./override-dialog.js";
+import { bindIncompleteDialog } from "./incomplete-dialog.js";
 
 let backToGrades = null;
 let overrideModal = null;
@@ -127,6 +128,8 @@ function bind(container)
     });
 
     bindOverrideForm();
+
+    bindIncompleteDialog(container, () => loadGradebookRoster(backToGrades));
 }
 
 function updateFinalCell(row, percentage)

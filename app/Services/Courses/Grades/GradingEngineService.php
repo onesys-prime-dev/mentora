@@ -80,6 +80,8 @@ class GradingEngineService
             'last_recalculated_at' => date('Y-m-d H:i:s'),
         ]);
 
+        $this->tagWithdrawn($offeringId);
+
         return count($context['studentIds']);
     }
 
@@ -316,6 +318,20 @@ class GradingEngineService
         return $bands[count($bands) - 1] ?? null;
     }
 
+    /**
+     * The tag a record carries: Incomplete (INC) when the instructor set it,
+     * otherwise Passed / Failed / Incomplete (nothing graded) from the grade
+     * that counts.
+     */
+    public function tagFor(?array $record, ?float $effective, float $passing): string
+    {
+        if (!empty($record['inc_set_at'])) {
+            return 'INC';
+        }
+
+        return $this->remarksFor($effective, $passing);
+    }
+
     public function remarksFor(?float $percentage, float $passing): string
     {
         return match (true) {
@@ -349,7 +365,7 @@ class GradingEngineService
             'grading_scheme_id' => $context['scheme']['id'],
             'calculated_percentage' => $result['percentage'],
             'calculated_grade_scale_item_id' => $result['band']['id'] ?? null,
-            'remarks' => $this->remarksFor($effective, (float) $context['scheme']['passing_percentage']),
+            'remarks' => $this->tagFor($record, $effective, (float) $context['scheme']['passing_percentage']),
             'last_calculated_at' => $now,
             'updated_at' => $now,
         ];
@@ -410,7 +426,7 @@ class GradingEngineService
             'overridden_grade_scale_item_id' => $isOverride ? ($this->bandFor($context['bands'], $percentage)['id'] ?? null) : null,
             'override_reason' => $isOverride ? trim($reason) : null,
             'overridden_by' => $isOverride ? $user->id : null,
-            'remarks' => $this->remarksFor($effective, (float) $context['scheme']['passing_percentage']),
+            'remarks' => $this->tagFor($record, $effective, (float) $context['scheme']['passing_percentage']),
             'updated_at' => $now,
         ]);
 
@@ -429,5 +445,143 @@ class GradingEngineService
         ]);
 
         return ['success' => true, 'message' => $isOverride ? 'Final grade overridden.' : 'Override removed.'];
+    }
+    /*
+    |--------------------------------------------------------------------------
+    | Tags: Incomplete (INC) and Withdrawn
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Marks a student's grade Incomplete (INC): neither passed nor failed,
+     * with the reason and, optionally, the date to finish by. The grade
+     * itself is untouched.
+     */
+    public function markIncomplete(User $user, int $offeringId, int $studentId, string $reason, ?string $until = null): array
+    {
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            return ['success' => false, 'message' => 'Give a reason for the Incomplete.'];
+        }
+
+        if ($until !== null && $until !== '') {
+            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $until);
+
+            if ($date === false || $date->format('Y-m-d') !== $until) {
+                return ['success' => false, 'message' => 'Enter the finish-by date as year-month-day.'];
+            }
+        } else {
+            $until = null;
+        }
+
+        $record = $this->recordFor($offeringId, $studentId);
+
+        if (!$record) {
+            return ['success' => false, 'message' => 'Student is not enrolled in this section.'];
+        }
+
+        $now = date('Y-m-d H:i:s');
+
+        $this->recordModel->update($record['id'], [
+            'remarks' => 'INC',
+            'inc_set_at' => $now,
+            'inc_set_by' => $user->id,
+            'inc_reason' => $reason,
+            'inc_until' => $until,
+            'updated_at' => $now,
+        ]);
+
+        GradeAudit::record('grades.incomplete_set', $offeringId, [
+            'new' => ['student_id' => $studentId, 'reason' => $reason, 'until' => $until],
+        ], $user);
+
+        return ['success' => true, 'message' => 'Marked Incomplete.'];
+    }
+
+    /** Takes the Incomplete off: the grade shows Passed or Failed again. */
+    public function clearIncomplete(User $user, int $offeringId, int $studentId): array
+    {
+        $record = $this->recordModel->findForStudent($offeringId, $studentId);
+
+        if (!$record || empty($record['inc_set_at'])) {
+            return ['success' => false, 'message' => 'This student is not marked Incomplete.'];
+        }
+
+        $this->recordModel->update($record['id'], [
+            'inc_set_at' => null,
+            'inc_set_by' => null,
+            'inc_reason' => null,
+            'inc_until' => null,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->recalculateStudent($offeringId, $studentId);
+
+        GradeAudit::record('grades.incomplete_cleared', $offeringId, [
+            'old' => ['student_id' => $studentId, 'reason' => $record['inc_reason']],
+        ], $user);
+
+        return ['success' => true, 'message' => 'Incomplete removed.'];
+    }
+
+    /**
+     * Brings one student's tag in step with their enrolment: a student who
+     * dropped or withdrew is tagged Withdrawn (their grade is kept, frozen);
+     * one who is enrolled again gets a normal tag back.
+     */
+    public function syncEnrolment(int $offeringId, int $studentId): void
+    {
+        $record = $this->recordModel->findForStudent($offeringId, $studentId);
+
+        if (!$record) {
+            return;
+        }
+
+        $status = db_connect()->table('enrollments')
+            ->select('status')
+            ->where('offering_id', $offeringId)
+            ->where('student_user_id', $studentId)
+            ->get()->getRowArray()['status'] ?? null;
+
+        if (in_array($status, ['dropped', 'withdrawn'], true)) {
+
+            if ($record['remarks'] !== 'Withdrawn') {
+                $this->recordModel->update($record['id'], ['remarks' => 'Withdrawn', 'updated_at' => date('Y-m-d H:i:s')]);
+            }
+
+            return;
+        }
+
+        if ($record['remarks'] === 'Withdrawn') {
+            $this->recalculateStudent($offeringId, $studentId);
+        }
+    }
+
+    /** Every student who dropped or withdrew from the section carries the Withdrawn tag. */
+    private function tagWithdrawn(int $offeringId): void
+    {
+        $students = db_connect()->table('enrollments')
+            ->select('student_user_id')
+            ->where('offering_id', $offeringId)
+            ->whereIn('status', ['dropped', 'withdrawn'])
+            ->get()->getResultArray();
+
+        foreach ($students as $row) {
+            $this->syncEnrolment($offeringId, (int) $row['student_user_id']);
+        }
+    }
+
+    /** The student's record, calculated first if they have none yet. */
+    private function recordFor(int $offeringId, int $studentId): ?array
+    {
+        $record = $this->recordModel->findForStudent($offeringId, $studentId);
+
+        if (!$record) {
+            $this->recalculateStudent($offeringId, $studentId);
+            $record = $this->recordModel->findForStudent($offeringId, $studentId);
+        }
+
+        return $record;
     }
 }

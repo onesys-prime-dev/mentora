@@ -267,6 +267,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+        $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
 
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.
@@ -509,6 +510,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+        $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
 
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.

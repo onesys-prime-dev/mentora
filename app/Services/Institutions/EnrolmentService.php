@@ -271,6 +271,9 @@ class EnrolmentService
 
         $db->table('enrollments')->where('id', $enrollmentId)->update(['status' => $status, 'updated_at' => date('Y-m-d H:i:s')]);
 
+        // A student who dropped or withdrew is tagged Withdrawn in the gradebook; re-enrolled, they get a normal tag.
+        (new \App\Services\Courses\Grades\GradingEngineService())->syncEnrolment((int) $row['offering_id'], (int) $row['student_user_id']);
+
         $this->audit('enrolment.status_changed', $actor, $institutionId, $enrollmentId, ['status' => $row['status']], ['status' => $status, 'offering_id' => (int) $row['offering_id'], 'student_user_id' => (int) $row['student_user_id']]);
     }
 

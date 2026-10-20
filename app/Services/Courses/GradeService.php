@@ -230,6 +230,8 @@ class GradeService
                 'points_earned' => $breakdown['points_earned'] ?? 0,
                 'points_possible' => $breakdown['points_possible'] ?? 0,
                 'remarks' => $isPublished ? ($record['remarks'] ?? 'Incomplete') : 'Incomplete',
+                'inc_reason' => $isPublished ? ($record['inc_reason'] ?? null) : null,
+                'inc_until' => $isPublished ? ($record['inc_until'] ?? null) : null,
                 'graded_count' => count($graded),
                 'total_count' => count($assessments),
                 'is_override' => $isPublished && !empty($record['is_override']),

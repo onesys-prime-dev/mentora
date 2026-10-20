@@ -196,12 +196,16 @@ class SisGradeExporter
                 continue; // the SIS does not know it
             }
 
+            // A withdrawn student has no final grade to hand over, and an Incomplete is not settled yet:
+            // both are counted as skipped rather than sent.
+            $settled = ! in_array($record['remarks'], ['Withdrawn', 'INC'], true);
+
             $candidates[] = [
                 'offering_id'         => (int) $record['course_offering_id'],
                 'student_id'          => (int) $record['student_id'],
                 'course_external_id'  => $course,
                 'student_external_id' => $student,
-                'percentage'          => SisGradePayload::finalPercentage($record),
+                'percentage'          => $settled ? SisGradePayload::finalPercentage($record) : null,
                 'remarks'             => (string) $record['remarks'],
             ];
         }

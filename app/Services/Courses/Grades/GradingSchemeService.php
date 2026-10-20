@@ -280,6 +280,8 @@ class GradingSchemeService
                 'is_override' => !empty($record['is_override']),
                 'override_reason' => $record['override_reason'] ?? null,
                 'remarks' => $record['remarks'] ?? 'Incomplete',
+                'inc_reason' => $record['inc_reason'] ?? null,
+                'inc_until' => $record['inc_until'] ?? null,
             ];
 
         }
@@ -358,6 +360,16 @@ class GradingSchemeService
      * Sets (percentage given) or clears (null) an instructor's override of
      * a student's final grade. Every change is recorded (GradeHistoryModel).
      */
+    /** Marks the student's grade Incomplete (INC), or takes it off, with the reason and finish-by date. */
+    public function setIncomplete(User $user, int $offeringId, int $studentId, bool $incomplete, string $reason = '', ?string $until = null): array
+    {
+        $engine = new GradingEngineService();
+
+        return $incomplete
+            ? $engine->markIncomplete($user, $offeringId, $studentId, $reason, $until)
+            : $engine->clearIncomplete($user, $offeringId, $studentId);
+    }
+
     public function overrideGrade(User $user, int $offeringId, int $studentId, ?float $percentage, string $reason): array
     {
         return (new GradingEngineService())->overrideFinalGrade($user, $offeringId, $studentId, $percentage, $reason);

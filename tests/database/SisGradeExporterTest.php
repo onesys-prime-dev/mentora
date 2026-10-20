@@ -235,6 +235,20 @@ final class SisGradeExporterTest extends DatabaseTestCase
         $this->assertCount(2, $this->theDelivery());
     }
 
+    public function testAWithdrawnStudentAndAnIncompleteAreNotSent(): void
+    {
+        $gone = SisFixture::student($this->institution, 'S4', 'gone@example.com');
+        $open = SisFixture::student($this->institution, 'S5', 'open@example.com');
+        SisFixture::grade($this->offering, $gone, 60.0, null, 'Withdrawn');
+        SisFixture::grade($this->offering, $open, 55.0, null, 'INC');
+
+        $result = $this->export();
+
+        $this->assertSame(2, $result->datasets['grades']['created']);
+        $this->assertSame(2, $result->datasets['grades']['skipped']);
+        $this->assertCount(2, $this->theDelivery());
+    }
+
     public function testAStudentOrCourseTheSisDoesNotKnowIsNotSent(): void
     {
         $local = PeopleFactory::person('student', 'Local', 'Person', 'local@example.com', $this->institution);

@@ -171,6 +171,21 @@ class GradingSchemeController extends BaseController
         );
     }
 
+    /** Marks a student's grade Incomplete (INC) or takes it off. */
+    public function setIncomplete(int $offeringId, int $studentId)
+    {
+        $payload = $this->payload();
+
+        $incomplete = !empty($payload['incomplete']);
+
+        $until = isset($payload['until']) && $payload['until'] !== '' ? (string) $payload['until'] : null;
+
+        // Recorded by the engine (grades.incomplete_set / grades.incomplete_cleared).
+        return $this->response->setJSON(
+            $this->schemeService->setIncomplete(auth()->user(), $offeringId, $studentId, $incomplete, (string) ($payload['reason'] ?? ''), $until)
+        );
+    }
+
     public function overrideGrade(int $offeringId, int $studentId)
     {
         $payload = $this->payload();

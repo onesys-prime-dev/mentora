@@ -94,6 +94,9 @@ export const fetchGradebookRoster = () => request(`${base()}/roster`);
 export const updateManualScore = (itemId, studentId, score) =>
     request(`${base()}/roster/items/${itemId}/students/${studentId}`, "PATCH", { score });
 
+export const setIncomplete = (studentId, incomplete, reason = "", until = "") =>
+    request(`${base()}/roster/students/${studentId}/incomplete`, "PATCH", { incomplete, reason, until });
+
 export const overrideGrade = (studentId, percentage, reason) =>
     request(`${base()}/roster/students/${studentId}/override`, "PATCH", { percentage, reason });
 
