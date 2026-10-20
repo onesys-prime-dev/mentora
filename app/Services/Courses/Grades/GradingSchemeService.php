@@ -323,7 +323,21 @@ class GradingSchemeService
             return ['success' => false, 'message' => 'Student is not enrolled in this section.'];
         }
 
+        $before = (new \App\Models\Grades\GradebookItemScoreModel())
+            ->where('grade_item_id', $itemId)
+            ->where('student_id', $studentId)
+            ->first();
+
         (new GradebookSyncService())->setManualScore($offeringId, $itemId, $studentId, $score, $user->id);
+
+        $previous = $before === null || $before['raw_score'] === null ? null : (float) $before['raw_score'];
+
+        if ($previous !== $score) {
+            GradeAudit::record('grades.manual_score', $offeringId, [
+                'old' => ['item_id' => $itemId, 'item' => $item['name'], 'student_id' => $studentId, 'score' => $previous],
+                'new' => ['item_id' => $itemId, 'item' => $item['name'], 'student_id' => $studentId, 'score' => $score],
+            ], $user);
+        }
 
         $refreshed = $scheme['status'] === 'Published';
 
@@ -962,6 +976,8 @@ class GradingSchemeService
         }
 
         $count = (new GradingEngineService())->recalculateOffering($offeringId);
+
+        GradeAudit::record('grades.recalculated', $offeringId, ['new' => ['students' => $count]]);
 
         return ['success' => true, 'message' => "Recalculated {$count} " . ($count === 1 ? 'student' : 'students') . '.'];
     }

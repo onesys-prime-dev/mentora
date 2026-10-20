@@ -580,6 +580,75 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
         $this->assertSame('Score saved. Final grades update once the grading is published.', $result['message']);
     }
 
+    /** @return list<array<string, mixed>> the grade audit entries of this section, oldest first */
+    private function audit(string $action): array
+    {
+        return db_connect()->table('audit_logs')
+            ->where('action', $action)
+            ->where('target_id', (string) $this->offering)
+            ->orderBy('id')
+            ->get()->getResultArray();
+    }
+
+    public function testEveryChangedManualScoreIsRecordedWithTheOldAndNewValue(): void
+    {
+        $itemId = $this->quizItem();
+
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 15);
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 18);
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 18);
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, null);
+
+        $entries = $this->audit('grades.manual_score');
+
+        $this->assertCount(3, $entries, 'saving the same score again is not a change');
+
+        $moves = array_map(static fn (array $e): array => [
+            json_decode($e['old_values'], true)['score'],
+            json_decode($e['new_values'], true)['score'],
+        ], $entries);
+
+        $this->assertEquals([[null, 15.0], [15.0, 18.0], [18.0, null]], $moves);
+        $this->assertSame($this->instructor->id, (int) $entries[0]['actor_user_id']);
+        $this->assertSame($this->student->id, json_decode($entries[0]['new_values'], true)['student_id']);
+    }
+
+    public function testARefusedScoreLeavesNoAuditEntry(): void
+    {
+        $itemId = $this->quizItem();
+
+        $result = $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 999);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame([], $this->audit('grades.manual_score'));
+    }
+
+    public function testAnOverrideAndItsRemovalAreRecordedWithTheReason(): void
+    {
+        $this->service->recalculate($this->offering);
+
+        $this->service->overrideGrade($this->instructor, $this->offering, $this->student->id, 88.0, 'Excused absence');
+        $this->service->overrideGrade($this->instructor, $this->offering, $this->student->id, null, '');
+
+        $set = $this->audit('grades.override_set');
+        $removed = $this->audit('grades.override_removed');
+
+        $this->assertCount(1, $set);
+        $this->assertSame('Excused absence', json_decode($set[0]['new_values'], true)['reason']);
+        $this->assertEquals(88.0, json_decode($set[0]['new_values'], true)['percentage']);
+        $this->assertCount(1, $removed);
+    }
+
+    public function testARecalculationIsRecordedWithHowManyStudentsItTouched(): void
+    {
+        $this->service->recalculate($this->offering);
+
+        $entries = $this->audit('grades.recalculated');
+
+        $this->assertCount(1, $entries);
+        $this->assertSame(1, json_decode($entries[0]['new_values'], true)['students']);
+    }
+
     public function testClearingAScoreLeavesTheItemUngraded(): void
     {
         $itemId = $this->quizItem();

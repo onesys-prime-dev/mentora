@@ -375,6 +375,10 @@ class GradeSheetImportService
             return ['success' => false, 'message' => 'The scores could not be saved.'];
         }
 
+        GradeAudit::record('grades.import_applied', $offeringId, [
+            'new' => ['scores' => count($valid), 'students' => count(array_unique(array_column($valid, 0)))],
+        ], $user);
+
         // Same rule as live grading: final grades follow while the scheme is
         // published.
         $scheme = (new GradingSchemeModel())->find($scheme['id']);

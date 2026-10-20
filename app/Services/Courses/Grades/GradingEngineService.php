@@ -414,6 +414,11 @@ class GradingEngineService
             'updated_at' => $now,
         ]);
 
+        GradeAudit::record($isOverride ? 'grades.override_set' : 'grades.override_removed', $offeringId, [
+            'old' => ['student_id' => $studentId, 'percentage' => $previous],
+            'new' => ['student_id' => $studentId, 'percentage' => $effective, 'reason' => trim($reason)],
+        ], $user);
+
         $this->historyModel->insert([
             'gradebook_record_id' => $record['id'],
             'previous_percentage' => $previous,
