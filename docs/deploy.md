@@ -142,19 +142,20 @@ The two environments' `GROQ_API_KEY` hashes and `QB_WORKER_SECRET` hashes must d
 
 ### Findings of the last review (2026-10-20)
 
-| | Staging | Production | Action |
+The secrets file is **root-owned, mode 600, in both environments**: systemd reads it as root before dropping to the site user, so a flaw in the website cannot expose the Groq key. The code in `QB_PATH` is owned by the site user, because the deploy's rsync has to write it; secrets never live there.
+
+| | Staging | Production | Status |
 |---|---|---|---|
 | Unit name | `mentora-qb-worker-staging` | `mentora-qb-worker-production` | the deploy used to restart `mentora-qb-worker`, which does not exist; fixed (`QB_SERVICE`) |
 | Restart without sudo | not possible | not possible | fixed: `SIGUSR1` route |
-| Secrets file owner | `root`, 600 | **the site user**, 600 | change to `root:root` so the website's PHP cannot read the Groq key |
-| Groq key, worker secret | distinct from production's, secret matches the site `.env` | distinct from staging's, secret matches the site `.env` | none |
-| `QB_WORKER_ID` | `staging-1` | **unset** (shows as `host-pid`, a new row after every restart) | set `production-1` |
-| Hardening in the installed unit | `MemoryMax`, `CPUQuota`, `ProtectSystem` etc. | the same | add `MemoryHigh`, `TimeoutStopSec`, `StartLimit*`, `TasksMax`, `PrivateDevices`, `SyslogIdentifier` from the new template |
+| Secrets file owner | `root`, 600 | was the site user; now `root`, 600 | fixed |
+| Groq key, worker secret | distinct from production's, secret matches the site `.env` | distinct from staging's, secret matches the site `.env` | none needed |
+| `QB_WORKER_ID` | `staging-1` | was unset; now `production-1` | fixed |
+| Installed unit | new template | new template (old units saved in `/root/mentora-unit-backups/`) | fixed |
 | `/opt` folder mode | 755 | 770 | harmless; production's is tighter |
 | Worker folder contents | no `eval/` | has `eval/` (copied by hand before the deploy step existed) | harmless; the deploy never deletes excluded folders |
-| `questionBuilder.useJobs` | true | true | none |
+| `questionBuilder.useJobs` | true | true | none needed |
 | `questionBuilder.serviceUrl` | `http://127.0.0.1:8008`, nothing listens | same | unused while `useJobs` is true; can be removed |
-| Heartbeat on the monitoring page | fresh | fresh | none |
 
 ## When a deploy fails
 
