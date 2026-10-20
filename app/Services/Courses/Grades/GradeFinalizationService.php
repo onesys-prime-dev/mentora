@@ -3,6 +3,7 @@
 namespace App\Services\Courses\Grades;
 
 use App\Services\Courses\Assessments\AssessmentResultService;
+use App\Services\Notifications\NotificationService;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -238,6 +239,8 @@ class GradeFinalizationService
 
         $now = date('Y-m-d H:i:s');
 
+        $finalizationId = (int) ($this->current($offeringId)['id'] ?? 0);
+
         $db = db_connect();
 
         $db->transStart();
@@ -264,12 +267,75 @@ class GradeFinalizationService
 
         GradeAudit::record('grades.reopened', $offeringId, ['new' => ['reason' => $reason, 'already_sent_to_sis' => $sent !== null]], $user);
 
+        $this->tellReopened($user, $offeringId, $finalizationId, $reason, $sent !== null);
+
         return [
             'success' => true,
             'message' => $sent !== null
                 ? 'The grades are open again. They were already sent to the SIS: after you finalize them again, only what changed is sent.'
                 : 'The grades are open again.',
         ];
+    }
+
+    /**
+     * Final grades that were reopened are news to the people responsible for
+     * them: the section's instructors and the chairperson of its
+     * sub-department, except whoever did it. Each is told once per
+     * finalization, in the app (not by email: it is not urgent).
+     */
+    private function tellReopened(User $actor, int $offeringId, int $finalizationId, string $reason, bool $alreadySent): void
+    {
+        $db = db_connect();
+
+        $section = $db->table('course_offerings o')
+            ->select('c.course_code, c.course_title, o.section_code, sd.id AS sub_department_id, d.institution_id')
+            ->join('courses c', 'c.id = o.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments d', 'd.id = sd.department_id')
+            ->where('o.id', $offeringId)
+            ->get()->getRowArray();
+
+        if (!$section) {
+            return;
+        }
+
+        $name = trim((string) ($db->table('user_profiles')->select("CONCAT(first_name, ' ', last_name) AS name", false)->where('user_id', $actor->id)->get()->getRowArray()['name'] ?? ''));
+
+        $label = trim($section['course_code'] . ' ' . $section['section_code']);
+
+        $body = $label . ': ' . ($name !== '' ? $name : 'Someone') . ' reopened the final grades. Reason: ' . $reason
+            . ($alreadySent ? ' They had already been sent to the SIS; changes will be sent after they are finalized again.' : '');
+
+        $slug = url_title((string) $section['course_title'], '-', true);
+
+        $audience = [];
+
+        foreach ($db->table('instructor_assignments')->select('instructor_user_id')->where('offering_id', $offeringId)->get()->getResultArray() as $row) {
+            $audience[(int) $row['instructor_user_id']] = 'instructor';
+        }
+
+        foreach ($db->table('chairperson_assignments')->select('chairperson_user_id')->where(['sub_department_id' => $section['sub_department_id'], 'status' => 'active'])->get()->getResultArray() as $row) {
+            // A person who is both is told once, as the chairperson.
+            $audience[(int) $row['chairperson_user_id']] = 'chairperson';
+        }
+
+        unset($audience[(int) $actor->id]);
+
+        $notifications = new NotificationService();
+
+        foreach ($audience as $userId => $area) {
+            $notifications->send(
+                $userId,
+                'grades_reopened',
+                'Final grades reopened',
+                $body,
+                false,
+                "grades-reopened:{$finalizationId}:{$userId}",
+                (int) $section['institution_id'],
+                site_url("{$area}/courses/{$offeringId}/{$slug}/grades"),
+            );
+        }
     }
 
     /** Handed-in work of the section's counted assessments that nobody has finished grading. */

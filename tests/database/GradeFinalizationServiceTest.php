@@ -382,6 +382,147 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Telling people the grades were reopened
+    |--------------------------------------------------------------------------
+    */
+
+    private function chairOfTheSection(): User
+    {
+        $chair = CourseFactory::user('chairperson');
+
+        $sub = (int) db_connect()->query(
+            'SELECT sd.id FROM course_offerings o JOIN courses c ON c.id = o.course_id
+               JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id WHERE o.id = ?',
+            [$this->offering],
+        )->getRow()->id;
+
+        db_connect()->table('chairperson_assignments')->insert([
+            'sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $chair;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function reopenedNotices(?User $for = null): array
+    {
+        $query = db_connect()->table('notifications')->where('type', 'grades_reopened');
+
+        if ($for !== null) {
+            $query->where('user_id', $for->id);
+        }
+
+        return $query->get()->getResultArray();
+    }
+
+    public function testReopeningTellsTheChairpersonWhoDidItAndWhy(): void
+    {
+        $chair = $this->chairOfTheSection();
+        $this->finalize();
+
+        $this->service->reopen($this->instructor, $this->offering, 'A score was entered wrongly');
+
+        $notices = $this->reopenedNotices($chair);
+
+        $this->assertCount(1, $notices);
+        $this->assertSame('Final grades reopened', $notices[0]['title']);
+        $this->assertStringContainsString('A score was entered wrongly', $notices[0]['body']);
+        $this->assertStringContainsString('/chairperson/courses/' . $this->offering . '/', $notices[0]['link']);
+        $this->assertSame(0, (int) $notices[0]['urgent'], 'not worth an email');
+    }
+
+    public function testWhoeverReopenedItIsNotToldAndStudentsAreNeverTold(): void
+    {
+        $this->chairOfTheSection();
+        $this->finalize();
+
+        $this->service->reopen($this->instructor, $this->offering, 'Fixing a score');
+
+        $told = array_map('intval', array_column($this->reopenedNotices(), 'user_id'));
+
+        $this->assertNotContains((int) $this->instructor->id, $told);
+        $this->assertNotContains((int) $this->strong->id, $told);
+        $this->assertNotContains((int) $this->weak->id, $told);
+        $this->assertCount(1, $told, 'only the chairperson');
+    }
+
+    public function testWhenTheChairpersonReopensTheInstructorIsTold(): void
+    {
+        $chair = $this->chairOfTheSection();
+        $this->finalize();
+
+        $this->service->reopen($chair, $this->offering, 'On the dean request');
+
+        $notices = $this->reopenedNotices($this->instructor);
+
+        $this->assertCount(1, $notices);
+        $this->assertStringContainsString('/instructor/courses/' . $this->offering . '/', $notices[0]['link']);
+        $this->assertSame([], $this->reopenedNotices($chair), 'the chairperson did it themselves');
+    }
+
+    public function testSomeoneWhoIsBothIsToldOnceAsTheChairperson(): void
+    {
+        $both = CourseFactory::user('chairperson');
+        CourseFactory::assignInstructor($this->offering, $both);
+
+        $sub = (int) db_connect()->query(
+            'SELECT sd.id FROM course_offerings o JOIN courses c ON c.id = o.course_id
+               JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id WHERE o.id = ?',
+            [$this->offering],
+        )->getRow()->id;
+
+        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $both->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+
+        $this->finalize();
+
+        $this->service->reopen($this->instructor, $this->offering, 'Fixing a score');
+
+        $notices = $this->reopenedNotices($both);
+
+        $this->assertCount(1, $notices);
+        $this->assertStringContainsString('/chairperson/courses/', $notices[0]['link']);
+    }
+
+    public function testEachReopeningIsToldSeparatelyAndTheNoticeSaysIfTheGradesWereAlreadySent(): void
+    {
+        $chair = $this->chairOfTheSection();
+
+        $this->finalize();
+        $this->service->reopen($this->instructor, $this->offering, 'First fix');
+
+        $institution = (int) db_connect()->table('course_offerings o')
+            ->select('d.institution_id AS id')->join('courses c', 'c.id = o.course_id')->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')->join('departments d', 'd.id = sd.department_id')
+            ->where('o.id', $this->offering)->get()->getRowArray()['id'];
+
+        $this->finalize();
+
+        db_connect()->table('sis_grade_exports')->insert([
+            'institution_id' => $institution, 'offering_id' => $this->offering, 'student_id' => $this->strong->id,
+            'percentage' => 78, 'remarks' => 'Passed', 'batch_key' => 'g1-x', 'sent_at' => '2026-10-20 08:00:00',
+        ]);
+
+        $this->service->reopen($this->instructor, $this->offering, 'Second fix');
+
+        $notices = $this->reopenedNotices($chair);
+
+        $this->assertCount(2, $notices);
+        $this->assertStringNotContainsString('SIS', $notices[0]['body']);
+        $this->assertStringContainsString('already been sent to the SIS', $notices[1]['body']);
+    }
+
+    public function testNothingIsSentWhenTheReopenIsRefused(): void
+    {
+        $this->chairOfTheSection();
+        $this->finalize();
+
+        $this->service->reopen($this->instructor, $this->offering, '   ');
+
+        $this->assertSame([], $this->reopenedNotices());
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Excused
     |--------------------------------------------------------------------------
     */
