@@ -34,6 +34,16 @@ if ($gradeLabel !== null) {
 }
 ?>
 
+<?php if ($isFinal): ?>
+    <div class="flex justify-end">
+        <button type="button" data-report-path="mine" data-report-format="pdf" data-my-grade-report
+            class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+            <?= icon('grades', 'h-4 w-4 text-current') ?>
+            Download my grade report
+        </button>
+    </div>
+<?php endif; ?>
+
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
     <?= view('components/metric-card', [

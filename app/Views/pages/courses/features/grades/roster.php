@@ -76,6 +76,7 @@ $isRequestMode = $overrideMode === 'request';
                         <td class="px-4 py-2 whitespace-nowrap">
                             <div class="font-semibold text-[#646464]"><?= esc($student['student_name']) ?></div>
                             <div class="text-xs text-[#767676]"><?= esc($student['student_number']) ?></div>
+                            <button type="button" data-report-path="student/<?= (int) $student['student_id'] ?>" data-report-format="pdf" class="text-[11px] font-semibold text-brand hover:underline" title="Download this student's grade report (PDF)">Grade report</button>
                         </td>
 
                         <?php foreach ($items as $item): ?>

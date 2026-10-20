@@ -10,6 +10,7 @@ import { loadGradebookRoster } from "./roster/roster.js";
 import { initializeGradeSheet } from "./import-export/grade-sheet.js";
 import { bindFinalizeDialog } from "./finalize/finalize-dialog.js";
 import { bindCurveDialog } from "./curve/curve-dialog.js";
+import { bindReportMenu, bindReportTriggers } from "./reports/report-menu.js";
 
 /*
  * Reuses the Assessments feature's own Grade Work screen rather than
@@ -106,6 +107,9 @@ export async function initialize()
 
         bindGradebookToolbar();
 
+        // A student's own report (once the grades are final).
+        bindReportTriggers(container.querySelector("[data-my-grade-report]")?.parentElement ?? document.createElement("div"));
+
     }
 
     catch (error) {
@@ -165,6 +169,8 @@ function bindGradebookToolbar()
     bindFinalizeDialog(initialize);
 
     bindCurveDialog(initialize);
+
+    bindReportMenu();
 }
 
 function bindAssessmentLinks()

@@ -86,6 +86,28 @@ $finalization = $gradebook['finalization'] ?? null;
 
                 <button
                     type="button"
+                    data-toggle-report-menu
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                    Reports
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+
+                <div data-report-menu class="absolute right-0 z-20 mt-2 hidden w-64 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
+                    <p class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Class gradebook</p>
+                    <button type="button" data-report-path="class" data-report-format="xlsx" class="rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Excel (.xlsx)</button>
+                    <button type="button" data-report-path="class" data-report-format="csv" class="rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">CSV (.csv)</button>
+                    <p class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Class summary</p>
+                    <button type="button" data-report-path="summary" data-report-format="pdf" class="rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">PDF</button>
+                    <button type="button" data-report-path="summary" data-report-format="html" data-report-mode="print" class="rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Print view</button>
+                    <p class="px-3 py-2 text-xs text-gray-500">A student's own report is on their row in the Gradebook.</p>
+                </div>
+
+            </div>
+
+            <div class="relative">
+
+                <button
+                    type="button"
                     data-toggle-grade-sheet-menu
                     class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
                     Offline Grade Sheet

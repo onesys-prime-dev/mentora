@@ -105,6 +105,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
+        $routes->get('(:num)/grades/report/mine', 'Courses\Grades\GradeReportController::mine/$1');
     });
 });
 
@@ -290,6 +291,9 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
@@ -336,6 +340,9 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
     });
 });
 
@@ -546,6 +553,9 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
 
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
@@ -667,6 +677,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
             $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
             $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+            $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+            $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+            $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         });
 
         // The subscription, to read (institution.settings), and the SIS connection's runs (sis.run):

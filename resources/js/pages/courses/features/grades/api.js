@@ -70,6 +70,9 @@ export const resyncGradeItem = (itemId) => request(`${base()}/scheme/items/${ite
 
 export const recalculateGrades = () => request(`${base()}/recalculate`, "POST");
 
+/** The address of a report file or print page of this section. */
+export const reportUrl = (path, format) => `${base()}/report/${path}?format=${encodeURIComponent(format)}`;
+
 export const fetchCurves = () => request(`${base()}/curve`);
 
 export const previewCurve = (payload) => request(`${base()}/curve/preview`, "POST", payload);
