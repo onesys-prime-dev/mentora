@@ -373,6 +373,296 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         $this->assertSame('It goes to the dean to decide.', $this->service->routeText($this->chair, $this->offering), 'a chairperson skips their own step');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | The dean's decision
+    |--------------------------------------------------------------------------
+    */
+
+    /** A request that has reached the dean: asked by the instructor, endorsed by the chairperson. @return int request id */
+    private function waitingForDean(?float $percentage = 92.0): int
+    {
+        $id = $this->ask($percentage)['request']['id'];
+        $this->service->endorse($this->chair, $id, 'Fine by me');
+
+        return $id;
+    }
+
+    private function gradeRecord(): array
+    {
+        return db_connect()->table('gradebook_records')->where('student_id', $this->student->id)->get()->getRowArray();
+    }
+
+    public function testTheDeanIsToldWhenARequestReachesThemAndNotBefore(): void
+    {
+        $id = $this->ask()['request']['id'];
+        $this->assertCount(0, $this->notificationsFor($this->dean), 'still with the chairperson');
+
+        $this->service->endorse($this->chair, $id, '');
+
+        $told = $this->notificationsFor($this->dean);
+        $this->assertCount(1, $told);
+        $this->assertStringContainsString('waiting for your decision', $told[0]['body']);
+        $this->assertStringEndsWith('/dean/approvals', $told[0]['link']);
+    }
+
+    public function testARequestThatSkipsTheChairpersonTellsTheDeanAtOnce(): void
+    {
+        $this->service->request($this->chair, $this->offering, (int) $this->student->id, 91.0, 'Appeal upheld');
+
+        $this->assertCount(1, $this->notificationsFor($this->dean));
+    }
+
+    public function testApprovingChangesTheGradeThroughTheEngineAndClosesTheRequest(): void
+    {
+        $id = $this->waitingForDean();
+
+        $result = $this->service->approve($this->dean, $id, 'Agreed');
+
+        $this->assertTrue($result['success'], $result['message']);
+        $this->assertStringContainsString('final grade was changed', $result['message']);
+
+        $record = $this->gradeRecord();
+        $this->assertSame(1, (int) $record['is_override']);
+        $this->assertSame(92.0, (float) $record['overridden_percentage']);
+        $this->assertSame('Late quiz excused (medical).', $record['override_reason']);
+        $this->assertSame('Passed', $record['remarks'], 'the remarks follow the new grade');
+
+        $history = db_connect()->table('grade_history')->get()->getRowArray();
+        $this->assertSame(88.0, (float) $history['previous_percentage']);
+        $this->assertSame(92.0, (float) $history['new_percentage']);
+        $this->assertSame((int) $this->dean->id, (int) $history['changed_by']);
+
+        $row = $this->row($id);
+        $this->assertSame(Chain::APPROVED, $row['status']);
+        $this->assertNull($row['open_marker']);
+        $this->assertSame((int) $this->dean->id, (int) $row['decided_by']);
+        $this->assertSame('Agreed', $row['decision_reason']);
+        $this->assertNotNull($row['decided_at']);
+
+        $this->assertContains('grade.override_approved', $this->actions());
+        $told = array_values(array_filter($this->notificationsFor($this->teacher), static fn (array $n): bool => str_contains($n['title'], 'approved')));
+        $this->assertCount(1, $told);
+        $this->assertStringContainsString('92%', $told[0]['body']);
+
+        $this->assertTrue($this->ask(95.0, 'A later appeal')['success'], 'a decided request no longer blocks the student');
+    }
+
+    public function testApprovingARemovalClearsTheOverrideAndRestoresTheCalculatedGrade(): void
+    {
+        db_connect()->table('gradebook_records')->where('student_id', $this->student->id)->update(['is_override' => 1, 'overridden_percentage' => 95.0]);
+        $id = $this->waitingForDean(null);
+
+        $result = $this->service->approve($this->dean, $id);
+
+        $this->assertTrue($result['success'], $result['message']);
+        $this->assertStringContainsString('override was removed', $result['message']);
+
+        $record = $this->gradeRecord();
+        $this->assertSame(0, (int) $record['is_override']);
+        $this->assertNull($record['overridden_percentage']);
+        $this->assertSame(95.0, (float) db_connect()->table('grade_history')->get()->getRowArray()['previous_percentage']);
+        $this->assertSame(88.0, (float) db_connect()->table('grade_history')->get()->getRowArray()['new_percentage']);
+    }
+
+    public function testRejectingNeedsAReasonAndLeavesTheGradeAlone(): void
+    {
+        $id = $this->waitingForDean();
+
+        $this->assertFalse($this->service->reject($this->dean, $id, '  ')['success'], 'a reason is required');
+        $this->assertSame(Chain::AWAITING_DEAN, $this->row($id)['status']);
+
+        $result = $this->service->reject($this->dean, $id, 'The note does not cover that quiz.');
+
+        $this->assertTrue($result['success'], $result['message']);
+        $this->assertSame(0, (int) $this->gradeRecord()['is_override'], 'the grade is untouched');
+        $this->assertSame(0, db_connect()->table('grade_history')->countAllResults());
+
+        $row = $this->row($id);
+        $this->assertSame(Chain::REJECTED, $row['status']);
+        $this->assertNull($row['open_marker']);
+        $this->assertSame('The note does not cover that quiz.', $row['decision_reason']);
+
+        $this->assertContains('grade.override_rejected', $this->actions());
+        $told = array_values(array_filter($this->notificationsFor($this->teacher), static fn (array $n): bool => str_contains($n['title'], 'rejected')));
+        $this->assertStringContainsString('The note does not cover that quiz.', $told[0]['body']);
+    }
+
+    public function testWhoMayDecide(): void
+    {
+        $id = $this->waitingForDean();
+
+        $otherDepartment = DeanFactory::department('O', $this->institution);
+        $otherDean       = DeanFactory::dean($this->institution, $otherDepartment['department'], 'Olga');
+        $notDean         = PeopleFactory::person('instructor', 'Not', 'Dean', null, $this->institution);
+
+        foreach ([[$otherDean, "another department's dean"], [$this->chair, 'the chairperson'], [$this->teacher, 'the requester'], [$notDean, 'an instructor'], [$this->student, 'a student']] as [$who, $label]) {
+            $this->assertFalse($this->service->approve($who, $id)['success'], $label);
+            $this->assertFalse($this->service->reject($who, $id, 'No')['success'], $label);
+        }
+
+        $this->assertSame(Chain::AWAITING_DEAN, $this->row($id)['status']);
+        $this->assertSame(0, (int) $this->gradeRecord()['is_override']);
+        $this->assertFalse($this->service->approve($this->dean, 999999)['success']);
+    }
+
+    public function testARequestStillWithTheChairpersonCannotBeDecidedByTheDean(): void
+    {
+        $id = $this->ask()['request']['id'];
+
+        $this->assertFalse($this->service->approve($this->dean, $id)['success']);
+        $this->assertFalse($this->service->reject($this->dean, $id, 'No')['success']);
+        $this->assertSame(Chain::AWAITING_CHAIR, $this->row($id)['status']);
+    }
+
+    public function testADeanWhoAlsoTeachesCannotDecideTheirOwnRequestNorAnyWhileActingAsAnInstructor(): void
+    {
+        $dean = PeopleFactory::person('instructor', 'Dora', 'Dean', null, $this->institution);
+        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->department, (int) $dean->id);
+        $dean = model(CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
+        CourseFactory::assignInstructor($this->offering, $dean);
+
+        $roles = new \App\Services\Auth\ActiveRoleService();
+
+        // As dean she cannot even ask: she asks as the instructor she also is.
+        $roles->switchTo($dean, 'dean');
+        $this->assertFalse($this->service->request($dean, $this->offering, (int) $this->student->id, 91.0, 'My appeal')['success']);
+
+        // Her own request: the dean step is the administrator's, never hers.
+        $roles->switchTo($dean, 'instructor');
+        $own = $this->service->request($dean, $this->offering, (int) $this->student->id, 91.0, 'My appeal');
+        $this->assertSame(Chain::AWAITING_CHAIR, $own['request']['status'], 'the chairperson endorses it first');
+        $this->service->endorse($this->chair, $own['request']['id'], '');
+        $this->assertSame(Chain::AWAITING_INSTITUTION, $this->row($own['request']['id'])['status']);
+
+        $roles->switchTo($dean, 'dean');
+        $this->assertFalse($this->service->approve($dean, $own['request']['id'])['success'], 'never her own request');
+
+        // Acting as an instructor she is not the dean, for anyone else's request either.
+        $this->service->withdraw($dean, $this->offering, $own['request']['id']);
+        $other = $this->waitingForDean();
+        $roles->switchTo($dean, 'instructor');
+
+        $this->assertFalse($this->service->approve($dean, $other)['success'], 'as an instructor');
+        $this->assertSame(Chain::AWAITING_DEAN, $this->row($other)['status']);
+    }
+
+    public function testOnlyOneDecisionWinsAndAWithdrawnRequestCannotBeApproved(): void
+    {
+        $id = $this->waitingForDean();
+
+        $this->assertTrue($this->service->approve($this->dean, $id)['success']);
+        $this->assertFalse($this->service->approve($this->dean, $id)['success'], 'already decided');
+        $this->assertFalse($this->service->reject($this->dean, $id, 'Changed my mind')['success'], 'already decided');
+        $this->assertSame(Chain::APPROVED, $this->row($id)['status']);
+
+        $other = PeopleFactory::person('student', 'Bob', 'Ray', null, $this->institution);
+        CourseFactory::enroll($this->offering, $other);
+        $this->record($other, 70.0);
+        $second = $this->service->request($this->teacher, $this->offering, (int) $other->id, 80.0, 'Re-marked')['request']['id'];
+        $this->service->endorse($this->chair, $second, '');
+        $this->service->withdraw($this->teacher, $this->offering, $second);
+
+        $this->assertFalse($this->service->approve($this->dean, $second)['success'], 'withdrawn before the dean answered');
+        $this->assertSame(0, (int) db_connect()->table('gradebook_records')->where('student_id', $other->id)->get()->getRowArray()['is_override']);
+    }
+
+    public function testAGradeThatCannotBeChangedLeavesTheRequestWaitingForTheDean(): void
+    {
+        $id = $this->waitingForDean();
+
+        // The student left the section after the request: the engine has nothing to change.
+        db_connect()->table('gradebook_records')->where('student_id', $this->student->id)->delete();
+        db_connect()->table('enrollments')->where('student_user_id', $this->student->id)->update(['status' => 'dropped']);
+
+        $result = $this->service->approve($this->dean, $id);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('could not be changed', $result['message']);
+
+        $row = $this->row($id);
+        $this->assertSame(Chain::AWAITING_DEAN, $row['status'], 'given back, not lost');
+        $this->assertSame(1, (int) $row['open_marker']);
+        $this->assertNull($row['decided_by']);
+        $this->assertNotContains('grade.override_approved', $this->actions());
+    }
+
+    public function testTheDeansListHoldsWhatWaitsForThemAndTheDecidedOnes(): void
+    {
+        $waiting = $this->waitingForDean();
+
+        $other = PeopleFactory::person('student', 'Bob', 'Ray', null, $this->institution);
+        CourseFactory::enroll($this->offering, $other);
+        $this->record($other, 70.0);
+        $this->service->request($this->teacher, $this->offering, (int) $other->id, 80.0, 'Re-marked');   // still with the chairperson
+
+        $decidedStudent = PeopleFactory::person('student', 'Cy', 'Day', null, $this->institution);
+        CourseFactory::enroll($this->offering, $decidedStudent);
+        $this->record($decidedStudent, 60.0);
+        $decided = $this->service->request($this->teacher, $this->offering, (int) $decidedStudent->id, 75.0, 'Appeal')['request']['id'];
+        $this->service->endorse($this->chair, $decided, '');
+        $this->service->reject($this->dean, $decided, 'No grounds');
+
+        $pending = $this->service->listForDean($this->dean, new \App\Services\Courses\Grades\OverrideApprovalFilters());
+
+        $this->assertSame([$waiting], array_map('intval', array_column($pending, 'id')), 'only what the chairperson passed on');
+        $this->assertSame('Ann Lee', $pending[0]['student_name']);
+        $this->assertSame('Tess Teacher', $pending[0]['requester_name']);
+        $this->assertSame('Maria Chair', $pending[0]['endorser_name']);
+        $this->assertSame('Program G', $pending[0]['program_name']);
+        $this->assertSame(88.0, (float) $pending[0]['current_calculated']);
+        $this->assertSame(1, $this->service->pendingCountForDean($this->dean));
+
+        $history = $this->service->listForDean($this->dean, new \App\Services\Courses\Grades\OverrideApprovalFilters('decided'));
+        $this->assertSame([$decided], array_map('intval', array_column($history, 'id')));
+        $this->assertSame('rejected', $history[0]['status']);
+    }
+
+    public function testTheDeansListFollowsItsFiltersAndStaysInTheirDepartment(): void
+    {
+        $this->waitingForDean();
+        $filters = static fn (array $input) => \App\Services\Courses\Grades\OverrideApprovalFilters::fromInput($input);
+        $count   = fn (array $input) => count($this->service->listForDean($this->dean, $filters($input)));
+
+        $program = (int) db_connect()->table('programs')->where('sub_department_id', $this->sub)->get()->getRowArray()['id'];
+
+        $this->assertSame(1, $count(['q' => 'ann']));
+        $this->assertSame(1, $count(['q' => 'IT101']));
+        $this->assertSame(1, $count(['q' => 'computing']));
+        $this->assertSame(0, $count(['q' => 'nobody']));
+        $this->assertSame(0, $count(['q' => '%']), 'a wildcard is plain text');
+        $this->assertSame(1, $count(['program' => (string) $program]));
+        $this->assertSame(0, $count(['program' => (string) ($program + 999)]));
+        $this->assertSame(1, $count(['requested_by' => (string) $this->teacher->id]));
+        $this->assertSame(0, $count(['requested_by' => (string) $this->chair->id]));
+
+        $otherDepartment = DeanFactory::department('O', $this->institution);
+        $otherDean       = DeanFactory::dean($this->institution, $otherDepartment['department'], 'Olga');
+
+        $this->assertSame([], $this->service->listForDean($otherDean, new \App\Services\Courses\Grades\OverrideApprovalFilters()), "another department's dean sees none of it");
+        $this->assertSame([], $this->service->listForDean(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), new \App\Services\Courses\Grades\OverrideApprovalFilters()));
+        $this->assertSame(['Tess Teacher'], array_column($this->service->requestersForDean($this->dean), 'name'));
+    }
+
+    public function testTheBreakdownShowsHowTheGradeIsMadeUp(): void
+    {
+        $quizzes = GradeFactory::category($this->scheme, 'Quizzes', 30);
+        $exams   = GradeFactory::category($this->scheme, 'Exams', 70, null, 2);
+        $quiz    = GradeFactory::item($this->scheme, $quizzes, 'Quiz 1', 10);
+        $exam    = GradeFactory::item($this->scheme, $exams, 'Midterm', 100);
+        GradeFactory::score($this->offering, $this->student, $quiz, 8.0);
+        GradeFactory::score($this->offering, $this->student, $exam, 90.0);
+
+        $parts = $this->service->breakdown($this->offering, (int) $this->student->id);
+
+        $this->assertSame(['Quizzes', 'Exams'], array_column($parts, 'name'));
+        $this->assertSame(80.0, $parts[0]['percentage']);
+        $this->assertSame(90.0, $parts[1]['percentage']);
+
+        $this->assertSame([], $this->service->breakdown($this->offering, 999999), 'not enrolled');
+        $this->assertSame([], $this->service->breakdown(999999, (int) $this->student->id), 'no such offering');
+    }
+
     public function testEveryStepIsAuditedWithTheActorAndTheRequest(): void
     {
         $id = $this->ask()['request']['id'];

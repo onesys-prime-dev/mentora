@@ -5,7 +5,8 @@
 | Toolbar — the filter bar above a list
 |--------------------------------------------------------------------------
 | Params: action (required), fields (required), filtered (bool, shows Clear),
-| clearUrl.
+| clearUrl, hidden (name => value, kept when the filters are applied, such as
+| the tab the list is on).
 |
 | fields: list of
 |   ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => '...', 'value' => '', 'span' => 'lg:col-span-2']
@@ -22,11 +23,16 @@
 
 $filtered = $filtered ?? false;
 $clearUrl = $clearUrl ?? $action;
+$hidden   = $hidden ?? [];
 
 $input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 ?>
 
 <form method="get" action="<?= esc($action) ?>" role="search" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4" data-toolbar>
+
+    <?php foreach ($hidden as $hiddenName => $hiddenValue): ?>
+        <input type="hidden" name="<?= esc((string) $hiddenName) ?>" value="<?= esc((string) $hiddenValue) ?>">
+    <?php endforeach; ?>
 
     <?php foreach ($fields as $field): ?>
         <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 <?= esc($field['span'] ?? '') ?>">

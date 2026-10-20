@@ -205,7 +205,14 @@ final class DeanCourseViewTest extends RouteTestCase
         }
 
         $this->assertGreaterThan(50, $checked, 'the course write routes were found and each one was refused');
-        $this->assertSame([], array_filter(array_keys($routes->getRoutes('POST')), static fn (string $p): bool => str_starts_with($p, 'dean/')), 'the dean area has no POST route at all yet');
+        // The dean's only writes are decisions on grade-override requests (dean/approvals); nothing inside a course.
+        $writes = [];
+
+        foreach (['POST', 'PUT', 'PATCH', 'DELETE'] as $verb) {
+            $writes = array_merge($writes, array_filter(array_keys($routes->getRoutes($verb)), static fn (string $p): bool => str_starts_with($p, 'dean/')));
+        }
+
+        $this->assertSame([], array_values(array_filter($writes, static fn (string $p): bool => ! str_starts_with($p, 'dean/approvals/'))), 'the dean can write nothing in a course');
     }
 
     public function testAnAttemptToWriteLeavesTheCourseUntouched(): void
