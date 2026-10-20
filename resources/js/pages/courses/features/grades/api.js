@@ -97,8 +97,16 @@ export const deleteGradingPeriod = (periodId) => request(`${base()}/scheme/perio
 
 export const fetchGradebookRoster = () => request(`${base()}/roster`);
 
-export const updateManualScore = (itemId, studentId, score) =>
-    request(`${base()}/roster/items/${itemId}/students/${studentId}`, "PATCH", { score });
+export const updateManualScore = (itemId, studentId, score, excused = false) =>
+    request(`${base()}/roster/items/${itemId}/students/${studentId}`, "PATCH", { score, excused });
+
+export const restoreGradeCategory = (categoryId) => request(`${base()}/scheme/categories/${categoryId}/restore`, "POST");
+
+export const restoreGradeItem = (itemId) => request(`${base()}/scheme/items/${itemId}/restore`, "POST");
+
+export const reorderGradeCategories = (ids) => request(`${base()}/scheme/categories/order`, "PATCH", { ids });
+
+export const reorderGradeItems = (categoryId, ids) => request(`${base()}/scheme/categories/${categoryId}/items/order`, "PATCH", { ids });
 
 export const setIncomplete = (studentId, incomplete, reason = "", until = "") =>
     request(`${base()}/roster/students/${studentId}/incomplete`, "PATCH", { incomplete, reason, until });

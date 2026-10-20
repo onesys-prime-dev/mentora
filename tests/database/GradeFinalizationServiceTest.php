@@ -320,6 +320,52 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Excused
+    |--------------------------------------------------------------------------
+    */
+
+    public function testAnExcusedItemIsLeftOutOfAFinalGradeInsteadOfCountingAsZero(): void
+    {
+        // The weak student is excused from the midterm they never took: only the quiz counts.
+        GradeFactory::score($this->offering, $this->weak, $this->exam, null, true);
+
+        $this->finalize();
+
+        $this->assertEquals(50.0, (float) $this->record($this->weak)['final_percentage'], '10 of 20 on the quiz alone');
+        $this->assertEquals(0.0, (float) $this->record($this->none)['final_percentage'], 'not excused: both count as zero');
+    }
+
+    public function testAnExcusedItemIsNotCountedAsMissingWorkInTheChecklist(): void
+    {
+        GradeFactory::score($this->offering, $this->weak, $this->exam, null, true);
+
+        $this->assertSame(2, $this->service->readiness($this->offering)['counts']['missing_scores'], 'only the third student\'s two');
+    }
+
+    public function testExcusingAndUnexcusingAScoreThroughTheGradebook(): void
+    {
+        $schemes = new GradingSchemeService();
+        $manual = (int) $schemes->createManualItem($this->instructor, $this->offering, (int) db_connect()->table('grade_categories')->where('grading_scheme_id', $this->scheme)->where('name', 'Quizzes')->get()->getRowArray()['id'], ['name' => 'Attendance', 'max_points' => 10])['item']['id'];
+
+        $this->assertTrue($schemes->updateManualScore($this->instructor, $this->offering, $manual, $this->weak->id, null, true)['success']);
+
+        $row = db_connect()->table('gradebook_item_scores')->where('grade_item_id', $manual)->where('student_id', $this->weak->id)->get()->getRowArray();
+        $this->assertSame(1, (int) $row['is_missing']);
+        $this->assertNull($row['raw_score']);
+
+        $this->assertTrue($schemes->updateManualScore($this->instructor, $this->offering, $manual, $this->weak->id, 7)['success']);
+
+        $row = db_connect()->table('gradebook_item_scores')->where('grade_item_id', $manual)->where('student_id', $this->weak->id)->get()->getRowArray();
+        $this->assertSame(0, (int) $row['is_missing'], 'a score replaces the excuse');
+        $this->assertEquals(7.0, (float) $row['raw_score']);
+
+        $audit = db_connect()->table('audit_logs')->where('action', 'grades.manual_score')->orderBy('id')->get()->getResultArray();
+        $this->assertTrue(json_decode($audit[0]['new_values'], true)['excused']);
+        $this->assertFalse(json_decode($audit[1]['new_values'], true)['excused']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Names on screen
     |--------------------------------------------------------------------------
     */

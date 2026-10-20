@@ -116,7 +116,12 @@ class GradeFinalizationService
 
                 $row = $context['scores'][(int) $item['id']][$studentId] ?? null;
 
-                if (!$row || $row['raw_score'] === null || !empty($row['is_missing'])) {
+                // An excused item is left out of the grade; only work not entered counts as missing.
+                if (!empty($row['is_missing'])) {
+                    continue;
+                }
+
+                if (!$row || $row['raw_score'] === null) {
                     $missing++;
                 }
 

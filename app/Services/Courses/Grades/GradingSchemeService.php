@@ -178,6 +178,10 @@ class GradingSchemeService
             'uncategorized' => $uncategorized,
             'out_of_sync_count' => count(array_filter($items, static fn ($item) => $item['is_out_of_sync'])),
             'finalization' => (new GradeFinalizationService())->current($offeringId),
+            'removed' => [
+                'categories' => $this->categoryModel->where('grading_scheme_id', $scheme['id'])->where('status', 'Archived')->orderBy('updated_at', 'DESC')->findAll(),
+                'items' => $this->itemModel->where('grading_scheme_id', $scheme['id'])->where('status', 'Archived')->where('assessment_id IS NULL', null, false)->orderBy('updated_at', 'DESC')->findAll(),
+            ],
             'scales' => $this->scaleModel->where('status', 'Active')->orderBy('id')->findAll(),
             'scale_items' => !empty($scheme['grade_scale_id'])
                 ? $this->scaleItemModel->listForScale((int) $scheme['grade_scale_id'])
@@ -259,10 +263,12 @@ class GradingSchemeService
             $record = $recordModel->findForStudent($offeringId, $studentId);
 
             $itemScores = [];
+            $excusedItems = [];
 
             foreach ($manualItemIds as $itemId) {
                 $cell = $scores[$itemId][$studentId] ?? null;
                 $itemScores[$itemId] = $cell && $cell['raw_score'] !== null ? (float) $cell['raw_score'] : null;
+                $excusedItems[$itemId] = !empty($cell['is_missing']);
             }
 
             $result = $engine->compute($context, $studentId);
@@ -275,6 +281,7 @@ class GradingSchemeService
 
             $students[] = $row + [
                 'scores' => $itemScores,
+                'excused' => $excusedItems,
                 'breakdown' => $breakdown,
                 'percentage' => \App\Models\Assessments\GradebookRecordModel::effectivePercentage($record),
                 'calculated_percentage' => $record['calculated_percentage'] ?? null,
@@ -304,7 +311,7 @@ class GradingSchemeService
      * final grade refreshes only while the scheme is published and not
      * waiting on a Recalculate.
      */
-    public function updateManualScore(User $user, int $offeringId, int $itemId, int $studentId, ?float $score): array
+    public function updateManualScore(User $user, int $offeringId, int $itemId, int $studentId, ?float $score, bool $excused = false): array
     {
         if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
             return $locked;
@@ -318,7 +325,7 @@ class GradingSchemeService
             return ['success' => false, 'message' => 'Only manual items can be scored here.'];
         }
 
-        if ($score !== null && ($score < 0 || $score > (float) $item['max_points'])) {
+        if (!$excused && $score !== null && ($score < 0 || $score > (float) $item['max_points'])) {
             return ['success' => false, 'message' => 'Score must be between 0 and ' . GradeSheetLayout::number((float) $item['max_points']) . '.'];
         }
 
@@ -337,14 +344,20 @@ class GradingSchemeService
             ->where('student_id', $studentId)
             ->first();
 
-        (new GradebookSyncService())->setManualScore($offeringId, $itemId, $studentId, $score, $user->id);
+        (new GradebookSyncService())->setManualScore($offeringId, $itemId, $studentId, $excused ? null : $score, $user->id, $excused);
+
+        $wasExcused = $before !== null && !empty($before['is_missing']);
 
         $previous = $before === null || $before['raw_score'] === null ? null : (float) $before['raw_score'];
 
-        if ($previous !== $score) {
+        if ($excused) {
+            $score = null;
+        }
+
+        if ($previous !== $score || $wasExcused !== $excused) {
             GradeAudit::record('grades.manual_score', $offeringId, [
-                'old' => ['item_id' => $itemId, 'item' => $item['name'], 'student_id' => $studentId, 'score' => $previous],
-                'new' => ['item_id' => $itemId, 'item' => $item['name'], 'student_id' => $studentId, 'score' => $score],
+                'old' => ['item_id' => $itemId, 'item' => $item['name'], 'student_id' => $studentId, 'score' => $previous, 'excused' => $wasExcused],
+                'new' => ['item_id' => $itemId, 'item' => $item['name'], 'student_id' => $studentId, 'score' => $score, 'excused' => $excused],
             ], $user);
         }
 
@@ -559,8 +572,8 @@ class GradingSchemeService
 
         $name = trim((string) ($data['name'] ?? ''));
 
-        if ($name === '') {
-            return ['success' => false, 'message' => 'Category name is required.'];
+        if ($problem = $this->categoryNameProblem((int) $scheme['id'], $name)) {
+            return ['success' => false, 'message' => $problem];
         }
 
         $weight = (float) ($data['weight_percentage'] ?? 0);
@@ -621,8 +634,8 @@ class GradingSchemeService
 
             $name = trim((string) $data['name']);
 
-            if ($name === '') {
-                return ['success' => false, 'message' => 'Category name is required.'];
+            if ($problem = $this->categoryNameProblem((int) $scheme['id'], $name, $categoryId)) {
+                return ['success' => false, 'message' => $problem];
             }
 
             $update['name'] = $name;
@@ -849,11 +862,77 @@ class GradingSchemeService
 
         $this->categoryModel->update($categoryId, ['status' => 'Archived', 'updated_at' => date('Y-m-d H:i:s')]);
 
-        $this->itemModel->where('category_id', $categoryId)->set(['category_id' => null])->update();
+        $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
+
+        // Its items stay attached to it (and stop counting with it), so Restore brings everything back.
+        $scored = $this->scoreModel
+            ->join('grade_items', 'grade_items.id = gradebook_item_scores.grade_item_id')
+            ->where('grade_items.category_id', $categoryId)
+            ->where('gradebook_item_scores.raw_score IS NOT NULL', null, false)
+            ->countAllResults();
+
+        return [
+            'success' => true,
+            'message' => $scored > 0
+                ? "Category removed. {$scored} " . ($scored === 1 ? 'score is' : 'scores are') . ' set aside; restore it to count them again.'
+                : 'Category removed.',
+            'scores_set_aside' => $scored,
+        ];
+    }
+
+    /** Brings a removed category back, with its items and their scores. */
+    public function restoreCategory(int $offeringId, int $categoryId): array
+    {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
+        $scheme = $this->forOffering($offeringId);
+
+        $category = $this->categoryModel->find($categoryId);
+
+        if (!$category || (int) $category['grading_scheme_id'] !== (int) $scheme['id'] || $category['status'] !== 'Archived') {
+            return ['success' => false, 'message' => 'Category not found.'];
+        }
+
+        if ($problem = $this->categoryNameProblem((int) $scheme['id'], (string) $category['name'], $categoryId)) {
+            return ['success' => false, 'message' => 'Rename or remove the category with the same name first. ' . $problem];
+        }
+
+        $this->categoryModel->update($categoryId, ['status' => 'Active', 'updated_at' => date('Y-m-d H:i:s')]);
 
         $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
 
-        return ['success' => true, 'message' => 'Category removed.'];
+        GradeAudit::record('grades.category_restored', $offeringId, ['new' => ['category_id' => $categoryId, 'name' => $category['name']]]);
+
+        return ['success' => true, 'message' => 'Category restored.'];
+    }
+
+    /** Puts the active categories of the scheme in the given order. */
+    public function reorderCategories(int $offeringId, array $categoryIds): array
+    {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
+        $scheme = $this->forOffering($offeringId);
+
+        $ids = array_values(array_unique(array_map('intval', $categoryIds)));
+
+        $active = array_map('intval', array_column($this->categoryModel->listForScheme((int) $scheme['id']), 'id'));
+
+        if (array_diff($ids, $active) !== []) {
+            return ['success' => false, 'message' => 'Category not found.'];
+        }
+
+        // Anything not named keeps its place after the named ones.
+        $order = array_merge($ids, array_values(array_diff($active, $ids)));
+
+        foreach ($order as $position => $id) {
+            $this->categoryModel->update($id, ['sort_order' => $position + 1]);
+        }
+
+        return ['success' => true, 'message' => 'Order saved.'];
     }
 
     /*
@@ -880,8 +959,8 @@ class GradingSchemeService
         $name = trim((string) ($data['name'] ?? ''));
         $maxPoints = (float) ($data['max_points'] ?? 0);
 
-        if ($name === '') {
-            return ['success' => false, 'message' => 'Item name is required.'];
+        if ($problem = $this->itemNameProblem((int) $scheme['id'], $categoryId, $name)) {
+            return ['success' => false, 'message' => $problem];
         }
 
         if ($maxPoints <= 0) {
@@ -949,8 +1028,10 @@ class GradingSchemeService
 
             $name = trim((string) $data['name']);
 
-            if ($name === '') {
-                return ['success' => false, 'message' => 'Item name is required.'];
+            $inCategory = array_key_exists('category_id', $update) ? $update['category_id'] : ($item['category_id'] ? (int) $item['category_id'] : null);
+
+            if ($problem = $this->itemNameProblem((int) $scheme['id'], $inCategory, $name, $itemId)) {
+                return ['success' => false, 'message' => $problem];
             }
 
             $update['name'] = $name;
@@ -967,6 +1048,33 @@ class GradingSchemeService
 
             $affectsGrades = $affectsGrades || $maxPoints !== (float) $item['max_points'];
             $update['max_points'] = $maxPoints;
+
+            $tooHigh = $this->scoreModel->where('grade_item_id', $itemId)->where('raw_score >', $maxPoints)->countAllResults();
+
+            if ($maxPoints !== (float) $item['max_points']) {
+
+                if (!empty($data['rescale_scores'])) {
+
+                    // Every score keeps its share of the maximum (8 of 10 stays 80%).
+                    $ratio = $maxPoints / (float) $item['max_points'];
+
+                    $this->scoreModel->where('grade_item_id', $itemId)->where('raw_score IS NOT NULL', null, false)
+                        ->set('raw_score', 'ROUND(raw_score * ' . (float) $ratio . ', 2)', false)
+                        ->update();
+
+                } elseif ($tooHigh > 0) {
+
+                    return [
+                        'success' => false,
+                        'message' => $tooHigh . ($tooHigh === 1 ? ' score is' : ' scores are') . ' higher than ' . GradeSheetLayout::number($maxPoints)
+                            . '. Lower or clear ' . ($tooHigh === 1 ? 'it' : 'them') . ' first, or rescale every score to the new maximum.',
+                        'needs_rescale' => true,
+                        'scores_above' => $tooHigh,
+                    ];
+
+                }
+
+            }
 
         }
 
@@ -1011,6 +1119,81 @@ class GradingSchemeService
         }
 
         return ['success' => true, 'message' => 'Item removed from the gradebook.'];
+    }
+
+    /** Brings a removed manual item back into its category, with its scores. */
+    public function restoreItem(User $user, int $offeringId, int $itemId): array
+    {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
+        $scheme = $this->forOffering($offeringId);
+
+        $item = $this->itemModel->find($itemId);
+
+        if (!$item || (int) $item['grading_scheme_id'] !== (int) $scheme['id'] || $item['status'] !== 'Archived' || !empty($item['assessment_id'])) {
+            return ['success' => false, 'message' => 'Item not found.'];
+        }
+
+        $categoryId = $item['category_id'] ? (int) $item['category_id'] : null;
+
+        if ($categoryId !== null && !$this->ownedCategory($scheme, $categoryId)) {
+            $categoryId = null; // its category is gone too: the item comes back uncategorized
+        }
+
+        if ($problem = $this->itemNameProblem((int) $scheme['id'], $categoryId, (string) $item['name'], $itemId)) {
+            return ['success' => false, 'message' => 'Rename or remove the item with the same name first. ' . $problem];
+        }
+
+        $this->itemModel->update($itemId, ['status' => 'Active', 'category_id' => $categoryId, 'updated_by' => $user->id, 'updated_at' => date('Y-m-d H:i:s')]);
+
+        $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
+
+        GradeAudit::record('grades.item_restored', $offeringId, ['new' => ['item_id' => $itemId, 'name' => $item['name']]], $user);
+
+        return ['success' => true, 'message' => 'Item restored.'];
+    }
+
+    /** Puts the active items of one category in the given order. */
+    public function reorderItems(int $offeringId, int $categoryId, array $itemIds): array
+    {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
+        $scheme = $this->forOffering($offeringId);
+
+        if (!$this->ownedCategory($scheme, $categoryId)) {
+            return ['success' => false, 'message' => 'Category not found.'];
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $itemIds)));
+
+        $inCategory = array_values(array_filter(
+            $this->itemModel->listForScheme((int) $scheme['id']),
+            static fn (array $item) => (int) $item['category_id'] === $categoryId
+        ));
+
+        $active = array_map('intval', array_column($inCategory, 'id'));
+
+        if (array_diff($ids, $active) !== []) {
+            return ['success' => false, 'message' => 'Item not found.'];
+        }
+
+        $order = array_merge($ids, array_values(array_diff($active, $ids)));
+
+        // Items of every category share one sort_order sequence, so this
+        // category's items trade the positions they already hold.
+        $positions = array_map(static fn (array $item) => (int) $item['sort_order'], $inCategory);
+
+        sort($positions);
+
+        foreach ($order as $index => $id) {
+            $this->itemModel->update($id, ['sort_order' => $positions[$index]]);
+        }
+
+        return ['success' => true, 'message' => 'Order saved.'];
     }
 
     public function resyncItem(User $user, int $offeringId, int $itemId): array
@@ -1086,6 +1269,46 @@ class GradingSchemeService
             && $item['status'] === 'Active'
                 ? $item
                 : null;
+    }
+
+    private function categoryNameProblem(int $schemeId, string $name, ?int $exceptId = null): ?string
+    {
+        if ($name === '') {
+            return 'Category name is required.';
+        }
+
+        if (mb_strlen($name) > 100) {
+            return 'Category names can be at most 100 characters.';
+        }
+
+        $same = $this->categoryModel->where('grading_scheme_id', $schemeId)->where('status', 'Active')->where('LOWER(name)', mb_strtolower($name));
+
+        if ($exceptId !== null) {
+            $same->where('id !=', $exceptId);
+        }
+
+        return $same->countAllResults() > 0 ? "A category called \u{201C}{$name}\u{201D} already exists." : null;
+    }
+
+    private function itemNameProblem(int $schemeId, ?int $categoryId, string $name, ?int $exceptId = null): ?string
+    {
+        if ($name === '') {
+            return 'Item name is required.';
+        }
+
+        if (mb_strlen($name) > 100) {
+            return 'Item names can be at most 100 characters.';
+        }
+
+        $same = $this->itemModel->where('grading_scheme_id', $schemeId)->where('status', 'Active')->where('LOWER(name)', mb_strtolower($name));
+
+        $categoryId === null ? $same->where('category_id IS NULL', null, false) : $same->where('category_id', $categoryId);
+
+        if ($exceptId !== null) {
+            $same->where('id !=', $exceptId);
+        }
+
+        return $same->countAllResults() > 0 ? "An item called \u{201C}{$name}\u{201D} already exists in this category." : null;
     }
 
     private function hasScores(int $itemId): bool

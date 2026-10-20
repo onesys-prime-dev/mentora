@@ -98,6 +98,30 @@ class GradingSchemeController extends BaseController
         return $this->audited('grades.item_deleted', $offeringId, $this->schemeService->deleteItem(auth()->user(), $offeringId, $itemId), ['item_id' => $itemId]);
     }
 
+    public function restoreItem(int $offeringId, int $itemId)
+    {
+        return $this->response->setJSON($this->schemeService->restoreItem(auth()->user(), $offeringId, $itemId));
+    }
+
+    public function restoreCategory(int $offeringId, int $categoryId)
+    {
+        return $this->response->setJSON($this->schemeService->restoreCategory($offeringId, $categoryId));
+    }
+
+    public function reorderCategories(int $offeringId)
+    {
+        $data = $this->payload();
+
+        return $this->response->setJSON($this->schemeService->reorderCategories($offeringId, (array) ($data['ids'] ?? [])));
+    }
+
+    public function reorderItems(int $offeringId, int $categoryId)
+    {
+        $data = $this->payload();
+
+        return $this->response->setJSON($this->schemeService->reorderItems($offeringId, $categoryId, (array) ($data['ids'] ?? [])));
+    }
+
     public function resyncItem(int $offeringId, int $itemId)
     {
         return $this->audited('grades.item_resynced', $offeringId, $this->schemeService->resyncItem(auth()->user(), $offeringId, $itemId), ['item_id' => $itemId]);
@@ -167,7 +191,7 @@ class GradingSchemeController extends BaseController
 
         // Recorded by the service, with the previous and the new score.
         return $this->response->setJSON(
-            $this->schemeService->updateManualScore(auth()->user(), $offeringId, $itemId, $studentId, $score)
+            $this->schemeService->updateManualScore(auth()->user(), $offeringId, $itemId, $studentId, $score, !empty($payload['excused']))
         );
     }
 

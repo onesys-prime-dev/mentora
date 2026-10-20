@@ -31,6 +31,10 @@ import {
     createGradingPeriod,
     updateGradingPeriod,
     deleteGradingPeriod,
+    restoreGradeCategory,
+    restoreGradeItem,
+    reorderGradeCategories,
+    reorderGradeItems,
 } from "../api.js";
 
 import { bindModal } from "../../assessments/modals/index.js";
@@ -275,7 +279,7 @@ function bind(container)
             const periodId = button.dataset.periodId || null;
 
             runSave(() => createGradeCategory({
-                name: "New category",
+                name: uniqueCategoryName(editor),
                 weight_percentage: 0,
                 ...(periodId ? { period_id: periodId } : {}),
             }));
@@ -341,8 +345,29 @@ function bind(container)
             });
 
         item.querySelector("[data-grade-item-max]")
-            ?.addEventListener("change", (event) => {
-                runSave(() => updateGradeItem(itemId, { max_points: Number(event.target.value) }));
+            ?.addEventListener("change", async (event) => {
+
+                const max_points = Number(event.target.value);
+
+                const result = await runSave(() => updateGradeItem(itemId, { max_points }), false);
+
+                if (result && result.needs_rescale) {
+
+                    const message = `${result.message}\n\nRescale every score to the new maximum? (8 of 10 becomes 4 of 5.)`;
+
+                    if (confirm(message)) {
+                        await runSave(() => updateGradeItem(itemId, { max_points, rescale_scores: true }));
+                        return;
+                    }
+
+                }
+
+                await rerender();
+
+                if (result && result.success === false) {
+                    showError(result.message);
+                }
+
             });
 
         item.querySelector("[data-grade-item-category]")
@@ -362,7 +387,77 @@ function bind(container)
 
     });
 
+    /*
+    | Restore what was removed
+    */
+
+    editor.querySelectorAll("[data-restore-grade-category]").forEach((button) => {
+        button.addEventListener("click", () => runSave(() => restoreGradeCategory(button.dataset.restoreGradeCategory)));
+    });
+
+    editor.querySelectorAll("[data-restore-grade-item]").forEach((button) => {
+        button.addEventListener("click", () => runSave(() => restoreGradeItem(button.dataset.restoreGradeItem)));
+    });
+
+    /*
+    | Order: move a category among its siblings, or an item within its category
+    */
+
+    editor.querySelectorAll("[data-move-grade-category]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const ids = movedIds(editor, "[data-grade-category]", "gradeCategory", button.closest("[data-grade-category]"), button.dataset.moveGradeCategory);
+            runSave(() => reorderGradeCategories(ids));
+        });
+    });
+
+    editor.querySelectorAll("[data-move-grade-item]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const row = button.closest("[data-grade-item]");
+            const categoryId = row.closest("[data-grade-category]")?.dataset.gradeCategory;
+            const ids = movedIds(row.parentElement, "[data-grade-item]", "gradeItem", row, button.dataset.moveGradeItem);
+            runSave(() => reorderGradeItems(categoryId, ids));
+        });
+    });
+
     bindItemModal();
+}
+
+/** "New category", or "New category 2", 3 … : names must be unique in a scheme. */
+function uniqueCategoryName(editor)
+{
+    const taken = new Set(
+        Array.from(editor.querySelectorAll("[data-grade-category-name]")).map((input) => input.value.trim().toLowerCase())
+    );
+
+    let name = "New category";
+
+    for (let n = 2; taken.has(name.toLowerCase()); n++) {
+        name = `New category ${n}`;
+    }
+
+    return name;
+}
+
+/**
+ * The ids of the siblings matching `selector` under `scope`, with `element`
+ * moved one place up or down.
+ */
+function movedIds(scope, selector, dataKey, element, direction)
+{
+    const ids = Array.from(scope.querySelectorAll(selector))
+        .filter((candidate) => candidate.parentElement === element.parentElement)
+        .map((candidate) => candidate.dataset[dataKey]);
+
+    const index = ids.indexOf(element.dataset[dataKey]);
+    const target = direction === "up" ? index - 1 : index + 1;
+
+    if (index < 0 || target < 0 || target >= ids.length) {
+        return ids;
+    }
+
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+
+    return ids;
 }
 
 /**

@@ -100,8 +100,25 @@ class GradebookSyncService
      * An instructor-entered score on a manual item (offline import).
      * Null clears it.
      */
-    public function setManualScore(int $offeringId, int $gradeItemId, int $studentId, ?float $score, int $gradedBy): void
+    public function setManualScore(int $offeringId, int $gradeItemId, int $studentId, ?float $score, int $gradedBy, bool $excused = false): void
     {
+        // Excused: the student is let off this item. It is left out of their grade, even in a final
+        // grade where work that was never done counts as zero (stored as is_missing, which the engine skips).
+        if ($excused) {
+
+            $this->scoreModel->upsertScore($offeringId, $studentId, $gradeItemId, [
+                'assessment_submission_id' => null,
+                'raw_score' => null,
+                'raw_percentage' => null,
+                'is_missing' => 1,
+                'graded_by' => $gradedBy,
+                'graded_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            return;
+
+        }
+
         if ($score === null) {
             $this->scoreModel->where('grade_item_id', $gradeItemId)->where('student_id', $studentId)->delete();
             return;

@@ -392,7 +392,7 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
         $this->assertFalse($this->needsRecalculation());
     }
 
-    public function testRemovingACategoryArchivesItAndOrphansItsItems(): void
+    public function testRemovingACategoryArchivesItAndItsItemsStopCountingButStayAttached(): void
     {
         $itemId = $this->quizItem();
         $quizzes = $this->categoryId('Quizzes');
@@ -400,7 +400,9 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
         $this->assertTrue($this->service->deleteCategory($this->offering, $quizzes)['success']);
 
         $this->assertSame('Archived', $this->row('grade_categories', $quizzes)['status']);
-        $this->assertNull($this->row('grade_items', $itemId)['category_id'], 'the item stops counting but is kept');
+        $this->assertSame($quizzes, (int) $this->row('grade_items', $itemId)['category_id'], 'kept with its category so Restore brings it back');
+        $uncategorized = array_column($this->service->describe($this->offering)['uncategorized'], 'id');
+        $this->assertContains($itemId, array_map('intval', $uncategorized), 'and it shows as not counting');
         $this->assertTrue($this->needsRecalculation());
     }
 
@@ -446,7 +448,7 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
             0,
             db_connect()->table('grade_categories')->where('grading_scheme_id', $this->scheme()['id'])->where('status', 'Active')->countAllResults()
         );
-        $this->assertNull($this->row('grade_items', $itemId)['category_id']);
+        $this->assertNotNull($this->row('grade_items', $itemId)['category_id'], 'kept so the category can be restored');
         $this->assertTrue($this->needsRecalculation());
     }
 
@@ -647,6 +649,133 @@ final class GradingSchemeServiceTest extends DatabaseTestCase
 
         $this->assertCount(1, $entries);
         $this->assertSame(1, json_decode($entries[0]['new_values'], true)['students']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Names, maximums, restoring and ordering
+    |--------------------------------------------------------------------------
+    */
+
+    public function testCategoryAndItemNamesAreRequiredShortAndUnique(): void
+    {
+        $quizzes = $this->categoryId('Quizzes');
+
+        $this->assertFalse($this->service->createCategory($this->offering, ['name' => '  ', 'weight_percentage' => 0])['success']);
+        $this->assertFalse($this->service->createCategory($this->offering, ['name' => str_repeat('x', 101), 'weight_percentage' => 0])['success']);
+        $duplicate = $this->service->createCategory($this->offering, ['name' => 'quizzes', 'weight_percentage' => 0]);
+        $this->assertFalse($duplicate['success']);
+        $this->assertStringContainsString('already exists', $duplicate['message']);
+
+        $this->quizItem();
+        $this->assertFalse($this->service->createManualItem($this->instructor, $this->offering, $quizzes, ['name' => 'QUIZ 1', 'max_points' => 5])['success'], 'same name in the same category');
+        $this->assertFalse($this->service->createManualItem($this->instructor, $this->offering, $quizzes, ['name' => str_repeat('y', 101), 'max_points' => 5])['success']);
+        $this->assertTrue($this->service->createManualItem($this->instructor, $this->offering, $this->categoryId('Exams'), ['name' => 'Quiz 1', 'max_points' => 5])['success'], 'another category may reuse it');
+    }
+
+    public function testRenamingToTheOwnNameIsFine(): void
+    {
+        $quizzes = $this->categoryId('Quizzes');
+
+        $this->assertTrue($this->service->updateCategory($this->offering, $quizzes, ['name' => 'Quizzes', 'weight_percentage' => 35])['success']);
+    }
+
+    public function testTheMaximumCannotGoBelowScoresAlreadyGivenUnlessTheyAreRescaled(): void
+    {
+        $itemId = $this->quizItem();
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 18);
+
+        $refused = $this->service->updateItem($this->instructor, $this->offering, $itemId, ['max_points' => 10]);
+
+        $this->assertFalse($refused['success']);
+        $this->assertTrue($refused['needs_rescale']);
+        $this->assertSame(1, $refused['scores_above']);
+        $this->assertEquals(20.0, (float) $this->row('grade_items', $itemId)['max_points'], 'nothing changed');
+
+        $rescaled = $this->service->updateItem($this->instructor, $this->offering, $itemId, ['max_points' => 10, 'rescale_scores' => true]);
+
+        $this->assertTrue($rescaled['success']);
+        $score = db_connect()->table('gradebook_item_scores')->where('grade_item_id', $itemId)->get()->getRowArray();
+        $this->assertEquals(9.0, (float) $score['raw_score'], '18 of 20 stays 90%');
+    }
+
+    public function testRaisingTheMaximumNeedsNoRescale(): void
+    {
+        $itemId = $this->quizItem();
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 18);
+
+        $this->assertTrue($this->service->updateItem($this->instructor, $this->offering, $itemId, ['max_points' => 30])['success']);
+    }
+
+    public function testRemovingAScoredCategoryTellsHowManyScoresAreSetAsideAndRestoreBringsThemBack(): void
+    {
+        $itemId = $this->quizItem();
+        $quizzes = $this->categoryId('Quizzes');
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 15);
+
+        $removed = $this->service->deleteCategory($this->offering, $quizzes);
+
+        $this->assertSame(1, $removed['scores_set_aside']);
+        $this->assertStringContainsString('1 score is set aside', $removed['message']);
+        $this->assertContains($quizzes, array_map('intval', array_column($this->service->describe($this->offering)['removed']['categories'], 'id')));
+
+        $restored = $this->service->restoreCategory($this->offering, $quizzes);
+
+        $this->assertTrue($restored['success']);
+        $this->assertSame('Active', $this->row('grade_categories', $quizzes)['status']);
+        $described = $this->service->describe($this->offering);
+        $this->assertNotContains($itemId, array_map('intval', array_column($described['uncategorized'], 'id')));
+        $this->assertSame(1, db_connect()->table('gradebook_item_scores')->where('grade_item_id', $itemId)->countAllResults(), 'the scores were never lost');
+    }
+
+    public function testACategoryCannotBeRestoredOverOneWithTheSameName(): void
+    {
+        $quizzes = $this->categoryId('Quizzes');
+        $this->service->deleteCategory($this->offering, $quizzes);
+        $this->service->createCategory($this->offering, ['name' => 'Quizzes', 'weight_percentage' => 0]);
+
+        $this->assertFalse($this->service->restoreCategory($this->offering, $quizzes)['success']);
+    }
+
+    public function testARemovedManualItemIsListedAndCanBeRestored(): void
+    {
+        $itemId = $this->quizItem();
+        $this->service->updateManualScore($this->instructor, $this->offering, $itemId, $this->student->id, 15);
+        $this->service->deleteItem($this->instructor, $this->offering, $itemId);
+
+        $this->assertContains($itemId, array_map('intval', array_column($this->service->describe($this->offering)['removed']['items'], 'id')));
+
+        $this->assertTrue($this->service->restoreItem($this->instructor, $this->offering, $itemId)['success']);
+        $this->assertSame('Active', $this->row('grade_items', $itemId)['status']);
+        $this->assertFalse($this->service->restoreItem($this->instructor, $this->offering, $itemId)['success'], 'already active');
+    }
+
+    public function testCategoriesAndItemsCanBeReordered(): void
+    {
+        $quizzes = $this->categoryId('Quizzes');
+        $exams = $this->categoryId('Exams');
+
+        $this->assertTrue($this->service->reorderCategories($this->offering, [$exams, $quizzes])['success']);
+        $order = array_map('intval', array_column($this->service->describe($this->offering)['categories'], 'id'));
+        $this->assertSame([$exams, $quizzes], $order);
+
+        $a = (int) $this->service->createManualItem($this->instructor, $this->offering, $quizzes, ['name' => 'A', 'max_points' => 5])['item']['id'];
+        $b = (int) $this->service->createManualItem($this->instructor, $this->offering, $quizzes, ['name' => 'B', 'max_points' => 5])['item']['id'];
+
+        $this->assertTrue($this->service->reorderItems($this->offering, $quizzes, [$b, $a])['success']);
+
+        $categories = $this->service->describe($this->offering)['categories'];
+        $inQuizzes = array_values(array_filter($categories, static fn (array $c) => (int) $c['id'] === $quizzes))[0]['items'];
+        $this->assertSame([$b, $a], array_map('intval', array_column($inQuizzes, 'id')));
+    }
+
+    public function testReorderingRefusesThingsThatAreNotInThisGradebook(): void
+    {
+        $quizzes = $this->categoryId('Quizzes');
+
+        $this->assertFalse($this->service->reorderCategories($this->offering, [999999])['success']);
+        $this->assertFalse($this->service->reorderItems($this->offering, $quizzes, [999999])['success']);
+        $this->assertFalse($this->service->reorderItems($this->offering, 999999, [])['success']);
     }
 
     public function testClearingAScoreLeavesTheItemUngraded(): void

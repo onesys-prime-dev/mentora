@@ -80,12 +80,14 @@ $isRequestMode = $overrideMode === 'request';
 
                         <?php foreach ($items as $item): ?>
                             <td class="px-4 py-2">
+                                <?php $isExcused = !empty($student['excused'][$item['id']]); ?>
                                 <input
-                                    type="number" min="0" max="<?= $points($item['max_points']) ?>" step="0.5"
-                                    value="<?= $student['scores'][$item['id']] ?? '' ?>"
+                                    type="text" inputmode="decimal" autocomplete="off"
+                                    value="<?= $isExcused ? 'EX' : ($student['scores'][$item['id']] ?? '') ?>"
                                     placeholder="—"
-                                    data-manual-score-input data-item-id="<?= (int) $item['id'] ?>"
-                                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none transition focus:border-brand">
+                                    title="0 to <?= $points($item['max_points']) ?>, or EX to excuse this student from the item"
+                                    data-manual-score-input data-item-id="<?= (int) $item['id'] ?>" data-max-points="<?= $points($item['max_points']) ?>"
+                                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none transition focus:border-brand <?= $isExcused ? 'bg-gray-50 font-semibold text-[#646464]' : '' ?>">
                             </td>
                         <?php endforeach; ?>
 

@@ -176,6 +176,11 @@ class GradingEngineService
 
                 $score = $this->scoreFor($context, $overrideScores, (int) $item['id'], $studentId);
 
+                // An excused item is left out of the grade altogether.
+                if ($score === null && !empty($context['scores'][(int) $item['id']][$studentId]['is_missing'])) {
+                    continue;
+                }
+
                 // A final grade counts work that was never graded or handed in as zero.
                 if ($score === null && !$missingAsZero) {
                     continue;

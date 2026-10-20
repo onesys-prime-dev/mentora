@@ -259,6 +259,10 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
 
         // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/categories/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreCategory/$1/$2');
+        $routes->post('(:num)/grades/scheme/items/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreItem/$1/$2');
+        $routes->patch('(:num)/grades/scheme/categories/order', 'Courses\Grades\GradingSchemeController::reorderCategories/$1');
+        $routes->patch('(:num)/grades/scheme/categories/(:num)/items/order', 'Courses\Grades\GradingSchemeController::reorderItems/$1/$2');
         $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
         $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
         $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');
@@ -507,6 +511,10 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
 
         // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/categories/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreCategory/$1/$2');
+        $routes->post('(:num)/grades/scheme/items/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreItem/$1/$2');
+        $routes->patch('(:num)/grades/scheme/categories/order', 'Courses\Grades\GradingSchemeController::reorderCategories/$1');
+        $routes->patch('(:num)/grades/scheme/categories/(:num)/items/order', 'Courses\Grades\GradingSchemeController::reorderItems/$1/$2');
         $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
         $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
         $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');

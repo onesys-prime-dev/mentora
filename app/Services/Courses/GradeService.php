@@ -241,8 +241,41 @@ class GradeService
                 'is_override' => $isPublished && !empty($record['is_override']),
                 'passing_percentage' => (float) $scheme['passing_percentage'],
             ],
+            'manualItems' => $isPublished && $context ? $this->manualItemsFor($context, (int) $user->id) : [],
             'categoryBreakdown' => $isPublished ? ($breakdown['categories'] ?? []) : [],
             'periodBreakdown' => $isPublished ? ($breakdown['periods'] ?? []) : [],
         ];
+    }
+    /**
+     * The student's scores on the items the instructor enters by hand, for
+     * the categories that count toward the grade.
+     *
+     * @return list<array{name: string, category: string, score: ?float, max: float, excused: bool}>
+     */
+    private function manualItemsFor(array $context, int $studentId): array
+    {
+        $categories = array_column($context['categories'], 'name', 'id');
+
+        $rows = [];
+
+        foreach ($context['items'] as $item) {
+
+            if (!empty($item['assessment_id']) || !isset($categories[(int) $item['category_id']])) {
+                continue;
+            }
+
+            $cell = $context['scores'][(int) $item['id']][$studentId] ?? null;
+
+            $rows[] = [
+                'name' => (string) $item['name'],
+                'category' => (string) $categories[(int) $item['category_id']],
+                'score' => $cell && $cell['raw_score'] !== null ? (float) $cell['raw_score'] : null,
+                'max' => (float) $item['max_points'],
+                'excused' => !empty($cell['is_missing']),
+            ];
+
+        }
+
+        return $rows;
     }
 }
