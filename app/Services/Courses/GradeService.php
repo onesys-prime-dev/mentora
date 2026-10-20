@@ -231,6 +231,7 @@ class GradeService
                 'points_possible' => $breakdown['points_possible'] ?? 0,
                 'remarks' => $isPublished ? ($record['remarks'] ?? 'Incomplete') : 'Incomplete',
                 'is_final' => $isPublished && !empty($record['finalized_at']),
+                'is_adjusted' => $isPublished && $context !== null && ($context['adjustments']['items'] !== [] || !empty($context['adjustments']['final'])),
                 'tag' => $isPublished
                     ? \App\Services\Courses\Grades\GradingEngineService::displayTag($record['remarks'] ?? 'Incomplete', !empty($record['finalized_at']))
                     : 'Incomplete',

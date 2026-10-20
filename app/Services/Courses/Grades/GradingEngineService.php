@@ -144,6 +144,8 @@ class GradingEngineService
             'items' => $items,
             'studentIds' => $studentIds,
             'scores' => $this->scoreModel->mapForItems(array_map('intval', array_column($items, 'id')), $studentIds),
+            // Curves that count now: how an item's scores, or the final percentage, are read.
+            'adjustments' => (new \App\Models\Grades\GradeAdjustmentModel())->liveFor($offeringId),
             'bands' => !empty($scheme['grade_scale_id'])
                 ? $this->scaleItemModel->listForScale((int) $scheme['grade_scale_id'])
                 : [],
@@ -186,7 +188,19 @@ class GradingEngineService
                     continue;
                 }
 
+                $wasScored = $score !== null;
+
                 $score ??= 0.0;
+
+                // A curve changes the score that counts, never the one that was entered. Work that
+                // was never done (counted as zero in a final grade) is not curved.
+                if ($wasScored && isset($context['adjustments']['items'][(int) $item['id']])) {
+
+                    $curve = $context['adjustments']['items'][(int) $item['id']];
+
+                    $score = GradeAdjustmentService::adjust($curve['method'], $curve['params'], $score, (float) $item['max_points']);
+
+                }
 
                 $earned += $score;
                 $possible += (float) $item['max_points'];
@@ -251,6 +265,15 @@ class GradingEngineService
                 static fn (array $category) => [$category['percentage'], $category['weight']],
                 $categories
             ));
+
+        }
+
+        // A curve on the final grade moves the calculated percentage (an override still wins, elsewhere).
+        if ($final !== null && !empty($context['adjustments']['final'])) {
+
+            $curve = $context['adjustments']['final'];
+
+            $final = GradeAdjustmentService::adjust($curve['method'], $curve['params'], $final, 100.0);
 
         }
 

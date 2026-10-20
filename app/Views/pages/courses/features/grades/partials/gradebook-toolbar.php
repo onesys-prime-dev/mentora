@@ -38,6 +38,16 @@ $finalization = $gradebook['finalization'] ?? null;
 
         <div class="flex items-center gap-2">
 
+            <?php if ($finalization === null): ?>
+                <button
+                    type="button"
+                    data-open-curve
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                    <?= icon('score', 'h-4 w-4 text-current') ?>
+                    Curve
+                </button>
+            <?php endif; ?>
+
             <?php if ($finalization !== null): ?>
                 <button
                     type="button"
@@ -146,3 +156,4 @@ $finalization = $gradebook['finalization'] ?? null;
 </div>
 
 <?= view('pages/courses/features/grades/partials/modals/grade-finalize', [], ['saveData' => false]) ?>
+<?= view('pages/courses/features/grades/partials/modals/grade-curve', [], ['saveData' => false]) ?>

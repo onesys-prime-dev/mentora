@@ -70,6 +70,14 @@ export const resyncGradeItem = (itemId) => request(`${base()}/scheme/items/${ite
 
 export const recalculateGrades = () => request(`${base()}/recalculate`, "POST");
 
+export const fetchCurves = () => request(`${base()}/curve`);
+
+export const previewCurve = (payload) => request(`${base()}/curve/preview`, "POST", payload);
+
+export const applyCurve = (payload) => request(`${base()}/curve`, "POST", payload);
+
+export const undoCurve = (adjustmentId) => request(`${base()}/curve/${adjustmentId}`, "DELETE");
+
 export const fetchFinalization = () => request(`${base()}/finalization`);
 
 export const finalizeGrades = () => request(`${base()}/finalization`, "POST");

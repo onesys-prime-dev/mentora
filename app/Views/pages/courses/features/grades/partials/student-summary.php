@@ -44,8 +44,8 @@ if ($gradeLabel !== null) {
         'detail' => match (true) {
             !$isPublished => "Your instructor hasn't published the grading yet",
             !empty($summary['is_override']) => 'Set by your instructor',
-            $isFinal && $finalGrade !== null => 'Final grade',
-            $finalGrade !== null => 'So far, from your graded work',
+            $isFinal && $finalGrade !== null => 'Final grade' . (!empty($summary['is_adjusted']) ? ' · adjusted by your instructor' : ''),
+            $finalGrade !== null => 'So far, from your graded work' . (!empty($summary['is_adjusted']) ? ' · adjusted by your instructor' : ''),
             default => 'Nothing graded yet',
         },
     ], ['saveData' => false]) ?>

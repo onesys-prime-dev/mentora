@@ -274,6 +274,11 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
 
         // Finalize the section's grades, or reopen them with a reason.
+        // Grading on a curve: what is in force, a preview, applying, and taking one off.
+        $routes->get('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::show/$1');
+        $routes->post('(:num)/grades/curve/preview', 'Courses\Grades\GradeAdjustmentController::preview/$1');
+        $routes->post('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::apply/$1');
+        $routes->delete('(:num)/grades/curve/(:num)', 'Courses\Grades\GradeAdjustmentController::undo/$1/$2');
         $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
         $routes->post('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::finalize/$1');
         $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
@@ -526,6 +531,11 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
 
         // The chairperson sees where the grades stand and may reopen them with a reason (finalizing is the instructor's).
+        // Grading on a curve: what is in force, a preview, applying, and taking one off.
+        $routes->get('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::show/$1');
+        $routes->post('(:num)/grades/curve/preview', 'Courses\Grades\GradeAdjustmentController::preview/$1');
+        $routes->post('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::apply/$1');
+        $routes->delete('(:num)/grades/curve/(:num)', 'Courses\Grades\GradeAdjustmentController::undo/$1/$2');
         $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
         $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
 
