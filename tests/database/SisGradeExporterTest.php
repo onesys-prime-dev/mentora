@@ -9,6 +9,7 @@ use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Test\StreamFilterTrait;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\DeanFactory;
 use Tests\Support\FakeEmail;
 use Tests\Support\FakeSisConnector;
 use Tests\Support\PeopleFactory;
@@ -274,6 +275,165 @@ final class SisGradeExporterTest extends DatabaseTestCase
     private function leftOut(\App\Services\Sis\SisImportResult $result): array
     {
         return array_column($result->issues, 'reason', 'item');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The dean's sign-off gate
+    |--------------------------------------------------------------------------
+    */
+
+    /** A dean of this institution's department, with an active assignment (so the institution "has a dean"). */
+    private function deanOfTheInstitution(): User
+    {
+        $department = (int) db_connect()->table('departments')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
+
+        return DeanFactory::dean($this->institution, $department);
+    }
+
+    private function signOff(int $offering, User $dean): void
+    {
+        db_connect()->table('grade_signoffs')->insert(['offering_id' => $offering, 'signed_by' => $dean->id, 'signed_at' => '2026-10-02 08:00:00', 'open_marker' => 1]);
+    }
+
+    private function reopenSignOff(int $offering): void
+    {
+        db_connect()->table('grade_signoffs')->where(['offering_id' => $offering, 'open_marker' => 1])->update(['open_marker' => null, 'reopened_at' => '2026-10-03 08:00:00']);
+    }
+
+    private function override(User $student, float $percentage): void
+    {
+        db_connect()->table('gradebook_records')->where(['course_offering_id' => $this->offering, 'student_id' => $student->id])->update(['is_override' => 1, 'overridden_percentage' => $percentage]);
+    }
+
+    public function testWithNoDeanFinalizedGradesGoWithoutAnySignOff(): void
+    {
+        $result = $this->export();
+
+        $this->assertSame(2, $result->datasets['grades']['created']);
+        $this->assertCount(2, $this->theDelivery());
+    }
+
+    public function testWithADeanNothingIsSentUntilTheGradesAreSignedOff(): void
+    {
+        $this->deanOfTheInstitution();
+
+        $result = $this->export();
+
+        $this->assertSame(['created' => 0, 'updated' => 0, 'skipped' => 2, 'failed' => 0], $result->datasets['grades']);
+        $this->assertSame(0, $this->sis->calls);
+        $this->assertSame(0, db_connect()->table('sis_grade_exports')->countAllResults());
+    }
+
+    public function testAPreviewSaysTheDeanHasNotSignedOffAndCountsTheSection(): void
+    {
+        $this->deanOfTheInstitution();
+
+        $left = $this->leftOut($this->export(true));
+
+        $this->assertSame('The dean has not signed off the grades yet', $left['IT101-A (2 students)'] ?? null, 'one line for the section, with a count');
+    }
+
+    public function testOnceTheDeanSignsOffTheGradesGo(): void
+    {
+        $dean = $this->deanOfTheInstitution();
+        $this->signOff($this->offering, $dean);
+
+        $result = $this->export();
+
+        $this->assertSame(2, $result->datasets['grades']['created']);
+        $this->assertCount(2, $this->theDelivery());
+    }
+
+    public function testASectionNotFinalizedIsStillSaidToBeNotFinalizedEvenWithADean(): void
+    {
+        $dean = $this->deanOfTheInstitution();
+        $late = SisFixture::student($this->institution, 'S6', 'late@example.com');
+        SisFixture::grade($this->offering, $late, 72.0, null, 'Passed', false);
+        $this->signOff($this->offering, $dean);
+
+        $left = $this->leftOut($this->export(true));
+
+        $this->assertSame('The grades are not finalized yet', $left['IT101-A (1 student)'] ?? null);
+    }
+
+    public function testAChangeApprovedAfterSignOffIsSentOnceAsAnUpdate(): void
+    {
+        $dean = $this->deanOfTheInstitution();
+        $this->signOff($this->offering, $dean);
+        $this->export();
+        $this->sis->calls = 0;
+
+        // An override approved after the sign-off (the section is still signed off).
+        $this->override($this->ann, 95.0);
+
+        $change = $this->export();
+
+        $this->assertSame(['created' => 0, 'updated' => 1, 'skipped' => 1, 'failed' => 0], $change->datasets['grades']);
+        $this->assertSame(1, $this->sis->calls);
+        $this->assertSame([['course_external_id' => 'C1', 'student_external_id' => 'S1', 'percentage' => '95.00', 'remarks' => 'Passed']], array_values(array_slice($this->sis->deliveries, -1))[0]);
+
+        $this->sis->calls = 0;
+        $again = $this->export();
+
+        $this->assertSame(0, $this->sis->calls, 'sent once: the next run has nothing new');
+        $this->assertStringContainsString('No new or changed', $again->message);
+    }
+
+    public function testChangesWaitWhileTheSignOffIsReopenedAndGoWhenItIsSignedAgain(): void
+    {
+        $dean = $this->deanOfTheInstitution();
+        $this->signOff($this->offering, $dean);
+        $this->export();
+        $this->sis->calls = 0;
+
+        $this->reopenSignOff($this->offering);
+        $this->override($this->ann, 95.0);
+
+        $held = $this->export();
+        $this->assertSame(0, $this->sis->calls, 'not signed off now: nothing goes');
+        $this->assertSame(2, $held->datasets['grades']['skipped']);
+        $this->assertSame('The dean has not signed off the grades yet', $this->leftOut($this->export(true))['IT101-A (2 students)'] ?? null);
+
+        $this->signOff($this->offering, $dean);
+        $sent = $this->export();
+
+        $this->assertSame(1, $sent->datasets['grades']['updated'], 'the held change goes once it is signed off again');
+    }
+
+    public function testADeanOfAnotherInstitutionDoesNotGateThisOne(): void
+    {
+        $other      = SisFixture::institution('OTHER');
+        $department = (int) db_connect()->table('departments')->where('institution_id', $other)->get()->getRowArray()['id'];
+        DeanFactory::dean($other, $department);
+
+        $result = $this->export();
+
+        $this->assertSame(2, $result->datasets['grades']['created'], 'this institution has no dean of its own');
+    }
+
+    public function testWhenTheLastDeanIsGoneTheGateIsOffAgain(): void
+    {
+        $dean = $this->deanOfTheInstitution();
+        $this->assertSame(0, $this->export(true)->datasets['grades']['created'], 'gated while there is a dean');
+
+        db_connect()->table('dean_assignments')->where('dean_user_id', $dean->id)->update(['status' => 'ended', 'active_marker' => null]);
+
+        $this->assertSame(2, $this->export(true)->datasets['grades']['created'], 'no dean: finalization is enough, as before');
+    }
+
+    public function testASignOffOfAnotherSectionDoesNotOpenThisOne(): void
+    {
+        $dean  = $this->deanOfTheInstitution();
+        $other = SisFixture::course($this->institution, 'C2', 'IT102')['offering'];
+        SisFixture::grade($other, $this->ann, 90.0);
+        $this->signOff($other, $dean);
+
+        $result = $this->export();
+
+        $this->assertSame(1, $result->datasets['grades']['created'], 'only the signed-off section');
+        $this->assertSame(2, $result->datasets['grades']['skipped'], 'the section that is not signed off');
+        $this->assertSame([['course_external_id' => 'C2', 'student_external_id' => 'S1', 'percentage' => '90.00', 'remarks' => 'Passed']], $this->theDelivery());
     }
 
     public function testAPreviewSaysWhoIsLeftOutAndWhy(): void

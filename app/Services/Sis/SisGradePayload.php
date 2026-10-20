@@ -16,6 +16,7 @@ final class SisGradePayload
 {
     /** Why a student's grade is not handed over. */
     public const NOT_FINAL = 'not_final';
+    public const NOT_SIGNED_OFF = 'not_signed_off';
     public const WITHDRAWN = 'withdrawn';
     public const INCOMPLETE = 'incomplete';
     public const NO_GRADE = 'no_grade';
@@ -25,6 +26,7 @@ final class SisGradePayload
     /** @var array<string, string> the reason in words, for the person reading a preview */
     public const REASONS = [
         self::NOT_FINAL => 'The grades are not finalized yet',
+        self::NOT_SIGNED_OFF => 'The dean has not signed off the grades yet',
         self::WITHDRAWN => 'The student withdrew, so there is no final grade',
         self::INCOMPLETE => 'Marked Incomplete (INC), not settled yet',
         self::NO_GRADE => 'Nothing has been graded yet',

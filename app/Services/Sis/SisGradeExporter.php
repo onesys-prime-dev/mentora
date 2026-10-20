@@ -16,6 +16,9 @@ use Throwable;
  * the source of truth here, and only final grades go out (course, student,
  * percentage, remarks): never assessment scores or feedback.
  *
+ * - Where the institution has a dean, only grades the dean signed off go out
+ *   (GradeSignoffService); a change approved after sign-off (an override) is
+ *   sent once like any other change. Without a dean, a finalized grade is enough.
  * - Only what is new or changed since it was last sent is delivered
  *   (`sis_grade_exports` remembers), so a run with nothing new sends nothing.
  * - A delivery has a key made from its content: the same grades always give
@@ -193,17 +196,21 @@ class SisGradeExporter
             ->orderBy('g.id')
             ->get()->getResultArray();
 
+        // Where the institution has a dean, only the grades the dean signed off go out; elsewhere (null) finalization is enough.
+        $signedOff = $this->signedOffSections($institutionId);
+
         $candidates = [];
 
         foreach ($records as $record) {
             $course  = $courses[(int) $record['course_id']] ?? null;
             $student = $students[(int) $record['student_id']] ?? null;
 
-            // Only a finalized grade is handed over; a withdrawn student has no final grade to give and an
-            // Incomplete is not settled yet. Whatever is left out is counted and said why.
+            // Only a finalized grade is handed over (and, with a dean, a signed-off one); a withdrawn student has
+            // no final grade to give and an Incomplete is not settled yet. Whatever is left out is counted and said why.
             $skip = match (true) {
                 $course === null || $student === null => SisGradePayload::NOT_IN_SIS,
                 empty($record['finalized_at']) => SisGradePayload::NOT_FINAL,
+                $signedOff !== null && ! isset($signedOff[(int) $record['course_offering_id']]) => SisGradePayload::NOT_SIGNED_OFF,
                 $record['remarks'] === 'Withdrawn' => SisGradePayload::WITHDRAWN,
                 $record['remarks'] === 'INC' => SisGradePayload::INCOMPLETE,
                 default => null,
@@ -223,6 +230,42 @@ class SisGradeExporter
     }
 
     /**
+     * The sections whose grades the dean has signed off, when the institution has a dean; null when it
+     * has none, which means the gate does not apply and a finalized grade is enough, as it always was.
+     *
+     * A reopened sign-off is no longer one, so changes to that section wait until it is signed off again.
+     *
+     * @return array<int, true>|null offering id => true
+     */
+    private function signedOffSections(int $institutionId): ?array
+    {
+        $db = db_connect();
+
+        $hasDean = $db->table('dean_assignments da')
+            ->join('departments d', 'd.id = da.department_id')
+            ->where('d.institution_id', $institutionId)
+            ->where(['da.status' => 'active', 'da.active_marker' => 1])
+            ->countAllResults() > 0;
+
+        if (! $hasDean) {
+            return null;
+        }
+
+        $ids = $db->table('grade_signoffs s')
+            ->select('s.offering_id')
+            ->join('course_offerings o', 'o.id = s.offering_id')
+            ->join('courses c', 'c.id = o.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments d', 'd.id = sd.department_id')
+            ->where('d.institution_id', $institutionId)
+            ->where('s.open_marker', 1)
+            ->get()->getResultArray();
+
+        return array_fill_keys(array_map('intval', array_column($ids, 'offering_id')), true);
+    }
+
+    /**
      * The grades left out, in words. A section that is not finalized (or not
      * known to the SIS) is one line with a count; everyone else is named.
      * Grades that were already sent and did not change are not listed: that
@@ -236,7 +279,7 @@ class SisGradeExporter
     {
         $db = db_connect();
 
-        $perSection = [SisGradePayload::NOT_FINAL, SisGradePayload::NOT_IN_SIS];
+        $perSection = [SisGradePayload::NOT_FINAL, SisGradePayload::NOT_SIGNED_OFF, SisGradePayload::NOT_IN_SIS];
 
         $sections = [];
         $named = [];
