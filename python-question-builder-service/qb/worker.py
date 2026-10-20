@@ -10,6 +10,8 @@ loop to be correct, to survive PHP going away, and to report typed failures."""
 
 import logging
 import os
+import signal
+import threading
 import time
 from dataclasses import dataclass
 from typing import Callable
@@ -20,6 +22,10 @@ from .php_client import PhpClient, PhpUnavailable
 log = logging.getLogger("qb.worker")
 
 VERSION = "0.1"
+
+# Exit status after a restart request (SIGUSR1). Non-zero on purpose: the unit's
+# Restart=on-failure brings the worker back, which a plain exit 0 would not.
+RESTART_EXIT_CODE = 75
 
 Handler = Callable[[dict, "JobContext"], dict]
 
@@ -125,6 +131,35 @@ class Worker:
                 self.sleep(delay)
 
 
+class StopRequest:
+    """Turns signals into a polite stop. SIGTERM (systemctl stop) and SIGINT end
+    the loop after the current job; SIGUSR1 does the same and asks to be started
+    again, so a deploy can restart the worker with `kill -USR1` and no sudo.
+    Waiting on `event` instead of sleeping lets an idle worker stop at once."""
+
+    def __init__(self) -> None:
+        self.event = threading.Event()
+        self.restart = False
+
+    def install(self) -> None:  # pragma: no cover - needs the main thread
+        signal.signal(signal.SIGTERM, self._stop)
+        signal.signal(signal.SIGINT, self._stop)
+
+        if hasattr(signal, "SIGUSR1"):
+            signal.signal(signal.SIGUSR1, self._restart)
+
+    def _stop(self, signum, frame) -> None:
+        self.event.set()
+
+    def _restart(self, signum, frame) -> None:
+        self.restart = True
+        self.event.set()
+
+    @property
+    def exit_code(self) -> int:
+        return RESTART_EXIT_CODE if self.restart else 0
+
+
 def main() -> None:  # pragma: no cover - process entry point
     from . import envfile
     from .config import ConfigError, build_worker, from_env
@@ -152,7 +187,16 @@ def main() -> None:  # pragma: no cover - process entry point
 
     log.info("Worker %s starting (backend %s, models %s)", settings.worker_id, settings.backend, ", ".join(settings.models))
 
-    build_worker(settings).run_forever()
+    worker = build_worker(settings)
+    stop = StopRequest()
+    stop.install()
+    worker.sleep = stop.event.wait
+
+    worker.run_forever(should_stop=stop.event.is_set)
+
+    log.info("Worker stopping%s.", " for a restart" if stop.restart else "")
+
+    raise SystemExit(stop.exit_code)
 
 
 if __name__ == "__main__":  # pragma: no cover
