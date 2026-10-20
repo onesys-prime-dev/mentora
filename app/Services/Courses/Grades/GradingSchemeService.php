@@ -177,6 +177,7 @@ class GradingSchemeService
             'categories' => $categories,
             'uncategorized' => $uncategorized,
             'out_of_sync_count' => count(array_filter($items, static fn ($item) => $item['is_out_of_sync'])),
+            'finalization' => (new GradeFinalizationService())->current($offeringId),
             'scales' => $this->scaleModel->where('status', 'Active')->orderBy('id')->findAll(),
             'scale_items' => !empty($scheme['grade_scale_id'])
                 ? $this->scaleItemModel->listForScale((int) $scheme['grade_scale_id'])
@@ -280,6 +281,8 @@ class GradingSchemeService
                 'is_override' => !empty($record['is_override']),
                 'override_reason' => $record['override_reason'] ?? null,
                 'remarks' => $record['remarks'] ?? 'Incomplete',
+                'is_final' => !empty($record['finalized_at']),
+                'tag' => GradingEngineService::displayTag($record['remarks'] ?? 'Incomplete', !empty($record['finalized_at'])),
                 'inc_reason' => $record['inc_reason'] ?? null,
                 'inc_until' => $record['inc_until'] ?? null,
             ];
@@ -303,6 +306,10 @@ class GradingSchemeService
      */
     public function updateManualScore(User $user, int $offeringId, int $itemId, int $studentId, ?float $score): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $item = $this->ownedItem($scheme, $itemId);
@@ -383,6 +390,10 @@ class GradingSchemeService
 
     public function updateScheme(User $user, int $offeringId, array $data): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $update = [];
@@ -540,6 +551,10 @@ class GradingSchemeService
 
     public function createCategory(int $offeringId, array $data): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $name = trim((string) ($data['name'] ?? ''));
@@ -588,6 +603,10 @@ class GradingSchemeService
 
     public function updateCategory(int $offeringId, int $categoryId, array $data): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $category = $this->ownedCategory($scheme, $categoryId);
@@ -662,6 +681,10 @@ class GradingSchemeService
 
     public function createPeriod(int $offeringId, array $data): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $name = trim((string) ($data['name'] ?? ''));
@@ -697,6 +720,10 @@ class GradingSchemeService
 
     public function updatePeriod(int $offeringId, int $periodId, array $data): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $period = $this->ownedPeriod($scheme, $periodId);
@@ -751,6 +778,10 @@ class GradingSchemeService
      */
     public function deletePeriod(int $offeringId, int $periodId): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $period = $this->ownedPeriod($scheme, $periodId);
@@ -804,6 +835,10 @@ class GradingSchemeService
      */
     public function deleteCategory(int $offeringId, int $categoryId): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $category = $this->ownedCategory($scheme, $categoryId);
@@ -832,6 +867,10 @@ class GradingSchemeService
      */
     public function createManualItem(User $user, int $offeringId, int $categoryId, array $data): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         if (!$this->ownedCategory($scheme, $categoryId)) {
@@ -876,6 +915,10 @@ class GradingSchemeService
      */
     public function updateItem(User $user, int $offeringId, int $itemId, array $data): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $item = $this->ownedItem($scheme, $itemId);
@@ -945,6 +988,10 @@ class GradingSchemeService
      */
     public function deleteItem(User $user, int $offeringId, int $itemId): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $item = $this->ownedItem($scheme, $itemId);
@@ -968,6 +1015,10 @@ class GradingSchemeService
 
     public function resyncItem(User $user, int $offeringId, int $itemId): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         if (!$this->ownedItem($scheme, $itemId)) {
@@ -979,6 +1030,10 @@ class GradingSchemeService
 
     public function recalculate(int $offeringId): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = $this->forOffering($offeringId);
 
         $problem = $this->publishProblem((int) $scheme['id']);

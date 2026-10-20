@@ -8,6 +8,7 @@ import { renderGradesSkeleton } from "./skeleton.js";
 import { loadGradingScheme } from "./scheme/scheme.js";
 import { loadGradebookRoster } from "./roster/roster.js";
 import { initializeGradeSheet } from "./import-export/grade-sheet.js";
+import { bindFinalizeDialog } from "./finalize/finalize-dialog.js";
 
 /*
  * Reuses the Assessments feature's own Grade Work screen rather than
@@ -159,6 +160,8 @@ function bindGradebookToolbar()
     });
 
     initializeGradeSheet(initialize);
+
+    bindFinalizeDialog(initialize);
 }
 
 function bindAssessmentLinks()

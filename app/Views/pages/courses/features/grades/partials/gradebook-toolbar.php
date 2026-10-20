@@ -11,6 +11,7 @@ $needsRecalculation = !empty($scheme['needs_recalculation']);
 $outOfSync = (int) ($gradebook['out_of_sync_count'] ?? 0);
 $uncategorized = count($gradebook['uncategorized'] ?? []);
 $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
+$finalization = $gradebook['finalization'] ?? null;
 ?>
 
 <div class="flex flex-col gap-3" data-gradebook-toolbar>
@@ -36,6 +37,24 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
         </div>
 
         <div class="flex items-center gap-2">
+
+            <?php if ($finalization !== null): ?>
+                <button
+                    type="button"
+                    data-open-reopen
+                    class="inline-flex items-center gap-2 rounded-xl border border-[#946200]/40 px-4 py-2 text-sm font-semibold text-[#946200] transition hover:bg-[#FFF8E6]">
+                    <?= icon('lock', 'h-4 w-4 text-current') ?>
+                    Reopen grades
+                </button>
+            <?php else: ?>
+                <button
+                    type="button"
+                    data-open-finalize
+                    class="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+                    <?= icon('check', 'h-4 w-4 text-current') ?>
+                    Finalize grades
+                </button>
+            <?php endif; ?>
 
             <button
                 type="button"
@@ -75,7 +94,19 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 
     </div>
 
-    <?php if ($needsRecalculation): ?>
+    <?php if ($finalization !== null): ?>
+        <div class="flex items-center gap-3 rounded-2xl border border-[#BFD3F2] bg-brand-tint px-5 py-3 text-sm text-brand-dark" data-finalized-banner>
+            <?= icon('lock', 'h-4 w-4 text-current') ?>
+            <span>
+                <strong>Grades are final.</strong>
+                Finalized by <?= esc(trim((string) ($finalization['finalized_by_name'] ?? '')) !== '' ? $finalization['finalized_by_name'] : 'an instructor') ?>
+                on <?= esc(date('M j, Y, g:i A', strtotime((string) $finalization['finalized_at']))) ?>.
+                Scores, the grading scheme and imports are locked until you reopen them.
+            </span>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($needsRecalculation && $finalization === null): ?>
 
         <!-- Config changed since the last calculation: final grades wait for an explicit Recalculate. -->
         <div class="flex items-center justify-between gap-4 rounded-2xl border border-[#FFE3A3] bg-[#FFF8E6] px-5 py-3 text-sm text-[#946200]" data-recalculate-banner>
@@ -113,3 +144,5 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
     <?php endif; ?>
 
 </div>
+
+<?= view('pages/courses/features/grades/partials/modals/grade-finalize', [], ['saveData' => false]) ?>

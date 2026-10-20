@@ -70,6 +70,12 @@ export const resyncGradeItem = (itemId) => request(`${base()}/scheme/items/${ite
 
 export const recalculateGrades = () => request(`${base()}/recalculate`, "POST");
 
+export const fetchFinalization = () => request(`${base()}/finalization`);
+
+export const finalizeGrades = () => request(`${base()}/finalization`, "POST");
+
+export const reopenGrades = (reason) => request(`${base()}/finalization/reopen`, "POST", { reason });
+
 /*
 |--------------------------------------------------------------------------
 | Grading periods

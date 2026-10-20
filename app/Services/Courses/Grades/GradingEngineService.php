@@ -156,7 +156,7 @@ class GradingEngineService
      * @return array{percentage: ?float, points_earned: float, points_possible: float,
      *               categories: list<array>, periods: list<array>, band: ?array, remarks: string}
      */
-    public function compute(array $context, int $studentId, array $overrideScores = []): array
+    public function compute(array $context, int $studentId, array $overrideScores = [], bool $missingAsZero = false): array
     {
         $categories = [];
         $pointsEarned = 0.0;
@@ -176,9 +176,12 @@ class GradingEngineService
 
                 $score = $this->scoreFor($context, $overrideScores, (int) $item['id'], $studentId);
 
-                if ($score === null) {
+                // A final grade counts work that was never graded or handed in as zero.
+                if ($score === null && !$missingAsZero) {
                     continue;
                 }
+
+                $score ??= 0.0;
 
                 $earned += $score;
                 $possible += (float) $item['max_points'];
@@ -332,6 +335,25 @@ class GradingEngineService
         return $this->remarksFor($effective, $passing);
     }
 
+    /**
+     * What a grade is called on screen. Passed and Failed are for a final
+     * grade; before the grades are finalized the same standing reads "On
+     * track" or "At risk", because more work is still to come. Incomplete
+     * (INC) and Withdrawn read the same either way.
+     */
+    public static function displayTag(string $remarks, bool $isFinal): string
+    {
+        if ($isFinal) {
+            return $remarks;
+        }
+
+        return match ($remarks) {
+            'Passed' => 'On track',
+            'Failed' => 'At risk',
+            default => $remarks,
+        };
+    }
+
     public function remarksFor(?float $percentage, float $passing): string
     {
         return match (true) {
@@ -357,9 +379,11 @@ class GradingEngineService
 
         $record = $this->recordModel->findForStudent($context['offeringId'], $studentId);
 
-        $effective = !empty($record['is_override'])
-            ? ($record['overridden_percentage'] === null ? null : (float) $record['overridden_percentage'])
-            : $result['percentage'];
+        $effective = match (true) {
+            !empty($record['is_override']) => $record['overridden_percentage'] === null ? null : (float) $record['overridden_percentage'],
+            !empty($record['finalized_at']) => $record['final_percentage'] === null ? null : (float) $record['final_percentage'],
+            default => $result['percentage'],
+        };
 
         $values = [
             'grading_scheme_id' => $context['scheme']['id'],
@@ -414,9 +438,11 @@ class GradingEngineService
 
         $isOverride = $percentage !== null;
 
+        $fallback = !empty($record['finalized_at']) ? $record['final_percentage'] : $record['calculated_percentage'];
+
         $effective = $isOverride
             ? $percentage
-            : ($record['calculated_percentage'] === null ? null : (float) $record['calculated_percentage']);
+            : ($fallback === null ? null : (float) $fallback);
 
         $now = date('Y-m-d H:i:s');
 
@@ -583,5 +609,59 @@ class GradingEngineService
         }
 
         return $record;
+    }
+    /*
+    |--------------------------------------------------------------------------
+    | Finalizing
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Freezes one student's final grade: computed with work that was never
+     * graded counted as zero, then stored beside the live calculation. An
+     * Incomplete stays Incomplete; everyone else is tagged Passed or Failed.
+     * Returns false when the student has no record to freeze.
+     */
+    public function freezeStudent(array $context, int $studentId, int $finalizedBy, string $now): bool
+    {
+        $this->store($context, $studentId, $this->compute($context, $studentId));
+
+        $record = $this->recordModel->findForStudent($context['offeringId'], $studentId);
+
+        if (!$record) {
+            return false;
+        }
+
+        $final = $this->compute($context, $studentId, [], true);
+
+        $effective = !empty($record['is_override'])
+            ? ($record['overridden_percentage'] === null ? null : (float) $record['overridden_percentage'])
+            : $final['percentage'];
+
+        $this->recordModel->update($record['id'], [
+            'finalized_at' => $now,
+            'finalized_by' => $finalizedBy,
+            'final_percentage' => $final['percentage'],
+            'final_grade_scale_item_id' => $final['band']['id'] ?? null,
+            'remarks' => $this->tagFor($record, $effective, (float) $context['scheme']['passing_percentage']),
+            'updated_at' => $now,
+        ]);
+
+        return true;
+    }
+
+    /** Lifts the frozen final grades of a section: grades follow the live calculation again. */
+    public function unfreezeOffering(int $offeringId): void
+    {
+        db_connect()->table('gradebook_records')
+            ->where('course_offering_id', $offeringId)
+            ->update([
+                'finalized_at' => null,
+                'finalized_by' => null,
+                'final_percentage' => null,
+                'final_grade_scale_item_id' => null,
+            ]);
+
+        $this->recalculateOffering($offeringId);
     }
 }

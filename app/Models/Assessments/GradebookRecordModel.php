@@ -33,6 +33,10 @@ class GradebookRecordModel extends Model
         'inc_set_by',
         'inc_reason',
         'inc_until',
+        'finalized_at',
+        'finalized_by',
+        'final_percentage',
+        'final_grade_scale_item_id',
         'last_calculated_at',
         'created_at',
         'updated_at',
@@ -59,7 +63,7 @@ class GradebookRecordModel extends Model
             return [];
         }
 
-        $rows = $this->select(['course_offering_id', 'calculated_percentage', 'overridden_percentage', 'is_override'])
+        $rows = $this->select(['course_offering_id', 'calculated_percentage', 'overridden_percentage', 'is_override', 'finalized_at', 'final_percentage'])
             ->whereIn('course_offering_id', $offeringIds)
             ->findAll();
 
@@ -81,7 +85,9 @@ class GradebookRecordModel extends Model
     }
 
     /**
-     * The percentage that counts: the override when set, else the calculated one.
+     * The percentage that counts: the override when set; else, once the
+     * section's grades are finalized, the frozen final grade; else the
+     * calculated one.
      */
     public static function effectivePercentage(?array $record): ?float
     {
@@ -89,9 +95,11 @@ class GradebookRecordModel extends Model
             return null;
         }
 
-        $value = !empty($record['is_override'])
-            ? $record['overridden_percentage']
-            : $record['calculated_percentage'];
+        $value = match (true) {
+            !empty($record['is_override']) => $record['overridden_percentage'],
+            !empty($record['finalized_at']) => $record['final_percentage'] ?? null,
+            default => $record['calculated_percentage'],
+        };
 
         return $value === null ? null : (float) $value;
     }

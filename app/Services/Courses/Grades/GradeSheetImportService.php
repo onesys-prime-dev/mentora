@@ -303,6 +303,10 @@ class GradeSheetImportService
      */
     public function apply(User $user, int $offeringId, array $payload): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = (new GradingSchemeService())->forOffering($offeringId);
 
         $engine = new GradingEngineService();

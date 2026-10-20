@@ -155,7 +155,7 @@ final class SisGradeExporterTest extends DatabaseTestCase
     {
         $this->export();
 
-        db_connect()->table('gradebook_records')->where('student_id', $this->ann->id)->update(['calculated_percentage' => 91.0]);
+        db_connect()->table('gradebook_records')->where('student_id', $this->ann->id)->update(['calculated_percentage' => 91.0, 'final_percentage' => 91.0]);
 
         $result = $this->export();
 
@@ -233,6 +233,27 @@ final class SisGradeExporterTest extends DatabaseTestCase
         $this->assertSame(2, $result->datasets['grades']['created']);
         $this->assertSame(1, $result->datasets['grades']['skipped']);
         $this->assertCount(2, $this->theDelivery());
+    }
+
+    public function testGradesThatAreNotFinalizedYetAreNotSent(): void
+    {
+        $open = SisFixture::student($this->institution, 'S6', 'open2@example.com');
+        SisFixture::grade($this->offering, $open, 72.0, null, 'Passed', false);
+
+        $result = $this->export();
+
+        $this->assertSame(2, $result->datasets['grades']['created'], 'only the finalized grades go');
+        $this->assertCount(2, $this->theDelivery());
+    }
+
+    public function testTheFrozenFinalGradeIsWhatIsSentNotTheLiveCalculation(): void
+    {
+        db_connect()->table('gradebook_records')->where('student_id', $this->ann->id)->update(['calculated_percentage' => 99.0, 'final_percentage' => 60.0]);
+
+        $this->export();
+
+        $sent = array_column($this->theDelivery(), 'percentage', 'student_external_id');
+        $this->assertSame('60.00', $sent['S1']);
     }
 
     public function testAWithdrawnStudentAndAnIncompleteAreNotSent(): void

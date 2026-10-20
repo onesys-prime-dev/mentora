@@ -144,12 +144,12 @@ $isRequestMode = $overrideMode === 'request';
                                 data-inc-reason="<?= esc((string) ($student['inc_reason'] ?? ''), 'attr') ?>"
                                 data-inc-until="<?= esc((string) ($student['inc_until'] ?? ''), 'attr') ?>"
                                 title="<?= $isInc ? 'Incomplete: ' . esc((string) ($student['inc_reason'] ?? ''), 'attr') : 'Mark this grade Incomplete (INC)' ?>"
-                                class="rounded-full px-2 py-0.5 text-xs font-bold transition hover:ring-2 hover:ring-brand/30 <?= match ($student['remarks']) {
-                                    'Passed' => 'bg-[#E8F5EC] text-[#2E7D4F]',
-                                    'Failed' => 'bg-[#FDEDEC] text-[#C33939]',
+                                class="rounded-full px-2 py-0.5 text-xs font-bold transition hover:ring-2 hover:ring-brand/30 <?= match ($student['tag']) {
+                                    'Passed', 'On track' => 'bg-[#E8F5EC] text-[#2E7D4F]',
+                                    'Failed', 'At risk' => 'bg-[#FDEDEC] text-[#C33939]',
                                     'INC' => 'bg-[#FFF1D6] text-[#946200]',
                                     default => 'bg-gray-100 text-gray-500',
-                                } ?>"><?= esc($isInc ? 'INC' : $student['remarks']) ?></button>
+                                } ?>"><?= esc($student['tag']) ?></button>
                             <?php if ($isInc && !empty($student['inc_until'])): ?>
                                 <p class="mt-1 text-[11px] text-[#946200]">Finish by <?= esc(date('M j, Y', strtotime((string) $student['inc_until']))) ?></p>
                             <?php endif; ?>

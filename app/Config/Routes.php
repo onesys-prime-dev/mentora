@@ -269,6 +269,11 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
         $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
 
+        // Finalize the section's grades, or reopen them with a reason.
+        $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
+        $routes->post('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::finalize/$1');
+        $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
+
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.
         $routes->patch('(:num)/grades/override-requests/(:num)', 'Courses\Grades\OverrideRequestController::update/$1/$2');
@@ -511,6 +516,10 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
         $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
+
+        // The chairperson sees where the grades stand and may reopen them with a reason (finalizing is the instructor's).
+        $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
+        $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
 
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.

@@ -176,13 +176,14 @@ class SisGradeExporter
         $students = $links('person');
 
         $records = $db->table('gradebook_records g')
-            ->select('g.course_offering_id, g.student_id, g.calculated_percentage, g.is_override, g.overridden_percentage, g.remarks, o.course_id')
+            ->select('g.course_offering_id, g.student_id, g.calculated_percentage, g.is_override, g.overridden_percentage, g.finalized_at, g.final_percentage, g.remarks, o.course_id')
             ->join('course_offerings o', 'o.id = g.course_offering_id')
             ->join('courses c', 'c.id = o.course_id')
             ->join('programs p', 'p.id = c.program_id')
             ->join('sub_departments sd', 'sd.id = p.sub_department_id')
             ->join('departments d', 'd.id = sd.department_id')
             ->where('d.institution_id', $institutionId)
+            ->where('g.finalized_at IS NOT NULL', null, false)
             ->orderBy('g.id')
             ->get()->getResultArray();
 

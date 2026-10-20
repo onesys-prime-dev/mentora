@@ -5,9 +5,13 @@
  */
 $finalGrade = $summary['overall_percentage'] ?? null;
 
-$remarksMeta = match ($summary['remarks'] ?? null) {
+$isFinal = !empty($summary['is_final']);
+
+$remarksMeta = match ($summary['tag'] ?? ($summary['remarks'] ?? null)) {
     'Passed'     => ['label' => 'Passed',      'tone' => 'success', 'icon' => 'check'],
     'Failed'     => ['label' => 'Failed',      'tone' => 'danger',  'icon' => 'attention'],
+    'On track'   => ['label' => 'On track',    'tone' => 'success', 'icon' => 'in-progress'],
+    'At risk'    => ['label' => 'At risk',     'tone' => 'warning', 'icon' => 'attention'],
     'Withdrawn'  => ['label' => 'Withdrawn',   'tone' => 'neutral', 'icon' => 'attention'],
     'INC'        => ['label' => 'Incomplete (INC)', 'tone' => 'warning', 'icon' => 'in-progress'],
     default      => ['label' => 'In Progress', 'tone' => 'warning', 'icon' => 'in-progress'],
@@ -40,7 +44,8 @@ if ($gradeLabel !== null) {
         'detail' => match (true) {
             !$isPublished => "Your instructor hasn't published the grading yet",
             !empty($summary['is_override']) => 'Set by your instructor',
-            $finalGrade !== null => 'From your graded work so far',
+            $isFinal && $finalGrade !== null => 'Final grade',
+            $finalGrade !== null => 'So far, from your graded work',
             default => 'Nothing graded yet',
         },
     ], ['saveData' => false]) ?>

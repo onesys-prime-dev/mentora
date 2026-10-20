@@ -230,6 +230,10 @@ class GradeService
                 'points_earned' => $breakdown['points_earned'] ?? 0,
                 'points_possible' => $breakdown['points_possible'] ?? 0,
                 'remarks' => $isPublished ? ($record['remarks'] ?? 'Incomplete') : 'Incomplete',
+                'is_final' => $isPublished && !empty($record['finalized_at']),
+                'tag' => $isPublished
+                    ? \App\Services\Courses\Grades\GradingEngineService::displayTag($record['remarks'] ?? 'Incomplete', !empty($record['finalized_at']))
+                    : 'Incomplete',
                 'inc_reason' => $isPublished ? ($record['inc_reason'] ?? null) : null,
                 'inc_until' => $isPublished ? ($record['inc_until'] ?? null) : null,
                 'graded_count' => count($graded),

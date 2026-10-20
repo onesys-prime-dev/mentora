@@ -15,11 +15,15 @@ namespace App\Services\Sis;
 final class SisGradePayload
 {
     /**
-     * @param array{calculated_percentage: mixed, is_override: mixed, overridden_percentage: mixed} $record a gradebook record
+     * @param array{calculated_percentage: mixed, is_override: mixed, overridden_percentage: mixed, finalized_at?: mixed, final_percentage?: mixed} $record a gradebook record
      */
     public static function finalPercentage(array $record): ?float
     {
-        $value = (int) $record['is_override'] === 1 ? $record['overridden_percentage'] : $record['calculated_percentage'];
+        $value = match (true) {
+            (int) $record['is_override'] === 1 => $record['overridden_percentage'],
+            !empty($record['finalized_at']) => $record['final_percentage'] ?? null,
+            default => $record['calculated_percentage'],
+        };
 
         return $value === null || $value === '' ? null : round((float) $value, 2);
     }
