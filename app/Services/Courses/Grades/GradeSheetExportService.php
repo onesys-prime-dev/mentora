@@ -300,6 +300,7 @@ class GradeSheetExportService
             'Quiz and assignment scores are locked — they come from grading in Mentora and are updated there.',
             'Category %, Final %, Grade and Remarks recalculate as you type, using this section\'s grading scheme.',
             'Leave a score blank if it isn\'t graded yet; a blank doesn\'t count against the student.',
+            ...$this->curveLines($layout),
             'Don\'t add, remove, reorder or rename columns or rows, and don\'t edit the grey cells — the import checks this and flags any row that was changed.',
             'If the grading scheme changes after you export (weights, categories, items or points), export a fresh sheet — an older one will be refused.',
             '',
@@ -312,6 +313,34 @@ class GradeSheetExportService
 
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getColumnDimension('A')->setWidth(120);
+    }
+
+    /**
+     * What to tell the reader when a curve is in force: the score columns hold
+     * the scores as entered, and the calculated columns count them curved.
+     *
+     * @return list<string>
+     */
+    private function curveLines(GradeSheetLayout $layout): array
+    {
+        $curved = array_values(array_filter($layout->items(), static fn (array $item) => $layout->curveOf($item) !== null));
+
+        $lines = [];
+
+        if ($curved !== []) {
+            $lines[] = 'A curve is in force on ' . implode(', ', array_map(static fn (array $item) => $item['assessment_title'] ?? $item['name'], $curved))
+                . ' (marked [curved]): those columns show the scores as entered, and Category %, Final %, Grade and Remarks count them curved.';
+        }
+
+        if ($layout->finalCurve() !== null) {
+            $lines[] = 'A curve is in force on the final grade: Final %, Grade and Remarks include it.';
+        }
+
+        if ($lines !== []) {
+            $lines[] = 'If a curve is applied or removed after you export, export a fresh sheet — an older one will be refused.';
+        }
+
+        return $lines;
     }
 
     private function save(int $offeringId, string $extension, callable $write): array
