@@ -34,6 +34,9 @@ class GradeSheetLayout
 
     public const FIRST_DATA_ROW = 4;
 
+    /** What a score cell holds for a student who is excused from a manual item. */
+    public const EXCUSED = 'EX';
+
     private array $columns;
 
     public function __construct(private array $context)

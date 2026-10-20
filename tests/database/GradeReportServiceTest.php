@@ -181,9 +181,107 @@ final class GradeReportServiceTest extends DatabaseTestCase
         @unlink($file['file_path']);
 
         $this->assertStringStartsWith("\xEF\xBB\xBF", $csv, 'UTF-8 byte order mark so accents open correctly');
-        $this->assertStringContainsString('Student number', $csv);
+        $this->assertStringContainsString('student_number', $csv);
         $this->assertStringContainsString("'=HYPERLINK", $csv, 'text that looks like a formula is made plain');
         $this->assertMatchesRegularExpression('/\.csv$/', $file['filename']);
+    }
+
+    /** @return list<list<string>> */
+    private function csvRows(array $report): array
+    {
+        $file = $this->service->classSheet($report, 'csv');
+        $rows = array_map('str_getcsv', file($file['file_path'], FILE_IGNORE_NEW_LINES));
+        @unlink($file['file_path']);
+
+        $rows[0][0] = ltrim($rows[0][0], "\xEF\xBB\xBF");
+
+        return $rows;
+    }
+
+    public function testTheCsvIsDataForOtherSoftwareNotAReport(): void
+    {
+        $rows = $this->csvRows($this->service->classReport($this->offering));
+
+        $this->assertSame(
+            ['student_id', 'student_number', 'student_name', 'score: Quiz 1 (max 20)', 'score: Midterm (max 100)', 'category_percent: Quizzes', 'category_percent: Exams', 'final_percent', 'grade', 'standing', 'is_final', 'is_overridden', 'curve_in_force', 'excused_items', 'incomplete_until'],
+            $rows[0]
+        );
+
+        $ann = array_values(array_filter($rows, static fn (array $r): bool => ($r[1] ?? '') === 'N-Ann'))[0];
+
+        $this->assertSame((string) $this->students['Ann']->id, $ann[0], 'a stable id comes first');
+        $this->assertSame('18', $ann[3], 'plain numbers, nothing formatted');
+        $this->assertSame('90', $ann[7]);
+        $this->assertSame(['no', 'no', 'no'], array_slice($ann, 10, 3), 'yes/no flags, not words');
+        $this->assertNotContains('Notes', $rows[0], 'no prose written for a reader');
+    }
+
+    public function testInTheCsvAnExcusedItemIsABlankScoreNamedInItsOwnColumn(): void
+    {
+        (new \App\Services\Courses\Grades\GradingSchemeService())->updateManualScore($this->teacher, $this->offering, $this->quiz, (int) $this->students['Ben']->id, null, true);
+
+        $rows = $this->csvRows($this->service->classReport($this->offering));
+
+        $ben = array_values(array_filter($rows, static fn (array $r): bool => ($r[1] ?? '') === 'N-Ben'))[0];
+
+        $this->assertSame('', $ben[3], 'no EX in a number column');
+        $this->assertSame('Quiz 1', $ben[13]);
+    }
+
+    public function testTheCsvFlagsFinalOverriddenAndCurvedGradesAsYesNo(): void
+    {
+        (new GradeFinalizationService())->finalize($this->teacher, $this->offering);
+        (new GradingEngineService())->overrideFinalGrade($this->teacher, $this->offering, $this->students['Ann']->id, 99.0, 'Appeal');
+
+        $rows = $this->csvRows($this->service->classReport($this->offering));
+        $ann = array_values(array_filter($rows, static fn (array $r): bool => ($r[1] ?? '') === 'N-Ann'))[0];
+
+        $this->assertSame('99', $ann[7]);
+        $this->assertSame(['yes', 'yes'], array_slice($ann, 10, 2));
+    }
+
+    public function testTheCsvAndTheExcelReportAreDifferentFiles(): void
+    {
+        $report = $this->service->classReport($this->offering);
+
+        $csv = $this->service->classSheet($report, 'csv');
+        $xlsx = $this->service->classSheet($report, 'xlsx');
+
+        $this->assertMatchesRegularExpression('/^gradebook-data-/', $csv['filename']);
+        $this->assertMatchesRegularExpression('/^gradebook-[A-Z0-9]/', $xlsx['filename']);
+
+        $book = \PhpOffice\PhpSpreadsheet\IOFactory::load($xlsx['file_path']);
+        @unlink($csv['file_path']);
+        @unlink($xlsx['file_path']);
+
+        $header = $book->getSheetByName('Gradebook')->toArray()[0];
+
+        $this->assertContains('Notes', $header, 'the report has its words');
+        $this->assertContains('Student number', $header, 'and readable headers');
+        $this->assertNotNull($book->getSheetByName('Summary'));
+    }
+
+    public function testTheExcelReportColoursTheStandingsAndFormatsThePercentages(): void
+    {
+        $xlsx = $this->service->classSheet($this->service->classReport($this->offering), 'xlsx');
+
+        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($xlsx['file_path'])->getSheetByName('Gradebook');
+        @unlink($xlsx['file_path']);
+
+        $header = $sheet->toArray()[0];
+        $standing = array_search('Standing', $header, true) + 1;
+        $percent = array_search('Grade %', $header, true) + 1;
+
+        $rows = $sheet->toArray();
+
+        foreach ($rows as $offset => $row) {
+            if ($offset > 0 && $row[1] === 'Tester, Ann') {
+                $style = $sheet->getStyle([$standing, $offset + 1]);
+                $this->assertSame('FF2E7D4F', $style->getFont()->getColor()->getARGB(), 'On track is green');
+                $this->assertTrue($style->getFont()->getBold());
+                $this->assertSame('0.00', $sheet->getStyle([$percent, $offset + 1])->getNumberFormat()->getFormatCode());
+            }
+        }
     }
 
     public function testTheSpreadsheetHasTheGradebookAndASummarySheet(): void

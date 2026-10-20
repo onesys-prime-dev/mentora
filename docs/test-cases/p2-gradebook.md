@@ -120,11 +120,14 @@ rules themselves are tested without a browser (see "Already automated" below).
 - **Role:** Instructor. **Priority:** P2
 - **Data:** IT101-A, Grades tab, the Reports menu
 - **Steps:**
-  1. Open Reports and choose the class gradebook as CSV.
+  1. Open Reports and choose the class gradebook as Data (CSV).
   2. Open Reports and choose the class summary print view.
 - **Expected:**
-  - A file named `gradebook-IT101-A-<date>.csv` is downloaded, with a "Student
-    number" column and the students in it.
+  - A file named `gradebook-data-IT101-A-<date>.csv` is downloaded: the data for
+    other software, with a `student_number` column, plain numbers and the students
+    in it. (The Excel choice, "Report", is the formatted one to read and print, with
+    notes in words and a Summary sheet; the offline grade sheet is a third thing,
+    for entering manual scores and importing them back.)
   - The class summary opens in its own tab with its figures, the students and a
     "Print or save as PDF" button.
   - Both exports are in the audit log (`grades.report_exported`).

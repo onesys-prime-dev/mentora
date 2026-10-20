@@ -110,14 +110,17 @@ class GradeSheetExportService
             $studentId = (int) $student['student_id'];
 
             $scores = [];
+            $excused = [];
 
             foreach ($layout->items() as $item) {
                 $row = $context['scores'][(int) $item['id']][$studentId] ?? null;
                 $scores[(int) $item['id']] = $row && $row['raw_score'] !== null ? (float) $row['raw_score'] : null;
+                $excused[(int) $item['id']] = !empty($row['is_missing']);
             }
 
             $students[] = $student + [
                 'scores' => $scores,
+                'excused' => $excused,
                 'result' => $engine->compute($context, $studentId),
             ];
 
@@ -184,7 +187,9 @@ class GradeSheetExportService
                     'student_id' => $studentId,
                     'student_number' => $student['student_number'],
                     'student_name' => $student['student_name'],
-                    'item' => $student['scores'][(int) $column['item']['id']] ?? null,
+                    'item' => ($layout->isManual($column['item']) && !empty($student['excused'][(int) $column['item']['id']]))
+                        ? GradeSheetLayout::EXCUSED
+                        : ($student['scores'][(int) $column['item']['id']] ?? null),
                     'category' => $formulas
                         ? $layout->categoryFormula($column['category'], $rowNumber)
                         : $categoryPercent[(int) $column['category']['id']] ?? null,
@@ -300,6 +305,7 @@ class GradeSheetExportService
             'Quiz and assignment scores are locked — they come from grading in Mentora and are updated there.',
             'Category %, Final %, Grade and Remarks recalculate as you type, using this section\'s grading scheme.',
             'Leave a score blank if it isn\'t graded yet; a blank doesn\'t count against the student.',
+            'Type EX in a score cell to excuse a student from that item: it is left out of their grade, like a blank, but it says the student was let off rather than not graded yet.',
             ...$this->curveLines($layout),
             'Don\'t add, remove, reorder or rename columns or rows, and don\'t edit the grey cells — the import checks this and flags any row that was changed.',
             'If the grading scheme changes after you export (weights, categories, items or points), export a fresh sheet — an older one will be refused.',

@@ -289,7 +289,8 @@ final class GradeSheetTest extends DatabaseTestCase
         $this->assertTrue($sheet->getStyle($attendance . '4')->getProtection()->getLocked() === 'unprotected', 'manual scores are editable');
         $this->assertNotSame('unprotected', $sheet->getStyle($quiz . '4')->getProtection()->getLocked(), 'quiz scores are locked');
         $this->assertSame('2026-001', (string) $sheet->getCell('B4')->getValue(), 'student numbers stay text');
-        $this->assertStringContainsString('Template: ', (string) $book->getSheetByName('Instructions')->getCell('A10')->getValue());
+        $lines = array_column($book->getSheetByName('Instructions')->toArray(), 0);
+        $this->assertNotEmpty(array_filter($lines, static fn ($line) => str_starts_with((string) $line, 'Template: ')), 'the instructions end with the template signature');
     }
 
     /*
@@ -400,6 +401,154 @@ final class GradeSheetTest extends DatabaseTestCase
         }
 
         $this->fail('row not in preview');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Excused
+    |--------------------------------------------------------------------------
+    */
+
+    private function excuse(User $student, int $item): void
+    {
+        (new \App\Services\Courses\Grades\GradingSchemeService())->updateManualScore($this->instructor, $this->offeringId, $item, (int) $student->id, null, true);
+    }
+
+    public function testAnExcusedManualScoreIsEXInTheSheetNotABlank(): void
+    {
+        $this->excuse($this->bob, $this->recitation);
+
+        $grid = $this->readCsv($this->exportCsv());
+
+        $this->assertSame('EX', $grid[$this->rowOf($grid, $this->bob)][$this->col($grid, 'item:' . $this->recitation)]);
+        $this->assertSame('', $grid[$this->rowOf($grid, $this->ada)][$this->col($grid, 'item:' . $this->recitation)], 'a student who is merely not graded yet stays blank');
+    }
+
+    public function testTheExcelSheetSaysEXToo(): void
+    {
+        $this->excuse($this->bob, $this->recitation);
+
+        $path = $this->exportXlsx();
+
+        $book = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+        $sheet = $book->getSheetByName('Grades');
+        $layout = new GradeSheetLayout((new \App\Services\Courses\Grades\GradingEngineService())->context($this->offeringId));
+        $column = GradeSheetLayout::letter(array_search('item:' . $this->recitation, $layout->keys(), true) + 1);
+
+        $values = [];
+
+        for ($row = GradeSheetLayout::FIRST_DATA_ROW; $row < GradeSheetLayout::FIRST_DATA_ROW + 4; $row++) {
+            $values[] = (string) $sheet->getCell($column . $row)->getValue();
+        }
+
+        $this->assertContains('EX', $values);
+    }
+
+    public function testASheetWithExcusedCellsComesBackWithNoChanges(): void
+    {
+        $this->excuse($this->bob, $this->recitation);
+
+        $preview = $this->preview($this->exportCsv());
+
+        $this->assertSame(0, $preview['validCount']);
+        $this->assertSame(0, $preview['flaggedCount']);
+    }
+
+    public function testTypingEXOverAScoreExcusesTheStudentAndIsPreviewedAsSuch(): void
+    {
+        $preview = $this->previewEdit($this->ada, 'item:' . $this->attendance, 'ex');
+
+        $change = $this->rowFor($preview, $this->ada)['changes'][0];
+
+        $this->assertTrue($change['valid']);
+        $this->assertTrue($change['newExcused']);
+        $this->assertFalse($change['oldExcused']);
+        $this->assertNull($change['newValue']);
+        $this->assertSame(9.0, $change['oldValue']);
+    }
+
+    public function testExcusedWorksInAnyCaseAndSpelledOut(): void
+    {
+        foreach (['EX', 'Ex', ' excused ', 'EXCUSED'] as $typed) {
+            $change = $this->rowFor($this->previewEdit($this->ada, 'item:' . $this->attendance, $typed), $this->ada)['changes'][0];
+
+            $this->assertTrue($change['newExcused'], "'{$typed}'");
+        }
+    }
+
+    public function testClearingAnExcusedCellOrTypingANumberOverItAreChanges(): void
+    {
+        $this->excuse($this->bob, $this->recitation);
+
+        $cleared = $this->rowFor($this->previewEdit($this->bob, 'item:' . $this->recitation, ''), $this->bob)['changes'][0];
+        $this->assertTrue($cleared['oldExcused']);
+        $this->assertFalse($cleared['newExcused']);
+        $this->assertNull($cleared['newValue']);
+
+        $scored = $this->rowFor($this->previewEdit($this->bob, 'item:' . $this->recitation, '12'), $this->bob)['changes'][0];
+        $this->assertTrue($scored['oldExcused']);
+        $this->assertSame(12.0, $scored['newValue']);
+    }
+
+    public function testSomethingThatIsNeitherANumberNorEXIsRefusedWithAHint(): void
+    {
+        $change = $this->rowFor($this->previewEdit($this->ada, 'item:' . $this->attendance, 'absent'), $this->ada)['changes'][0];
+
+        $this->assertFalse($change['valid']);
+        $this->assertStringContainsString('EX', $change['error']);
+    }
+
+    public function testApplyingAnExcuseStoresItAndALaterScoreReplacesIt(): void
+    {
+        $this->assertTrue($this->apply([['student_id' => $this->ada->id, 'grade_item_id' => $this->attendance, 'value' => null, 'excused' => true]])['success']);
+
+        $row = db_connect()->table('gradebook_item_scores')->where('grade_item_id', $this->attendance)->where('student_id', $this->ada->id)->get()->getRowArray();
+        $this->assertSame(1, (int) $row['is_missing']);
+        $this->assertNull($row['raw_score']);
+
+        $this->assertTrue($this->apply([$this->change($this->ada, $this->attendance, 6)])['success']);
+
+        $row = db_connect()->table('gradebook_item_scores')->where('grade_item_id', $this->attendance)->where('student_id', $this->ada->id)->get()->getRowArray();
+        $this->assertSame(0, (int) $row['is_missing']);
+        $this->assertEquals(6.0, (float) $row['raw_score']);
+    }
+
+    public function testAnExcuseLeavesTheItemOutOfTheGradeLikeAGradedZeroWouldNot(): void
+    {
+        $this->apply([['student_id' => $this->ada->id, 'grade_item_id' => $this->attendance, 'value' => null, 'excused' => true]]);
+
+        (new \App\Services\Courses\Grades\GradingEngineService())->recalculateOffering($this->offeringId);
+
+        // Participation is now Recitation alone (ungraded), so there is no participation percentage:
+        // the final is the quiz's 80% alone, not dragged down by a zero.
+        $record = db_connect()->table('gradebook_records')->where('student_id', $this->ada->id)->get()->getRowArray();
+
+        $this->assertEquals(80.0, (float) $record['calculated_percentage']);
+    }
+
+    public function testAnExcuseOnAQuizOrAssignmentItemCannotBeImported(): void
+    {
+        $result = $this->apply([['student_id' => $this->ada->id, 'grade_item_id' => $this->quizItem, 'value' => null, 'excused' => true]]);
+
+        $this->assertFalse($result['success'], 'only manual items can be changed through the sheet');
+    }
+
+    public function testAppliedExcusesAreCountedInTheAuditEntry(): void
+    {
+        $this->apply([['student_id' => $this->ada->id, 'grade_item_id' => $this->attendance, 'value' => null, 'excused' => true], $this->change($this->bob, $this->attendance, 5)]);
+
+        $entry = db_connect()->table('audit_logs')->where('action', 'grades.import_applied')->get()->getRowArray();
+
+        $this->assertSame(1, json_decode($entry['new_values'], true)['excused']);
+    }
+
+    public function testTheInstructionsExplainEX(): void
+    {
+        $path = $this->exportXlsx();
+
+        $text = implode(' ', array_column(\PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getSheetByName('Instructions')->toArray(), 0));
+
+        $this->assertStringContainsString('Type EX', $text);
     }
 
     public function testAnEditedManualScoreShowsItsOldAndNewValueAndTheFinalGradeBeforeAndAfter(): void

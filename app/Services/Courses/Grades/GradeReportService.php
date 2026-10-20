@@ -17,8 +17,13 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  *
  * Every number comes from the same grading engine and the same stored grades
  * the screens use, so a report never disagrees with the gradebook:
- *   - the class gradebook (XLSX / CSV): one row per student, with the scores,
- *     the category percentages, the grade and the tag;
+ *   - the class gradebook, in two forms that are not the same thing:
+ *       Excel: the report to read, print and file. Formatted, coloured
+ *       standings, notes in words, a Summary sheet.
+ *       CSV: the data for other software. Ids, plain numbers, yes/no flags,
+ *       ISO dates; no prose, no formatting, one header row.
+ *     (The offline grade sheet, GradeSheetExportService, is a third thing:
+ *     the template for editing scores and importing them back.)
  *   - the class summary (PDF / print): the class's mean, range, who passes,
  *     the tags and how the grades are spread;
  *   - a student's report (PDF / print): their scores, how their grade is made up
@@ -185,12 +190,16 @@ class GradeReportService
     */
 
     /**
-     * The class gradebook as a file.
+     * The class gradebook as a file: Excel (the report) or CSV (the data).
      *
      * @return array{success: true, file_path: string, filename: string}
      */
     public function classSheet(array $report, string $format): array
     {
+        if ($format === 'csv') {
+            return $this->writeCsv($report, $this->dataLines($report));
+        }
+
         $header = ['Student number', 'Student'];
 
         foreach ($report['items'] as $item) {
@@ -223,7 +232,78 @@ class GradeReportService
 
         }
 
-        return $format === 'csv' ? $this->writeCsv($report, $lines) : $this->writeXlsx($report, $lines);
+        return $this->writeXlsx($report, $lines);
+    }
+
+    /**
+     * The class gradebook as data, for a spreadsheet formula, a script, a
+     * database import or another gradebook: stable ids, plain numbers, ISO
+     * dates and yes/no flags, and nothing written for a reader (no notes,
+     * no markers in the headers, no "EX": an excused item is a blank score
+     * and is named in `excused_items`).
+     *
+     * @return list<list<mixed>>
+     */
+    private function dataLines(array $report): array
+    {
+        $header = ['student_id', 'student_number', 'student_name'];
+
+        foreach ($report['items'] as $item) {
+            $header[] = 'score: ' . $item['name'] . ' (max ' . $this->number($item['max']) . ')';
+        }
+
+        foreach ($report['categories'] as $category) {
+            $header[] = 'category_percent: ' . $category['name'];
+        }
+
+        array_push($header, 'final_percent', 'grade', 'standing', 'is_final', 'is_overridden', 'curve_in_force', 'excused_items', 'incomplete_until');
+
+        $curved = $report['curves'] !== [];
+
+        $names = array_column($report['items'], 'name', 'id');
+
+        $lines = [$header];
+
+        foreach ($report['rows'] as $row) {
+
+            $line = [$row['student_id'], $row['student_number'], $row['student_name']];
+
+            $excused = [];
+
+            foreach ($report['items'] as $item) {
+
+                $score = $row['scores'][$item['id']] ?? null;
+
+                if ($score === 'EX') {
+                    $excused[] = $names[$item['id']];
+                    $score = null;
+                }
+
+                $line[] = $score ?? '';
+
+            }
+
+            foreach ($report['categories'] as $category) {
+                $line[] = $row['categories'][$category['id']] ?? '';
+            }
+
+            array_push(
+                $line,
+                $row['percentage'] ?? '',
+                $row['band'] ?? '',
+                $row['tag'],
+                $row['is_final'] ? 'yes' : 'no',
+                $row['is_override'] ? 'yes' : 'no',
+                $curved ? 'yes' : 'no',
+                implode('; ', $excused),
+                $row['inc_until'] ?? ''
+            );
+
+            $lines[] = $line;
+
+        }
+
+        return $lines;
     }
 
     /** A report page as a PDF. */
@@ -451,9 +531,33 @@ class GradeReportService
         $sheet->getStyle([1, 1, $last, 1])->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E6EEFB');
         $sheet->freezePane('C2');
 
+        $standing = $last - 1;
+        $percentFrom = 2 + count($report['items']) + 1;
+        $percentTo = $percentFrom + count($report['categories']);
+
+        $colours = ['Passed' => '2E7D4F', 'On track' => '2E7D4F', 'Failed' => 'C33939', 'At risk' => '946200', 'INC' => '946200'];
+
+        foreach ($report['rows'] as $offset => $row) {
+
+            $rowNumber = $offset + 2;
+
+            if (isset($colours[$row['tag']])) {
+                $sheet->getStyle([$standing, $rowNumber, $standing, $rowNumber])->getFont()->setBold(true)->getColor()->setRGB($colours[$row['tag']]);
+            }
+
+        }
+
+        if ($report['rows'] !== []) {
+            $sheet->getStyle([$percentFrom, 2, $percentTo, count($report['rows']) + 1])->getNumberFormat()->setFormatCode('0.00');
+            $sheet->getStyle([$last, 2, $last, count($report['rows']) + 1])->getAlignment()->setWrapText(true);
+        }
+
         for ($c = 1; $c <= $last; $c++) {
             $sheet->getColumnDimensionByColumn($c)->setAutoSize(true);
         }
+
+        // The notes are prose: a fixed width, wrapped, instead of one very long line.
+        $sheet->getColumnDimensionByColumn($last)->setAutoSize(false)->setWidth(48);
 
         $summary = $spreadsheet->createSheet();
         $summary->setTitle('Summary');
@@ -502,7 +606,8 @@ class GradeReportService
             mkdir($directory, 0777, true);
         }
 
-        $filename = $this->fileStem($report, 'gradebook') . '.' . $extension;
+        // The report and the data are different files; the name says which.
+        $filename = $this->fileStem($report, $extension === 'csv' ? 'gradebook-data' : 'gradebook') . '.' . $extension;
 
         $path = $directory . '/' . date('His') . '-' . bin2hex(random_bytes(3)) . '-' . $filename;
 

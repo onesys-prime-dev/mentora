@@ -180,10 +180,10 @@ test("TC-GBK-05 Instructor downloads the class gradebook and the class summary",
     const download = page.waitForEvent("download");
     await page.locator('[data-report-path="class"][data-report-format="csv"]').click();
     const file = await download;
-    expect(file.suggestedFilename()).toMatch(/^gradebook-IT101-A-\d{8}\.csv$/);
+    expect(file.suggestedFilename()).toMatch(/^gradebook-data-IT101-A-\d{8}\.csv$/);
     const path = await file.path();
     const csv = (await import("node:fs")).readFileSync(path, "utf8");
-    expect(csv).toContain("Student number");
+    expect(csv).toContain("student_number");
     expect(csv).toContain("Dela Cruz");
 
     // The class summary as a print view in its own tab.
