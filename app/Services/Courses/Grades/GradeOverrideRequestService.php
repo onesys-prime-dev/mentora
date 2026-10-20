@@ -426,6 +426,8 @@ class GradeOverrideRequestService
 
         $this->audit('grade.override_approved', $dean, $requestId, $context, ['status' => $row['status']], [
             'status' => OverrideRequestChain::APPROVED, 'requested_percentage' => $row['requested_percentage'], 'student_id' => (int) $row['student_id'], 'comment' => trim($comment),
+            // A change to grades the dean had already signed off: recorded as such, for what is handed to the SIS.
+            'after_signoff' => (new GradeSignoffService())->isSignedOff((int) $row['offering_id']),
         ]);
 
         $this->tell(
