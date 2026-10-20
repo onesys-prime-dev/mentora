@@ -215,6 +215,24 @@ final class AnnouncementRoutesTest extends RouteTestCase
         $this->assertSame($message, $row['message']);
     }
 
+    public function testThePostFromTheCalendarLandsOnTheChosenDayAndRefusesThePast(): void
+    {
+        $this->loggedInAs($this->instructor);
+
+        $post = fn (string $date) => $this->withBody(json_encode(['offering_id' => $this->offering, 'subject' => 'Dated', 'message' => '{}', 'date' => $date]))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->call('post', 'instructor/api/calendar/announcements');
+
+        $future = date('Y-m-d', strtotime('+5 days'));
+
+        $this->assertSame(201, $post($future)->response()->getStatusCode());
+        $this->assertSame($future, substr(db_connect()->table('announcements')->get()->getRowArray()['created_at'], 0, 10));
+
+        $this->assertSame(422, $post(date('Y-m-d', strtotime('-1 day')))->response()->getStatusCode());
+        $this->assertSame(422, $post('not-a-date')->response()->getStatusCode());
+        $this->assertSame(1, db_connect()->table('announcements')->countAllResults());
+    }
+
     public function testTheCalendarPostIsRefusedForOfferingsTheInstructorDoesNotTeach(): void
     {
         $other = CourseFactory::offering('B');

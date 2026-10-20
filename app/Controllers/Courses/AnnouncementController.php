@@ -57,7 +57,20 @@ class AnnouncementController extends BaseController
 
         $data = $this->request->getJSON(true) ?? [];
 
+        // The day to post on: today or later, never the past. Kept at the
+        // current time of day so same-day posts still order by when they were made.
+        $date = (string) ($data['date'] ?? date('Y-m-d'));
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1 || ! checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4))) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Choose a valid date.'])->setStatusCode(422);
+        }
+
+        if ($date < date('Y-m-d')) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Announcements can be posted for today or a later day, not a past one.'])->setStatusCode(422);
+        }
+
         $result = $this->announcementService->create(auth()->user(), (int) ($data['offering_id'] ?? 0), [
+            'created_at' => $date . ' ' . date('H:i:s'),
             'subject' => $data['subject'] ?? $data['title'] ?? '',
             'message' => isset($data['message'])
                 ? (string) $data['message']

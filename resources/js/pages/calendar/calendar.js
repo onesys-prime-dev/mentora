@@ -703,7 +703,7 @@ function openDateMenu(dateStr)
 
     const actions = [
         isInstructor ? actionButton("add-assessment", "Add Assessment", plusIcon) : "",
-        isInstructor ? actionButton("add-announcement", "Add Announcement", plusIcon) : "",
+        isInstructor && dateStr >= isoDate(new Date()) ? actionButton("add-announcement", "Add Announcement", plusIcon) : "",
         actionButton("add-reminder", "Add Reminder", plusIcon),
     ].join("");
 
@@ -1030,7 +1030,7 @@ async function submitAssessmentForm(e)
 
 /* ---- Add Announcement (instructor) --------------------------------------- */
 
-function openAnnouncementForm()
+function openAnnouncementForm(dateStr)
 {
     openModal("Post Announcement");
 
@@ -1050,6 +1050,11 @@ function openAnnouncementForm()
                 <select name="offering_id" required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
                     ${courseOptions()}
                 </select>
+            </label>
+
+            <label class="flex flex-col gap-1 text-sm">
+                Date
+                <input type="date" name="date" required value="${dateStr}" min="${isoDate(new Date())}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
             </label>
 
         </form>
@@ -1200,6 +1205,7 @@ async function submitAnnouncementForm(e)
             headers: jsonHeaders(),
             body: JSON.stringify({
                 offering_id: form.offering_id.value,
+                date: form.date.value,
                 subject: form.querySelector("[data-composer-subject]").value.trim(),
                 message: JSON.stringify(serializeMessage(getComposerEditor())),
                 attachment_file_ids: (form._attachments ?? []).map((file) => file.file_id),
