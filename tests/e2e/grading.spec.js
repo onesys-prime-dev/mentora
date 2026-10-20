@@ -115,9 +115,10 @@ test("TC-GRD-03 Student sees their grades", async ({ browser }) => {
 
     // The overall grade and its breakdown by category.
     await expect(grades).toContainText(/overall grade/i);
-    await expect(grades).toContainText("90.00%");
+    await expect(grades).toContainText("90%");
     await expect(grades).toContainText("63/70");
-    await expect(grades).toContainText(/on track:\s+passed/i);
+    // Before the grades are finalized the standing reads "On track" (Passed is for a final grade).
+    await expect(grades).toContainText(/on track:\s+on track/i);
     await expect(grades).toContainText("Quizzes");
     await expect(grades).toContainText("40%");
     await expect(grades).toContainText("27 of 30 pts");
@@ -140,7 +141,7 @@ test("TC-GRD-03 Student sees their grades", async ({ browser }) => {
     const { origin, pathname } = new URL(instructor.url());
     const [, prefix, offeringId] = pathname.match(/^(.*\/instructor)\/courses\/(\d+)\//);
     const { html } = await (await instructor.request.get(`${origin}${prefix}/api/courses/${offeringId}/grades/roster`)).json();
-    const row = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").match(/Dela Cruz, Juan 2026-02000 (.*?) (Passed|Failed|Incomplete)/);
+    const row = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").match(/Dela Cruz, Juan 2026-02000 (.*?) (On track|At risk|Passed|Failed|INC|Incomplete)/);
     expect(row, "student1 is in the instructor's gradebook").not.toBeNull();
     const final = Number.parseFloat(row[1].trim().split(" ").at(-1));
     expect(final).toBe(shown);

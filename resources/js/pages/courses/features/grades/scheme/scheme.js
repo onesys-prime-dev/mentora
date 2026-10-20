@@ -423,7 +423,7 @@ function bind(container)
 }
 
 /** "New category", or "New category 2", 3 … : names must be unique in a scheme. */
-function uniqueCategoryName(editor)
+export function uniqueCategoryName(editor)
 {
     const taken = new Set(
         Array.from(editor.querySelectorAll("[data-grade-category-name]")).map((input) => input.value.trim().toLowerCase())
@@ -442,7 +442,7 @@ function uniqueCategoryName(editor)
  * The ids of the siblings matching `selector` under `scope`, with `element`
  * moved one place up or down.
  */
-function movedIds(scope, selector, dataKey, element, direction)
+export function movedIds(scope, selector, dataKey, element, direction)
 {
     const ids = Array.from(scope.querySelectorAll(selector))
         .filter((candidate) => candidate.parentElement === element.parentElement)
