@@ -107,8 +107,9 @@ final class DeanDashboardPageTest extends RouteTestCase
         $this->assertNotEmpty($links[1], 'the attention items are links');
 
         foreach (array_unique($links[1]) as $url) {
-            $path = preg_replace('#^https?://[^/]+/mentora/public/index\.php/#', '', $url);
-            $path = preg_replace('/#.*$/', '', $path);
+            // The address relative to the app, whatever the base URL is (it differs between machines and CI).
+            $prefix = rtrim(site_url(), '/') . '/';
+            $path   = preg_replace('/#.*$/', '', str_starts_with($url, $prefix) ? substr($url, strlen($prefix)) : $url);
 
             $this->loggedInAs($this->dean);
             $this->assertSame(200, $this->call('get', $path)->response()->getStatusCode(), "the item linking to {$url} must open");
