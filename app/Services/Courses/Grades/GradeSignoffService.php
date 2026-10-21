@@ -239,6 +239,52 @@ class GradeSignoffService
     }
 
     /**
+     * How many sections of the dean's department are ready, blocked and signed off in a term (the newest unless
+     * one is asked for). The same answer as the sign-off board gives, worked out in a handful of queries for
+     * the dashboard instead of one status check per section.
+     *
+     * @return array{term: ?int, ready: int, blocked: int, signed_off: int}
+     */
+    public function counts(User $dean, ?int $termId = null): array
+    {
+        $none       = ['term' => null, 'ready' => 0, 'blocked' => 0, 'signed_off' => 0];
+        $programIds = (new DeanAccessService())->programIds($dean);
+        $terms      = (new MonitorProgramService())->termsForPrograms($programIds);
+
+        $known  = array_map(static fn (array $t): int => (int) $t['id'], $terms);
+        $termId = $termId !== null && in_array($termId, $known, true) ? $termId : ($known[0] ?? null);
+
+        if ($termId === null || $programIds === []) {
+            return $none;
+        }
+
+        $ids = array_map('intval', array_column(OfferingDetail::inPrograms($programIds)->where('academic_terms.id', $termId)->get()->getResultArray(), 'offering_id'));
+
+        if ($ids === []) {
+            return ['term' => $termId] + $none;
+        }
+
+        $db     = db_connect();
+        $signed = array_flip(array_map('intval', array_column($db->table('grade_signoffs')->select('offering_id')->whereIn('offering_id', $ids)->where('open_marker', 1)->get()->getResultArray(), 'offering_id')));
+        $final  = array_flip(array_map('intval', array_column($db->table('grade_finalizations')->select('course_offering_id')->whereIn('course_offering_id', $ids)->where('open_marker', 1)->get()->getResultArray(), 'course_offering_id')));
+        $open   = array_flip(array_map('intval', array_column($db->table('grade_override_requests')->select('offering_id')->whereIn('offering_id', $ids)->where('open_marker', 1)->get()->getResultArray(), 'offering_id')));
+
+        $counts = ['term' => $termId, 'ready' => 0, 'blocked' => 0, 'signed_off' => 0];
+
+        foreach ($ids as $id) {
+            if (isset($signed[$id])) {
+                $counts['signed_off']++;
+            } elseif (! isset($final[$id]) || isset($open[$id])) {
+                $counts['blocked']++;
+            } else {
+                $counts['ready']++;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
      * What the dean's sign-off page shows for a term: the department's programs, each with its sections and
      * where each stands.
      *

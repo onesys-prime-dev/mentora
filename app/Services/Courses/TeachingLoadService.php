@@ -153,15 +153,7 @@ class TeachingLoadService
             $students[(int) $e['offering_id']][] = (int) $e['student_user_id'];
         }
 
-        $waiting = array_column($db->table('assessment_submissions s')
-            ->select(['cm.offering_id', 'COUNT(*) AS waiting'], false)
-            ->join('assessments a', 'a.id = s.assessment_id')
-            ->join('course_modules cm', 'cm.id = a.module_id')
-            ->whereIn('cm.offering_id', $offeringIds)
-            ->where('s.submitted_at IS NOT NULL', null, false)
-            ->where('s.is_graded', 0)
-            ->groupBy('cm.offering_id')
-            ->get()->getResultArray(), 'waiting', 'offering_id');
+        $waiting = UngradedWork::countByOffering($offeringIds);
 
         $activity = $this->monitor->instructorActivity($offeringIds, new MonitorProgramFilters());
         $byOffering = [];
