@@ -58,7 +58,28 @@ read-only mode (`data-role="parent"` in `calendar.js`): deadlines and announceme
 nothing to add, edit or delete, and the child's own reminders are never in it
 (`ParentCalendarEvents`).
 
-The course workspace for a parent (four tabs) comes in a later branch.
+**The course** (`parent/children/{id}/courses/{offering}/{slug}/{tab}`) is the student's course
+page in a parent mode (`ParentCourseController`, `pages/courses/view.php` with `courseRole`,
+`courseFeatures` and a view-only note). The tab scripts are the student's own, unchanged (they only
+treat the role `instructor` specially); each tab's endpoint under `parent/children/{id}/api/courses/{offering}/`
+returns `{html}` from `ParentCourseTabs`:
+
+| Tab | A parent sees | Never |
+|---|---|---|
+| Overview | the course facts: description, teacher, schedule, room, term | progress, activity, class size, links into Modules |
+| Announcements | the latest 20 (pinned first): subject, text, author, date | replies, reactions, attachments, a composer |
+| Assessments | title, type, due date and a status word | a score, an attempt, feedback, any way into a quiz |
+| Grades | overall percentage, band, Final or So far, tag, each category's weight and percentage (under its period when the scheme has periods) | items, manual scores, assessments, points |
+
+Only those four tabs have routes. Modules, Resources, Discussions and every staff route answer
+404. The filters run in this order: `parentportal` (switched off: the portal-off page, or a 403 for an
+API call), then `parentchild` (the child must be the parent's, and enrolled in the course named in the
+address, in any enrolment status). A course with no grading scheme shows no standing and none is
+created by looking; a child who also holds a staff role has no grade or assessment data read.
+
+**The grade report** (`.../grades/report/mine`) is a PDF, only once the grades are final, and every
+download is audited (`grades.report_exported`, the parent as actor). It is the student's report
+without the item-by-item part (no Points column, no Scores list), so it says no more than the Grades tab.
 
 ## How it is enforced
 

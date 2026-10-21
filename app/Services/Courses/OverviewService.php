@@ -513,7 +513,7 @@ class OverviewService
      *
      * @return list<array{days: string, time: string, room: string, mode: string}>
      */
-    protected function scheduleBlocks(int $offeringId): array
+    public function scheduleBlocks(int $offeringId): array
     {
         $dayNames = [
             'mon' => 'Mon', 'tue' => 'Tue', 'wed' => 'Wed', 'thu' => 'Thu',

@@ -163,6 +163,17 @@ final class ParentDashboardPageTest extends RouteTestCase
         $this->assertStringContainsString('View calendar', $body);
     }
 
+    public function testEachCourseCardLinksToTheCourse(): void
+    {
+        $ann      = $this->child('Ann');
+        $offering = $this->course($ann);
+        $this->loggedInAs($this->parent);
+
+        [, $body] = $this->open('/parent/dashboard');
+
+        $this->assertStringContainsString('parent/children/' . $ann->id . '/courses/' . $offering . '/', $body);
+    }
+
     public function testNoScoreOfASingleItemEverReachesThePage(): void
     {
         $this->course($this->child('Ann'));

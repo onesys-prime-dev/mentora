@@ -43,7 +43,7 @@ $actions .= '<a href="' . esc(site_url('parent/children/' . (int) $child['id'] .
         <?php else: ?>
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <?php foreach ($dashboard['courses'] as $course): ?>
-                    <?= view('pages/parent/partials/course-card', ['course' => $course, 'past' => false], ['saveData' => false]) ?>
+                    <?= view('pages/parent/partials/course-card', ['course' => $course, 'past' => false, 'childId' => (int) $child['id']], ['saveData' => false]) ?>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
@@ -52,7 +52,7 @@ $actions .= '<a href="' . esc(site_url('parent/children/' . (int) $child['id'] .
     <?= view('pages/parent/partials/deadlines', ['deadlines' => $dashboard['deadlines']], ['saveData' => false]) ?>
 
     <?php if ($dashboard['past'] !== []): ?>
-        <?= view('pages/parent/partials/past-terms', ['past' => $dashboard['past']], ['saveData' => false]) ?>
+        <?= view('pages/parent/partials/past-terms', ['past' => $dashboard['past'], 'childId' => (int) $child['id']], ['saveData' => false]) ?>
     <?php endif; ?>
 
 </div>

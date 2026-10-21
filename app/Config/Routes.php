@@ -371,6 +371,17 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('calendar', 'Parents\ParentCalendarController::index');
     $routes->get('children/(:num)/calendar', 'Parents\ParentCalendarController::page/$1', ['filter' => 'parentchild']);
     $routes->get('children/(:num)/api/calendar/events', 'Parents\ParentCalendarController::events/$1', ['filter' => 'parentchild']);
+
+    // The child's course: four read-only tabs (overview, announcements, assessments, grades) and
+    // nothing else. A tab outside those four has no route, so it is a 404.
+    $routes->get('children/(:num)/api/courses/(:num)/overview', 'Parents\ParentCourseController::overview/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/announcements', 'Parents\ParentCourseController::announcements/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/assessments', 'Parents\ParentCourseController::assessments/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/grades', 'Parents\ParentCourseController::grades/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    // The grade report (PDF), once the grades are final; each download is audited.
+    $routes->get('children/(:num)/api/courses/(:num)/grades/report/mine', 'Parents\ParentCourseController::report/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/courses/(:num)/(:segment)', 'Parents\ParentCourseController::redirect/$1/$2/$3', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/courses/(:num)/(:segment)/(:segment)', 'Parents\ParentCourseController::page/$1/$2/$3/$4', ['filter' => ['parentportal', 'parentchild']]);
 });
 
 // A chairperson has full instructor rights on every course in their

@@ -189,6 +189,40 @@ final class ParentAccessServiceTest extends DatabaseTestCase
         $this->assertTrue($this->access->canViewOffering($this->parent, (int) $ann->id, $done));
     }
 
+    public function testOnlyAPlainStudentIsReadAsAStudent(): void
+    {
+        $plain = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
+        $this->assertTrue(ParentAccessService::readsAsStudent($plain));
+
+        foreach (['instructor', 'chairperson', 'dean', 'institutional_admin'] as $role) {
+            $mixed = PeopleFactory::person('student', 'Mix', $role, null, $this->institution);
+            $mixed->addGroup($role);
+
+            $this->assertFalse(ParentAccessService::readsAsStudent($mixed), $role);
+        }
+    }
+
+    public function testTheOfferingRowIsGivenForEveryEnrolmentStatusAndOnlyToTheRightParent(): void
+    {
+        $current = CourseFactory::offering('G');
+        $dropped = CourseFactory::offering('H');
+        $other   = CourseFactory::offering('I');
+        $ann     = $this->child('Ann');
+        CourseFactory::enroll($current, $ann);
+        CourseFactory::enroll($dropped, $ann, 'dropped');
+
+        $row = $this->access->childOffering($this->parent, (int) $ann->id, $current);
+
+        $this->assertSame($current, (int) $row['offering_id']);
+        $this->assertNotSame('', (string) $row['course_title']);
+        $this->assertSame('dropped', $this->access->childOffering($this->parent, (int) $ann->id, $dropped)['enrollment_status']);
+        $this->assertNull($this->access->childOffering($this->parent, (int) $ann->id, $other));
+        $this->assertNull($this->access->childOffering($this->parent, (int) $ann->id, 0));
+
+        $stranger = PeopleFactory::person('parent', 'Olga', 'Other', null, $this->institution);
+        $this->assertNull($this->access->childOffering($stranger, (int) $ann->id, $current));
+    }
+
     public function testAnOfferingTheChildIsNotInIsRefused(): void
     {
         $theirs = CourseFactory::offering('D');

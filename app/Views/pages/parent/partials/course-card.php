@@ -2,13 +2,16 @@
 /**
  * One course of the child: its code, title and teacher, and the standing the
  * student sees on their own Grades tab (percentage, band, "Final" or "So far",
- * and the tag). A past course also says how it ended. No links yet: the
- * course pages for a parent come in a later branch.
+ * and the tag). A past course also says how it ended. The title opens the
+ * course (its four read-only tabs).
  *
- * @var array<string, mixed> $course one card of ParentDashboardService
- * @var bool                 $past   whether it belongs to "Past terms"
+ * @var array<string, mixed> $course  one card of ParentDashboardService
+ * @var bool                 $past    whether it belongs to "Past terms"
+ * @var int                  $childId the child the dashboard is showing
  */
-helper('grade');
+helper(['grade', 'url']);
+
+$courseUrl = site_url('parent/children/' . (int) $childId . '/courses/' . (int) $course['offering_id'] . '/' . url_title((string) $course['course_title'], '-', true));
 
 $past   = $past ?? false;
 $look   = grade_tag_look((string) $course['tag']);
@@ -23,7 +26,9 @@ $ending = match ($course['enrollment_status']) {
 
     <header class="flex flex-col gap-0.5">
         <span class="text-xs font-semibold uppercase tracking-wide text-[#646464]"><?= esc($course['course_code'] . '-' . $course['section_code']) ?></span>
-        <h3 class="text-base font-bold text-[#1A1C1E]"><?= esc($course['course_title']) ?></h3>
+        <h3 class="text-base font-bold text-[#1A1C1E]">
+            <a href="<?= esc($courseUrl) ?>" class="rounded hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><?= esc($course['course_title']) ?></a>
+        </h3>
         <?php if ($course['instructor_name'] !== ''): ?>
             <span class="text-sm text-[#646464]"><?= esc($course['instructor_name']) ?></span>
         <?php endif; ?>

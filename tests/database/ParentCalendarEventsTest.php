@@ -78,18 +78,24 @@ final class ParentCalendarEventsTest extends DatabaseTestCase
         $this->assertSame([], $this->events());
     }
 
-    public function testAnnouncementsAreThereButWithoutALinkIntoTheStudentsPages(): void
+    public function testAnnouncementsLinkToTheParentsAnnouncementsTabNeverTheStudentsPages(): void
     {
         db_connect()->table('announcements')->insert([
             'offering_id' => $this->offering, 'author_id' => $this->teacher->id, 'subject' => 'Room change', 'message' => 'We move to room 4.',
             'created_at' => '2026-11-05 08:00:00', 'updated_at' => '2026-11-05 08:00:00',
         ]);
+        $id = (int) db_connect()->insertID();
 
         $events = $this->events();
 
         $this->assertSame(['Room change'], array_column($events, 'title'));
         $this->assertSame('announcement', $events[0]['kind']);
-        $this->assertArrayNotHasKey('url', $events[0], 'the course pages for a parent come later');
+
+        $url = $events[0]['url'];
+
+        $this->assertStringContainsString('parent/children/' . $this->child->id . '/courses/' . $this->offering . '/', $url);
+        $this->assertStringEndsWith('/announcements?announcement=' . $id, $url);
+        $this->assertStringNotContainsString('student/', $url);
     }
 
     public function testAnotherCoursesEventsAreNotIncluded(): void

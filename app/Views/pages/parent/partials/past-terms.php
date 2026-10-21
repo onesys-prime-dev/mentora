@@ -3,7 +3,8 @@
  * Courses that are over for the child (finished, dropped or withdrawn),
  * folded away until opened. Only drawn when there are some.
  *
- * @var list<array<string, mixed>> $past cards of ParentDashboardService
+ * @var list<array<string, mixed>> $past    cards of ParentDashboardService
+ * @var int                        $childId the child the dashboard is showing
  */
 ?>
 
@@ -12,7 +13,7 @@
 
     <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <?php foreach ($past as $course): ?>
-            <?= view('pages/parent/partials/course-card', ['course' => $course, 'past' => true], ['saveData' => false]) ?>
+            <?= view('pages/parent/partials/course-card', ['course' => $course, 'past' => true, 'childId' => (int) $childId], ['saveData' => false]) ?>
         <?php endforeach; ?>
     </div>
 </details>

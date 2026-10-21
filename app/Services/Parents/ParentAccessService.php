@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Parents;
 
+use App\Models\Courses\EnrollmentModel;
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
@@ -71,12 +72,45 @@ class ParentAccessService
         return false;
     }
 
+    /**
+     * Whether the shared course services will read this person as a student. A student who also
+     * holds a staff role is read as that staff member (instructor-shaped data, drafts, and for a
+     * dean a role lookup that would overwrite the parent's own), so no grade or assessment is
+     * read for them.
+     */
+    public static function readsAsStudent(User $child): bool
+    {
+        return array_diff($child->getGroups(), ['student', 'parent']) === [];
+    }
+
     /** The child as a user (to ask the student's own services about them), or null when the parent may not reach them. */
     public function childUser(User $parent, int $studentId): ?User
     {
         return $this->canViewChild($parent, $studentId)
             ? model(UserModel::class)->findById($studentId)
             : null;
+    }
+
+    /**
+     * One of the child's courses as a course card (code, title, term, teacher,
+     * `enrollment_status`, `offering_status`...), whatever the enrolment status;
+     * null when the parent may not reach the child or the child is not in it.
+     *
+     * @return ?array<string, mixed>
+     */
+    public function childOffering(User $parent, int $studentId, int $offeringId): ?array
+    {
+        if (! $this->canViewOffering($parent, $studentId, $offeringId)) {
+            return null;
+        }
+
+        foreach ((new EnrollmentModel())->retrieveStudentCourseOfferings($studentId, false, true) as $row) {
+            if ((int) $row['offering_id'] === $offeringId) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     public function canViewOffering(User $parent, int $studentId, int $offeringId): bool

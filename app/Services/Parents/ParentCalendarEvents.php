@@ -25,7 +25,7 @@ class ParentCalendarEvents extends CalendarEventService
      */
     public function forRange(User $user, string $from, string $to): array
     {
-        if (array_diff($user->getGroups(), ['student', 'parent']) !== []) {
+        if (! ParentAccessService::readsAsStudent($user)) {
             return ['events' => [], 'courses' => []];
         }
 
@@ -42,14 +42,23 @@ class ParentCalendarEvents extends CalendarEventService
         return ['events' => $events, 'courses' => $courses];
     }
 
-    /** Course announcements, without the student's link and without resolving anyone's role. */
+    /**
+     * Course announcements, linking to the parent's Announcements tab for that
+     * course (never the student's pages) and without resolving anyone's role.
+     */
     protected function announcementEvents(User $user, array $offeringIds, array $courses, string $from, string $to): array
     {
         $labels = $this->courseLabels($courses);
+        $slugs  = [];
+        $child  = (int) $user->id;
 
-        helper('announcement');
+        helper(['announcement', 'url']);
 
-        return array_map(static function (array $row) use ($labels): array {
+        foreach ($courses as $course) {
+            $slugs[(int) $course['offering_id']] = url_title((string) $course['course_title'], '-', true);
+        }
+
+        return array_map(static function (array $row) use ($labels, $slugs, $child): array {
             $preview = announcement_plain_text($row['message']);
 
             return [
@@ -61,6 +70,7 @@ class ParentCalendarEvents extends CalendarEventService
                 'course'      => $labels[(int) $row['offering_id']] ?? '',
                 'offering_id' => (int) $row['offering_id'],
                 'tone'        => 'info',
+                'url'         => site_url('parent/children/' . $child . '/courses/' . (int) $row['offering_id'] . '/' . ($slugs[(int) $row['offering_id']] ?? 'course') . '/announcements?announcement=' . (int) $row['id']),
                 'detail'      => mb_strlen($preview) > 80 ? mb_substr($preview, 0, 79) . '…' : $preview,
             ];
         }, $this->announcementModel->retrieveForOfferingsInRange($offeringIds, $from, $to));

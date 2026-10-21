@@ -127,7 +127,7 @@ class ParentDashboardService
         // A student who also holds a staff role is read by the course services as that staff
         // member (instructor-shaped data, and a dean's "active role" lookup would overwrite the
         // parent's own). Their courses are listed, but no grade or assessment is read.
-        if (array_diff($child->getGroups(), ['student', 'parent']) !== []) {
+        if (! ParentAccessService::readsAsStudent($child)) {
             return [$none, [], null];
         }
 
