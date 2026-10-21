@@ -12,7 +12,7 @@ class AddUniqueSubmissionAttempt extends Migration
 {
     public function up()
     {
-        $t = $this->db->prefixTable('assessment_submissions');
+        $t = db_connect()->prefixTable('assessment_submissions');
 
         // Close any gaps or repeats the old check-then-insert left, or the index cannot be built.
         $this->db->query(
@@ -27,6 +27,6 @@ class AddUniqueSubmissionAttempt extends Migration
 
     public function down()
     {
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('assessment_submissions') . ' DROP INDEX uq_submission_attempt');
+        $this->db->query('ALTER TABLE ' . db_connect()->prefixTable('assessment_submissions') . ' DROP INDEX uq_submission_attempt');
     }
 }
