@@ -244,7 +244,7 @@ class MonitorDepartmentService
             $rows[] = ['id' => (int) $definition['id'], 'name' => (string) $definition['name'], 'context' => $definition['context'] ?? null] + $this->metrics($members, $facts);
         }
 
-        return $this->sorted($rows, $filters->sort, $filters->dir);
+        return RowSort::by($rows, $filters->sort, $filters->dir);
     }
 
     /**
@@ -322,37 +322,6 @@ class MonitorDepartmentService
             'at_risk'          => $atRisk,
             'last_activity'    => $last,
         ];
-    }
-
-    /**
-     * Sorted by a column; a missing value (no data yet) always sorts last whatever the direction,
-     * and equal values keep name order, so the order never jumps between reloads.
-     *
-     * @param list<array<string, mixed>> $rows
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function sorted(array $rows, string $sort, string $dir): array
-    {
-        usort($rows, static function (array $a, array $b) use ($sort, $dir): int {
-            $left  = $a[$sort] ?? null;
-            $right = $b[$sort] ?? null;
-
-            if ($left === null && $right !== null) {
-                return 1;
-            }
-
-            if ($right === null && $left !== null) {
-                return -1;
-            }
-
-            $result = $left === $right ? 0 : ($left <=> $right);
-            $result = $dir === 'desc' ? -$result : $result;
-
-            return $result !== 0 ? $result : strcasecmp((string) $a['name'], (string) $b['name']);
-        });
-
-        return $rows;
     }
 
     /**

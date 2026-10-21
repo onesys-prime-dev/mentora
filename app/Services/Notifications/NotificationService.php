@@ -59,6 +59,53 @@ class NotificationService
         return db_connect()->table('notifications')->where(['user_id' => $userId, 'dedupe_key' => $dedupeKey])->countAllResults() > 0;
     }
 
+    /**
+     * Tells many people the same thing at once (an announcement to a whole department): one in-app
+     * notification each, never an email, and idempotent like send(): someone who already has this
+     * dedupe key is skipped. Done in a few queries however many people there are.
+     *
+     * @param list<int> $userIds
+     *
+     * @return int how many were new (and so stored)
+     */
+    public function sendToMany(array $userIds, string $type, string $title, string $body, string $dedupeKey, ?int $institutionId = null, ?string $link = null, ?DateTimeImmutable $now = null): int
+    {
+        $userIds = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn (int $id): bool => $id > 0)));
+
+        if ($userIds === []) {
+            return 0;
+        }
+
+        $stamp  = ($now ?? new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $db     = db_connect();
+        $stored = 0;
+
+        foreach (array_chunk($userIds, 500) as $chunk) {
+            $have = array_map('intval', array_column($db->table('notifications')->select('user_id')->where('dedupe_key', $dedupeKey)->whereIn('user_id', $chunk)->get()->getResultArray(), 'user_id'));
+            $new  = array_values(array_diff($chunk, $have));
+
+            if ($new === []) {
+                continue;
+            }
+
+            $db->table('notifications')->insertBatch(array_map(static fn (int $userId): array => [
+                'user_id'        => $userId,
+                'institution_id' => $institutionId,
+                'type'           => $type,
+                'title'          => $title,
+                'body'           => $body,
+                'link'           => $link,
+                'urgent'         => 0,
+                'dedupe_key'     => $dedupeKey,
+                'created_at'     => $stamp,
+            ], $new));
+
+            $stored += count($new);
+        }
+
+        return $stored;
+    }
+
     public function unreadCount(int $userId): int
     {
         return db_connect()->table('notifications')->where('user_id', $userId)->where('read_at IS NULL', null, false)->countAllResults();
