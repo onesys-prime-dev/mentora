@@ -23,7 +23,9 @@ final class AcademicDefaultsResolutionTest extends TestCase
         $this->assertSame(50, $r['behindBelow']);
         $this->assertSame(7, $r['overdueGradingDays']);
 
-        foreach (['passingFromInstitution', 'scaleFromInstitution', 'inactiveFromInstitution', 'behindFromInstitution', 'overdueFromInstitution'] as $flag) {
+        $this->assertSame(AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, $r['highLoadUnits']);
+
+        foreach (['passingFromInstitution', 'scaleFromInstitution', 'inactiveFromInstitution', 'behindFromInstitution', 'overdueFromInstitution', 'highLoadFromInstitution'] as $flag) {
             $this->assertFalse($r[$flag], $flag);
         }
     }
@@ -31,7 +33,7 @@ final class AcademicDefaultsResolutionTest extends TestCase
     public function testTheInstitutionsValuesWinOverThePlatforms(): void
     {
         $r = AcademicDefaults::resolve(
-            ['passing_percentage' => '60.00', 'grade_scale_id' => '9', 'inactive_days' => '21', 'behind_below_percent' => '40', 'overdue_grading_days' => '3'],
+            ['passing_percentage' => '60.00', 'grade_scale_id' => '9', 'inactive_days' => '21', 'behind_below_percent' => '40', 'overdue_grading_days' => '3', 'high_load_units' => '18'],
             ['passing_percentage' => '75.00', 'grade_scale_id' => '1'],
         );
 
@@ -42,6 +44,8 @@ final class AcademicDefaultsResolutionTest extends TestCase
         $this->assertSame(3, $r['overdueGradingDays']);
         $this->assertTrue($r['passingFromInstitution']);
         $this->assertTrue($r['overdueFromInstitution']);
+        $this->assertSame(18, $r['highLoadUnits']);
+        $this->assertTrue($r['highLoadFromInstitution']);
     }
 
     public function testEachValueFallsBackOnItsOwn(): void
