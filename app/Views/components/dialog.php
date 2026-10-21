@@ -5,7 +5,8 @@
 | Dialog — a modal over the page (shared/dialog.js)
 |--------------------------------------------------------------------------
 | Params: id (required), title (required), body (html, required), footer
-| (html, usually the buttons), size (sm|md|lg).
+| (html, usually the buttons), size (sm|md|lg), autoOpen (bool: open when the page
+| loads, for a step the server has already prepared, such as a form for a chosen row).
 |
 | Open it with <button data-dialog-open="<id>">. Put a form inside as
 | form[data-dialog-form] to submit without leaving the page (the server answers
@@ -17,6 +18,7 @@
 
 $size   = $size ?? 'md';
 $footer = $footer ?? '';
+$autoOpen = $autoOpen ?? false;
 
 $width = match ($size) {
     'sm'    => 'sm:max-w-sm',
@@ -25,7 +27,7 @@ $width = match ($size) {
 };
 ?>
 
-<div id="<?= esc($id) ?>" data-dialog hidden class="hidden fixed inset-0 z-50 items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="<?= esc($id) ?>-title">
+<div id="<?= esc($id) ?>" data-dialog <?= $autoOpen ? 'data-dialog-autoopen ' : '' ?>hidden class="hidden fixed inset-0 z-50 items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="<?= esc($id) ?>-title">
 
     <div class="flex max-h-full w-full flex-col gap-5 overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl <?= $width ?>" tabindex="-1">
 
