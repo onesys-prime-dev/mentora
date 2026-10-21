@@ -66,11 +66,14 @@ if (! function_exists('global_apps')) {
             ];
         }
 
-        // A parent's pages arrive one branch at a time; notifications and the profile come later.
+        // A parent's tools: their children's dashboard and calendar, the shared notifications list,
+        // and their own profile.
         if ($role === 'parent') {
             return [
                 ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('parent/dashboard')],
                 ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'calendar', 'url' => site_url('parent/calendar')],
+                ['key' => 'notifications', 'label' => 'Notifications', 'icon' => 'bell', 'url' => site_url('notifications')],
+                ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('parent/profile')],
             ];
         }
 

@@ -367,6 +367,12 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('dashboard', 'Parents\ParentDashboardController::index');
     // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
     $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
+    // The parent's own page. These two forms are the only things a parent can post, and both are
+    // about their own account: the email choice for each child, and an emailed password link.
+    $routes->get('profile', 'Parents\ParentProfileController::index');
+    $routes->post('profile/notifications', 'Parents\ParentProfileController::saveNotifications', ['filter' => 'parentportal']);
+    $routes->post('profile/password-link', 'Parents\ParentProfileController::sendPasswordLink');
+
     // The child's calendar, read-only (deadlines and announcements; never their reminders).
     $routes->get('calendar', 'Parents\ParentCalendarController::index');
     $routes->get('children/(:num)/calendar', 'Parents\ParentCalendarController::page/$1', ['filter' => 'parentchild']);

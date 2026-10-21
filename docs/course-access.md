@@ -77,6 +77,12 @@ API call), then `parentchild` (the child must be the parent's, and enrolled in t
 address, in any enrolment status). A course with no grading scheme shows no standing and none is
 created by looking; a child who also holds a staff role has no grade or assessment data read.
 
+**The parent's profile** (`parent/profile`) is the parent's own account and the only place a parent can
+change anything: the email choice for each child (`POST parent/profile/notifications`, behind
+`parentportal`) and an emailed password link to their own address (`POST parent/profile/password-link`).
+Nothing under `parent/children/...` can be posted to, and a read-only institution refuses both.
+Notifications are on the shared `/notifications` page (`docs/notifications.md`, "Parents").
+
 **The grade report** (`.../grades/report/mine`) is a PDF, only once the grades are final, and every
 download is audited (`grades.report_exported`, the parent as actor). It is the student's report
 without the item-by-item part (no Points column, no Scores list), so it says no more than the Grades tab.

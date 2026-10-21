@@ -94,6 +94,20 @@ final class NotificationsTest extends DatabaseTestCase
         $this->assertCount(2, $this->notes($this->boss));
     }
 
+    public function testSaysWhetherAPersonWasToldWithoutTellingThem(): void
+    {
+        $service = new NotificationService();
+
+        $this->assertFalse($service->has($this->boss, 'key-1'));
+        $this->assertCount(0, $this->notes($this->boss), 'asking tells nobody');
+
+        $service->send($this->boss, 'x', 'Title', 'Body', false, 'key-1', $this->acme, null, $this->now);
+
+        $this->assertTrue($service->has($this->boss, 'key-1'));
+        $this->assertFalse($service->has($this->admin, 'key-1'), 'another person was not told');
+        $this->assertFalse($service->has($this->boss, 'key-2'));
+    }
+
     public function testAnUrgentOneIsAlsoEmailedAndAnOrdinaryOneIsNot(): void
     {
         $service = new NotificationService();

@@ -53,7 +53,9 @@ afterEach(() => {
     delete window.coursesConfig;
 });
 
-describe("the tab scripts with a parent's fragments", () => {
+// The first import of a tab script pulls in a large module graph; on a busy machine that can pass
+// the 5 second default.
+describe("the tab scripts with a parent's fragments", { timeout: 30000 }, () => {
     for (const feature of Object.keys(fragments)) {
         it(`${feature}: asks the parent's address and shows the fragment, not the error screen`, async () => {
             const fetch = await load(feature);

@@ -4,6 +4,7 @@ namespace App\Services\Courses\Grades;
 
 use App\Services\Courses\Assessments\AssessmentResultService;
 use App\Services\Notifications\NotificationService;
+use App\Services\Parents\ParentNotifier;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -52,6 +53,12 @@ class GradeFinalizationService
         return $row && (int) $row['students'] > 0
             ? ['students' => (int) $row['students'], 'last_sent_at' => (string) $row['last_sent_at']]
             : null;
+    }
+
+    /** The parents' notifier; a method so a test can swap it. */
+    protected function parentNotifier(): ParentNotifier
+    {
+        return new ParentNotifier();
     }
 
     public function isFinalized(int $offeringId): bool
@@ -223,6 +230,14 @@ class GradeFinalizationService
 
         // Where the institution has a dean, the finalized grades are now ready for the dean's sign-off.
         (new GradeSignoffService())->announceReady($offeringId);
+
+        // Telling the parents is a courtesy after the fact: the grades are already final, and the
+        // scheduled sweep will find any message that was missed.
+        try {
+            $this->parentNotifier()->finalGrades($offeringId);
+        } catch (\Throwable $e) {
+            log_message('error', 'Telling the parents about final grades failed: ' . $e->getMessage());
+        }
 
         return [
             'success' => true,
