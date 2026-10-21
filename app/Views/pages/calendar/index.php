@@ -148,6 +148,13 @@ $legend = array_values(array_filter([
 
 </div>
 
+<?php if ($isInstructor): ?>
+    <!-- The announcements page's own composer, cloned into the modal by calendar.js -->
+    <template id="calendar-announcement-composer">
+        <?= $this->include('pages/courses/features/announcements/partials/composer') ?>
+    </template>
+<?php endif; ?>
+
 <!-- One modal shell, body swapped per action by calendar.js -->
 <div
     id="calendar-modal"
@@ -155,7 +162,7 @@ $legend = array_values(array_filter([
     role="dialog"
     aria-modal="true">
 
-    <div class="flex w-full max-w-md flex-col gap-5 rounded-2xl bg-white p-6 shadow-xl">
+    <div class="flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
 
         <div class="flex items-center justify-between">
             <span data-calendar-modal-title class="text-lg font-bold text-brand"></span>

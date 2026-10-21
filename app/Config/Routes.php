@@ -113,6 +113,11 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
 });
 
 $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], function ($routes) {
+
+    // Follow-up requests: the list, a new request, the reply thread and closing.
+    $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
+    $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
+    $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
@@ -321,8 +326,16 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->post('signoff/(:num)', 'Dean\SignoffController::signOff/$1', ['filter' => 'reauth']);
     $routes->post('signoff/(:num)/reopen', 'Dean\SignoffController::reopen/$1');
 
+
+    // Follow-up requests: the list, a new request, the reply thread and closing.
+    $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
+    $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
+    $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
+    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
+
     $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index');
     $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1');
+    $routes->get('api/monitor-department/(:segment)', 'Dean\MonitorDepartmentController::data/$1');
 
     // A read-only view of every course of the department (courses.view), exactly what its
     // instructor sees: the same controllers as the instructor's, but only the reading routes.
@@ -402,6 +415,14 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('/', 'Dashboard\DashboardController::index');
 
     // Grade-override requests of the sub-departments they chair: endorse, or send back with a comment.
+
+    // Follow-up requests: the list, a new request, the reply thread and closing.
+    $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
+    $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
+    $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
+    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
+    $routes->post('follow-ups/(:num)/pass-down', 'FollowUps\FollowUpsController::passDown/$1');
+
     $routes->get('override-requests', 'Chairperson\OverrideRequestsController::index');
     $routes->post('override-requests/(:num)/endorse', 'Chairperson\OverrideRequestsController::endorse/$1');
     $routes->post('override-requests/(:num)/send-back', 'Chairperson\OverrideRequestsController::sendBack/$1');

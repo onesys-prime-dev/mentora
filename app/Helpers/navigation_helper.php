@@ -62,6 +62,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'courses', 'label' => 'Courses', 'icon' => 'hat', 'url' => site_url('dean/courses')],
                 ['key' => 'approvals', 'label' => 'Approvals', 'icon' => 'tasks', 'url' => site_url('dean/approvals')],
                 ['key' => 'signoff', 'label' => 'Sign-off', 'icon' => 'check', 'url' => site_url('dean/signoff')],
+                ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('dean/follow-ups')],
                 ['key' => 'monitor-department', 'label' => 'Monitor Department', 'icon' => 'score', 'url' => site_url('dean/monitor-department')],
             ];
         }
@@ -109,6 +110,12 @@ if (! function_exists('global_apps')) {
         if ($role === 'chairperson') {
             $apps[] = ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url($role . '/monitor-program')];
             $apps[] = ['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')];
+            $apps[] = ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('chairperson/follow-ups')];
+        }
+
+        // What the dean or a chairperson asked of an instructor.
+        if ($role === 'instructor') {
+            $apps[] = ['key' => 'follow-ups', 'label' => 'Requests', 'icon' => 'inbox', 'url' => site_url('instructor/follow-ups')];
         }
 
         return $apps;

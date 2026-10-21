@@ -60,29 +60,38 @@ class GradeSignoffService
     /**
      * Where an offering stands: signed off, ready for the dean, or blocked and why.
      *
-     * @return array{state: string, blockers: list<string>, signoff: array<string, mixed>|null}
+     * @return array{state: string, blockers: list<string>, counts: array{ungraded_work: int, open_requests: int}, signoff: array<string, mixed>|null}
      */
     public function status(int $offeringId): array
     {
         $signoff = $this->current($offeringId);
+        $counts  = ['ungraded_work' => 0, 'open_requests' => 0];
 
         if ($signoff !== null) {
-            return ['state' => self::SIGNED_OFF, 'blockers' => [], 'signoff' => $signoff];
+            return ['state' => self::SIGNED_OFF, 'blockers' => [], 'counts' => $counts, 'signoff' => $signoff];
         }
 
-        $blockers = [];
+        $blockers     = [];
+        $finalization = new GradeFinalizationService();
 
-        if (! (new GradeFinalizationService())->isFinalized($offeringId)) {
+        if (! $finalization->isFinalized($offeringId)) {
             $blockers[] = 'The instructor has not finalized the grades yet.';
+
+            // What the instructor still has to do first, so the dean knows what the wait is about.
+            $counts['ungraded_work'] = $finalization->readiness($offeringId)['counts']['ungraded_work'];
+
+            if ($counts['ungraded_work'] > 0) {
+                $blockers[] = $counts['ungraded_work'] . ($counts['ungraded_work'] === 1 ? ' piece of handed-in work is' : ' pieces of handed-in work are') . ' still waiting to be graded.';
+            }
         }
 
-        $open = db_connect()->table('grade_override_requests')->where(['offering_id' => $offeringId, 'open_marker' => 1])->countAllResults();
+        $counts['open_requests'] = db_connect()->table('grade_override_requests')->where(['offering_id' => $offeringId, 'open_marker' => 1])->countAllResults();
 
-        if ($open > 0) {
-            $blockers[] = $open . ($open === 1 ? ' grade-override request is' : ' grade-override requests are') . ' still open.';
+        if ($counts['open_requests'] > 0) {
+            $blockers[] = $counts['open_requests'] . ($counts['open_requests'] === 1 ? ' grade-override request is' : ' grade-override requests are') . ' still open.';
         }
 
-        return ['state' => $blockers === [] ? self::READY : self::BLOCKED, 'blockers' => $blockers, 'signoff' => null];
+        return ['state' => $blockers === [] ? self::READY : self::BLOCKED, 'blockers' => $blockers, 'counts' => $counts, 'signoff' => null];
     }
 
     /**
@@ -272,6 +281,8 @@ class GradeSignoffService
                 'students'       => (int) $row['enrolled'],
                 'state'          => $status['state'],
                 'blockers'       => $status['blockers'],
+                'counts'         => $status['counts'],
+                'grades_url'     => site_url('dean/courses/' . (int) $row['offering_id'] . '/' . url_title((string) $row['course_title'], '-', true) . '/grades'),
                 'signed_by_name' => $status['signoff']['signed_by_name'] ?? null,
                 'signed_at'      => $status['signoff']['signed_at'] ?? null,
             ];

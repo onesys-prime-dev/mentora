@@ -263,12 +263,14 @@ class AnnouncementService
             return ['success' => false, 'message' => 'Add a subject before posting.'];
         }
 
-        $this->announcementModel->insert([
+        // `created_at` is only given when posting for a chosen day (the calendar).
+        $this->announcementModel->insert(array_filter([
             'offering_id' => $offeringId,
             'author_id' => $user->id,
             'subject' => $subject,
             'message' => (string) ($data['message'] ?? ''),
-        ]);
+            'created_at' => $data['created_at'] ?? null,
+        ], static fn ($value) => $value !== null));
 
         $announcementId = (int) $this->announcementModel->getInsertID();
 

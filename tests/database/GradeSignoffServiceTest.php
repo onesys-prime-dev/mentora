@@ -11,6 +11,7 @@ use App\Services\Courses\Grades\GradingEngineService;
 use App\Services\Courses\Grades\GradingSchemeService;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
+use Tests\Support\AssessmentFactory;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
 use Tests\Support\DeanFactory;
@@ -128,6 +129,47 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         $this->finalized();
 
         $this->assertSame(Signoff::READY, $this->service->status($this->offering)['state']);
+    }
+
+    public function testASectionBlockedByUngradedWorkSaysHowMuchIsStillToGrade(): void
+    {
+        $assessment = CourseFactory::assessment($this->offering, $this->teacher, CourseFactory::module($this->offering));
+        db_connect()->table('assessments')->where('id', $assessment)->update(['status' => 'Published']);
+
+        $students = array_column(db_connect()->table('enrollments')->where('offering_id', $this->offering)->get()->getResultArray(), 'student_user_id');
+
+        foreach ($students as $studentId) {
+            AssessmentFactory::attempt($assessment, model(CodeIgniter\Shield\Models\UserModel::class)->findById((int) $studentId), 'Submitted');
+        }
+
+        $status = $this->service->status($this->offering);
+
+        $this->assertSame(Signoff::BLOCKED, $status['state']);
+        $this->assertSame(2, $status['counts']['ungraded_work']);
+        $this->assertSame(0, $status['counts']['open_requests']);
+        $this->assertSame(
+            ['The instructor has not finalized the grades yet.', '2 pieces of handed-in work are still waiting to be graded.'],
+            $status['blockers']
+        );
+    }
+
+    public function testASectionWithNothingInTheWayHasNoCountsAndASignedOffOneNeitherDoes(): void
+    {
+        $this->finalized();
+
+        $this->assertSame(['ungraded_work' => 0, 'open_requests' => 0], $this->service->status($this->offering)['counts']);
+
+        $this->service->signOff($this->dean, $this->offering);
+
+        $this->assertSame(['ungraded_work' => 0, 'open_requests' => 0], $this->service->status($this->offering)['counts']);
+    }
+
+    public function testTheBoardCarriesTheCountsAndALinkToLookAtTheGrades(): void
+    {
+        $section = $this->service->board($this->dean, $this->term)['programs'][0]['sections'][0];
+
+        $this->assertSame(['ungraded_work' => 0, 'open_requests' => 0], $section['counts']);
+        $this->assertStringEndsWith("/dean/courses/{$this->offering}/course-it101/grades", $section['grades_url']);
     }
 
     public function testAnOpenOverrideRequestBlocksASectionThatIsOtherwiseReady(): void

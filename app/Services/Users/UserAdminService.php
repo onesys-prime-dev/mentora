@@ -7,6 +7,7 @@ namespace App\Services\Users;
 use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
 use App\Services\Concerns\InTransaction;
+use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\InvitationInput;
 use App\Services\Institutions\InvitationService;
 use App\Services\Sis\SisOwnership;
@@ -43,7 +44,7 @@ class UserAdminService
     use InTransaction;
 
     /** The roles an administrator may give someone from the screen. */
-    public const ASSIGNABLE_ROLES = ['institutional_admin', 'chairperson', 'instructor', 'student', 'parent'];
+    public const ASSIGNABLE_ROLES = ['institutional_admin', 'dean', 'chairperson', 'instructor', 'student', 'parent'];
 
     private UserDirectory $directory;
 
@@ -190,6 +191,9 @@ class UserAdminService
         $this->inTransaction(function () use ($userId, $actor, $user, $now): void {
             $this->accounts->deactivate($userId, $now);
 
+            // An account that is off cannot decide anything: the deanship ends and waiting requests move up.
+            (new DeanAssignmentService())->endForPerson($userId, $actor);
+
             $this->audit('user.deactivated', $actor, $userId, $user, ['old' => ['active' => (int) $user['active']], 'new' => ['active' => 0]]);
         });
     }
@@ -299,6 +303,11 @@ class UserAdminService
             /** @var User $entity */
             $entity = model(UserModel::class)->findById($userId);
             $entity->syncGroups(...$roles);
+
+            // A dean who is no longer a dean is no longer in charge of a department; their requests move up.
+            if (in_array('dean', $before, true) && ! in_array('dean', $roles, true)) {
+                (new DeanAssignmentService())->endForPerson($userId, $actor);
+            }
 
             $this->audit('user.roles_changed', $actor, $userId, $user, ['old' => ['roles' => $before], 'new' => ['roles' => $roles]]);
         });
