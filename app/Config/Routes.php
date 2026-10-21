@@ -333,6 +333,10 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
     $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
 
+    // What chairpersons changed in the department's courses, for the dean to look over and mark as reviewed.
+    $routes->get('chairperson-review', 'Dean\ChairpersonReviewController::index');
+    $routes->post('chairperson-review/reviewed', 'Dean\ChairpersonReviewController::reviewed');
+
     $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index');
     $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1');
     $routes->get('api/monitor-department/(:segment)', 'Dean\MonitorDepartmentController::data/$1');
