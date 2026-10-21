@@ -215,6 +215,9 @@ class StorageService
 
         $mimeType = $file['mime_type'] ?: 'application/octet-stream';
 
+        // Students upload anything as assignment work; HTML or SVG shown inline would run as this site.
+        $download = $download || ! preg_match('#^(image/(png|jpeg|gif|webp)|application/pdf|video/|audio/)#', $mimeType);
+
         $range = $this->parseRange($request->getHeaderLine('Range'), $size);
 
         if ($range === false) {

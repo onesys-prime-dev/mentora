@@ -138,7 +138,7 @@ final class SisFixture
     }
 
     /** A final grade record. */
-    public static function grade(int $offering, User $student, ?float $calculated, ?float $override = null, string $remarks = 'Passed'): void
+    public static function grade(int $offering, User $student, ?float $calculated, ?float $override = null, string $remarks = 'Passed', bool $final = true): void
     {
         db_connect()->table('gradebook_records')->insert([
             'course_offering_id'    => $offering,
@@ -147,6 +147,9 @@ final class SisFixture
             'is_override'           => $override === null ? 0 : 1,
             'overridden_percentage' => $override,
             'remarks'               => $remarks,
+            // Only finalized grades are handed to the SIS.
+            'finalized_at'          => $final ? '2026-10-01 08:00:00' : null,
+            'final_percentage'      => $final ? $calculated : null,
         ]);
     }
 

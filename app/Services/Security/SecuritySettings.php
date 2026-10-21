@@ -15,7 +15,7 @@ use InvalidArgumentException;
 class SecuritySettings
 {
     /** Roles that can be asked for an emailed code at sign-in. */
-    public const TWO_FACTOR_CHOICES = ['institutional_admin', 'chairperson', 'instructor', 'student', 'parent'];
+    public const TWO_FACTOR_CHOICES = ['institutional_admin', 'dean', 'chairperson', 'instructor', 'student', 'parent'];
 
     private const INT_KEYS = ['passwordMinLength', 'sessionTimeoutMinutes', 'lockoutAttempts', 'lockoutMinutes'];
 

@@ -11,7 +11,7 @@ day-to-day workflow.
 | Deploy (staging) | `.github/workflows/deploy.yml` | push to `main`, or a manual run | Run CI first (`needs: ci`); only if it passes, call `deploy-reusable.yml` for the `staging` environment: build, back up the database, copy the app, migrate, health-check, smoke-test (see `deploy.md`) |
 | Deploy (production) | `.github/workflows/deploy-production.yml` | a `v*` tag, or a manual run from a tag | Check the tag is `vX.Y.Z` and on `main`, re-run CI, wait for the `production` environment's approval, then the same reusable deploy (see `github-environments.md`) |
 | Deploy steps | `.github/workflows/deploy-reusable.yml` | called by the two above | The shared steps; runs inside the named GitHub Environment so it uses that environment's secrets and variables |
-| Uptime check | `.github/workflows/uptime.yml` | hourly, or a manual run | Smoke-test staging; open an issue assigned to the alert owner when it is down, close it on recovery (see `uptime.md`, including what it costs in Actions minutes) |
+| Uptime check | `.github/workflows/uptime.yml` | hourly, or a manual run | Smoke-test staging and production (two independent jobs); open an issue per site assigned to the alert owner when it is down, close it on recovery (see `uptime.md`, including what it costs in Actions minutes) |
 
 ## CI jobs (all must pass)
 

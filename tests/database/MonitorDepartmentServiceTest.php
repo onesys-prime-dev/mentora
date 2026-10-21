@@ -289,6 +289,33 @@ final class MonitorDepartmentServiceTest extends DatabaseTestCase
         $this->assertNotNull($overview['atRisk'][0]['slug']);
     }
 
+    public function testInstructorActivityIsPerInstructorOfTheDepartmentOnly(): void
+    {
+        $rows = array_column($this->service->instructorActivity($this->dean, $this->filters()), null, 'name');
+
+        $names = array_keys($rows);
+        sort($names);
+
+        $this->assertSame(['Leo Law', 'Tess Tan'], $names, 'the two instructors of the department, nobody from the other department');
+        $this->assertSame(1, $rows['Tess Tan']['sections']);
+        $this->assertSame(2, $rows['Tess Tan']['graded_count']);
+        $this->assertSame(36.0, $rows['Tess Tan']['avg_grading_turnaround_hours']);
+        $this->assertSame(12.0, $rows['Leo Law']['avg_grading_turnaround_hours']);
+        $this->assertGreaterThanOrEqual(1, $rows['Tess Tan']['content_updates']);
+    }
+
+    public function testInstructorActivityFollowsTheFiltersAndAnEndedDeanshipSeesNothing(): void
+    {
+        $narrow = $this->service->instructorActivity($this->dean, $this->filters(['program' => (string) $this->programB1]));
+
+        $this->assertSame(['Leo Law'], array_column($narrow, 'name'));
+        $this->assertSame([], $this->service->instructorActivity($this->dean, $this->filters(['term' => (string) $this->laterTerm])));
+
+        db_connect()->table('dean_assignments')->where('dean_user_id', $this->dean->id)->update(['status' => 'ended', 'active_marker' => null]);
+
+        $this->assertSame([], $this->service->instructorActivity($this->dean, $this->filters()));
+    }
+
     public function testADeanWithoutAnActiveAssignmentSeesNothing(): void
     {
         $overview = $this->service->overview(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), $this->filters());

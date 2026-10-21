@@ -60,7 +60,24 @@ if (! function_exists('global_apps')) {
             return [
                 ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('dean/dashboard')],
                 ['key' => 'courses', 'label' => 'Courses', 'icon' => 'hat', 'url' => site_url('dean/courses')],
+                ['key' => 'approvals', 'label' => 'Approvals', 'icon' => 'tasks', 'url' => site_url('dean/approvals')],
+                ['key' => 'signoff', 'label' => 'Sign-off', 'icon' => 'check', 'url' => site_url('dean/signoff')],
+                ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('dean/follow-ups')],
+                ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => site_url('dean/announcements')],
+                ['key' => 'teaching-load', 'label' => 'Teaching load', 'icon' => 'modules', 'url' => site_url('dean/teaching-load')],
+                ['key' => 'chairperson-review', 'label' => 'Chairperson review', 'icon' => 'tasks', 'url' => site_url('dean/chairperson-review')],
                 ['key' => 'monitor-department', 'label' => 'Monitor Department', 'icon' => 'score', 'url' => site_url('dean/monitor-department')],
+            ];
+        }
+
+        // A parent's tools: their children's dashboard and calendar, the shared notifications list,
+        // and their own profile.
+        if ($role === 'parent') {
+            return [
+                ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('parent/dashboard')],
+                ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'calendar', 'url' => site_url('parent/calendar')],
+                ['key' => 'notifications', 'label' => 'Notifications', 'icon' => 'bell', 'url' => site_url('notifications')],
+                ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('parent/profile')],
             ];
         }
 
@@ -83,18 +100,28 @@ if (! function_exists('global_apps')) {
             ];
         }
 
-        return [
+        $apps = [
             ['key' => 'courses',       'label' => 'Courses',       'icon' => 'hat',          'url' => site_url($role . '/courses')],
             ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],
             ['key' => 'schedule',      'label' => 'Schedule',      'icon' => 'clock',        'url' => site_url($role . '/schedule')],
             ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
-            ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => null],
+            ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => in_array($role, ['student', 'instructor', 'chairperson'], true) ? site_url($role . '/announcements') : null],
             ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
-            // Chairperson-only; an inert tile everywhere else, same as grades/announcements/inbox above.
-            ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => $role === 'chairperson' ? site_url($role . '/monitor-program') : null],
-            // Chairperson-only, like Monitor Program: grade-override requests to endorse. Not a tile for anyone else.
-            ...($role === 'chairperson' ? [['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')]] : []),
         ];
+
+        // Two of the chairperson's own pages. No other role is shown these tiles.
+        if ($role === 'chairperson') {
+            $apps[] = ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url($role . '/monitor-program')];
+            $apps[] = ['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')];
+            $apps[] = ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('chairperson/follow-ups')];
+        }
+
+        // What the dean or a chairperson asked of an instructor.
+        if ($role === 'instructor') {
+            $apps[] = ['key' => 'follow-ups', 'label' => 'Requests', 'icon' => 'inbox', 'url' => site_url('instructor/follow-ups')];
+        }
+
+        return $apps;
     }
 }
 

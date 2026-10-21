@@ -139,7 +139,7 @@ final class DeanCourseViewTest extends RouteTestCase
 
     public function testAnotherDepartmentsCourseIsNotFoundOnEveryReadingRouteInTheSameInstitutionOrAnother(): void
     {
-        $paths = ['overview', 'announcements', 'announcements/more', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster', 'grades/export'];
+        $paths = ['overview', 'announcements', 'announcements/more', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster', 'grades/export', 'grades/report/class', 'grades/report/summary'];
 
         foreach (['another department' => $this->sibling, 'another institution' => $this->foreign] as $where => $offering) {
             foreach ($paths as $path) {
@@ -205,7 +205,15 @@ final class DeanCourseViewTest extends RouteTestCase
         }
 
         $this->assertGreaterThan(50, $checked, 'the course write routes were found and each one was refused');
-        $this->assertSame([], array_filter(array_keys($routes->getRoutes('POST')), static fn (string $p): bool => str_starts_with($p, 'dean/')), 'the dean area has no POST route at all yet');
+        // The dean has pages of their own that change things (approving an override request, signing off
+        // grades), but nothing inside a course: no write route under the course pages or their API.
+        $writes = [];
+
+        foreach (['POST', 'PUT', 'PATCH', 'DELETE'] as $verb) {
+            $writes = array_merge($writes, array_filter(array_keys($routes->getRoutes($verb)), static fn (string $p): bool => str_starts_with($p, 'dean/courses') || str_starts_with($p, 'dean/api/')));
+        }
+
+        $this->assertSame([], array_values($writes), 'the dean can write nothing in a course');
     }
 
     public function testAnAttemptToWriteLeavesTheCourseUntouched(): void

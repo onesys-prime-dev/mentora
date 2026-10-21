@@ -12,7 +12,7 @@ namespace App\Services\Institutions;
 class InstitutionSnapshot
 {
     /** Roles shown on the home page, in this order. */
-    public const ROLES = ['student', 'instructor', 'chairperson', 'institutional_admin', 'parent'];
+    public const ROLES = ['student', 'instructor', 'chairperson', 'dean', 'institutional_admin', 'parent'];
 
     /**
      * @return array{

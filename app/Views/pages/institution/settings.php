@@ -48,6 +48,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         ['label' => 'Academic', 'href' => site_url($base . '/academic'), 'active' => $settingsTab === 'academic'],
         ['label' => 'Announcement', 'href' => site_url($base . '/announcement'), 'active' => $settingsTab === 'announcement'],
         ['label' => 'Security', 'href' => site_url($base . '/security'), 'active' => $settingsTab === 'security'],
+        ['label' => 'Parents', 'href' => site_url($base . '/parents'), 'active' => $settingsTab === 'parents'],
     ]], ['saveData' => false]) ?>
 
     <?php if ($settingsTab === 'profile'): ?>
@@ -125,6 +126,40 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         </div>
 
+    <?php elseif ($settingsTab === 'parents'): ?>
+
+        <?php $pp = $settingsParents; ?>
+
+        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" data-parent-portal-form>
+            <?= csrf_field() ?>
+
+            <fieldset class="flex flex-col gap-3" <?= $disabled ?>>
+                <legend class="text-sm font-bold text-brand">Parent portal</legend>
+                <p class="text-sm text-[#3D3D3D]">Lets linked parents see their child's courses and grades, read-only. Switching it off hides it from every parent at once; nothing is deleted.</p>
+
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                        <input type="radio" name="enabled" value="1" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? 'checked' : '' ?> <?= $disabled ?>>
+                        On
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                        <input type="radio" name="enabled" value="0" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? '' : 'checked' ?> <?= $disabled ?>>
+                        Off
+                    </label>
+                </div>
+            </fieldset>
+
+            <?php if (! $pp['platform']): ?>
+                <?= view('components/lock-note', ['kind' => 'platform', 'text' => 'Switched off by Mentora for your institution. You cannot turn it on.'], ['saveData' => false]) ?>
+            <?php endif; ?>
+
+            <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
+
+            <?php if ($settingsCanEdit): ?>
+                <div class="flex justify-end"><button type="submit" class="<?= $primary ?>">Save parent portal</button></div>
+            <?php endif; ?>
+        </form>
+
     <?php elseif ($settingsTab === 'security'): ?>
 
         <?php
@@ -135,7 +170,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             'lockoutAttempts'       => ['Failed sign-ins before a lockout', 'attempts', 'Fewer attempts than the platform.'],
             'lockoutMinutes'        => ['Lockout length', 'minutes', 'Longer than the platform.'],
         ];
-        $roleNames = ['institutional_admin' => 'Institutional administrators', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
+        $roleNames = ['institutional_admin' => 'Institutional administrators', 'dean' => 'Deans', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
         ?>
 
         <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm" data-security-form>
@@ -257,13 +292,14 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             <section class="flex flex-col gap-4" aria-labelledby="thresholds">
                 <div>
                     <h2 id="thresholds" class="text-sm font-bold text-brand">What counts as needing attention</h2>
-                    <p class="text-xs text-[#646464]">Used by reports and by the chairperson and instructor dashboards, so everyone reads the same numbers.</p>
+                    <p class="text-xs text-[#646464]">Used by reports, by the chairperson, instructor and dean pages, so everyone reads the same numbers.</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <?= $field(['name' => 'inactive_days', 'label' => 'No recent activity (days)', 'type' => 'number', 'value' => (string) $a['inactiveDays'], 'attrs' => 'min="1" max="365" inputmode="numeric"' . $off, 'help' => 'A student or course silent for this long. ' . $source($a['inactiveFromInstitution'])]) ?>
                     <?= $field(['name' => 'behind_below_percent', 'label' => 'Behind below (%)', 'type' => 'number', 'value' => (string) $a['behindBelow'], 'attrs' => 'min="1" max="100" inputmode="numeric"' . $off, 'help' => 'Progress through the published items. ' . $source($a['behindFromInstitution'])]) ?>
                     <?= $field(['name' => 'overdue_grading_days', 'label' => 'Overdue grading (days)', 'type' => 'number', 'value' => (string) $a['overdueGradingDays'], 'attrs' => 'min="1" max="90" inputmode="numeric"' . $off, 'help' => 'Work waiting this long to be graded. ' . $source($a['overdueFromInstitution'])]) ?>
+                    <?= $field(['name' => 'high_load_units', 'label' => 'High teaching load (units)', 'type' => 'number', 'value' => (string) $a['highLoadUnits'], 'attrs' => 'min="1" max="100" inputmode="numeric"' . $off, 'help' => 'An instructor teaching this many units in a term is marked on the dean Teaching load page. ' . $source($a['highLoadFromInstitution'])]) ?>
                 </div>
             </section>
 

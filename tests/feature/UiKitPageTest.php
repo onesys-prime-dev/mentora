@@ -54,13 +54,15 @@ final class UiKitPageTest extends RouteTestCase
         $this->assertStringNotContainsString('>ui-kit<', preg_replace('/\s+/', '', $body) ?? '');
     }
 
-    public function testTheHeaderBellIsALinkToTheNotifications(): void
+    public function testTheHeaderBellOpensAPanelThatLinksToAllNotifications(): void
     {
         $this->signIn();
 
         $body = $this->step('GET', 'ui-kit')->response()->getBody();
 
-        $this->assertMatchesRegularExpression('/<a\s+href="[^"]*notifications"\s+aria-label="Notifications"/', $body);
+        $this->assertStringContainsString('id="notifications-button"', $body);
+        $this->assertStringContainsString('id="notifications-panel"', $body);
+        $this->assertMatchesRegularExpression('/<a\s+href="[^"]*notifications"[^>]*>\s*View all notifications/', $body);
     }
 
     public function testThePageDoesNotShutThePhoneOutWithTheDesktopGutter(): void

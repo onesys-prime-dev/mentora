@@ -37,6 +37,7 @@ $routes->group('internal/ai', ['filter' => 'aiworker'], function ($routes) {
 
 // A signed-in person's own notifications, for every role.
 $routes->get('notifications', 'NotificationController::index', ['filter' => 'session']);
+$routes->get('notifications/feed', 'NotificationController::feed', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
@@ -44,8 +45,13 @@ $routes->post('notifications/read', 'NotificationController::read', ['filter' =>
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
 
 $routes->group('student', ['filter' => ['role:student', 'readonly']], function ($routes) {
+    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    $routes->get('announcements', 'Announcements\AnnouncementsController::index');
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
+
+    // The student's own profile, to read: their details and the parents who can see their progress.
+    $routes->get('profile', 'Students\StudentProfileController::index');
 
     $routes->get('courses', 'Courses\CourseController::index');
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:student']);
@@ -104,10 +110,18 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');
+        $routes->get('(:num)/grades/report/mine', 'Courses\Grades\GradeReportController::mine/$1');
     });
 });
 
 $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], function ($routes) {
+    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    $routes->get('announcements', 'Announcements\AnnouncementsController::index');
+
+    // Follow-up requests: the list, a new request, the reply thread and closing.
+    $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
+    $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
+    $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
@@ -258,6 +272,10 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
 
         // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/categories/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreCategory/$1/$2');
+        $routes->post('(:num)/grades/scheme/items/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreItem/$1/$2');
+        $routes->patch('(:num)/grades/scheme/categories/order', 'Courses\Grades\GradingSchemeController::reorderCategories/$1');
+        $routes->patch('(:num)/grades/scheme/categories/(:num)/items/order', 'Courses\Grades\GradingSchemeController::reorderItems/$1/$2');
         $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
         $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
         $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');
@@ -266,6 +284,17 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+        $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
+
+        // Finalize the section's grades, or reopen them with a reason.
+        // Grading on a curve: what is in force, a preview, applying, and taking one off.
+        $routes->get('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::show/$1');
+        $routes->post('(:num)/grades/curve/preview', 'Courses\Grades\GradeAdjustmentController::preview/$1');
+        $routes->post('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::apply/$1');
+        $routes->delete('(:num)/grades/curve/(:num)', 'Courses\Grades\GradeAdjustmentController::undo/$1/$2');
+        $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
+        $routes->post('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::finalize/$1');
+        $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
 
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.
@@ -274,6 +303,9 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
@@ -285,8 +317,43 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
     $routes->get('courses', 'Dean\DeanCoursesController::index');
+    // Grade-override requests of the department that wait for the dean: approve (the grade is
+    // changed) or reject (with a reason). The only writes in this group besides the dean's own pages.
+    $routes->get('approvals', 'Dean\ApprovalsController::index');
+    $routes->post('approvals/(:num)/approve', 'Dean\ApprovalsController::approve/$1');
+    $routes->post('approvals/(:num)/reject', 'Dean\ApprovalsController::reject/$1');
+
+    // Term-end sign-off of finalized grades, per section or for a program's ready sections. Signing off
+    // asks for the password again (reauth); the dean also reopens a sign-off, with a reason.
+    $routes->get('signoff', 'Dean\SignoffController::index');
+    $routes->post('signoff/program/(:num)/(:num)', 'Dean\SignoffController::signOffProgram/$1/$2', ['filter' => 'reauth']);
+    $routes->post('signoff/(:num)', 'Dean\SignoffController::signOff/$1', ['filter' => 'reauth']);
+    $routes->post('signoff/(:num)/reopen', 'Dean\SignoffController::reopen/$1');
+
+
+    // Follow-up requests: the list, a new request, the reply thread and closing.
+    $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
+    $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
+    $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
+    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
+
+    // The dean's announcements to the department, a sub-department or a program (department.announce).
+    $routes->get('announcements', 'Dean\DepartmentAnnouncementsController::index', ['filter' => 'permission:department.announce']);
+    $routes->post('announcements', 'Dean\DepartmentAnnouncementsController::store', ['filter' => 'permission:department.announce']);
+    $routes->post('announcements/(:num)', 'Dean\DepartmentAnnouncementsController::update/$1', ['filter' => 'permission:department.announce']);
+    $routes->post('announcements/(:num)/end', 'Dean\DepartmentAnnouncementsController::end/$1', ['filter' => 'permission:department.announce']);
+
+    // What each instructor of the department carries in a term (view only), and one instructor's sections.
+    $routes->get('teaching-load', 'Dean\TeachingLoadController::index');
+    $routes->get('teaching-load/(:num)', 'Dean\TeachingLoadController::show/$1');
+
+    // What chairpersons changed in the department's courses, for the dean to look over and mark as reviewed.
+    $routes->get('chairperson-review', 'Dean\ChairpersonReviewController::index');
+    $routes->post('chairperson-review/reviewed', 'Dean\ChairpersonReviewController::reviewed');
+
     $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index');
     $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1');
+    $routes->get('api/monitor-department/(:segment)', 'Dean\MonitorDepartmentController::data/$1');
 
     // A read-only view of every course of the department (courses.view), exactly what its
     // instructor sees: the same controllers as the instructor's, but only the reading routes.
@@ -320,7 +387,41 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
     });
+});
+
+// A parent follows the students linked to them, read-only: this group has GET
+// routes only, so there is nothing a parent can change. Their children and the
+// portal's on/off state are decided in ParentDashboardController.
+$routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:children.view']], function ($routes) {
+    $routes->get('/', 'Parents\ParentDashboardController::index');
+    $routes->get('dashboard', 'Parents\ParentDashboardController::index');
+    // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
+    $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
+    // The parent's own page. These two forms are the only things a parent can post, and both are
+    // about their own account: the email choice for each child, and an emailed password link.
+    $routes->get('profile', 'Parents\ParentProfileController::index');
+    $routes->post('profile/notifications', 'Parents\ParentProfileController::saveNotifications', ['filter' => 'parentportal']);
+    $routes->post('profile/password-link', 'Parents\ParentProfileController::sendPasswordLink');
+
+    // The child's calendar, read-only (deadlines and announcements; never their reminders).
+    $routes->get('calendar', 'Parents\ParentCalendarController::index');
+    $routes->get('children/(:num)/calendar', 'Parents\ParentCalendarController::page/$1', ['filter' => 'parentchild']);
+    $routes->get('children/(:num)/api/calendar/events', 'Parents\ParentCalendarController::events/$1', ['filter' => 'parentchild']);
+
+    // The child's course: four read-only tabs (overview, announcements, assessments, grades) and
+    // nothing else. A tab outside those four has no route, so it is a 404.
+    $routes->get('children/(:num)/api/courses/(:num)/overview', 'Parents\ParentCourseController::overview/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/announcements', 'Parents\ParentCourseController::announcements/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/assessments', 'Parents\ParentCourseController::assessments/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/grades', 'Parents\ParentCourseController::grades/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    // The grade report (PDF), once the grades are final; each download is audited.
+    $routes->get('children/(:num)/api/courses/(:num)/grades/report/mine', 'Parents\ParentCourseController::report/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/courses/(:num)/(:segment)', 'Parents\ParentCourseController::redirect/$1/$2/$3', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/courses/(:num)/(:segment)/(:segment)', 'Parents\ParentCourseController::page/$1/$2/$3/$4', ['filter' => ['parentportal', 'parentchild']]);
 });
 
 // A chairperson has full instructor rights on every course in their
@@ -329,9 +430,19 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
 // instead of InstructorAssignmentModel. Calendar and schedule are the
 // chairperson's own too, over the program's courses (getCourseOfferings).
 $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], function ($routes) {
+    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    $routes->get('announcements', 'Announcements\AnnouncementsController::index');
     $routes->get('/', 'Dashboard\DashboardController::index');
 
     // Grade-override requests of the sub-departments they chair: endorse, or send back with a comment.
+
+    // Follow-up requests: the list, a new request, the reply thread and closing.
+    $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
+    $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
+    $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
+    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
+    $routes->post('follow-ups/(:num)/pass-down', 'FollowUps\FollowUpsController::passDown/$1');
+
     $routes->get('override-requests', 'Chairperson\OverrideRequestsController::index');
     $routes->post('override-requests/(:num)/endorse', 'Chairperson\OverrideRequestsController::endorse/$1');
     $routes->post('override-requests/(:num)/send-back', 'Chairperson\OverrideRequestsController::sendBack/$1');
@@ -500,6 +611,10 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/grades/recalculate', 'Courses\Grades\GradingSchemeController::recalculate/$1');
 
         // Grading periods (Prelim / Midterm / Finals, ...)
+        $routes->post('(:num)/grades/scheme/categories/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreCategory/$1/$2');
+        $routes->post('(:num)/grades/scheme/items/(:num)/restore', 'Courses\Grades\GradingSchemeController::restoreItem/$1/$2');
+        $routes->patch('(:num)/grades/scheme/categories/order', 'Courses\Grades\GradingSchemeController::reorderCategories/$1');
+        $routes->patch('(:num)/grades/scheme/categories/(:num)/items/order', 'Courses\Grades\GradingSchemeController::reorderItems/$1/$2');
         $routes->post('(:num)/grades/scheme/periods', 'Courses\Grades\GradingSchemeController::storePeriod/$1');
         $routes->patch('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::updatePeriod/$1/$2');
         $routes->delete('(:num)/grades/scheme/periods/(:num)', 'Courses\Grades\GradingSchemeController::deletePeriod/$1/$2');
@@ -508,6 +623,16 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
         $routes->patch('(:num)/grades/roster/items/(:num)/students/(:num)', 'Courses\Grades\GradingSchemeController::updateManualScore/$1/$2/$3');
         $routes->patch('(:num)/grades/roster/students/(:num)/override', 'Courses\Grades\GradingSchemeController::overrideGrade/$1/$2');
+        $routes->patch('(:num)/grades/roster/students/(:num)/incomplete', 'Courses\Grades\GradingSchemeController::setIncomplete/$1/$2');
+
+        // The chairperson sees where the grades stand and may reopen them with a reason (finalizing is the instructor's).
+        // Grading on a curve: what is in force, a preview, applying, and taking one off.
+        $routes->get('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::show/$1');
+        $routes->post('(:num)/grades/curve/preview', 'Courses\Grades\GradeAdjustmentController::preview/$1');
+        $routes->post('(:num)/grades/curve', 'Courses\Grades\GradeAdjustmentController::apply/$1');
+        $routes->delete('(:num)/grades/curve/(:num)', 'Courses\Grades\GradeAdjustmentController::undo/$1/$2');
+        $routes->get('(:num)/grades/finalization', 'Courses\Grades\GradeFinalizationController::show/$1');
+        $routes->post('(:num)/grades/finalization/reopen', 'Courses\Grades\GradeFinalizationController::reopen/$1');
 
         // A request to override a final grade (where the institution has deans): edit one that was
         // sent back, or take one back. Only the requester can; the service checks it.
@@ -516,6 +641,9 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
 
         // Offline grade sheet (XLSX / CSV)
         $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+        $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+        $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+        $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         $routes->post('(:num)/grades/import/preview', 'Courses\Grades\GradeSheetController::preview/$1');
         $routes->post('(:num)/grades/import/apply', 'Courses\Grades\GradeSheetController::apply/$1');
     });
@@ -524,8 +652,8 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
 // "Confirm your password" in front of dangerous actions, for every administrative area
 // except the system administrator's own address (admin/reauth, below). The ReauthFilter
 // sends people here.
-$routes->get('reauth', 'ReauthController::show', ['filter' => 'role:institutional_admin']);
-$routes->post('reauth', 'ReauthController::confirm', ['filter' => 'role:institutional_admin']);
+$routes->get('reauth', 'ReauthController::show', ['filter' => 'role:institutional_admin,dean']);
+$routes->post('reauth', 'ReauthController::confirm', ['filter' => 'role:institutional_admin,dean']);
 
 // A gallery of the shared interface components (app/Views/components), for the people
 // building and reviewing screens. Signed-in people only; not routed in production.
@@ -637,6 +765,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('(:num)/grades/scheme', 'Courses\Grades\GradingSchemeController::show/$1');
             $routes->get('(:num)/grades/roster', 'Courses\Grades\GradingSchemeController::roster/$1');
             $routes->get('(:num)/grades/export', 'Courses\Grades\GradeSheetController::export/$1');
+            $routes->get('(:num)/grades/report/class', 'Courses\Grades\GradeReportController::classSheet/$1');
+            $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
+            $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
         });
 
         // The subscription, to read (institution.settings), and the SIS connection's runs (sis.run):
@@ -676,6 +807,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('announcement', 'Institution\InstitutionSettingsController::announcement');
             $routes->post('announcement', 'Institution\InstitutionSettingsController::saveAnnouncement');
             $routes->post('announcement/remove', 'Institution\InstitutionSettingsController::removeAnnouncement');
+            $routes->get('parents', 'Institution\InstitutionSettingsController::parents');
+            $routes->post('parents', 'Institution\InstitutionSettingsController::saveParents');
             // Security settings need the password (IA1): a loosened rule is refused, but a tightened one locks people out.
             $routes->get('security', 'Institution\InstitutionSettingsController::security');
             $routes->post('security', 'Institution\InstitutionSettingsController::saveSecurity', ['filter' => 'reauth']);

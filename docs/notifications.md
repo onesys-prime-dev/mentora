@@ -37,9 +37,35 @@ no `emailed_at`.
   admin header; everyone else sees a notice line under the page header while
   something is unread.
 
+## Parents
+
+A child's linked parents are told what changes for the child (`ParentNotifier`). Each parent hears each
+thing once, in the app always, and by email when the event is one of the emailed kinds and their switch
+for that child is on (default on; set on their Profile page, `parent/profile`).
+
+| Event | Told when | Emailed | Opens |
+|---|---|---|---|
+| Final grade available | the instructor finalizes the grades (also found by the sweep, if finalized in the last 14 days) | yes | Grades tab |
+| Marked incomplete (INC) | the sweep finds it | yes | Grades tab |
+| Withdrawn | the sweep finds it | yes | Overview tab |
+| May be falling behind ("At risk") | the sweep finds the running grade below the passing mark | yes | Grades tab |
+| Work not handed in | the sweep: **one message per child per day**, saying only how many | yes (that one) | Assessments tab, or the dashboard |
+| New course announcement | the sweep, for announcements of the last 3 days | **never** | Announcements tab |
+
+Rules: only a child's **current** courses count (an active offering, an enrolled student, a published
+grading scheme); nothing is told while the institution's parent portal is switched off; a deactivated
+or deleted parent is never told; **no message or email carries a grade, a percentage or a score**, only
+that something is ready and where to sign in. INC, Withdrawn and At risk are told once per child and
+course; a final grade once per finalization (so reopening and finalizing again tells again); an item not
+handed in is reported once, ever (`parent_alerted_items`).
+
+The sweep is `php spark parents:notify` (add `--dry-run` to count without telling anyone). **It must be
+scheduled every 15 minutes** (see `docs/server-setup.md`, section 6); until it is, only final grades are
+sent (those go at once). Running it more often is harmless.
+
 ## Not here yet
 
 - Backup, service-down, sync-failed and repeated-failed-login notifications:
   those arrive with the monitoring, backup and SIS branches, using the same
   `NotificationService::send()`.
-- Per-person preferences (everything urgent is emailed).
+- Per-person preferences for anyone but a parent (everything urgent is emailed); a parent chooses per child.

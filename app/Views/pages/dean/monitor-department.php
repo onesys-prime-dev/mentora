@@ -125,7 +125,8 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
             id="monitor-program-charts"
             class="grid grid-cols-1 gap-5 lg:grid-cols-2"
             data-completion="<?= esc(json_encode(array_map(static fn (array $g) => ['label' => $g['name'], 'value' => $g['completion']], $groups)), 'attr') ?>"
-            data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>">
+            data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>"
+            data-instructor-activity="<?= esc(json_encode(array_map(static fn (array $i) => ['label' => $i['name'], 'content' => $i['content_updates'], 'announcements' => $i['announcements']], $instructorActivity)), 'attr') ?>">
             <div class="rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Completion per <?= $filters->compare === 'program' ? 'program' : 'sub-department' ?></p>
                 <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
@@ -135,6 +136,15 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
                 <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                 <p class="mb-3 text-xs text-[#646464]">Students per grade band across the department.</p>
                 <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
+            </div>
+            <div class="rounded-2xl bg-white p-5 shadow-sm lg:col-span-2">
+                <p class="text-sm font-semibold text-[#1A1C1E]">Instructor activity</p>
+                <p class="mb-3 text-xs text-[#646464]">Content updates and announcements per instructor in the chosen period.</p>
+                <?php if ($instructorActivity === []): ?>
+                    <p class="py-10 text-center text-sm text-[#646464]" data-instructor-activity-empty>No instructors teach in this scope yet.</p>
+                <?php else: ?>
+                    <div class="relative h-64"><canvas id="monitor-program-activity-chart" role="img" aria-label="Content updates and announcements per instructor"></canvas></div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -205,11 +215,14 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
                                 </a>
                                 <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
                             </div>
-                            <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
-                                <?= $student['reason'] === 'inactive'
-                                    ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
-                                    : $student['progress'] . '% complete' ?>
-                            </span>
+                            <div class="flex items-center gap-3">
+                                <a data-follow-up-link class="text-xs font-semibold text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $student['offering_id'], 'student' => (int) $student['student_id'], 'reason' => 'at_risk'])) ?>">Follow up</a>
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
+                                    <?= $student['reason'] === 'inactive'
+                                        ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
+                                        : $student['progress'] . '% complete' ?>
+                                </span>
+                            </div>
                         </li>
                     <?php endforeach; ?>
                 </ul>

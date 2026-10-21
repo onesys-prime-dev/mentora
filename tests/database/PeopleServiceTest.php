@@ -186,6 +186,23 @@ final class PeopleServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('seats', $e->getMessage());
     }
 
+    public function testAParentIsInvitedWithTheirStudentsAndATypoStopsEverythingOnTheStudentsField(): void
+    {
+        $ann = $this->person('student', 'Ann');
+
+        $sent = $this->service->invite($this->institution, 'parent', ['first_name' => 'Pam', 'last_name' => 'Parent', 'email' => 'pam@people.test', 'students' => 'ann@people.test'], $this->actor);
+
+        $this->assertSame([(int) $ann->id], json_decode((string) db_connect()->table('institution_invitations')->where('id', $sent['invitation_id'])->get()->getRowArray()['student_ids'], true));
+        $this->assertCount(1, $this->mailer->sent);
+
+        $e = $this->refused(fn () => $this->service->invite($this->institution, 'parent', ['first_name' => 'Olga', 'last_name' => 'Parent', 'email' => 'olga@people.test', 'students' => "ann@people.test\nghost@people.test"], $this->actor));
+
+        $this->assertArrayHasKey('students', $e->errors());
+        $this->assertStringContainsString('ghost@people.test', $e->errors()['students']);
+        $this->assertCount(1, $this->mailer->sent, 'the second invitation was not sent');
+        $this->assertSame(0, db_connect()->table('institution_invitations')->where('email', 'olga@people.test')->countAllResults());
+    }
+
     public function testAnInvitationCanBeSentAgainAndCancelledButNotByAnotherInstitution(): void
     {
         $this->service->invite($this->institution, 'student', ['first_name' => 'Ann', 'last_name' => 'Lee', 'email' => 'ann@school.test'], $this->actor);

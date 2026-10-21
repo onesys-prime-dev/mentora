@@ -197,6 +197,21 @@ class DemoUsersSeeder extends Seeder
                 'institution_id' => 1,
             ],
 
+            // A second parent who is linked to no student (the "not linked" page).
+            [
+                'username'    => 'parent.demo2',
+                'email'       => 'parent2@mentora.test',
+                'password'    => 'Parent123!',
+                'group'       => 'parent',
+                'first_name'  => 'Linda',
+                'middle_name' => null,
+                'last_name'   => 'Reyes',
+                'suffix'      => null,
+                'student_number' => null,
+                'program_id'  => null,
+                'institution_id' => 1,
+            ],
+
             // =====================================================
             // Institutional administrator (of institution 1)
             // =====================================================

@@ -21,12 +21,21 @@ namespace App\Services\Courses\Grades;
  * - The row hash fingerprints each row's locked values as exported (student
  *   and quiz/assignment scores), so an edit to a locked cell is caught even
  *   when those scores have since changed in Mentora.
+ * - A curve in force (GradeAdjustmentService) is part of the formulas: the
+ *   score cells keep the scores as entered, and the computed columns count
+ *   them the way the grading engine does, curved. The curve is in the
+ *   signature too, so a sheet exported before a curve was applied or removed
+ *   is refused with the same clear message as one exported before any other
+ *   change to the grading setup.
  */
 class GradeSheetLayout
 {
     public const META_PREFIX = '[machine-readable — do not edit]';
 
     public const FIRST_DATA_ROW = 4;
+
+    /** What a score cell holds for a student who is excused from a manual item. */
+    public const EXCUSED = 'EX';
 
     private array $columns;
 
@@ -115,7 +124,7 @@ class GradeSheetLayout
         }
 
         return array_merge($columns, $periodColumns, [
-            ['key' => 'final', 'header' => 'Final %', 'type' => 'final'],
+            ['key' => 'final', 'header' => 'Final %' . ($this->finalCurve() !== null ? ' [curved]' : ''), 'type' => 'final'],
             ['key' => 'grade', 'header' => 'Grade', 'type' => 'grade'],
             ['key' => 'remarks', 'header' => 'Remarks', 'type' => 'remarks'],
             ['key' => 'row_hash', 'header' => 'Check (do not edit)', 'type' => 'row_hash'],
@@ -142,7 +151,8 @@ class GradeSheetLayout
             $columns[] = [
                 'key' => 'item:' . $item['id'],
                 'header' => $name . ' (/' . self::number((float) $item['max_points']) . ')'
-                    . ($this->isManual($item) ? '' : ' [locked]'),
+                    . ($this->isManual($item) ? '' : ' [locked]')
+                    . ($this->curveOf($item) !== null ? ' [curved]' : ''),
                 'type' => 'item',
                 'item' => $item,
                 'category' => $category,
@@ -177,6 +187,10 @@ class GradeSheetLayout
             'bands' => array_map(static fn ($b) => [(int) $b['id'], (float) $b['minimum_percentage']], $this->context['bands']),
             'categories' => array_map(static fn ($c) => [(int) $c['id'], $c['period_id'] !== null ? (int) $c['period_id'] : null, (float) $c['weight_percentage']], $this->context['categories']),
             'items' => array_map(static fn ($i) => [(int) $i['id'], (int) $i['category_id'], (float) $i['max_points']], $this->items()),
+            'curves' => [
+                'items' => array_map(static fn ($c) => [$c['method'], $c['params']], $this->context['adjustments']['items'] ?? []),
+                'final' => isset($this->context['adjustments']['final']) ? [$this->context['adjustments']['final']['method'], $this->context['adjustments']['final']['params']] : null,
+            ],
         ])), 0, 32);
     }
 
@@ -249,8 +263,14 @@ class GradeSheetLayout
         foreach ($this->columns as $index => $column) {
             if ($column['type'] === 'item' && (int) $column['category']['id'] === (int) $category['id']) {
                 $cell = self::letter($index + 1) . $row;
-                $cells[] = $cell;
                 $possible[] = 'IF(ISNUMBER(' . $cell . '),' . self::number((float) $column['item']['max_points']) . ',0)';
+
+                // A curved item counts its curved score, never the one typed in the cell.
+                $curve = $this->curveOf($column['item']);
+
+                $cells[] = $curve === null
+                    ? $cell
+                    : 'IF(ISNUMBER(' . $cell . '),' . $this->curveExpression($curve, $cell, (float) $column['item']['max_points']) . ',0)';
             }
         }
 
@@ -283,18 +303,26 @@ class GradeSheetLayout
      */
     public function finalFormula(int $row): string
     {
+        $curve = $this->finalCurve();
+
+        $wrap = $curve === null
+            ? null
+            : fn (string $rolled): string => $this->curveExpression($curve, $rolled, 100.0);
+
         if ($this->usesPeriods()) {
             return $this->weightedRollupFormula(
                 static fn (array $column) => $column['type'] === 'period',
                 static fn (array $column) => (float) $column['period']['weight_percentage'],
-                $row
+                $row,
+                $wrap
             );
         }
 
         return $this->weightedRollupFormula(
             static fn (array $column) => $column['type'] === 'category',
             static fn (array $column) => (float) $column['category']['weight_percentage'],
-            $row
+            $row,
+            $wrap
         );
     }
 
@@ -303,7 +331,7 @@ class GradeSheetLayout
      * over whichever columns $matches picks, blank when none of them have a
      * value yet — mirrors GradingEngineService::rollup() exactly.
      */
-    private function weightedRollupFormula(callable $matches, callable $weightOf, int $row): string
+    private function weightedRollupFormula(callable $matches, callable $weightOf, int $row, ?callable $wrap = null): string
     {
         $numerator = [];
         $denominator = [];
@@ -334,7 +362,57 @@ class GradeSheetLayout
 
         $den = '(' . implode('+', $denominator) . ')';
 
-        return '=IF(' . $den . '=0,"",ROUND((' . implode('+', $numerator) . ')/' . $den . ',2))';
+        $rolled = 'ROUND((' . implode('+', $numerator) . ')/' . $den . ',2)';
+
+        return '=IF(' . $den . '=0,"",' . ($wrap !== null ? $wrap($rolled) : $rolled) . ')';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Curves in force
+    |--------------------------------------------------------------------------
+    */
+
+    /** @return array{method: string, params: array<string, float>}|null */
+    public function curveOf(array $item): ?array
+    {
+        return $this->context['adjustments']['items'][(int) $item['id']] ?? null;
+    }
+
+    /** @return array{method: string, params: array<string, float>}|null */
+    public function finalCurve(): ?array
+    {
+        return $this->context['adjustments']['final'] ?? null;
+    }
+
+    /**
+     * The spreadsheet form of GradeAdjustmentService::adjust(): the curve
+     * applied to `$value` (a cell or a formula), kept between 0 and `$max`
+     * and rounded to two decimals, exactly as the grading engine does.
+     *
+     * @param array{method: string, params: array<string, float>} $curve
+     */
+    private function curveExpression(array $curve, string $value, float $max): string
+    {
+        $p = $curve['params'];
+
+        $inner = match ($curve['method']) {
+            'add_points' => $value . '+' . self::literal((float) ($p['points'] ?? 0)),
+            'scale_to_max' => $value . '*' . self::literal((float) ($p['factor'] ?? 1)),
+            'linear' => self::literal((float) ($p['slope'] ?? 1)) . '*' . $value . '+' . self::literal((float) ($p['intercept'] ?? 0)),
+            'set_mean' => $value . '+' . self::literal((float) ($p['shift'] ?? 0)),
+            default => $value,
+        };
+
+        return 'ROUND(MIN(' . self::number($max) . ',MAX(0,' . $inner . ')),2)';
+    }
+
+    /** A number written into a formula: enough digits for a factor, no exponent, no locale. */
+    private static function literal(float $value): string
+    {
+        $text = rtrim(rtrim(number_format($value, 10, '.', ''), '0'), '.');
+
+        return $text === '' || $text === '-0' ? '0' : ($value < 0 ? '(' . $text . ')' : $text);
     }
 
     public function gradeFormula(int $row): string

@@ -158,6 +158,20 @@ final class PlanLimitsTest extends DatabaseTestCase
         $this->assertSame(1, $this->limits->usage($theirs)['seats']);
     }
 
+    public function testParentsNeverTakeASeat(): void
+    {
+        $institution = $this->institution();
+        $this->subscribe($institution, 1);
+        $this->member($institution);
+
+        $this->member($institution, 'parent');
+        $this->member($institution, 'parent');
+
+        $this->assertSame(1, $this->limits->usage($institution)['seats']);
+        $this->assertNotNull($this->limits->seatBlock($institution), 'the one student seat is used');
+        $this->assertNull($this->limits->seatBlock($institution, 0), 'parents alone never block');
+    }
+
     public function testAStudentInTwoInstitutionsTakesASeatInEach(): void
     {
         $a = $this->institution('A');

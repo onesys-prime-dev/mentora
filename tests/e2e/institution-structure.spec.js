@@ -457,7 +457,7 @@ test("TC-PAR-01 A parent is linked to a student from the Parents tab and unlinke
     await page.getByRole("link", { name: "Parents" }).click();
     await expect(page.getByRole("heading", { name: "Parents", level: 1 })).toBeVisible();
 
-    const row = page.getByRole("row", { name: /parent1@mentora.test/ });
+    const row = page.getByRole("row", { name: /parent2@mentora.test/ });
     await expect(row).toContainText("No student linked");
 
     await row.getByRole("button", { name: "Link students" }).click();
@@ -468,13 +468,13 @@ test("TC-PAR-01 A parent is linked to a student from the Parents tab and unlinke
 
     await expect(page.getByText(/1 student was linked/)).toBeVisible();
     await expect(page.getByText(/nobody@mentora.test is not a student number or email/)).toBeVisible();
-    await expect(page.getByRole("row", { name: /parent1@mentora.test/ }).locator("[data-linked-student]")).toHaveCount(1);
+    await expect(page.getByRole("row", { name: /parent2@mentora.test/ }).locator("[data-linked-student]")).toHaveCount(1);
 
-    await page.getByRole("row", { name: /parent1@mentora.test/ }).getByRole("button", { name: /^Unlink / }).click();
+    await page.getByRole("row", { name: /parent2@mentora.test/ }).getByRole("button", { name: /^Unlink / }).click();
     await page.getByRole("dialog", { name: /^Unlink / }).getByRole("button", { name: "Unlink" }).click();
 
     await expect(page.getByText("The link was removed.")).toBeVisible();
-    await expect(page.getByRole("row", { name: /parent1@mentora.test/ })).toContainText("No student linked");
+    await expect(page.getByRole("row", { name: /parent2@mentora.test/ })).toContainText("No student linked");
 });
 
 test("TC-UPL-01 Files are previewed first, and applying them (after the password) creates the people", async ({ page }) => {

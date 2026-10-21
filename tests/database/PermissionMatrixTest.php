@@ -146,6 +146,12 @@ final class PermissionMatrixTest extends DatabaseTestCase
         $this->assertSame(['courses.view'], $this->matrix->effective()['student']);
     }
 
+    public function testAParentCanOnlyViewTheirChildren(): void
+    {
+        $this->assertSame(['children.view'], AuthGroups::DEFAULT_MATRIX['parent']);
+        $this->assertArrayHasKey('children.view', $this->matrix->permissions());
+    }
+
     public function testRolesAndPermissionsAreListedFromTheConfig(): void
     {
         $this->assertEqualsCanonicalizing(['student', 'instructor', 'chairperson', 'dean', 'parent', 'institutional_admin', 'admin'], $this->matrix->roles());

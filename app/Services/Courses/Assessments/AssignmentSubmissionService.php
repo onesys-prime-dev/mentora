@@ -2,6 +2,7 @@
 
 namespace App\Services\Courses\Assessments;
 
+use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\Shield\Entities\User;
 
@@ -179,18 +180,40 @@ class AssignmentSubmissionService
 
         $now = date('Y-m-d H:i:s');
 
-        $this->submissionModel->insert([
-            'assessment_id' => $assessmentId,
-            'student_id' => $user->id,
-            'attempt_number' => $lastAttemptNumber + 1,
-            'started_at' => $now,
-            'submitted_at' => $now,
-            'submission_text' => $text !== '' ? $text : null,
-            'submission_link' => $link !== '' ? $link : null,
-            'submission_file_id' => $fileId,
-            'is_late_submission' => !empty($assessment['due_date']) && strtotime($now) > strtotime($assessment['due_date']),
-            'status' => 'Submitted',
-        ]);
+        $code = 0;
+
+        try {
+            $saved = $this->submissionModel->insert([
+                'assessment_id' => $assessmentId,
+                'student_id' => $user->id,
+                'attempt_number' => $lastAttemptNumber + 1,
+                'started_at' => $now,
+                'submitted_at' => $now,
+                'submission_text' => $text !== '' ? $text : null,
+                'submission_link' => $link !== '' ? $link : null,
+                'submission_file_id' => $fileId,
+                'is_late_submission' => !empty($assessment['due_date']) && strtotime($now) > strtotime($assessment['due_date']),
+                'status' => 'Submitted',
+            ]);
+        } catch (DatabaseException $e) {
+            $saved = false;
+            $code = $e->getCode();
+        }
+
+        if ($saved === false) {
+            if ($fileId !== null) {
+                $this->fileModel->delete($fileId);
+                $this->storageService->delete($stored['storage_key']);
+            }
+
+            // 1062 = duplicate key: a request sent at the same moment took this attempt number first.
+            // Inside a transaction the driver returns false instead of throwing, so read the code from it.
+            $code = $code ?: db_connect()->error()['code'];
+
+            return ['success' => false, 'message' => $code === 1062
+                ? "You've already submitted this assignment."
+                : 'Your work could not be saved. Try again.'];
+        }
 
         // Handing the work in completes its item in the module.
         (new LearningProgressService())->completeOnSubmission((int) $user->id, $assessmentId);

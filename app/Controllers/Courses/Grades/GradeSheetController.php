@@ -9,8 +9,10 @@ use App\Services\Courses\Grades\GradeSheetImportService;
 use App\Services\Storage\StorageService;
 
 /**
- * Instructor-only: offline grade sheet export (XLSX / CSV) and import
- * (preview → apply), same flow as the quiz builder's question import.
+ * Instructor-only: the offline grade sheet. The app offers it as Excel (live
+ * formulas, only the manual score cells editable); `?format=csv` still gives
+ * plain values for scripts, and either can be imported (preview → apply), the
+ * same flow as the quiz builder's question import.
  */
 class GradeSheetController extends BaseController
 {

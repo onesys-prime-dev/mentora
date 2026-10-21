@@ -11,6 +11,7 @@ $needsRecalculation = !empty($scheme['needs_recalculation']);
 $outOfSync = (int) ($gradebook['out_of_sync_count'] ?? 0);
 $uncategorized = count($gradebook['uncategorized'] ?? []);
 $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
+$finalization = $gradebook['finalization'] ?? null;
 ?>
 
 <div class="flex flex-col gap-3" data-gradebook-toolbar>
@@ -27,7 +28,7 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 
             <span class="text-sm text-[#767676]">
                 <?= esc($scheme['name'] ?? 'Grading Scheme') ?>
-                · Passing <?= esc(rtrim(rtrim(number_format((float) ($scheme['passing_percentage'] ?? 75), 2), '0'), '.')) ?>%
+                · Passing <?= esc(grade_percent($scheme['passing_percentage'] ?? \App\Services\Institutions\AcademicDefaults::PLATFORM_PASSING)) ?>
                 <?php if (!empty($scheme['last_recalculated_at'])): ?>
                     · Last calculated <?= esc(date('M j, g:i A', strtotime($scheme['last_recalculated_at']))) ?>
                 <?php endif; ?>
@@ -36,6 +37,39 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
         </div>
 
         <div class="flex items-center gap-2">
+
+            <?php if ($finalization === null): ?>
+                <button
+                    type="button"
+                    data-open-curve
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                    <?= icon('score', 'h-4 w-4 text-current') ?>
+                    Curve
+                </button>
+            <?php endif; ?>
+
+            <?php if ($finalization !== null && ($gradebook['signoff'] ?? null) !== null): ?>
+                <span class="inline-flex items-center gap-2 rounded-xl border border-[#2B7549]/30 bg-[#E8F5EC] px-4 py-2 text-sm font-semibold text-[#1F5A38]" data-signed-off-tag>
+                    <?= icon('check', 'h-4 w-4 text-current') ?>
+                    Signed off by the dean
+                </span>
+            <?php elseif ($finalization !== null): ?>
+                <button
+                    type="button"
+                    data-open-reopen
+                    class="inline-flex items-center gap-2 rounded-xl border border-[#946200]/40 px-4 py-2 text-sm font-semibold text-[#946200] transition hover:bg-[#FFF8E6]">
+                    <?= icon('lock', 'h-4 w-4 text-current') ?>
+                    Reopen grades
+                </button>
+            <?php else: ?>
+                <button
+                    type="button"
+                    data-open-finalize
+                    class="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+                    <?= icon('check', 'h-4 w-4 text-current') ?>
+                    Finalize grades
+                </button>
+            <?php endif; ?>
 
             <button
                 type="button"
@@ -57,16 +91,50 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 
                 <button
                     type="button"
-                    data-toggle-grade-sheet-menu
+                    data-toggle-report-menu
                     class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
-                    Offline Grade Sheet
+                    Reports
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
 
-                <div data-grade-sheet-menu class="absolute right-0 z-20 mt-2 hidden w-56 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
-                    <a data-grade-sheet-export="xlsx" class="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">Export Excel (.xlsx)</a>
-                    <a data-grade-sheet-export="csv" class="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">Export CSV (.csv)</a>
-                    <button type="button" data-open-grade-sheet-import class="rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Import grade sheet…</button>
+                <div data-report-menu class="absolute right-0 z-20 mt-2 hidden w-72 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
+                    <p class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Class gradebook</p>
+                    <button type="button" data-report-path="class" data-report-format="xlsx" class="flex flex-col rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <span>Report (Excel)</span>
+                        <span class="text-xs text-gray-500">To read, print and file: formatted, with a summary.</span>
+                    </button>
+                    <button type="button" data-report-path="class" data-report-format="csv" class="flex flex-col rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <span>Data (CSV)</span>
+                        <span class="text-xs text-gray-500">Plain numbers and ids, for other software.</span>
+                    </button>
+                    <p class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Class summary</p>
+                    <button type="button" data-report-path="summary" data-report-format="pdf" class="rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">PDF</button>
+                    <button type="button" data-report-path="summary" data-report-format="html" data-report-mode="print" class="rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Print view</button>
+                    <p class="px-3 py-2 text-xs text-gray-500">A student's own report is on their row in the Gradebook.</p>
+                </div>
+
+            </div>
+
+            <div class="relative">
+
+                <button
+                    type="button"
+                    data-toggle-grade-sheet-menu
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                    Offline grade sheet
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+
+                <div data-grade-sheet-menu class="absolute right-0 z-20 mt-2 hidden w-72 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
+                    <p class="px-3 pt-2 pb-1 text-xs text-gray-500">For entering manual scores away from Mentora, then bringing them back.</p>
+                    <a data-grade-sheet-export="xlsx" class="flex cursor-pointer flex-col rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <span>Download the sheet (Excel)</span>
+                        <span class="text-xs text-gray-500">Type scores, or EX to excuse a student. Totals update as you type.</span>
+                    </a>
+                    <button type="button" data-open-grade-sheet-import class="flex flex-col rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <span>Import the sheet…</span>
+                        <span class="text-xs text-gray-500">Shows what would change before anything is saved.</span>
+                    </button>
                 </div>
 
             </div>
@@ -75,7 +143,34 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 
     </div>
 
-    <?php if ($needsRecalculation): ?>
+    <?php if ($finalization !== null): ?>
+        <div class="flex items-center gap-3 rounded-2xl border border-[#BFD3F2] bg-brand-tint px-5 py-3 text-sm text-brand-dark" data-finalized-banner>
+            <?= icon('lock', 'h-4 w-4 text-current') ?>
+            <span>
+                <strong>Grades are final.</strong>
+                Finalized by <?= esc(trim((string) ($finalization['finalized_by_name'] ?? '')) !== '' ? $finalization['finalized_by_name'] : 'an instructor') ?>
+                on <?= esc(date('M j, Y, g:i A', strtotime((string) $finalization['finalized_at']))) ?>.
+                <?php $signoff = $gradebook['signoff'] ?? null; ?>
+                <?php if ($signoff !== null): ?>
+                    <span data-signoff-note>
+                        Signed off by <?= esc(trim((string) ($signoff['signed_by_name'] ?? '')) !== '' ? $signoff['signed_by_name'] : 'the dean') ?>
+                        on <?= esc(date('M j, Y', strtotime((string) $signoff['signed_at']))) ?>.
+                        Scores, the grading scheme and imports are locked, and only the dean can reopen the grades.
+                    </span>
+                <?php else: ?>
+                    Scores, the grading scheme and imports are locked until you reopen them.
+                <?php endif; ?>
+                <?php $handoff = $gradebook['handoff'] ?? null; ?>
+                <?php if ($handoff !== null): ?>
+                    <span data-sis-handoff>Sent to the student information system on <?= esc(date('M j, Y', strtotime($handoff['last_sent_at']))) ?> (<?= (int) $handoff['students'] ?> <?= $handoff['students'] === 1 ? 'student' : 'students' ?>).</span>
+                <?php else: ?>
+                    <span data-sis-handoff class="opacity-80">Not sent to the student information system yet.</span>
+                <?php endif; ?>
+            </span>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($needsRecalculation && $finalization === null): ?>
 
         <!-- Config changed since the last calculation: final grades wait for an explicit Recalculate. -->
         <div class="flex items-center justify-between gap-4 rounded-2xl border border-[#FFE3A3] bg-[#FFF8E6] px-5 py-3 text-sm text-[#946200]" data-recalculate-banner>
@@ -113,3 +208,6 @@ $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
     <?php endif; ?>
 
 </div>
+
+<?= view('pages/courses/features/grades/partials/modals/grade-finalize', [], ['saveData' => false]) ?>
+<?= view('pages/courses/features/grades/partials/modals/grade-curve', [], ['saveData' => false]) ?>

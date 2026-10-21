@@ -36,7 +36,25 @@ final class CreateInstitutionInvitationsMigrationTest extends DatabaseTestCase
             db_connect()->table('institutions')->whereIn('id', $this->institutionIds)->delete();
         }
 
+        $this->restoreLaterColumns();
+
         parent::tearDown();
+    }
+
+    /**
+     * Redoing this migration builds the table as it first was. Columns that
+     * later migrations added are put back, so the tests that run after this
+     * one find the table as the application expects it.
+     */
+    private function restoreLaterColumns(): void
+    {
+        db_connect()->resetDataCache();
+
+        if (db_connect()->tableExists('institution_invitations') && ! db_connect()->fieldExists('student_ids', 'institution_invitations')) {
+            require_once APPPATH . 'Database/Migrations/2026-11-09-000001_AddStudentsToInstitutionInvitations.php';
+
+            (new App\Database\Migrations\AddStudentsToInstitutionInvitations())->up();
+        }
     }
 
     private function institution(string $code): int
