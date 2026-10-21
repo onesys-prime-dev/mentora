@@ -36,7 +36,7 @@ $accountLinks = [
     class="
         flex
         items-center
-        justify-between 
+        justify-between
         border-b
         border-b-black/10
         bg-white/75
