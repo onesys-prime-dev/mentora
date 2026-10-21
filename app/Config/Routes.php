@@ -333,6 +333,10 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
     $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
 
+    // What each instructor of the department carries in a term (view only), and one instructor's sections.
+    $routes->get('teaching-load', 'Dean\TeachingLoadController::index');
+    $routes->get('teaching-load/(:num)', 'Dean\TeachingLoadController::show/$1');
+
     // What chairpersons changed in the department's courses, for the dean to look over and mark as reviewed.
     $routes->get('chairperson-review', 'Dean\ChairpersonReviewController::index');
     $routes->post('chairperson-review/reviewed', 'Dean\ChairpersonReviewController::reviewed');

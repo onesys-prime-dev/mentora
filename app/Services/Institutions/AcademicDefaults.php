@@ -35,6 +35,9 @@ class AcademicDefaults
 
     public const PLATFORM_OVERDUE_DAYS = 7;
 
+    /** Units an instructor teaches in a term from which the dean's teaching-load page marks a high load. */
+    public const PLATFORM_HIGH_LOAD_UNITS = 21;
+
     public const MAX_CATEGORIES = 12;
 
     /**
@@ -43,7 +46,7 @@ class AcademicDefaults
      * @param array<string, mixed>|null $stored   the institution's row, or null
      * @param array<string, mixed>|null $platform the system default grading scheme row, or null
      *
-     * @return array{passing: float, passingFromInstitution: bool, scaleId: ?int, scaleFromInstitution: bool, inactiveDays: int, inactiveFromInstitution: bool, behindBelow: int, behindFromInstitution: bool, overdueGradingDays: int, overdueFromInstitution: bool}
+     * @return array{passing: float, passingFromInstitution: bool, scaleId: ?int, scaleFromInstitution: bool, inactiveDays: int, inactiveFromInstitution: bool, behindBelow: int, behindFromInstitution: bool, overdueGradingDays: int, overdueFromInstitution: bool, highLoadUnits: int, highLoadFromInstitution: bool}
      */
     public static function resolve(?array $stored, ?array $platform): array
     {
@@ -54,6 +57,7 @@ class AcademicDefaults
         $inactive = $stored['inactive_days'] ?? null;
         $behind  = $stored['behind_below_percent'] ?? null;
         $overdue = $stored['overdue_grading_days'] ?? null;
+        $highLoad = $stored['high_load_units'] ?? null;
 
         return [
             'passing'                 => $passing !== null ? (float) $passing : (float) ($platform['passing_percentage'] ?? self::PLATFORM_PASSING),
@@ -66,6 +70,8 @@ class AcademicDefaults
             'behindFromInstitution'   => $behind !== null,
             'overdueGradingDays'      => $overdue !== null ? (int) $overdue : self::PLATFORM_OVERDUE_DAYS,
             'overdueFromInstitution'  => $overdue !== null,
+            'highLoadUnits'           => $highLoad !== null ? (int) $highLoad : self::PLATFORM_HIGH_LOAD_UNITS,
+            'highLoadFromInstitution' => $highLoad !== null,
         ];
     }
 
@@ -146,6 +152,14 @@ class AcademicDefaults
         return $out;
     }
 
+    /** The units from which the dean's teaching-load page marks an instructor's term as a high load, for an institution. */
+    public function highLoadUnitsFor(int $institutionId): int
+    {
+        $stored = db_connect()->table('institution_academic_defaults')->select('high_load_units')->where('institution_id', $institutionId)->get()->getRowArray();
+
+        return self::resolve($stored, null)['highLoadUnits'];
+    }
+
     /**
      * The thresholds for the institution a person belongs to.
      *
@@ -200,7 +214,7 @@ class AcademicDefaults
 
     /**
      * @param array<string, mixed> $input passing_percentage, grade_scale_id, inactive_days, behind_below_percent,
-     *                                    overdue_grading_days, category_name[], category_weight[]
+     *                                    overdue_grading_days, high_load_units, category_name[], category_weight[]
      *
      * @throws StructureException
      */
@@ -211,6 +225,7 @@ class AcademicDefaults
             'inactive_days'        => $this->whole($input['inactive_days'] ?? '', 'inactive_days', 1, 365, 'Days without activity is a whole number from 1 to 365.'),
             'behind_below_percent' => $this->whole($input['behind_below_percent'] ?? '', 'behind_below_percent', 1, 100, 'Behind below is a percentage from 1 to 100.'),
             'overdue_grading_days' => $this->whole($input['overdue_grading_days'] ?? '', 'overdue_grading_days', 1, 90, 'Overdue grading is a whole number of days from 1 to 90.'),
+            'high_load_units'      => $this->whole($input['high_load_units'] ?? '', 'high_load_units', 1, 100, 'High load is a whole number of units from 1 to 100.'),
             'grade_scale_id'       => $this->scale($input['grade_scale_id'] ?? ''),
         ];
 
@@ -311,6 +326,7 @@ class AcademicDefaults
             'inactive'    => $state['inactiveDays'],
             'behind'      => $state['behindBelow'],
             'overdue'     => $state['overdueGradingDays'],
+            'high_load'   => $state['highLoadUnits'],
             'categories'  => $state['categoriesFromInstitution'] ? $state['categories'] : 'platform',
         ];
     }

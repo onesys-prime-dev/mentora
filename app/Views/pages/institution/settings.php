@@ -292,13 +292,14 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             <section class="flex flex-col gap-4" aria-labelledby="thresholds">
                 <div>
                     <h2 id="thresholds" class="text-sm font-bold text-brand">What counts as needing attention</h2>
-                    <p class="text-xs text-[#646464]">Used by reports and by the chairperson and instructor dashboards, so everyone reads the same numbers.</p>
+                    <p class="text-xs text-[#646464]">Used by reports, by the chairperson, instructor and dean pages, so everyone reads the same numbers.</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <?= $field(['name' => 'inactive_days', 'label' => 'No recent activity (days)', 'type' => 'number', 'value' => (string) $a['inactiveDays'], 'attrs' => 'min="1" max="365" inputmode="numeric"' . $off, 'help' => 'A student or course silent for this long. ' . $source($a['inactiveFromInstitution'])]) ?>
                     <?= $field(['name' => 'behind_below_percent', 'label' => 'Behind below (%)', 'type' => 'number', 'value' => (string) $a['behindBelow'], 'attrs' => 'min="1" max="100" inputmode="numeric"' . $off, 'help' => 'Progress through the published items. ' . $source($a['behindFromInstitution'])]) ?>
                     <?= $field(['name' => 'overdue_grading_days', 'label' => 'Overdue grading (days)', 'type' => 'number', 'value' => (string) $a['overdueGradingDays'], 'attrs' => 'min="1" max="90" inputmode="numeric"' . $off, 'help' => 'Work waiting this long to be graded. ' . $source($a['overdueFromInstitution'])]) ?>
+                    <?= $field(['name' => 'high_load_units', 'label' => 'High teaching load (units)', 'type' => 'number', 'value' => (string) $a['highLoadUnits'], 'attrs' => 'min="1" max="100" inputmode="numeric"' . $off, 'help' => 'An instructor teaching this many units in a term is marked on the dean Teaching load page. ' . $source($a['highLoadFromInstitution'])]) ?>
                 </div>
             </section>
 
