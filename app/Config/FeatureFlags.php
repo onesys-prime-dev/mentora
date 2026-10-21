@@ -33,5 +33,9 @@ class FeatureFlags extends BaseConfig
             'description' => 'AI-assisted question generation for quizzes.',
             'default'     => true,
         ],
+        'parent.portal' => [
+            'description' => 'The parent portal: linked parents see their child\'s courses and grades, read-only.',
+            'default'     => true,
+        ],
     ];
 }

@@ -52,6 +52,26 @@ final class NavigationHelperTest extends CIUnitTestCase
         $this->assertNotNull($apps['courses']);
     }
 
+    public function testAParentOnlyGetsTilesThatLeadSomewhere(): void
+    {
+        $apps = global_apps('parent');
+
+        $this->assertSame(['dashboard', 'calendar', 'notifications', 'profile'], array_column($apps, 'key'));
+        $this->assertSame(site_url('parent/dashboard'), $apps[0]['url']);
+        $this->assertSame(site_url('parent/calendar'), $apps[1]['url']);
+        $this->assertSame(site_url('notifications'), $apps[2]['url']);
+        $this->assertSame(site_url('parent/profile'), $apps[3]['url']);
+
+        $collection = \Config\Services::routes(false);
+        $collection->loadRoutes();
+
+        foreach ($apps as $app) {
+            $path = trim(str_replace(rtrim(site_url(), '/'), '', $app['url']), '/');
+
+            $this->assertArrayHasKey($path, $collection->getRoutes('GET'), $app['key']);
+        }
+    }
+
     public function testMonitorProgramIsOnlyLinkedForAChairperson(): void
     {
         foreach (['student', 'instructor'] as $role) {

@@ -121,7 +121,9 @@ class InvitationService
             throw new InvalidArgumentException($blocked);
         }
 
-        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.created', $role));
+        $studentIds = $this->studentsToLink($institutionId, $role, (string) ($input['students'] ?? ''));
+
+        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.created', $role, $studentIds));
 
         return $this->delivered($issued, $person['email'], $now);
     }
@@ -179,7 +181,10 @@ class InvitationService
 
         $person = ['first_name' => $old['first_name'], 'last_name' => $old['last_name'], 'email' => $old['email']];
 
-        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.resent', (string) $old['role']));
+        // The students named when it was first sent come along with the new link.
+        $studentIds = $old['student_ids'] === null ? null : json_decode((string) $old['student_ids'], true);
+
+        $issued = $this->inTransaction(fn (): array => $this->issue($institutionId, $person, $actor, $now, 'invitation.resent', (string) $old['role'], is_array($studentIds) ? $studentIds : null));
 
         return $this->delivered($issued, $person['email'], $now);
     }
@@ -190,13 +195,14 @@ class InvitationService
      * saved. Meant to run inside a transaction (see invite() and onboarding),
      * so that a failure here leaves nothing behind.
      *
-     * @param array{first_name: string, last_name: string, email: string} $person already checked by InvitationInput
+     * @param array{first_name: string, last_name: string, email: string} $person     already checked by InvitationInput
+     * @param ?list<int>                                                  $studentIds the students a parent will be linked to on accepting (already checked), or null
      *
      * @return array{id: int, token: string, expires_at: string}
      *
      * @throws InvalidArgumentException
      */
-    public function issue(int $institutionId, array $person, ?User $actor, DateTimeImmutable $now, string $auditAction = 'invitation.created', string $role = self::ROLE): array
+    public function issue(int $institutionId, array $person, ?User $actor, DateTimeImmutable $now, string $auditAction = 'invitation.created', string $role = self::ROLE, ?array $studentIds = null): array
     {
         if (model(UserModel::class)->findByCredentials(['email' => $person['email']]) !== null) {
             throw new InvalidArgumentException("An account with {$person['email']} already exists. Invite a different address.");
@@ -231,6 +237,7 @@ class InvitationService
             'email'              => $person['email'],
             'first_name'         => $person['first_name'],
             'last_name'          => $person['last_name'],
+            'student_ids'        => $studentIds === null || $studentIds === [] ? null : json_encode(array_values($studentIds)),
             'token_hash'         => $secret['hash'],
             'expires_at'         => $expires,
             'invited_by_user_id' => $by?->id,
@@ -245,7 +252,7 @@ class InvitationService
             'target_type'    => 'invitation',
             'target_id'      => (int) $id,
             'institution_id' => $institutionId,
-            'new'            => ['email' => $person['email'], 'role' => $role, 'expires_at' => $expires],
+            'new'            => ['email' => $person['email'], 'role' => $role, 'expires_at' => $expires] + ($studentIds ? ['students' => count($studentIds)] : []),
         ]);
 
         return ['id' => (int) $id, 'token' => $secret['token'], 'expires_at' => $expires];
@@ -413,15 +420,59 @@ class InvitationService
 
             $db->table('institution_invitations')->where('id', $invitation['id'])->update(['accepted_user_id' => $user->id]);
 
+            // A parent invited with students is linked to them now that there is an account. The
+            // administrator who sent the invitation is the one who linked them; anyone who is no
+            // longer a student here is skipped, not a reason to refuse the account.
+            $linkedStudents = 0;
+            $studentIds     = $invitation['role'] === 'parent' && $invitation['student_ids'] !== null ? json_decode((string) $invitation['student_ids'], true) : null;
+
+            if (is_array($studentIds) && $studentIds !== []) {
+                $inviter = $invitation['invited_by_user_id'] !== null ? model(UserModel::class)->findById((int) $invitation['invited_by_user_id']) : null;
+
+                $linkedStudents = (new ParentLinkService())->createLinks((int) $invitation['institution_id'], (int) $user->id, array_map('intval', $studentIds), $inviter, ['via' => 'invitation', 'invitation_id' => (int) $invitation['id']])['linked'];
+            }
+
             service('auditLogger')->log('invitation.accepted', $user, [
                 'target_type'    => 'invitation',
                 'target_id'      => (int) $invitation['id'],
                 'institution_id' => (int) $invitation['institution_id'],
-                'new'            => ['email' => $invitation['email'], 'role' => $invitation['role'], 'user_id' => (int) $user->id],
+                'new'            => ['email' => $invitation['email'], 'role' => $invitation['role'], 'user_id' => (int) $user->id, 'linked_students' => $linkedStudents],
             ]);
 
             return $user;
         });
+    }
+
+    /**
+     * The students a parent invitation names, as ids, checked now so a typo is
+     * fixed before anything is sent. Every name must be a student of this
+     * institution: one that is not stops the invitation and is listed with its
+     * reason. Only a parent can be given students.
+     *
+     * @return ?list<int> null when none were named
+     *
+     * @throws StructureException on the `students` field
+     */
+    private function studentsToLink(int $institutionId, string $role, string $text): ?array
+    {
+        if (trim($text) === '') {
+            return null;
+        }
+
+        if ($role !== 'parent') {
+            throw StructureException::field('students', 'Students can only be named for a parent.');
+        }
+
+        $found = (new ParentLinkService())->resolve($institutionId, $text);
+
+        if ($found['skipped'] !== []) {
+            $parts = array_map(static fn (array $s): string => $s['identifier'] . ' ' . $s['reason'], array_slice($found['skipped'], 0, 5));
+            $more  = count($found['skipped']) > 5 ? ' and ' . (count($found['skipped']) - 5) . ' more' : '';
+
+            throw StructureException::field('students', implode('; ', $parts) . $more . '. Nothing was sent.');
+        }
+
+        return $found['students'];
     }
 
     /** Whether the development conveniences apply (the link is also logged). Never true in production or staging. */
