@@ -70,6 +70,12 @@ function isCourseStaff()
     return role === "instructor" || role === "chairperson";
 }
 
+/** A parent only looks: nothing can be added, edited or deleted from their calendar. */
+function isReadOnly()
+{
+    return role === "parent";
+}
+
 /*
 |--------------------------------------------------------------------------
 | Date helpers
@@ -454,6 +460,7 @@ function renderDay()
 
     <div class="flex flex-col gap-4 p-6">
 
+        ${isReadOnly() ? "" : `
         <button
             type="button"
             data-calendar-add="${dateStr}"
@@ -463,11 +470,12 @@ function renderDay()
             </svg>
             Add to this day
         </button>
+        `}
 
         ${events.length === 0 ? `
             <div class="flex flex-col items-center justify-center gap-1 py-10 text-center">
                 <span class="text-sm font-bold text-[#646464]">Nothing on this day</span>
-                <span class="text-xs text-[#878787]">Assessments, announcements and reminders will show up here.</span>
+                <span class="text-xs text-[#878787]">${isReadOnly() ? "Assessments and announcements will show up here." : "Assessments, announcements and reminders will show up here."}</span>
             </div>
         ` : events.map(dayRow).join("")}
 
@@ -696,11 +704,15 @@ function openDateMenu(dateStr)
 
     const plusIcon = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />';
 
-    const actions = [
+    const actions = isReadOnly() ? "" : [
         isInstructor ? actionButton("add-assessment", "Add Assessment", plusIcon) : "",
         isInstructor ? actionButton("add-announcement", "Add Announcement", plusIcon) : "",
         actionButton("add-reminder", "Add Reminder", plusIcon),
     ].join("");
+
+    const nothingToday = isReadOnly() && events.length === 0
+        ? '<p class="text-sm text-[#646464]">Nothing on this day.</p>'
+        : "";
 
     const assessmentEvents = events.filter((e) => e.kind === "assessment");
 
@@ -738,7 +750,7 @@ function openDateMenu(dateStr)
 
     openModal(formatDateLong(dateStr));
 
-    modalBody().innerHTML = `<div class="flex flex-col gap-3">${actions}${editLinks}${readOnlyList}</div>`;
+    modalBody().innerHTML = `<div class="flex flex-col gap-3">${actions}${editLinks}${readOnlyList}${nothingToday}</div>`;
 
     modalBody().querySelectorAll("[data-calendar-action]").forEach((button) => {
         button.addEventListener("click", () => {

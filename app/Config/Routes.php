@@ -365,6 +365,12 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
 $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:children.view']], function ($routes) {
     $routes->get('/', 'Parents\ParentDashboardController::index');
     $routes->get('dashboard', 'Parents\ParentDashboardController::index');
+    // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
+    $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
+    // The child's calendar, read-only (deadlines and announcements; never their reminders).
+    $routes->get('calendar', 'Parents\ParentCalendarController::index');
+    $routes->get('children/(:num)/calendar', 'Parents\ParentCalendarController::page/$1', ['filter' => 'parentchild']);
+    $routes->get('children/(:num)/api/calendar/events', 'Parents\ParentCalendarController::events/$1', ['filter' => 'parentchild']);
 });
 
 // A chairperson has full instructor rights on every course in their

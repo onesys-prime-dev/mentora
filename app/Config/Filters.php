@@ -13,6 +13,7 @@ use App\Filters\MaintenanceFilter;
 use App\Filters\ClosedOfferingFilter;
 use App\Filters\CourseMembershipFilter;
 use App\Filters\InstitutionCourseFilter;
+use App\Filters\ParentChildFilter;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
 use App\Filters\RoleFilter;
@@ -57,6 +58,7 @@ class Filters extends BaseFilters
         'institutioncourse' => InstitutionCourseFilter::class,
         'deancourse'    => InstitutionCourseFilter::class,
         'role'          => RoleFilter::class,
+        'parentchild'   => ParentChildFilter::class,
         'accountstate'  => AccountStateFilter::class,
         'impersonation' => ImpersonationFilter::class,
         'loginlockout'  => LoginLockoutFilter::class,

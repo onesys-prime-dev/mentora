@@ -152,6 +152,22 @@ final class ParentAccessServiceTest extends DatabaseTestCase
         $this->assertFalse($this->access->canViewOffering($this->parent, (int) $this->child('Bea')->id, 0));
     }
 
+    public function testTheChildCanBeLoadedAsAUserOnlyWhenReachable(): void
+    {
+        $ann      = $this->child('Ann');
+        $stranger = PeopleFactory::person('student', 'Zed', 'Stranger', null, $this->institution);
+        $other    = PeopleFactory::person('parent', 'Olga', 'Other', null, $this->institution);
+        $theirs   = $this->child('Tom', null, $other);
+
+        $this->assertSame((int) $ann->id, (int) $this->access->childUser($this->parent, (int) $ann->id)?->id);
+        $this->assertNull($this->access->childUser($this->parent, (int) $stranger->id));
+        $this->assertNull($this->access->childUser($this->parent, (int) $theirs->id));
+        $this->assertNull($this->access->childUser($this->parent, 0));
+
+        db_connect()->table('users')->where('id', $ann->id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
+        $this->assertNull($this->access->childUser($this->parent, (int) $ann->id));
+    }
+
     public function testAParentReachesTheOfferingsTheirChildIsIn(): void
     {
         $offering = CourseFactory::offering();

@@ -66,10 +66,11 @@ if (! function_exists('global_apps')) {
             ];
         }
 
-        // A parent's pages arrive one branch at a time; until then only the landing page exists.
+        // A parent's pages arrive one branch at a time; notifications and the profile come later.
         if ($role === 'parent') {
             return [
                 ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('parent/dashboard')],
+                ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'calendar', 'url' => site_url('parent/calendar')],
             ];
         }
 

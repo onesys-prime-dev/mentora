@@ -6,6 +6,7 @@ namespace App\Services\Parents;
 
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
+use CodeIgniter\Shield\Models\UserModel;
 
 /**
  * Which children a parent may reach, and which of their courses.
@@ -68,6 +69,14 @@ class ParentAccessService
         }
 
         return false;
+    }
+
+    /** The child as a user (to ask the student's own services about them), or null when the parent may not reach them. */
+    public function childUser(User $parent, int $studentId): ?User
+    {
+        return $this->canViewChild($parent, $studentId)
+            ? model(UserModel::class)->findById($studentId)
+            : null;
     }
 
     public function canViewOffering(User $parent, int $studentId, int $offeringId): bool

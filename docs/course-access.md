@@ -35,8 +35,30 @@ answered by `ParentAccessService` (`app/Services/Parents/`), live from
 - the whole portal is gated by `ParentPortal` (Mentora's `parent.portal` flag AND the
   institution's switch; unreadable means off).
 
-Branch 1 of the parent portal builds this foundation and the landing page; the course
-workspace for a parent (a child id in the address, four tabs) comes in a later branch.
+The child is named in the address (`parent/children/{id}/...`); the `parentchild` route
+filter answers **404** for anyone the parent is not linked to, ahead of any controller.
+
+**The dashboard** (`ParentDashboardService`, `parent/dashboard` and `parent/children/{id}`)
+reads the child through the services the student's own pages use, so the two agree:
+
+- *Courses this term* carry the standing the student sees (percentage, band, "Final" or
+  "So far", tag), only once the grading scheme is published. *Past terms* hold dropped,
+  withdrawn and finished courses.
+- *Needs attention*: "At risk" is the gradebook tag for a running grade below the passing
+  mark (INC and Withdrawn replace it); *not handed in* is a published assessment past due
+  with nothing submitted (an Excused one is never missing); *final grade available* shows for
+  14 days after a grade is finalized.
+- *Coming up*: deadlines in the next 14 days, with the child's status and never a score.
+- A student who also holds a staff role has their courses listed but no grade or assessment
+  read (the shared services would treat them as that staff member). A course without a
+  grading scheme shows no standing, and none is created by looking at it.
+
+**The calendar** (`parent/children/{id}/calendar`) is the student calendar page in a
+read-only mode (`data-role="parent"` in `calendar.js`): deadlines and announcements only,
+nothing to add, edit or delete, and the child's own reminders are never in it
+(`ParentCalendarEvents`).
+
+The course workspace for a parent (four tabs) comes in a later branch.
 
 ## How it is enforced
 

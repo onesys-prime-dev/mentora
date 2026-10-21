@@ -1,38 +1,59 @@
 <?php
 /**
- * The parent's landing page until the parent dashboard is built: the linked
- * children by name.
+ * The parent's dashboard for one child.
  *
- * @var list<array{student_id: int, name: string, institution_id: int}> $children
+ * @var list<array{student_id: int, name: string, institution_id: int}> $children  every linked child (for the switcher)
+ * @var array<string, mixed>                                           $dashboard ParentDashboardService::forChild()
  */
+$child = $dashboard['child'];
+
+$actions = '';
+
+if (count($children) > 1) {
+    $actions .= view('pages/parent/partials/child-switcher', ['children' => $children, 'selected' => (int) $child['id']], ['saveData' => false]);
+}
+
+$actions .= '<a href="' . esc(site_url('parent/children/' . (int) $child['id'] . '/calendar')) . '" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">View calendar</a>';
 ?>
 
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-8 py-3">
+<div class="flex flex-col gap-6 py-3">
 
     <?= view('components/page-head', [
         'title'       => 'Parent',
         'icon'        => 'user',
-        'description' => 'Your children\'s progress at a glance.',
+        'description' => 'How ' . $child['name'] . ' is doing.',
+        'actions'     => $actions,
     ], ['saveData' => false]) ?>
 
-    <section class="flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="parent-children">
-        <h2 id="parent-children" class="text-sm font-bold text-brand">Your children</h2>
+    <?= view('pages/parent/partials/attention', ['items' => $dashboard['attention']], ['saveData' => false]) ?>
 
-        <ul class="flex flex-col divide-y divide-gray-100">
-            <?php foreach ($children as $child): ?>
-                <li class="flex items-center justify-between gap-3 py-2">
-                    <span class="text-sm font-semibold text-[#1A1C1E]"><?= esc($child['name']) ?></span>
-                    <span class="text-xs text-[#646464]">Student</span>
-                </li>
-            <?php endforeach; ?>
-        </ul>
+    <section class="flex flex-col gap-3" aria-labelledby="parent-courses">
+        <h2 id="parent-courses" class="text-sm font-bold text-brand">Courses this term</h2>
 
-        <p class="text-xs text-[#646464]">Their courses and grades are coming to this page soon.</p>
+        <?php if ($dashboard['courses'] === []): ?>
+            <?= view('components/empty-state', [
+                'icon'  => 'hat',
+                'title' => (strtok($child['name'], ' ') ?: 'Your child') . ' is not enrolled in any course this term',
+                'text'  => 'Courses appear here once your child is enrolled.',
+            ], ['saveData' => false]) ?>
+        <?php else: ?>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <?php foreach ($dashboard['courses'] as $course): ?>
+                    <?= view('pages/parent/partials/course-card', ['course' => $course, 'past' => false], ['saveData' => false]) ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </section>
+
+    <?= view('pages/parent/partials/deadlines', ['deadlines' => $dashboard['deadlines']], ['saveData' => false]) ?>
+
+    <?php if ($dashboard['past'] !== []): ?>
+        <?= view('pages/parent/partials/past-terms', ['past' => $dashboard['past']], ['saveData' => false]) ?>
+    <?php endif; ?>
 
 </div>
 

@@ -38,6 +38,13 @@ final class InstitutionParentPortalSettingsTest extends RouteTestCase
         $this->signIn($this->admin);
     }
 
+    protected function tearDown(): void
+    {
+        Services::resetSingle('settings');
+
+        parent::tearDown();
+    }
+
     private function signIn(User $user): void
     {
         auth()->logout();

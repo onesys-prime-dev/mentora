@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Services\Flags\FeatureFlags;
 use App\Services\Parents\ParentPortal;
+use CodeIgniter\Config\Services;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
@@ -24,7 +25,17 @@ final class ParentRoleRoutesTest extends RouteTestCase
     {
         parent::setUp();
 
+        // The settings service remembers values in memory; a switch a test sets must not outlive it.
+        Services::resetSingle('settings');
+
         $this->institution = PeopleFactory::institution('PRR');
+    }
+
+    protected function tearDown(): void
+    {
+        Services::resetSingle('settings');
+
+        parent::tearDown();
     }
 
     private function parent(): User
