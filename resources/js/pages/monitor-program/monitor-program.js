@@ -73,6 +73,29 @@ export function gradeDistributionChartConfig(distribution) {
     };
 }
 
+/** @param {Array<{label: string, content: number, announcements: number}>} points */
+export function instructorActivityChartConfig(points) {
+    return {
+        type: "bar",
+        data: {
+            labels: points.map((point) => point.label),
+            datasets: [
+                { label: "Content updates", data: points.map((point) => point.content), backgroundColor: BLUE, borderRadius: 6, maxBarThickness: 36 },
+                { label: "Announcements", data: points.map((point) => point.announcements), backgroundColor: "#4CAF7A", borderRadius: 6, maxBarThickness: 36 },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: "bottom" } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+            },
+        },
+    };
+}
+
 initialize();
 
 function initialize() {
@@ -93,5 +116,11 @@ function initialize() {
     if (gradeCanvas) {
         const distribution = JSON.parse(root.dataset.gradeDistribution || "{}");
         new Chart(gradeCanvas, gradeDistributionChartConfig(distribution));
+    }
+
+    const activityCanvas = document.getElementById("monitor-program-activity-chart");
+
+    if (activityCanvas) {
+        new Chart(activityCanvas, instructorActivityChartConfig(JSON.parse(root.dataset.instructorActivity || "[]")));
     }
 }
