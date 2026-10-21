@@ -21,6 +21,79 @@ Anyone else, with a valid account and the right role, gets a **404** before any
 controller runs: reads, writes and exports alike. The page does not confirm the
 offering exists.
 
+## Parents
+
+A parent belongs to no course. They reach a **child's** courses, read-only, under
+`parent/...` (GET routes only, role `parent`, permission `children.view`). The question is
+answered by `ParentAccessService` (`app/Services/Parents/`), live from
+`parent_student_links`:
+
+- only the parent's own (current) institution counts, and the student must still belong to it;
+- a deactivated student stays reachable (their history), a deleted one does not;
+- a child's course is reachable when the child is enrolled in it in any status (dropped and
+  finished courses stay visible);
+- the whole portal is gated by `ParentPortal` (Mentora's `parent.portal` flag AND the
+  institution's switch; unreadable means off).
+
+The child is named in the address (`parent/children/{id}/...`); the `parentchild` route
+filter answers **404** for anyone the parent is not linked to, ahead of any controller.
+
+**The dashboard** (`ParentDashboardService`, `parent/dashboard` and `parent/children/{id}`)
+reads the child through the services the student's own pages use, so the two agree:
+
+- *Courses this term* carry the standing the student sees (percentage, band, "Final" or
+  "So far", tag), only once the grading scheme is published. *Past terms* hold dropped,
+  withdrawn and finished courses.
+- *Needs attention*: "At risk" is the gradebook tag for a running grade below the passing
+  mark (INC and Withdrawn replace it); *not handed in* is a published assessment past due
+  with nothing submitted (an Excused one is never missing); *final grade available* shows for
+  14 days after a grade is finalized.
+- *Coming up*: deadlines in the next 14 days, with the child's status and never a score.
+- A student who also holds a staff role has their courses listed but no grade or assessment
+  read (the shared services would treat them as that staff member). A course without a
+  grading scheme shows no standing, and none is created by looking at it.
+
+**The calendar** (`parent/children/{id}/calendar`) is the student calendar page in a
+read-only mode (`data-role="parent"` in `calendar.js`): deadlines and announcements only,
+nothing to add, edit or delete, and the child's own reminders are never in it
+(`ParentCalendarEvents`).
+
+**The course** (`parent/children/{id}/courses/{offering}/{slug}/{tab}`) is the student's course
+page in a parent mode (`ParentCourseController`, `pages/courses/view.php` with `courseRole`,
+`courseFeatures` and a view-only note). The tab scripts are the student's own, unchanged (they only
+treat the role `instructor` specially); each tab's endpoint under `parent/children/{id}/api/courses/{offering}/`
+returns `{html}` from `ParentCourseTabs`:
+
+| Tab | A parent sees | Never |
+|---|---|---|
+| Overview | the course facts: description, teacher, schedule, room, term | progress, activity, class size, links into Modules |
+| Announcements | the latest 20 (pinned first): subject, text, author, date | replies, reactions, attachments, a composer |
+| Assessments | title, type, due date and a status word | a score, an attempt, feedback, any way into a quiz |
+| Grades | overall percentage, band, Final or So far, tag, each category's weight and percentage (under its period when the scheme has periods) | items, manual scores, assessments, points |
+
+Only those four tabs have routes. Modules, Resources, Discussions and every staff route answer
+404. The filters run in this order: `parentportal` (switched off: the portal-off page, or a 403 for an
+API call), then `parentchild` (the child must be the parent's, and enrolled in the course named in the
+address, in any enrolment status). A course with no grading scheme shows no standing and none is
+created by looking; a child who also holds a staff role has no grade or assessment data read.
+
+**The student can see who their parents are.** `student/profile` (read only, no write route) shows the
+student's name, email and student number and "Parents who can see your progress": the names (never an
+email) of the parents who actually have access now, that is `ParentAccessService::parentsOf` (linked,
+active, a parent, members of the institution) whose institution has the parent portal on. With none,
+or the portal off, it says "No parent can see your progress." The header's "My Profile" opens it (and a
+parent's own profile for a parent).
+
+**The parent's profile** (`parent/profile`) is the parent's own account and the only place a parent can
+change anything: the email choice for each child (`POST parent/profile/notifications`, behind
+`parentportal`) and an emailed password link to their own address (`POST parent/profile/password-link`).
+Nothing under `parent/children/...` can be posted to, and a read-only institution refuses both.
+Notifications are on the shared `/notifications` page (`docs/notifications.md`, "Parents").
+
+**The grade report** (`.../grades/report/mine`) is a PDF, only once the grades are final, and every
+download is audited (`grades.report_exported`, the parent as actor). It is the student's report
+without the item-by-item part (no Points column, no Scores list), so it says no more than the Grades tab.
+
 ## How it is enforced
 
 - `CourseMembership` (`app/Services/Courses/`) answers the question, as the role

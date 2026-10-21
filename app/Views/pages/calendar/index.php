@@ -21,13 +21,21 @@
 
 $userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
+// A parent looks at a child's calendar: the role, the API addresses and a heading come from
+// the controller, and nothing is added or edited (calendar.js reads the role "parent").
+$calendarRole           = $calendarRole ?? $userRole;
+$calendarApiBase        = $calendarApiBase ?? site_url($userRole . '/api/calendar');
+$calendarCoursesApiBase = $calendarCoursesApiBase ?? site_url($userRole . '/api/courses');
+$calendarHeading        = $calendarHeading ?? null;
+$readOnly               = $calendarRole === 'parent';
+
 $isInstructor = $userRole === 'instructor';
 
-$legend = [
+$legend = array_values(array_filter([
     ['kind' => 'assessment',   'label' => 'Assessment',   'dot' => 'bg-[#946200]'],
     ['kind' => 'announcement', 'label' => 'Announcement', 'dot' => 'bg-brand'],
     ['kind' => 'reminder',     'label' => 'Reminder',     'dot' => 'bg-emerald-600'],
-];
+], static fn (array $item): bool => ! ($readOnly && $item['kind'] === 'reminder')));
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -36,15 +44,19 @@ $legend = [
 
 <div class="flex flex-col gap-5 lg:h-full lg:min-h-0">
 
-    <?= $this->include('components/back') ?>
+    <?php if ($calendarHeading !== null): ?>
+        <?= view('components/page-head', ['title' => $calendarHeading, 'icon' => 'calendar', 'backUrl' => $calendarBackUrl, 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+    <?php else: ?>
+        <?= $this->include('components/back') ?>
+    <?php endif; ?>
 
     <div
         id="calendar-app"
         class="flex flex-1 min-h-0 flex-col gap-5 rounded-3xl bg-white p-6 lg:min-h-0"
         data-today="<?= esc($today) ?>"
-        data-role="<?= esc($userRole) ?>"
-        data-api-base="<?= esc(site_url($userRole . '/api/calendar')) ?>"
-        data-courses-api-base="<?= esc(site_url($userRole . '/api/courses')) ?>"
+        data-role="<?= esc($calendarRole) ?>"
+        data-api-base="<?= esc($calendarApiBase) ?>"
+        data-courses-api-base="<?= esc($calendarCoursesApiBase) ?>"
         data-initial-events="<?= esc(json_encode($events), 'attr') ?>"
         data-courses="<?= esc(json_encode($courses), 'attr') ?>"
         data-assessment-types="<?= esc(json_encode($assessmentTypes), 'attr') ?>">

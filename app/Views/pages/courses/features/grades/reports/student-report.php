@@ -2,8 +2,11 @@
 /**
  * One student's grade report. Data: GradeReportService::studentReport() as
  * $report; $printBar shows the Print button on screen (not in the PDF);
- * $showClassMean adds the class average (for the instructor, not the student).
+ * $showClassMean adds the class average (for the instructor, not the student);
+ * $showItems (default true) is the item-by-item part: the Points column and the
+ * Scores list. A parent's copy leaves it out, as their Grades tab does.
  */
+$showItems = $showItems ?? true;
 $f = static fn ($v) => $v === null ? '—' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
 $student = $report['student'];
 $offering = $report['offering'];
@@ -54,19 +57,22 @@ $offering = $report['offering'];
 
 <h2>How the grade is made up</h2>
 <table>
-    <thead><tr><th>Category</th><th class="num">Weight</th><th class="num">Points</th><th class="num">Percentage</th></tr></thead>
+    <thead><tr><th>Category</th><th class="num">Weight</th><?php if ($showItems): ?><th class="num">Points</th><?php endif; ?><th class="num">Percentage</th></tr></thead>
     <tbody>
         <?php foreach ($report['categories'] as $category): ?>
             <tr>
                 <td><?= esc($category['name']) ?></td>
                 <td class="num"><?= esc($f($category['weight'])) ?>%</td>
-                <td class="num"><?= $category['possible'] > 0 ? esc($f($category['earned'])) . ' / ' . esc($f($category['possible'])) : '—' ?></td>
+                <?php if ($showItems): ?>
+                    <td class="num"><?= $category['possible'] > 0 ? esc($f($category['earned'])) . ' / ' . esc($f($category['possible'])) : '—' ?></td>
+                <?php endif; ?>
                 <td class="num"><?= $category['percentage'] !== null ? esc($f($category['percentage'])) . '%' : 'Nothing graded yet' ?></td>
             </tr>
         <?php endforeach; ?>
     </tbody>
 </table>
 
+<?php if ($showItems): ?>
 <h2>Scores</h2>
 <table>
     <thead><tr><th>Item</th><th>Category</th><th class="num">Score</th></tr></thead>
@@ -84,6 +90,7 @@ $offering = $report['offering'];
         <?php endforeach; ?>
     </tbody>
 </table>
+<?php endif; ?>
 
 </body>
 </html>

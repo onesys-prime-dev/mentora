@@ -84,4 +84,7 @@ class Platform extends BaseConfig
 
     /** The last day (YYYY-MM-DD) that banner is shown; empty for no end. */
     public string $institutionAnnouncementUntil = '';
+
+    /** Whether an institution's administrator has left the parent portal on (only ever switched off per institution). */
+    public bool $parentPortalEnabled = true;
 }

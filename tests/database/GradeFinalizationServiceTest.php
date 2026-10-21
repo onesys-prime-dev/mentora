@@ -6,11 +6,15 @@ use App\Models\Assessments\GradebookRecordModel;
 use App\Services\Courses\Grades\GradeFinalizationService;
 use App\Services\Courses\Grades\GradingEngineService;
 use App\Services\Courses\Grades\GradingSchemeService;
+use App\Services\Parents\ParentNotifier;
+use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\AssessmentFactory;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\FakeEmail;
 use Tests\Support\GradeFactory;
+use Tests\Support\PeopleFactory;
 
 /**
  * Finalizing a section's grades: what blocks it, missing work counting as 0,
@@ -104,6 +108,51 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
         $this->assertSame(3, $readiness['counts']['students']);
         $this->assertSame(3, $readiness['counts']['missing_scores'], 'weak: exam; none: quiz and exam; strong has both');
         $this->assertStringContainsString('count as 0', $readiness['notes'][0]);
+    }
+
+    /** A parent linked to $student in a fresh institution (both are members of it). */
+    private function parentOf(User $student): User
+    {
+        $institution = PeopleFactory::institution('GFP');
+        $parent      = PeopleFactory::person('parent', 'Pam', 'Parent', 'pam@gfp.example', $institution);
+
+        db_connect()->table('institution_users')->insert(['institution_id' => $institution, 'user_id' => $student->id, 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $institution, 'parent_user_id' => $parent->id, 'student_user_id' => $student->id, 'created_at' => date('Y-m-d H:i:s')]);
+
+        return $parent;
+    }
+
+    public function testFinalizingTellsTheStudentsParentsAtOnce(): void
+    {
+        $mailer = FakeEmail::install();
+        $pam    = $this->parentOf($this->strong);
+
+        try {
+            $this->assertTrue($this->finalize()['success']);
+
+            $note = db_connect()->table('notifications')->where(['user_id' => $pam->id, 'type' => 'parent.final'])->get()->getRowArray();
+
+            $this->assertNotNull($note);
+            $this->assertStringContainsString('/courses/' . $this->offering . '/', $note['link']);
+            $this->assertSame(['pam@gfp.example'], array_column($mailer->sent, 'to'));
+        } finally {
+            Services::resetSingle('email');
+        }
+    }
+
+    public function testAParentNotifierThatFailsNeverBlocksFinalizing(): void
+    {
+        $service = new class () extends GradeFinalizationService {
+            protected function parentNotifier(): ParentNotifier
+            {
+                throw new RuntimeException('the notifier broke');
+            }
+        };
+
+        $result = $service->finalize($this->instructor, $this->offering);
+
+        $this->assertTrue($result['success']);
+        $this->assertTrue((bool) $service->isFinalized($this->offering));
     }
 
     public function testADraftSchemeBlocksFinalizing(): void

@@ -24,9 +24,10 @@ $studentMeta = $userRole === 'student'
 
 $avatarUrl = base_url('assets/images/placeholder/profile.png');
 
-// Not built yet — shown so the menu's shape is settled, but inert.
+// Not built yet — shown so the menu's shape is settled, but inert. "My Profile" is real for the
+// roles that have a profile page (a student's, to read; a parent's, with their email choices).
 $accountLinks = [
-    ['label' => 'My Profile', 'icon' => 'user'],
+    ['label' => 'My Profile', 'icon' => 'user', 'url' => in_array($userRole, ['student', 'parent'], true) ? site_url($userRole . '/profile') : null],
     ['label' => 'Settings', 'icon' => 'settings'],
     ['label' => 'Help & Support', 'icon' => 'help'],
 ];
@@ -258,6 +259,22 @@ $accountLinks = [
                 <nav class="flex flex-col p-2" aria-label="Account">
 
                     <?php foreach ($accountLinks as $link): ?>
+
+                        <?php if (! empty($link['url'])): ?>
+
+                            <a
+                                href="<?= esc($link['url']) ?>"
+                                class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#1A1C1E] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+
+                                <?= icon($link['icon'], 'h-4 w-4 text-brand') ?>
+
+                                <span class="flex-1"><?= esc($link['label']) ?></span>
+
+                            </a>
+
+                            <?php continue; ?>
+
+                        <?php endif; ?>
 
                         <span
                             class="flex cursor-default items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-500"
