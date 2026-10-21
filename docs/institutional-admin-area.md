@@ -139,7 +139,15 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Link students:** paste student numbers or email addresses (one per line or comma-separated). They must be students of the institution; anyone who cannot be linked is skipped and named with the reason, the rest are linked together. The same student can have several parents.
 - **Unlink:** from the chip, with a confirm that says nothing else about either person changes.
 - **Audit:** `parent.linked|unlinked` (target type `parent_link`).
-- **What a linked parent sees** is not decided yet; for now the link is the record that a later parent area will rely on.
+- **What a linked parent sees:** see "Parent portal" below and `docs/course-access.md`.
+
+## Parent portal switch
+
+Institution settings has a **Parents** tab (`institution/settings/parents`, `institution.settings`; read-only while the institution is read-only). One On/Off choice for the whole institution.
+
+- The portal is on only when Mentora's `parent.portal` feature flag is on for the institution **and** the institution has not switched it off. The administrator can only switch it off (and back on): when Mentora has it off, the tab says so and the portal stays off whatever is chosen.
+- Off means every parent of the institution sees a "switched off" page and no child data is read. Nothing is deleted, and links are kept.
+- The choice is stored per institution (`parentPortalEnabled`) and audited like any setting (`settings.changed`). A switch that cannot be read counts as off.
 
 ## Uploading from CSV
 

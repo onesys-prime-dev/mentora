@@ -66,6 +66,13 @@ if (! function_exists('global_apps')) {
             ];
         }
 
+        // A parent's pages arrive one branch at a time; until then only the landing page exists.
+        if ($role === 'parent') {
+            return [
+                ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('parent/dashboard')],
+            ];
+        }
+
         // The system administrator's tools. The page also has its own grouped navigation bar;
         // this is the same set as tiles, so the Apps menu is the same everywhere.
         if ($role === 'admin') {

@@ -359,6 +359,14 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     });
 });
 
+// A parent follows the students linked to them, read-only: this group has GET
+// routes only, so there is nothing a parent can change. Their children and the
+// portal's on/off state are decided in ParentDashboardController.
+$routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:children.view']], function ($routes) {
+    $routes->get('/', 'Parents\ParentDashboardController::index');
+    $routes->get('dashboard', 'Parents\ParentDashboardController::index');
+});
+
 // A chairperson has full instructor rights on every course in their
 // program (R7 of the chairperson plan) — this block mirrors instructor's
 // course routes exactly, same controllers, scoped by ChairpersonAccessService
@@ -732,6 +740,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('announcement', 'Institution\InstitutionSettingsController::announcement');
             $routes->post('announcement', 'Institution\InstitutionSettingsController::saveAnnouncement');
             $routes->post('announcement/remove', 'Institution\InstitutionSettingsController::removeAnnouncement');
+            $routes->get('parents', 'Institution\InstitutionSettingsController::parents');
+            $routes->post('parents', 'Institution\InstitutionSettingsController::saveParents');
             // Security settings need the password (IA1): a loosened rule is refused, but a tightened one locks people out.
             $routes->get('security', 'Institution\InstitutionSettingsController::security');
             $routes->post('security', 'Institution\InstitutionSettingsController::saveSecurity', ['filter' => 'reauth']);

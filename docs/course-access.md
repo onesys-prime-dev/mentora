@@ -21,6 +21,23 @@ Anyone else, with a valid account and the right role, gets a **404** before any
 controller runs: reads, writes and exports alike. The page does not confirm the
 offering exists.
 
+## Parents
+
+A parent belongs to no course. They reach a **child's** courses, read-only, under
+`parent/...` (GET routes only, role `parent`, permission `children.view`). The question is
+answered by `ParentAccessService` (`app/Services/Parents/`), live from
+`parent_student_links`:
+
+- only the parent's own (current) institution counts, and the student must still belong to it;
+- a deactivated student stays reachable (their history), a deleted one does not;
+- a child's course is reachable when the child is enrolled in it in any status (dropped and
+  finished courses stay visible);
+- the whole portal is gated by `ParentPortal` (Mentora's `parent.portal` flag AND the
+  institution's switch; unreadable means off).
+
+Branch 1 of the parent portal builds this foundation and the landing page; the course
+workspace for a parent (a child id in the address, four tabs) comes in a later branch.
+
 ## How it is enforced
 
 - `CourseMembership` (`app/Services/Courses/`) answers the question, as the role
