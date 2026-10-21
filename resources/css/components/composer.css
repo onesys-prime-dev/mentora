@@ -1,0 +1,24 @@
+@layer components {
+
+    /*
+    |--------------------------------------------------------------------------
+    | The announcement / discussion composer. Tailwind's reset removes list
+    | markers, so without these the editor shows no bullets or numbers until
+    | the message is posted. Matches how posted messages render (list-disc /
+    | list-decimal, pl-5).
+    |--------------------------------------------------------------------------
+    */
+
+    .announcement-composer-content ul {
+
+        @apply list-disc pl-5;
+
+    }
+
+    .announcement-composer-content ol {
+
+        @apply list-decimal pl-5;
+
+    }
+
+}
