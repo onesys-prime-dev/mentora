@@ -73,6 +73,15 @@ describe("a dialog", () => {
         expect(document.activeElement.id).toBe("first");
     });
 
+    it("opens on load when the server marked it, and leaves the others closed", () => {
+        page(`${DIALOG}<div id="prepared" data-dialog data-dialog-autoopen hidden class="hidden"><button id="inside" data-dialog-close>Close</button></div>`);
+        bindDialogs();
+
+        expect(document.getElementById("prepared").hidden).toBe(false);
+        expect(document.getElementById("d").hidden).toBe(true);
+        expect(document.activeElement.id).toBe("inside");
+    });
+
     it("closes on its close button and returns focus to the trigger", () => {
         page(DIALOG);
         bindDialogs();

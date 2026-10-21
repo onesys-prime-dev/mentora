@@ -23,12 +23,23 @@ final class NavigationHelperTest extends CIUnitTestCase
         $student = global_apps('student');
         $instructor = global_apps('instructor');
 
-        $this->assertSame(array_column($student, 'key'), array_column($instructor, 'key'));
+        // The instructor has the student's apps, and the Requests a dean or chairperson sent them.
+        $this->assertSame([...array_column($student, 'key'), 'follow-ups'], array_column($instructor, 'key'));
         $this->assertSame(['courses', 'calendar', 'schedule', 'grades', 'announcements', 'inbox'], array_column($student, 'key'));
 
         $this->assertSame(site_url('student/courses'), $student[0]['url']);
         $this->assertSame(site_url('instructor/calendar'), $instructor[1]['url']);
         $this->assertSame(site_url('instructor/schedule'), $instructor[2]['url']);
+    }
+
+    public function testFollowUpsAreLinkedForTheDeanTheChairpersonAndTheInstructorOnly(): void
+    {
+        foreach (['dean', 'chairperson', 'instructor'] as $role) {
+            $this->assertSame(site_url($role . '/follow-ups'), array_column(global_apps($role), 'url', 'key')['follow-ups'], $role);
+        }
+
+        $this->assertArrayNotHasKey('follow-ups', array_column(global_apps('student'), 'url', 'key'));
+        $this->assertSame('Requests', array_column(global_apps('instructor'), 'label', 'key')['follow-ups']);
     }
 
     public function testPagesThatAreNotBuiltYetHaveNoUrl(): void

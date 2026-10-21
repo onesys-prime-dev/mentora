@@ -102,6 +102,7 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                                         <?php if ((int) $section['counts']['open_requests'] > 0): ?>
                                             <a class="text-brand hover:underline" href="<?= esc(site_url('dean/approvals')) ?>">Decide the open requests</a>
                                         <?php endif; ?>
+                                        <a data-follow-up-link class="text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $section['offering_id'], 'reason' => 'blocked_signoff'])) ?>">Send a follow-up</a>
                                     </span>
                                 <?php elseif ($section['state'] === GradeSignoffService::SIGNED_OFF): ?>
                                     <span class="text-xs text-[#2B7549]" data-signed-by>

@@ -215,11 +215,14 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
                                 </a>
                                 <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
                             </div>
-                            <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
-                                <?= $student['reason'] === 'inactive'
-                                    ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
-                                    : $student['progress'] . '% complete' ?>
-                            </span>
+                            <div class="flex items-center gap-3">
+                                <a data-follow-up-link class="text-xs font-semibold text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $student['offering_id'], 'student' => (int) $student['student_id'], 'reason' => 'at_risk'])) ?>">Follow up</a>
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
+                                    <?= $student['reason'] === 'inactive'
+                                        ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
+                                        : $student['progress'] . '% complete' ?>
+                                </span>
+                            </div>
                         </li>
                     <?php endforeach; ?>
                 </ul>
