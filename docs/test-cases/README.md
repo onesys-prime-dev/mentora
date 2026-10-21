@@ -27,7 +27,7 @@ Every case has the same fields:
 
 - **ID**: `TC-<AREA>-<NN>`, never reused. Areas: `AUTH`, `ANN` (announcements),
   `MOD` (modules and progress), `QUIZ`, `ASG` (assignments), `GRD` (grading and
-  grades).
+  grades), `PRT` (the parent portal, in [p2-parent.md](p2-parent.md)).
 - **Role**: who performs it (Student, Instructor, or Anonymous).
 - **Data**: the demo accounts, course and item it uses (see below), so any two
   people run the same case.
@@ -57,6 +57,8 @@ Cases run on the demo data from `php spark db:seed DatabaseSeeder`
 | Michael Villanueva (student5) | `student5@mentora.test` | `Student123!` | Student |
 | Maria Santos (instructor1) | `instructor1@mentora.test` | `Instructor123!` | Instructor |
 | Joseph Garcia (instructor2) | `instructor2@mentora.test` | `Instructor123!` | Instructor |
+| Roberto Diaz Cruz (parent1) | `parent1@mentora.test` | `Parent123!` | Parent of student1 and student5 |
+| Linda Reyes (parent2) | `parent2@mentora.test` | `Parent123!` | Parent linked to nobody |
 
 Who is in which course (term: 1st Semester 2026-2027):
 
