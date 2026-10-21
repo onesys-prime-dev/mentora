@@ -125,7 +125,8 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
             id="monitor-program-charts"
             class="grid grid-cols-1 gap-5 lg:grid-cols-2"
             data-completion="<?= esc(json_encode(array_map(static fn (array $g) => ['label' => $g['name'], 'value' => $g['completion']], $groups)), 'attr') ?>"
-            data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>">
+            data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>"
+            data-instructor-activity="<?= esc(json_encode(array_map(static fn (array $i) => ['label' => $i['name'], 'content' => $i['content_updates'], 'announcements' => $i['announcements']], $instructorActivity)), 'attr') ?>">
             <div class="rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Completion per <?= $filters->compare === 'program' ? 'program' : 'sub-department' ?></p>
                 <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
@@ -135,6 +136,15 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
                 <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                 <p class="mb-3 text-xs text-[#646464]">Students per grade band across the department.</p>
                 <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
+            </div>
+            <div class="rounded-2xl bg-white p-5 shadow-sm lg:col-span-2">
+                <p class="text-sm font-semibold text-[#1A1C1E]">Instructor activity</p>
+                <p class="mb-3 text-xs text-[#646464]">Content updates and announcements per instructor in the chosen period.</p>
+                <?php if ($instructorActivity === []): ?>
+                    <p class="py-10 text-center text-sm text-[#646464]" data-instructor-activity-empty>No instructors teach in this scope yet.</p>
+                <?php else: ?>
+                    <div class="relative h-64"><canvas id="monitor-program-activity-chart" role="img" aria-label="Content updates and announcements per instructor"></canvas></div>
+                <?php endif; ?>
             </div>
         </div>
 
