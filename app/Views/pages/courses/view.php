@@ -1,7 +1,8 @@
-<?php 
-$userRole = esc($user->getGroups()[0]);
+<?php
+// A parent looks at a child's course: the controller gives the role, the tabs it may have and a note.
+$userRole = $courseRole ?? esc($user->getGroups()[0]);
 
-$features = [
+$features = $courseFeatures ?? [
     'overview' => 'Overview',
     'announcements' => 'Announcements',
     'modules' => 'Modules',
@@ -68,6 +69,12 @@ $features = [
     <?php if (! empty($readOnlyView)): ?>
         <div class="px-4 sm:px-10" data-view-only>
             <?= view('components/lock-note', ['kind' => 'closed', 'text' => 'View only. You are looking at ' . $course['course_code'] . ' ' . $course['section_code'] . ' as ' . ($readOnlyAs ?? 'an administrator of this institution') . ': everything is shown as its instructor sees it, and nothing can be changed here.'], ['saveData' => false]) ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (! empty($parentNote)): ?>
+        <div class="px-4 sm:px-10" data-view-only>
+            <?= view('components/lock-note', ['kind' => 'closed', 'text' => $parentNote], ['saveData' => false]) ?>
         </div>
     <?php endif; ?>
 

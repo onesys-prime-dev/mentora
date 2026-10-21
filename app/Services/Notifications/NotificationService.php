@@ -53,6 +53,12 @@ class NotificationService
         return true;
     }
 
+    /** Whether this person has already been told this (the same dedupe key), without telling them. */
+    public function has(int $userId, string $dedupeKey): bool
+    {
+        return db_connect()->table('notifications')->where(['user_id' => $userId, 'dedupe_key' => $dedupeKey])->countAllResults() > 0;
+    }
+
     public function unreadCount(int $userId): int
     {
         return db_connect()->table('notifications')->where('user_id', $userId)->where('read_at IS NULL', null, false)->countAllResults();

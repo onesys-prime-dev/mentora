@@ -48,6 +48,9 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
+    // The student's own profile, to read: their details and the parents who can see their progress.
+    $routes->get('profile', 'Students\StudentProfileController::index');
+
     $routes->get('courses', 'Courses\CourseController::index');
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:student']);
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:student']);
@@ -370,6 +373,37 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/grades/report/summary', 'Courses\Grades\GradeReportController::summary/$1');
         $routes->get('(:num)/grades/report/student/(:num)', 'Courses\Grades\GradeReportController::student/$1/$2');
     });
+});
+
+// A parent follows the students linked to them, read-only: this group has GET
+// routes only, so there is nothing a parent can change. Their children and the
+// portal's on/off state are decided in ParentDashboardController.
+$routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:children.view']], function ($routes) {
+    $routes->get('/', 'Parents\ParentDashboardController::index');
+    $routes->get('dashboard', 'Parents\ParentDashboardController::index');
+    // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
+    $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
+    // The parent's own page. These two forms are the only things a parent can post, and both are
+    // about their own account: the email choice for each child, and an emailed password link.
+    $routes->get('profile', 'Parents\ParentProfileController::index');
+    $routes->post('profile/notifications', 'Parents\ParentProfileController::saveNotifications', ['filter' => 'parentportal']);
+    $routes->post('profile/password-link', 'Parents\ParentProfileController::sendPasswordLink');
+
+    // The child's calendar, read-only (deadlines and announcements; never their reminders).
+    $routes->get('calendar', 'Parents\ParentCalendarController::index');
+    $routes->get('children/(:num)/calendar', 'Parents\ParentCalendarController::page/$1', ['filter' => 'parentchild']);
+    $routes->get('children/(:num)/api/calendar/events', 'Parents\ParentCalendarController::events/$1', ['filter' => 'parentchild']);
+
+    // The child's course: four read-only tabs (overview, announcements, assessments, grades) and
+    // nothing else. A tab outside those four has no route, so it is a 404.
+    $routes->get('children/(:num)/api/courses/(:num)/overview', 'Parents\ParentCourseController::overview/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/announcements', 'Parents\ParentCourseController::announcements/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/assessments', 'Parents\ParentCourseController::assessments/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/api/courses/(:num)/grades', 'Parents\ParentCourseController::grades/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    // The grade report (PDF), once the grades are final; each download is audited.
+    $routes->get('children/(:num)/api/courses/(:num)/grades/report/mine', 'Parents\ParentCourseController::report/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/courses/(:num)/(:segment)', 'Parents\ParentCourseController::redirect/$1/$2/$3', ['filter' => ['parentportal', 'parentchild']]);
+    $routes->get('children/(:num)/courses/(:num)/(:segment)/(:segment)', 'Parents\ParentCourseController::page/$1/$2/$3/$4', ['filter' => ['parentportal', 'parentchild']]);
 });
 
 // A chairperson has full instructor rights on every course in their
@@ -753,6 +787,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('announcement', 'Institution\InstitutionSettingsController::announcement');
             $routes->post('announcement', 'Institution\InstitutionSettingsController::saveAnnouncement');
             $routes->post('announcement/remove', 'Institution\InstitutionSettingsController::removeAnnouncement');
+            $routes->get('parents', 'Institution\InstitutionSettingsController::parents');
+            $routes->post('parents', 'Institution\InstitutionSettingsController::saveParents');
             // Security settings need the password (IA1): a loosened rule is refused, but a tightened one locks people out.
             $routes->get('security', 'Institution\InstitutionSettingsController::security');
             $routes->post('security', 'Institution\InstitutionSettingsController::saveSecurity', ['filter' => 'reauth']);

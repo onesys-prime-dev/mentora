@@ -155,6 +155,8 @@ user (`crontab -e`):
 */5 * * * *  cd <site folder> && php8.5 spark backup:run          >> writable/logs/cron-backup.log 2>&1
 15 2 * * *   cd <site folder> && php8.5 spark subscriptions:sync  >> writable/logs/cron-sync.log 2>&1
 30 2 * * *   cd <site folder> && php8.5 spark institutions:purge-expired >> writable/logs/cron-purge.log 2>&1
+# tells parents what changed for their children (docs/notifications.md); without it only final grades are sent
+*/15 * * * * cd <site folder> && php8.5 spark parents:notify       >> writable/logs/cron-parents.log 2>&1
 # only when SIS is in use (sis-integration.md), in this order:
 0 3 * * *    cd <site folder> && php8.5 spark sis:sync            >> writable/logs/cron-sis.log 2>&1
 30 3 * * *   cd <site folder> && php8.5 spark sis:grades          >> writable/logs/cron-sis.log 2>&1

@@ -48,6 +48,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         ['label' => 'Academic', 'href' => site_url($base . '/academic'), 'active' => $settingsTab === 'academic'],
         ['label' => 'Announcement', 'href' => site_url($base . '/announcement'), 'active' => $settingsTab === 'announcement'],
         ['label' => 'Security', 'href' => site_url($base . '/security'), 'active' => $settingsTab === 'security'],
+        ['label' => 'Parents', 'href' => site_url($base . '/parents'), 'active' => $settingsTab === 'parents'],
     ]], ['saveData' => false]) ?>
 
     <?php if ($settingsTab === 'profile'): ?>
@@ -124,6 +125,40 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             </section>
 
         </div>
+
+    <?php elseif ($settingsTab === 'parents'): ?>
+
+        <?php $pp = $settingsParents; ?>
+
+        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" data-parent-portal-form>
+            <?= csrf_field() ?>
+
+            <fieldset class="flex flex-col gap-3" <?= $disabled ?>>
+                <legend class="text-sm font-bold text-brand">Parent portal</legend>
+                <p class="text-sm text-[#3D3D3D]">Lets linked parents see their child's courses and grades, read-only. Switching it off hides it from every parent at once; nothing is deleted.</p>
+
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                        <input type="radio" name="enabled" value="1" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? 'checked' : '' ?> <?= $disabled ?>>
+                        On
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                        <input type="radio" name="enabled" value="0" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? '' : 'checked' ?> <?= $disabled ?>>
+                        Off
+                    </label>
+                </div>
+            </fieldset>
+
+            <?php if (! $pp['platform']): ?>
+                <?= view('components/lock-note', ['kind' => 'platform', 'text' => 'Switched off by Mentora for your institution. You cannot turn it on.'], ['saveData' => false]) ?>
+            <?php endif; ?>
+
+            <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
+
+            <?php if ($settingsCanEdit): ?>
+                <div class="flex justify-end"><button type="submit" class="<?= $primary ?>">Save parent portal</button></div>
+            <?php endif; ?>
+        </form>
 
     <?php elseif ($settingsTab === 'security'): ?>
 

@@ -105,6 +105,46 @@ class ParentLinkService
             throw PageNotFoundException::forPageNotFound();
         }
 
+        $found   = $this->resolve($institutionId, $text);
+        $skipped = $found['skipped'];
+        $toLink  = [];
+
+        foreach ($found['students'] as $studentId) {
+            $name = $found['names'][$studentId];
+
+            if ($studentId === $parentId) {
+                $skipped[] = ['identifier' => $name, 'reason' => 'is the parent themselves'];
+            } elseif ($db->table('parent_student_links')->where(['institution_id' => $institutionId, 'parent_user_id' => $parentId, 'student_user_id' => $studentId])->countAllResults() > 0) {
+                $skipped[] = ['identifier' => $name, 'reason' => 'is already linked'];
+            } else {
+                $toLink[] = $studentId;
+            }
+        }
+
+        if ($toLink === []) {
+            throw StructureException::field('students', $this->skippedText($skipped, 'Nobody was linked.'));
+        }
+
+        $made = $this->createLinks($institutionId, $parentId, $toLink, $actor);
+
+        return [
+            'linked'   => $made['linked'],
+            'skipped'  => $skipped,
+            'warnings' => $skipped === [] ? [] : [$this->skippedText($skipped, count($skipped) === 1 ? '1 was skipped.' : count($skipped) . ' were skipped.')],
+        ];
+    }
+
+    /**
+     * Finds the students a pasted list names (a student number or an email per
+     * line), without linking anyone. A student named twice counts once. Anyone
+     * who cannot be used is listed with the reason; the rest are returned.
+     *
+     * @return array{students: list<int>, names: array<int, string>, skipped: list<array{identifier: string, reason: string}>}
+     *
+     * @throws StructureException an empty list, or more lines than EnrolmentList::MAX
+     */
+    public function resolve(int $institutionId, string $text): array
+    {
         $names = EnrolmentList::parse($text);
 
         if ($names === []) {
@@ -116,7 +156,7 @@ class ParentLinkService
         }
 
         $skipped = [];
-        $toLink  = [];
+        $found   = [];
 
         foreach ($names as $name) {
             $student = $this->findStudent($institutionId, $name);
@@ -127,26 +167,46 @@ class ParentLinkService
                 continue;
             }
 
-            $studentId = (int) $student['id'];
-
-            if ($studentId === $parentId) {
-                $skipped[] = ['identifier' => $name, 'reason' => 'is the parent themselves'];
-            } elseif ($db->table('parent_student_links')->where(['institution_id' => $institutionId, 'parent_user_id' => $parentId, 'student_user_id' => $studentId])->countAllResults() > 0) {
-                $skipped[] = ['identifier' => $name, 'reason' => 'is already linked'];
-            } else {
-                $toLink[$studentId] = $name;
-            }
+            $found[(int) $student['id']] ??= $name;
         }
 
-        if ($toLink === []) {
-            throw StructureException::field('students', $this->skippedText($skipped, 'Nobody was linked.'));
-        }
+        return ['students' => array_keys($found), 'names' => $found, 'skipped' => $skipped];
+    }
 
-        $now = date('Y-m-d H:i:s');
+    /**
+     * Links the parent to these students, all or none. Each id is checked again
+     * (a student of this institution, not the parent, not already linked), so a
+     * list prepared earlier, such as the one an invitation carries, is safe to
+     * use later: whoever is no longer valid is skipped. One `parent.linked`
+     * audit entry per link, with $audit merged into what it records.
+     *
+     * @param list<int>            $studentIds
+     * @param array<string, mixed> $audit      extra keys for the audit entry (for example how the link came about)
+     *
+     * @return array{linked: int, skipped: list<int>} the ids that were skipped
+     *
+     * @throws StructureException when the links could not be saved (nothing is then changed)
+     */
+    public function createLinks(int $institutionId, int $parentId, array $studentIds, ?User $actor = null, array $audit = []): array
+    {
+        $db      = db_connect();
+        $now     = date('Y-m-d H:i:s');
+        $linked  = 0;
+        $skipped = [];
 
         $db->transStart();
 
-        foreach (array_keys($toLink) as $studentId) {
+        foreach (array_values(array_unique(array_map('intval', $studentIds))) as $studentId) {
+            if (
+                $studentId === $parentId
+                || ! $this->isStudentOf($institutionId, $studentId)
+                || $db->table('parent_student_links')->where(['institution_id' => $institutionId, 'parent_user_id' => $parentId, 'student_user_id' => $studentId])->countAllResults() > 0
+            ) {
+                $skipped[] = $studentId;
+
+                continue;
+            }
+
             $db->table('parent_student_links')->insert([
                 'institution_id'     => $institutionId,
                 'parent_user_id'     => $parentId,
@@ -155,7 +215,9 @@ class ParentLinkService
                 'created_at'         => $now,
             ]);
 
-            $this->audit('parent.linked', $actor, $institutionId, (int) $db->insertID(), null, ['parent_user_id' => $parentId, 'student_user_id' => $studentId]);
+            $this->audit('parent.linked', $actor, $institutionId, (int) $db->insertID(), null, ['parent_user_id' => $parentId, 'student_user_id' => $studentId] + $audit);
+
+            $linked++;
         }
 
         $db->transComplete();
@@ -164,11 +226,19 @@ class ParentLinkService
             throw new StructureException('The students could not be linked. Nothing was changed.');
         }
 
-        return [
-            'linked'   => count($toLink),
-            'skipped'  => $skipped,
-            'warnings' => $skipped === [] ? [] : [$this->skippedText($skipped, count($skipped) === 1 ? '1 was skipped.' : count($skipped) . ' were skipped.')],
-        ];
+        return ['linked' => $linked, 'skipped' => $skipped];
+    }
+
+    /** Whether this id is a student of the institution right now (member, not deleted, holds the student role). */
+    private function isStudentOf(int $institutionId, int $userId): bool
+    {
+        return db_connect()->table('users u')
+            ->join('institution_users iu', 'iu.user_id = u.id')
+            ->join('auth_groups_users g', "g.user_id = u.id AND g.`group` = 'student'", 'inner', false)
+            ->where('iu.institution_id', $institutionId)
+            ->where('u.id', $userId)
+            ->where('u.deleted_at IS NULL', null, false)
+            ->countAllResults() > 0;
     }
 
     /**
