@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Academic\ParentStudentLinkModel;
+use App\Services\Institutions\EnrolmentList;
 use App\Services\Institutions\ParentLinkService;
 use App\Services\Institutions\StructureException;
 use CodeIgniter\Config\Services;
@@ -113,6 +114,88 @@ final class ParentLinkServiceTest extends DatabaseTestCase
 
         $this->assertArrayHasKey('students', $e->errors());
         $this->assertStringContainsString('already linked', $e->errors()['students']);
+        $this->assertSame(1, $this->links());
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Finding the students, and making the links (what an invitation uses)
+    |--------------------------------------------------------------------------
+    */
+
+    public function testResolveFindsStudentsByNumberOrEmailAndCountsAStudentOnce(): void
+    {
+        $ann = $this->student('Ann', '2026-001');
+        $ben = $this->student('Ben');
+
+        $found = $this->service->resolve($this->institution, "2026-001\nben@parents.test, ann@parents.test");
+
+        $this->assertEqualsCanonicalizing([(int) $ann->id, (int) $ben->id], $found['students']);
+        $this->assertSame([], $found['skipped']);
+        $this->assertSame('2026-001', $found['names'][(int) $ann->id], 'named the first way it was written');
+        $this->assertSame(0, $this->links(), 'looking links nothing');
+    }
+
+    public function testResolveNamesWhoCannotBeUsedWithTheReason(): void
+    {
+        $this->student('Ann', '2026-001');
+        $this->student('Zed', '2026-009', $this->other);
+        PeopleFactory::person('instructor', 'Tom', 'Teacher', 'tom@parents.test', $this->institution);
+
+        $found   = $this->service->resolve($this->institution, '2026-001, 2026-009, tom@parents.test, ghost@parents.test');
+        $reasons = array_column($found['skipped'], 'reason', 'identifier');
+
+        $this->assertCount(1, $found['students']);
+        $this->assertStringContainsString('not a student number or email in your institution', $reasons['2026-009']);
+        $this->assertStringContainsString('not a student number or email in your institution', $reasons['ghost@parents.test']);
+        $this->assertStringContainsString('student role', $reasons['tom@parents.test']);
+    }
+
+    public function testResolveRefusesAnEmptyBoxAndTooManyLines(): void
+    {
+        $this->assertArrayHasKey('students', $this->refused(fn () => $this->service->resolve($this->institution, " \n "))->errors());
+
+        $tooMany = implode("\n", array_map(static fn (int $i): string => "n{$i}@parents.test", range(1, EnrolmentList::MAX + 1)));
+
+        $this->assertStringContainsString('smaller groups', $this->refused(fn () => $this->service->resolve($this->institution, $tooMany))->errors()['students']);
+    }
+
+    public function testCreateLinksLinksTheValidStudentsAndAuditsEachWithTheExtraKeys(): void
+    {
+        $ann = $this->student('Ann');
+        $ben = $this->student('Ben');
+
+        $result = $this->service->createLinks($this->institution, (int) $this->parent->id, [(int) $ann->id, (int) $ben->id, (int) $ann->id], $this->actor, ['via' => 'invitation', 'invitation_id' => 77]);
+
+        $this->assertSame(2, $result['linked']);
+        $this->assertSame([], $result['skipped']);
+        $this->assertSame(2, $this->links());
+
+        $entries = db_connect()->table('audit_logs')->where('action', 'parent.linked')->get()->getResultArray();
+
+        $this->assertCount(2, $entries);
+        $this->assertSame((int) $this->actor->id, (int) $entries[0]['actor_user_id']);
+
+        $new = json_decode((string) $entries[0]['new_values'], true);
+        $this->assertSame('invitation', $new['via']);
+        $this->assertSame(77, $new['invitation_id']);
+        $this->assertSame((int) $this->parent->id, $new['parent_user_id']);
+    }
+
+    public function testCreateLinksSkipsWhoIsNoLongerAStudentHereOrIsAlreadyLinked(): void
+    {
+        $ann     = $this->student('Ann');
+        $gone    = $this->student('Gone');
+        $abroad  = $this->student('Abroad', null, $this->other);
+        $teacher = PeopleFactory::person('instructor', 'Tom', 'Teacher', 'tom2@parents.test', $this->institution);
+
+        db_connect()->table('users')->where('id', $gone->id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
+        $this->service->createLinks($this->institution, (int) $this->parent->id, [(int) $ann->id], $this->actor);
+
+        $result = $this->service->createLinks($this->institution, (int) $this->parent->id, [(int) $ann->id, (int) $gone->id, (int) $abroad->id, (int) $teacher->id, (int) $this->parent->id], $this->actor);
+
+        $this->assertSame(0, $result['linked']);
+        $this->assertEqualsCanonicalizing([(int) $ann->id, (int) $gone->id, (int) $abroad->id, (int) $teacher->id, (int) $this->parent->id], $result['skipped']);
         $this->assertSame(1, $this->links());
     }
 

@@ -154,11 +154,15 @@ foreach ($peopleInvitations as $i) {
         }
     }
 
+    // A parent invited with students: say how many will be linked once they accept.
+    $toLink      = $i['role'] === 'parent' && $i['student_ids'] !== null ? count((array) json_decode((string) $i['student_ids'], true)) : 0;
+    $toLinkLabel = $toLink > 0 ? '<span class="block text-xs text-[#646464]" data-students-to-link>' . $toLink . ($toLink === 1 ? ' student' : ' students') . ' to link</span>' : '';
+
     $invitationRows[] = [
         'id'      => $i['id'],
         'label'   => $i['first_name'] . ' ' . $i['last_name'],
         'cells'   => [
-            'name'    => ['html' => '<span class="font-medium">' . esc($i['first_name'] . ' ' . $i['last_name']) . '</span><span class="block text-xs text-[#646464]">' . esc($i['email']) . '</span>'],
+            'name'    => ['html' => '<span class="font-medium">' . esc($i['first_name'] . ' ' . $i['last_name']) . '</span><span class="block text-xs text-[#646464]">' . esc($i['email']) . '</span>' . $toLinkLabel],
             'role'    => $peopleRoleLabels[$i['role']] ?? (string) $i['role'],
             'status'  => ['html' => view('components/status-badge', ['label' => $expired ? 'Expired' : 'Waiting', 'tone' => $expired ? 'warning' : 'info'], ['saveData' => false])],
             'expires' => date('j M Y', strtotime((string) $i['expires_at'])),
@@ -308,7 +312,8 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
 
     <?= view('components/dialog', ['id' => 'person-invite', 'title' => 'Invite a person', 'body' => $form(
         $person()
-        . $field(['name' => 'role', 'label' => 'Role', 'type' => 'select', 'options' => $roleSelect, 'required' => true, 'help' => $seatsText . ' A student invitation uses a seat.']),
+        . $field(['name' => 'role', 'label' => 'Role', 'type' => 'select', 'options' => $roleSelect, 'required' => true, 'help' => $seatsText . ' A student invitation uses a seat.'])
+        . $field(['name' => 'students', 'label' => 'Students to link (optional)', 'type' => 'textarea', 'help' => 'Only for a parent: student numbers or emails, one per line. They are linked when the parent accepts the invitation.']),
         'Send invitation',
     )], ['saveData' => false]) ?>
 

@@ -48,6 +48,9 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
+    // The student's own profile, to read: their details and the parents who can see their progress.
+    $routes->get('profile', 'Students\StudentProfileController::index');
+
     $routes->get('courses', 'Courses\CourseController::index');
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:student']);
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:student']);

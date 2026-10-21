@@ -138,7 +138,12 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Page:** the institution's accounts with the parent role, with their linked students as chips, searchable, 25 per page.
 - **Link students:** paste student numbers or email addresses (one per line or comma-separated). They must be students of the institution; anyone who cannot be linked is skipped and named with the reason, the rest are linked together. The same student can have several parents.
 - **Unlink:** from the chip, with a confirm that says nothing else about either person changes.
-- **Audit:** `parent.linked|unlinked` (target type `parent_link`).
+- **Invite a parent with their students:** the Invite dialog on People has an optional **Students to link** box (student numbers or emails, one per line), for the Parent role only. A parent has no account until they accept, so the list is checked when the invitation is sent and kept on it; the links are made in the same step that makes the account, with the administrator who sent it as the actor.
+  - **Strict at invite:** every name must be a student of this institution. One that is not (a typo, another institution, not a student) stops the invitation: nothing is sent and each unmatched name is shown with its reason on the field.
+  - **At acceptance** a student who has since left or been deleted is skipped (the account is still made, and `invitation.accepted` records how many were linked).
+  - **Sending again** keeps the students; a fresh invitation to the same address replaces the open one and carries the list typed for it. The pending list shows "n students to link".
+  - Naming students for any other role is refused.
+- **Audit:** `parent.linked|unlinked` (target type `parent_link`); a link made through an invitation also records `via: invitation` and the invitation id.
 - **What a linked parent sees:** see "Parent portal" below and `docs/course-access.md`.
 
 ## Parent portal switch

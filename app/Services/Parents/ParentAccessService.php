@@ -57,6 +57,63 @@ class ParentAccessService
         return $children;
     }
 
+    /**
+     * The parents who can reach a student now: linked in the student's
+     * institution, still active, holding the parent role and members of that
+     * institution, with the student still a member of it and not deleted.
+     * Whether the institution's parent portal is on is a separate question
+     * (ParentPortal).
+     *
+     * @return list<array{parent_id: int, institution_id: int}>
+     */
+    public function parentsOf(int $studentId): array
+    {
+        if ($studentId < 1) {
+            return [];
+        }
+
+        $rows = db_connect()->table('parent_student_links l')
+            ->distinct()
+            ->select('l.parent_user_id AS parent_id, l.institution_id')
+            ->join('users p', 'p.id = l.parent_user_id AND p.deleted_at IS NULL AND p.active = 1', 'inner', false)
+            ->join('auth_groups_users g', "g.user_id = p.id AND g.`group` = 'parent'", 'inner', false)
+            ->join('institution_users pi', 'pi.user_id = l.parent_user_id AND pi.institution_id = l.institution_id', 'inner', false)
+            ->join('institution_users si', 'si.user_id = l.student_user_id AND si.institution_id = l.institution_id', 'inner', false)
+            ->join('users s', 's.id = l.student_user_id AND s.deleted_at IS NULL', 'inner', false)
+            ->where('l.student_user_id', $studentId)
+            ->get()->getResultArray();
+
+        return array_map(static fn (array $row): array => ['parent_id' => (int) $row['parent_id'], 'institution_id' => (int) $row['institution_id']], $rows);
+    }
+
+    /**
+     * The names of the parents who can see a student's progress right now (for
+     * the student to read): those of {@see parentsOf()} whose institution has the
+     * parent portal switched on. Names only, in order.
+     *
+     * @return list<string>
+     */
+    public function parentNamesWithAccess(int $studentId): array
+    {
+        $portal = new ParentPortal();
+        $names  = [];
+
+        foreach ($this->parentsOf($studentId) as $parent) {
+            if (! $portal->enabled($parent['institution_id'])) {
+                continue;
+            }
+
+            $profile = db_connect()->table('user_profiles')->select('first_name, last_name')->where('user_id', $parent['parent_id'])->get()->getRowArray() ?? [];
+            $name    = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
+
+            $names[] = $name !== '' ? $name : 'A parent';
+        }
+
+        sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $names;
+    }
+
     public function canViewChild(User $parent, int $studentId): bool
     {
         if ($studentId < 1) {

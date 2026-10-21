@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Services\Parents\ParentAccessService;
+use App\Services\Parents\ParentPortal;
+use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
@@ -29,9 +31,19 @@ final class ParentAccessServiceTest extends DatabaseTestCase
     {
         parent::setUp();
 
+        // The settings service remembers values in memory; a switch a test sets must not outlive it.
+        Services::resetSingle('settings');
+
         $this->institution = PeopleFactory::institution('PAS');
         $this->parent      = PeopleFactory::person('parent', 'Pam', 'Parent', null, $this->institution);
         $this->access      = new ParentAccessService();
+    }
+
+    protected function tearDown(): void
+    {
+        Services::resetSingle('settings');
+
+        parent::tearDown();
     }
 
     private function child(string $first, ?int $institution = null, ?User $parent = null): User
@@ -200,6 +212,70 @@ final class ParentAccessServiceTest extends DatabaseTestCase
 
             $this->assertFalse(ParentAccessService::readsAsStudent($mixed), $role);
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The parents a student has (who can reach them now)
+    |--------------------------------------------------------------------------
+    */
+
+    public function testParentsOfListsOnlyThoseWhoCanReachTheStudentNow(): void
+    {
+        $ann = $this->child('Ann');
+
+        $inactive = PeopleFactory::person('parent', 'Gone', 'Parent', null, $this->institution);
+        $deleted  = PeopleFactory::person('parent', 'Deleted', 'Parent', null, $this->institution);
+        $notAPar  = PeopleFactory::person('instructor', 'Not', 'Parent', null, $this->institution);
+        $left     = PeopleFactory::person('parent', 'Left', 'Parent', null, $this->institution);
+
+        foreach ([$inactive, $deleted, $notAPar, $left] as $person) {
+            $this->link($person, $ann);
+        }
+
+        db_connect()->table('users')->where('id', $inactive->id)->update(['active' => 0]);
+        db_connect()->table('users')->where('id', $deleted->id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('institution_users')->where('user_id', $left->id)->delete();
+
+        $this->assertSame([(int) $this->parent->id], array_column($this->access->parentsOf((int) $ann->id), 'parent_id'));
+    }
+
+    public function testParentsOfIsEmptyOnceTheStudentHasLeftTheInstitution(): void
+    {
+        $ann = $this->child('Ann');
+        db_connect()->table('institution_users')->where('user_id', $ann->id)->delete();
+
+        $this->assertSame([], $this->access->parentsOf((int) $ann->id));
+        $this->assertSame([], $this->access->parentsOf(0));
+    }
+
+    public function testTheNamesAParentCanBeShownByAreSortedAndNothingMore(): void
+    {
+        $ann   = $this->child('Ann');
+        $olga  = PeopleFactory::person('parent', 'Olga', 'Another', 'olga@family.test', $this->institution);
+        $this->link($olga, $ann);
+
+        $names = $this->access->parentNamesWithAccess((int) $ann->id);
+
+        $this->assertSame(['Olga Another', 'Pam Parent'], $names);
+    }
+
+    public function testNoNamesWhileThePortalIsSwitchedOff(): void
+    {
+        $ann = $this->child('Ann');
+        (new ParentPortal())->setInstitutionOn($this->institution, false);
+
+        $this->assertSame([], $this->access->parentNamesWithAccess((int) $ann->id));
+    }
+
+    public function testAnotherStudentsParentsAreNeverListed(): void
+    {
+        $ann = $this->child('Ann');
+        $zed = PeopleFactory::person('student', 'Zed', 'Other', null, $this->institution);
+        $una = PeopleFactory::person('parent', 'Una', 'Other', null, $this->institution);
+        $this->link($una, $zed);
+
+        $this->assertSame(['Pam Parent'], $this->access->parentNamesWithAccess((int) $ann->id));
     }
 
     public function testTheOfferingRowIsGivenForEveryEnrolmentStatusAndOnlyToTheRightParent(): void

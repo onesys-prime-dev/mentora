@@ -75,24 +75,11 @@ class ParentNotifier
      */
     public function parentsOf(int $studentId): array
     {
-        $rows = db_connect()->table('parent_student_links l')
-            ->distinct()
-            ->select('l.parent_user_id AS parent_id, l.institution_id')
-            ->join('users p', 'p.id = l.parent_user_id AND p.deleted_at IS NULL AND p.active = 1', 'inner', false)
-            ->join('auth_groups_users g', "g.user_id = p.id AND g.`group` = 'parent'", 'inner', false)
-            ->join('institution_users pi', 'pi.user_id = l.parent_user_id AND pi.institution_id = l.institution_id', 'inner', false)
-            ->join('institution_users si', 'si.user_id = l.student_user_id AND si.institution_id = l.institution_id', 'inner', false)
-            ->join('users s', 's.id = l.student_user_id AND s.deleted_at IS NULL', 'inner', false)
-            ->where('l.student_user_id', $studentId)
-            ->get()->getResultArray();
-
         $parents = [];
 
-        foreach ($rows as $row) {
-            $institution = (int) $row['institution_id'];
-
-            if ($this->portalOn[$institution] ??= $this->portal->enabled($institution)) {
-                $parents[] = ['parent_id' => (int) $row['parent_id'], 'institution_id' => $institution];
+        foreach ((new ParentAccessService())->parentsOf($studentId) as $parent) {
+            if ($this->portalOn[$parent['institution_id']] ??= $this->portal->enabled($parent['institution_id'])) {
+                $parents[] = $parent;
             }
         }
 

@@ -77,6 +77,13 @@ API call), then `parentchild` (the child must be the parent's, and enrolled in t
 address, in any enrolment status). A course with no grading scheme shows no standing and none is
 created by looking; a child who also holds a staff role has no grade or assessment data read.
 
+**The student can see who their parents are.** `student/profile` (read only, no write route) shows the
+student's name, email and student number and "Parents who can see your progress": the names (never an
+email) of the parents who actually have access now, that is `ParentAccessService::parentsOf` (linked,
+active, a parent, members of the institution) whose institution has the parent portal on. With none,
+or the portal off, it says "No parent can see your progress." The header's "My Profile" opens it (and a
+parent's own profile for a parent).
+
 **The parent's profile** (`parent/profile`) is the parent's own account and the only place a parent can
 change anything: the email choice for each child (`POST parent/profile/notifications`, behind
 `parentportal`) and an emailed password link to their own address (`POST parent/profile/password-link`).
