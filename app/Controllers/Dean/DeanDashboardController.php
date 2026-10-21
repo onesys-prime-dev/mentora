@@ -5,32 +5,42 @@ declare(strict_types=1);
 namespace App\Controllers\Dean;
 
 use App\Controllers\BaseController;
-use App\Services\Courses\DeanAccessService;
+use App\Models\Users\UserProfileModel;
+use App\Services\Courses\DeanDashboardService;
 
 /**
- * The dean's landing page. A dean with no active assignment gets an
- * explanation, not an error and not any data; the real dashboard is built
- * on this page in the dean-dashboard branch.
+ * The dean's home page: the department in numbers, what needs their attention (each item opening the
+ * screen where it is dealt with), what chairpersons have been changing and the announcements they made.
+ * A dean with no active assignment gets an explanation, not an error and not any data. If the numbers
+ * cannot be worked out the page says so and offers to try again, rather than showing nothing.
  */
 class DeanDashboardController extends BaseController
 {
     public function index(): string
     {
-        $department = (new DeanAccessService())->departmentFor(auth()->user());
+        $user = auth()->user();
 
-        if ($department === null) {
-            return view('pages/dean/no-assignment', [
-                'title' => 'Dashboard',
-                'page'  => 'dashboard',
-                'user'  => auth()->user(),
-            ]);
+        $loadError = false;
+        $overview  = null;
+
+        try {
+            $overview = (new DeanDashboardService())->overview($user);
+        } catch (\Throwable $e) {
+            log_message('error', 'Dean dashboard failed to load: ' . $e->getMessage());
+            $loadError = true;
+        }
+
+        if ($overview === null && ! $loadError) {
+            return view('pages/dean/no-assignment', ['title' => 'Dashboard', 'page' => 'dashboard', 'user' => $user]);
         }
 
         return view('pages/dean/dashboard', [
-            'title'      => 'Dashboard',
-            'page'       => 'dashboard',
-            'user'       => auth()->user(),
-            'department' => db_connect()->table('departments')->select('id, name')->where('id', (int) $department['department_id'])->get()->getRowArray() ?? ['name' => 'Your department'],
+            'title'     => 'Dashboard',
+            'page'      => 'dashboard',
+            'user'      => $user,
+            'overview'  => $overview,
+            'profile'   => (new UserProfileModel())->retrieveUserProfile($user) ?? [],
+            'loadError' => $loadError,
         ]);
     }
 }

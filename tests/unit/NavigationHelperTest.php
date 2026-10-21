@@ -42,12 +42,18 @@ final class NavigationHelperTest extends CIUnitTestCase
         $this->assertSame('Requests', array_column(global_apps('instructor'), 'label', 'key')['follow-ups']);
     }
 
+    public function testAnnouncementsLeadToTheOneListForTheRolesThatHaveIt(): void
+    {
+        foreach (['student', 'instructor', 'chairperson', 'dean'] as $role) {
+            $this->assertSame(site_url($role . '/announcements'), array_column(global_apps($role), 'url', 'key')['announcements'], $role);
+        }
+    }
+
     public function testPagesThatAreNotBuiltYetHaveNoUrl(): void
     {
         $apps = array_column(global_apps('student'), 'url', 'key');
 
         $this->assertNull($apps['grades']);
-        $this->assertNull($apps['announcements']);
         $this->assertNull($apps['inbox']);
         $this->assertNotNull($apps['courses']);
     }
