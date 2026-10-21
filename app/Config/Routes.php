@@ -45,6 +45,8 @@ $routes->post('notifications/read', 'NotificationController::read', ['filter' =>
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
 
 $routes->group('student', ['filter' => ['role:student', 'readonly']], function ($routes) {
+    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    $routes->get('announcements', 'Announcements\AnnouncementsController::index');
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
@@ -113,6 +115,8 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
 });
 
 $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], function ($routes) {
+    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    $routes->get('announcements', 'Announcements\AnnouncementsController::index');
 
     // Follow-up requests: the list, a new request, the reply thread and closing.
     $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
@@ -333,6 +337,12 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
     $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
 
+    // The dean's announcements to the department, a sub-department or a program (department.announce).
+    $routes->get('announcements', 'Dean\DepartmentAnnouncementsController::index', ['filter' => 'permission:department.announce']);
+    $routes->post('announcements', 'Dean\DepartmentAnnouncementsController::store', ['filter' => 'permission:department.announce']);
+    $routes->post('announcements/(:num)', 'Dean\DepartmentAnnouncementsController::update/$1', ['filter' => 'permission:department.announce']);
+    $routes->post('announcements/(:num)/end', 'Dean\DepartmentAnnouncementsController::end/$1', ['filter' => 'permission:department.announce']);
+
     // What each instructor of the department carries in a term (view only), and one instructor's sections.
     $routes->get('teaching-load', 'Dean\TeachingLoadController::index');
     $routes->get('teaching-load/(:num)', 'Dean\TeachingLoadController::show/$1');
@@ -420,6 +430,8 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
 // instead of InstructorAssignmentModel. Calendar and schedule are the
 // chairperson's own too, over the program's courses (getCourseOfferings).
 $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], function ($routes) {
+    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    $routes->get('announcements', 'Announcements\AnnouncementsController::index');
     $routes->get('/', 'Dashboard\DashboardController::index');
 
     // Grade-override requests of the sub-departments they chair: endorse, or send back with a comment.

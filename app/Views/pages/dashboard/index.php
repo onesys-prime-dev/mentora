@@ -134,6 +134,10 @@ $cells = $layout['cells'];
 
     </div>
 
+    <?php if (in_array($userRole, ['student', 'instructor', 'chairperson'], true)): ?>
+        <?= $this->include('pages/dashboard/partials/department-announcements') ?>
+    <?php endif; ?>
+
     <!--
         12-column dashboard grid, two equal rows.
 

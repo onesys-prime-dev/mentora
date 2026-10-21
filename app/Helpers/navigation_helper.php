@@ -63,6 +63,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'approvals', 'label' => 'Approvals', 'icon' => 'tasks', 'url' => site_url('dean/approvals')],
                 ['key' => 'signoff', 'label' => 'Sign-off', 'icon' => 'check', 'url' => site_url('dean/signoff')],
                 ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('dean/follow-ups')],
+                ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => site_url('dean/announcements')],
                 ['key' => 'teaching-load', 'label' => 'Teaching load', 'icon' => 'modules', 'url' => site_url('dean/teaching-load')],
                 ['key' => 'chairperson-review', 'label' => 'Chairperson review', 'icon' => 'tasks', 'url' => site_url('dean/chairperson-review')],
                 ['key' => 'monitor-department', 'label' => 'Monitor Department', 'icon' => 'score', 'url' => site_url('dean/monitor-department')],
@@ -104,7 +105,7 @@ if (! function_exists('global_apps')) {
             ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],
             ['key' => 'schedule',      'label' => 'Schedule',      'icon' => 'clock',        'url' => site_url($role . '/schedule')],
             ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
-            ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => null],
+            ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => in_array($role, ['student', 'instructor', 'chairperson'], true) ? site_url($role . '/announcements') : null],
             ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
         ];
 
