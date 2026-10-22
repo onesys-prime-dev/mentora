@@ -53,8 +53,8 @@ use Throwable;
  * OfferingService), so every rule of those holds. The SIS wins: what it
  * lists replaces what is there (a dean it names replaces the department's
  * current one). What it stops listing is ended, but only what the SIS itself
- * supplied (sis_staff_assignments): an assignment made by hand is never
- * touched, and nothing is ended when the file had rows that could not be
+ * supplied (sis_staff_assignments), counted as "ended" and not as an update:
+ * an assignment made by hand is never touched, and nothing is ended when the file had rows that could not be
  * read, because what is "no longer listed" cannot then be known. Instructors
  * are only ended in the active term; past terms stay as they were. A section
  * the SIS says someone teaches is created in the active term if it is not
@@ -73,7 +73,7 @@ class SisImporter
 
     private DateTimeImmutable $now;
 
-    /** @var array<string, array{created: int, updated: int, skipped: int, failed: int}> */
+    /** @var array<string, array{created: int, updated: int, skipped: int, failed: int, ended?: int}> */
     private array $counts = [];
 
     /** @var list<array{dataset: string, item: string, reason: string}> */
@@ -155,7 +155,7 @@ class SisImporter
 
         try {
             foreach ($batches as $dataset => $batch) {
-                $this->counts[$dataset] = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0];
+                $this->counts[$dataset] = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0] + ($dataset === 'staff_assignments' ? ['ended' => 0] : []);
 
                 foreach ($batch->rejected as $rejected) {
                     $this->fail($dataset, "row {$rejected['row']}", $rejected['reason']);
@@ -732,12 +732,12 @@ class SisImporter
             if ($role === SisStaffAssignments::DEAN) {
                 if ($db->table('dean_assignments')->where(['id' => $localId, 'status' => 'active'])->countAllResults() > 0) {
                     (new DeanAssignmentService())->end($this->institutionId, $localId, $this->actor, true);
-                    $this->counts[$dataset]['updated']++;
+                    $this->counts[$dataset]['ended']++;
                 }
             } elseif ($role === SisStaffAssignments::CHAIRPERSON) {
                 if ($db->table('chairperson_assignments')->where(['id' => $localId, 'status' => 'active'])->countAllResults() > 0) {
                     (new ChairAssignmentService())->revoke($this->institutionId, $localId, $this->actor, true);
-                    $this->counts[$dataset]['updated']++;
+                    $this->counts[$dataset]['ended']++;
                 }
             } else {
                 $assignment = $db->table('instructor_assignments ia')
@@ -753,7 +753,7 @@ class SisImporter
 
                 if ($assignment !== null) {
                     (new OfferingService())->unassignInstructor($this->institutionId, $localId, $this->actor, true);
-                    $this->counts[$dataset]['updated']++;
+                    $this->counts[$dataset]['ended']++;
                 }
             }
 
@@ -897,9 +897,11 @@ class SisImporter
 
     private function summary(bool $dryRun): string
     {
-        $totals = (new SisImportResult(0, true, $dryRun, $this->counts, [], ''))->totals();
+        $result = new SisImportResult(0, true, $dryRun, $this->counts, [], '');
+        $totals = $result->totals();
+        $ended  = $result->ended() > 0 ? ", ended {$result->ended()}" : '';
 
-        return ($dryRun ? 'Preview, nothing was written: ' : '') . "created {$totals['created']}, updated {$totals['updated']}, skipped {$totals['skipped']}, failed {$totals['failed']}.";
+        return ($dryRun ? 'Preview, nothing was written: ' : '') . "created {$totals['created']}, updated {$totals['updated']}, skipped {$totals['skipped']}{$ended}, failed {$totals['failed']}.";
     }
 
     private function details(SisImportResult $result): array

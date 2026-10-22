@@ -83,12 +83,21 @@ $labels = [
         $totals = $uploadKept['totals'];
         $names  = ['created' => 'Will be created', 'updated' => 'Will be updated', 'skipped' => 'Already as uploaded', 'failed' => 'Refused'];
         $tones  = ['created' => 'success', 'updated' => 'info', 'skipped' => 'neutral', 'failed' => $totals['failed'] > 0 ? 'danger' : 'neutral'];
-        $apply  = $totals['created'] + $totals['updated'];
+        $ended  = (int) ($totals['ended'] ?? 0);
+
+        // A card for what would be ended only when something would be: it is not a change to a record but somebody
+        // losing a job (a dean, a chairperson, an instructor the SIS-style file no longer lists), so it stands apart.
+        if ($ended > 0) {
+            $names['ended'] = 'Will be ended';
+            $tones['ended'] = 'warning';
+        }
+
+        $apply = $totals['created'] + $totals['updated'] + $ended;
         ?>
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-upload-totals>
+        <div class="grid grid-cols-2 gap-4 <?= $ended > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4' ?>" data-upload-totals>
             <?php foreach ($names as $key => $label): ?>
-                <?= view('components/metric-card', ['label' => $label, 'value' => (string) $totals[$key], 'icon' => $key === 'failed' ? 'warning' : 'info', 'tone' => $tones[$key] === 'danger' ? 'danger' : ($tones[$key] === 'success' ? 'success' : 'neutral')], ['saveData' => false]) ?>
+                <?= view('components/metric-card', ['label' => $label, 'value' => (string) $totals[$key], 'icon' => $key === 'failed' ? 'warning' : 'info', 'tone' => in_array($tones[$key], ['danger', 'success', 'warning'], true) ? $tones[$key] : 'neutral'], ['saveData' => false]) ?>
             <?php endforeach; ?>
         </div>
 
@@ -98,7 +107,7 @@ $labels = [
                 <?php foreach ($uploadKept['datasets'] as $dataset => $counts): ?>
                     <li class="flex flex-wrap items-center justify-between gap-2" data-upload-file="<?= esc($dataset) ?>">
                         <span class="font-medium"><?= esc($dataset) ?>.csv</span>
-                        <span class="text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged · <?= esc((string) $counts['failed']) ?> refused</span>
+                        <span class="text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged<?= isset($counts['ended']) ? ' · ' . esc((string) $counts['ended']) . ' to end' : '' ?> · <?= esc((string) $counts['failed']) ?> refused</span>
                     </li>
                 <?php endforeach; ?>
             </ul>

@@ -100,10 +100,15 @@ final class SisStaffImportTest extends DatabaseTestCase
         return $this->run_();
     }
 
-    /** @return array{created: int, updated: int, skipped: int, failed: int} */
+    /** The counts of the four things a row can come to (what a run ends is counted apart: see ended()). @return array{created: int, updated: int, skipped: int, failed: int} */
     private function counts(SisImportResult $result): array
     {
-        return $result->datasets['staff_assignments'];
+        return array_diff_key($result->datasets['staff_assignments'], ['ended' => 0]);
+    }
+
+    private function ended(SisImportResult $result): int
+    {
+        return $result->datasets['staff_assignments']['ended'];
     }
 
     private function person(string $email): int
@@ -421,7 +426,10 @@ final class SisStaffImportTest extends DatabaseTestCase
 
         $result = $this->sync();
 
-        $this->assertSame(['created' => 0, 'updated' => 3, 'skipped' => 0, 'failed' => 0], $this->counts($result), 'three ended');
+        $this->assertSame(['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0], $this->counts($result), 'nothing was changed in place');
+        $this->assertSame(3, $this->ended($result), 'three were ended, and that is said on its own, not as three updates');
+        $this->assertSame(3, $result->ended());
+        $this->assertStringContainsString('ended 3', $result->message);
 
         $dean = $this->deans();
         $this->assertCount(1, $dean, 'the dean row stays');
@@ -436,6 +444,28 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertContains('structure.dean_ended', $this->actions());
         $this->assertContains('structure.chairperson_revoked', $this->actions());
         $this->assertSame(0, $this->tracked(), 'nothing is tracked once it is over');
+    }
+
+    public function testARunThatEndsNothingSaysNothingAboutEnding(): void
+    {
+        $result = $this->sync("dean,I1,{$this->deptCode()},,,");
+
+        $this->assertSame(0, $this->ended($result));
+        $this->assertSame(0, $result->ended());
+        $this->assertStringNotContainsString('ended', $result->message);
+        $this->assertSame(['created' => 1, 'updated' => 0, 'skipped' => 0, 'failed' => 0], $result->totals(), 'the four totals keep their shape');
+    }
+
+    public function testAPreviewSaysWhatWouldBeEnded(): void
+    {
+        $this->sync("dean,I1,{$this->deptCode()},,,");
+        SisFixture::drop($this->institution, 'staff_assignments', self::HEADER);
+
+        $preview = $this->run_(true);
+
+        $this->assertSame(1, $this->ended($preview));
+        $this->assertStringStartsWith('Preview, nothing was written', $preview->message);
+        $this->assertStringContainsString('ended 1', $preview->message);
     }
 
     public function testAnAssignmentListedAgainAfterItEndedIsAssignedAgain(): void
@@ -464,7 +494,8 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->sync("chairperson,I2,,{$this->subCode()},,", 'instructor,I2,,,C1,A');
         $result = $this->sync();
 
-        $this->assertSame(2, $this->counts($result)['updated'], 'only the two the SIS itself supplied are ended');
+        $this->assertSame(2, $this->ended($result), 'only the two the SIS itself supplied are ended');
+        $this->assertSame(0, $this->counts($result)['updated']);
         $this->assertCount(1, $this->chairs(), 'the chairperson made by hand stays');
         $this->assertSame($this->ida(), (int) $this->chairs()[0]['chairperson_user_id']);
         $this->assertSame([$handTeacher], $this->teachers($offering), 'so does the instructor added by hand');
@@ -480,9 +511,10 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertSame(['created' => 0, 'updated' => 1, 'skipped' => 0, 'failed' => 0], $this->counts($first), 'adopted: it is now the SIS that supplies it');
         $this->assertSame(1, $this->tracked('chairperson'));
 
-        $this->sync();
+        $second = $this->sync();
 
         $this->assertSame([], $this->chairs());
+        $this->assertSame(1, $this->ended($second));
     }
 
     private function giveChair(int $userId): int

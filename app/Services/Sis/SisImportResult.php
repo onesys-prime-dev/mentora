@@ -8,7 +8,8 @@ namespace App\Services\Sis;
 final class SisImportResult
 {
     /**
-     * @param array<string, array{created: int, updated: int, skipped: int, failed: int}> $datasets keyed by dataset
+     * @param array<string, array{created: int, updated: int, skipped: int, failed: int, ended?: int}> $datasets keyed by dataset;
+     *        `ended` is only there for a dataset that can end things (staff_assignments): an assignment the SIS no longer lists
      * @param list<array{dataset: string, item: string, reason: string}>                  $issues   rows that were not imported
      */
     public function __construct(
@@ -19,6 +20,21 @@ final class SisImportResult
         public readonly array $issues,
         public readonly string $message,
     ) {
+    }
+
+    /**
+     * How many assignments this run ends (or, for a preview, would end): what the SIS no longer lists. Counted on its
+     * own, not as an update, so nobody reads "3 updated" when it is three people losing a job.
+     */
+    public function ended(): int
+    {
+        $sum = 0;
+
+        foreach ($this->datasets as $counts) {
+            $sum += $counts['ended'] ?? 0;
+        }
+
+        return $sum;
     }
 
     /** @return array{created: int, updated: int, skipped: int, failed: int} */

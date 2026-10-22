@@ -115,7 +115,7 @@ final class SisImporterRollbackTest extends DatabaseTestCase
         $preview = (new SisImporter())->run($this->institution, $this->actor, true);
 
         $this->assertTrue($preview->ok);
-        $this->assertSame(['created' => 3, 'updated' => 0, 'skipped' => 0, 'failed' => 0], $preview->datasets['staff_assignments']);
+        $this->assertSame(['created' => 3, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'ended' => 0], $preview->datasets['staff_assignments']);
         $this->assertSame($before, $count(), 'a preview must assign nothing, create no section, grant no role and track nothing');
 
         $real = (new SisImporter())->run($this->institution, $this->actor, false);
