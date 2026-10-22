@@ -113,7 +113,9 @@ class CsvUploadController extends BaseController
 
         return redirect()->to('institution/people')->with(
             'message',
-            "The upload was applied: {$totals['created']} created, {$totals['updated']} updated, {$totals['skipped']} unchanged" . ($totals['failed'] > 0 ? ", {$totals['failed']} refused." : '.'),
+            "The upload was applied: {$totals['created']} created, {$totals['updated']} updated, {$totals['skipped']} unchanged"
+                . ($result->ended() > 0 ? ", {$result->ended()} ended" : '')
+                . ($totals['failed'] > 0 ? ", {$totals['failed']} refused." : '.'),
         );
     }
 

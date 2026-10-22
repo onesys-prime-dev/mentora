@@ -6,6 +6,7 @@
  * @var array<string, int>         $structureCounts
  * @var bool                       $structureCanEdit
  * @var array<int, list<array<string, mixed>>> $structureChairs     active chairpersons by sub-department id
+ * @var array<int, true>                        $structureSisChairs  chairperson assignments the SIS supplies (not editable here)
  * @var list<array<string, mixed>> $structureCandidates people who can be assigned
  */
 $base    = 'institution/structure';
@@ -185,7 +186,9 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                             <?php foreach ($chairs as $chair): ?>
                                 <span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1" data-chair="<?= esc((string) $chair['id']) ?>">
                                     <?= esc($chair['name']) ?>
-                                    <?php if ($structureCanEdit): ?>
+                                    <?php if (isset($structureSisChairs[(int) $chair['id']])): ?>
+                                        <span class="inline-flex items-center gap-1 text-xs text-[#646464]" data-sis-managed title="Managed by your student information system. Change it there; the next sync brings it here."><?= icon('lock', 'h-3 w-3') ?>From the SIS</span>
+                                    <?php elseif ($structureCanEdit): ?>
                                         <button type="button" class="rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
                                             aria-label="Remove <?= esc($chair['name']) ?> as chairperson"
                                             data-dialog-open="structure-confirm"

@@ -135,7 +135,7 @@ class CsvUploadService
     /**
      * What a kept preview found.
      *
-     * @return array{datasets: array<string, array<string, int>>, issues: list<array<string, string>>, message: string, files: list<string>, totals: array{created: int, updated: int, skipped: int, failed: int}}
+     * @return array{datasets: array<string, array<string, int>>, issues: list<array<string, string>>, message: string, files: list<string>, totals: array{created: int, updated: int, skipped: int, failed: int, ended: int}}
      *
      * @throws PageNotFoundException when the token is not this institution's, or has expired
      */
@@ -148,11 +148,12 @@ class CsvUploadService
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0];
+        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'ended' => 0];
 
         foreach ($data['datasets'] as $counts) {
             foreach (array_keys($totals) as $key) {
-                $totals[$key] += (int) $counts[$key];
+                // Only a dataset that can end things (staff assignments) has an "ended" count.
+                $totals[$key] += (int) ($counts[$key] ?? 0);
             }
         }
 

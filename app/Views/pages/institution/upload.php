@@ -19,6 +19,7 @@ $labels = [
     'instructors' => ['Instructors', 'external_id, email, first_name, last_name.'],
     'courses'     => ['Courses', 'external_id, course_code, course_title; units and program_code are optional.'],
     'enrollments' => ['Enrolments', 'course_external_id, student_external_id; section and status are optional.'],
+    'staff_assignments' => ['Staff assignments', 'role (dean, chairperson or instructor), person_external_id, and what they lead or teach: department_code for a dean, sub_department_code for a chairperson, course_external_id (and section) for an instructor. People and courses must be known already or be in the same upload. Whoever is no longer listed, among those a file like this assigned before, is ended.'],
 ];
 ?>
 
@@ -31,7 +32,7 @@ $labels = [
     <?= view('components/page-head', [
         'title'       => 'Upload from CSV',
         'icon'        => 'user',
-        'description' => 'Add many students, instructors, courses and enrolments at once from spreadsheet files.',
+        'description' => 'Add many students, instructors, courses, enrolments and staff assignments at once from spreadsheet files.',
         'backUrl'     => site_url('institution/people'),
         'backLabel'   => 'Back to people',
     ], ['saveData' => false]) ?>
@@ -56,7 +57,7 @@ $labels = [
         <form method="post" action="<?= esc(site_url($base)) ?>" enctype="multipart/form-data" class="flex flex-col gap-5 rounded-2xl bg-white p-6 shadow-sm" data-upload-form>
             <?= csrf_field() ?>
 
-            <p class="text-sm text-[#3D3D3D]">Choose the files you have; none is required, but at least one is. People and courses go in first, then enrolments, so a file of enrolments can refer to people and courses in the same upload. Nothing is saved until you have looked at the preview.</p>
+            <p class="text-sm text-[#3D3D3D]">Choose the files you have; none is required, but at least one is. People and courses go in first, then enrolments and staff assignments, so those files can refer to people and courses in the same upload. Nothing is saved until you have looked at the preview.</p>
 
             <?php foreach ($uploadDatasets as $dataset): ?>
                 <div class="flex flex-col gap-1" data-field="<?= esc($dataset) ?>">
@@ -82,12 +83,21 @@ $labels = [
         $totals = $uploadKept['totals'];
         $names  = ['created' => 'Will be created', 'updated' => 'Will be updated', 'skipped' => 'Already as uploaded', 'failed' => 'Refused'];
         $tones  = ['created' => 'success', 'updated' => 'info', 'skipped' => 'neutral', 'failed' => $totals['failed'] > 0 ? 'danger' : 'neutral'];
-        $apply  = $totals['created'] + $totals['updated'];
+        $ended  = (int) ($totals['ended'] ?? 0);
+
+        // A card for what would be ended only when something would be: it is not a change to a record but somebody
+        // losing a job (a dean, a chairperson, an instructor the SIS-style file no longer lists), so it stands apart.
+        if ($ended > 0) {
+            $names['ended'] = 'Will be ended';
+            $tones['ended'] = 'warning';
+        }
+
+        $apply = $totals['created'] + $totals['updated'] + $ended;
         ?>
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-upload-totals>
+        <div class="grid grid-cols-2 gap-4 <?= $ended > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4' ?>" data-upload-totals>
             <?php foreach ($names as $key => $label): ?>
-                <?= view('components/metric-card', ['label' => $label, 'value' => (string) $totals[$key], 'icon' => $key === 'failed' ? 'warning' : 'info', 'tone' => $tones[$key] === 'danger' ? 'danger' : ($tones[$key] === 'success' ? 'success' : 'neutral')], ['saveData' => false]) ?>
+                <?= view('components/metric-card', ['label' => $label, 'value' => (string) $totals[$key], 'icon' => $key === 'failed' ? 'warning' : 'info', 'tone' => in_array($tones[$key], ['danger', 'success', 'warning'], true) ? $tones[$key] : 'neutral'], ['saveData' => false]) ?>
             <?php endforeach; ?>
         </div>
 
@@ -97,7 +107,7 @@ $labels = [
                 <?php foreach ($uploadKept['datasets'] as $dataset => $counts): ?>
                     <li class="flex flex-wrap items-center justify-between gap-2" data-upload-file="<?= esc($dataset) ?>">
                         <span class="font-medium"><?= esc($dataset) ?>.csv</span>
-                        <span class="text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged · <?= esc((string) $counts['failed']) ?> refused</span>
+                        <span class="text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged<?= isset($counts['ended']) ? ' · ' . esc((string) $counts['ended']) . ' to end' : '' ?> · <?= esc((string) $counts['failed']) ?> refused</span>
                     </li>
                 <?php endforeach; ?>
             </ul>
