@@ -10,6 +10,7 @@
  * @var array<string, mixed>       $offeringChoices      terms and programs for the filters
  * @var array<string, mixed>       $offeringOptions      courses and terms the add form can use
  * @var list<array<string, mixed>> $offeringInstructors  people who can be assigned
+ * @var array<int, true>             $offeringSisInstructors instructor assignments the SIS supplies (not editable here)
  * @var bool                       $offeringCanEdit
  */
 $base    = 'institution/offerings';
@@ -47,7 +48,9 @@ foreach ($offeringRows as $o) {
     foreach ($o['instructors'] as $i) {
         $chips .= '<span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1 text-xs" data-instructor="' . esc((string) $i['assignment_id']) . '">' . esc($i['name']);
 
-        if ($offeringCanEdit && $open) {
+        if (isset($offeringSisInstructors[(int) $i['assignment_id']])) {
+            $chips .= ' <span class="inline-flex items-center gap-1 text-[#646464]" data-sis-managed title="Managed by your student information system. Change it there; the next sync brings it here.">' . icon('lock', 'h-3 w-3') . 'From the SIS</span>';
+        } elseif ($offeringCanEdit && $open) {
             $chips .= ' <button type="button" class="rounded font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
                 . ' aria-label="Remove ' . esc($i['name']) . ' from ' . esc($o['course_code'] . ' ' . $o['section_code']) . '"'
                 . ' data-dialog-open="offering-confirm"'

@@ -6,6 +6,10 @@ namespace App\Services\Sis;
 
 use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
+use App\Services\Institutions\ChairAssignmentService;
+use App\Services\Institutions\DeanAssignmentService;
+use App\Services\Institutions\OfferingService;
+use App\Services\Institutions\StructureException;
 use App\Services\Flags\FeatureFlags;
 use App\Services\Notifications\NotificationTriggers;
 use App\Services\Subscriptions\PlanLimits;
@@ -43,6 +47,19 @@ use Throwable;
  * Enrolments go into the institution's active term (the latest one, if
  * several), in the section the SIS names ("A" when it names none).
  *
+ * Staff assignments (staff_assignments.csv) come last, since they refer to
+ * people, courses and the active term. They go through the same services
+ * the screens use (DeanAssignmentService, ChairAssignmentService,
+ * OfferingService), so every rule of those holds. The SIS wins: what it
+ * lists replaces what is there (a dean it names replaces the department's
+ * current one). What it stops listing is ended, but only what the SIS itself
+ * supplied (sis_staff_assignments): an assignment made by hand is never
+ * touched, and nothing is ended when the file had rows that could not be
+ * read, because what is "no longer listed" cannot then be known. Instructors
+ * are only ended in the active term; past terms stay as they were. A section
+ * the SIS says someone teaches is created in the active term if it is not
+ * there yet, as enrolments do.
+ *
  * Not safe to call twice at once on one instance (it keeps run counters).
  */
 class SisImporter
@@ -66,6 +83,8 @@ class SisImporter
 
     private bool $termLooked = false;
 
+    private ?User $actor = null;
+
     public function __construct(
         private readonly ?SisConnectionService $connections = null,
         private readonly ?SisRunLog $runs = null,
@@ -83,6 +102,7 @@ class SisImporter
         $this->issues        = [];
         $this->termId        = null;
         $this->termLooked    = false;
+        $this->actor         = $actor;
 
         $institution = (new InstitutionModel())->find($institutionId) ?? throw new InvalidArgumentException('That institution does not exist.');
         $connections = $this->connections ?? new SisConnectionService();
@@ -154,6 +174,10 @@ class SisImporter
 
             if (isset($batches['enrollments'])) {
                 $this->enrollments($batches['enrollments']);
+            }
+
+            if (isset($batches['staff_assignments'])) {
+                $this->staffAssignments($batches['staff_assignments']);
             }
 
             $result = new SisImportResult($runId, true, $dryRun, $this->counts, $this->issues, $this->summary($dryRun));
@@ -450,19 +474,7 @@ class SisImporter
                 continue;
             }
 
-            $offering = $db->table('course_offerings')->where(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $m['section']])->get()->getRowArray();
-
-            if ($offering === null) {
-                $stamp = $this->stamp();
-
-                if (! $db->table('course_offerings')->insert(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $m['section'], 'status' => 'active', 'created_at' => $stamp, 'updated_at' => $stamp])) {
-                    throw new RuntimeException('The course offering could not be created.');
-                }
-
-                $offeringId = (int) $db->insertID();
-            } else {
-                $offeringId = (int) $offering['id'];
-            }
+            $offeringId = $this->offeringFor($courseId, $termId, $m['section']);
 
             $existing = $db->table('enrollments')->where(['offering_id' => $offeringId, 'student_user_id' => $studentId])->get()->getRowArray();
 
@@ -481,6 +493,293 @@ class SisImporter
                 $this->counts['enrollments']['updated']++;
             }
         }
+    }
+
+    /** The section of a course in a term, created when it is not there yet. */
+    private function offeringFor(int $courseId, int $termId, string $section): int
+    {
+        $db       = db_connect();
+        $offering = $db->table('course_offerings')->where(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $section])->get()->getRowArray();
+
+        if ($offering !== null) {
+            return (int) $offering['id'];
+        }
+
+        $stamp = $this->stamp();
+
+        if (! $db->table('course_offerings')->insert(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $section, 'status' => 'active', 'created_at' => $stamp, 'updated_at' => $stamp])) {
+            throw new RuntimeException('The course offering could not be created.');
+        }
+
+        return (int) $db->insertID();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Staff assignments
+    |--------------------------------------------------------------------------
+    */
+
+    private function staffAssignments(SisBatch $batch): void
+    {
+        $tracker = new SisStaffAssignments();
+        $dataset = 'staff_assignments';
+
+        /** @var array<string, true> $listed every row the SIS lists whose person and target were found */
+        $listed = [];
+        /** @var array<int, int> $deanOfDepartment department => the person this file made its dean */
+        $deanOfDepartment = [];
+        /** @var array<int, int> $deanedBy person => the department this file made them dean of */
+        $deanedBy = [];
+
+        foreach ($batch->records as $i => $record) {
+            $m    = SisMapper::staffAssignment($record);
+            $item = "{$m['person_external_id']} as {$m['role']} (row " . ($batch->rows[$i] ?? '?') . ')';
+
+            $personId = $this->linked('person', $m['person_external_id']);
+
+            if ($personId === null || ! $this->isMember($personId)) {
+                $this->fail($dataset, $item, "{$m['person_external_id']} is not a known person; list them in students.csv or instructors.csv.");
+
+                continue;
+            }
+
+            // Before anything is created for the row (an instructor's section), so a refused row leaves nothing behind.
+            if ($m['role'] === SisStaffAssignments::INSTRUCTOR && ! $this->hasRole($personId, 'instructor')) {
+                $this->fail($dataset, $item, 'The person does not hold the instructor role. List them in instructors.csv.');
+
+                continue;
+            }
+
+            try {
+                $targetId = $this->staffTarget($m, $item);
+
+                if ($targetId === null) {
+                    continue;
+                }
+
+                $key = "{$m['role']}|{$personId}|{$targetId}";
+
+                if (isset($listed[$key])) {
+                    $this->fail($dataset, $item, 'The same assignment is listed more than once.');
+
+                    continue;
+                }
+
+                $listed[$key] = true;
+
+                if ($m['role'] === SisStaffAssignments::DEAN) {
+                    if (isset($deanOfDepartment[$targetId]) && $deanOfDepartment[$targetId] !== $personId) {
+                        $this->fail($dataset, $item, 'The department already has a dean in this file; a department has one dean.');
+
+                        continue;
+                    }
+
+                    if (isset($deanedBy[$personId]) && $deanedBy[$personId] !== $targetId) {
+                        $this->fail($dataset, $item, 'The person is already the dean of another department in this file; a person is dean of one department.');
+
+                        continue;
+                    }
+
+                    $deanOfDepartment[$targetId] = $personId;
+                    $deanedBy[$personId]         = $targetId;
+                }
+
+                $this->applyStaff($tracker, $dataset, $item, $m['role'], $personId, $targetId);
+            } catch (StructureException $e) {
+                $this->fail($dataset, $item, $e->getMessage());
+            }
+        }
+
+        // What the SIS no longer lists ends, but only if the whole file could be read: a row that could not be
+        // read might have been the one that kept an assignment listed.
+        if ($batch->rejected !== []) {
+            $this->issues[] = ['dataset' => $dataset, 'item' => 'the whole file', 'reason' => 'Nothing was ended, because ' . count($batch->rejected) . ' row(s) of this file could not be read, so what the SIS no longer lists cannot be known.'];
+
+            return;
+        }
+
+        $this->endUnlistedStaff($tracker, $dataset, $listed);
+    }
+
+    /**
+     * The department, sub-department or offering the row names (the offering is created when it is not there yet),
+     * or null after failing the row with the reason.
+     *
+     * @param array{role: string, person_external_id: string, target: string, section: string} $m
+     */
+    private function staffTarget(array $m, string $item): ?int
+    {
+        $dataset = 'staff_assignments';
+        $db      = db_connect();
+
+        if ($m['role'] === SisStaffAssignments::DEAN) {
+            $row = $db->table('departments')->select('id')->where(['institution_id' => $this->institutionId, 'code' => $m['target']])->get()->getRowArray();
+
+            if ($row === null) {
+                $this->fail($dataset, $item, "department_code \"{$m['target']}\" is not a department of this institution.");
+
+                return null;
+            }
+
+            return (int) $row['id'];
+        }
+
+        if ($m['role'] === SisStaffAssignments::CHAIRPERSON) {
+            $rows = $db->table('sub_departments sd')
+                ->select('sd.id')
+                ->join('departments d', 'd.id = sd.department_id')
+                ->where(['d.institution_id' => $this->institutionId, 'sd.code' => $m['target']])
+                ->get()->getResultArray();
+
+            if ($rows === []) {
+                $this->fail($dataset, $item, "sub_department_code \"{$m['target']}\" is not a sub-department of this institution.");
+
+                return null;
+            }
+
+            if (count($rows) > 1) {
+                $this->fail($dataset, $item, "sub_department_code \"{$m['target']}\" matches more than one sub-department of this institution, so it cannot say which one.");
+
+                return null;
+            }
+
+            return (int) $rows[0]['id'];
+        }
+
+        $courseId = $this->linked('course', $m['target']);
+
+        if ($courseId === null || $this->courseRow($courseId) === null) {
+            $this->fail($dataset, $item, "The course {$m['target']} is not known; list it in courses.csv.");
+
+            return null;
+        }
+
+        $termId = $this->activeTerm();
+
+        if ($termId === null) {
+            $this->fail($dataset, $item, 'The institution has no active term to put the section in.');
+
+            return null;
+        }
+
+        return $this->offeringFor($courseId, $termId, $m['section']);
+    }
+
+    /**
+     * Makes one listed assignment true, through the service the screens use, and records that the SIS supplies it.
+     *
+     * @throws StructureException when a rule of that service refuses it
+     */
+    private function applyStaff(SisStaffAssignments $tracker, string $dataset, string $item, string $role, int $personId, int $targetId): void
+    {
+        $stamp     = $this->stamp();
+        $tracked   = $tracker->find($this->institutionId, $role, $personId, $targetId);
+        $trackedId = $tracked === null ? null : (int) $tracked['local_id'];
+
+        // Already in force: nothing to do but to remember that the SIS supplies it.
+        $activeId = match ($role) {
+            SisStaffAssignments::DEAN        => $this->activeDeanAssignment($personId, $targetId),
+            SisStaffAssignments::CHAIRPERSON => $this->activeChairAssignment($personId, $targetId),
+            default                          => $this->instructorAssignment($personId, $targetId),
+        };
+
+        if ($activeId !== null) {
+            $tracker->track($this->institutionId, $role, $personId, $targetId, $activeId, $stamp);
+            $this->counts[$dataset][$trackedId === $activeId ? 'skipped' : 'updated']++;
+
+            return;
+        }
+
+        $replaces = false;
+
+        if ($role === SisStaffAssignments::DEAN) {
+            $service  = new DeanAssignmentService();
+            $replaces = $service->currentDeanOfDepartment($targetId) !== null || $service->departmentOfDean($personId) !== null;
+            $localId  = $service->assign($this->institutionId, $targetId, $personId, $this->actor, true);
+        } elseif ($role === SisStaffAssignments::CHAIRPERSON) {
+            if (! $this->hasRole($personId, 'chairperson')) {
+                throw new StructureException('The person does not hold the chairperson role. An administrator gives them the role first (People).');
+            }
+
+            $localId = (new ChairAssignmentService())->assign($this->institutionId, $targetId, $personId, $this->actor);
+        } else {
+            $localId = (new OfferingService())->assignInstructor($this->institutionId, $targetId, $personId, $this->actor);
+        }
+
+        $tracker->track($this->institutionId, $role, $personId, $targetId, $localId, $stamp);
+        $this->counts[$dataset][$replaces || $tracked !== null ? 'updated' : 'created']++;
+    }
+
+    /**
+     * Ends what the SIS supplied before and no longer lists, and forgets what is already over.
+     *
+     * @param array<string, true> $listed
+     */
+    private function endUnlistedStaff(SisStaffAssignments $tracker, string $dataset, array $listed): void
+    {
+        $db     = db_connect();
+        $termId = $this->activeTerm();
+
+        foreach ($tracker->listFor($this->institutionId) as $row) {
+            $role    = (string) $row['role'];
+            $localId = (int) $row['local_id'];
+
+            if (isset($listed["{$role}|{$row['person_user_id']}|{$row['target_id']}"])) {
+                continue;
+            }
+
+            if ($role === SisStaffAssignments::DEAN) {
+                if ($db->table('dean_assignments')->where(['id' => $localId, 'status' => 'active'])->countAllResults() > 0) {
+                    (new DeanAssignmentService())->end($this->institutionId, $localId, $this->actor, true);
+                    $this->counts[$dataset]['updated']++;
+                }
+            } elseif ($role === SisStaffAssignments::CHAIRPERSON) {
+                if ($db->table('chairperson_assignments')->where(['id' => $localId, 'status' => 'active'])->countAllResults() > 0) {
+                    (new ChairAssignmentService())->revoke($this->institutionId, $localId, $this->actor, true);
+                    $this->counts[$dataset]['updated']++;
+                }
+            } else {
+                $assignment = $db->table('instructor_assignments ia')
+                    ->select('o.term_id, o.status')
+                    ->join('course_offerings o', 'o.id = ia.offering_id')
+                    ->where('ia.id', $localId)
+                    ->get()->getRowArray();
+
+                // The file describes the current term. A section of an earlier term, or one already closed, stays as it was.
+                if ($assignment !== null && ((int) $assignment['term_id'] !== $termId || $assignment['status'] !== 'active')) {
+                    continue;
+                }
+
+                if ($assignment !== null) {
+                    (new OfferingService())->unassignInstructor($this->institutionId, $localId, $this->actor, true);
+                    $this->counts[$dataset]['updated']++;
+                }
+            }
+
+            $tracker->forget((int) $row['id']);
+        }
+    }
+
+    private function activeDeanAssignment(int $personId, int $departmentId): ?int
+    {
+        $row = db_connect()->table('dean_assignments')->select('id')->where(['dean_user_id' => $personId, 'department_id' => $departmentId, 'status' => 'active'])->get()->getRowArray();
+
+        return $row === null ? null : (int) $row['id'];
+    }
+
+    private function activeChairAssignment(int $personId, int $subDepartmentId): ?int
+    {
+        $row = db_connect()->table('chairperson_assignments')->select('id')->where(['chairperson_user_id' => $personId, 'sub_department_id' => $subDepartmentId, 'status' => 'active'])->get()->getRowArray();
+
+        return $row === null ? null : (int) $row['id'];
+    }
+
+    private function instructorAssignment(int $personId, int $offeringId): ?int
+    {
+        $row = db_connect()->table('instructor_assignments')->select('id')->where(['instructor_user_id' => $personId, 'offering_id' => $offeringId])->get()->getRowArray();
+
+        return $row === null ? null : (int) $row['id'];
     }
 
     /*

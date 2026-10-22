@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Institutions;
 
+use App\Services\Sis\SisOwnership;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 
@@ -85,11 +86,15 @@ class ChairAssignmentService
         ], $rows);
     }
 
+    public const SIS_LOCK = 'This assignment is managed by your student information system. Change it there; the next sync brings it here.';
+
     /**
+     * @return int the assignment row: a new one, or the revoked one made active again
+     *
      * @throws StructureException
      * @throws PageNotFoundException
      */
-    public function assign(int $institutionId, int $subDepartmentId, int $userId, ?User $actor = null): void
+    public function assign(int $institutionId, int $subDepartmentId, int $userId, ?User $actor = null): int
     {
         $scope = InstitutionScope::forInstitution($institutionId);
         $scope->require('subDepartment', $subDepartmentId);
@@ -133,12 +138,17 @@ class ChairAssignmentService
         }
 
         $this->audit('structure.chairperson_assigned', $actor, $institutionId, $id, null, ['sub_department_id' => $subDepartmentId, 'chairperson_user_id' => $userId]);
+
+        return $id;
     }
 
     /**
+     * @param bool $ignoreSisLock true for the SIS sync itself, which is the owner the lock protects
+     *
      * @throws PageNotFoundException when the assignment is not this institution's
+     * @throws StructureException    when the SIS owns this assignment and the connection is enabled
      */
-    public function revoke(int $institutionId, int $assignmentId, ?User $actor = null): void
+    public function revoke(int $institutionId, int $assignmentId, ?User $actor = null, bool $ignoreSisLock = false): void
     {
         $db  = db_connect();
         $row = $db->table('chairperson_assignments ca')
@@ -155,6 +165,10 @@ class ChairAssignmentService
 
         if ($row['status'] !== 'active') {
             return;
+        }
+
+        if (! $ignoreSisLock && (new SisOwnership())->managesAssignment('chairperson', $assignmentId)) {
+            throw new StructureException(self::SIS_LOCK);
         }
 
         $db->table('chairperson_assignments')->where('id', $assignmentId)->update(['status' => 'revoked', 'updated_at' => date('Y-m-d H:i:s')]);

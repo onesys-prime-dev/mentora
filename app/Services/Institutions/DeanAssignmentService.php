@@ -6,12 +6,15 @@ namespace App\Services\Institutions;
 
 use App\Models\Assignments\DeanAssignmentModel;
 use App\Services\Courses\Grades\GradeOverrideRequestService;
+use App\Services\Sis\SisOwnership;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use RuntimeException;
 
 class DeanAssignmentService
 {
+    public const SIS_LOCK = 'This assignment is managed by your student information system. Change it there; the next sync brings it here.';
+
     private DeanAssignmentModel $assignments;
 
     public function __construct(?DeanAssignmentModel $assignments = null)
@@ -19,7 +22,12 @@ class DeanAssignmentService
         $this->assignments = $assignments ?? new DeanAssignmentModel();
     }
 
-    public function assign(int $institutionId, int $departmentId, int $userId, ?User $actor = null): int
+    /**
+     * @param bool $ignoreSisLock true for the SIS sync itself, which is the owner the lock protects
+     *
+     * @throws StructureException
+     */
+    public function assign(int $institutionId, int $departmentId, int $userId, ?User $actor = null, bool $ignoreSisLock = false): int
     {
         $db = db_connect();
         $department = $db->table('departments')->where([
@@ -44,6 +52,17 @@ class DeanAssignmentService
             || $db->table('chairperson_assignments')->where(['chairperson_user_id' => $userId, 'status' => 'active'])->countAllResults() > 0
         ) {
             throw StructureException::field('user_id', 'That person is a chairperson. A dean cannot also be a chairperson: remove the chairperson role and assignments first.');
+        }
+
+        // A dean the SIS supplies is replaced by the SIS, not by hand, while its connection is enabled.
+        if (! $ignoreSisLock) {
+            $sis = new SisOwnership();
+
+            foreach (array_filter([$this->assignments->currentDeanOfDepartment($departmentId), $this->assignments->departmentOfDean($userId)]) as $held) {
+                if ($sis->managesAssignment('dean', (int) $held['id'])) {
+                    throw new StructureException(self::SIS_LOCK);
+                }
+            }
         }
 
         $now = date('Y-m-d H:i:s');
@@ -90,7 +109,12 @@ class DeanAssignmentService
         return $id;
     }
 
-    public function end(int $institutionId, int $assignmentId, ?User $actor = null): void
+    /**
+     * @param bool $ignoreSisLock true for the SIS sync, and for what follows from the account itself changing
+     *
+     * @throws StructureException when the SIS owns this assignment and the connection is enabled
+     */
+    public function end(int $institutionId, int $assignmentId, ?User $actor = null, bool $ignoreSisLock = false): void
     {
         $db = db_connect();
         $row = $db->table('dean_assignments da')
@@ -104,6 +128,10 @@ class DeanAssignmentService
         }
         if ($row['status'] !== 'active') {
             return;
+        }
+
+        if (! $ignoreSisLock && (new SisOwnership())->managesAssignment('dean', $assignmentId)) {
+            throw new StructureException(self::SIS_LOCK);
         }
 
         $now = date('Y-m-d H:i:s');
@@ -132,7 +160,8 @@ class DeanAssignmentService
             return false;
         }
 
-        $this->end((int) $row['institution_id'], (int) $row['id'], $actor);
+        // Taking the role away or deactivating the person ends the deanship whoever supplied it.
+        $this->end((int) $row['institution_id'], (int) $row['id'], $actor, true);
 
         return true;
     }
