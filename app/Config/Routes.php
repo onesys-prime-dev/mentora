@@ -343,6 +343,10 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->post('announcements/(:num)', 'Dean\DepartmentAnnouncementsController::update/$1', ['filter' => 'permission:department.announce']);
     $routes->post('announcements/(:num)/end', 'Dean\DepartmentAnnouncementsController::end/$1', ['filter' => 'permission:department.announce']);
 
+    // The department report taken out of the app: a CSV of each part and one print-friendly page (department.monitor).
+    $routes->get('reports/export/(:segment)', 'Dean\DepartmentReportController::export/$1', ['filter' => 'permission:department.monitor']);
+    $routes->get('reports/print', 'Dean\DepartmentReportController::print', ['filter' => 'permission:department.monitor']);
+
     // What each instructor of the department carries in a term (view only), and one instructor's sections.
     $routes->get('teaching-load', 'Dean\TeachingLoadController::index');
     $routes->get('teaching-load/(:num)', 'Dean\TeachingLoadController::show/$1');
