@@ -33,6 +33,7 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
         'description' => 'Sign off the final grades of your department\'s sections. Instructors finalize first; you then sign them off, and only you can reopen a sign-off.',
         'backUrl'     => site_url('dean/dashboard'),
         'backLabel'   => 'Back to dashboard',
+        'actions'     => $loadError || $board['term'] === null ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/signoff') . '?term=' . (int) $board['term'], 'attr') . '" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Download CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?php if ($termOptions !== []): ?>

@@ -65,6 +65,14 @@ $columns = [
 ];
 
 $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
+
+// What leaves is what is on screen: the same filters, grouping and sort go in the address.
+$exportQuery = http_build_query($filters->toQuery());
+$exportClass = 'rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$exportLinks = '<div class="flex flex-wrap items-center gap-2">'
+    . '<a data-export="csv" href="' . esc(site_url('dean/reports/export/monitor') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportClass . '">Download CSV</a>'
+    . '<a data-export="print" href="' . esc(site_url('dean/reports/print') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportClass . '" target="_blank" rel="noopener">Print view</a>'
+    . '</div>';
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -79,6 +87,7 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
         'description' => $departmentName . ': how its sub-departments and programs are doing.',
         'backUrl'     => site_url('dean/dashboard'),
         'backLabel'   => 'Back to dashboard',
+        'actions'     => $loadError ? '' : $exportLinks,
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
