@@ -15,21 +15,24 @@ $section = static function (string $id, string $title, string $hint): string {
     return '<header class="flex flex-col gap-0.5"><h2 id="' . esc($id, 'attr') . '" class="text-base font-bold text-[#1A1C1E]">' . esc($title) . '</h2><p class="text-xs text-[#646464]">' . esc($hint) . '</p></header>';
 };
 
-$quiet = static fn (string $text): string => '<p class="rounded-xl border border-dashed border-gray-200 px-4 py-5 text-sm text-[#646464]">' . esc($text) . '</p>';
+$quiet = static fn (string $text): string => '<p class="rounded-xl border border-[#E3E6EE] bg-[#F6F7FA] px-4 py-5 text-sm text-[#646464]">' . esc($text) . '</p>';
 ?>
 
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-8 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url($area . '/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-8 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Announcements',
         'icon'        => 'announcement',
         'description' => 'Everything that reaches you, from the whole platform down to your own courses.',
-        'backUrl'     => site_url($area . '/dashboard'),
-        'backLabel'   => 'Back to dashboard',
     ], ['saveData' => false]) ?>
 
     <?php if ($loadError): ?>
@@ -61,7 +64,7 @@ $quiet = static fn (string $text): string => '<p class="rounded-xl border border
             <?php else: ?>
                 <ul class="flex flex-col gap-3">
                     <?php foreach ($department as $a): ?>
-                        <li class="flex flex-col gap-1 rounded-2xl bg-white px-5 py-4 shadow-sm" data-department-announcement>
+                        <li class="flex flex-col gap-1 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] px-5 py-4 shadow-md" data-department-announcement>
                             <span class="text-sm font-bold text-[#1A1C1E]"><?= esc($a['title']) ?></span>
                             <p class="whitespace-pre-line text-sm text-[#3D3D3D]"><?= esc($a['message']) ?></p>
                             <span class="text-xs text-[#646464]">
@@ -79,10 +82,10 @@ $quiet = static fn (string $text): string => '<p class="rounded-xl border border
             <?php if ($courses === []): ?>
                 <?= $quiet('No posts in your courses yet.') ?>
             <?php else: ?>
-                <ul class="flex flex-col divide-y divide-gray-100 rounded-2xl bg-white shadow-sm">
+                <ul class="flex flex-col divide-y divide-[#E3E6EE] overflow-hidden rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md">
                     <?php foreach ($courses as $c): ?>
                         <li>
-                            <a href="<?= esc($c['url']) ?>" class="flex flex-col gap-0.5 px-5 py-3 transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-course-announcement>
+                            <a href="<?= esc($c['url']) ?>" class="flex flex-col gap-0.5 px-5 py-3 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-course-announcement>
                                 <span class="text-sm font-semibold text-[#1A1C1E]"><?= esc($c['subject']) ?></span>
                                 <span class="text-xs text-[#646464]"><?= esc($c['code']) ?> · <?= esc($c['author']) ?> · <?= esc($when($c['created_at'])) ?></span>
                             </a>
@@ -93,6 +96,8 @@ $quiet = static fn (string $text): string => '<p class="rounded-xl border border
         </section>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 
