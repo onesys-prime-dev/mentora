@@ -313,6 +313,34 @@ final class ComponentViewsTest extends CIUnitTestCase
         $this->assertSame(3, substr_count($html, 'animate-pulse'));
     }
 
+    public function testABackLinkIsOneLabelledLinkToTheAddressItIsGiven(): void
+    {
+        $html = $this->render('back-link', ['backUrl' => '/dean/dashboard', 'backLabel' => 'Back to dashboard']);
+
+        $this->assertSame(1, substr_count($html, '<a '));
+        $this->assertStringContainsString('href="/dean/dashboard"', $html);
+        $this->assertStringContainsString('Back to dashboard', $html);
+        $this->assertStringContainsString('aria-hidden="true"', $html, 'the arrow is decoration; the words carry the meaning');
+
+        $plain = $this->render('back-link', ['backUrl' => '/x']);
+        $this->assertStringContainsString('Back', $plain, 'a link with no label still says where it goes');
+
+        $hostile = $this->render('back-link', ['backUrl' => '/x"><script>alert(1)</script>', 'backLabel' => '<b>Back</b>']);
+        $this->assertStringNotContainsString('<script>', $hostile);
+        $this->assertStringNotContainsString('<b>', $hostile);
+    }
+
+    public function testAPageHeadDrawsItsBackLinkWithTheBackLinkComponent(): void
+    {
+        $head = $this->render('page-head', ['title' => 'People', 'backUrl' => '/dashboard', 'backLabel' => 'Back to dashboard']);
+        $link = $this->render('back-link', ['backUrl' => '/dashboard', 'backLabel' => 'Back to dashboard']);
+
+        // Without the debug comments the test environment wraps every view in, and without whitespace.
+        $plain = static fn (string $html): string => preg_replace('/\s+/', ' ', trim(preg_replace('/<!--.*?-->/s', '', $html)));
+
+        $this->assertStringContainsString($plain($link), $plain($head), 'the same markup, so pages that use either look alike');
+    }
+
     public function testAPageHeadHasOneH1AnOptionalBackLinkAndActions(): void
     {
         $html = $this->render('page-head', ['title' => 'People', 'icon' => 'user', 'description' => 'Everyone here.', 'backUrl' => '/dashboard', 'backLabel' => 'Back to dashboard', 'actions' => '<button>Invite</button>']);

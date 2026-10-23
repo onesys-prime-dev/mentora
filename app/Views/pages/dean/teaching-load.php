@@ -69,14 +69,17 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
 
 <?= $this->section('content') ?>
 
-<div class="my-3 flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Teaching load',
         'icon'        => 'modules',
         'description' => 'What each instructor in your department teaches in a term. You can look, not change. A high load is ' . $highLoadUnits . ' units or more; your institution sets that number.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
         'actions'     => $loadError ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/teaching-load') . '?' . http_build_query($filters->toQuery(['term' => $term])), 'attr') . '" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
     ], ['saveData' => false]) ?>
 
@@ -115,6 +118,8 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
         ], ['saveData' => false]) ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 
