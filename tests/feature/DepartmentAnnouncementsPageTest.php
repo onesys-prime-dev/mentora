@@ -262,6 +262,28 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $this->assertSame(4, substr_count($this->page('student/announcements?level=nonsense', $this->student), 'data-level="'), 'an unknown level means all');
     }
 
+    public function testSearchKeepsOnlyWhatMatchesAndKeepsTheFilter(): void
+    {
+        $this->announce();
+        db_connect()->table('announcements')->insert([
+            'offering_id' => $this->offering, 'author_id' => $this->teacher->id, 'subject' => 'Quiz moved', 'message' => '{"version":1,"blocks":[]}', 'is_pinned' => 0,
+            'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $hit = $this->page('student/announcements?q=quiz', $this->student);
+        $this->assertStringContainsString('data-course-announcement', $hit);
+        $this->assertStringContainsString('data-announcement-search', $hit);
+
+        $miss = $this->page('student/announcements?q=zzzqqq', $this->student);
+        $this->assertStringNotContainsString('data-course-announcement', $miss);
+        $this->assertStringNotContainsString('data-department-announcement', $miss);
+        $this->assertStringContainsString('Nothing here matches', $miss);
+
+        $kept = $this->page('student/announcements?level=course&q=quiz', $this->student);
+        $this->assertStringContainsString('name="level" value="course"', $kept);
+        $this->assertStringContainsString('level=department&q=quiz', $kept);
+    }
+
     public function testRecipientsSeeAStripOnTheirDashboardAndOthersDoNot(): void
     {
         $this->announce();
