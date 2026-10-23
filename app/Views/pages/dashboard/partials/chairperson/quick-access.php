@@ -21,7 +21,7 @@ $links = global_apps($userRole);
                 class="shrink-0 flex items-center gap-2 h-10 px-4 rounded-full bg-white border border-[#E1E5EF] text-[13px] font-semibold text-[#A9A9A9] cursor-default"
                 aria-disabled="true"
                 title="Coming soon">
-                <?= icon($link['icon'], 'w-4 h-4') ?>
+                <?= icon($link['icon'], 'w-4 h-4 text-[#A9A9A9]') ?>
                 <?= esc($link['label']) ?>
             </span>
 
@@ -30,7 +30,8 @@ $links = global_apps($userRole);
             <a
                 class="shrink-0 flex items-center gap-2 h-10 px-4 rounded-full bg-white border border-[#E1E5EF] text-[13px] font-semibold text-[#2A3142] transition-colors hover:border-[#0040A6]/40 hover:bg-[#F8FAFF]"
                 href="<?= esc($link['url'], 'attr') ?>">
-                <span class="text-[#0040A6] flex"><?= icon($link['icon'], 'w-4 h-4') ?></span>
+                <?php // The colour is given to the icon itself: a few icons are registered in white (for blue tiles) and would vanish on this white pill. ?>
+                <span class="flex"><?= icon($link['icon'], 'w-4 h-4 text-[#0040A6]') ?></span>
                 <?= esc($link['label']) ?>
             </a>
 
