@@ -70,6 +70,21 @@ final class DeanDashboardPageTest extends RouteTestCase
         return html_entity_decode($response->getBody());
     }
 
+    public function testEveryTileOfTheQuickAccessStripShowsItsIcon(): void
+    {
+        $body = $this->page();
+
+        // Every tile of the strip, with the colour its icon was given.
+        preg_match_all('#<span class="flex"><svg[^>]*class="([^"]*)"#', $body, $icons);
+
+        $this->assertGreaterThanOrEqual(8, count($icons[1]), 'one icon for each tile of the strip');
+
+        foreach ($icons[1] as $class) {
+            $this->assertStringContainsString('text-[#0040A6]', $class, 'an icon registered in white would vanish on the white tile');
+            $this->assertStringNotContainsString('text-white', $class);
+        }
+    }
+
     public function testTheDeanSeesTheirDepartmentAndTheirCard(): void
     {
         $body = $this->page();

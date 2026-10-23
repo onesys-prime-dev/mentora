@@ -28,6 +28,23 @@ final class ChairpersonDashboardPageTest extends RouteTestCase
         $result->assertSee('Monitor Program');
     }
 
+    public function testEveryTileOfTheQuickAccessStripShowsItsIcon(): void
+    {
+        $this->loggedInAs(CourseFactory::user('chairperson'));
+
+        $body = html_entity_decode($this->get('chairperson/dashboard')->response()->getBody());
+
+        // Every tile of the strip, with the colour its icon was given.
+        preg_match_all('#<span class="flex"><svg[^>]*class="([^"]*)"#', $body, $icons);
+
+        $this->assertGreaterThanOrEqual(4, count($icons[1]), 'one icon for each tile of the strip');
+
+        foreach ($icons[1] as $class) {
+            $this->assertStringContainsString('text-[#0040A6]', $class, 'an icon registered in white would vanish on the white tile');
+            $this->assertStringNotContainsString('text-white', $class);
+        }
+    }
+
     public function testThePageRendersForAChairpersonWithAProgram(): void
     {
         $chair = CourseFactory::user('chairperson');
