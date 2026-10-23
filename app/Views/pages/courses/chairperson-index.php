@@ -41,8 +41,8 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
         <p class="text-sm text-[#3D3D3D]">Every course in the programs you chair.</p>
     </div>
 
-    <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4 sm:grid-cols-2 lg:grid-cols-6">
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 lg:col-span-2">Search
+    <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem_auto]">
+        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 sm:col-span-2 lg:col-span-1">Search
             <input class="<?= $input ?>" type="search" name="q" value="<?= esc($filters->q ?? '') ?>" placeholder="Course code, title or section">
         </label>
         <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Term
