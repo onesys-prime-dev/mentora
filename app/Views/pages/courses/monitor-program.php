@@ -117,13 +117,13 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
         <!-- Program snapshot -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <?php foreach ([
-                ['label' => 'Courses', 'value' => $snapshot['courses'], 'icon' => 'hat', 'tint' => 'bg-[#E8EEFC] text-[#0040A6]'],
-                ['label' => 'Instructors', 'value' => $snapshot['instructors'], 'icon' => 'user', 'tint' => 'bg-[#E6F4EC] text-[#1E8A4C]'],
-                ['label' => 'Enrolled students', 'value' => $snapshot['students'], 'icon' => 'lessons', 'tint' => 'bg-[#FFF1D6] text-[#946200]'],
+                ['label' => 'Courses', 'value' => $snapshot['courses'], 'icon' => 'hat', 'card' => 'border-[#0040A6]/25 bg-[#EEF3FD]', 'chip' => 'bg-[#0040A6]'],
+                ['label' => 'Instructors', 'value' => $snapshot['instructors'], 'icon' => 'user', 'card' => 'border-[#1E8A4C]/25 bg-[#EEF8F2]', 'chip' => 'bg-[#1E8A4C]'],
+                ['label' => 'Enrolled students', 'value' => $snapshot['students'], 'icon' => 'lessons', 'card' => 'border-[#B77A00]/30 bg-[#FFF7E6]', 'chip' => 'bg-[#B77A00]'],
             ] as $tile): ?>
-                <div class="flex items-center gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl <?= $tile['tint'] ?>">
-                        <?= icon($tile['icon'], 'h-6 w-6') ?>
+                <div class="flex items-center gap-4 rounded-2xl border <?= $tile['card'] ?> p-5 shadow-md">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl <?= $tile['chip'] ?>">
+                        <?= icon($tile['icon'], 'h-6 w-6 text-white') ?>
                     </span>
                     <div>
                         <p class="text-3xl font-bold leading-none text-[#0A0F1E]"><?= esc(number_format((int) $tile['value'])) ?></p>
