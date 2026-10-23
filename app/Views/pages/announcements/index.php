@@ -20,7 +20,9 @@ $section = static function (string $id, string $title, string $hint): string {
 
 $show = static fn (string $id): bool => $level === $id;
 
-$quiet = static fn (string $text): string => '<p class="rounded-xl border border-[#E3E6EE] bg-[#F6F7FA] px-4 py-5 text-sm text-[#646464]">' . esc($query !== '' ? 'Nothing here matches "' . $query . '".' : $text) . '</p>';
+$quiet = static fn (string $text): string => $query !== ''
+    ? view('components/empty-state', ['icon' => 'search', 'title' => 'Nothing here matches "' . $query . '"', 'text' => 'Try a different word, or look in another level.'], ['saveData' => false])
+    : view('components/empty-state', ['icon' => 'inbox', 'title' => $text, 'text' => 'When something is posted here, it appears.'], ['saveData' => false]);
 
 // A filter keeps the search and a search keeps the filter.
 $link = static fn (string $key): string => site_url($area . '/announcements') . '?' . http_build_query(array_filter(['level' => $key, 'q' => $query], static fn ($v) => $v !== ''));
@@ -55,8 +57,11 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
         <form method="get" action="<?= esc(site_url($area . '/announcements')) ?>" role="search" class="flex gap-2" data-announcement-search>
             <input type="hidden" name="level" value="<?= esc($level) ?>">
             <label class="sr-only" for="announcement-q">Search announcements</label>
+            <span class="relative flex min-w-0 flex-1">
+                <?= icon('search', 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400') ?>
             <input id="announcement-q" type="search" name="q" data-auto-search value="<?= esc($query) ?>" maxlength="100" placeholder="Search announcements"
-                   class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55 sm:w-64">
+                   class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55 sm:w-64">
+            </span>
         </form>
         </div>
     <?php endif; ?>
