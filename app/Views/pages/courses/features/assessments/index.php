@@ -118,9 +118,9 @@ if ($isInstructor) {
         <!-- Assessment list -->
         <div class="flex w-full min-w-0 flex-col gap-5">
 
-            <div class="flex flex-wrap items-center justify-end gap-4">
+            <div class="flex flex-wrap items-center gap-4">
 
-                <div class="flex flex-wrap gap-4">
+                <div class="flex w-full flex-wrap items-center gap-4">
 
                     <select
                         data-assessments-filter
@@ -134,7 +134,7 @@ if ($isInstructor) {
                     </select>
 
                     <!-- Client-side search (no form submit, so no page reload) -->
-                    <label class="flex h-10 w-64 items-center gap-2 rounded-4xl border border-gray-300 bg-white px-4 shadow">
+                    <label class="flex h-10 min-w-48 flex-1 items-center gap-2 rounded-4xl border border-gray-300 bg-white px-4 shadow">
 
                         <?= icon('search', 'h-4 w-4 opacity-60') ?>
 
