@@ -51,20 +51,15 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
 <?= $this->section('content') ?>
 
-<div class="flex justify-between items-center">
-    <?php if ($monitorBackUrl !== null): ?>
-        <div class="mb-5 flex items-center gap-4 font-heading text-xs uppercase text-[#3D3D3D]">
-            <a class="-ml-1 flex min-h-10 items-center gap-2 rounded px-1 transition hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc($monitorBackUrl) ?>">
-                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
-                <?= esc($monitorBackLabel) ?>
-            </a>
-        </div>
-    <?php else: ?>
-        <?= $this->include('components/back') ?>
-    <?php endif; ?>
-</div>
+<div class="py-3">
 
-<div class="my-3 flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<?php if ($monitorBackUrl !== null): ?>
+    <?= view('components/back-link', ['backUrl' => $monitorBackUrl, 'backLabel' => $monitorBackLabel], ['saveData' => false]) ?>
+<?php else: ?>
+    <?= $this->include('components/back') ?>
+<?php endif; ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
@@ -281,6 +276,8 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
         <?php endif; ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

@@ -27,11 +27,11 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
 
 <?= $this->section('content') ?>
 
-<div class="flex justify-between items-center">
-    <?= $this->include('components/back') ?>
-</div>
+<div class="py-3">
 
-<div class="my-3 flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<?= $this->include('components/back') ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
@@ -146,6 +146,8 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
         </nav>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 
