@@ -72,14 +72,17 @@ $unreviewedOnPage = array_filter($entries, static fn (array $e): bool => $e['rev
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Chairperson review',
         'icon'        => 'tasks',
         'description' => 'What chairpersons changed in courses they do not teach, in your department. You can look and mark what you have reviewed; nothing here blocks or reverts a change.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
         'actions'     => $unreviewedOnPage === [] ? '' : '<form method="post" action="' . esc(site_url('dean/chairperson-review/reviewed'), 'attr') . '">' . csrf_field()
             . implode('', array_map(static fn (array $e): string => '<input type="hidden" name="ids[]" value="' . (int) $e['id'] . '">', $unreviewedOnPage))
             . '<input type="hidden" name="back" value="' . esc($back, 'attr') . '"><button type="submit" class="' . esc($primary, 'attr') . '" data-mark-page>Mark these ' . count($unreviewedOnPage) . ' reviewed</button></form>',
@@ -88,6 +91,7 @@ $unreviewedOnPage = array_filter($entries, static fn (array $e): bool => $e['rev
     <?= view('components/tabs', ['tabs' => $tabs, 'ariaLabel' => 'Review state'], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => $base,
         'filtered' => $filters->isFiltered(),
         'clearUrl' => $filters->view === 'unreviewed' ? $base : $base . '?view=' . $filters->view,
@@ -125,6 +129,8 @@ $unreviewedOnPage = array_filter($entries, static fn (array $e): bool => $e['rev
         <?= view('components/pagination', ['page' => $pageNumber, 'pages' => $pages, 'total' => $total, 'baseUrl' => $base, 'query' => $filters->toQuery()], ['saveData' => false]) ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

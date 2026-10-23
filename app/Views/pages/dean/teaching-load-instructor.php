@@ -54,18 +54,22 @@ $columns = [
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => $base . ($term !== null ? '?term=' . (int) $term : ''), 'backLabel' => 'Back to teaching load'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => (string) $instructor['name'],
         'icon'        => 'user',
         'description' => 'Their sections in your department this term. You can look, not change.',
-        'backUrl'     => $base . ($term !== null ? '?term=' . (int) $term : ''),
-        'backLabel'   => 'Back to teaching load',
     ], ['saveData' => false]) ?>
 
     <?php if (count($termOptions) > 1): ?>
         <?= view('components/toolbar', [
+            'surface'  => 'tinted', // on the page's white panel a white card would not stand out
             'action'   => site_url('dean/teaching-load/' . (int) $instructor['id']),
             'filtered' => false,
             'fields'   => [['type' => 'select', 'name' => 'term', 'label' => 'Term', 'options' => $termOptions, 'value' => (string) ($term ?? '')]],
@@ -87,6 +91,8 @@ $columns = [
         'emptyText'  => 'They teach in your department, but not in this term. Choose another term above.',
         'emptyIcon'  => 'hat',
     ], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

@@ -68,14 +68,17 @@ $audiences = DepartmentAnnouncementService::AUDIENCES;
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Announcements',
         'icon'        => 'announcement',
         'description' => 'Tell your department, a sub-department or a program something. The people it is for see it in their Announcements and are notified.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
         'actions'     => $loadError ? '' : '<button type="button" data-dialog-open="announcement-new" class="' . esc($primary, 'attr') . '">New announcement</button>',
     ], ['saveData' => false]) ?>
 
@@ -140,6 +143,8 @@ $audiences = DepartmentAnnouncementService::AUDIENCES;
         <?php endforeach; ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

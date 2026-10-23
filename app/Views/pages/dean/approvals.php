@@ -75,14 +75,17 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Grade overrides',
         'icon'        => 'tasks',
         'description' => 'Requests to change a final grade in your department. Approving changes the grade; rejecting leaves it as it is.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
     ], ['saveData' => false]) ?>
 
     <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
@@ -91,6 +94,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
     </div>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => $base,
         'filtered' => $filters->isFiltered(),
         'clearUrl' => $decided ? $base . '?view=decided' : $base,
@@ -184,6 +188,8 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             <?= view('components/dialog', ['id' => "review-{$id}", 'title' => $student . ', ' . $course, 'body' => $body, 'size' => 'lg'], ['saveData' => false]) ?>
         <?php endforeach; ?>
     <?php endif; ?>
+
+</div>
 
 </div>
 

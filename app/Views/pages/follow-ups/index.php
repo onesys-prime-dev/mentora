@@ -81,7 +81,12 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url($area . '/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => $area === 'instructor' ? 'Requests' : 'Follow-ups',
@@ -91,8 +96,6 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
             'chairperson' => 'Requests from the dean to you, and the follow-ups you send to instructors in your sub-departments.',
             default       => 'Things your dean or chairperson asked you to look at. Reply, and mark each one done when it is.',
         },
-        'backUrl'     => site_url($area . '/dashboard'),
-        'backLabel'   => 'Back to dashboard',
         'actions'     => $actions,
     ], ['saveData' => false]) ?>
 
@@ -232,6 +235,8 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
         <?php endif; ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 
