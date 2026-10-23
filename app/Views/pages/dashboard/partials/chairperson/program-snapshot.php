@@ -13,7 +13,7 @@ $metrics = [
 ?>
 
 <!-- program snapshot (chairperson) -->
-<div class="flex flex-col gap-3 bg-white rounded-3xl p-5 shadow-sm">
+<div class="flex flex-col gap-3 bg-white rounded-3xl p-5 shadow-md ring-1 ring-black/5 border-t-4 border-t-brand">
 
     <span class="text-xs font-bold uppercase tracking-wide text-[#4A5468]">Program snapshot</span>
 

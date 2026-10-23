@@ -6,7 +6,7 @@ $max = max(1, ...array_column($instructors, 'sections') ?: [1]);
 ?>
 
 <!-- instructor workload (chairperson) -->
-<div class="flex flex-col gap-3 bg-white rounded-3xl p-5 shadow-sm h-full min-h-0">
+<div class="flex flex-col gap-3 bg-white rounded-3xl p-5 shadow-md ring-1 ring-black/5 border-t-4 border-t-[#1E8A4C] h-full min-h-0">
 
     <span class="text-xs font-bold uppercase tracking-wide text-[#4A5468]">Instructor workload</span>
 

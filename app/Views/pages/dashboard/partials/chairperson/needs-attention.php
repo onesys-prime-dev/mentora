@@ -27,9 +27,9 @@ $href = static function (array $item) use ($userRole): string {
 ?>
 
 <!-- needs attention (chairperson) -->
-<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full">
+<div class="flex flex-col bg-white rounded-3xl shadow-md ring-1 ring-black/5 border-t-4 border-t-[#B77A00] overflow-clip h-full">
 
-    <div class="flex items-center justify-between px-6 py-4 border-b border-[#F1F3F8]">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#F1F3F8] bg-[#FFFBF2]">
         <div class="flex items-center gap-2.5">
             <?= icon('attention', 'w-[18px] h-[18px] text-[#A63A18]') ?>
             <span class="text-base font-bold text-[#0A0F1E]">Needs Attention</span>
