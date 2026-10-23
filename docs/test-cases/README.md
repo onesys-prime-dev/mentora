@@ -27,8 +27,9 @@ Every case has the same fields:
 
 - **ID**: `TC-<AREA>-<NN>`, never reused. Areas: `AUTH`, `ANN` (announcements),
   `MOD` (modules and progress), `QUIZ`, `ASG` (assignments), `GRD` (grading and
-  grades), `PRT` (the parent portal, in [p2-parent.md](p2-parent.md)).
-- **Role**: who performs it (Student, Instructor, or Anonymous).
+  grades), `PRT` (the parent portal, in [p2-parent.md](p2-parent.md)), `DEAN` (the dean, in
+  [p2-dean.md](p2-dean.md)).
+- **Role**: who performs it (Student, Instructor, Dean, or Anonymous).
 - **Data**: the demo accounts, course and item it uses (see below), so any two
   people run the same case.
 - **Steps**: numbered, from a clean start, in plain words a tester can follow.

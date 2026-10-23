@@ -12,10 +12,10 @@ $style = [
     'overrides'         => ['icon' => 'tasks',     'tint' => 'bg-[#FFF1D6]', 'color' => 'text-[#946200]', 'badge' => 'bg-[#FFF1D6] text-[#946200]'],
     'signoff_ready'     => ['icon' => 'check',     'tint' => 'bg-[#E8EEFC]', 'color' => 'text-[#0040A6]', 'badge' => 'bg-[#E8EEFC] text-[#0040A6]'],
     'signoff_blocked'   => ['icon' => 'lock',      'tint' => 'bg-[#FFF1D6]', 'color' => 'text-[#946200]', 'badge' => 'bg-[#FFF1D6] text-[#946200]'],
-    'followups_overdue' => ['icon' => 'inbox',     'tint' => 'bg-[#FBE8E2]', 'color' => 'text-[#C3471F]', 'badge' => 'bg-[#FBE8E2] text-[#C3471F]'],
+    'followups_overdue' => ['icon' => 'inbox',     'tint' => 'bg-[#FBE8E2]', 'color' => 'text-[#A63A18]', 'badge' => 'bg-[#FBE8E2] text-[#A63A18]'],
     'overdue_grading'   => ['icon' => 'tasks',     'tint' => 'bg-[#FFF1D6]', 'color' => 'text-[#946200]', 'badge' => 'bg-[#FFF1D6] text-[#946200]'],
     'inactive_courses'  => ['icon' => 'time-mono', 'tint' => 'bg-[#F1F3F8]', 'color' => 'text-[#4A5468]', 'badge' => 'bg-[#F1F3F8] text-[#4A5468]'],
-    'at_risk'           => ['icon' => 'user',      'tint' => 'bg-[#FBE8E2]', 'color' => 'text-[#C3471F]', 'badge' => 'bg-[#FBE8E2] text-[#C3471F]'],
+    'at_risk'           => ['icon' => 'user',      'tint' => 'bg-[#FBE8E2]', 'color' => 'text-[#A63A18]', 'badge' => 'bg-[#FBE8E2] text-[#A63A18]'],
 ];
 ?>
 
@@ -24,12 +24,12 @@ $style = [
 
     <div class="flex items-center justify-between px-6 py-4 border-b border-[#F1F3F8]">
         <div class="flex items-center gap-2.5">
-            <?= icon('attention', 'w-[18px] h-[18px] text-[#C3471F]') ?>
+            <?= icon('attention', 'w-[18px] h-[18px] text-[#A63A18]') ?>
             <h2 class="text-base font-bold text-[#0A0F1E]">Needs Attention</h2>
         </div>
 
         <?php if ($items !== []): ?>
-            <span class="text-xs font-bold text-[#C3471F] bg-[#FBE8E2] rounded-full px-2.5 py-1">
+            <span class="text-xs font-bold text-[#A63A18] bg-[#FBE8E2] rounded-full px-2.5 py-1">
                 <?= count($items) ?> <?= count($items) === 1 ? 'item' : 'items' ?>
             </span>
         <?php endif; ?>

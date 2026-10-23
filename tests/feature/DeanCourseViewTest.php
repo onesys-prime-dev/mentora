@@ -341,6 +341,82 @@ final class DeanCourseViewTest extends RouteTestCase
         $this->assertSame(302, $this->step('GET', "dean/api/courses/{$this->offering}/overview")->response()->getStatusCode());
     }
 
+    /**
+     * What each tab of a course draws, as its HTML, for the person signed in now.
+     *
+     * @return array<string, string>
+     */
+    private function tabs(string $area): array
+    {
+        $html = [];
+
+        foreach (['modules', 'discussions', 'assessments', 'grades', 'grades/roster'] as $path) {
+            $this->withHeaders(['Accept' => 'application/json']);
+            $response = $this->call('get', "{$area}/api/courses/{$this->offering}/{$path}")->response();
+
+            $this->assertSame(200, $response->getStatusCode(), "{$area} {$path}");
+
+            $html[$path] = (string) $response->getBody();
+        }
+
+        return $html;
+    }
+
+    public function testTheDeanIsOfferedNoControlThatWouldBeRefused(): void
+    {
+        $tabs = $this->tabs('dean');
+
+        $this->assertStringNotContainsString('data-create-module-button', $tabs['modules']);
+        $this->assertStringNotContainsString('data-composer-open', $tabs['discussions']);
+        $this->assertStringNotContainsString('data-create-assessment-button', $tabs['assessments']);
+
+        foreach (['data-open-finalize', 'data-open-reopen', 'data-open-curve', 'data-open-grading-scheme', 'data-toggle-grade-sheet-menu', 'data-open-grade-sheet-import'] as $control) {
+            $this->assertStringNotContainsString($control, $tabs['grades'], $control);
+        }
+
+        $this->assertStringContainsString('data-toggle-report-menu', $tabs['grades'], 'reports are for reading, so they stay');
+
+        // The gradebook lists each student's grade and standing as text, with no button to change them.
+        $this->assertStringContainsString('data-roster-row', $tabs['grades/roster']);
+        $this->assertStringContainsString('data-grade-readout', $tabs['grades/roster']);
+        $this->assertStringNotContainsString('data-open-override', $tabs['grades/roster']);
+        $this->assertStringNotContainsString('data-open-incomplete', $tabs['grades/roster']);
+    }
+
+    public function testTheInstructorOfTheSameCourseStillHasEveryControl(): void
+    {
+        $this->signIn($this->teacher);
+        $tabs = $this->tabs('instructor');
+
+        $this->assertStringContainsString('data-create-module-button', $tabs['modules']);
+        $this->assertStringContainsString('data-composer-open', $tabs['discussions']);
+        $this->assertStringContainsString('data-create-assessment-button', $tabs['assessments']);
+
+        foreach (['data-open-finalize', 'data-open-curve', 'data-open-grading-scheme', 'data-toggle-grade-sheet-menu', 'data-open-grade-sheet-import'] as $control) {
+            $this->assertStringContainsString($control, $tabs['grades'], $control);
+        }
+
+        $this->assertStringContainsString('data-open-override', $tabs['grades/roster']);
+        $this->assertStringContainsString('data-open-incomplete', $tabs['grades/roster']);
+        $this->assertStringNotContainsString('data-grade-readout', $tabs['grades/roster']);
+    }
+
+    public function testADeanWhoAlsoTeachesGetsTheInstructorsControlsOnTheirOwnCourse(): void
+    {
+        $both = PeopleFactory::person('dean', 'Dual', 'Role', 'dual@dcv.example', $this->institution);
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $both->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
+        CourseFactory::assignInstructor($this->offering, $both);
+
+        $this->signIn($both);
+        $this->assertSame(200, $this->call('post', 'role/switch', ['role' => 'instructor'])->response()->getStatusCode());
+        $this->withSession();
+
+        $tabs = $this->tabs('instructor');
+
+        $this->assertStringContainsString('data-create-module-button', $tabs['modules'], 'acting as the instructor, the controls are theirs');
+        $this->assertStringContainsString('data-open-finalize', $tabs['grades']);
+    }
+
     public function testTheInstructorsAndStudentsOwnPagesAreUnchanged(): void
     {
         $this->signIn($this->teacher);
