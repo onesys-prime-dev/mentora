@@ -121,7 +121,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                 ['label' => 'Instructors', 'value' => $snapshot['instructors'], 'icon' => 'user', 'tint' => 'bg-[#E6F4EC] text-[#1E8A4C]'],
                 ['label' => 'Enrolled students', 'value' => $snapshot['students'], 'icon' => 'lessons', 'tint' => 'bg-[#FFF1D6] text-[#946200]'],
             ] as $tile): ?>
-                <div class="flex items-center gap-4 rounded-2xl border border-brand/20 bg-brand-tint p-5">
+                <div class="flex items-center gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                     <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl <?= $tile['tint'] ?>">
                         <?= icon($tile['icon'], 'h-6 w-6') ?>
                     </span>
@@ -135,7 +135,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
         <?php if ($comparison === []): ?>
 
-            <div class="rounded-2xl border border-brand/20 bg-brand-tint">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md">
                 <?= view('components/empty-state', [
                     'icon' => 'score',
                     'title' => $filters->isFiltered() ? 'No courses match these filters' : 'Nothing to monitor yet',
@@ -153,12 +153,12 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                 class="grid grid-cols-1 gap-5 lg:grid-cols-2"
                 data-completion="<?= esc(json_encode(array_map(static fn (array $c) => ['label' => $c['course_code'], 'value' => $c['completion_percentage']], $comparison)), 'attr') ?>"
                 data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>">
-                <div class="rounded-2xl border border-brand/20 bg-brand-tint p-5">
+                <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                     <p class="text-sm font-semibold text-[#1A1C1E]">Completion per course</p>
                     <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
                     <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
                 </div>
-                <div class="rounded-2xl border border-brand/20 bg-brand-tint p-5">
+                <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                     <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                     <p class="mb-3 text-xs text-[#646464]">Students per grade band across the program.</p>
                     <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
@@ -166,7 +166,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             </div>
 
             <!-- Course comparison -->
-            <div class="rounded-2xl border border-brand/20 bg-brand-tint p-5">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                 <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">Course comparison</p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
@@ -213,7 +213,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
 
             <!-- At-risk students -->
-            <div class="rounded-2xl border border-brand/20 bg-brand-tint p-5">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                 <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">At-risk students</p>
                 <?php if ($atRisk === []): ?>
                     <p class="text-sm text-[#646464]">Nobody is at risk right now.</p>
@@ -239,7 +239,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             </div>
 
             <!-- Audit log -->
-            <div class="rounded-2xl border border-brand/20 bg-brand-tint p-5">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                 <p class="mb-3 text-sm font-semibold text-[#1A1C1E]"><?= esc($monitorAuditTitle) ?></p>
                 <?php if ($audit['rows'] === []): ?>
                     <p class="text-sm text-[#646464]">No activity yet.</p>
