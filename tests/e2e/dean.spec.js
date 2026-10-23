@@ -499,7 +499,7 @@ async function seriousProblems(page) {
 }
 
 /** How far the page is wider than the window: anything above 0 means a sideways scrollbar for the whole page. */
-const overflowOf = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+const overflowOf = (page) => page.evaluate(() => globalThis.document.documentElement.scrollWidth - globalThis.document.documentElement.clientWidth);
 
 test("TC-DEAN-09 The dean's screens work with the keyboard alone", async ({ browser }) => {
     const page = await signedIn(browser, DEAN_WHO_TEACHES);
@@ -509,14 +509,14 @@ test("TC-DEAN-09 The dean's screens work with the keyboard alone", async ({ brow
 
     for (let press = 0; press < 40 && !reached; press++) {
         await page.keyboard.press("Tab");
-        reached = await page.evaluate(() => document.activeElement?.tagName === "A" && document.activeElement.textContent.trim() === "Approvals");
+        reached = await page.evaluate(() => globalThis.document.activeElement?.tagName === "A" && globalThis.document.activeElement.textContent.trim() === "Approvals");
     }
 
     expect(reached, "Tab reaches the Approvals tile").toBe(true);
 
     // It shows where the focus is.
     const marked = await page.evaluate(() => {
-        const style = getComputedStyle(document.activeElement);
+        const style = globalThis.getComputedStyle(globalThis.document.activeElement);
 
         return style.outlineStyle !== "none" || style.boxShadow !== "none";
     });
@@ -533,13 +533,13 @@ test("TC-DEAN-09 The dean's screens work with the keyboard alone", async ({ brow
 
     const dialog = page.locator("#announcement-new");
     await expect(dialog).toBeVisible();
-    expect(await dialog.evaluate((el) => el.contains(document.activeElement)), "the focus is inside the dialog").toBe(true);
+    expect(await dialog.evaluate((el) => el.contains(globalThis.document.activeElement)), "the focus is inside the dialog").toBe(true);
 
     // Tab stays inside it however many times it is pressed.
     for (let press = 0; press < 12; press++) {
         await page.keyboard.press("Tab");
     }
-    expect(await dialog.evaluate((el) => el.contains(document.activeElement)), "Tab does not leave the dialog").toBe(true);
+    expect(await dialog.evaluate((el) => el.contains(globalThis.document.activeElement)), "Tab does not leave the dialog").toBe(true);
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
