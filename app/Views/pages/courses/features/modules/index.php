@@ -38,7 +38,8 @@ $formatDuration = static function (int $minutes): string {
 
         <?php
         ob_start();
-        if ($isInstructor): ?>
+        // Someone who only looks (the dean, the institution's administrator) is shown no control that would be refused.
+        if ($isInstructor && ! \App\Services\Courses\CourseViewer::isReadOnlyViewer($user)): ?>
             <button
                 class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark"
                 data-create-module-button>

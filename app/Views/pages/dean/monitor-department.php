@@ -136,17 +136,17 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             data-completion="<?= esc(json_encode(array_map(static fn (array $g) => ['label' => $g['name'], 'value' => $g['completion']], $groups)), 'attr') ?>"
             data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>"
             data-instructor-activity="<?= esc(json_encode(array_map(static fn (array $i) => ['label' => $i['name'], 'content' => $i['content_updates'], 'announcements' => $i['announcements']], $instructorActivity)), 'attr') ?>">
-            <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Completion per <?= $filters->compare === 'program' ? 'program' : 'sub-department' ?></p>
                 <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
                 <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
             </div>
-            <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                 <p class="mb-3 text-xs text-[#646464]">Students per grade band across the department.</p>
                 <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
             </div>
-            <div class="rounded-2xl bg-white p-5 shadow-sm lg:col-span-2">
+            <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm lg:col-span-2">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Instructor activity</p>
                 <p class="mb-3 text-xs text-[#646464]">Content updates and announcements per instructor in the chosen period.</p>
                 <?php if ($instructorActivity === []): ?>

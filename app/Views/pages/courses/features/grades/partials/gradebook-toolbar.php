@@ -12,6 +12,9 @@ $outOfSync = (int) ($gradebook['out_of_sync_count'] ?? 0);
 $uncategorized = count($gradebook['uncategorized'] ?? []);
 $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 $finalization = $gradebook['finalization'] ?? null;
+
+// The dean and the institution's administrator read a gradebook; they are not shown what only its instructor can do.
+$viewOnly = \App\Services\Courses\CourseViewer::isReadOnlyViewer(auth()->user());
 ?>
 
 <div class="flex flex-col gap-3" data-gradebook-toolbar>
@@ -38,7 +41,7 @@ $finalization = $gradebook['finalization'] ?? null;
 
         <div class="flex items-center gap-2">
 
-            <?php if ($finalization === null): ?>
+            <?php if ($finalization === null && ! $viewOnly): ?>
                 <button
                     type="button"
                     data-open-curve
@@ -53,7 +56,7 @@ $finalization = $gradebook['finalization'] ?? null;
                     <?= icon('check', 'h-4 w-4 text-current') ?>
                     Signed off by the dean
                 </span>
-            <?php elseif ($finalization !== null): ?>
+            <?php elseif ($finalization !== null && ! $viewOnly): ?>
                 <button
                     type="button"
                     data-open-reopen
@@ -61,7 +64,7 @@ $finalization = $gradebook['finalization'] ?? null;
                     <?= icon('lock', 'h-4 w-4 text-current') ?>
                     Reopen grades
                 </button>
-            <?php else: ?>
+            <?php elseif ($finalization === null && ! $viewOnly): ?>
                 <button
                     type="button"
                     data-open-finalize
@@ -79,6 +82,7 @@ $finalization = $gradebook['finalization'] ?? null;
                 Gradebook
             </button>
 
+            <?php if (! $viewOnly): ?>
             <button
                 type="button"
                 data-open-grading-scheme
@@ -86,6 +90,7 @@ $finalization = $gradebook['finalization'] ?? null;
                 <?= icon('settings', 'h-4 w-4 text-current') ?>
                 Grading Scheme
             </button>
+            <?php endif; ?>
 
             <div class="relative">
 
@@ -115,6 +120,7 @@ $finalization = $gradebook['finalization'] ?? null;
 
             </div>
 
+            <?php if (! $viewOnly): ?>
             <div class="relative">
 
                 <button
@@ -138,6 +144,7 @@ $finalization = $gradebook['finalization'] ?? null;
                 </div>
 
             </div>
+            <?php endif; ?>
 
         </div>
 

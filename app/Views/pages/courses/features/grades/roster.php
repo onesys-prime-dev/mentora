@@ -16,6 +16,9 @@ $overrideMode  = $overrideMode ?? 'direct';
 $overrideRoute = $overrideRoute ?? '';
 $openRequests  = $openRequests ?? [];
 $isRequestMode = $overrideMode === 'request';
+
+// Someone who only looks (the dean, the institution's administrator) reads the grade and the standing; neither is a button.
+$viewOnly = \App\Services\Courses\CourseViewer::isReadOnlyViewer(auth()->user());
 ?>
 
 <div class="p-10 flex flex-col gap-6" data-gradebook-roster data-override-mode="<?= esc($overrideMode, 'attr') ?>" data-override-route="<?= esc($overrideRoute, 'attr') ?>">
@@ -175,6 +178,14 @@ $isRequestMode = $overrideMode === 'request';
                         <?php $openRequest = $openRequests[(int) $student['student_id']] ?? null; ?>
 
                         <td class="px-4 py-2">
+                            <?php if ($viewOnly): ?>
+                                <span class="inline-flex items-center gap-1.5 px-2 py-1 text-sm font-bold <?= $student['is_override'] ? 'text-[#946200]' : 'text-brand' ?>" data-grade-readout>
+                                    <?= $student['percentage'] !== null ? $points($student['percentage']) . '%' : '—' ?>
+                                    <?php if ($student['is_override']): ?>
+                                        <span class="rounded-full bg-[#FFF1D6] px-1.5 py-0.5 text-[10px] font-bold text-[#946200]">Override</span>
+                                    <?php endif; ?>
+                                </span>
+                            <?php else: ?>
                             <button
                                 type="button"
                                 data-open-override
@@ -198,6 +209,7 @@ $isRequestMode = $overrideMode === 'request';
                                     <span class="rounded-full bg-[#FFF1D6] px-1.5 py-0.5 text-[10px] font-bold text-[#946200]">Override</span>
                                 <?php endif; ?>
                             </button>
+                            <?php endif; ?>
 
                             <?php if ($openRequest !== null): ?>
                                 <p class="mt-1 text-[11px] font-semibold <?= $openRequest['returned'] ? 'text-[#C33939]' : 'text-[#946200]' ?>" data-request-state>
@@ -210,6 +222,10 @@ $isRequestMode = $overrideMode === 'request';
 
                         <td class="px-4 py-2">
                             <?php $isInc = $student['remarks'] === 'INC'; ?>
+                            <?php if ($viewOnly): ?>
+                                <?php $look = grade_tag_look($student['tag']); ?>
+                                <?= view('components/status-badge', ['label' => $student['tag'], 'tone' => $look['tone'], 'icon' => $look['icon']], ['saveData' => false]) ?>
+                            <?php else: ?>
                             <button
                                 type="button"
                                 data-open-incomplete
@@ -223,6 +239,7 @@ $isRequestMode = $overrideMode === 'request';
                                 <?php $look = grade_tag_look($student['tag']); ?>
                                 <?= view('components/status-badge', ['label' => $student['tag'], 'tone' => $look['tone'], 'icon' => $look['icon']], ['saveData' => false]) ?>
                             </button>
+                            <?php endif; ?>
                             <?php if ($isInc && !empty($student['inc_until'])): ?>
                                 <p class="mt-1 text-[11px] text-[#946200]">Finish by <?= esc(date('M j, Y', strtotime((string) $student['inc_until']))) ?></p>
                             <?php endif; ?>
