@@ -41,6 +41,12 @@ final class InstitutionCourseAccessTest extends DatabaseTestCase
         $this->assertSame('institution', CourseViewer::urlPrefix($admin, 'institutional_admin'));
     }
 
+    public function testNobodySignedInIsNobodysReadOnlyViewer(): void
+    {
+        // A page drawn with no one signed in (a test, a command) must not fail on who is looking: it is nobody's view-only view.
+        $this->assertFalse(CourseViewer::isReadOnlyViewer(null));
+    }
+
     public function testAnInstructorIsTheInstructorAndNeverTheReadOnlyViewer(): void
     {
         $teacher = PeopleFactory::person('instructor');
