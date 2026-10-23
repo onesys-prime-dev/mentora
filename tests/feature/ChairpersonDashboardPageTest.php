@@ -45,6 +45,31 @@ final class ChairpersonDashboardPageTest extends RouteTestCase
         }
     }
 
+    public function testNoRowOfNeedsAttentionIsDrawnInWhite(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $this->loggedInAs($chair);
+
+        $item = ['offering_id' => 1, 'slug' => 'x', 'assessment_id' => 1, 'student_id' => 1, 'title' => 'T', 'subtitle' => 'S', 'badge' => 'B'];
+
+        $body = view('pages/dashboard/partials/chairperson/needs-attention', [
+            'user' => $chair,
+            'data' => ['items' => [
+                $item + ['kind' => 'grading'],
+                $item + ['kind' => 'at_risk'],
+                $item + ['kind' => 'inactive'],
+            ]],
+        ]);
+
+        preg_match_all('#<svg[^>]*class="([^"]*)"#', $body, $icons);
+
+        $this->assertGreaterThanOrEqual(4, count($icons[1]), 'the heading and each of the three rows has an icon');
+
+        foreach ($icons[1] as $class) {
+            $this->assertStringNotContainsString('text-white', $class, 'an icon drawn in white on a light tint: ' . $class);
+        }
+    }
+
     public function testThePageRendersForAChairpersonWithAProgram(): void
     {
         $chair = CourseFactory::user('chairperson');

@@ -414,7 +414,7 @@ test("TC-DEAN-07 A dean posts a department announcement that its people read, an
 
     // A student of the department reads it, in the Announcements app, under its own level.
     const student = await signedIn(browser, accounts.student1, "student");
-    await student.goto("/student/announcements");
+    await student.goto("/student/announcements?level=department");
     const level = student.locator('[data-level="department"]');
     await expect(level).toContainText("Enrolment week schedule");
     await expect(level).toContainText("enrolment questions");

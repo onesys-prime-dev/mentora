@@ -65,14 +65,17 @@ foreach ($requests as $r) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('chairperson/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Override requests',
         'icon'        => 'tasks',
         'description' => 'Requests to change a final grade in the sub-departments you chair. Endorse one to send it on to the dean, or send it back with what needs to change.',
-        'backUrl'     => site_url('chairperson/dashboard'),
-        'backLabel'   => 'Back to dashboard',
     ], ['saveData' => false]) ?>
 
     <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
@@ -129,6 +132,8 @@ foreach ($requests as $r) {
         <?= view('components/dialog', ['id' => "endorse-{$id}", 'title' => 'Endorse this request', 'body' => $endorseBody], ['saveData' => false]) ?>
         <?= view('components/dialog', ['id' => "send-back-{$id}", 'title' => 'Send this request back', 'body' => $sendBackBody], ['saveData' => false]) ?>
     <?php endforeach; ?>
+
+</div>
 
 </div>
 
