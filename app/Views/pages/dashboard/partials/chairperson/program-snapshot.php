@@ -25,7 +25,8 @@ $metrics = [
 
                 <div class="flex items-center gap-2.5 min-w-0">
                     <span class="w-9 h-9 shrink-0 rounded-[10px] <?= $metric['tint'] ?> <?= $metric['color'] ?> flex items-center justify-center">
-                        <?= icon($metric['icon'], 'w-5 h-5') ?>
+                        <?php // Given the row's colour directly: `lessons` is registered in white and would vanish on the tint. ?>
+                        <?= icon($metric['icon'], 'w-5 h-5 ' . $metric['color']) ?>
                     </span>
                     <span class="text-sm text-[#2A3142] truncate"><?= esc($metric['label']) ?></span>
                 </div>

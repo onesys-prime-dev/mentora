@@ -31,7 +31,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
     <?= $this->include('components/back') ?>
 </div>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="my-3 flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
@@ -41,7 +41,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
         <p class="text-sm text-[#3D3D3D]">Every course in the programs you chair.</p>
     </div>
 
-    <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
+    <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4 sm:grid-cols-2 lg:grid-cols-5">
         <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 lg:col-span-2">Search
             <input class="<?= $input ?>" type="search" name="q" value="<?= esc($filters->q ?? '') ?>" placeholder="Course code, title or section">
         </label>

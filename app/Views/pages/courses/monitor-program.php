@@ -64,7 +64,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
     <?php endif; ?>
 </div>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="my-3 flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
@@ -75,7 +75,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
     </div>
 
     <!-- One-line filter toolbar (term · date range · apply), like an analytics report bar. -->
-    <form method="get" action="<?= esc($monitorBase) ?>" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm">
+    <form method="get" action="<?= esc($monitorBase) ?>" class="flex flex-wrap items-end gap-3 rounded-2xl border border-brand/20 bg-brand-tint px-5 py-4">
         <label class="flex min-w-48 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">Term
             <select class="<?= $input ?>" name="term">
                 <option value="">Any term</option>
