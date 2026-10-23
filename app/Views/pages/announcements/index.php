@@ -5,7 +5,8 @@
  *
  * @var string $area
  * @var string $query   what was searched for, or an empty string
- * @var string $level   the level being shown: all, platform, institution, department or course
+ * @var string $level   the level being shown: platform, institution, department or course
+ * @var array<string, int> $counts   how many announcements each level has
  * @var string $platform
  * @var string|null $institution
  * @var list<array<string, mixed>> $department
@@ -17,12 +18,12 @@ $section = static function (string $id, string $title, string $hint): string {
     return '<header class="flex flex-col gap-0.5"><h2 id="' . esc($id, 'attr') . '" class="text-base font-bold text-[#1A1C1E]">' . esc($title) . '</h2><p class="text-xs text-[#646464]">' . esc($hint) . '</p></header>';
 };
 
-$show = static fn (string $id): bool => $level === 'all' || $level === $id;
+$show = static fn (string $id): bool => $level === $id;
 
 $quiet = static fn (string $text): string => '<p class="rounded-xl border border-[#E3E6EE] bg-[#F6F7FA] px-4 py-5 text-sm text-[#646464]">' . esc($query !== '' ? 'Nothing here matches "' . $query . '".' : $text) . '</p>';
 
 // A filter keeps the search and a search keeps the filter.
-$link = static fn (string $key): string => site_url($area . '/announcements') . ($key === 'all' && $query === '' ? '' : '?' . http_build_query(array_filter(['level' => $key === 'all' ? '' : $key, 'q' => $query], static fn ($v) => $v !== '')));
+$link = static fn (string $key): string => site_url($area . '/announcements') . '?' . http_build_query(array_filter(['level' => $key, 'q' => $query], static fn ($v) => $v !== ''));
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -45,18 +46,17 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
     <?php if (! $loadError): ?>
         <div class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-3 sm:flex-row sm:items-center sm:justify-between">
         <nav aria-label="Filter announcements" class="flex flex-wrap items-center gap-2" data-level-filter>
-            <?php foreach (['all' => 'All', 'platform' => 'Platform', 'institution' => 'Institution', 'department' => 'Department', 'course' => 'Courses'] as $key => $label): ?>
+            <?php foreach (['platform' => 'Platform', 'institution' => 'Institution', 'department' => 'Department', 'course' => 'Courses'] as $key => $label): ?>
                 <a href="<?= esc($link($key)) ?>"
                    class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $level === $key ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
-                   <?= $level === $key ? 'aria-current="page"' : '' ?>><?= esc($label) ?></a>
+                   <?= $level === $key ? 'aria-current="page"' : '' ?>><?= esc($label) ?> <span class="ml-1 rounded-full px-2 py-0.5 text-xs font-bold <?= $level === $key ? 'bg-white/25 text-white' : 'bg-brand-tint text-brand-dark' ?>" data-level-count="<?= esc($key) ?>"><?= (int) ($counts[$key] ?? 0) ?></span></a>
             <?php endforeach; ?>
         </nav>
         <form method="get" action="<?= esc(site_url($area . '/announcements')) ?>" role="search" class="flex gap-2" data-announcement-search>
-            <?php if ($level !== 'all'): ?><input type="hidden" name="level" value="<?= esc($level) ?>"><?php endif; ?>
+            <input type="hidden" name="level" value="<?= esc($level) ?>">
             <label class="sr-only" for="announcement-q">Search announcements</label>
-            <input id="announcement-q" type="search" name="q" value="<?= esc($query) ?>" maxlength="100" placeholder="Search announcements"
-                   class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55 sm:w-64">
-            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Search</button>
+            <input id="announcement-q" type="search" name="q" data-auto-search value="<?= esc($query) ?>" maxlength="100" placeholder="Search announcements"
+                   class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55 sm:w-64">
         </form>
         </div>
     <?php endif; ?>

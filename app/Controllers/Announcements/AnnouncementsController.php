@@ -67,13 +67,25 @@ class AnnouncementsController extends BaseController
             $courses     = array_values(array_filter($courses, static fn (array $c): bool => $has([$c['subject'], $c['code'], $c['author']])));
         }
 
-        // One list, narrowed to a level by ?level=; anything else means all of them.
+        // How many each level has (after the search), shown on its filter.
+        $counts = [
+            'platform'    => $platform !== '' ? 1 : 0,
+            'institution' => $institution !== null ? 1 : 0,
+            'department'  => count($department),
+            'course'      => count($courses),
+        ];
+
+        // One level at a time, chosen by ?level=; without a valid one, the first level that has something.
         $level = (string) $this->request->getGet('level');
-        $level = in_array($level, ['platform', 'institution', 'department', 'course'], true) ? $level : 'all';
+
+        if (! isset($counts[$level])) {
+            $level = array_key_first(array_filter($counts)) ?? 'platform';
+        }
 
         return view('pages/announcements/index', [
             'level'        => $level,
             'query'        => $query,
+            'counts'       => $counts,
             'title'        => 'Announcements',
             'page'         => 'announcements',
             'user'         => $user,

@@ -178,15 +178,15 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $this->announce(['scope' => 'sub_department:' . $this->subA]);
 
         foreach ([[$this->student, 'student'], [$this->teacher, 'instructor'], [$this->chair, 'chairperson']] as [$user, $area]) {
-            $body = $this->page("{$area}/announcements", $user);
+            $body = $this->page("{$area}/announcements?level=department", $user);
 
             $this->assertStringContainsString('Enrolment week', $body, $area);
             $this->assertStringContainsString('Please see the registrar.', $body, $area);
             $this->assertStringContainsString('Sub A', $body, $area);
         }
 
-        $this->assertStringNotContainsString('Enrolment week', $this->page('student/announcements', $this->outsider), 'another department');
-        $this->assertStringContainsString('Nothing from your department right now', $this->page('student/announcements', $this->outsider));
+        $this->assertStringNotContainsString('Enrolment week', $this->page('student/announcements?level=department', $this->outsider), 'another department');
+        $this->assertStringContainsString('Nothing from your department right now', $this->page('student/announcements?level=department', $this->outsider));
     }
 
     public function testTheRoleFilterKeepsStaffPostsFromStudentsAndTheOtherWayRound(): void
@@ -223,34 +223,36 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
             'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $body = $this->page('student/announcements', $this->student);
+        $default = $this->page('student/announcements', $this->student);
+        $this->assertStringContainsString('data-level="platform"', $default, 'it opens on the first level that has something');
 
-        $positions = array_map(static fn (string $needle): int|false => strpos($body, $needle), ['Platform maintenance tonight', 'Institution closed on Friday', 'Enrolment week', 'Quiz moved']);
+        $filter = [];
+        preg_match_all('#data-level-count="(\w+)">(\d+)<#', $default, $found, PREG_SET_ORDER);
 
-        $this->assertNotContains(false, $positions, 'all four are there');
-        $sorted = $positions;
-        sort($sorted);
-        $this->assertSame($sorted, $positions, 'in the order platform, institution, department, courses');
-        $this->assertStringContainsString('student/courses/' . $this->offering . '/intro-to-computing/announcements', $body);
+        foreach ($found as [, $key, $count]) {
+            $filter[$key] = (int) $count;
+        }
+
+        $this->assertSame(['platform' => 1, 'institution' => 1, 'department' => 1, 'course' => 1], $filter, 'each filter counts its level');
+        $this->assertStringNotContainsString('data-level-count="all"', $default);
+
+        foreach (['institution' => 'Institution closed on Friday', 'department' => 'Enrolment week', 'course' => 'Quiz moved'] as $level => $text) {
+            $this->assertStringContainsString($text, $this->page('student/announcements?level=' . $level, $this->student), $level);
+        }
+
+        $this->assertStringContainsString('student/courses/' . $this->offering . '/intro-to-computing/announcements', $this->page('student/announcements?level=course', $this->student));
     }
 
     public function testALevelWithNothingToSayStillHasItsPlaceInTheSameOrder(): void
     {
-        $body = $this->page('student/announcements', $this->student);
-
-        foreach (['Nothing from the platform right now', 'Nothing from your institution right now', 'Nothing from your department right now'] as $text) {
-            $this->assertStringContainsString($text, $body);
+        foreach (['platform' => 'Nothing from the platform right now', 'institution' => 'Nothing from your institution right now', 'department' => 'Nothing from your department right now', 'course' => 'No posts in your courses yet'] as $level => $text) {
+            $this->assertStringContainsString($text, $this->page('student/announcements?level=' . $level, $this->student), $level);
         }
-
-        $this->assertLessThan(strpos($body, 'Nothing from your institution'), strpos($body, 'Nothing from the platform'));
-        $this->assertLessThan(strpos($body, 'Nothing from your department'), strpos($body, 'Nothing from your institution'));
-        $this->assertStringContainsString('Your courses', $body);
     }
 
     public function testTheLevelFilterNarrowsTheListToOneLevel(): void
     {
-        $all = $this->page('student/announcements', $this->student);
-        $this->assertStringContainsString('data-level-filter', $all);
+        $this->assertStringContainsString('data-level-filter', $this->page('student/announcements', $this->student));
 
         foreach (['platform', 'institution', 'department', 'course'] as $level) {
             $body = $this->page('student/announcements?level=' . $level, $this->student);
@@ -259,7 +261,7 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
             $this->assertStringContainsString('data-level="' . $level . '"', $body);
         }
 
-        $this->assertSame(4, substr_count($this->page('student/announcements?level=nonsense', $this->student), 'data-level="'), 'an unknown level means all');
+        $this->assertSame(1, substr_count($this->page('student/announcements?level=nonsense', $this->student), 'data-level="'), 'an unknown level falls back to one');
     }
 
     public function testSearchKeepsOnlyWhatMatchesAndKeepsTheFilter(): void
@@ -270,11 +272,12 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
             'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $hit = $this->page('student/announcements?q=quiz', $this->student);
+        $hit = $this->page('student/announcements?level=course&q=quiz', $this->student);
         $this->assertStringContainsString('data-course-announcement', $hit);
         $this->assertStringContainsString('data-announcement-search', $hit);
+        $this->assertStringNotContainsString('Search</button>', $hit, 'it searches as you type, there is no button');
 
-        $miss = $this->page('student/announcements?q=zzzqqq', $this->student);
+        $miss = $this->page('student/announcements?level=course&q=zzzqqq', $this->student);
         $this->assertStringNotContainsString('data-course-announcement', $miss);
         $this->assertStringNotContainsString('data-department-announcement', $miss);
         $this->assertStringContainsString('Nothing here matches', $miss);
