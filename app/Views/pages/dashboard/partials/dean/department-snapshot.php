@@ -27,7 +27,8 @@ $rows = [
         <?php foreach ($rows as [$label, $value, $icon]): ?>
             <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#F6F7FA] last:border-b-0">
                 <dt class="flex items-center gap-2.5 text-[13px] text-[#4A5468]">
-                    <span class="text-[#0040A6] flex"><?= icon($icon, 'w-4 h-4') ?></span>
+                    <?php // Given its colour directly: an icon registered in white (as `tasks` is) would vanish on the white card. ?>
+                    <span class="flex"><?= icon($icon, 'w-4 h-4 text-[#0040A6]') ?></span>
                     <?= esc($label) ?>
                 </dt>
                 <dd class="text-sm font-bold text-[#1A1C1E]"><?= esc(number_format((int) $value)) ?></dd>
