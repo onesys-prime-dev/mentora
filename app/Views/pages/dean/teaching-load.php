@@ -85,6 +85,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
 
     <?= view('components/toolbar', [
         'action'   => $base,
+        'surface'  => 'tinted', // it sits on the page's white panel, where a white card would not stand out
         'filtered' => $filters->subDepartmentId !== null,
         'clearUrl' => $base . ($term !== null ? '?term=' . (int) $term : ''),
         'hidden'   => $filters->toQuery(['term' => null, 'sub_department' => null]),

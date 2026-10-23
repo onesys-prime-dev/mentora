@@ -205,6 +205,29 @@ final class ComponentViewsTest extends CIUnitTestCase
         $this->assertStringContainsString('role="search"', $plain);
     }
 
+    public function testAToolbarIsAWhiteRaisedCardUnlessAskedToBeTinted(): void
+    {
+        $fields = [['type' => 'search', 'name' => 'q', 'label' => 'Search']];
+
+        $default = $this->render('toolbar', ['action' => '/people', 'fields' => $fields]);
+        $raised  = $this->render('toolbar', ['action' => '/people', 'fields' => $fields, 'surface' => 'raised']);
+        $tinted  = $this->render('toolbar', ['action' => '/people', 'fields' => $fields, 'surface' => 'tinted']);
+        $unknown = $this->render('toolbar', ['action' => '/people', 'fields' => $fields, 'surface' => 'neon']);
+
+        // Each render numbers its debug comments and its fields, so those are set aside before comparing.
+        $same = static fn (string $html): string => preg_replace(['/<!--.*?-->/s', '/f-([a-z]+)-\d+/'], ['', 'f-$1-n'], $html);
+
+        // Every page that does not ask keeps the card it always had.
+        $this->assertStringContainsString('rounded-2xl bg-white shadow-sm p-4', $default);
+        $this->assertSame($same($default), $same($raised));
+        $this->assertSame($same($default), $same($unknown), 'anything but the one other surface is the usual card');
+
+        // On a white panel it is tinted and outlined instead, so it can be told from the panel.
+        $this->assertStringContainsString('border border-brand/20 bg-brand-tint', $tinted);
+        $this->assertStringNotContainsString('shadow-sm', $tinted);
+        $this->assertStringContainsString('data-toolbar', $tinted, 'only the look changes');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | dialog, confirm
