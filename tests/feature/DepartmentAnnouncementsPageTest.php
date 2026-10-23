@@ -278,6 +278,7 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $this->assertStringNotContainsString('Search</button>', $hit, 'it searches as you type, there is no button');
 
         $miss = $this->page('student/announcements?level=course&q=zzzqqq', $this->student);
+        $this->assertMatchesRegularExpression('#data-level-count="course">1<#', $miss, 'a search does not change the counts');
         $this->assertStringNotContainsString('data-course-announcement', $miss);
         $this->assertStringNotContainsString('data-department-announcement', $miss);
         $this->assertStringContainsString('Nothing here matches', $miss);
