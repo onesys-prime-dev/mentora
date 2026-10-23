@@ -17,7 +17,7 @@ $secondaryLine = isset($data['program_name'])
 ?>
 
 <!-- profile card (chairperson) -->
-<div class="shrink-0 flex flex-col items-center gap-1 bg-white rounded-3xl p-6 text-center shadow-md ring-1 ring-black/5">
+<div class="shrink-0 flex flex-col items-center gap-1 bg-white rounded-3xl p-6 text-center shadow-md ring-1 ring-black/5 border-t-4 border-t-brand">
 
     <img
         class="w-18 h-18 rounded-full object-cover mb-2"
