@@ -46,7 +46,46 @@ class AnnouncementsController extends BaseController
             $loadError = true;
         }
 
+        // How many each level has (before any search, so typing never changes them), shown on its filter.
+        $counts = [
+            'platform'    => $platform !== '' ? 1 : 0,
+            'institution' => $institution !== null ? 1 : 0,
+            'department'  => count($department),
+            'course'      => count($courses),
+        ];
+
+        // ?q= keeps only what mentions every word typed, in any of the levels.
+        $query = mb_substr(trim((string) $this->request->getGet('q')), 0, 100);
+
+        if ($query !== '' && ! $loadError) {
+            $has         = static function (array $parts) use ($query): bool {
+                $text = mb_strtolower(implode(' ', array_map('strval', $parts)));
+
+                foreach (preg_split('/\s+/', mb_strtolower($query)) as $word) {
+                    if (! str_contains($text, $word)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            };
+            $platform    = $has([$platform]) ? $platform : '';
+            $institution = $institution !== null && $has([$institution]) ? $institution : null;
+            $department  = array_values(array_filter($department, static fn (array $a): bool => $has([$a['title'], $a['message'], $a['author'], $a['scope_label']])));
+            $courses     = array_values(array_filter($courses, static fn (array $c): bool => $has([$c['subject'], $c['code'], $c['author']])));
+        }
+
+        // One level at a time, chosen by ?level=; without a valid one, the first level that has something.
+        $level = (string) $this->request->getGet('level');
+
+        if (! isset($counts[$level])) {
+            $level = array_key_first(array_filter($counts)) ?? 'platform';
+        }
+
         return view('pages/announcements/index', [
+            'level'        => $level,
+            'query'        => $query,
+            'counts'       => $counts,
             'title'        => 'Announcements',
             'page'         => 'announcements',
             'user'         => $user,

@@ -42,7 +42,7 @@ $legend = array_values(array_filter([
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-5 lg:h-full lg:min-h-0">
+<div class="flex flex-col pt-3 lg:h-full lg:min-h-0">
 
     <?php if ($calendarHeading !== null): ?>
         <?= view('components/page-head', ['title' => $calendarHeading, 'icon' => 'calendar', 'backUrl' => $calendarBackUrl, 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
@@ -52,7 +52,7 @@ $legend = array_values(array_filter([
 
     <div
         id="calendar-app"
-        class="flex flex-1 min-h-0 flex-col gap-5 rounded-3xl bg-white p-6 lg:min-h-0"
+        class="flex flex-1 min-h-0 flex-col gap-5 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0"
         data-today="<?= esc($today) ?>"
         data-role="<?= esc($calendarRole) ?>"
         data-api-base="<?= esc($calendarApiBase) ?>"

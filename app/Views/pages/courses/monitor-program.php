@@ -51,20 +51,15 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
 <?= $this->section('content') ?>
 
-<div class="flex justify-between items-center">
-    <?php if ($monitorBackUrl !== null): ?>
-        <div class="mb-5 flex items-center gap-4 font-heading text-xs uppercase text-[#3D3D3D]">
-            <a class="-ml-1 flex min-h-10 items-center gap-2 rounded px-1 transition hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc($monitorBackUrl) ?>">
-                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
-                <?= esc($monitorBackLabel) ?>
-            </a>
-        </div>
-    <?php else: ?>
-        <?= $this->include('components/back') ?>
-    <?php endif; ?>
-</div>
+<div class="py-3">
 
-<div class="flex flex-col gap-6 py-3">
+<?php if ($monitorBackUrl !== null): ?>
+    <?= view('components/back-link', ['backUrl' => $monitorBackUrl, 'backLabel' => $monitorBackLabel], ['saveData' => false]) ?>
+<?php else: ?>
+    <?= $this->include('components/back') ?>
+<?php endif; ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
@@ -75,7 +70,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
     </div>
 
     <!-- One-line filter toolbar (term · date range · apply), like an analytics report bar. -->
-    <form method="get" action="<?= esc($monitorBase) ?>" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm">
+    <form method="get" action="<?= esc($monitorBase) ?>" class="flex flex-wrap items-end gap-3 rounded-2xl border border-brand/20 bg-brand-tint px-5 py-4">
         <label class="flex min-w-48 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">Term
             <select class="<?= $input ?>" name="term">
                 <option value="">Any term</option>
@@ -117,13 +112,13 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
         <!-- Program snapshot -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <?php foreach ([
-                ['label' => 'Courses', 'value' => $snapshot['courses'], 'icon' => 'hat', 'tint' => 'bg-[#E8EEFC] text-[#0040A6]'],
-                ['label' => 'Instructors', 'value' => $snapshot['instructors'], 'icon' => 'user', 'tint' => 'bg-[#E6F4EC] text-[#1E8A4C]'],
-                ['label' => 'Enrolled students', 'value' => $snapshot['students'], 'icon' => 'lessons', 'tint' => 'bg-[#FFF1D6] text-[#946200]'],
+                ['label' => 'Courses', 'value' => $snapshot['courses'], 'icon' => 'hat', 'card' => 'border-[#0040A6]/25 bg-[#EEF3FD]', 'chip' => 'bg-[#0040A6]'],
+                ['label' => 'Instructors', 'value' => $snapshot['instructors'], 'icon' => 'user', 'card' => 'border-[#1E8A4C]/25 bg-[#EEF8F2]', 'chip' => 'bg-[#1E8A4C]'],
+                ['label' => 'Enrolled students', 'value' => $snapshot['students'], 'icon' => 'lessons', 'card' => 'border-[#B77A00]/30 bg-[#FFF7E6]', 'chip' => 'bg-[#B77A00]'],
             ] as $tile): ?>
-                <div class="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl <?= $tile['tint'] ?>">
-                        <?= icon($tile['icon'], 'h-6 w-6') ?>
+                <div class="flex items-center gap-4 rounded-2xl border <?= $tile['card'] ?> p-5 shadow-md">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl <?= $tile['chip'] ?>">
+                        <?= icon($tile['icon'], 'h-6 w-6 text-white') ?>
                     </span>
                     <div>
                         <p class="text-3xl font-bold leading-none text-[#0A0F1E]"><?= esc(number_format((int) $tile['value'])) ?></p>
@@ -135,7 +130,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
         <?php if ($comparison === []): ?>
 
-            <div class="rounded-2xl bg-white/70">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md">
                 <?= view('components/empty-state', [
                     'icon' => 'score',
                     'title' => $filters->isFiltered() ? 'No courses match these filters' : 'Nothing to monitor yet',
@@ -153,12 +148,12 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                 class="grid grid-cols-1 gap-5 lg:grid-cols-2"
                 data-completion="<?= esc(json_encode(array_map(static fn (array $c) => ['label' => $c['course_code'], 'value' => $c['completion_percentage']], $comparison)), 'attr') ?>"
                 data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>">
-                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                     <p class="text-sm font-semibold text-[#1A1C1E]">Completion per course</p>
                     <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
                     <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
                 </div>
-                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                     <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                     <p class="mb-3 text-xs text-[#646464]">Students per grade band across the program.</p>
                     <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
@@ -166,7 +161,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             </div>
 
             <!-- Course comparison -->
-            <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                 <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">Course comparison</p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
@@ -213,7 +208,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
 
             <!-- At-risk students -->
-            <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                 <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">At-risk students</p>
                 <?php if ($atRisk === []): ?>
                     <p class="text-sm text-[#646464]">Nobody is at risk right now.</p>
@@ -239,7 +234,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             </div>
 
             <!-- Audit log -->
-            <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                 <p class="mb-3 text-sm font-semibold text-[#1A1C1E]"><?= esc($monitorAuditTitle) ?></p>
                 <?php if ($audit['rows'] === []): ?>
                     <p class="text-sm text-[#646464]">No activity yet.</p>
@@ -281,6 +276,8 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
         <?php endif; ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

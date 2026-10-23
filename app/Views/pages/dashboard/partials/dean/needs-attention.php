@@ -56,7 +56,8 @@ $style = [
                     data-attention="<?= esc($item['key'], 'attr') ?>">
 
                     <span class="w-10 h-10 shrink-0 rounded-xl <?= $look['tint'] ?> <?= $look['color'] ?> flex items-center justify-center">
-                        <?= icon($look['icon'], 'w-5 h-5') ?>
+                        <?php // The icon is given the row's colour itself: one registered in white would vanish on the tint. ?>
+                        <?= icon($look['icon'], 'w-5 h-5 ' . $look['color']) ?>
                     </span>
 
                     <span class="flex flex-col min-w-0 flex-1 gap-0.5">

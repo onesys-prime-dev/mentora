@@ -69,8 +69,9 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
 // What leaves is what is on screen: the same filters, grouping and sort go in the address.
 $exportQuery = http_build_query($filters->toQuery());
 $exportClass = 'rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$exportSolid = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
 $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
-    . '<a data-export="csv" href="' . esc(site_url('dean/reports/export/monitor') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportClass . '">Download CSV</a>'
+    . '<a data-export="csv" href="' . esc(site_url('dean/reports/export/monitor') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportSolid . '">Download CSV</a>'
     . '<a data-export="print" href="' . esc(site_url('dean/reports/print') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportClass . '" target="_blank" rel="noopener">Print view</a>'
     . '</div>';
 ?>
@@ -79,18 +80,22 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Monitor Department',
         'icon'        => 'score',
         'description' => $departmentName . ': how its sub-departments and programs are doing.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
         'actions'     => $loadError ? '' : $exportLinks,
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => $base,
         'filtered' => $filters->isFiltered(),
         'fields'   => [
@@ -294,6 +299,8 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
         </section>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

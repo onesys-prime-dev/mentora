@@ -205,6 +205,29 @@ final class ComponentViewsTest extends CIUnitTestCase
         $this->assertStringContainsString('role="search"', $plain);
     }
 
+    public function testAToolbarIsAWhiteRaisedCardUnlessAskedToBeTinted(): void
+    {
+        $fields = [['type' => 'search', 'name' => 'q', 'label' => 'Search']];
+
+        $default = $this->render('toolbar', ['action' => '/people', 'fields' => $fields]);
+        $raised  = $this->render('toolbar', ['action' => '/people', 'fields' => $fields, 'surface' => 'raised']);
+        $tinted  = $this->render('toolbar', ['action' => '/people', 'fields' => $fields, 'surface' => 'tinted']);
+        $unknown = $this->render('toolbar', ['action' => '/people', 'fields' => $fields, 'surface' => 'neon']);
+
+        // Each render numbers its debug comments and its fields, so those are set aside before comparing.
+        $same = static fn (string $html): string => preg_replace(['/<!--.*?-->/s', '/f-([a-z]+)-\d+/'], ['', 'f-$1-n'], $html);
+
+        // Every page that does not ask keeps the card it always had.
+        $this->assertStringContainsString('rounded-2xl bg-white shadow-sm p-4', $default);
+        $this->assertSame($same($default), $same($raised));
+        $this->assertSame($same($default), $same($unknown), 'anything but the one other surface is the usual card');
+
+        // On a white panel it is tinted and outlined instead, so it can be told from the panel.
+        $this->assertStringContainsString('border border-brand/20 bg-brand-tint', $tinted);
+        $this->assertStringNotContainsString('shadow-sm', $tinted);
+        $this->assertStringContainsString('data-toolbar', $tinted, 'only the look changes');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | dialog, confirm
@@ -311,6 +334,34 @@ final class ComponentViewsTest extends CIUnitTestCase
         $this->assertStringContainsString('aria-busy="true"', $html);
         $this->assertStringContainsString('Loading people', $html);
         $this->assertSame(3, substr_count($html, 'animate-pulse'));
+    }
+
+    public function testABackLinkIsOneLabelledLinkToTheAddressItIsGiven(): void
+    {
+        $html = $this->render('back-link', ['backUrl' => '/dean/dashboard', 'backLabel' => 'Back to dashboard']);
+
+        $this->assertSame(1, substr_count($html, '<a '));
+        $this->assertStringContainsString('href="/dean/dashboard"', $html);
+        $this->assertStringContainsString('Back to dashboard', $html);
+        $this->assertStringContainsString('aria-hidden="true"', $html, 'the arrow is decoration; the words carry the meaning');
+
+        $plain = $this->render('back-link', ['backUrl' => '/x']);
+        $this->assertStringContainsString('Back', $plain, 'a link with no label still says where it goes');
+
+        $hostile = $this->render('back-link', ['backUrl' => '/x"><script>alert(1)</script>', 'backLabel' => '<b>Back</b>']);
+        $this->assertStringNotContainsString('<script>', $hostile);
+        $this->assertStringNotContainsString('<b>', $hostile);
+    }
+
+    public function testAPageHeadDrawsItsBackLinkWithTheBackLinkComponent(): void
+    {
+        $head = $this->render('page-head', ['title' => 'People', 'backUrl' => '/dashboard', 'backLabel' => 'Back to dashboard']);
+        $link = $this->render('back-link', ['backUrl' => '/dashboard', 'backLabel' => 'Back to dashboard']);
+
+        // Without the debug comments the test environment wraps every view in, and without whitespace.
+        $plain = static fn (string $html): string => preg_replace('/\s+/', ' ', trim(preg_replace('/<!--.*?-->/s', '', $html)));
+
+        $this->assertStringContainsString($plain($link), $plain($head), 'the same markup, so pages that use either look alike');
     }
 
     public function testAPageHeadHasOneH1AnOptionalBackLinkAndActions(): void
