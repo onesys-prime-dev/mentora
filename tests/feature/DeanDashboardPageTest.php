@@ -85,6 +85,24 @@ final class DeanDashboardPageTest extends RouteTestCase
         }
     }
 
+    public function testNoIconOnTheDashboardIsDrawnInWhite(): void
+    {
+        // Nothing in the page's body sits on a dark background, so a white icon there cannot be seen. The tiles of the
+        // strip, the department's rows and the rows of Needs Attention (this department has an override, a section and
+        // a quiet course waiting) all have icons, and the white ones among those registered must have been given a colour.
+        $body = $this->page();
+
+        $this->assertSame(1, preg_match('#<main.*?</main>#s', $body, $main), 'the page has its main content');
+
+        preg_match_all('#<svg[^>]*class="([^"]*)"#', $main[0], $icons);
+
+        $this->assertGreaterThan(15, count($icons[1]), 'the strip, the snapshot and the attention rows are all drawn');
+
+        foreach ($icons[1] as $class) {
+            $this->assertStringNotContainsString('text-white', $class, 'an icon drawn in white on a light card: ' . $class);
+        }
+    }
+
     public function testTheDeanSeesTheirDepartmentAndTheirCard(): void
     {
         $body = $this->page();

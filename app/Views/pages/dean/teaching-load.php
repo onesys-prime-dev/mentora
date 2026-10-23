@@ -69,19 +69,23 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Teaching load',
         'icon'        => 'modules',
         'description' => 'What each instructor in your department teaches in a term. You can look, not change. A high load is ' . $highLoadUnits . ' units or more; your institution sets that number.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
-        'actions'     => $loadError ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/teaching-load') . '?' . http_build_query($filters->toQuery(['term' => $term])), 'attr') . '" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Download CSV</a>',
+        'actions'     => $loadError ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/teaching-load') . '?' . http_build_query($filters->toQuery(['term' => $term])), 'attr') . '" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
         'action'   => $base,
+        'surface'  => 'tinted', // it sits on the page's white panel, where a white card would not stand out
         'filtered' => $filters->subDepartmentId !== null,
         'clearUrl' => $base . ($term !== null ? '?term=' . (int) $term : ''),
         'hidden'   => $filters->toQuery(['term' => null, 'sub_department' => null]),
@@ -115,6 +119,8 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
         ], ['saveData' => false]) ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 
