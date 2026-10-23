@@ -46,7 +46,12 @@ class AnnouncementsController extends BaseController
             $loadError = true;
         }
 
+        // One list, narrowed to a level by ?level=; anything else means all of them.
+        $level = (string) $this->request->getGet('level');
+        $level = in_array($level, ['platform', 'institution', 'department', 'course'], true) ? $level : 'all';
+
         return view('pages/announcements/index', [
+            'level'        => $level,
             'title'        => 'Announcements',
             'page'         => 'announcements',
             'user'         => $user,

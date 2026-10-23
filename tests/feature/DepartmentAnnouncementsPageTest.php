@@ -247,6 +247,21 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $this->assertStringContainsString('Your courses', $body);
     }
 
+    public function testTheLevelFilterNarrowsTheListToOneLevel(): void
+    {
+        $all = $this->page('student/announcements', $this->student);
+        $this->assertStringContainsString('data-level-filter', $all);
+
+        foreach (['platform', 'institution', 'department', 'course'] as $level) {
+            $body = $this->page('student/announcements?level=' . $level, $this->student);
+
+            $this->assertSame(1, substr_count($body, 'data-level="'), $level . ' alone');
+            $this->assertStringContainsString('data-level="' . $level . '"', $body);
+        }
+
+        $this->assertSame(4, substr_count($this->page('student/announcements?level=nonsense', $this->student), 'data-level="'), 'an unknown level means all');
+    }
+
     public function testRecipientsSeeAStripOnTheirDashboardAndOthersDoNot(): void
     {
         $this->announce();

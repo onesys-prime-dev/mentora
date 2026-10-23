@@ -4,6 +4,7 @@
  * institution's, their department's and their courses'. A level with nothing to say still has its place.
  *
  * @var string $area
+ * @var string $level   the level being shown: all, platform, institution, department or course
  * @var string $platform
  * @var string|null $institution
  * @var list<array<string, mixed>> $department
@@ -14,6 +15,8 @@ $when = static fn (string $at): string => date('M j, Y', strtotime($at));
 $section = static function (string $id, string $title, string $hint): string {
     return '<header class="flex flex-col gap-0.5"><h2 id="' . esc($id, 'attr') . '" class="text-base font-bold text-[#1A1C1E]">' . esc($title) . '</h2><p class="text-xs text-[#646464]">' . esc($hint) . '</p></header>';
 };
+
+$show = static fn (string $id): bool => $level === 'all' || $level === $id;
 
 $quiet = static fn (string $text): string => '<p class="rounded-xl border border-[#E3E6EE] bg-[#F6F7FA] px-4 py-5 text-sm text-[#646464]">' . esc($text) . '</p>';
 ?>
@@ -35,6 +38,16 @@ $quiet = static fn (string $text): string => '<p class="rounded-xl border border
         'description' => 'Everything that reaches you, from the whole platform down to your own courses.',
     ], ['saveData' => false]) ?>
 
+    <?php if (! $loadError): ?>
+        <nav aria-label="Filter announcements" class="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/20 bg-brand-tint p-3" data-level-filter>
+            <?php foreach (['all' => 'All', 'platform' => 'Platform', 'institution' => 'Institution', 'department' => 'Department', 'course' => 'Courses'] as $key => $label): ?>
+                <a href="<?= esc(site_url($area . '/announcements') . ($key === 'all' ? '' : '?level=' . $key)) ?>"
+                   class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $level === $key ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
+                   <?= $level === $key ? 'aria-current="page"' : '' ?>><?= esc($label) ?></a>
+            <?php endforeach; ?>
+        </nav>
+    <?php endif; ?>
+
     <?php if ($loadError): ?>
 
         <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#C33939]/30 bg-white px-8 py-14 text-center" role="alert" data-load-error>
@@ -46,16 +59,23 @@ $quiet = static fn (string $text): string => '<p class="rounded-xl border border
 
     <?php else: ?>
 
+        <?php if ($show('platform')): ?>
         <section class="flex flex-col gap-3" aria-labelledby="level-platform" data-level="platform">
             <?= $section('level-platform', 'Platform', 'From the Mentora team, for everyone.') ?>
             <?= $platform !== '' ? '<p class="rounded-2xl bg-brand px-5 py-4 text-sm text-white">' . esc($platform) . '</p>' : $quiet('Nothing from the platform right now.') ?>
         </section>
 
+        <?php endif; ?>
+
+        <?php if ($show('institution')): ?>
         <section class="flex flex-col gap-3" aria-labelledby="level-institution" data-level="institution">
             <?= $section('level-institution', 'Your institution', 'From your institution\'s administrators.') ?>
             <?= $institution !== null ? '<p class="rounded-2xl bg-brand-tint px-5 py-4 text-sm text-brand-dark">' . esc($institution) . '</p>' : $quiet('Nothing from your institution right now.') ?>
         </section>
 
+        <?php endif; ?>
+
+        <?php if ($show('department')): ?>
         <section class="flex flex-col gap-3" aria-labelledby="level-department" data-level="department">
             <?= $section('level-department', 'Your department', 'From the dean, for the department, sub-department or program you belong to.') ?>
 
@@ -76,6 +96,9 @@ $quiet = static fn (string $text): string => '<p class="rounded-xl border border
             <?php endif; ?>
         </section>
 
+        <?php endif; ?>
+
+        <?php if ($show('course')): ?>
         <section class="flex flex-col gap-3" aria-labelledby="level-course" data-level="course">
             <?= $section('level-course', 'Your courses', 'The latest posts in the courses you are in.') ?>
 
@@ -94,6 +117,7 @@ $quiet = static fn (string $text): string => '<p class="rounded-xl border border
                 </ul>
             <?php endif; ?>
         </section>
+        <?php endif; ?>
 
     <?php endif; ?>
 
