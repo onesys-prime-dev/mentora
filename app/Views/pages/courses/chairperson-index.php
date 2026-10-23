@@ -41,7 +41,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
         <p class="text-sm text-[#3D3D3D]">Every course in the programs you chair.</p>
     </div>
 
-    <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4 sm:grid-cols-2 lg:grid-cols-5">
+    <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4 sm:grid-cols-2 lg:grid-cols-6">
         <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 lg:col-span-2">Search
             <input class="<?= $input ?>" type="search" name="q" value="<?= esc($filters->q ?? '') ?>" placeholder="Course code, title or section">
         </label>
@@ -73,7 +73,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
                 <?php endforeach; ?>
             </select>
         </label>
-        <div class="flex items-end gap-2 lg:col-span-5">
+        <div class="flex items-end gap-2 lg:col-span-1">
             <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Apply</button>
             <?php if ($filters->isFiltered()): ?>
                 <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= site_url('chairperson/courses') ?>">Clear</a>
