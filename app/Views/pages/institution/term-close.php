@@ -30,14 +30,17 @@ foreach ($plan['offerings'] as $o) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url($base), 'backLabel' => 'Back to terms'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Close ' . $term['name'],
         'icon'        => 'calendar',
         'description' => $term['academic_year'] . ' · ' . date('j M Y', strtotime((string) $term['start_date'])) . ' to ' . date('j M Y', strtotime((string) $term['end_date'])),
-        'backUrl'     => site_url($base),
-        'backLabel'   => 'Back to terms',
     ], ['saveData' => false]) ?>
 
     <?php if (session()->has('error')): ?>
@@ -56,7 +59,7 @@ foreach ($plan['offerings'] as $o) {
             <?= view('components/metric-card', ['label' => 'Left as they are', 'value' => (string) $plan['untouched'], 'icon' => 'info', 'tone' => 'neutral', 'detail' => 'Archived offerings'], ['saveData' => false]) ?>
         </div>
 
-        <section class="rounded-2xl bg-white p-6 shadow-sm" aria-label="What will change">
+        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-label="What will change">
             <h2 class="text-sm font-bold text-brand">What happens</h2>
             <ul class="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-[#3D3D3D]">
                 <li>The term and its offerings become <strong>completed</strong>.</li>
@@ -93,6 +96,8 @@ foreach ($plan['offerings'] as $o) {
         <?php endif; ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

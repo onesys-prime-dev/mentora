@@ -32,14 +32,17 @@ foreach ($exportRows as $row) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Data export',
         'icon'        => 'folder',
         'description' => 'A copy of everything ' . $exportName . ' holds in Mentora, as CSV files in one ZIP: terms, departments, programs, courses, people, enrolments, final grades, assessments, submissions and announcements. Uploaded files and passwords are not included.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
     ], ['saveData' => false]) ?>
 
     <?php if (session()->has('message')): ?>
@@ -50,7 +53,7 @@ foreach ($exportRows as $row) {
     <?php endif; ?>
 
     <?php if ($exportAllowed): ?>
-        <form class="flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm" method="post" action="<?= site_url('institution/export') ?>" data-export-form>
+        <form class="flex flex-wrap items-center gap-3 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-4 shadow-md" method="post" action="<?= site_url('institution/export') ?>" data-export-form>
             <?= csrf_field() ?>
             <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Create an export</button>
             <span class="text-xs text-[#646464]">Each export can be downloaded for <?= esc((string) $exportDays) ?> days.</span>
@@ -62,7 +65,7 @@ foreach ($exportRows as $row) {
     <?php endif; ?>
 
     <?php if ($rows === []): ?>
-        <div class="rounded-2xl bg-white/70" data-export-empty>
+        <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA]" data-export-empty>
             <?= view('components/empty-state', ['icon' => 'folder', 'title' => 'No exports yet', 'text' => $exportAllowed ? 'Create one above and it appears here.' : 'Exports you take will be listed here.'], ['saveData' => false]) ?>
         </div>
     <?php else: ?>
@@ -78,6 +81,8 @@ foreach ($exportRows as $row) {
             'rows'     => $rows,
         ], ['saveData' => false]) ?>
     <?php endif; ?>
+
+</div>
 
 </div>
 
