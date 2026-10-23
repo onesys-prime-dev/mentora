@@ -6,6 +6,7 @@ import "./shared/notifications-menu";
 import "./shared/role-switch";
 import "./shared/select-link";
 import "./shared/auto-search";
+import "./shared/select-arrow";
 import "./shared/announcement";
 import "./shared/toast";
 import "./shared/theme";

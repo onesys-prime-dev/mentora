@@ -122,19 +122,23 @@ if ($isInstructor) {
 
                 <div class="flex w-full flex-wrap items-center gap-4">
 
+                    <span class="relative flex">
                     <select
                         data-assessments-filter
+                        data-select-arrow
                         aria-label="Filter assessments"
-                        class="h-10 w-44 appearance-none rounded-full border border-gray-300 bg-white px-4 pr-10 text-sm shadow outline-none focus:border-blue-500">
+                        class="peer h-10 min-w-[4.5rem] field-sizing-content appearance-none rounded-full font-semibold text-brand border border-gray-300 bg-white pl-3 pr-8 text-sm shadow outline-none focus:border-blue-500">
 
                         <?php foreach ($filters as $value => $label): ?>
                             <option value="<?= esc($value) ?>"><?= esc($label) ?></option>
                         <?php endforeach; ?>
 
                     </select>
+                        <svg class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand transition-transform duration-200 peer-data-[open=true]:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                    </span>
 
                     <!-- Client-side search (no form submit, so no page reload) -->
-                    <label class="flex h-10 min-w-48 flex-1 items-center gap-2 rounded-4xl border border-gray-300 bg-white px-4 shadow">
+                    <label class="ml-auto flex h-10 w-64 items-center gap-2 rounded-4xl border border-gray-300 bg-white px-4 shadow">
 
                         <?= icon('search', 'h-4 w-4 opacity-60') ?>
 
