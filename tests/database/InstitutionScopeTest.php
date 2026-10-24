@@ -139,10 +139,4 @@ final class InstitutionScopeTest extends DatabaseTestCase
         $this->assertFalse($this->scope->ownsPerson($this->own['person']));
     }
 
-    public function testAPersonInTwoInstitutionsIsOwnedByBoth(): void
-    {
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->theirs, 'user_id' => $this->own['person'], 'created_at' => date('Y-m-d H:i:s')]);
-
-        $this->assertTrue($this->scope->ownsPerson($this->own['person']));
-    }
 }

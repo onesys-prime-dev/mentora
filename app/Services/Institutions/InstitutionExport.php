@@ -12,6 +12,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 use ZipArchive;
+use App\Services\Subscriptions\EffectiveStatus;
 
 /**
  * An institution's full data export (SA13): everything the customer owns, as
@@ -68,7 +69,7 @@ class InstitutionExport
         $institution = (new InstitutionModel())->find($institutionId)
             ?? throw new InvalidArgumentException('That institution does not exist.');
 
-        if (! self::isEligible((string) $institution['status'])) {
+        if (! self::isEligible(EffectiveStatus::of($institutionId, $now))) {
             throw new InvalidArgumentException('A full export is available once the subscription has ended, while the institution is read-only or past.');
         }
 

@@ -127,7 +127,6 @@ class UsersController extends BaseController
             'page'                  => 'admin-users',
             'user'                  => auth()->user(),
             'person'                => $person,
-            'personInstitutions'    => $this->institutions(),
             'personAssignableRoles' => UserAdminService::ASSIGNABLE_ROLES,
             'personIsSelf'          => (int) auth()->id() === $id,
             'personSisManaged'      => (new SisOwnership())->managesPerson($id),
@@ -164,18 +163,6 @@ class UsersController extends BaseController
         $roles = array_values(array_filter((array) $this->request->getPost('roles'), 'is_string'));
 
         return $this->act($id, fn () => $this->users->setRoles($id, $roles), 'Roles saved.');
-    }
-
-    public function addMembership(int $id): RedirectResponse
-    {
-        $institution = (int) $this->request->getPost('institution_id');
-
-        return $this->act($id, fn () => $this->users->addMembership($id, $institution), 'Added to the institution.');
-    }
-
-    public function removeMembership(int $id, int $institutionId): RedirectResponse
-    {
-        return $this->act($id, fn () => $this->users->removeMembership($id, $institutionId), 'Removed from the institution.');
     }
 
     public function resetPassword(int $id): RedirectResponse

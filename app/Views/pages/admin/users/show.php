@@ -1,10 +1,10 @@
 <?php
 /**
  * One person: who they are, whether they can sign in, their roles and
- * institutions, and what an administrator can do about it.
+ * institution, and what an administrator can do about it. An account belongs
+ * to one institution (decision D1), so the institution is shown, not changed.
  *
  * @var array<string, mixed>       $person
- * @var list<array<string, mixed>> $personInstitutions    every institution, for the add-membership select
  * @var list<string>               $personAssignableRoles roles that can be ticked
  * @var bool                       $personIsSelf
  * @var array<string, mixed>       $personValues          name and email as shown in the form
@@ -17,7 +17,6 @@ $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-v
 $isAdmin     = in_array('admin', $person['roles'], true);
 $deactivated = (int) $person['active'] === 0 || $person['deactivated_at'] !== null;
 $name        = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
-$memberOf    = array_column($person['institutions'], 'id');
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -132,40 +131,18 @@ $memberOf    = array_column($person['institutions'], 'id');
     </section>
 
     <section class="rounded-2xl bg-white p-6 shadow-sm" data-section="institutions">
-        <h2 class="text-lg font-semibold text-brand">Institutions</h2>
+        <h2 class="text-lg font-semibold text-brand">Institution</h2>
 
         <?php if ($person['institutions'] === []): ?>
             <p class="mt-3 text-sm text-[#646464]"><?= $isAdmin ? 'System administrators belong to no institution.' : 'Not a member of any institution.' ?></p>
         <?php else: ?>
             <ul class="mt-3 flex flex-col gap-2">
                 <?php foreach ($person['institutions'] as $institution): ?>
-                    <li class="flex items-center justify-between gap-3 text-sm">
+                    <li class="text-sm">
                         <a class="text-brand hover:underline" href="<?= site_url('admin/institutions/' . $institution['id']) ?>"><?= esc($institution['name']) ?></a>
-                        <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/memberships/' . $institution['id'] . '/remove') ?>">
-                            <?= csrf_field() ?>
-                            <button type="submit" class="<?= $btn ?> border-[#C33939] bg-white text-[#C33939] hover:bg-[#FDEDEC]">Remove</button>
-                        </form>
                     </li>
                 <?php endforeach; ?>
             </ul>
-        <?php endif; ?>
-
-        <?php if (! $isAdmin): ?>
-            <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/memberships') ?>" class="mt-4 flex flex-wrap items-end gap-3">
-                <?= csrf_field() ?>
-                <?php
-                $addable = ['' => 'Choose an institution'];
-
-                foreach ($personInstitutions as $institution) {
-                    if (! in_array((int) $institution['id'], array_map('intval', $memberOf), true) && $institution['status'] !== 'pending') {
-                        $addable[(string) $institution['id']] = (string) $institution['name'];
-                    }
-                }
-                ?>
-                <?= view('components/form-field', ['name' => 'institution_id', 'label' => 'Add to an institution', 'type' => 'select', 'options' => $addable, 'required' => true], ['saveData' => false]) ?>
-                <button type="submit" class="<?= $btn ?> border-brand bg-white text-brand hover:bg-brand-tint">Add</button>
-            </form>
-            <p class="mt-1 text-xs text-[#646464]">Changing institutions needs your password.</p>
         <?php endif; ?>
     </section>
 

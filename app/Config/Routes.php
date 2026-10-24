@@ -847,7 +847,6 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/sign-out', 'Institution\PeopleController::signOut/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)/reset-password', 'Institution\PeopleController::resetPassword/$1', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('(:num)/roles', 'Institution\PeopleController::roles/$1', ['filter' => ['permission:people.manage', 'reauth']]);
-            $routes->post('(:num)/remove', 'Institution\PeopleController::remove/$1', ['filter' => 'permission:people.manage']);
         });
 
         // The course catalog (structure.manage).
@@ -950,8 +949,6 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     $routes->post('users/(:num)/sign-out', 'Admin\UsersController::signOut/$1', ['filter' => 'permission:users.manage']);
     $routes->post('users/(:num)/reset-password', 'Admin\UsersController::resetPassword/$1', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/(:num)/roles', 'Admin\UsersController::roles/$1', ['filter' => ['permission:users.manage', 'reauth']]);
-    $routes->post('users/(:num)/memberships', 'Admin\UsersController::addMembership/$1', ['filter' => ['permission:users.manage', 'reauth']]);
-    $routes->post('users/(:num)/memberships/(:num)/remove', 'Admin\UsersController::removeMembership/$1/$2', ['filter' => ['permission:users.manage', 'reauth']]);
 
     // General settings: look with settings.view; saving needs settings.manage and the password.
     $routes->get('settings/general', 'Admin\GeneralSettingsController::index', ['filter' => 'permission:settings.view']);

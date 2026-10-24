@@ -12,6 +12,7 @@ use App\Services\Institutions\InstitutionAttention;
 use App\Services\Institutions\InstitutionAuditLog;
 use App\Services\Institutions\InstitutionScope;
 use App\Services\Institutions\InstitutionSnapshot;
+use App\Services\Subscriptions\EffectiveStatus;
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\HTTP\RedirectResponse;
 use DateTimeImmutable;
@@ -40,6 +41,9 @@ class HomeController extends BaseController
 
         $user = auth()->user();
         $id   = (int) $institution['id'];
+
+        // The status the banner and the export go by: the subscription dates count before the nightly job runs (6.1).
+        $institution['status'] = EffectiveStatus::of($id);
 
         // What the signed-in administrator is allowed to open; the page offers nothing else.
         $canAudit = $user->can('institution.audit');

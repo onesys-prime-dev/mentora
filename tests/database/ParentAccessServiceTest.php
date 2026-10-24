@@ -136,7 +136,6 @@ final class ParentAccessServiceTest extends DatabaseTestCase
     {
         $this->child('Ann');
         $second = PeopleFactory::institution('PAY');
-        db_connect()->table('institution_users')->insert(['institution_id' => $second, 'user_id' => $this->parent->id, 'created_at' => date('Y-m-d H:i:s')]);
         $this->child('Bea', $second);
 
         $this->assertSame(['Ann Lee'], array_column($this->access->children($this->parent), 'name'));

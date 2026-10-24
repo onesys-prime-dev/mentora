@@ -23,10 +23,29 @@ class ReadOnlyFilter implements FilterInterface
 {
     private const SAFE = ['GET', 'HEAD', 'OPTIONS'];
 
+    /**
+     * A person's own things stay theirs in a read-only institution (decision 8.2): their
+     * reminders, and a parent's email choices and password link. Notification read state
+     * and the role switch are outside the read-only areas already.
+     */
+    public const OWN_ACCOUNT = [
+        '#^(student|instructor|chairperson)/api/calendar/reminders(/|$)#',
+        '#^parent/profile/(notifications|password-link)$#',
+    ];
+
     public function before(RequestInterface $request, $arguments = null)
     {
         if (in_array(strtoupper($request->getMethod()), self::SAFE, true)) {
             return null;
+        }
+
+        /** @var IncomingRequest $request */
+        $path = trim($request->getPath(), '/');
+
+        foreach (self::OWN_ACCOUNT as $pattern) {
+            if (preg_match($pattern, $path) === 1) {
+                return null;
+            }
         }
 
         $user = auth()->user();

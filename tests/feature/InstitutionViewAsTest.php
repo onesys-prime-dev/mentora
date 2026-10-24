@@ -186,14 +186,6 @@ final class InstitutionViewAsTest extends RouteTestCase
         $this->assertStringContainsString('yourself', $this->refusal($this->admin));
     }
 
-    public function testSomeoneWhoIsAlsoAtAnotherInstitutionCannotBeViewed(): void
-    {
-        $shared = PeopleFactory::person('instructor', 'Shari', 'Shared', 'shared@view.example', $this->institution);
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->other, 'user_id' => $shared->id, 'created_at' => date('Y-m-d H:i:s')]);
-
-        $this->assertStringContainsString('another institution', $this->refusal($shared));
-    }
-
     public function testADeactivatedPersonCannotBeViewed(): void
     {
         (new AccountControl())->deactivate((int) $this->student->id);
@@ -282,13 +274,9 @@ final class InstitutionViewAsTest extends RouteTestCase
 
     public function testThePeopleListOffersItOnlyWhereItWorks(): void
     {
-        $elsewhere = PeopleFactory::person('instructor', 'Els', 'Where', 'els@view.example', $this->institution);
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->other, 'user_id' => $elsewhere->id, 'created_at' => date('Y-m-d H:i:s')]);
-
         $body = $this->go('GET', 'institution/people')->response()->getBody();
 
         $this->assertStringContainsString('/institution/view-as/' . $this->student->id . '"', $body);
         $this->assertStringNotContainsString('/institution/view-as/' . $this->admin->id . '"', $body, 'not yourself');
-        $this->assertStringNotContainsString('/institution/view-as/' . $elsewhere->id . '"', $body, 'not someone shared');
     }
 }

@@ -169,15 +169,11 @@ final class InstitutionPurgeTest extends DatabaseTestCase
     {
         $institution = $this->deletedInstitution(10);
         $alone       = $this->member($institution);
-        $shared      = $this->member($institution);
-        $this->member($this->liveInstitution(), $shared);
 
         $this->service->purge($institution, null, $this->admin);
 
         $this->assertTrue($this->exists('users', 'id', (int) $alone->id), 'the account is not deleted');
-        $this->assertTrue($this->exists('users', 'id', (int) $shared->id));
         $this->assertSame(0, db_connect()->table('institution_users')->where('institution_id', $institution)->countAllResults());
-        $this->assertSame(1, db_connect()->table('institution_users')->where('user_id', $shared->id)->countAllResults(), 'membership of the other institution stays');
     }
 
     public function testASystemAdministratorAccountIsNeverAffected(): void
@@ -279,19 +275,6 @@ final class InstitutionPurgeTest extends DatabaseTestCase
         $this->assertSame(1, $old['courses']);
         $this->assertSame(2, $old['members']);
         $this->assertSame(2, $old['members_left_without_an_institution']);
-    }
-
-    public function testMembersOfSeveralInstitutionsAreNotCountedAsLeftWithNothing(): void
-    {
-        $institution = $this->deletedInstitution(10);
-        $this->member($institution);
-        $shared = $this->member($institution);
-        $this->member($this->liveInstitution(), $shared);
-
-        $counts = $this->service->contents($institution);
-
-        $this->assertSame(2, $counts['members']);
-        $this->assertSame(1, $counts['members_left_without_an_institution']);
     }
 
     public function testNothingIsPurgedIfTheAuditEntryCannotBeWritten(): void

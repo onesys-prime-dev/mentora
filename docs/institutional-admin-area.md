@@ -9,6 +9,7 @@ How its screens are built (tokens, components, patterns and the acceptance list)
 - The institution is **decided on the server** from the signed-in person (`InstitutionScope`, built on `PlanLimits::institutionOf`), never from an id in the address or a form.
 - Every id a page is handed (department, sub-department, program, course, offering, term, person) is checked with `InstitutionScope::require()` before anything is read or written. A foreign or missing id answers **404**, not 403, so the page does not confirm it exists elsewhere.
 - A person removed from the platform (soft-deleted) is not owned.
+- **Read-only** follows the institution's effective status (`EffectiveStatus`): the subscription dates count even before the nightly `subscriptions:sync` has moved the stored status. A person's own things stay open in a read-only or past institution: their calendar reminders, and a parent's email choices and password link (`ReadOnlyFilter::OWN_ACCOUNT`).
 
 ## Routes
 
@@ -116,7 +117,7 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 
 `/institution/people` (permission `people.view` to look and export, `people.manage` to change; read-only while the institution is read-only). The Apps tile "People".
 
-- **List:** people of the institution (never system administrators, never another institution), searchable by name or email, filterable by role and status, sortable, 25 per page, with a CSV export of the current filters or only the ticked rows. A person who also belongs to another institution is marked, and the other institution is never named.
+- **List:** people of the institution (never system administrators, never another institution), searchable by name or email, filterable by role and status, sortable, 25 per page, with a CSV export of the current filters or only the ticked rows.
 - **Invitations tab:** invitations still waiting or expired. Send again (the earlier link stops working) or cancel. The account is made when the person chooses a password. A student invitation takes a seat and is refused when none is left.
 - **Edit details:** name and email. Locked while the SIS manages the person.
 - **Roles:** student, instructor, chairperson, parent, institutional administrator; at least one. Never system administrator.
@@ -125,9 +126,9 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Protected:**
   - The last active institutional administrator cannot be deactivated, demoted or removed, and nobody takes the administrator role from themselves.
   - Nobody deactivates their own account.
-  - A person who also belongs to another institution has an account that is not this administrator's: only "Remove from my institution" is offered. Someone who belongs only here is deactivated instead.
-- **Chairperson assignments** end when the role is taken away, the person is deactivated or removed (history kept).
-- **Audit:** `user.updated|deactivated|reactivated|signed_out|roles_changed|password_reset_sent|membership_removed`, `invitation.created|resent|revoked`, `users.exported`.
+  - An account belongs to one institution (decision D1), so a person is never removed from it: they are deactivated instead.
+- **Chairperson assignments** end when the role is taken away or the person is deactivated (history kept).
+- **Audit:** `user.updated|deactivated|reactivated|signed_out|roles_changed|password_reset_sent`, `invitation.created|resent|revoked`, `users.exported`.
 - **Not yet:** deans (their role arrives with the dean handout) and parent-student links (a later branch).
 
 ## Parents
@@ -311,7 +312,7 @@ On the People page, `Actions` has `View as this person` (permission `institution
 
 - **View only.** Every request that would change something is refused on the server, whatever the page or a script sends; reading works. A banner on every page names the person, the minutes left and the reason, with `Exit view`. Signing out also just ends the view.
 - **Time limited** by the platform's `impersonationMinutes` setting. When it passes, the next request ends the view and returns to People.
-- **Who can be viewed:** a live account of this institution: student, instructor, chairperson or parent. Never an administrator of any kind, never oneself, never a person who is also at another institution (the view would show that institution's data), and a person of another institution is answered as one who does not exist.
+- **Who can be viewed:** a live account of this institution: student, instructor, chairperson or parent. Never an administrator of any kind, never oneself, and a person of another institution is answered as one who does not exist.
 - **Works in a read-only institution**, since it changes nothing.
 - **Recorded:** start and end are audit entries (reason, time watched), and every entry made in between carries the administrator as impersonator, which the audit page shows as "viewing as, by ...".
 

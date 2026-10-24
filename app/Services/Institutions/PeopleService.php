@@ -230,7 +230,6 @@ class PeopleService
     public function update(int $institutionId, int $userId, array $input, ?User $actor = null): void
     {
         $person = $this->member($institutionId, $userId);
-        $this->accountIsOurs($person);
         $this->person($input);
 
         try {
@@ -249,7 +248,6 @@ class PeopleService
     public function deactivate(int $institutionId, int $userId, ?User $actor = null): void
     {
         $person = $this->member($institutionId, $userId);
-        $this->accountIsOurs($person);
         $this->mustNotBeLastAdministrator($institutionId, $person, 'deactivated');
 
         try {
@@ -268,7 +266,6 @@ class PeopleService
     public function reactivate(int $institutionId, int $userId, ?User $actor = null): void
     {
         $person = $this->member($institutionId, $userId);
-        $this->accountIsOurs($person);
 
         try {
             $this->users->reactivate($userId, $actor);
@@ -284,7 +281,6 @@ class PeopleService
     public function signOut(int $institutionId, int $userId, ?User $actor = null): void
     {
         $person = $this->member($institutionId, $userId);
-        $this->accountIsOurs($person);
 
         try {
             $this->users->signOut($userId, $actor);
@@ -304,7 +300,6 @@ class PeopleService
     public function resetPassword(int $institutionId, int $userId, ?User $actor = null): array
     {
         $person = $this->member($institutionId, $userId);
-        $this->accountIsOurs($person);
 
         try {
             return (new PasswordResetService())->send($userId, $actor);
@@ -324,7 +319,6 @@ class PeopleService
     public function setRoles(int $institutionId, int $userId, array $roles, ?User $actor = null): void
     {
         $person = $this->member($institutionId, $userId);
-        $this->accountIsOurs($person);
 
         $roles = array_values(array_unique(array_map('strval', $roles)));
 
@@ -357,32 +351,6 @@ class PeopleService
         if (in_array('chairperson', $person['roles'], true) && ! in_array('chairperson', $roles, true)) {
             $this->endChairAssignments($institutionId, $userId, $actor);
         }
-    }
-
-    /**
-     * Takes someone who also belongs elsewhere out of this institution. They
-     * keep their account and their other membership.
-     *
-     * @throws StructureException
-     * @throws PageNotFoundException
-     */
-    public function removeFromInstitution(int $institutionId, int $userId, ?User $actor = null): void
-    {
-        $person = $this->member($institutionId, $userId);
-
-        if (count($person['institutions']) < 2) {
-            throw new StructureException('This person belongs only to your institution, so there is nowhere for them to go. Deactivate the account instead.');
-        }
-
-        $this->mustNotBeLastAdministrator($institutionId, $person, 'removed');
-
-        try {
-            $this->users->removeMembership($userId, $institutionId, $actor);
-        } catch (InvalidArgumentException $e) {
-            throw $this->asRefusal($e);
-        }
-
-        $this->endChairAssignments($institutionId, $userId, $actor);
     }
 
     /**
@@ -449,18 +417,6 @@ class PeopleService
         }
 
         return $person;
-    }
-
-    /**
-     * @param array<string, mixed> $person
-     *
-     * @throws StructureException
-     */
-    private function accountIsOurs(array $person): void
-    {
-        if (count($person['institutions']) > 1) {
-            throw new StructureException($this->displayName($person) . ' also belongs to another institution, so their account is not yours to change. You can remove them from your institution instead.');
-        }
     }
 
     /**
@@ -551,7 +507,6 @@ class PeopleService
             $id        = (int) $r['id'];
             $active    = (int) $r['active'] === 1 && $r['deactivated_at'] === null;
             $isAdmin   = in_array('institutional_admin', $r['roles'], true);
-            $elsewhere = count($r['institutions']) > 1;
 
             $shaped[] = [
                 'id'             => $id,
@@ -562,11 +517,10 @@ class PeopleService
                 'roles'          => array_values(array_diff($r['roles'], ['admin'])),
                 'active'         => $active,
                 'last_active'    => $r['last_active'],
-                'elsewhere'      => $elsewhere,
                 'sis'            => in_array($id, $managed, true),
                 'self'           => $id === $actorId,
                 // What view-as accepts: a live account of this institution alone that is not an administrator's.
-                'viewable'       => $active && $id !== $actorId && ! $isAdmin && ! $elsewhere,
+                'viewable'       => $active && $id !== $actorId && ! $isAdmin,
                 'last_admin'     => $isAdmin && $active && $admins <= 1,
             ];
         }

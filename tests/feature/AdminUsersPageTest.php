@@ -567,20 +567,6 @@ final class AdminUsersPageTest extends RouteTestCase
         $this->assertStringContainsString('at least one role', $this->body("admin/users/{$user->id}"));
     }
 
-    public function testAddingAndRemovingAnInstitution(): void
-    {
-        $this->confirmedPassword();
-        $user = PeopleFactory::person('instructor', 'Ivo', 'Teacher', null, $this->acme);
-
-        $this->submit("admin/users/{$user->id}/memberships", ['institution_id' => (string) $this->beta]);
-
-        $this->assertSame(['Acme University', 'Beta College'], array_column($this->directoryRow($user)['institutions'], 'name'));
-
-        $this->submit("admin/users/{$user->id}/memberships/{$this->acme}/remove");
-
-        $this->assertSame(['Beta College'], array_column($this->directoryRow($user)['institutions'], 'name'));
-    }
-
     /*
     |--------------------------------------------------------------------------
     | Bulk

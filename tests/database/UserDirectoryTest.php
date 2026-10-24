@@ -47,7 +47,6 @@ final class UserDirectoryTest extends DatabaseTestCase
     public function testARowHoldsWhoTheyAreAndWhereTheyBelong(): void
     {
         $user = PeopleFactory::person('student', 'Maria', 'Santos', 'maria@example.com', $this->acme, true, '2026-10-09 08:00:00');
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->beta, 'user_id' => $user->id]);
         db_connect()->table('auth_groups_users')->insert(['user_id' => $user->id, 'group' => 'instructor']);
 
         $row = $this->directory->find((int) $user->id);
@@ -56,7 +55,7 @@ final class UserDirectoryTest extends DatabaseTestCase
         $this->assertSame('Maria', $row['first_name']);
         $this->assertSame('Santos', $row['last_name']);
         $this->assertSame(['instructor', 'student'], $row['roles']);
-        $this->assertSame(['Acme University', 'Beta College'], array_column($row['institutions'], 'name'));
+        $this->assertSame(['Acme University'], array_column($row['institutions'], 'name'));
         $this->assertSame('2026-10-09 08:00:00', $row['last_active']);
         $this->assertNull($row['deactivated_at']);
     }
@@ -103,16 +102,6 @@ final class UserDirectoryTest extends DatabaseTestCase
         $this->assertSame(['ana@example.com'], $this->emails($this->filters(['institution' => (string) $this->acme])));
         $this->assertSame(['ben@example.com'], $this->emails($this->filters(['institution' => (string) $this->beta])));
         $this->assertCount(3, $this->emails($this->filters()));
-    }
-
-    public function testAPersonInSeveralInstitutionsAppearsOnceInEach(): void
-    {
-        $both = PeopleFactory::person('instructor', 'Both', 'Places', 'both@example.com', $this->acme);
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->beta, 'user_id' => $both->id]);
-
-        $this->assertSame(['both@example.com'], $this->emails($this->filters(['institution' => (string) $this->acme])));
-        $this->assertSame(['both@example.com'], $this->emails($this->filters(['institution' => (string) $this->beta])));
-        $this->assertSame(1, $this->directory->search($this->filters())['total'], 'and once overall');
     }
 
     public function testFilteringByRole(): void
@@ -211,10 +200,9 @@ final class UserDirectoryTest extends DatabaseTestCase
         $this->assertSame([], $this->directory->search($this->filters(['per_page' => '3', 'page' => '9']))['rows']);
     }
 
-    public function testTheTotalCountsPeopleNotInstitutionsOrRoles(): void
+    public function testTheTotalCountsPeopleNotRoles(): void
     {
         $user = PeopleFactory::person('student', 'Many', 'Things', 'many@example.com', $this->acme);
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->beta, 'user_id' => $user->id]);
         db_connect()->table('auth_groups_users')->insert(['user_id' => $user->id, 'group' => 'instructor']);
 
         $this->assertSame(1, $this->directory->search($this->filters())['total']);

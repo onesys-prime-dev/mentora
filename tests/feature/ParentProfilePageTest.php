@@ -196,7 +196,7 @@ final class ParentProfilePageTest extends RouteTestCase
         $this->assertSame(['pam@example.test'], array_column($this->mailer->sent, 'to'), 'the password link is the parent\'s own account, so it still works');
     }
 
-    public function testAReadOnlyInstitutionRefusesBothChanges(): void
+    public function testAPastInstitutionStillLetsTheParentKeepTheirOwnSettings(): void
     {
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'past']);
         $this->loggedInAs($this->pam);
@@ -206,8 +206,9 @@ final class ParentProfilePageTest extends RouteTestCase
         $this->visit('POST', '/parent/profile/notifications', ['email' => [(string) $this->ben->id]]);
         $this->visit('POST', '/parent/profile/password-link');
 
-        $this->assertSame(0, db_connect()->table('parent_child_preferences')->countAllResults());
-        $this->assertSame([], $this->mailer->sent);
+        // A person's own things stay theirs in a read-only or past institution (decision 8.2).
+        $this->assertGreaterThan(0, db_connect()->table('parent_child_preferences')->countAllResults());
+        $this->assertCount(1, $this->mailer->sent);
     }
 
     public function testEveryOtherRoleIsTurnedAway(): void

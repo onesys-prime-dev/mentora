@@ -41,11 +41,11 @@ usable once, and chooses their own password. The account is made when they do
 | Sign out everywhere | Ends every session. They can sign in again. | no |
 | Send a password reset link | Emails a link; they choose the new password. | yes |
 | Roles | Replaces their roles (at least one). | yes |
-| Institutions | Adds or removes a membership. | yes |
+| Institution | Shown, not changed: an account belongs to one institution (decision D1). | — |
 
 Every change is recorded in the audit log (`user.updated`, `user.deactivated`,
 `user.reactivated`, `user.signed_out`, `user.password_reset_sent`,
-`user.roles_changed`, `user.membership_added`, `user.membership_removed`), in the
+`user.roles_changed`), in the
 same transaction as the change.
 
 ### Rules

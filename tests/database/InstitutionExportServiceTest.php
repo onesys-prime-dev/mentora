@@ -113,6 +113,19 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         $this->export->build($id, $admin, $this->now);
     }
 
+    public function testAnInstitutionWhoseSubscriptionRanOutCanExportEvenBeforeTheNightlyJob(): void
+    {
+        [$id, $admin] = $this->institutionWithData('active');
+
+        $db = db_connect();
+        $db->table('plans')->insert(['name' => 'Lapsed plan', 'status' => 'active']);
+        $db->table('subscriptions')->insert(['institution_id' => $id, 'plan_id' => (int) $db->insertID(), 'start_date' => '2025-01-01', 'end_date' => '2026-07-01']);
+
+        $this->export->build($id, $admin, $this->now);
+
+        $this->assertSame(1, $db->table('institution_exports')->where(['institution_id' => $id, 'status' => 'ready'])->countAllResults());
+    }
+
     public function testAnUnknownInstitutionIsRefused(): void
     {
         [, $admin] = $this->institutionWithData();

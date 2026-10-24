@@ -126,7 +126,7 @@ final class InstitutionHomeAttentionTest extends RouteTestCase
     public function testAReadOnlyInstitutionIsNotToldTwiceThatItIsReadOnly(): void
     {
         PeopleFactory::subscribe($this->institution, PeopleFactory::plan('Std'));
-        db_connect()->table('subscriptions')->where('institution_id', $this->institution)->update(['end_date' => date('Y-m-d', strtotime('-60 days'))]);
+        db_connect()->table('subscriptions')->where('institution_id', $this->institution)->update(['end_date' => date('Y-m-d', strtotime('-30 days'))]);
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
 
         $body = $this->home();

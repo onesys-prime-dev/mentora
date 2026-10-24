@@ -32,9 +32,8 @@ use Throwable;
  * administrator as the impersonator (AuditLogger reads `impersonator_id`).
  *
  * An institution's administrator may view only as a member of their own
- * institution: never as an administrator of any kind, never as themselves, and
- * never as someone whose account is shared with another institution, because
- * the view would show that institution's data too. A person who does not
+ * institution, never as an administrator of any kind or as themselves (an
+ * account belongs to one institution, decision D1). A person who does not
  * belong to the institution is answered as one who does not exist.
  *
  * Session keys: `impersonator_id` (the administrator) and `impersonation`
@@ -135,10 +134,6 @@ class Impersonation
 
         if ($byInstitution && $target->inGroup('institutional_admin')) {
             throw new InvalidArgumentException('You cannot view as an administrator.');
-        }
-
-        if ($byInstitution && $this->institutionCount($targetId) > 1) {
-            throw new InvalidArgumentException('That person also belongs to another institution, so their view cannot be shown.');
         }
 
         if (! $target->isActivated() || (new AccountControl())->isDeactivated($targetId)) {
@@ -266,11 +261,6 @@ class Impersonation
         }
 
         return $institutionId;
-    }
-
-    private function institutionCount(int $userId): int
-    {
-        return db_connect()->table('institution_users')->where('user_id', $userId)->countAllResults();
     }
 
     /** The one institution a person belongs to, for the audit entry (null when none or several). */

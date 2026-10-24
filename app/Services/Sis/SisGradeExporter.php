@@ -10,6 +10,7 @@ use CodeIgniter\Shield\Entities\User;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use Throwable;
+use App\Services\Subscriptions\EffectiveStatus;
 
 /**
  * The outbound sync (SA10): final grades from Mentora to the SIS. Mentora is
@@ -71,7 +72,8 @@ class SisGradeExporter
                 throw new InvalidArgumentException('The connection is not enabled.');
             }
 
-            if ($institution['status'] !== InstitutionModel::ACTIVE) {
+            // By its dates as well, so a lapsed subscription stops sending even before the nightly job runs.
+            if (EffectiveStatus::of($institutionId, $now) !== InstitutionModel::ACTIVE) {
                 throw new InvalidArgumentException('Only an active institution can send grades.');
             }
         }

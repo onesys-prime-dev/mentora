@@ -20,6 +20,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
+use App\Services\Subscriptions\EffectiveStatus;
 
 /**
  * The inbound sync (SA10): people, courses and enrolments from the SIS into
@@ -122,7 +123,8 @@ class SisImporter
                 throw new InvalidArgumentException('The connection is not enabled.');
             }
 
-            if ($institution['status'] !== InstitutionModel::ACTIVE) {
+            // By its dates as well, so a lapsed subscription stops syncing even before the nightly job runs.
+            if (EffectiveStatus::of($institutionId, $this->now) !== InstitutionModel::ACTIVE) {
                 throw new InvalidArgumentException('Only an active institution can be synced.');
             }
 

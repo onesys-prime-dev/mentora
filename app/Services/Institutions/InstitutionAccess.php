@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Institutions;
 
+use App\Services\Subscriptions\EffectiveStatus;
+
 /**
  * Whether the people of an institution may change things (SA13).
  *
@@ -13,9 +15,11 @@ namespace App\Services\Institutions;
  * look and export, but nothing can be changed. The read-only filter uses this
  * to refuse writes, and the app layout uses it to show the banner.
  *
- * A user who belongs to no institution (a system administrator) is never
- * restricted. A user in several institutions is restricted only if none of
- * them allows changes.
+ * The status is the effective one (EffectiveStatus): the subscription dates
+ * count even before the nightly job has moved the stored status (decision 6.1).
+ * An account belongs to one institution (decision D1), so that institution
+ * decides. A user who belongs to none (a system administrator) is never
+ * restricted.
  */
 class InstitutionAccess
 {
@@ -40,31 +44,24 @@ class InstitutionAccess
 
     private function work(int $userId): string
     {
-        $rows = db_connect()->table('institution_users')
-            ->select('institutions.status, institutions.deleted_at')
+        $row = db_connect()->table('institution_users')
+            ->select('institutions.id, institutions.deleted_at')
             ->join('institutions', 'institutions.id = institution_users.institution_id')
             ->where('institution_users.user_id', $userId)
-            ->get()->getResultArray();
+            ->get()->getRowArray();
 
-        if ($rows === []) {
+        if ($row === null) {
             return self::WRITABLE;
         }
 
-        $states = [];
-
-        foreach ($rows as $row) {
-            $states[] = match (true) {
-                $row['deleted_at'] !== null || $row['status'] === 'past' => self::PAST,
-                $row['status'] === 'read_only'                          => self::READ_ONLY,
-                default                                                 => self::WRITABLE,
-            };
+        if ($row['deleted_at'] !== null) {
+            return self::PAST;
         }
 
-        if (in_array(self::WRITABLE, $states, true)) {
-            return self::WRITABLE;
-        }
-
-        // None allows changes. Read-only only if every one of them is merely read-only.
-        return in_array(self::PAST, $states, true) ? self::PAST : self::READ_ONLY;
+        return match (EffectiveStatus::of((int) $row['id'])) {
+            'past'      => self::PAST,
+            'read_only' => self::READ_ONLY,
+            default     => self::WRITABLE,
+        };
     }
 }

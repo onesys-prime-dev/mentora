@@ -12,6 +12,7 @@ use CodeIgniter\HTTP\DownloadResponse;
 use CodeIgniter\HTTP\RedirectResponse;
 use InvalidArgumentException;
 use Throwable;
+use App\Services\Subscriptions\EffectiveStatus;
 
 /**
  * An institutional administrator's own data export (SA13). It works while
@@ -35,7 +36,7 @@ class ExportController extends BaseController
             'pageTitle'     => 'Data export',
             'user'          => auth()->user(),
             'exportName'    => (string) $institution['name'],
-            'exportAllowed' => InstitutionExport::isEligible((string) $institution['status']),
+            'exportAllowed' => InstitutionExport::isEligible(EffectiveStatus::of((int) $institution['id'])),
             'exportRows'    => (new InstitutionExport())->history((int) $institution['id']),
             'exportDays'    => InstitutionExport::KEEP_DAYS,
         ]);

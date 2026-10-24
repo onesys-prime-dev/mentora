@@ -118,11 +118,6 @@ class PeopleController extends BaseController
         return $this->run(fn (int $inst) => $this->people->setRoles($inst, $id, $roles, auth()->user()), 'The roles were saved.', self::BACK);
     }
 
-    public function remove(int $id): ResponseInterface|RedirectResponse
-    {
-        return $this->run(fn (int $inst) => $this->people->removeFromInstitution($inst, $id, auth()->user()), 'They were removed from your institution.', self::BACK);
-    }
-
     public function bulkDeactivate(): ResponseInterface|RedirectResponse
     {
         return $this->bulk('deactivate');

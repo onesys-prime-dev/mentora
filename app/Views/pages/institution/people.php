@@ -45,10 +45,6 @@ foreach ($peopleRows as $p) {
 
     $badges = '';
 
-    if ($p['elsewhere']) {
-        $badges .= ' <span class="ml-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-[#646464]" data-elsewhere>Also at another institution</span>';
-    }
-
     if ($p['sis']) {
         $badges .= ' <span class="ml-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#646464]" data-sis-locked>' . icon('lock', 'h-3 w-3') . 'SIS</span>';
     }
@@ -63,56 +59,44 @@ foreach ($peopleRows as $p) {
     }
 
     if ($peopleCanEdit) {
-        if (! $p['elsewhere']) {
-            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-edit"'
-                . ' data-dialog-title="Edit ' . $label . '" data-dialog-label="Save" data-dialog-action="' . $url('/' . $p['id']) . '"'
-                . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email']]) . '"'
-                . ($p['sis'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
+        $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-edit"'
+            . ' data-dialog-title="Edit ' . $label . '" data-dialog-label="Save" data-dialog-action="' . $url('/' . $p['id']) . '"'
+            . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email']]) . '"'
+            . ($p['sis'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
 
-            $values = [];
+        $values = [];
 
-            foreach ($peopleRoles as $role) {
-                $values['role_' . $role] = in_array($role, $p['roles'], true);
-            }
-
-            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-roles"'
-                . ' data-dialog-title="Roles of ' . $label . '" data-dialog-label="Save roles" data-dialog-action="' . $url('/' . $p['id'] . '/roles') . '"'
-                . ' data-dialog-values="' . $json($values) . '">Change roles</button>';
-
-            if ($p['active']) {
-                $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
-                    . ' data-dialog-title="Send ' . $label . ' a password link?"'
-                    . ' data-dialog-text="They get an email with a link to choose a new password. Their current password keeps working until they do."'
-                    . ' data-dialog-label="Send link" data-dialog-action="' . $url('/' . $p['id'] . '/reset-password') . '">Send password link</button>';
-
-                $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
-                    . ' data-dialog-title="Sign ' . $label . ' out everywhere?"'
-                    . ' data-dialog-text="Every device they are signed in on is signed out. They can sign in again straight away."'
-                    . ' data-dialog-label="Sign out" data-dialog-action="' . $url('/' . $p['id'] . '/sign-out') . '">Sign out everywhere</button>';
-            }
-
-            if ($p['active'] && ! $p['self'] && ! $p['last_admin']) {
-                $items .= '<button type="button" class="' . $menuBad . '" data-dialog-open="person-confirm"'
-                    . ' data-dialog-title="Deactivate ' . $label . '?"'
-                    . ' data-dialog-text="They are signed out and cannot sign in. Their work, grades and history are kept. If they are a chairperson, that assignment ends. You can reactivate them later."'
-                    . ' data-dialog-label="Deactivate" data-dialog-action="' . $url('/' . $p['id'] . '/deactivate') . '">Deactivate</button>';
-            } elseif (! $p['active']) {
-                $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
-                    . ' data-dialog-title="Reactivate ' . $label . '?"'
-                    . ' data-dialog-text="They can sign in again. A student takes a seat of your plan."'
-                    . ' data-dialog-label="Reactivate" data-dialog-action="' . $url('/' . $p['id'] . '/reactivate') . '">Reactivate</button>';
-            }
-        } else {
-            $items .= '<p class="px-3 py-2 text-xs text-[#646464]">Their account is shared with another institution, so only their place in yours can change.</p>';
+        foreach ($peopleRoles as $role) {
+            $values['role_' . $role] = in_array($role, $p['roles'], true);
         }
 
-        if ($p['elsewhere'] && ! $p['last_admin']) {
+        $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-roles"'
+            . ' data-dialog-title="Roles of ' . $label . '" data-dialog-label="Save roles" data-dialog-action="' . $url('/' . $p['id'] . '/roles') . '"'
+            . ' data-dialog-values="' . $json($values) . '">Change roles</button>';
+
+        if ($p['active']) {
+            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+                . ' data-dialog-title="Send ' . $label . ' a password link?"'
+                . ' data-dialog-text="They get an email with a link to choose a new password. Their current password keeps working until they do."'
+                . ' data-dialog-label="Send link" data-dialog-action="' . $url('/' . $p['id'] . '/reset-password') . '">Send password link</button>';
+
+            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+                . ' data-dialog-title="Sign ' . $label . ' out everywhere?"'
+                . ' data-dialog-text="Every device they are signed in on is signed out. They can sign in again straight away."'
+                . ' data-dialog-label="Sign out" data-dialog-action="' . $url('/' . $p['id'] . '/sign-out') . '">Sign out everywhere</button>';
+        }
+
+        if ($p['active'] && ! $p['self'] && ! $p['last_admin']) {
             $items .= '<button type="button" class="' . $menuBad . '" data-dialog-open="person-confirm"'
-                . ' data-dialog-title="Remove ' . $label . ' from your institution?"'
-                . ' data-dialog-text="They keep their account and their place in the other institution. They lose access to yours, and any chairperson assignment here ends."'
-                . ' data-dialog-label="Remove" data-dialog-action="' . $url('/' . $p['id'] . '/remove') . '">Remove from my institution</button>';
+                . ' data-dialog-title="Deactivate ' . $label . '?"'
+                . ' data-dialog-text="They are signed out and cannot sign in. Their work, grades and history are kept. If they are a chairperson, that assignment ends. You can reactivate them later."'
+                . ' data-dialog-label="Deactivate" data-dialog-action="' . $url('/' . $p['id'] . '/deactivate') . '">Deactivate</button>';
+        } elseif (! $p['active']) {
+            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+                . ' data-dialog-title="Reactivate ' . $label . '?"'
+                . ' data-dialog-text="They can sign in again. A student takes a seat of your plan."'
+                . ' data-dialog-label="Reactivate" data-dialog-action="' . $url('/' . $p['id'] . '/reactivate') . '">Reactivate</button>';
         }
-
     }
 
     if ($items !== '') {
