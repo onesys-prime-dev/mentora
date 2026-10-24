@@ -281,6 +281,6 @@ final class ReadOnlyModeTest extends RouteTestCase
     {
         $this->signIn($this->userIn('student', 'past'));
 
-        $this->assertStringContainsString('login', $this->step('GET', 'logout')->response()->getHeaderLine('Location'));
+        $this->assertStringContainsString('login', $this->step('POST', 'logout')->response()->getHeaderLine('Location'));
     }
 }

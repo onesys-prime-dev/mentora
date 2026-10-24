@@ -19,6 +19,9 @@
     })();
 </script>
 
+<?php // The session's CSRF token, which shared/csrf.js adds to every change a script makes. ?>
+<meta name="csrf-token" content="<?= esc(csrf_hash(), 'attr') ?>">
+
 <?= vite('resources/js/app.js') ?>
 
 <?php

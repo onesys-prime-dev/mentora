@@ -51,7 +51,7 @@
             </button>
 
             <p class="text-center text-sm text-gray-600">
-                Not you? <a class="text-blue-800 font-medium hover:underline" href="<?= site_url('logout') ?>">Sign in as someone else</a>
+                Not you? <button type="submit" formaction="<?= site_url('logout') ?>" formnovalidate class="text-blue-800 font-medium hover:underline">Sign in as someone else</button>
             </p>
 
         </form>

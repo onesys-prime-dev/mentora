@@ -162,3 +162,20 @@ These were the open questions left after the first pass.
 - The one chair is notified (`GradeOverrideRequestService.php:111, 171`) and is the only one who can endorse.
 - If the sub-department has no chair, or the chair made the request, the chair step is skipped and the request goes to the dean, or to the admin (1.1). The requester sees that the step was skipped.
 - A chair assigned later picks up only requests still waiting for a chair (16.0c). Requests already past that step don't move back.
+
+## Added during the design (2026-10-24)
+
+Settled while designing the fixes ([design](superpowers/specs/2026-10-23-audit-fixes-design.md)). Where one changes an earlier decision, it says so.
+
+- **D1** One account belongs to exactly one institution; the system admin belongs to none. A parent with children at two schools uses two accounts. The multi-institution cases of 8.1, 10.2 and 10.3 can no longer happen.
+- **D2** Each role is offered only the permissions that do something for it, on both permission pages.
+- **D3** A dean may sign off a section they teach.
+- **D4** An institution admin may not sign off a section they teach; another institution admin must. With one admin, it waits and they are told it needs a second admin.
+- **D5** The deploy installs the scheduled jobs itself, then checks they are there, and fails only if that check fails. **Replaces 6.3.**
+- **D6** New permission `discussions.manage` (pin, lock, delete others' posts, mark the answer), on by default for instructors and chairpersons.
+- **D7** Student and staff in the same course are refused within the same term, and no one may ever enrol in a course they have taught or chaired. A former student may teach it later. Refines 9.3.
+- **D8** A sixth SIS dataset for class times, per offering. Extends 13.2.
+- **D9** The class-times file is the whole timetable: a section in it gets exactly its rows and is locked; a SIS-owned section left out loses its SIS times; a section the SIS never sent is untouched; no file changes nothing.
+- **D10** A former student may later chair that program; a former dean or institution admin may never enrol in a course they led; someone whose enrolment ended in a past term may later be made staff.
+- **D11** The missed-job email goes out once when a job goes quiet and once when it recovers; the admin home warning stays in between.
+- **Also:** the background export adds a seventh scheduled job (6.4). Auditing a course (an ungraded enrolment) is out of scope.

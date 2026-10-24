@@ -124,7 +124,7 @@ final class AdminTwoFactorPagesTest extends RouteTestCase
     {
         $this->enterPassword();
 
-        $response = $this->step('GET', 'logout')->response();
+        $response = $this->step('POST', 'logout')->response();
 
         $this->assertStringContainsString('login', $response->getHeaderLine('Location'));
 
@@ -226,7 +226,8 @@ final class AdminTwoFactorPagesTest extends RouteTestCase
         $before = $this->todaysLog();
         $this->step('POST', 'auth/a/handle', ['email' => 'someone.else@mentora.test']);
 
-        $this->assertSame($before, $this->todaysLog(), 'nothing was added to the log');
+        // Only what was written by this request, which also logs the framework's "CSRF token verified".
+        $this->assertStringNotContainsString('sign-in code', substr($this->todaysLog(), strlen($before)), 'no code was logged');
         $this->assertSame([], $this->mailer->sent);
     }
 }

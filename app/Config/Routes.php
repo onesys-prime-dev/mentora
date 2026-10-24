@@ -6,7 +6,9 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Auth\RedirectController::index');
 $routes->post('role/switch', 'Auth\RedirectController::switchRole');
 
-service('auth')->routes($routes);
+// Shield's routes, except its GET logout: signing out is a button (POST), so a link or an image can't sign anyone out.
+service('auth')->routes($routes, ['except' => ['logout']]);
+$routes->post('logout', '\CodeIgniter\Shield\Controllers\LoginController::logoutAction', ['as' => 'logout']);
 
 // Public liveness check for the deploy pipeline; see HealthController.
 $routes->get('health', 'HealthController::index');

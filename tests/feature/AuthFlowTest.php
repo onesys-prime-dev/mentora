@@ -106,7 +106,7 @@ final class AuthFlowTest extends RouteTestCase
         $this->loggedInAs(CourseFactory::user('student'));
         $this->assertTrue(auth()->loggedIn());
 
-        $this->get('logout');
+        $this->post('logout');
 
         $this->assertFalse(auth()->loggedIn());
         $this->assertStringEndsWith('/login', $this->location('GET', 'student/courses'));

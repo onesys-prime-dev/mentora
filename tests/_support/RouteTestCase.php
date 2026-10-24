@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use CodeIgniter\Config\Services;
 use CodeIgniter\Router\RouteCollection;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Test\AuthenticationTesting;
@@ -22,9 +23,13 @@ use CodeIgniter\Test\TestResponse;
 abstract class RouteTestCase extends DatabaseTestCase
 {
     use AuthenticationTesting;
-    use FeatureTestTrait;
+    use FeatureTestTrait {
+        call as private featureCall;
+    }
 
     protected bool $isolateTests = true;
+
+    private bool $withoutCsrf = false;
 
     /** Set when this test had to create the stand-in Vite manifest (so it removes it again). */
     private bool $createdViteManifest = false;
@@ -54,8 +59,41 @@ abstract class RouteTestCase extends DatabaseTestCase
         return $result;
     }
 
+    /**
+     * Every request that changes something carries the session's CSRF token, the way a page
+     * served by the app would. withoutCsrfToken() sends the next requests without one.
+     *
+     * @param array<array-key, mixed>|null $params
+     */
+    public function call(string $method, string $path, ?array $params = null)
+    {
+        unset($this->headers['X-CSRF-TOKEN']);
+
+        if (! $this->withoutCsrf && in_array(strtoupper($method), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            $token = $this->session['csrf_test_name'] ?? bin2hex(random_bytes(16));
+
+            $this->session['csrf_test_name'] = $token;
+            $this->headers['X-CSRF-TOKEN']   = $token;
+        }
+
+        // A fresh security service, so it reads the token from the session this request is given.
+        Services::resetSingle('security');
+
+        return $this->featureCall($method, $path, $params);
+    }
+
+    /** The next requests are sent without a CSRF token, as from a page that was open too long. */
+    protected function withoutCsrfToken(): static
+    {
+        $this->withoutCsrf = true;
+
+        return $this;
+    }
+
     protected function tearDown(): void
     {
+        $this->withoutCsrf = false;
+
         auth()->logout();
 
         // A test that mounted its own routes (withRoutes) added them to the shared

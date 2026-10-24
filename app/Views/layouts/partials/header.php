@@ -293,15 +293,22 @@ $accountLinks = [
 
                     <div class="my-1 border-t border-gray-100"></div>
 
-                    <a
-                        href="<?= site_url('/logout') ?>"
-                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50">
+                    <?php // A button, not a link: only a deliberate press signs out. ?>
+                    <form action="<?= site_url('logout') ?>" method="post">
 
-                        <?= icon('logout', 'h-4 w-4') ?>
+                        <?= csrf_field() ?>
 
-                        Log out
+                        <button
+                            type="submit"
+                            class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50">
 
-                    </a>
+                            <?= icon('logout', 'h-4 w-4') ?>
+
+                            Log out
+
+                        </button>
+
+                    </form>
 
                 </nav>
             </div>

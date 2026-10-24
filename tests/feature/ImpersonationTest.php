@@ -340,7 +340,7 @@ final class ImpersonationTest extends RouteTestCase
     {
         $this->viewAs($this->student);
 
-        $response = $this->go('GET', 'logout');
+        $response = $this->go('POST', 'logout');
 
         $this->assertStringEndsWith("admin/users/{$this->student->id}", $response->response()->getHeaderLine('Location'));
         $this->assertSame((int) $this->admin->id, $this->signedInId());

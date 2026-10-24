@@ -61,3 +61,7 @@ Events::on('pre_system', static function (): void {
 Events::on('login', [AuditAuthListener::class, 'login']);
 Events::on('failedLogin', [AuditAuthListener::class, 'failedLogin']);
 Events::on('logout', [AuditAuthListener::class, 'logout']);
+
+// A new CSRF token at every sign-in. The token lives in the session, and the session keeps its data when its id
+// changes at sign-in, so a page from before signing in must not keep working.
+Events::on('login', static fn () => service('security')->generateHash());

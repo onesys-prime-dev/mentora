@@ -12,6 +12,7 @@ use App\Filters\LoginLockoutFilter;
 use App\Filters\MaintenanceFilter;
 use App\Filters\ClosedOfferingFilter;
 use App\Filters\CourseMembershipFilter;
+use App\Filters\CsrfFilter;
 use App\Filters\InstitutionCourseFilter;
 use App\Filters\ParentChildFilter;
 use App\Filters\ParentPortalFilter;
@@ -20,7 +21,6 @@ use App\Filters\ReauthFilter;
 use App\Filters\RoleFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
-use CodeIgniter\Filters\CSRF;
 use CodeIgniter\Filters\DebugToolbar;
 use CodeIgniter\Filters\ForceHTTPS;
 use CodeIgniter\Filters\Honeypot;
@@ -41,7 +41,7 @@ class Filters extends BaseFilters
      * or [filter_name => [classname1, classname2, ...]]
      */
     public array $aliases = [
-        'csrf'          => CSRF::class,
+        'csrf'          => CsrfFilter::class,
         'toolbar'       => DebugToolbar::class,
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
@@ -106,7 +106,9 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            // 'csrf',
+            // First: a page that was open too long is answered before anything else looks at the request.
+            // The AI worker is the one exception; it is authenticated by its own secret (aiworker).
+            'csrf' => ['except' => ['internal/ai/*']],
             // 'invalidchars',
 
             // A deactivated account, or a session an administrator ended, is turned away here.
