@@ -55,10 +55,10 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     // The student's own profile, to read: their details and the parents who can see their progress.
     $routes->get('profile', 'Students\StudentProfileController::index');
 
-    $routes->get('courses', 'Courses\CourseController::index');
-    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:student']);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:student']);
-    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => 'coursemember:student']);
+    $routes->get('courses', 'Courses\CourseController::index', ['filter' => 'permission:courses.view']);
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:student']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => ['permission:courses.view', 'coursemember:student']]);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:student']]);
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
@@ -71,7 +71,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => ['coursemember:student', 'assessmentscope', 'closedoffering']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['permission:courses.view', 'coursemember:student', 'assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -127,10 +127,10 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
-    $routes->get('courses', 'Courses\CourseController::index');
-    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:instructor']);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:instructor']);
-    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => 'coursemember:instructor']);
+    $routes->get('courses', 'Courses\CourseController::index', ['filter' => 'permission:courses.view']);
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
 
@@ -141,12 +141,12 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->patch('reminders/(:num)/done', 'Calendar\ReminderController::markDone/$1');
         $routes->delete('reminders/(:num)', 'Calendar\ReminderController::destroy/$1');
 
-        $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar');
+        $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar', ['filter' => 'coursepermission:announcements.manage']);
     });
 
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->group('api/courses', ['filter' => ['coursemember:instructor', 'assessmentscope', 'closedoffering']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['permission:courses.view', 'coursemember:instructor', 'assessmentscope', 'closedoffering', 'coursepermission']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -337,7 +337,7 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
     $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
     $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
-    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
+    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store', ['filter' => 'permission:followups.manage']);
 
     // The dean's announcements to the department, a sub-department or a program (department.announce).
     $routes->get('announcements', 'Dean\DepartmentAnnouncementsController::index', ['filter' => 'permission:department.announce']);
@@ -357,9 +357,9 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('chairperson-review', 'Dean\ChairpersonReviewController::index');
     $routes->post('chairperson-review/reviewed', 'Dean\ChairpersonReviewController::reviewed');
 
-    $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index');
-    $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1');
-    $routes->get('api/monitor-department/(:segment)', 'Dean\MonitorDepartmentController::data/$1');
+    $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index', ['filter' => 'permission:department.monitor']);
+    $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1', ['filter' => 'permission:department.monitor']);
+    $routes->get('api/monitor-department/(:segment)', 'Dean\MonitorDepartmentController::data/$1', ['filter' => 'permission:department.monitor']);
 
     // A read-only view of every course of the department (courses.view), exactly what its
     // instructor sees: the same controllers as the instructor's, but only the reading routes.
@@ -446,8 +446,8 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
     $routes->post('follow-ups/(:num)/reply', 'FollowUps\FollowUpsController::reply/$1');
     $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
-    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store');
-    $routes->post('follow-ups/(:num)/pass-down', 'FollowUps\FollowUpsController::passDown/$1');
+    $routes->post('follow-ups', 'FollowUps\FollowUpsController::store', ['filter' => 'permission:followups.manage']);
+    $routes->post('follow-ups/(:num)/pass-down', 'FollowUps\FollowUpsController::passDown/$1', ['filter' => 'permission:followups.manage']);
 
     $routes->get('override-requests', 'Chairperson\OverrideRequestsController::index');
     $routes->post('override-requests/(:num)/endorse', 'Chairperson\OverrideRequestsController::endorse/$1');
@@ -463,20 +463,20 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->patch('reminders/(:num)/done', 'Calendar\ReminderController::markDone/$1');
         $routes->delete('reminders/(:num)', 'Calendar\ReminderController::destroy/$1');
 
-        $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar');
+        $routes->post('announcements', 'Courses\AnnouncementController::storeFromCalendar', ['filter' => 'coursepermission:announcements.manage']);
     });
 
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
-    $routes->get('courses', 'Courses\ChairpersonCoursesController::index');
-    $routes->get('monitor-program', 'Courses\MonitorProgramController::index');
+    $routes->get('courses', 'Courses\ChairpersonCoursesController::index', ['filter' => 'permission:courses.view']);
+    $routes->get('monitor-program', 'Courses\MonitorProgramController::index', ['filter' => 'permission:program.monitor']);
 
     // Monitor Program's data layer (R5) — a separate URL space from
     // api/courses below, since these aren't scoped to one offering and
     // have no numeric id segment for assessmentscope/chairpersoncourseaudit
     // to key off; role:chairperson plus MonitorProgramService's own
     // program-scoped join is this group's only access check.
-    $routes->group('api/monitor-program', function ($routes) {
+    $routes->group('api/monitor-program', ['filter' => 'permission:program.monitor'], function ($routes) {
         $routes->get('snapshot', 'Courses\MonitorProgramController::snapshot');
         $routes->get('enrollment', 'Courses\MonitorProgramController::enrollment');
         $routes->get('grades', 'Courses\MonitorProgramController::grades');
@@ -485,11 +485,11 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('course-comparison', 'Courses\MonitorProgramController::courseComparison');
         $routes->get('terms', 'Courses\MonitorProgramController::terms');
     });
-    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => 'coursemember:chairperson']);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => 'coursemember:chairperson']);
-    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => 'coursemember:chairperson']);
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
 
-    $routes->group('api/courses', ['filter' => ['coursemember:chairperson', 'assessmentscope', 'closedoffering', 'chairpersoncourseaudit']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['permission:courses.view', 'coursemember:chairperson', 'assessmentscope', 'closedoffering', 'chairpersoncourseaudit', 'coursepermission']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -821,6 +821,11 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('security/reset', 'Institution\InstitutionSettingsController::resetSecurity', ['filter' => 'reauth']);
         });
 
+        // What the institution's roles may do, on top of the platform's settings (institution.roles;
+        // a change also needs the password).
+        $routes->get('roles', 'Institution\RolesController::index', ['filter' => 'permission:institution.roles']);
+        $routes->post('roles/permissions', 'Institution\RolesController::toggle', ['filter' => ['permission:institution.roles', 'reauth']]);
+
         // The institution's people (people.view to look, people.manage to change; the
         // dangerous ones also need the password).
         $routes->group('people', function ($routes) {
@@ -874,9 +879,9 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     $routes->post('reauth', 'Admin\ReauthController::confirm');
 
     // Audit log: list, CSV export, and the source-address display setting.
-    $routes->get('audit-log', 'Admin\AuditLogController::index');
-    $routes->get('audit-log/export', 'Admin\AuditLogController::export');
-    $routes->post('audit-log/settings', 'Admin\AuditLogController::updateSettings', ['filter' => 'reauth']);
+    $routes->get('audit-log', 'Admin\AuditLogController::index', ['filter' => 'permission:audit.view']);
+    $routes->get('audit-log/export', 'Admin\AuditLogController::export', ['filter' => 'permission:audit.view']);
+    $routes->post('audit-log/settings', 'Admin\AuditLogController::updateSettings', ['filter' => ['permission:audit.manage', 'reauth']]);
 
     // Roles and permissions: view the matrix, change one cell (permission first, then password).
     $routes->get('roles', 'Admin\RolesController::index', ['filter' => 'permission:roles.view']);

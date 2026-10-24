@@ -13,16 +13,16 @@ use Config\AuthGroups;
  */
 final class AuthGroupsConfigTest extends CIUnitTestCase
 {
-    private const PLATFORM_AREAS = ['institutions', 'subscriptions', 'users', 'roles', 'flags', 'settings', 'audit', 'monitoring', 'backup', 'integrations'];
+    private const PLATFORM_AREAS = ['institutions', 'subscriptions', 'users', 'roles', 'flags', 'settings', 'audit', 'backup', 'integrations'];
 
     /** Permissions that belong inside an institution (the system administrator never holds them). */
     private const ACADEMIC = [
-        'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor',
+        'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor',
         'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce',
         'children.view',
         // The institutional administrator's own administration.
         'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage', 'people.view', 'people.manage',
-        'reports.view', 'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run',
+        'reports.view', 'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles',
     ];
 
     private AuthGroups $config;
@@ -92,6 +92,10 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
         }
 
         $this->assertArrayHasKey('impersonation.start', $this->config->permissions);
+
+        // Monitoring is looked at, never configured: there is nothing for a manage permission to control (7.7).
+        $this->assertArrayHasKey('monitoring.view', $this->config->permissions);
+        $this->assertArrayNotHasKey('monitoring.manage', $this->config->permissions);
     }
 
     public function testTheSystemAdministratorHasEveryPlatformPermission(): void
@@ -104,6 +108,7 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
         }
 
         $this->assertContains('impersonation.start', $admin);
+        $this->assertContains('monitoring.view', $admin);
     }
 
     public function testTheSystemAdministratorHasNoDirectAccessToAcademicWork(): void

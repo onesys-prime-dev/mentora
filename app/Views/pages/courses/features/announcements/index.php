@@ -21,7 +21,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
 
         <div class="flex min-w-0 flex-col gap-6" data-announcements-main>
 
-            <?php if ($isInstructor): ?>
+            <?php if ($canManage ?? $isInstructor): ?>
 
                 <button
                     type="button"

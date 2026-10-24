@@ -12,10 +12,12 @@ use App\Filters\LoginLockoutFilter;
 use App\Filters\MaintenanceFilter;
 use App\Filters\ClosedOfferingFilter;
 use App\Filters\CourseMembershipFilter;
+use App\Filters\CoursePermissionFilter;
 use App\Filters\CsrfFilter;
 use App\Filters\InstitutionCourseFilter;
 use App\Filters\ParentChildFilter;
 use App\Filters\ParentPortalFilter;
+use App\Filters\PermissionFilter;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
 use App\Filters\RoleFilter;
@@ -56,6 +58,7 @@ class Filters extends BaseFilters
         'ajaxredirect'  => AjaxRedirectFilter::class,
         'readonly'      => ReadOnlyFilter::class,
         'closedoffering' => ClosedOfferingFilter::class,
+        'coursepermission' => CoursePermissionFilter::class,
         'institutioncourse' => InstitutionCourseFilter::class,
         'deancourse'    => InstitutionCourseFilter::class,
         'role'          => RoleFilter::class,
@@ -148,4 +151,13 @@ class Filters extends BaseFilters
      * @var array<string, array<string, list<string>>>
      */
     public array $filters = [];
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // After Shield's registrar has added its own: `permission:` reads the person's institution's
+        // settings on top of the platform's (audit decision U1b).
+        $this->aliases['permission'] = PermissionFilter::class;
+    }
 }

@@ -13,8 +13,9 @@ $uncategorized = count($gradebook['uncategorized'] ?? []);
 $totalWeight = (float) ($gradebook['total_weight'] ?? 0);
 $finalization = $gradebook['finalization'] ?? null;
 
-// The dean and the institution's administrator read a gradebook; they are not shown what only its instructor can do.
-$viewOnly = \App\Services\Courses\CourseViewer::isReadOnlyViewer(auth()->user());
+// The dean and the institution's administrator read a gradebook, and so does an instructor whose institution took
+// grading away (grading.manage); none of them is shown what only a grading instructor can do.
+$viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'grading');
 ?>
 
 <div class="flex flex-col gap-3" data-gradebook-toolbar>

@@ -104,6 +104,19 @@ without the item-by-item part (no Points column, no Scores list), so it says no 
   inside the offering.
 - `AssessmentScopeService::canAccess` uses the same answer, so a person who is both
   instructor and chairperson is judged as the role they are acting as.
+- Being in the course is not all: a change asks the permission of the part of the
+  course it belongs to (`CoursePermissionFilter`, on the instructor's and
+  chairperson's `api/courses` groups), and the course screens hide what the person
+  may not change (`CourseAbilities`, also `coursesConfig.can` for the scripts).
+  Each institution can take these away from its roles (`roles-and-permissions.md`).
+
+  | Change | Needs |
+  |---|---|
+  | announcements: post, edit, delete, pin, attachments | `announcements.manage` |
+  | discussions: pin, lock; delete someone else's post or reply; mark someone else's answer | `discussions.manage` |
+  | the gradebook, grading work and feedback, the curve (`grades/…`, `submissions/…`) | `grading.manage` |
+  | any other course change: modules, units, items, assessments, rubrics, questions, generation, import | `courses.manage` |
+  | replying, reacting, posting and editing one's own discussion | nothing |
 
 ## Keeping it so
 

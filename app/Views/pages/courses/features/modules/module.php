@@ -1,6 +1,8 @@
 <?php
 $userRole = esc($user->getGroups()[0]);
 $isInstructor = $is_instructor;
+// Course content can be changed by its instructor unless their institution took it away (courses.manage).
+$canEditContent = $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'content');
 
 $formatDuration = static function (int $minutes): string {
     if ($minutes <= 0) {
@@ -44,7 +46,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                         <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                             Draft
                         </span>
-                    <?php elseif ($isInstructor): ?>
+                    <?php elseif ($canEditContent): ?>
                         <?= view('pages/courses/features/modules/partials/publish-chip', ['status' => 'published'], ['saveData' => false]) ?>
                     <?php endif; ?>
                 </div>
@@ -58,7 +60,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
         </div>
 
-        <?php if ($isInstructor): ?>
+        <?php if ($canEditContent): ?>
             <?= view('pages/courses/features/modules/partials/module-actions-inline', ['module' => $module]) ?>
         <?php endif; ?>
 
@@ -135,7 +137,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
             <div class="flex items-center p-1 py-2" data-learning-unit-row>
 
-                <?php if ($isInstructor): ?>
+                <?php if ($canEditContent): ?>
 
                     <div data-learning-unit-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
@@ -168,7 +170,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                 <span class="shrink-0 rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
                                     Draft
                                 </span>
-                            <?php elseif ($isInstructor): ?>
+                            <?php elseif ($canEditContent): ?>
                                 <?= view('pages/courses/features/modules/partials/publish-chip', [
                                     'status' => $learning_unit['status'],
                                     'hiddenBy' => $moduleIsDraft ? 'module' : null,
@@ -188,7 +190,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                 </svg>
                             </div>
 
-                            <?php if ($isInstructor): ?>
+                            <?php if ($canEditContent): ?>
                                 <?= view('pages/courses/features/modules/partials/learning-unit-actions', ['module' => $module, 'learning_unit' => $learning_unit]) ?>
                             <?php endif; ?>
 
@@ -218,7 +220,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                         data-learning-item="<?= esc($learning_item['id']) ?>"
                                         <?php if ($itemBlocked): ?>data-locked="1" aria-disabled="true"<?php endif; ?>>
 
-                                        <?php if ($isInstructor): ?>
+                                        <?php if ($canEditContent): ?>
 
                                             <div data-learning-item-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
@@ -295,7 +297,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
                                         </div>
 
-                                        <?php if ($isInstructor): ?>
+                                        <?php if ($canEditContent): ?>
                                             <?= view('pages/courses/features/modules/partials/learning-item-actions', ['learning_item' => $learning_item]) ?>
                                         <?php endif; ?>
 
@@ -305,7 +307,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
                             <?php endforeach; ?>
 
-                            <?php if ($isInstructor): ?>
+                            <?php if ($canEditContent): ?>
 
                                 <div
                                     data-create-learning-item-button
@@ -341,7 +343,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
         <?php endforeach; ?>
 
-        <?php if ($isInstructor): ?>
+        <?php if ($canEditContent): ?>
 
             <div data-create-learning-unit-button data-module-id="<?= esc($module['id']) ?>" class="group flex cursor-pointer items-center gap-3 px-2 py-5 transition-all duration-200">
 

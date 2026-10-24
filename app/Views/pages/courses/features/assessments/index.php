@@ -151,7 +151,7 @@ if ($isInstructor) {
 
                     </label>
 
-                    <?php if ($isInstructor && ! \App\Services\Courses\CourseViewer::isReadOnlyViewer($user)): ?>
+                    <?php if ($isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'content')): ?>
 
                         <button
                             type="button"

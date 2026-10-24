@@ -91,7 +91,8 @@ class FollowUpsController extends BaseController
             'recipients'   => $recipients,
             'prefill'      => $prefill,
             'passTo'       => $passTo,
-            'canSend'      => $area !== 'instructor',
+            // Sending and passing down follow-ups is the dean's and chairperson's, unless their institution took it away (7.6).
+            'canSend'      => $area !== 'instructor' && (new \App\Services\Auth\RolePermissions())->allows(auth()->user(), 'followups.manage'),
             'loadError'    => $loadError,
             'flashToasts'  => true,
             'previousPage' => 'dashboard',

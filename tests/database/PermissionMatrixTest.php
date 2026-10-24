@@ -62,10 +62,10 @@ final class PermissionMatrixTest extends DatabaseTestCase
 
     public function testARolePermissionPairCanBeStoredOnlyOnce(): void
     {
-        $this->override('student', 'grading.manage', true);
+        $this->override('institutional_admin', 'grades.approve', true);
 
         try {
-            $stored = (new RolePermissionModel())->insert(['role' => 'student', 'permission' => 'grading.manage', 'granted' => 0]);
+            $stored = (new RolePermissionModel())->insert(['role' => 'institutional_admin', 'permission' => 'grades.approve', 'granted' => 0]);
         } catch (DatabaseException) {
             $stored = false;
         }
@@ -77,8 +77,8 @@ final class PermissionMatrixTest extends DatabaseTestCase
 
     public function testTheSamePermissionCanBeStoredForDifferentRoles(): void
     {
-        $this->override('student', 'grading.manage', true);
-        $this->override('parent', 'grading.manage', true);
+        $this->override('institutional_admin', 'grades.approve', true);
+        $this->override('institutional_admin', 'grades.signoff', true);
 
         $this->assertSame(2, db_connect()->table('role_permissions')->countAllResults());
     }
@@ -98,11 +98,11 @@ final class PermissionMatrixTest extends DatabaseTestCase
 
     public function testAStoredGrantShowsInTheEffectiveMatrixButNotTheDefaults(): void
     {
-        $this->override('student', 'announcements.manage', true);
+        $this->override('institutional_admin', 'grades.approve', true);
 
-        $this->assertContains('announcements.manage', $this->matrix->effective()['student']);
-        $this->assertNotContains('announcements.manage', $this->matrix->defaults()['student']);
-        $this->assertTrue($this->matrix->has('student', 'announcements.manage'));
+        $this->assertContains('grades.approve', $this->matrix->effective()['institutional_admin']);
+        $this->assertNotContains('grades.approve', $this->matrix->defaults()['institutional_admin']);
+        $this->assertTrue($this->matrix->has('institutional_admin', 'grades.approve'));
     }
 
     public function testAStoredDenialRemovesThePermissionFromTheEffectiveMatrix(): void
@@ -192,9 +192,9 @@ final class PermissionMatrixTest extends DatabaseTestCase
 
     public function testAGrantedPermissionStartsWorking(): void
     {
-        $this->override('student', 'announcements.manage', true);
+        $this->override('institutional_admin', 'grades.approve', true);
 
-        $this->assertTrue(CourseFactory::user('student')->can('announcements.manage'));
+        $this->assertTrue(CourseFactory::user('institutional_admin')->can('grades.approve'));
     }
 
     public function testAUserWithSeveralRolesGetsWhatEitherAllows(): void

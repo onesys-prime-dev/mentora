@@ -21,7 +21,7 @@ final class PostFormsCarryATokenTest extends CIUnitTestCase
 
     public function testAFormWithoutTheTokenIsFound(): void
     {
-        $dir = WRITEPATH . 'tmp-csrf-scan-' . bin2hex(random_bytes(4));
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-csrf-scan-' . bin2hex(random_bytes(4));
         mkdir($dir . '/pages', 0775, true);
         file_put_contents($dir . '/pages/bad.php', '<form action="/x" method="POST"><button>Go</button></form>');
         file_put_contents($dir . '/pages/good.php', '<form method="post"><?= csrf_field() ?></form>');
@@ -31,8 +31,10 @@ final class PostFormsCarryATokenTest extends CIUnitTestCase
             $this->assertSame(['pages/bad.php'], self::formsWithoutAToken($dir));
         } finally {
             array_map('unlink', glob($dir . '/pages/*.php'));
-            rmdir($dir . '/pages');
-            rmdir($dir);
+
+            // Windows can hold a just-read directory for a moment; a leftover in the temp folder is harmless.
+            @rmdir($dir . '/pages');
+            @rmdir($dir);
         }
     }
 

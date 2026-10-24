@@ -85,7 +85,6 @@ class AuthGroups extends ShieldAuthGroups
         'audit.view'           => 'View and export the audit log',
         'audit.manage'         => 'Change audit log settings',
         'monitoring.view'      => 'View system health and performance',
-        'monitoring.manage'    => 'Change monitoring settings',
         'backup.view'          => 'View backup history',
         'backup.manage'        => 'Start backups',
         'integrations.view'    => 'View integrations',
@@ -97,6 +96,7 @@ class AuthGroups extends ShieldAuthGroups
         'courses.manage'        => 'Edit course content and settings',
         'grading.manage'        => 'Grade work and manage the gradebook',
         'announcements.manage'  => 'Post and manage announcements',
+        'discussions.manage'    => 'Moderate course discussions: pin, lock, delete others\' posts, mark the answer',
         'program.monitor'       => 'Monitor a whole program',
         'department.monitor'    => 'Monitor a whole department',
         'grades.approve'        => 'Approve final-grade overrides',
@@ -117,6 +117,7 @@ class AuthGroups extends ShieldAuthGroups
         'institution.audit'     => 'View the institution\'s audit log',
         'institution.impersonate' => 'View the platform as one of the institution\'s users (view only)',
         'sis.run'               => 'Preview and run the SIS import and send grades',
+        'institution.roles'     => 'Change the academic permissions of the institution\'s roles',
     ];
 
     /**
@@ -135,22 +136,43 @@ class AuthGroups extends ShieldAuthGroups
             'flags.view', 'flags.manage',
             'settings.view', 'settings.manage',
             'audit.view', 'audit.manage',
-            'monitoring.view', 'monitoring.manage',
+            'monitoring.view',
             'backup.view', 'backup.manage',
             'integrations.view', 'integrations.manage',
             'impersonation.start',
         ],
         'institutional_admin' => [
-            'courses.view', 'program.monitor',
+            'courses.view',
             'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage',
             'people.view', 'people.manage', 'reports.view',
-            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run',
+            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles',
         ],
         'dean'              => ['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce'],
-        'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor'],
-        'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage'],
+        'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor', 'followups.manage'],
+        'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage'],
         'student'             => ['courses.view'],
         'parent'              => ['children.view'],
+    ];
+
+    /**
+     * The permissions each role is offered: only those that do something for it (audit decision D2). A
+     * box outside this cannot be set on either Roles page, and a stored row for one is ignored.
+     *
+     * @var array<string, list<string>>
+     */
+    public const APPLICABLE = [
+        'admin'               => self::DEFAULT_MATRIX['admin'],
+        'institutional_admin' => [
+            'courses.view', 'grades.approve', 'grades.signoff',
+            'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage',
+            'people.view', 'people.manage', 'reports.view',
+            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles',
+        ],
+        'dean'        => ['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce'],
+        'chairperson' => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor', 'followups.manage'],
+        'instructor'  => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage'],
+        'student'     => ['courses.view'],
+        'parent'      => ['children.view'],
     ];
 
     /** @var array<string, list<string>> */

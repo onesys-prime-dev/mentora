@@ -166,7 +166,7 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
                     . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
                     . '<div class="flex justify-end"><button type="submit" data-dialog-label class="' . esc($primary, 'attr') . '">Send reply</button></div></form>';
 
-                if (! empty($passTo[$id])) {
+                if ($canSend && ! empty($passTo[$id])) {
                     $choices = ['' => 'Choose an instructor'];
 
                     foreach ($passTo[$id] as $person) {

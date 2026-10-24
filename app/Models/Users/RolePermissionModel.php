@@ -30,5 +30,5 @@ class RolePermissionModel extends Model
 
     protected $updatedField = 'updated_at';
 
-    protected $allowedFields = ['role', 'permission', 'granted'];
+    protected $allowedFields = ['institution_id', 'role', 'permission', 'granted'];
 }

@@ -1,6 +1,8 @@
 <?php
 $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'instructor' : esc($user->getGroups()[0]);
 $isInstructor = $userRole === 'instructor';
+// Course content can be changed by its instructor unless their institution took it away (courses.manage).
+$canEditContent = $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'content');
 
 $moduleCount = count($modules);
 
@@ -39,7 +41,7 @@ $formatDuration = static function (int $minutes): string {
         <?php
         ob_start();
         // Someone who only looks (the dean, the institution's administrator) is shown no control that would be refused.
-        if ($isInstructor && ! \App\Services\Courses\CourseViewer::isReadOnlyViewer($user)): ?>
+        if ($canEditContent): ?>
             <button
                 class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark"
                 data-create-module-button>
@@ -78,7 +80,7 @@ $formatDuration = static function (int $minutes): string {
 
             <div class="flex items-center p-1" data-module-wrapper data-module-id="<?= esc($module['id']) ?>">
 
-                <?php if ($isInstructor): ?>
+                <?php if ($canEditContent): ?>
 
                     <div data-module-card-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
@@ -188,7 +190,7 @@ $formatDuration = static function (int $minutes): string {
                             </svg>
                         </div>
 
-                        <?php if ($isInstructor): ?>
+                        <?php if ($canEditContent): ?>
                             <?= view('pages/courses/features/modules/partials/module-actions', ['module' => $module]) ?>
                         <?php endif; ?>
 

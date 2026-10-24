@@ -94,7 +94,7 @@ final class AdminRolesPageTest extends RouteTestCase
         $this->withSession();
 
         $this->assertSame(302, $this->step('GET', 'admin/roles')->response()->getStatusCode());
-        $this->flip('student', 'grading.manage', '1');
+        $this->flip('institutional_admin', 'grades.approve', '1');
 
         $this->assertSame(0, $this->overrideCount());
     }
@@ -134,7 +134,15 @@ final class AdminRolesPageTest extends RouteTestCase
         $body = $this->body();
 
         $this->assertStringContainsString('aria-label="Revoke grading.manage for Instructor"', $body);
-        $this->assertStringContainsString('aria-label="Grant grading.manage for Student"', $body);
+        $this->assertStringContainsString('aria-label="Revoke discussions.manage for Instructor"', $body);
+    }
+
+    public function testACellThatDoesNothingForTheRoleIsNotAControl(): void
+    {
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('aria-label="Grant grading.manage for Student"', $body);
+        $this->assertStringContainsString('title="Not used by this role"', $body);
     }
 
     public function testAnEditedCellIsMarked(): void
@@ -142,7 +150,7 @@ final class AdminRolesPageTest extends RouteTestCase
         $this->assertStringNotContainsString('text-[10px] font-semibold text-amber-700">Edited</span>', $this->body());
 
         $this->confirmedPassword();
-        $this->flip('student', 'announcements.manage', '1');
+        $this->flip('institutional_admin', 'grades.approve', '1');
 
         $this->assertStringContainsString('text-[10px] font-semibold text-amber-700">Edited</span>', $this->body());
     }
@@ -155,7 +163,7 @@ final class AdminRolesPageTest extends RouteTestCase
 
     public function testChangingACellNeedsThePasswordFirst(): void
     {
-        $response = $this->flip('student', 'announcements.manage', '1')->response();
+        $response = $this->flip('institutional_admin', 'grades.approve', '1')->response();
 
         $this->assertStringEndsWith('admin/reauth', $response->getHeaderLine('Location'));
         $this->assertSame(0, $this->overrideCount(), 'nothing changed');
@@ -166,10 +174,10 @@ final class AdminRolesPageTest extends RouteTestCase
     {
         $this->confirmedPassword();
 
-        $location = $this->flip('student', 'announcements.manage', '1')->response()->getHeaderLine('Location');
+        $location = $this->flip('institutional_admin', 'grades.approve', '1')->response()->getHeaderLine('Location');
         $this->assertStringEndsWith('admin/roles', $location);
-        $this->assertTrue((new PermissionMatrix())->has('student', 'announcements.manage'));
-        $this->assertStringContainsString('Granted announcements.manage for student', $this->body());
+        $this->assertTrue((new PermissionMatrix())->has('institutional_admin', 'grades.approve'));
+        $this->assertStringContainsString('Granted grades.approve for institutional_admin', $this->body());
 
         $this->flip('instructor', 'grading.manage', '0');
         $this->assertFalse((new PermissionMatrix())->has('instructor', 'grading.manage'));
@@ -199,11 +207,11 @@ final class AdminRolesPageTest extends RouteTestCase
     public function testTheChangeTakesEffectOnTheNextRequestForThatRole(): void
     {
         $this->confirmedPassword();
-        $this->flip('student', 'grading.manage', '1');
+        $this->flip('institutional_admin', 'grades.approve', '1');
 
         PermissionMatrix::flush();
 
-        $this->assertTrue(CourseFactory::user('student')->can('grading.manage'));
+        $this->assertTrue(CourseFactory::user('institutional_admin')->can('grades.approve'));
     }
 
     public function testRepeatingAChangeSaysNothingChanged(): void

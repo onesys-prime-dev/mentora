@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Admin;
 
 use App\Models\Users\RolePermissionModel;
+use App\Services\Auth\RolePermissions;
 use CodeIgniter\Config\Factories;
 use CodeIgniter\Shield\Authorization\PermissionMatcher;
 use CodeIgniter\Shield\Entities\User;
@@ -35,17 +36,22 @@ class PermissionMatrix
     public const LOCKED_ROLE = 'admin';
 
     /**
-     * The defaults with $overrides applied. Pure: no database, no config
-     * lookups beyond the two constants it is given.
+     * The defaults with $overrides applied. Pure: no database. A change to a
+     * permission a role is not offered is ignored (AuthGroups::APPLICABLE
+     * unless another map is given).
      *
      * @param array<string, list<string>>                                          $defaults
      * @param list<array{role: string, permission: string, granted: int|string|bool}> $overrides
-     * @param list<string>|null                                                    $known     the permissions that exist; those in $defaults when omitted
+     * @param list<string>|null                                                    $known      the permissions that exist; those in $defaults when omitted
+     * @param array<string, list<string>>|null                                     $applicable what each role is offered (decision D2); AuthGroups::APPLICABLE when omitted
+     * @param bool                                                                 $refillEmpty a role the changes left with nothing gets its defaults back (the platform layer); an institution's layer passes false, so a later platform change can never hand back what the institution took away
      *
      * @return array<string, list<string>>
      */
-    public static function apply(array $defaults, array $overrides, ?array $known = null): array
+    public static function apply(array $defaults, array $overrides, ?array $known = null, ?array $applicable = null, bool $refillEmpty = true): array
     {
+        $applicable ??= AuthGroups::APPLICABLE;
+
         $known ??= self::knownPermissions($defaults);
 
         $matrix = $defaults;
@@ -54,7 +60,7 @@ class PermissionMatrix
             $role       = (string) $override['role'];
             $permission = strtolower((string) $override['permission']);
 
-            if ($role === self::LOCKED_ROLE || ! isset($defaults[$role]) || ! in_array($permission, $known, true)) {
+            if ($role === self::LOCKED_ROLE || ! isset($defaults[$role]) || ! in_array($permission, $known, true) || ! in_array($permission, $applicable[$role] ?? [], true)) {
                 continue;
             }
 
@@ -68,7 +74,7 @@ class PermissionMatrix
         foreach ($matrix as $role => $permissions) {
             $matrix[$role] = array_values(array_unique($permissions));
 
-            if ($matrix[$role] === []) {
+            if ($matrix[$role] === [] && $refillEmpty) {
                 $matrix[$role] = $defaults[$role];
             }
         }
@@ -77,12 +83,13 @@ class PermissionMatrix
     }
 
     /**
-     * Every row in role_permissions. Empty (rather than an error) when the
-     * table does not exist yet, as during the first migration.
+     * The rows of one layer of role_permissions: the platform's (institution 0, the
+     * default) or one institution's own changes on top of it. Empty (rather than an
+     * error) when the table does not exist yet, as during the first migration.
      *
      * @return list<array{role: string, permission: string, granted: int|string|bool}>
      */
-    public static function storedOverrides(): array
+    public static function storedOverrides(int $institutionId = 0): array
     {
         try {
             $db = db_connect();
@@ -91,7 +98,7 @@ class PermissionMatrix
                 return [];
             }
 
-            return $db->table('role_permissions')->select('role, permission, granted')->orderBy('id')->get()->getResultArray();
+            return $db->table('role_permissions')->select('role, permission, granted')->where('institution_id', $institutionId)->orderBy('id')->get()->getResultArray();
         } catch (Throwable) {
             return [];
         }
@@ -104,6 +111,7 @@ class PermissionMatrix
     public static function flush(): void
     {
         Factories::reset('config');
+        RolePermissions::flush();
     }
 
     /**
@@ -176,6 +184,10 @@ class PermissionMatrix
             throw new InvalidArgumentException('The system administrator role is locked; its permissions cannot be changed.');
         }
 
+        if (! in_array($permission, self::applicable($role), true)) {
+            throw new InvalidArgumentException('That permission does nothing for that role.');
+        }
+
         $current = $this->effective()[$role];
         $has     = in_array($permission, $current, true);
 
@@ -188,7 +200,7 @@ class PermissionMatrix
         }
 
         $model    = new RolePermissionModel();
-        $previous = $model->where('role', $role)->where('permission', $permission)->first();
+        $previous = $model->where(['institution_id' => 0, 'role' => $role, 'permission' => $permission])->first();
 
         // Only a difference from the defaults is worth a row.
         $matchesDefault = in_array($permission, $this->defaults()[$role], true) === $granted;
@@ -218,13 +230,23 @@ class PermissionMatrix
      */
     private function replaceRow(RolePermissionModel $model, string $role, string $permission, ?bool $granted): void
     {
-        $model->where('role', $role)->where('permission', $permission)->delete();
+        $model->where(['institution_id' => 0, 'role' => $role, 'permission' => $permission])->delete();
 
         if ($granted !== null) {
-            $model->insert(['role' => $role, 'permission' => $permission, 'granted' => $granted ? 1 : 0]);
+            $model->insert(['institution_id' => 0, 'role' => $role, 'permission' => $permission, 'granted' => $granted ? 1 : 0]);
         }
 
         self::flush();
+    }
+
+    /**
+     * The permissions this role is offered: only those that do something for it (decision D2).
+     *
+     * @return list<string>
+     */
+    public static function applicable(string $role): array
+    {
+        return AuthGroups::APPLICABLE[$role] ?? [];
     }
 
     /** True when the role has the permission now. */

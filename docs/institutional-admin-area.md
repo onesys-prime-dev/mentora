@@ -113,6 +113,15 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Seats** count student accounts, not places, so enrolling an existing student never uses one.
 - **Audit:** `enrolment.added|status_changed` (target type `enrollment`).
 
+## Roles and permissions
+
+`/institution/roles` (permission `institution.roles`; a change also needs the password; read-only while the institution is read-only). The Apps tile "Roles and permissions".
+
+- **What:** the academic permissions of the institution's dean, chairperson, instructor, student and parent roles, on top of the platform's defaults. The same grid as the system administrator's page; "Edited" marks a box that differs from the platform's, and a box never changed follows the platform, later changes included.
+- **Not here:** the institutional administrator and system administrator roles, and any platform or institution-administration permission.
+- **Rules:** a role keeps at least one permission; a permission a role is not offered cannot be set.
+- **Audit:** `roles.permission_changed` with the institution. More in `roles-and-permissions.md`.
+
 ## People
 
 `/institution/people` (permission `people.view` to look and export, `people.manage` to change; read-only while the institution is read-only). The Apps tile "People".

@@ -150,6 +150,7 @@ class AnnouncementService
             'html' => view('pages/courses/features/announcements/index', [
                 'user' => $user,
                 'isInstructor' => $isInstructor,
+                'canManage' => $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'announcements'),
                 'announcements' => $announcements,
                 'pinned' => $pinned,
                 'filters' => $queryFilters,
@@ -213,6 +214,9 @@ class AnnouncementService
     /** Attaches replies, reaction state, attachments, and per-row permission flags. */
     private function hydrate(array $announcements, User $user, bool $isInstructor): array
     {
+        // Posting, editing and pinning are the instructor's, unless their institution took it away (7.4).
+        $isInstructor = $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'announcements');
+
         $ids = array_column($announcements, 'id');
 
         $repliesByAnnouncement = $this->replyModel->retrieveForAnnouncements($ids);

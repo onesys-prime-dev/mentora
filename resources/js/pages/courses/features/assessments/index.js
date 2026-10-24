@@ -96,11 +96,15 @@ export async function initialize() {
     const isInstructor =
         window.coursesConfig.role === "instructor";
 
+    // The editor and builder change course content, which an institution can take away (courses.manage).
+    const canEditContent =
+        isInstructor && window.coursesConfig.can?.content !== false;
+
     const isEditor =
-        isInstructor && params.has("editor");
+        canEditContent && params.has("editor");
 
     const isBuilder =
-        isInstructor && params.has("builder");
+        canEditContent && params.has("builder");
 
     const isGrading =
         isInstructor && params.has("grade");
