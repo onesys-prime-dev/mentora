@@ -59,7 +59,7 @@ foreach ($plan['offerings'] as $o) {
             <?= view('components/metric-card', ['label' => 'Left as they are', 'value' => (string) $plan['untouched'], 'icon' => 'info', 'tone' => 'neutral', 'detail' => 'Archived offerings'], ['saveData' => false]) ?>
         </div>
 
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-label="What will change">
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="What will change">
             <h2 class="text-sm font-bold text-brand">What happens</h2>
             <ul class="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-[#3D3D3D]">
                 <li>The term and its offerings become <strong>completed</strong>.</li>

@@ -57,7 +57,7 @@ $labels = [
 
     <?php if ($uploadStep === 1): ?>
 
-        <form method="post" action="<?= esc(site_url($base)) ?>" enctype="multipart/form-data" class="flex flex-col gap-5 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" data-upload-form>
+        <form method="post" action="<?= esc(site_url($base)) ?>" enctype="multipart/form-data" class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-upload-form>
             <?= csrf_field() ?>
 
             <p class="text-sm text-[#3D3D3D]">Choose the files you have; none is required, but at least one is. People and courses go in first, then enrolments and staff assignments, so those files can refer to people and courses in the same upload. Nothing is saved until you have looked at the preview.</p>
@@ -104,7 +104,7 @@ $labels = [
             <?php endforeach; ?>
         </div>
 
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-label="Files">
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="Files">
             <h2 class="text-sm font-bold text-brand">By file</h2>
             <ul class="mt-3 flex flex-col gap-2 text-sm">
                 <?php foreach ($uploadKept['datasets'] as $dataset => $counts): ?>
@@ -117,7 +117,7 @@ $labels = [
         </section>
 
         <?php if ($uploadKept['issues'] !== []): ?>
-            <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-label="Refused rows" data-upload-issues>
+            <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="Refused rows" data-upload-issues>
                 <h2 class="text-sm font-bold text-[#C33939]">Refused rows</h2>
                 <p class="mt-1 text-xs text-[#646464]">These rows are left out. Everything else is still applied.</p>
                 <ul class="mt-3 flex flex-col gap-1 text-sm">

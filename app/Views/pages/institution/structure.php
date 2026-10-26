@@ -71,7 +71,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
     <?php if ($structureTree === []): ?>
 
-        <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA]" data-structure-empty>
+        <div class="rounded-2xl border border-gray-200 bg-gray-50" data-structure-empty>
             <?= view('components/empty-state', [
                 'icon'  => 'hat',
                 'title' => 'No departments yet',

@@ -82,7 +82,7 @@ $shift = $copyPlan['shiftDays'] ?? 0;
         <?= view('components/alert', ['tone' => 'info', 'title' => 'Add a term first', 'text' => 'Offerings are copied into an upcoming or active term, and there is none yet. Add one on the Terms page.'], ['saveData' => false]) ?>
     <?php endif; ?>
 
-    <form method="get" action="<?= esc(site_url($base)) ?>" class="grid grid-cols-1 gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md sm:grid-cols-3 sm:items-end" data-copy-terms>
+    <form method="get" action="<?= esc(site_url($base)) ?>" class="grid grid-cols-1 gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md sm:grid-cols-3 sm:items-end" data-copy-terms>
         <?= view('components/form-field', ['name' => 'source', 'label' => 'Copy from', 'type' => 'select', 'options' => $sourceOptions, 'value' => $copySource > 0 ? (string) $copySource : '', 'required' => true], ['saveData' => false]) ?>
         <?= view('components/form-field', ['name' => 'target', 'label' => 'Copy into', 'type' => 'select', 'options' => $targetOptions, 'value' => $copyTarget > 0 ? (string) $copyTarget : '', 'required' => true, 'help' => 'An upcoming or active term.'], ['saveData' => false]) ?>
         <div><button type="submit" class="<?= $second ?>">Show the offerings</button></div>
@@ -90,7 +90,7 @@ $shift = $copyPlan['shiftDays'] ?? 0;
 
     <?php if ($copyPlan !== null): ?>
 
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-label="What will be copied" data-copy-summary>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="What will be copied" data-copy-summary>
             <h2 class="text-sm font-bold text-brand">From <?= esc($copyPlan['source']['name']) ?> into <?= esc($copyPlan['target']['name']) ?></h2>
             <ul class="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-[#3D3D3D]">
                 <li><strong>Copied:</strong> sections and weekly schedules, modules, units, items and resources, assessments with their questions and rubrics, and the grading scheme.</li>
@@ -114,7 +114,7 @@ $shift = $copyPlan['shiftDays'] ?? 0;
             <?php if ($rows === []): ?>
                 <?= view('components/empty-state', ['icon' => 'modules', 'title' => 'No offerings to copy', 'text' => 'This term has no offerings that are not archived.'], ['saveData' => false]) ?>
             <?php else: ?>
-                <div class="overflow-hidden rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md" data-table>
+                <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-md" data-table>
                     <table class="w-full text-sm">
                         <caption class="sr-only">Offerings to copy</caption>
                         <thead class="max-md:sr-only border-b border-gray-100 bg-gray-50/70">

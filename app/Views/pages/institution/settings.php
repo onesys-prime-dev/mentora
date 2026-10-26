@@ -56,7 +56,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
     <?php if ($settingsTab === 'profile'): ?>
 
-        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md">
+        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md">
             <?= csrf_field() ?>
 
             <?= $field(['name' => 'name', 'label' => 'Display name', 'value' => (string) $d['name'], 'required' => true, 'maxlength' => 150, 'help' => 'Shown to your students, instructors and parents.']) ?>
@@ -87,7 +87,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-            <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form class="flex flex-col gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" data-announcement-form>
+            <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-announcement-form>
                 <?= csrf_field() ?>
 
                 <p class="text-sm text-[#3D3D3D]">One line for everyone in your institution, shown at the top of their pages under the Mentora announcement. People can hide it for themselves.</p>
@@ -107,7 +107,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <?php endif; ?>
             </form>
 
-            <section class="flex flex-col gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="announcement-preview">
+            <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="announcement-preview">
                 <h2 id="announcement-preview" class="text-sm font-bold text-brand">As your people will see it</h2>
 
                 <?php if ($n['text'] === ''): ?>
@@ -133,7 +133,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $pp = $settingsParents; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" data-parent-portal-form>
+        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-parent-portal-form>
             <?= csrf_field() ?>
 
             <fieldset class="flex flex-col gap-3" <?= $disabled ?>>
@@ -176,7 +176,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         $roleNames = ['institutional_admin' => 'Institutional administrators', 'dean' => 'Deans', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" data-security-form>
+        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-security-form>
             <?= csrf_field() ?>
 
             <p class="text-sm text-[#3D3D3D]">Your institution can be <strong>stricter</strong> than the platform, never looser. Leave a box empty to follow the platform. Changing these asks for your password.</p>
@@ -262,7 +262,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         }
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" data-academic-form>
+        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-academic-form>
             <?= csrf_field() ?>
 
             <section class="flex flex-col gap-4" aria-labelledby="new-offerings">
@@ -328,7 +328,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
             <div class="flex flex-col gap-6">
 
-                <section class="flex flex-col gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="logo-heading">
+                <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="logo-heading">
                     <h2 id="logo-heading" class="text-sm font-bold text-brand">Logo</h2>
 
                     <?php if ($d['logo_file_id'] !== null): ?>
@@ -361,7 +361,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                     </form>
                 </section>
 
-                <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="colours-heading">
+                <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="colours-heading">
                     <h2 id="colours-heading" class="text-sm font-bold text-brand">Colours</h2>
 
                     <form method="post" action="<?= esc(site_url($base . '/branding')) ?>" data-dialog-form data-brand-form class="mt-4 flex flex-col gap-4">
@@ -403,7 +403,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
             </div>
 
-            <section class="flex flex-col gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="preview-heading">
+            <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="preview-heading">
                 <h2 id="preview-heading" class="text-sm font-bold text-brand">Preview</h2>
                 <p class="text-xs text-[#646464]">This is how buttons, links and badges will look. Nothing changes until you save.</p>
 

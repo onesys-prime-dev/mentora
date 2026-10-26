@@ -119,7 +119,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
 
     <?php if ($d['rows'] === []): ?>
 
-        <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA]">
+        <div class="rounded-2xl border border-gray-200 bg-gray-50">
             <?= view('components/empty-state', [
                 'icon'  => 'score',
                 'title' => $filtered ? 'No courses match these filters' : 'No courses to report on yet',
@@ -137,7 +137,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
             <?= view('components/metric-card', ['label' => 'Graded', 'value' => $d['grading']['percent'] === null ? '—' : $d['grading']['percent'] . '%', 'icon' => 'grades', 'tone' => 'neutral', 'detail' => $d['grading']['turnaround'] === null ? 'Published grades only' : 'Typically ' . $d['grading']['turnaround'] . ' h to grade'], ['saveData' => false]) ?>
         </div>
 
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="distribution" data-report-distribution>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="distribution" data-report-distribution>
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 id="distribution" class="text-sm font-bold text-brand">Grade distribution</h2>
                 <?php if ($d['grading']['average'] !== null): ?>

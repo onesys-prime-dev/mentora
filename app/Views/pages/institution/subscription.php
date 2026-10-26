@@ -59,13 +59,13 @@ foreach ($planHistory as $i => $h) {
 
     <?php if ($planInfo === null): ?>
 
-        <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA]">
+        <div class="rounded-2xl border border-gray-200 bg-gray-50">
             <?= view('components/empty-state', ['icon' => 'info', 'title' => 'No subscription yet', 'text' => 'Your Mentora contact sets up your plan. It will appear here.'], ['saveData' => false]) ?>
         </div>
 
     <?php else: ?>
 
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="plan-heading" data-subscription>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="plan-heading" data-subscription>
             <div class="flex flex-wrap items-center gap-3">
                 <h2 id="plan-heading" class="text-lg font-bold text-brand"><?= esc($planInfo['name']) ?></h2>
                 <?= view('components/status-badge', ['label' => $names[$planStatus->state] ?? $planStatus->state, 'tone' => $tones[$planStatus->state] ?? 'neutral'], ['saveData' => false]) ?>
@@ -82,7 +82,7 @@ foreach ($planHistory as $i => $h) {
             <?php endif; ?>
         </section>
 
-        <section class="flex flex-col gap-4 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="usage-heading" data-usage>
+        <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="usage-heading" data-usage>
             <h2 id="usage-heading" class="text-sm font-bold text-brand">Use against your plan</h2>
 
             <?= view('components/usage-bar', ['label' => 'Student seats', 'used' => $planUsage['seats']['used'], 'limit' => $planUsage['seats']['limit']], ['saveData' => false]) ?>

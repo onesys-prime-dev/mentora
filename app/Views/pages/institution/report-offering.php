@@ -65,7 +65,7 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
     </div>
 
     <?php if ($g !== null && $g['graded_count'] > 0): ?>
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="dist" data-report-distribution>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="dist" data-report-distribution>
             <h2 id="dist" class="text-sm font-bold text-brand">Grade distribution</h2>
             <ul class="mt-4 flex flex-col gap-2">
                 <?php foreach ($g['distribution'] as $bucket => $count): ?>
@@ -81,7 +81,7 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
         </section>
     <?php endif; ?>
 
-    <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="activity-heading">
+    <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="activity-heading">
         <h2 id="activity-heading" class="text-sm font-bold text-brand">Instructor activity</h2>
         <p class="mt-2 text-sm text-[#3D3D3D]" data-report-activity>
             <?= esc((string) $a['content_updates']) ?> content update<?= $a['content_updates'] === 1 ? '' : 's' ?> and

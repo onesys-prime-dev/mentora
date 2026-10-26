@@ -74,7 +74,7 @@ if ($c['latest'] !== null) {
         <?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?>
     <?php endif; ?>
 
-    <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="state-heading" data-connection>
+    <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="state-heading" data-connection>
         <div class="flex flex-wrap items-center gap-3">
             <h2 id="state-heading" class="text-lg font-bold text-brand"><?= esc($c['label']) ?></h2>
             <?php if (! $c['available']): ?>
@@ -104,7 +104,7 @@ if ($c['latest'] !== null) {
 
     <?php if ($ready): ?>
 
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="import-heading" data-section="import">
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="import-heading" data-section="import">
             <h2 id="import-heading" class="text-sm font-bold text-brand">Import from the SIS</h2>
             <p class="mt-1 text-sm text-[#3D3D3D]">A preview does the whole job and then undoes it, so you see the counts and any rows that would be refused. Run one before the first real import. A real import asks for your password.</p>
 
@@ -141,7 +141,7 @@ if ($c['latest'] !== null) {
             <?php endif; ?>
         </section>
 
-        <section class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-6 shadow-md" aria-labelledby="grades-heading" data-section="grades">
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="grades-heading" data-section="grades">
             <h2 id="grades-heading" class="text-sm font-bold text-brand">Final grades to the SIS</h2>
             <p class="mt-1 text-sm text-[#3D3D3D]">Only final grades go out (course, student, percentage, remarks): a section's grades are final once its instructor finalizes them. Only those new or changed since they were last sent are included. Sending the same grades again replaces the delivery, so nothing is duplicated. Sending asks for your password.</p>
 

@@ -53,7 +53,7 @@ foreach ($exportRows as $row) {
     <?php endif; ?>
 
     <?php if ($exportAllowed): ?>
-        <form class="flex flex-wrap items-center gap-3 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] p-4 shadow-md" method="post" action="<?= site_url('institution/export') ?>" data-export-form>
+        <form class="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-md" method="post" action="<?= site_url('institution/export') ?>" data-export-form>
             <?= csrf_field() ?>
             <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Create an export</button>
             <span class="text-xs text-[#646464]">Each export can be downloaded for <?= esc((string) $exportDays) ?> days.</span>
@@ -65,7 +65,7 @@ foreach ($exportRows as $row) {
     <?php endif; ?>
 
     <?php if ($rows === []): ?>
-        <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA]" data-export-empty>
+        <div class="rounded-2xl border border-gray-200 bg-gray-50" data-export-empty>
             <?= view('components/empty-state', ['icon' => 'folder', 'title' => 'No exports yet', 'text' => $exportAllowed ? 'Create one above and it appears here.' : 'Exports you take will be listed here.'], ['saveData' => false]) ?>
         </div>
     <?php else: ?>
