@@ -139,7 +139,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                 <?php $subActive = (int) $sub['is_active'] === 1; ?>
 
                 <details class="group overflow-hidden rounded-xl border border-brand/20 bg-white shadow-sm" data-sub-department="<?= esc((string) $sub['id']) ?>" <?= $subActive ? 'open' : '' ?>>
-                    <summary class="flex cursor-pointer bg-[#E4ECFA] flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm marker:content-none hover:bg-[#D6E3F8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+                    <summary class="flex cursor-pointer bg-brand/10 flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm marker:content-none hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
                         <span class="flex flex-wrap items-center gap-3 font-semibold text-[#1A1C1E]">
                             <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs font-semibold text-brand-dark"><?= esc($sub['code']) ?></span>
                             <?= esc($sub['name']) ?>
