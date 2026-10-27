@@ -34,7 +34,7 @@ $home    = $isCurrent('admin/dashboard') || $menuPath === 'admin';
     <div class="hidden flex-col gap-1 px-3 pb-4 peer-checked:flex lg:flex lg:px-4 lg:py-5">
 
         <a class="<?= $link ?> flex items-center gap-3 font-semibold <?= $home ? $current : $idle ?>" href="<?= site_url('admin/dashboard') ?>" <?= $home ? 'aria-current="page"' : '' ?>>
-            <?= icon('start', 'h-5 w-5 shrink-0 text-current') ?>Home
+            <?= icon('home', 'h-5 w-5 shrink-0 text-current') ?>Home
         </a>
 
         <?php foreach ($menu as $group => [$groupIcon, $links]): ?>
