@@ -21,6 +21,8 @@ $featureHelp = 'Feature keys, one per line or separated by commas. '
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <div class="mx-auto max-w-xl">
 
     <?= view('components/page-head', ['title' => $formHeading, 'icon' => 'points', 'backUrl' => site_url('admin/plans'), 'backLabel' => 'Plans'], ['saveData' => false]) ?>
@@ -53,6 +55,8 @@ $featureHelp = 'Feature keys, one per line or separated by commas. '
             <button type="submit" class="<?= $primary ?>"><?= $isEdit ? 'Save' : 'Add plan' ?></button>
         </div>
     </form>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

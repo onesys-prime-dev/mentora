@@ -29,6 +29,8 @@ foreach ($newRoles as $role) {
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <div class="mx-auto max-w-lg">
 
     <?= view('components/page-head', [
@@ -63,6 +65,8 @@ foreach ($newRoles as $role) {
             <button type="submit" class="<?= $primary ?>">Send invitation</button>
         </div>
     </form>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

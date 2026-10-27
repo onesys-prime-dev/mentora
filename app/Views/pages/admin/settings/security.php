@@ -17,6 +17,8 @@ $tick    = 'h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40';
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <div class="mx-auto max-w-2xl">
     <?= view('components/page-head', [
         'title'       => 'Security settings',
@@ -71,6 +73,8 @@ $tick    = 'h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40';
             <button type="submit" class="<?= $primary ?>">Save</button>
         </div>
     </form>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

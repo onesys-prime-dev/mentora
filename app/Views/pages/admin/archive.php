@@ -68,6 +68,8 @@ foreach ($deletedRows as $row) {
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Archive', 'icon' => 'drafts'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-[#646464]">
     Institutions that are no longer running. Past institutions keep all their data, read-only, until they are renewed.
@@ -115,5 +117,7 @@ foreach ($deletedRows as $row) {
         'emptyText'  => 'A deleted institution can be restored here until it is purged.',
     ], ['saveData' => false]) ?>
 </section>
+
+</div>
 
 <?= $this->endSection() ?>

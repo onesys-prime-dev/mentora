@@ -61,6 +61,7 @@ if (! function_exists('icon_registry')) {
             'search' => ['color' => $gray, 'body' => $path('M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z')],
             'code' => ['color' => 'text-white', 'body' => $path('M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4')],
             'door' => ['color' => $blue, 'body' => $path('M4 21h16M6 21V4a1 1 0 011-1h10a1 1 0 011 1v17M14.5 12h.01')],
+            'home' => ['color' => $blue, 'body' => $path('M3 10.5L12 3l9 7.5M5 9.5V20a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V9.5')],
 
             /* global apps (solid 20×20, same family as hat / calendar / message) */
             'clock' => ['color' => $dark, 'fill' => true, 'viewBox' => '0 0 20 20', 'body' => '<path fill-rule="evenodd" clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>'],

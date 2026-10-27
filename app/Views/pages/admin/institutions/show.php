@@ -32,6 +32,8 @@ $btn       = 'rounded-full border px-3 py-1 text-xs font-semibold transition foc
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => $profInstitution['name'], 'icon' => 'hat', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions', 'actions' => '<span class="rounded-full px-2 py-0.5 text-xs font-semibold ' . $statusClass . '" data-institution-status="' . esc($profInstitution['status']) . '">' . esc($statusLabel) . '</span>' . ($isDeleted ? '<span class="rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Deleted</span>' : '')], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]"><span class="font-mono text-xs"><?= esc($profInstitution['code']) ?></span></p>
 
@@ -91,6 +93,8 @@ $btn       = 'rounded-full border px-3 py-1 text-xs font-semibold transition foc
         <?php endif; ?>
         <a class="<?= $btn ?> mt-4 inline-block border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50" href="<?= site_url('admin/institutions/' . $profInstitution['id'] . '/users') ?>">People and invitations</a>
     </section>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>
