@@ -291,7 +291,7 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertContains('structure.chairperson_assigned', $this->actions());
     }
 
-    public function testSeveralChairpersonsMayChairOneSubDepartmentAndOneMayChairSeveral(): void
+    public function testASubDepartmentHasOneChairpersonAndOneMayChairSeveral(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
         $this->giveRole($this->ida(), 'chairperson');
@@ -299,8 +299,40 @@ final class SisStaffImportTest extends DatabaseTestCase
 
         $result = $this->sync("chairperson,I2,,{$this->subCode()},,", "chairperson,I3,,{$this->subCode()},,", 'chairperson,I2,,NET,,');
 
-        $this->assertSame(3, $this->counts($result)['created']);
-        $this->assertCount(2, $this->chairs());
+        $this->assertSame(2, $this->counts($result)['created']);
+        $this->assertSame(1, $this->counts($result)['failed']);
+        $this->assertStringContainsString('already has a chairperson in this file', $result->issues[0]['reason']);
+        $this->assertCount(1, $this->chairs());
+        $this->assertSame($this->ian(), (int) $this->chairs()[0]['chairperson_user_id']);
+    }
+
+    public function testTheSisChairpersonReplacesTheOneMadeByHand(): void
+    {
+        $this->giveRole($this->ian(), 'chairperson');
+        $this->giveRole($this->ida(), 'chairperson');
+        (new ChairAssignmentService())->assign($this->institution, $this->sub, $this->ida(), $this->actor);
+
+        $this->sync("chairperson,I2,,{$this->subCode()},,");
+
+        $this->assertCount(1, $this->chairs());
+        $this->assertSame($this->ian(), (int) $this->chairs()[0]['chairperson_user_id']);
+        $this->assertSame($this->ida(), (int) $this->chairs('revoked')[0]['chairperson_user_id']);
+    }
+
+    public function testTheChairpersonTheSisSuppliesIsNotReplacedByHand(): void
+    {
+        $this->giveRole($this->ian(), 'chairperson');
+        $this->giveRole($this->ida(), 'chairperson');
+        $this->sync("chairperson,I2,,{$this->subCode()},,");
+
+        try {
+            (new ChairAssignmentService())->assign($this->institution, $this->sub, $this->ida(), $this->actor, true);
+            $this->fail('the SIS owns this chairperson');
+        } catch (StructureException $e) {
+            $this->assertSame(ChairAssignmentService::SIS_LOCK, $e->getMessage());
+        }
+
+        $this->assertSame($this->ian(), (int) $this->chairs()[0]['chairperson_user_id']);
     }
 
     public function testAPersonWhoDoesNotHoldTheChairpersonRoleIsRefusedAndNeverGrantedIt(): void
@@ -484,7 +516,10 @@ final class SisStaffImportTest extends DatabaseTestCase
     {
         $this->giveRole($this->ian(), 'chairperson');
         $this->giveRole($this->ida(), 'chairperson');
-        (new ChairAssignmentService())->assign($this->institution, $this->sub, $this->ida(), $this->actor);
+        // One chairperson per sub-department (16.0): the one made by hand chairs another.
+        db_connect()->table('sub_departments')->insert(['department_id' => $this->department, 'name' => 'Networks', 'code' => 'NET']);
+        $handSub = (int) db_connect()->insertID();
+        (new ChairAssignmentService())->assign($this->institution, $handSub, $this->ida(), $this->actor);
         $handDean = PeopleFactory::person('dean', 'Hand', 'Made', null, $this->institution);
         $handTeacher = $this->ivy();
         $this->sync('instructor,I2,,,C1,A'); // creates the section
@@ -496,8 +531,8 @@ final class SisStaffImportTest extends DatabaseTestCase
 
         $this->assertSame(2, $this->ended($result), 'only the two the SIS itself supplied are ended');
         $this->assertSame(0, $this->counts($result)['updated']);
-        $this->assertCount(1, $this->chairs(), 'the chairperson made by hand stays');
-        $this->assertSame($this->ida(), (int) $this->chairs()[0]['chairperson_user_id']);
+        $this->assertSame([], $this->chairs());
+        $this->assertSame(1, db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $handSub, 'chairperson_user_id' => $this->ida(), 'status' => 'active'])->countAllResults(), 'the chairperson made by hand stays');
         $this->assertSame([$handTeacher], $this->teachers($offering), 'so does the instructor added by hand');
         $this->assertNotNull($handDean);
     }

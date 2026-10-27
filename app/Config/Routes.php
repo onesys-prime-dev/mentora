@@ -821,6 +821,17 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('security/reset', 'Institution\InstitutionSettingsController::resetSecurity', ['filter' => 'reauth']);
         });
 
+        // Grade-override requests of departments with no dean who may approve them (grades.approve).
+        $routes->get('approvals', 'Institution\ApprovalsController::index', ['filter' => 'permission:grades.approve']);
+        $routes->post('approvals/(:num)/approve', 'Institution\ApprovalsController::approve/$1', ['filter' => 'permission:grades.approve']);
+        $routes->post('approvals/(:num)/reject', 'Institution\ApprovalsController::reject/$1', ['filter' => 'permission:grades.approve']);
+
+        // Sign-off of departments with no dean who may sign off (grades.signoff); signing off asks for the password.
+        $routes->get('signoff', 'Institution\SignoffController::index', ['filter' => 'permission:grades.signoff']);
+        $routes->post('signoff/program/(:num)/(:num)', 'Institution\SignoffController::signOffProgram/$1/$2', ['filter' => ['permission:grades.signoff', 'reauth']]);
+        $routes->post('signoff/(:num)', 'Institution\SignoffController::signOff/$1', ['filter' => ['permission:grades.signoff', 'reauth']]);
+        $routes->post('signoff/(:num)/reopen', 'Institution\SignoffController::reopen/$1', ['filter' => 'permission:grades.signoff']);
+
         // What the institution's roles may do, on top of the platform's settings (institution.roles;
         // a change also needs the password).
         $routes->get('roles', 'Institution\RolesController::index', ['filter' => 'permission:institution.roles']);

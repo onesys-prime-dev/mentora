@@ -142,7 +142,8 @@ class AuthGroups extends ShieldAuthGroups
             'impersonation.start',
         ],
         'institutional_admin' => [
-            'courses.view',
+            // grades.approve and grades.signoff: they stand in where a department has no dean (7.3).
+            'courses.view', 'grades.approve', 'grades.signoff',
             'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage',
             'people.view', 'people.manage', 'reports.view',
             'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles',

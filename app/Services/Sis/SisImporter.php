@@ -533,6 +533,8 @@ class SisImporter
         $deanOfDepartment = [];
         /** @var array<int, int> $deanedBy person => the department this file made them dean of */
         $deanedBy = [];
+        /** @var array<int, int> $chairOfSub sub-department => the person this file made its chairperson */
+        $chairOfSub = [];
 
         foreach ($batch->records as $i => $record) {
             $m    = SisMapper::staffAssignment($record);
@@ -585,6 +587,16 @@ class SisImporter
 
                     $deanOfDepartment[$targetId] = $personId;
                     $deanedBy[$personId]         = $targetId;
+                }
+
+                if ($m['role'] === SisStaffAssignments::CHAIRPERSON) {
+                    if (isset($chairOfSub[$targetId]) && $chairOfSub[$targetId] !== $personId) {
+                        $this->fail($dataset, $item, 'The sub-department already has a chairperson in this file; a sub-department has one chairperson.');
+
+                        continue;
+                    }
+
+                    $chairOfSub[$targetId] = $personId;
                 }
 
                 $this->applyStaff($tracker, $dataset, $item, $m['role'], $personId, $targetId);
@@ -704,7 +716,8 @@ class SisImporter
                 throw new StructureException('The person does not hold the chairperson role. An administrator gives them the role first (People).');
             }
 
-            $localId = (new ChairAssignmentService())->assign($this->institutionId, $targetId, $personId, $this->actor);
+            // The SIS owns its chairpersons: what it lists replaces the one there (16.0).
+            $localId = (new ChairAssignmentService())->assign($this->institutionId, $targetId, $personId, $this->actor, true, true);
         } else {
             $localId = (new OfferingService())->assignInstructor($this->institutionId, $targetId, $personId, $this->actor);
         }

@@ -95,7 +95,7 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
         $this->assertSame($this->institution, (int) $log['institution_id']);
     }
 
-    public function testASubDepartmentCanHaveSeveralChairpersonsAndAPersonSeveralSubDepartments(): void
+    public function testASubDepartmentHasOneChairpersonAndAPersonMayChairSeveral(): void
     {
         $second = PeopleFactory::person('chairperson', 'Dee', 'Second', null, $this->institution);
 
@@ -104,12 +104,13 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
         $sub2 = (int) db_connect()->insertID();
 
         $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
-        $this->service->assign($this->institution, $this->sub, (int) $second->id, $this->admin);
+        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->sub, (int) $second->id, $this->admin));
         $this->service->assign($this->institution, $sub2, (int) $this->chair->id, $this->admin);
 
         $chairs = $this->service->bySubDepartment($this->institution);
 
-        $this->assertCount(2, $chairs[$this->sub]);
+        $this->assertStringContainsString('Confirm to replace them', $e->getMessage());
+        $this->assertCount(1, $chairs[$this->sub]);
         $this->assertCount(1, $chairs[$sub2]);
     }
 

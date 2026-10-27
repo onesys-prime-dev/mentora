@@ -71,11 +71,14 @@ To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', '
 
 ## Chairpersons
 
-On the Structure page, each sub-department lists its chairpersons with **Assign chairperson** and **Remove** (`ChairAssignmentService`).
+On the Structure page, each sub-department shows its chairperson with **Assign chairperson** (when it has none), **Replace chairperson** and **Remove** (`ChairAssignmentService`).
 
-- A sub-department can have several chairpersons and a person can chair several sub-departments. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active sub-department.
-- Removing keeps the row (`revoked`); assigning again reuses it. A chairperson's reach is derived live from these rows, so it follows on their next request.
-- Audit: `structure.chairperson_assigned|revoked`.
+- **One chairperson per sub-department** (audit 16.0); a person can chair several sub-departments. The database keeps it so: `active_marker` is 1 on the one active row and a unique key covers `(sub_department_id, active_marker)`. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active sub-department.
+- **Replacing:** assigning someone to a sub-department that has a chairperson is refused ("… chairs …. Confirm to replace them.") unless the administrator confirms (`replace=1`, the Replace chairperson dialog). The old assignment then ends (`revoked`, history kept) and the old chair is told; override requests waiting for a chairperson's endorsement pass to the new chair, who is told. A request the new chair made themselves moves on to the dean (or the administrators), since nobody else could endorse it. If another administrator changed the chair at the same moment, the second is told to reload.
+- **The SIS:** a chairperson the SIS supplies is replaced or removed there, not by hand (no Replace button; a request anyway gets the SIS message). The SIS sync replaces the chair it lists, and a file listing two chairpersons for one sub-department fails the second row.
+- **Existing data:** the migration `OneChairpersonPerSubDepartment` keeps each sub-department's most recently assigned chair and ends the others.
+- Removing keeps the row (`revoked`); assigning again reuses it. Requests that were waiting for the removed chair move on to the dean (or the administrators) instead of waiting for nobody (`grade.override_rerouted`). A chairperson's reach is derived live from these rows, so it follows on their next request.
+- Audit: `structure.chairperson_assigned|revoked` (a replacement records both, the revoked one with `replaced_by`).
 - Giving someone the chairperson role is done on the People page (a later branch).
 
 ## Terms
@@ -121,6 +124,33 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Not here:** the institutional administrator and system administrator roles, and any platform or institution-administration permission.
 - **Rules:** a role keeps at least one permission; a permission a role is not offered cannot be set.
 - **Audit:** `roles.permission_changed` with the institution. More in `roles-and-permissions.md`.
+- **Warnings:** where nobody can approve grade overrides or sign off grades in a department ("Nobody can … in …"), the page says so; the system administrator's Roles page lists the same for every institution (`GradeAuthority::gaps`).
+
+## Who decides grade overrides and sign-off
+
+`GradeAuthority` answers it for the override chain, sign-off and the SIS grade export.
+
+- **Whether approval is used:** an institution uses approval and sign-off once it has any active dean assignment. With none, overrides stay direct and finalized grades go straight to the SIS, as before. When the first dean is assigned, the finalized sections whose grades were not sent yet are announced to whoever now signs them off: the new dean for their department, the administrators for the rest.
+- **Who:** in a department, its dean if they hold the permission as dean (`grades.approve`, `grades.signoff`); otherwise the institution's active administrators who hold it. Both permissions are institutional administrator defaults.
+- **Nobody decides their own request**, and an administrator never signs off a section they teach (another administrator does). A dean may sign off a section they teach.
+- **Changing the permission** (either Roles page) moves waiting requests to whoever now decides them.
+
+## Approvals
+
+`/institution/approvals` (permission `grades.approve`; read-only while the institution is read-only). The dean's Approvals page, for the requests waiting for the institution (`awaiting_institution`).
+
+- **Pending:** the requests of the institution waiting for an administrator, with the same filters as the dean's. **Decided:** those decided by the institution's administrators.
+- **Deciding:** approve or reject, never your own. The first administrator to decide wins; the next is told "That request was just decided or withdrawn." Every administrator who may decide it is told when one arrives (link to this page).
+- **When it can't be decided:** the requester is told why it waits ("This needs another administrator…" or "Nobody in your institution can decide this yet…").
+
+## Sign-off
+
+`/institution/signoff` (permission `grades.signoff`; signing off a section or a program also needs the password). The dean's Sign-off board, for the programs of departments with no dean who signs off.
+
+- **Board:** term filter, programs with their ready sections; signing off one section or a whole program, and reopening.
+- **Own sections:** a section the administrator teaches is marked and can't be signed off by them ("You teach this section, so another administrator signs it off."). "Sign off all N ready" leaves them out of N and says how many were left for another administrator.
+- **Notices:** when a section is ready, the administrators who may sign it off are told, minus the section's instructors.
+- **Not here:** the dean's CSV export and follow-ups.
 
 ## People
 

@@ -28,6 +28,11 @@ $sections = [
     and every role keeps at least one permission. <span class="font-semibold text-amber-700">Edited</span> marks a cell that differs from the default.
 </p>
 
+<?php $duty = ['grades.approve' => 'approve grade overrides', 'grades.signoff' => 'sign off grades']; ?>
+<?php foreach ($roleGaps ?? [] as $gap): ?>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'warning', 'text' => $gap['institution'] . ': nobody can ' . $duty[$gap['permission']] . ' in ' . $gap['department'] . '. Its requests and sign-offs wait.'], ['saveData' => false]) ?></div>
+<?php endforeach; ?>
+
 <?php if (session()->has('message')): ?>
     <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
 <?php endif; ?>

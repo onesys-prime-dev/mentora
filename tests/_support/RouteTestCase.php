@@ -40,6 +40,10 @@ abstract class RouteTestCase extends DatabaseTestCase
 
         $_SERVER['HTTPS'] = 'on';
 
+        // The shared renderer keeps the data of every view it rendered; a request starts with none, so each test
+        // does too (one page's reauthDialog or area must not show up on the next test's page).
+        Services::resetSingle('renderer');
+
         $this->ensureViteManifest();
     }
 

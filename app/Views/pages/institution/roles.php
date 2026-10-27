@@ -10,6 +10,7 @@
  * @var array<string, list<string>> $currentMatrix this institution's
  * @var array<string, list<string>> $defaultMatrix the platform's
  * @var bool                        $rolesCanEdit  false while the institution is read-only
+ * @var list<array{department: string, permission: string}> $roleGaps where nobody may approve or sign off (U1f)
  */
 ?>
 
@@ -26,6 +27,11 @@
         'backUrl'     => site_url('institution/dashboard'),
         'backLabel'   => 'Back to home',
     ], ['saveData' => false]) ?>
+
+    <?php $duty = ['grades.approve' => 'approve grade overrides', 'grades.signoff' => 'sign off grades']; ?>
+    <?php foreach ($roleGaps ?? [] as $gap): ?>
+        <?= view('components/alert', ['tone' => 'warning', 'text' => 'Nobody can ' . $duty[$gap['permission']] . ' in ' . $gap['department'] . '. Requests and sign-offs there wait until a dean or an administrator has the permission.'], ['saveData' => false]) ?>
+    <?php endforeach; ?>
 
     <?php if (! $rolesCanEdit): ?>
         <?= view('components/lock-note', ['kind' => 'read_only'], ['saveData' => false]) ?>

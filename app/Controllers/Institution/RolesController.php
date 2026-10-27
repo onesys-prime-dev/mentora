@@ -45,6 +45,8 @@ class RolesController extends BaseController
             'defaultMatrix' => $matrices->matrixFor(0),
             'rolesCanEdit'  => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'flashToasts'   => true,
+            // Where nobody may approve or sign off: requests and sign-offs there wait (U1f).
+            'roleGaps'      => \App\Services\Courses\Grades\GradeAuthority::gaps($institutionId),
         ]);
     }
 

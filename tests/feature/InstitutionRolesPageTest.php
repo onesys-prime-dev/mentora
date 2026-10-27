@@ -68,6 +68,19 @@ final class InstitutionRolesPageTest extends RouteTestCase
         $this->assertStringContainsString('A box you have not changed follows the platform', $body);
     }
 
+    public function testThePageWarnsWhenNobodyCanApproveInADepartment(): void
+    {
+        $withDean = \Tests\Support\DeanFactory::department('IRW', $this->institution);
+        \Tests\Support\DeanFactory::dean($this->institution, $withDean['department']);
+        \Tests\Support\DeanFactory::department('IRX', $this->institution);
+        db_connect()->table('role_permissions')->insert(['institution_id' => $this->institution, 'role' => 'institutional_admin', 'permission' => 'grades.approve', 'granted' => 0]);
+        PermissionMatrix::flush();
+
+        $this->asAdmin();
+
+        $this->assertStringContainsString('Nobody can approve grade overrides in College IRX', (string) $this->step('GET', 'institution/roles')->getBody());
+    }
+
     public function testAChangeNeedsThePasswordFirst(): void
     {
         $this->asAdmin();

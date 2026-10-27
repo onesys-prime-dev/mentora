@@ -47,6 +47,8 @@ if (! function_exists('global_apps')) {
                 ['key' => 'offerings',   'label' => 'Offerings',   'icon' => 'modules',  'url' => site_url('institution/offerings')],
                 ['key' => 'people',      'label' => 'People',      'icon' => 'user',     'url' => site_url('institution/people')],
                 ['key' => 'roles',       'label' => 'Roles and permissions', 'icon' => 'lock', 'url' => site_url('institution/roles')],
+                ['key' => 'approvals',   'label' => 'Approvals',   'icon' => 'tasks',    'url' => site_url('institution/approvals')],
+                ['key' => 'signoff',     'label' => 'Sign-off',    'icon' => 'check',    'url' => site_url('institution/signoff')],
                 ['key' => 'reports',     'label' => 'Reports',     'icon' => 'score',    'url' => site_url('institution/reports')],
                 ['key' => 'settings',    'label' => 'Settings',    'icon' => 'settings', 'url' => site_url('institution/settings')],
                 ['key' => 'subscription', 'label' => 'Subscription', 'icon' => 'info',   'url' => site_url('institution/subscription')],

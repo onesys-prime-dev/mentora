@@ -67,7 +67,9 @@ final class SisStaffLockPagesTest extends RouteTestCase
 
         $chairs             = new ChairAssignmentService();
         $this->sisChairRow  = $chairs->assign($this->institution, $this->sub, (int) $this->sisChair->id, $this->admin);
-        $this->handChairRow = $chairs->assign($this->institution, $this->sub, (int) $this->handChair->id, $this->admin);
+        // One chairperson per sub-department (16.0): the one made by hand chairs a second sub-department.
+        $db->table('sub_departments')->insert(['department_id' => $dept, 'code' => 'HAND', 'name' => 'Hand sub', 'is_active' => 1]);
+        $this->handChairRow = $chairs->assign($this->institution, (int) $db->insertID(), (int) $this->handChair->id, $this->admin);
 
         $this->offering = SisFixture::course($this->institution)['offering'];
 

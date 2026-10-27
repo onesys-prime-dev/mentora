@@ -179,7 +179,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
                         <?php $chairs = $structureChairs[(int) $sub['id']] ?? []; ?>
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" data-chairs>
-                            <span class="font-semibold text-[#3D3D3D]">Chairperson<?= count($chairs) === 1 ? '' : 's' ?>:</span>
+                            <span class="font-semibold text-[#3D3D3D]">Chairperson:</span>
                             <?php if ($chairs === []): ?>
                                 <span class="text-[#646464]" data-chairs-empty>None assigned yet.</span>
                             <?php endif; ?>
@@ -199,12 +199,20 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                     <?php endif; ?>
                                 </span>
                             <?php endforeach; ?>
-                            <?php if ($structureCanEdit && $subActive): ?>
+                            <?php if ($structureCanEdit && $subActive && $chairs === []): ?>
                                 <button type="button" class="<?= $link ?>"
                                     data-dialog-open="structure-chair"
                                     data-dialog-title="Assign a chairperson to <?= esc($sub['name']) ?>"
                                     data-dialog-label="Assign"
                                     data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/chairpersons')) ?>">Assign chairperson</button>
+                            <?php elseif ($structureCanEdit && $subActive && ! isset($structureSisChairs[(int) $chairs[0]['id']])): ?>
+                                <?php // One chairperson per sub-department (16.0): choosing someone else replaces them, once confirmed here. ?>
+                                <button type="button" class="<?= $link ?>"
+                                    data-dialog-open="structure-chair"
+                                    data-dialog-title="Replace <?= esc($chairs[0]['name']) ?> as chairperson of <?= esc($sub['name']) ?>? Their assignment ends and they are told."
+                                    data-dialog-label="Replace"
+                                    data-dialog-values="<?= esc(json_encode(['replace' => '1']), 'attr') ?>"
+                                    data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/chairpersons')) ?>">Replace chairperson</button>
                             <?php endif; ?>
                         </div>
 
@@ -299,7 +307,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     [$chairBody, $chairFooter] = $form('structure-chair', view('components/form-field', [
         'name' => 'user_id', 'label' => 'Chairperson', 'type' => 'select', 'options' => $candidateOptions, 'required' => true,
         'help' => 'People who hold the chairperson role in your institution. Give someone the role on the People page.',
-    ], ['saveData' => false]));
+    ], ['saveData' => false]) . '<input type="hidden" name="replace" value="">');
 
     [$subBody, $subFooter]   = $form('structure-sub', $code . $name);
     [$progBody, $progFooter] = $form('structure-program', $code . $name);

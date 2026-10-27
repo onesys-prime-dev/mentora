@@ -59,6 +59,7 @@ class ApprovalsController extends BaseController
 
         return view('pages/dean/approvals', [
             'title'        => 'Approvals',
+            'area'         => 'dean',
             'page'         => 'approvals',
             'user'         => $user,
             'filters'      => $filters,

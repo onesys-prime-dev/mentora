@@ -42,6 +42,7 @@ class SignoffController extends BaseController
 
         return view('pages/dean/signoff', [
             'title'        => 'Sign-off',
+            'area'         => 'dean',
             'page'         => 'signoff',
             'user'         => $user,
             'board'        => $board,

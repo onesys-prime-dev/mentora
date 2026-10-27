@@ -94,7 +94,7 @@ final class AdminRolesPageTest extends RouteTestCase
         $this->withSession();
 
         $this->assertSame(302, $this->step('GET', 'admin/roles')->response()->getStatusCode());
-        $this->flip('institutional_admin', 'grades.approve', '1');
+        $this->flip('instructor', 'grading.manage', '0');
 
         $this->assertSame(0, $this->overrideCount());
     }
@@ -104,6 +104,20 @@ final class AdminRolesPageTest extends RouteTestCase
     | The page
     |--------------------------------------------------------------------------
     */
+
+    public function testThePageWarnsAboutInstitutionsWhereNobodyCanSignOff(): void
+    {
+        $home = \Tests\Support\DeanFactory::department('ARW');
+        \Tests\Support\DeanFactory::dean($home['institution'], $home['department']);
+        db_connect()->table('institutions')->where('id', $home['institution'])->update(['name' => 'Warn University']);
+        db_connect()->table('role_permissions')->insertBatch([
+            ['institution_id' => $home['institution'], 'role' => 'dean', 'permission' => 'grades.signoff', 'granted' => 0],
+            ['institution_id' => $home['institution'], 'role' => 'institutional_admin', 'permission' => 'grades.signoff', 'granted' => 0],
+        ]);
+        PermissionMatrix::flush();
+
+        $this->assertStringContainsString('Warn University: nobody can sign off grades in College ARW', $this->body());
+    }
 
     public function testTheMatrixListsEveryRoleAndPermission(): void
     {
@@ -150,7 +164,7 @@ final class AdminRolesPageTest extends RouteTestCase
         $this->assertStringNotContainsString('text-[10px] font-semibold text-amber-700">Edited</span>', $this->body());
 
         $this->confirmedPassword();
-        $this->flip('institutional_admin', 'grades.approve', '1');
+        $this->flip('instructor', 'grading.manage', '0');
 
         $this->assertStringContainsString('text-[10px] font-semibold text-amber-700">Edited</span>', $this->body());
     }
@@ -163,7 +177,7 @@ final class AdminRolesPageTest extends RouteTestCase
 
     public function testChangingACellNeedsThePasswordFirst(): void
     {
-        $response = $this->flip('institutional_admin', 'grades.approve', '1')->response();
+        $response = $this->flip('instructor', 'grading.manage', '0')->response();
 
         $this->assertStringEndsWith('admin/reauth', $response->getHeaderLine('Location'));
         $this->assertSame(0, $this->overrideCount(), 'nothing changed');
@@ -174,14 +188,14 @@ final class AdminRolesPageTest extends RouteTestCase
     {
         $this->confirmedPassword();
 
-        $location = $this->flip('institutional_admin', 'grades.approve', '1')->response()->getHeaderLine('Location');
+        $location = $this->flip('instructor', 'grading.manage', '0')->response()->getHeaderLine('Location');
         $this->assertStringEndsWith('admin/roles', $location);
-        $this->assertTrue((new PermissionMatrix())->has('institutional_admin', 'grades.approve'));
-        $this->assertStringContainsString('Granted grades.approve for institutional_admin', $this->body());
-
-        $this->flip('instructor', 'grading.manage', '0');
         $this->assertFalse((new PermissionMatrix())->has('instructor', 'grading.manage'));
         $this->assertStringContainsString('Revoked grading.manage for instructor', $this->body());
+
+        $this->flip('instructor', 'grading.manage', '1');
+        $this->assertTrue((new PermissionMatrix())->has('instructor', 'grading.manage'));
+        $this->assertStringContainsString('Granted grading.manage for instructor', $this->body());
     }
 
     public function testTheChangeShowsInThePageAfterwards(): void
@@ -207,7 +221,7 @@ final class AdminRolesPageTest extends RouteTestCase
     public function testTheChangeTakesEffectOnTheNextRequestForThatRole(): void
     {
         $this->confirmedPassword();
-        $this->flip('institutional_admin', 'grades.approve', '1');
+        $this->flip('instructor', 'grading.manage', '0');
 
         PermissionMatrix::flush();
 

@@ -90,6 +90,11 @@ final class InstitutionRoles
             throw $e;
         }
 
+        // Who may approve overrides changed: the waiting requests go to whoever may decide them now (7.2).
+        if ($permission === 'grades.approve' && in_array($role, ['dean', 'institutional_admin'], true)) {
+            (new \App\Services\Courses\Grades\GradeOverrideRequestService())->retargetInstitution($institutionId);
+        }
+
         return true;
     }
 

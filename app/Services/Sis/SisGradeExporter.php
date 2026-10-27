@@ -243,13 +243,7 @@ class SisGradeExporter
     {
         $db = db_connect();
 
-        $hasDean = $db->table('dean_assignments da')
-            ->join('departments d', 'd.id = da.department_id')
-            ->where('d.institution_id', $institutionId)
-            ->where(['da.status' => 'active', 'da.active_marker' => 1])
-            ->countAllResults() > 0;
-
-        if (! $hasDean) {
+        if (! \App\Services\Courses\Grades\GradeAuthority::usesApproval($institutionId)) {
             return null;
         }
 

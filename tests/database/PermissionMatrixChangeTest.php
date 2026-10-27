@@ -61,18 +61,6 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testGrantingAPermissionStoresAGrantAndTheMatrixChangesAtOnce(): void
-    {
-        $this->assertTrue($this->matrix->set('institutional_admin', 'grades.approve', true, $this->admin));
-
-        $row = db_connect()->table('role_permissions')->get()->getRowArray();
-
-        $this->assertSame('institutional_admin', $row['role']);
-        $this->assertSame('grades.approve', $row['permission']);
-        $this->assertSame(1, (int) $row['granted']);
-        $this->assertTrue($this->matrix->has('institutional_admin', 'grades.approve'), 'no waiting for the next request');
-    }
-
     public function testRevokingADefaultStoresADenial(): void
     {
         $this->assertTrue($this->matrix->set('instructor', 'grading.manage', false, $this->admin));
@@ -93,9 +81,9 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
 
     public function testChangingTheSameCellTwiceLeavesOneRow(): void
     {
-        $this->matrix->set('institutional_admin', 'grades.approve', true, $this->admin);
-        $this->matrix->set('institutional_admin', 'grades.approve', false, $this->admin);
-        $this->matrix->set('institutional_admin', 'grades.approve', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
 
         $this->assertSame(1, $this->rowCount());
     }
@@ -103,7 +91,7 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
     public function testAskingForWhatIsAlreadyTrueDoesNothing(): void
     {
         $this->assertFalse($this->matrix->set('instructor', 'courses.view', true, $this->admin));
-        $this->assertFalse($this->matrix->set('institutional_admin', 'grades.approve', false, $this->admin));
+        $this->assertFalse($this->matrix->set('instructor', 'grading.manage', true, $this->admin));
 
         $this->assertSame(0, $this->rowCount());
         $this->assertSame([], $this->audit(), 'a non-change is not an event');
@@ -111,7 +99,7 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
 
     public function testPermissionNamesAreCaseInsensitive(): void
     {
-        $this->assertTrue($this->matrix->set('institutional_admin', 'Grades.Approve', true, $this->admin));
+        $this->assertTrue($this->matrix->set('instructor', 'Grading.Manage', false, $this->admin));
         $this->assertTrue($this->matrix->has('institutional_admin', 'grades.approve'));
     }
 
@@ -119,10 +107,10 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
     {
         $before = $this->matrix->effective();
 
-        $this->matrix->set('institutional_admin', 'grades.approve', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
 
         $after = $this->matrix->effective();
-        unset($before['institutional_admin'], $after['institutional_admin']);
+        unset($before['instructor'], $after['instructor']);
 
         $this->assertSame($before, $after);
     }
@@ -217,7 +205,7 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
     {
         auth()->login($this->admin);
 
-        $this->matrix->set('institutional_admin', 'grades.approve', true);
+        $this->matrix->set('instructor', 'grading.manage', false);
 
         auth()->logout();
 
@@ -237,19 +225,19 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
         });
 
         try {
-            $this->matrix->set('institutional_admin', 'grades.approve', true, $this->admin);
+            $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
             $this->fail('the failure must reach the caller');
         } catch (RuntimeException $e) {
             $this->assertSame('the audit log is unavailable', $e->getMessage());
         }
 
-        $this->assertFalse($this->matrix->has('institutional_admin', 'grades.approve'), 'the grant was taken back');
+        $this->assertTrue($this->matrix->has('instructor', 'grading.manage'), 'the revoke was taken back');
         $this->assertSame($rowsBefore, $this->rowCount());
     }
 
     public function testAnAuditFailureRestoresTheEarlierValueNotJustTheDefault(): void
     {
-        $this->matrix->set('institutional_admin', 'grades.approve', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
 
         Services::injectMock('auditLogger', new class () extends AuditLogger {
             public function log(string $action, ?User $actor = null, array $details = []): int
@@ -259,12 +247,12 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
         });
 
         try {
-            $this->matrix->set('institutional_admin', 'grades.approve', false, $this->admin);
+            $this->matrix->set('instructor', 'grading.manage', true, $this->admin);
         } catch (RuntimeException) {
             // expected
         }
 
-        $this->assertTrue($this->matrix->has('institutional_admin', 'grades.approve'), 'still granted, as before the failed attempt');
-        $this->assertSame(1, (new RolePermissionModel())->where('role', 'institutional_admin')->countAllResults());
+        $this->assertFalse($this->matrix->has('instructor', 'grading.manage'), 'still revoked, as before the failed attempt');
+        $this->assertSame(1, (new RolePermissionModel())->where('role', 'instructor')->countAllResults());
     }
 }

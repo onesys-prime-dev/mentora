@@ -79,6 +79,8 @@ final class DeanFactory
 
         db_connect()->table('chairperson_assignments')->insert([
             'sub_department_id' => $subDepartment, 'chairperson_user_id' => $chair->id, 'status' => $status, 'assigned_at' => date('Y-m-d H:i:s'),
+            // One active chairperson per sub-department (decision 16.0).
+            'active_marker' => $status === 'active' ? 1 : null,
         ]);
 
         return $chair;

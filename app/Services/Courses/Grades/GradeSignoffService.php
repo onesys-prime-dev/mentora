@@ -7,9 +7,11 @@ namespace App\Services\Courses\Grades;
 use App\Models\Assessments\GradeSignoffModel;
 use App\Models\Courses\OfferingDetail;
 use App\Services\Auth\ActiveRoleService;
+use App\Services\Auth\RolePermissions;
 use App\Services\Courses\DeanAccessService;
 use App\Services\Courses\MonitorProgramService;
 use App\Services\Notifications\NotificationService;
+use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -131,7 +133,7 @@ class GradeSignoffService
 
         GradeAudit::record('grades.signed_off', $offeringId, ['new' => ['signoff_id' => $id]], $dean);
 
-        $this->tell($offeringId, $dean, "grade-signoff:{$id}:signed", 'Grades signed off', 'the dean signed off the final grades.');
+        $this->tell($offeringId, $dean, "grade-signoff:{$id}:signed", 'Grades signed off', 'the ' . $this->who($dean) . ' signed off the final grades.');
 
         return ['success' => true, 'message' => 'Signed off.'];
     }
@@ -143,12 +145,18 @@ class GradeSignoffService
      */
     public function signOffProgram(User $dean, int $programId, int $termId): array
     {
-        if (! (new DeanAccessService())->canAccessProgram($dean, $programId)) {
-            return ['success' => false, 'message' => 'That program is not in your department.', 'signed' => 0, 'left' => 0];
+        $mine = (new ActiveRoleService())->resolve($dean) === 'institutional_admin'
+            ? in_array($programId, $this->adminProgramIds($dean), true)
+            : (new DeanAccessService())->canAccessProgram($dean, $programId);
+
+        if (! $mine) {
+            return ['success' => false, 'message' => 'That program is not one you sign off.', 'signed' => 0, 'left' => 0];
         }
 
         $signed = 0;
         $left   = 0;
+        $own    = 0;
+        $admin  = (new ActiveRoleService())->resolve($dean) === 'institutional_admin';
 
         foreach (array_column(OfferingDetail::inPrograms([$programId])->where('academic_terms.id', $termId)->get()->getResultArray(), 'offering_id') as $offeringId) {
             $offeringId = (int) $offeringId;
@@ -157,12 +165,22 @@ class GradeSignoffService
                 continue;
             }
 
+            // An administrator's own section is another administrator's to sign off (D4), not one "not ready".
+            if ($admin && in_array((int) $dean->id, $this->instructorsOf($offeringId), true)) {
+                $own++;
+
+                continue;
+            }
+
             $this->signOff($dean, $offeringId)['success'] ? $signed++ : $left++;
         }
 
+        $rest = ($left > 0 ? ", {$left} not ready were left" : '')
+            . ($own > 0 ? ", {$own} you teach " . ($own === 1 ? 'was' : 'were') . ' left for another administrator' : '');
+
         return [
             'success' => true,
-            'message' => $signed === 0 ? 'Nothing was ready to sign off.' : "Signed off {$signed} " . ($signed === 1 ? 'section' : 'sections') . ($left > 0 ? ", {$left} not ready were left." : '.'),
+            'message' => $signed === 0 ? 'Nothing was ready to sign off' . ($own > 0 ? ' that you may sign off' : '') . '.' : "Signed off {$signed} " . ($signed === 1 ? 'section' : 'sections') . $rest . '.',
             'signed'  => $signed,
             'left'    => $left,
         ];
@@ -202,7 +220,7 @@ class GradeSignoffService
 
         GradeAudit::record('grades.signoff_reopened', $offeringId, ['new' => ['signoff_id' => (int) $current['id'], 'reason' => trim($reason)]], $dean);
 
-        $this->tell($offeringId, $dean, "grade-signoff:{$current['id']}:reopened", 'Sign-off reopened', 'the dean reopened the sign-off of the final grades. Reason: ' . trim($reason));
+        $this->tell($offeringId, $dean, "grade-signoff:{$current['id']}:reopened", 'Sign-off reopened', 'the ' . $this->who($dean) . ' reopened the sign-off of the final grades. Reason: ' . trim($reason));
 
         return ['success' => true, 'message' => 'Sign-off ended. The grades stay finalized.'];
     }
@@ -220,22 +238,25 @@ class GradeSignoffService
             return;
         }
 
-        $dean = (new \App\Models\Assignments\DeanAssignmentModel())->currentDeanOfDepartment((int) $section['department_id']);
+        $dean = GradeAuthority::deanFor((int) $section['department_id'], 'grades.signoff');
 
-        if ($dean === null) {
-            return;
+        // With no dean who may sign off, the administrators who may (2.1), never one who teaches it (D4).
+        $people = $dean !== null
+            ? [$dean => 'dean/signoff']
+            : array_fill_keys(GradeAuthority::institutionAdmins((int) $section['institution_id'], 'grades.signoff', $this->instructorsOf($offeringId)), 'institution/signoff');
+
+        foreach ($people as $userId => $page) {
+            $this->notifications->send(
+                (int) $userId,
+                'grade_signoff',
+                'Grades ready for sign-off',
+                trim($section['course_code'] . ' ' . $section['section_code']) . ': the grades are finalized and ready for your sign-off.',
+                false,
+                "grade-signoff:ready:{$offeringId}:" . date('YmdHis'),
+                (int) $section['institution_id'],
+                site_url($page),
+            );
         }
-
-        $this->notifications->send(
-            (int) $dean['dean_user_id'],
-            'grade_signoff',
-            'Grades ready for sign-off',
-            trim($section['course_code'] . ' ' . $section['section_code']) . ': the grades are finalized and ready for your sign-off.',
-            false,
-            "grade-signoff:ready:{$offeringId}:" . date('YmdHis'),
-            (int) $section['institution_id'],
-            site_url('dean/signoff'),
-        );
     }
 
     /**
@@ -292,9 +313,20 @@ class GradeSignoffService
      */
     public function board(User $dean, ?int $termId): array
     {
-        $access     = new DeanAccessService();
-        $programIds = $access->programIds($dean);
-        $terms      = (new MonitorProgramService())->termsForPrograms($programIds);
+        return $this->boardFor((new DeanAccessService())->programIds($dean), $termId, 'dean');
+    }
+
+    /**
+     * The sign-off board for a set of programs: the dean's department, or the administrator's departments with
+     * no dean who may sign off (adminProgramIds). Its course links point into the area ('dean', 'institution').
+     *
+     * @param list<int> $programIds
+     *
+     * @return array{terms: list<array<string, mixed>>, term: ?int, programs: list<array<string, mixed>>}
+     */
+    public function boardFor(array $programIds, ?int $termId, string $area): array
+    {
+        $terms = (new MonitorProgramService())->termsForPrograms($programIds);
 
         // A term that is not one of the department's falls back to the newest.
         $known  = array_map(static fn (array $t): int => (int) $t['id'], $terms);
@@ -314,9 +346,16 @@ class GradeSignoffService
             $programId = (int) $row['program_id'];
             $status    = $this->status((int) $row['offering_id']);
 
-            $programs[$programId] ??= ['id' => $programId, 'name' => (string) $row['program_name'], 'sections' => [], 'counts' => [self::READY => 0, self::BLOCKED => 0, self::SIGNED_OFF => 0]];
+            $own                  = $area === 'institution' && in_array((int) auth()->id(), $this->instructorsOf((int) $row['offering_id']), true);
+            $programs[$programId] ??= ['id' => $programId, 'name' => (string) $row['program_name'], 'sections' => [], 'counts' => [self::READY => 0, self::BLOCKED => 0, self::SIGNED_OFF => 0], 'own_ready' => 0];
 
             $programs[$programId]['counts'][$status['state']]++;
+
+            // Ready, but the administrator's own: another administrator signs it off (D4).
+            if ($own && $status['state'] === self::READY) {
+                $programs[$programId]['own_ready']++;
+            }
+
             $programs[$programId]['sections'][] = [
                 'offering_id'    => (int) $row['offering_id'],
                 'course_code'    => $row['course_code'],
@@ -328,7 +367,8 @@ class GradeSignoffService
                 'state'          => $status['state'],
                 'blockers'       => $status['blockers'],
                 'counts'         => $status['counts'],
-                'grades_url'     => site_url('dean/courses/' . (int) $row['offering_id'] . '/' . url_title((string) $row['course_title'], '-', true) . '/grades'),
+                'grades_url'     => site_url($area . '/courses/' . (int) $row['offering_id'] . '/' . url_title((string) $row['course_title'], '-', true) . '/grades'),
+                'own_section'    => $own,
                 'signed_by_name' => $status['signoff']['signed_by_name'] ?? null,
                 'signed_at'      => $status['signoff']['signed_at'] ?? null,
             ];
@@ -338,17 +378,142 @@ class GradeSignoffService
     }
 
     /** Why this person may not decide on this offering, or null when they may: the dean of its department, acting as dean. */
-    private function mayDecide(User $dean, int $offeringId): ?string
+    private function mayDecide(User $user, int $offeringId): ?string
     {
-        if ((new ActiveRoleService())->resolve($dean) !== 'dean' || ! (new DeanAccessService())->canAccessOffering($dean, $offeringId)) {
-            return 'That section is not in your department.';
-        }
-
         if (! $this->appliesTo($offeringId)) {
             return 'Sign-off is not used in this institution.';
         }
 
+        $role        = (new ActiveRoleService())->resolve($user);
+        $permissions = new RolePermissions();
+
+        // The dean of the department, who may sign off a section they teach (D3).
+        if ($role === 'dean') {
+            return (new DeanAccessService())->canAccessOffering($user, $offeringId) && $permissions->allows($user, 'grades.signoff', 'dean')
+                ? null
+                : 'That section is not in your department.';
+        }
+
+        // An administrator of the institution, where the department has no dean who may sign off (2.1, U1e).
+        $section = $this->section($offeringId);
+
+        if ($role !== 'institutional_admin' || $section === null
+            || (new PlanLimits())->institutionOf((int) $user->id) !== (int) $section['institution_id']
+            || GradeAuthority::deanFor((int) $section['department_id'], 'grades.signoff') !== null
+            || ! $permissions->allows($user, 'grades.signoff', 'institutional_admin')) {
+            return 'That section is not one you sign off.';
+        }
+
+        // Never their own section: another administrator signs it off (D4).
+        if (in_array((int) $user->id, $this->instructorsOf($offeringId), true)) {
+            return 'You teach this section, so another administrator signs it off.';
+        }
+
         return null;
+    }
+
+    /**
+     * The institution's first dean was just assigned, so grades already finalized now need a sign-off before
+     * they go to the SIS (2.3): the administrators who may sign off are told which sections wait.
+     */
+    public function announceNowNeeded(int $institutionId): void
+    {
+        $rows = db_connect()->table('grade_finalizations f')
+            ->select('co.id, c.course_code, co.section_code, d.id AS department_id')
+            ->join('course_offerings co', 'co.id = f.course_offering_id')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments d', 'd.id = sd.department_id')
+            ->where('d.institution_id', $institutionId)
+            ->where('f.open_marker', 1)
+            ->where('NOT EXISTS (SELECT 1 FROM grade_signoffs s WHERE s.offering_id = co.id AND s.open_marker = 1)', null, false)
+            // Grades already sent to the SIS are not held back now (2.3: the unsent ones are).
+            ->where('NOT EXISTS (SELECT 1 FROM sis_grade_exports x WHERE x.offering_id = co.id)', null, false)
+            ->orderBy('c.course_code')->orderBy('co.section_code')
+            ->get()->getResultArray();
+
+        // Each section goes to whoever signs it off: its department's dean, or else the administrators.
+        $forDean   = [];
+        $forAdmins = [];
+
+        foreach ($rows as $row) {
+            $deanId = GradeAuthority::deanFor((int) $row['department_id'], 'grades.signoff');
+
+            if ($deanId === null) {
+                $forAdmins[] = $row;
+            } else {
+                $forDean[$deanId][] = $row;
+            }
+        }
+
+        foreach ($forDean as $deanId => $sections) {
+            $this->notifications->send($deanId, 'grade_signoff', 'Grades now need sign-off', $this->nowNeededBody($sections), false, "grade-signoff:now-needed:{$institutionId}:dean:" . date('YmdHis'), $institutionId, site_url('dean/signoff'));
+        }
+
+        if ($forAdmins === []) {
+            return;
+        }
+
+        foreach (GradeAuthority::institutionAdmins($institutionId, 'grades.signoff') as $adminId) {
+            $this->notifications->send($adminId, 'grade_signoff', 'Grades now need sign-off', $this->nowNeededBody($forAdmins), false, "grade-signoff:now-needed:{$institutionId}:" . date('YmdHis'), $institutionId, site_url('institution/signoff'));
+        }
+    }
+
+    /** @param non-empty-list<array{course_code: string, section_code: string}> $sections */
+    private function nowNeededBody(array $sections): string
+    {
+        $count  = count($sections);
+        $labels = array_map(static fn (array $r): string => trim($r['course_code'] . ' ' . $r['section_code']), array_slice($sections, 0, 5));
+
+        return $count . ($count === 1 ? ' section' : ' sections') . ' with finalized grades now need a sign-off before the grades go to the SIS: '
+            . implode(', ', $labels) . ($count > 5 ? ' and ' . ($count - 5) . ' more' : '') . '.';
+    }
+
+    /**
+     * The programs of the administrator's institution whose department has no dean who may sign off: what the
+     * administrator signs off (2.1).
+     *
+     * @return list<int>
+     */
+    public function adminProgramIds(User $admin): array
+    {
+        $institution = (new PlanLimits())->institutionOf((int) $admin->id);
+
+        if ($institution === null || ! GradeAuthority::usesApproval($institution)) {
+            return [];
+        }
+
+        $rows = db_connect()->table('programs p')
+            ->select('p.id, sd.department_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments d', 'd.id = sd.department_id')
+            ->where('d.institution_id', $institution)
+            ->orderBy('p.id')
+            ->get()->getResultArray();
+
+        $noDean = [];
+
+        return array_values(array_map(
+            static fn (array $r): int => (int) $r['id'],
+            array_filter($rows, static function (array $r) use (&$noDean): bool {
+                $department = (int) $r['department_id'];
+
+                return $noDean[$department] ??= GradeAuthority::deanFor($department, 'grades.signoff') === null;
+            })
+        ));
+    }
+
+    /** @return list<int> who teaches this section */
+    private function instructorsOf(int $offeringId): array
+    {
+        return array_map('intval', array_column(db_connect()->table('instructor_assignments')->select('instructor_user_id')->where('offering_id', $offeringId)->get()->getResultArray(), 'instructor_user_id'));
+    }
+
+    /** Who signed off or reopened, in the words the instructor reads. */
+    private function who(User $user): string
+    {
+        return (new ActiveRoleService())->resolve($user) === 'institutional_admin' ? 'administrator' : 'dean';
     }
 
     /** @return array<string, mixed>|null */

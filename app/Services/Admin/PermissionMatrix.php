@@ -220,6 +220,11 @@ class PermissionMatrix
             throw $e;
         }
 
+        // Who may approve overrides changed everywhere: the waiting requests go to whoever may decide them now (7.2).
+        if ($permission === 'grades.approve' && in_array($role, ['dean', 'institutional_admin'], true)) {
+            (new \App\Services\Courses\Grades\GradeOverrideRequestService())->retargetInstitution(null);
+        }
+
         return true;
     }
 

@@ -65,6 +65,9 @@ class DeanAssignmentService
             }
         }
 
+        // The institution's first dean brings sign-off with it: grades already finalized now wait for one (2.3).
+        $firstDean = ! \App\Services\Courses\Grades\GradeAuthority::usesApproval($institutionId);
+
         $now = date('Y-m-d H:i:s');
         $db->transStart();
 
@@ -100,6 +103,10 @@ class DeanAssignmentService
 
         // Requests waiting for the department's dean now wait for this one (or, if it is their own, for the administrator).
         (new GradeOverrideRequestService())->retargetDepartment($departmentId);
+
+        if ($firstDean) {
+            (new \App\Services\Courses\Grades\GradeSignoffService())->announceNowNeeded($institutionId);
+        }
 
         service('auditLogger')->log('structure.dean_assigned', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $id, 'institution_id' => $institutionId,

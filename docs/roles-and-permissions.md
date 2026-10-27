@@ -32,7 +32,7 @@ Each role is offered only the permissions that have an effect for it (`AuthGroup
 | dean | `courses.view`, `department.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `department.announce` |
 | institutional_admin | the institution-administration permissions, `courses.view`, `grades.approve`, `grades.signoff`, `institution.roles` |
 
-`monitoring.manage` was removed (nothing used it). `grades.approve` and `grades.signoff` are enforced with the approval and sign-off work (plan 4).
+`monitoring.manage` was removed (nothing used it).
 
 ## What each permission controls
 
@@ -42,4 +42,6 @@ Each role is offered only the permissions that have an effect for it (`AuthGroup
 - **`department.monitor`**: the dean's Monitor Department page, its data and the department report.
 - **`followups.manage`**: sending a follow-up and passing one down. Replying to and closing a follow-up you received needs none.
 - **`department.announce`**: the dean's department announcements.
+- **`grades.approve`**: deciding final-grade override requests: the dean's for their department, otherwise the institution's administrators' (`/institution/approvals`). Who decides is `GradeAuthority`; see `institutional-admin-area.md`, "Who decides grade overrides and sign-off". A change for the dean or the institutional administrator moves the waiting requests at once.
+- **`grades.signoff`**: signing off finalized grades: the dean's, otherwise the institution's administrators' (`/institution/signoff`). Both Roles pages warn where nobody holds it, or `grades.approve`, in a department.
 - **`audit.view`**, **`audit.manage`**: the platform audit log, and its settings.

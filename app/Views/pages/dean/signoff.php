@@ -9,8 +9,13 @@
  */
 use App\Services\Courses\Grades\GradeSignoffService;
 
-$base   = site_url('dean/signoff');
+$area ??= 'dean';
+$base   = site_url($area . '/signoff');
 $termId = $board['term'];
+
+// The administrators share the page: any of them may reopen what another signed off.
+$reopener = $area === 'dean' ? 'only you can' : 'only an administrator can';
+$scope    = $area === 'dean' ? "your department's sections" : 'the sections of departments with no dean who signs off';
 
 $termOptions = [];
 
@@ -28,15 +33,15 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
 <div class="py-3">
 
 <?php // The way back stays on the background, above the panel, not in the box. ?>
-<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+<?= view('components/back-link', ['backUrl' => site_url($area . '/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
 
 <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Term-end sign-off',
         'icon'        => 'check',
-        'description' => 'Sign off the final grades of your department\'s sections. Instructors finalize first; you then sign them off, and only you can reopen a sign-off.',
-        'actions'     => $loadError || $board['term'] === null ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/signoff') . '?term=' . (int) $board['term'], 'attr') . '" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
+        'description' => 'Sign off the final grades of ' . $scope . '. Instructors finalize first; you then sign them off, and ' . $reopener . ' reopen a sign-off.',
+        'actions'     => $loadError || $board['term'] === null || $area !== 'dean' ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/signoff') . '?term=' . (int) $board['term'], 'attr') . '" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?php if ($termOptions !== []): ?>
@@ -62,13 +67,14 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
         <?= view('components/empty-state', [
             'icon'  => 'check',
             'title' => 'No sections to sign off',
-            'text'  => 'Sections of your department appear here, term by term, once there are some.',
+            'text'  => ucfirst($scope) . ' appear here, term by term, once there are some.',
         ], ['saveData' => false]) ?>
 
     <?php else: ?>
 
         <?php foreach ($board['programs'] as $program): ?>
-            <?php $ready = (int) $program['counts'][GradeSignoffService::READY]; ?>
+            <?php // What this person may sign off: a section an administrator teaches is another administrator's (D4). ?>
+            <?php $ready = (int) $program['counts'][GradeSignoffService::READY] - (int) ($program['own_ready'] ?? 0); ?>
 
             <section class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm" aria-labelledby="program-<?= (int) $program['id'] ?>" data-program="<?= (int) $program['id'] ?>">
 
@@ -76,7 +82,7 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                     <div>
                         <h2 id="program-<?= (int) $program['id'] ?>" class="text-base font-bold text-brand"><?= esc($program['name']) ?></h2>
                         <p class="text-xs text-[#646464]" data-program-counts>
-                            <?= $ready ?> ready · <?= (int) $program['counts'][GradeSignoffService::BLOCKED] ?> blocked · <?= (int) $program['counts'][GradeSignoffService::SIGNED_OFF] ?> signed off
+                            <?= (int) $program['counts'][GradeSignoffService::READY] ?> ready · <?= (int) $program['counts'][GradeSignoffService::BLOCKED] ?> blocked · <?= (int) $program['counts'][GradeSignoffService::SIGNED_OFF] ?> signed off
                         </p>
                     </div>
 
@@ -105,9 +111,9 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                                     <span class="flex flex-wrap gap-3 text-xs font-semibold" data-blocker-links>
                                         <a class="text-brand hover:underline" href="<?= esc($section['grades_url']) ?>">See the grades (view only)</a>
                                         <?php if ((int) $section['counts']['open_requests'] > 0): ?>
-                                            <a class="text-brand hover:underline" href="<?= esc(site_url('dean/approvals')) ?>">Decide the open requests</a>
+                                            <a class="text-brand hover:underline" href="<?= esc(site_url($area . '/approvals')) ?>">Decide the open requests</a>
                                         <?php endif; ?>
-                                        <a data-follow-up-link class="text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $section['offering_id'], 'reason' => 'blocked_signoff'])) ?>">Send a follow-up</a>
+                                        <?php if ($area === 'dean'): ?><a data-follow-up-link class="text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $section['offering_id'], 'reason' => 'blocked_signoff'])) ?>">Send a follow-up</a><?php endif; ?>
                                     </span>
                                 <?php elseif ($section['state'] === GradeSignoffService::SIGNED_OFF): ?>
                                     <span class="text-xs text-[#2B7549]" data-signed-by>
@@ -123,7 +129,9 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                                     default                         => ['label' => 'Blocked', 'tone' => 'warning', 'icon' => 'attention'],
                                 }, ['saveData' => false]) ?>
 
-                                <?php if ($section['state'] === GradeSignoffService::READY): ?>
+                                <?php if ($section['state'] === GradeSignoffService::READY && ! empty($section['own_section'])): ?>
+                                    <span class="text-xs text-[#646464]" data-own-section>You teach this section, so another administrator signs it off.</span>
+                                <?php elseif ($section['state'] === GradeSignoffService::READY): ?>
                                     <button type="button" data-dialog-open="signoff-<?= (int) $section['offering_id'] ?>" class="rounded-full border border-brand px-4 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand-tint">Sign off</button>
                                 <?php elseif ($section['state'] === GradeSignoffService::SIGNED_OFF): ?>
                                     <button type="button" data-dialog-open="reopen-<?= (int) $section['offering_id'] ?>" class="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Reopen…</button>
@@ -136,14 +144,14 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
         <?php endforeach; ?>
 
         <?php foreach ($board['programs'] as $program): ?>
-            <?php $ready = (int) $program['counts'][GradeSignoffService::READY]; ?>
+            <?php $ready = (int) $program['counts'][GradeSignoffService::READY] - (int) ($program['own_ready'] ?? 0); ?>
 
             <?php if ($ready > 0): ?>
                 <?= view('components/confirm', [
                     'id'           => 'signoff-program-' . (int) $program['id'],
                     'title'        => 'Sign off all ready sections',
-                    'text'         => 'Sign off the grades of ' . $ready . ($ready === 1 ? ' ready section' : ' ready sections') . ' in ' . $program['name'] . '? Sections that are not ready are left as they are. Only you can reopen a sign-off.',
-                    'action'       => site_url('dean/signoff/program/' . (int) $program['id'] . '/' . (int) $termId),
+                    'text'         => 'Sign off the grades of ' . $ready . ($ready === 1 ? ' ready section' : ' ready sections') . ' in ' . $program['name'] . '? Sections that are not ready are left as they are' . ((int) ($program['own_ready'] ?? 0) > 0 ? ', and so are those you teach' : '') . '. ' . ucfirst($reopener) . ' reopen a sign-off.',
+                    'action'       => site_url($area . '/signoff/program/' . (int) $program['id'] . '/' . (int) $termId),
                     'confirmLabel' => 'Sign off ' . $ready,
                     'ajax'         => true,
                 ], ['saveData' => false]) ?>
@@ -156,15 +164,15 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                     <?= view('components/confirm', [
                         'id'           => 'signoff-' . (int) $section['offering_id'],
                         'title'        => 'Sign off ' . $label,
-                        'text'         => 'Sign off the final grades of ' . $label . ' (' . (int) $section['students'] . ' ' . ($section['students'] === 1 ? 'student' : 'students') . ')? The instructor and chairperson can no longer reopen them: only you can.',
-                        'action'       => site_url('dean/signoff/' . (int) $section['offering_id']),
+                        'text'         => 'Sign off the final grades of ' . $label . ' (' . (int) $section['students'] . ' ' . ($section['students'] === 1 ? 'student' : 'students') . ')? The instructor and chairperson can no longer reopen them: ' . $reopener . '.',
+                        'action'       => site_url($area . '/signoff/' . (int) $section['offering_id']),
                         'confirmLabel' => 'Sign off',
                         'ajax'         => true,
                     ], ['saveData' => false]) ?>
                 <?php elseif ($section['state'] === GradeSignoffService::SIGNED_OFF): ?>
                     <?php
-                    $reopenBody = '<form method="post" action="' . esc(site_url('dean/signoff/' . (int) $section['offering_id'] . '/reopen'), 'attr') . '" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
-                        . '<p class="text-sm text-[#3D3D3D]">This ends your sign-off of ' . esc($label) . '. The grades stay finalized, and the instructor and chairperson are told why.</p>'
+                    $reopenBody = '<form method="post" action="' . esc(site_url($area . '/signoff/' . (int) $section['offering_id'] . '/reopen'), 'attr') . '" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
+                        . '<p class="text-sm text-[#3D3D3D]">This ends the sign-off of ' . esc($label) . '. The grades stay finalized, and the instructor and chairperson are told why.</p>'
                         . $field(['name' => 'reason', 'label' => 'Why are you reopening it?', 'type' => 'textarea', 'required' => true, 'maxlength' => 2000])
                         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
                         . '<div class="flex flex-wrap items-center justify-end gap-3"><button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
