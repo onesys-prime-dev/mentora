@@ -54,7 +54,7 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
 
             <?= $this->include('layouts/partials/admin-menu') ?>
 
-            <main class="min-w-0 flex-1 <?= $mainGutter ?> py-8 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <main class="min-w-0 flex-1 <?= $mainGutter ?> py-8 focus:outline-none lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0">
 
                 <?= $this->renderSection('content') ?>
 
