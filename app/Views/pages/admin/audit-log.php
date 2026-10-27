@@ -71,7 +71,10 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 
 <?= $this->section('content') ?>
 
-<?= view('components/page-head', ['title' => 'Audit log', 'icon' => 'tasks', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc($exportUrl) . '">Export CSV</a>'], ['saveData' => false]) ?>
+<?php // From lg up the page fills the screen and only the table scrolls, on its own. ?>
+<div class="flex flex-col lg:h-full lg:min-h-[28rem]">
+
+<?= view('components/page-head', ['title' => 'Audit log', 'icon' => 'tasks', 'actions' => '<button type="button" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-dialog-open="audit-settings">Display settings</button> <a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc($exportUrl) . '">Export CSV</a>'], ['saveData' => false]) ?>
 
 <?php if (session()->has('message')): ?>
     <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
@@ -80,7 +83,7 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<div class="mt-6 flex flex-col gap-4">
+<div class="mt-6 flex flex-col gap-4 lg:min-h-0 lg:flex-1">
 
     <?= view('components/toolbar', [
         'action'   => site_url('admin/audit-log'),
@@ -104,6 +107,7 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
         'caption'    => 'Audit log',
         'columns'    => $columns,
         'rows'       => $rows,
+        'fill'       => true,
         'sort'       => $filters->sort,
         'dir'        => $filters->dir,
         'sortUrl'    => $sortUrl,
@@ -116,14 +120,21 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 
 </div>
 
-<form data-dialog-form method="post" action="<?= site_url('admin/audit-log/settings') ?>" class="mt-8 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
-    <?= csrf_field() ?>
-    <input type="hidden" name="show_ip" value="0">
-    <label class="flex items-center gap-2 text-sm text-[#3D3D3D]">
-        <input type="checkbox" name="show_ip" value="1" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" <?= $showIp ? 'checked' : '' ?>>
-        Show the source IP of each entry (addresses are always recorded; this only controls whether they are shown and exported)
-    </label>
-    <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
-</form>
+<?php
+$settingsForm = '<form data-dialog-form method="post" action="' . site_url('admin/audit-log/settings') . '" class="flex flex-col gap-5">' . csrf_field()
+    . '<input type="hidden" name="show_ip" value="0">'
+    . '<label class="flex items-start gap-3 text-sm text-[#3D3D3D]">'
+    . '<input type="checkbox" name="show_ip" value="1" class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-brand focus:ring-brand/40"' . ($showIp ? ' checked' : '') . '>'
+    . '<span>Show the source IP of each entry<span class="mt-1 block text-xs text-[#646464]">Addresses are always recorded; this only controls whether they are shown and exported.</span></span>'
+    . '</label>'
+    . '<div class="flex flex-wrap items-center justify-end gap-3">'
+    . '<button type="button" data-dialog-close class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Cancel</button>'
+    . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>'
+    . '</div></form>';
+?>
+
+<?= view('components/dialog', ['id' => 'audit-settings', 'title' => 'Display settings', 'body' => $settingsForm], ['saveData' => false]) ?>
+
+</div>
 
 <?= $this->endSection() ?>
