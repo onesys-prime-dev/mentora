@@ -4,7 +4,7 @@
  * area (layouts/app): the glass header with the bell, the Apps menu and the
  * account menu, the background, the banners and the toasts. What differs is
  * the Apps menu (the platform's tools, see global_apps('admin')) and a
- * grouped navigation bar under the header, which an administrator needs on
+ * grouped sidebar down the left, which an administrator needs on
  * every page because the platform has more than a dozen of them.
  *
  * The header's page title is the system's name: the page's own <h1> says
@@ -37,8 +37,6 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
 
         <?= $this->include('layouts/partials/header') ?>
 
-        <?= $this->include('layouts/partials/admin-menu') ?>
-
         <?= $this->include('layouts/partials/announcement') ?>
 
         <?= $this->include('layouts/partials/notifications-strip') ?>
@@ -47,11 +45,17 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
             <?= $this->include('layouts/partials/flash-toasts') ?>
         <?php endif; ?>
 
-        <main class="flex-1 <?= $mainGutter ?> py-8">
+        <div class="flex flex-1 flex-col lg:flex-row">
 
-            <?= $this->renderSection('content') ?>
+            <?= $this->include('layouts/partials/admin-menu') ?>
 
-        </main>
+            <main class="min-w-0 flex-1 <?= $mainGutter ?> py-8">
+
+                <?= $this->renderSection('content') ?>
+
+            </main>
+
+        </div>
 
     </div>
 
