@@ -25,6 +25,14 @@ final class PreferredRoleOrderTest extends CIUnitTestCase
         $this->assertSame('chairperson', ActiveRoleService::preferredRole(['student', 'chairperson']));
     }
 
+    public function testParentIsTheLowestRole(): void
+    {
+        $this->assertSame('instructor', ActiveRoleService::preferredRole(['parent', 'instructor']));
+        $this->assertSame('student', ActiveRoleService::preferredRole(['parent', 'student']));
+        $this->assertSame('chairperson', ActiveRoleService::preferredRole(['parent', 'instructor', 'chairperson']));
+        $this->assertSame('parent', ActiveRoleService::preferredRole(['parent']));
+    }
+
     public function testOtherwiseTheFirstGroupIsUsed(): void
     {
         $this->assertSame('instructor', ActiveRoleService::preferredRole(['instructor', 'student']));

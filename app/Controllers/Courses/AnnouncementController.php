@@ -46,16 +46,36 @@ class AnnouncementController extends BaseController
         );
     }
 
-    /** Posting from the Calendar's date-click menu: plain title/body, offering chosen in the form. */
+    /**
+     * Posting from the Calendar's date-click menu, offering chosen in the form.
+     * The calendar sends the composer's rich message (`subject` + `message`);
+     * plain `title` + `body` is still accepted.
+     */
     public function storeFromCalendar()
     {
         helper('announcement');
 
         $data = $this->request->getJSON(true) ?? [];
 
+        // The day to post on: today or later, never the past. Kept at the
+        // current time of day so same-day posts still order by when they were made.
+        $date = (string) ($data['date'] ?? date('Y-m-d'));
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1 || ! checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4))) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Choose a valid date.'])->setStatusCode(422);
+        }
+
+        if ($date < date('Y-m-d')) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Announcements can be posted for today or a later day, not a past one.'])->setStatusCode(422);
+        }
+
         $result = $this->announcementService->create(auth()->user(), (int) ($data['offering_id'] ?? 0), [
-            'subject' => $data['title'] ?? '',
-            'message' => announcement_message_from_text((string) ($data['body'] ?? '')),
+            'created_at' => $date . ' ' . date('H:i:s'),
+            'subject' => $data['subject'] ?? $data['title'] ?? '',
+            'message' => isset($data['message'])
+                ? (string) $data['message']
+                : announcement_message_from_text((string) ($data['body'] ?? '')),
+            'attachment_file_ids' => $data['attachment_file_ids'] ?? [],
         ]);
 
         return $this->response

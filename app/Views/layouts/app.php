@@ -23,7 +23,7 @@ $shellHeight = $fullHeight ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen
 // A page can pass its own gutter. The default keeps px-40 from xl up (as before) and
 // narrows below it, so pages work on a laptop, a tablet and a phone.
 $mainGutter  = $mainGutter ?? 'px-4 sm:px-8 lg:px-16 xl:px-40';
-$mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'py-10';
+$mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'pb-10 pt-4';
 
 // The page is rendered first, so the header can tell whether the page already names itself:
 // a page with its own <h1> does not need the same words repeated beside the logo.

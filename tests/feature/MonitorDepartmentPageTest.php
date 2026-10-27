@@ -312,4 +312,50 @@ final class MonitorDepartmentPageTest extends RouteTestCase
     {
         $this->assertStringContainsString('dean/monitor-department', $this->page());
     }
+
+    public function testTheDataEndpointsGiveTheSameNumbersAsThePage(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->enrolled($it, 2);
+        $this->loggedInAs($this->dean);
+
+        foreach (['totals', 'groups', 'grade-distribution', 'instructor-activity', 'at-risk'] as $section) {
+            $response = $this->call('GET', '/dean/api/monitor-department/' . $section)->response();
+
+            $this->assertSame(200, $response->getStatusCode(), $section);
+            $this->assertIsArray(json_decode($response->getBody(), true), $section);
+        }
+
+        $totals = json_decode($this->call('GET', '/dean/api/monitor-department/totals')->response()->getBody(), true);
+
+        $this->assertSame(2, $totals['students']);
+        $this->assertSame(1, $totals['courses']);
+    }
+
+    public function testTheDataEndpointsRefuseAnUnknownSectionAndOtherRoles(): void
+    {
+        $this->loggedInAs($this->dean);
+
+        try {
+            $this->call('GET', '/dean/api/monitor-department/secrets');
+            $this->fail('an unknown section must be a 404');
+        } catch (\CodeIgniter\Exceptions\PageNotFoundException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->loggedInAs(CourseFactory::user('student'));
+        $this->assertNotSame(200, $this->call('GET', '/dean/api/monitor-department/totals')->response()->getStatusCode());
+    }
+
+    public function testTheInstructorActivityChartIsOnThePage(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->enrolled($it, 1);
+        CourseFactory::assignInstructor($it, PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution));
+
+        $body = html_entity_decode($this->page());
+
+        $this->assertStringContainsString('monitor-program-activity-chart', $body);
+        $this->assertStringContainsString('Tess Tan', $body);
+    }
 }

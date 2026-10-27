@@ -11,7 +11,8 @@ namespace App\Services\Sis;
  * Mentora, because the next sync would put them back.
  *
  * Enrolments are the SIS's too, when it knows both the course and the
- * student: the next sync would undo a hand change.
+ * student: the next sync would undo a hand change. So are the deans,
+ * chairpersons and instructors it assigned (not ones added by hand).
  */
 class SisOwnership
 {
@@ -41,6 +42,42 @@ class SisOwnership
             ->where('sis_links.local_id', $userId)
             ->where('sis_connections.enabled', 1)
             ->countAllResults() > 0;
+    }
+
+    /**
+     * Whether the SIS is currently the owner of this assignment: it supplied it and its connection is
+     * enabled, so the next sync would put a hand change back.
+     *
+     * @param 'dean'|'chairperson'|'instructor' $role
+     */
+    public function managesAssignment(string $role, int $assignmentId): bool
+    {
+        return db_connect()->table('sis_staff_assignments')
+            ->join('sis_connections', 'sis_connections.institution_id = sis_staff_assignments.institution_id')
+            ->where('sis_staff_assignments.role', $role)
+            ->where('sis_staff_assignments.local_id', $assignmentId)
+            ->where('sis_connections.enabled', 1)
+            ->countAllResults() > 0;
+    }
+
+    /**
+     * The ids of the assignments of one role that the SIS owns, for a page that shows many of them.
+     *
+     * @param 'dean'|'chairperson'|'instructor' $role
+     *
+     * @return array<int, true> keyed by assignment id
+     */
+    public function managedAssignments(string $role, int $institutionId): array
+    {
+        $rows = db_connect()->table('sis_staff_assignments')
+            ->select('sis_staff_assignments.local_id')
+            ->join('sis_connections', 'sis_connections.institution_id = sis_staff_assignments.institution_id')
+            ->where('sis_staff_assignments.role', $role)
+            ->where('sis_staff_assignments.institution_id', $institutionId)
+            ->where('sis_connections.enabled', 1)
+            ->get()->getResultArray();
+
+        return array_fill_keys(array_map(static fn (array $r): int => (int) $r['local_id'], $rows), true);
     }
 
     /** Whether the SIS owns this student's place in this course (it knows both). */

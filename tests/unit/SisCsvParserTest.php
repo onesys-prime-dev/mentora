@@ -124,8 +124,76 @@ final class SisCsvParserTest extends CIUnitTestCase
         SisCsvParser::parse('grades', "a\n1\n");
     }
 
-    public function testTheDatasetsAreTheFourInboundOnes(): void
+    public function testTheDatasetsAreTheInboundOnes(): void
     {
-        $this->assertSame(['students', 'instructors', 'courses', 'enrollments'], SisCsvParser::datasets());
+        $this->assertSame(['students', 'instructors', 'courses', 'enrollments', 'staff_assignments'], SisCsvParser::datasets());
+    }
+
+    private const STAFF = "role,person_external_id,department_code,sub_department_code,course_external_id,section\n";
+
+    public function testEachStaffRoleNeedsTheColumnThatNamesWhatItLeadsOrTeaches(): void
+    {
+        $batch = SisCsvParser::parse('staff_assignments', self::STAFF
+            . "dean,P1,CCS,,,\n"
+            . "chairperson,P2,,IT,,\n"
+            . "instructor,P3,,,C1,B\n"
+            . "Dean,P4,CCS,,,\n");
+
+        $this->assertSame([], $batch->rejected);
+        $this->assertCount(4, $batch->records);
+        $this->assertSame('CCS', $batch->records[0]['department_code']);
+        $this->assertSame('IT', $batch->records[1]['sub_department_code']);
+        $this->assertSame(['C1', 'B'], [$batch->records[2]['course_external_id'], $batch->records[2]['section']]);
+    }
+
+    public function testAStaffRowThatLacksItsTargetOrHasAnUnknownRoleIsRejectedWithItsReason(): void
+    {
+        $batch = SisCsvParser::parse('staff_assignments', self::STAFF
+            . "dean,P1,,,,\n"
+            . "chairperson,P2,,,,\n"
+            . "instructor,P3,,,,\n"
+            . "registrar,P4,CCS,,,\n"
+            . ",P5,CCS,,,\n"
+            . "dean,,CCS,,,\n");
+
+        $this->assertSame([], $batch->records);
+        $this->assertSame([
+            ['row' => 2, 'reason' => 'department_code is required for a dean.'],
+            ['row' => 3, 'reason' => 'sub_department_code is required for a chairperson.'],
+            ['row' => 4, 'reason' => 'course_external_id is required for an instructor.'],
+            ['row' => 5, 'reason' => 'role must be one of: dean, chairperson, instructor.'],
+            ['row' => 6, 'reason' => 'role is empty.'],
+            ['row' => 7, 'reason' => 'person_external_id is empty.'],
+        ], $batch->rejected);
+    }
+
+    public function testTheSamePersonMayLeadSeveralThingsButNotTheSameOneTwice(): void
+    {
+        $batch = SisCsvParser::parse('staff_assignments', self::STAFF
+            . "chairperson,P1,,IT,,\n"
+            . "chairperson,P1,,NET,,\n"
+            . "instructor,P1,,,C1,A\n"
+            . "instructor,P1,,,C1,B\n"
+            . "CHAIRPERSON,p1,,it,,\n");
+
+        $this->assertCount(4, $batch->records, 'different things are different rows');
+        $this->assertSame([['row' => 6, 'reason' => 'Repeats row 2 (role + person_external_id + department_code + sub_department_code + course_external_id + section).']], $batch->rejected, 'the same thing in other capitals is a repeat');
+    }
+
+    public function testAStaffFileWithoutItsRequiredColumnsIsRefusedWhole(): void
+    {
+        $this->expectException(SisException::class);
+        $this->expectExceptionMessage('staff_assignments.csv is missing the column(s): person_external_id.');
+
+        SisCsvParser::parse('staff_assignments', "role,department_code\ndean,CCS\n");
+    }
+
+    public function testTheTemplateOfTheStaffFileListsItsColumns(): void
+    {
+        $spec = SisCsvParser::spec('staff_assignments');
+
+        $this->assertSame(['role', 'person_external_id'], $spec['required']);
+        $this->assertSame(['department_code', 'sub_department_code', 'course_external_id', 'section'], $spec['optional']);
+        $this->assertSame(['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_external_id'], SisCsvParser::STAFF_TARGET_COLUMN);
     }
 }

@@ -483,6 +483,65 @@ final class QuestionServiceTest extends DatabaseTestCase
         $this->assertSame(6.0, $this->total());
     }
 
+    /** A published quiz of two 5-point questions with a graded attempt scoring both; its grade item and record exist. @return array{0: int, 1: int, 2: int, 3: \CodeIgniter\Shield\Entities\User} first question, second question, attempt, student */
+    private function gradedQuizOfTwo(): array
+    {
+        $offering = (int) $this->row('assessments', $this->quiz)['module_id'];
+        $offering = (int) db_connect()->table('course_modules')->where('id', $offering)->get()->getRowArray()['offering_id'];
+
+        $schemeId = \Tests\Support\GradeFactory::scheme($offering);
+        db_connect()->table('grading_schemes')->where('id', $schemeId)->update(['status' => 'Published']);
+        \Tests\Support\GradeFactory::category($schemeId, 'Quizzes', 100);
+
+        $first = (int) $this->add(['question_text' => 'One', 'question_type' => 'Essay', 'points' => 5])['question']['id'];
+        $second = (int) $this->add(['question_text' => 'Two', 'question_type' => 'Essay', 'points' => 5])['question']['id'];
+
+        db_connect()->table('assessments')->where('id', $this->quiz)->update(['status' => 'Published']);
+        (new \App\Services\Courses\Grades\GradeItemSyncService())->syncFromAssessment($this->quiz);
+
+        $student = CourseFactory::user('student');
+        CourseFactory::enroll($offering, $student);
+        $attempt = AssessmentFactory::attempt($this->quiz, $student, 'Graded', 10.0, ['percentage' => 100]);
+        AssessmentFactory::response($attempt, $first, ['score' => 5.0]);
+        AssessmentFactory::response($attempt, $second, ['score' => 5.0]);
+
+        (new \App\Services\Courses\Grades\GradebookSyncService())->syncItemScore($this->quiz, (int) $student->id);
+
+        return [$first, $second, $attempt, $student];
+    }
+
+    public function testDeletingAQuestionRescoresTheAttemptAndKeepsTheGradeWithinTheMax(): void
+    {
+        [$first, , $attempt, $student] = $this->gradedQuizOfTwo();
+
+        $this->service->deleteQuestion($first);
+
+        $submission = $this->row('assessment_submissions', $attempt);
+        $this->assertEquals(5.0, (float) $submission['score'], 'the deleted question\'s points go with it');
+        $this->assertEquals(100.0, (float) $submission['percentage']);
+
+        $item = db_connect()->table('grade_items')->where('assessment_id', $this->quiz)->get()->getRowArray();
+        $this->assertEquals(5.0, (float) $item['max_points'], 'the gradebook item follows the quiz total');
+
+        $record = db_connect()->table('gradebook_records')->where('student_id', $student->id)->get()->getRowArray();
+        $this->assertEquals(100.0, (float) $record['calculated_percentage'], 'never above 100%');
+    }
+
+    public function testAddingAQuestionLowersTheShareOfAnAttemptThatDidNotAnswerIt(): void
+    {
+        [, , $attempt, $student] = $this->gradedQuizOfTwo();
+
+        $this->add(['question_text' => 'Three', 'question_type' => 'Essay', 'points' => 10]);
+
+        $this->assertEquals(50.0, (float) $this->row('assessment_submissions', $attempt)['percentage']);
+
+        $item = db_connect()->table('grade_items')->where('assessment_id', $this->quiz)->get()->getRowArray();
+        $this->assertEquals(20.0, (float) $item['max_points']);
+
+        $record = db_connect()->table('gradebook_records')->where('student_id', $student->id)->get()->getRowArray();
+        $this->assertEquals(50.0, (float) $record['calculated_percentage']);
+    }
+
     public function testDeletingAQuestionTakesItsStudentAnswersWithIt(): void
     {
         $id = (int) $this->add(['question_text' => 'A', 'question_type' => 'Essay'])['question']['id'];

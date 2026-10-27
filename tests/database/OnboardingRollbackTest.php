@@ -90,7 +90,11 @@ final class OnboardingRollbackTest extends DatabaseTestCase
         // while the invitation is written, after the subscription has already been started.
         $existing = CourseFactory::user('student');
         db_connect()->table('auth_identities')->insert(['user_id' => $existing->id, 'type' => 'email_password', 'secret' => 'taken@example.com', 'secret2' => 'x', 'created_at' => date('Y-m-d H:i:s')]);
-        db_connect()->table('audit_logs')->truncate();
+        // Only the audit log, and with foreign keys off: other tables (the dean's review marks) refer to it.
+        $db = db_connect();
+        $db->query('SET FOREIGN_KEY_CHECKS = 0');
+        $db->query('TRUNCATE TABLE `audit_logs`');
+        $db->query('SET FOREIGN_KEY_CHECKS = 1');
 
         $term = ['plan_id' => (string) $plan, 'period_start' => '2026-10-01', 'period_end' => '2027-09-30'];
 

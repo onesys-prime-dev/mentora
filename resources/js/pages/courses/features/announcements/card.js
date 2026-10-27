@@ -350,7 +350,7 @@ function bindReplyRow(row) {
 
 }
 
-/** Clamps to ~4 lines; "See more" removes the clamp. */
+/** Clamps to ~4 lines; "See more" removes the clamp and becomes "See less". */
 function bindSeeMore(element) {
 
     if (!element) {
@@ -375,8 +375,11 @@ function bindSeeMore(element) {
     });
 
     button.addEventListener("click", () => {
-        element.classList.remove("line-clamp-4");
-        button.classList.add("hidden");
+
+        const expanded = element.classList.toggle("line-clamp-4") === false;
+
+        button.textContent = expanded ? "See less" : "See more";
+
     });
 
 }

@@ -58,18 +58,22 @@ foreach ($auditRows as $row) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Audit log',
         'icon'        => 'info',
         'description' => 'Who did what in your institution, and when. Entries are never changed or removed.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
         'actions'     => '<a class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc($exportUrl) . '" data-audit-export>Export CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
@@ -106,6 +110,8 @@ foreach ($auditRows as $row) {
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $f->page, 'pages' => $auditPages, 'total' => $auditTotal, 'baseUrl' => site_url($base), 'query' => $f->toQuery(['page' => null])], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

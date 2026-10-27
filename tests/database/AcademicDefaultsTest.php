@@ -179,6 +179,9 @@ final class AcademicDefaultsTest extends DatabaseTestCase
         yield 'silence of over a year' => [['inactive_days' => '400'], 'inactive_days'];
         yield 'behind below 0' => [['behind_below_percent' => '0'], 'behind_below_percent'];
         yield 'overdue grading of 0 days' => [['overdue_grading_days' => '0'], 'overdue_grading_days'];
+        yield 'a high load of 0 units' => [['high_load_units' => '0'], 'high_load_units'];
+        yield 'a high load of over 100 units' => [['high_load_units' => '101'], 'high_load_units'];
+        yield 'a high load that is text' => [['high_load_units' => 'lots'], 'high_load_units'];
         yield 'weights that do not add up' => [['category_name' => ['A', 'B'], 'category_weight' => ['60', '30']], 'categories'];
         yield 'a category with no name' => [['category_name' => [''], 'category_weight' => ['100']], 'categories'];
         yield 'a category listed twice' => [['category_name' => ['A', 'a'], 'category_weight' => ['50', '50']], 'categories'];
@@ -196,6 +199,27 @@ final class AcademicDefaultsTest extends DatabaseTestCase
         $this->assertArrayHasKey($field, $e->errors());
         $this->assertSame(0, db_connect()->table('institution_academic_defaults')->countAllResults());
         $this->assertSame(0, db_connect()->table('audit_logs')->where('action', 'institution.academic_defaults_updated')->countAllResults());
+    }
+
+    public function testTheHighLoadIsThePlatformsUntilTheInstitutionSetsItAndIsAuditedWhenItDoes(): void
+    {
+        $this->assertSame(AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, $this->defaults->highLoadUnitsFor($this->institution));
+
+        $this->defaults->save($this->institution, ['high_load_units' => '15'], $this->actor);
+
+        $this->assertSame(15, $this->defaults->highLoadUnitsFor($this->institution));
+        $this->assertTrue($this->defaults->forInstitution($this->institution)['highLoadFromInstitution']);
+        $this->assertSame(AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, $this->defaults->highLoadUnitsFor($this->other), 'another institution is not affected');
+        $this->assertStringContainsString('"high_load":15', (string) db_connect()->table('audit_logs')->where('action', 'institution.academic_defaults_updated')->get()->getRowArray()['new_values']);
+
+        $this->defaults->save($this->institution, ['high_load_units' => ''], $this->actor);
+
+        $this->assertSame(AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, $this->defaults->highLoadUnitsFor($this->institution), 'cleared, it is the platform value again');
+
+        $this->defaults->save($this->institution, ['high_load_units' => '12'], $this->actor);
+        $this->defaults->reset($this->institution, $this->actor);
+
+        $this->assertSame(AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, $this->defaults->highLoadUnitsFor($this->institution));
     }
 
     public function testTheThresholdsAreTheInstitutionsForItsOfferingsOnly(): void

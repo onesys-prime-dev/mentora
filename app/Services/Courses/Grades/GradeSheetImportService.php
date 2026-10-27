@@ -250,20 +250,26 @@ class GradeSheetImportService
             $current = $context['scores'][$itemId][$studentId]['raw_score'] ?? null;
             $current = $current === null ? null : (float) $current;
 
-            $parsed = $this->parseNumber($value($index));
+            $currentExcused = !empty($context['scores'][$itemId][$studentId]['is_missing']);
+
+            $excused = $this->isExcusedCell($value($index));
+
+            $parsed = $excused ? null : $this->parseNumber($value($index));
 
             $change = [
                 'gradeItemId' => $itemId,
                 'itemName' => $item['name'],
                 'oldValue' => $current,
+                'oldExcused' => $currentExcused,
                 'newValue' => null,
+                'newExcused' => $excused,
                 'valid' => true,
                 'error' => null,
             ];
 
             if ($parsed === false) {
                 $change['valid'] = false;
-                $change['error'] = "“{$value($index)}” isn't a number.";
+                $change['error'] = "“{$value($index)}” isn't a number (type EX to excuse the student).";
                 $row['changes'][] = $change;
                 continue;
             }
@@ -276,9 +282,12 @@ class GradeSheetImportService
                 continue;
             }
 
-            $unchanged = $parsed === null
-                ? $current === null
-                : $current !== null && abs($parsed - $current) < 0.001;
+            // Excused, blank and a number are three different states; a cell that still says what it said is not a change.
+            $unchanged = match (true) {
+                $excused => $currentExcused,
+                $parsed === null => $current === null && !$currentExcused,
+                default => $current !== null && !$currentExcused && abs($parsed - $current) < 0.001,
+            };
 
             if ($unchanged) {
                 continue;
@@ -299,10 +308,14 @@ class GradeSheetImportService
     */
 
     /**
-     * @param array{signature?: string, changes?: list<array{student_id: int, grade_item_id: int, value: ?float}>} $payload
+     * @param array{signature?: string, changes?: list<array{student_id: int, grade_item_id: int, value: ?float, excused?: bool}>} $payload
      */
     public function apply(User $user, int $offeringId, array $payload): array
     {
+        if ($locked = (new GradeFinalizationService())->lockRefusal($offeringId)) {
+            return $locked;
+        }
+
         $scheme = (new GradingSchemeService())->forOffering($offeringId);
 
         $engine = new GradingEngineService();
@@ -332,9 +345,14 @@ class GradeSheetImportService
             $studentId = (int) ($change['student_id'] ?? 0);
             $itemId = (int) ($change['grade_item_id'] ?? 0);
             $value = $change['value'] ?? null;
+            $excused = !empty($change['excused']);
 
             if (!isset($enrolled[$studentId], $manualItems[$itemId])) {
                 continue;
+            }
+
+            if ($excused) {
+                $value = null;
             }
 
             if ($value !== null) {
@@ -351,7 +369,7 @@ class GradeSheetImportService
 
             }
 
-            $valid[] = [$studentId, $itemId, $value];
+            $valid[] = [$studentId, $itemId, $value, $excused];
 
         }
 
@@ -365,8 +383,8 @@ class GradeSheetImportService
 
         $db->transStart();
 
-        foreach ($valid as [$studentId, $itemId, $value]) {
-            $sync->setManualScore($offeringId, $itemId, $studentId, $value, (int) $user->id);
+        foreach ($valid as [$studentId, $itemId, $value, $excused]) {
+            $sync->setManualScore($offeringId, $itemId, $studentId, $value, (int) $user->id, $excused);
         }
 
         $db->transComplete();
@@ -375,11 +393,15 @@ class GradeSheetImportService
             return ['success' => false, 'message' => 'The scores could not be saved.'];
         }
 
+        GradeAudit::record('grades.import_applied', $offeringId, [
+            'new' => ['scores' => count($valid), 'students' => count(array_unique(array_column($valid, 0))), 'excused' => count(array_filter(array_column($valid, 3)))],
+        ], $user);
+
         // Same rule as live grading: final grades follow while the scheme is
-        // published and not waiting on a recalculation.
+        // published.
         $scheme = (new GradingSchemeModel())->find($scheme['id']);
 
-        $refreshed = $scheme['status'] === 'Published' && empty($scheme['needs_recalculation']);
+        $refreshed = $scheme['status'] === 'Published';
 
         if ($refreshed) {
             foreach (array_unique(array_column($valid, 0)) as $studentId) {
@@ -392,7 +414,7 @@ class GradeSheetImportService
         return [
             'success' => true,
             'message' => "{$count} " . ($count === 1 ? 'score' : 'scores') . ' imported.'
-                . ($refreshed ? '' : ' Recalculate to update final grades.'),
+                . ($refreshed ? '' : ' Final grades update once the grading is published.'),
         ];
     }
 
@@ -480,6 +502,18 @@ class GradeSheetImportService
     /**
      * Blank → null, a number → float, anything else → false.
      */
+    /** EX (or "excused", in any case) in a score cell: the student is let off the item. */
+    private function isExcusedCell(mixed $value): bool
+    {
+        if (!is_string($value)) {
+            return false;
+        }
+
+        $text = strtolower(trim($value));
+
+        return $text === 'ex' || $text === 'excused';
+    }
+
     private function parseNumber(mixed $value): float|null|false
     {
         if ($value === null) {

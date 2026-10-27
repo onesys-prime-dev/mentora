@@ -28,6 +28,48 @@ final class ChairpersonDashboardPageTest extends RouteTestCase
         $result->assertSee('Monitor Program');
     }
 
+    public function testEveryTileOfTheQuickAccessStripShowsItsIcon(): void
+    {
+        $this->loggedInAs(CourseFactory::user('chairperson'));
+
+        $body = html_entity_decode($this->get('chairperson/dashboard')->response()->getBody());
+
+        // Every tile of the strip, with the colour its icon was given.
+        preg_match_all('#<span class="flex"><svg[^>]*class="([^"]*)"#', $body, $icons);
+
+        $this->assertGreaterThanOrEqual(4, count($icons[1]), 'one icon for each tile of the strip');
+
+        foreach ($icons[1] as $class) {
+            $this->assertStringContainsString('text-[#0040A6]', $class, 'an icon registered in white would vanish on the white tile');
+            $this->assertStringNotContainsString('text-white', $class);
+        }
+    }
+
+    public function testNoRowOfNeedsAttentionIsDrawnInWhite(): void
+    {
+        $chair = CourseFactory::user('chairperson');
+        $this->loggedInAs($chair);
+
+        $item = ['offering_id' => 1, 'slug' => 'x', 'assessment_id' => 1, 'student_id' => 1, 'title' => 'T', 'subtitle' => 'S', 'badge' => 'B'];
+
+        $body = view('pages/dashboard/partials/chairperson/needs-attention', [
+            'user' => $chair,
+            'data' => ['items' => [
+                $item + ['kind' => 'grading'],
+                $item + ['kind' => 'at_risk'],
+                $item + ['kind' => 'inactive'],
+            ]],
+        ]);
+
+        preg_match_all('#<svg[^>]*class="([^"]*)"#', $body, $icons);
+
+        $this->assertGreaterThanOrEqual(4, count($icons[1]), 'the heading and each of the three rows has an icon');
+
+        foreach ($icons[1] as $class) {
+            $this->assertStringNotContainsString('text-white', $class, 'an icon drawn in white on a light tint: ' . $class);
+        }
+    }
+
     public function testThePageRendersForAChairpersonWithAProgram(): void
     {
         $chair = CourseFactory::user('chairperson');

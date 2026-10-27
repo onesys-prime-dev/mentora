@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\Notifications\NotificationService;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * A signed-in person's own notifications, for every role: the list, and
@@ -24,6 +25,31 @@ class NotificationController extends BaseController
             'user'          => $user,
             'noteRows'      => (new NotificationService())->listFor((int) $user->id),
             'noteIsAdmin'   => $isAdmin,
+        ]);
+    }
+
+    /** The next batch of the bell panel's list, as ready-made rows. */
+    public function feed(): ResponseInterface
+    {
+        $before = $this->request->getGet('before');
+
+        $page = (new NotificationService())->page(
+            (int) auth()->id(),
+            is_string($before) && preg_match('/^\d{1,10}$/', $before) === 1 ? (int) $before : null,
+            7,
+        );
+
+        $html = '';
+
+        foreach ($page['rows'] as $row) {
+            $html .= view('layouts/partials/notification-item', ['row' => $row], ['saveData' => false]);
+        }
+
+        return $this->response->setJSON([
+            'html'        => $html,
+            'count'       => count($page['rows']),
+            'next_before' => $page['rows'] === [] ? null : (int) end($page['rows'])['id'],
+            'has_more'    => $page['has_more'],
         ]);
     }
 

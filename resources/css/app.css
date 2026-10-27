@@ -46,6 +46,22 @@
 }
 
 /*
+ * The pointer hand on everything that can be clicked (Tailwind's reset leaves
+ * buttons with the arrow), and the not-allowed one on what is switched off.
+ * :where() keeps it weaker than any cursor-* utility a component sets itself.
+ */
+@layer base {
+    :where(button, [role="button"], [role="tab"], [role="menuitem"], summary, select, a[href], label[for], input:is([type="checkbox"], [type="radio"], [type="submit"], [type="button"], [type="reset"], [type="file"], [type="range"], [type="color"]), [data-dialog-open], [data-dialog-close]):not(:disabled, [aria-disabled="true"]) {
+        cursor: pointer;
+    }
+
+    :where(button, select, input, textarea):disabled,
+    :where([aria-disabled="true"]) {
+        cursor: not-allowed;
+    }
+}
+
+/*
  * Course Workspace keyboard focus: every button, link and role="link" card
  * gets a visible brand-blue ring without each one needing its own classes.
  * Elements that already define a focus-visible style keep theirs (inline
@@ -59,6 +75,7 @@
 }
 
 @import "./components/reading.css";
+@import "./components/composer.css";
 
 @layer components {
     /*

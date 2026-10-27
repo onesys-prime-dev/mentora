@@ -65,23 +65,37 @@ $columns = [
 ];
 
 $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
+
+// What leaves is what is on screen: the same filters, grouping and sort go in the address.
+$exportQuery = http_build_query($filters->toQuery());
+$exportClass = 'rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$exportSolid = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
+$exportLinks = '<div class="flex flex-wrap items-center gap-2">'
+    . '<a data-export="csv" href="' . esc(site_url('dean/reports/export/monitor') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportSolid . '">Download CSV</a>'
+    . '<a data-export="print" href="' . esc(site_url('dean/reports/print') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportClass . '" target="_blank" rel="noopener">Print view</a>'
+    . '</div>';
 ?>
 
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Monitor Department',
         'icon'        => 'score',
         'description' => $departmentName . ': how its sub-departments and programs are doing.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
+        'actions'     => $loadError ? '' : $exportLinks,
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => $base,
         'filtered' => $filters->isFiltered(),
         'fields'   => [
@@ -125,16 +139,26 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
             id="monitor-program-charts"
             class="grid grid-cols-1 gap-5 lg:grid-cols-2"
             data-completion="<?= esc(json_encode(array_map(static fn (array $g) => ['label' => $g['name'], 'value' => $g['completion']], $groups)), 'attr') ?>"
-            data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>">
-            <div class="rounded-2xl bg-white p-5 shadow-sm">
+            data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>"
+            data-instructor-activity="<?= esc(json_encode(array_map(static fn (array $i) => ['label' => $i['name'], 'content' => $i['content_updates'], 'announcements' => $i['announcements']], $instructorActivity)), 'attr') ?>">
+            <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Completion per <?= $filters->compare === 'program' ? 'program' : 'sub-department' ?></p>
                 <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
                 <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
             </div>
-            <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                 <p class="mb-3 text-xs text-[#646464]">Students per grade band across the department.</p>
                 <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
+            </div>
+            <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm lg:col-span-2">
+                <p class="text-sm font-semibold text-[#1A1C1E]">Instructor activity</p>
+                <p class="mb-3 text-xs text-[#646464]">Content updates and announcements per instructor in the chosen period.</p>
+                <?php if ($instructorActivity === []): ?>
+                    <p class="py-10 text-center text-sm text-[#646464]" data-instructor-activity-empty>No instructors teach in this scope yet.</p>
+                <?php else: ?>
+                    <div class="relative h-64"><canvas id="monitor-program-activity-chart" role="img" aria-label="Content updates and announcements per instructor"></canvas></div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -205,11 +229,14 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
                                 </a>
                                 <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
                             </div>
-                            <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
-                                <?= $student['reason'] === 'inactive'
-                                    ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
-                                    : $student['progress'] . '% complete' ?>
-                            </span>
+                            <div class="flex items-center gap-3">
+                                <a data-follow-up-link class="text-xs font-semibold text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $student['offering_id'], 'student' => (int) $student['student_id'], 'reason' => 'at_risk'])) ?>">Follow up</a>
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
+                                    <?= $student['reason'] === 'inactive'
+                                        ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
+                                        : $student['progress'] . '% complete' ?>
+                                </span>
+                            </div>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -272,6 +299,8 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
         </section>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

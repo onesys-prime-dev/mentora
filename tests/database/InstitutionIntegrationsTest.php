@@ -102,6 +102,28 @@ final class InstitutionIntegrationsTest extends DatabaseTestCase
         $this->assertSame('import result', $this->integrations->view($this->institution)['latest']['message']);
     }
 
+    public function testTheLatestGradeSendIsKeptApartFromTheLatestImportWithWhatItLeftOut(): void
+    {
+        $this->record('manual', 'import result', 'inbound');
+        $this->record('manual', 'Grades sent: 2 new, 0 changed, 1 left out.', 'outbound', null, json_encode([
+            'issues' => [['dataset' => 'grades', 'item' => 'Stu S4 · IT101-A', 'reason' => 'The student withdrew, so there is no final grade']],
+            'truncated' => false,
+        ]));
+
+        $view = $this->integrations->view($this->institution);
+
+        $this->assertSame('import result', $view['latest']['message']);
+        $this->assertSame('Grades sent: 2 new, 0 changed, 1 left out.', $view['latestGrades']['message']);
+        $this->assertSame('Stu S4 · IT101-A', $view['latestGrades']['issues'][0]['item']);
+    }
+
+    public function testWithNoGradeSendYetThereIsNoLatestGrades(): void
+    {
+        $this->record('manual', 'import result', 'inbound');
+
+        $this->assertNull($this->integrations->view($this->institution)['latestGrades']);
+    }
+
     public function testRunsObeyTheSystemAdministratorsRules(): void
     {
         $actor = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);

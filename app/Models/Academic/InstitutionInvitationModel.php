@@ -37,6 +37,7 @@ class InstitutionInvitationModel extends Model
         'email',
         'first_name',
         'last_name',
+        'student_ids',
         'token_hash',
         'expires_at',
         'sent_at',

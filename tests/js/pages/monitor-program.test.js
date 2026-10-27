@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completionChartConfig, gradeDistributionChartConfig } from "../../../resources/js/pages/monitor-program/monitor-program.js";
+import { completionChartConfig, gradeDistributionChartConfig, instructorActivityChartConfig } from "../../../resources/js/pages/monitor-program/monitor-program.js";
 
 describe("completionChartConfig", () => {
     it("maps each point's label and value into the bar dataset", () => {
@@ -45,5 +45,18 @@ describe("gradeDistributionChartConfig", () => {
         const config = gradeDistributionChartConfig({ "0-59": 0, "60-69": 0 });
 
         expect(config.data.datasets[0].data).toEqual([0, 0]);
+    });
+});
+
+describe("instructorActivityChartConfig", () => {
+    it("draws content updates and announcements per instructor", () => {
+        const config = instructorActivityChartConfig([{ label: "Tess Tan", content: 3, announcements: 1 }]);
+
+        expect(config.data.labels).toEqual(["Tess Tan"]);
+        expect(config.data.datasets.map((set) => set.data)).toEqual([[3], [1]]);
+    });
+
+    it("renders no instructors as an empty chart, not an error", () => {
+        expect(instructorActivityChartConfig([]).data.labels).toEqual([]);
     });
 });

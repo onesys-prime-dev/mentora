@@ -1811,8 +1811,8 @@ class ModuleService
 
             $this->assessmentModel->update($assessment['id'], $assessmentUpdate);
 
-            // Published from Modules: add it to the gradebook too.
-            if (($assessmentUpdate['status'] ?? null) === 'Published') {
+            // Published or drafted from Modules: the gradebook follows it.
+            if (isset($assessmentUpdate['status'])) {
                 (new \App\Services\Courses\Grades\GradeItemSyncService())->syncFromAssessment((int) $assessment['id']);
             }
         }

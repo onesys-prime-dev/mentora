@@ -549,6 +549,115 @@ final class GradingEngineServiceTest extends DatabaseTestCase
         $this->assertSame(78.0, (float) $this->record($g['offering'], $g['strong'])['calculated_percentage']);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tags: Incomplete (INC) and Withdrawn
+    |--------------------------------------------------------------------------
+    */
+
+    public function testAnIncompleteIsNeitherPassedNorFailedAndKeepsTheGrade(): void
+    {
+        $g = $this->gradebook();
+        $this->engine->recalculateOffering($g['offering']);
+        $teacher = $this->instructor($g);
+
+        $result = $this->engine->markIncomplete($teacher, $g['offering'], $g['weak']->id, 'Medical leave', '2026-12-15');
+
+        $this->assertTrue($result['success']);
+        $record = $this->record($g['offering'], $g['weak']);
+        $this->assertSame('INC', $record['remarks']);
+        $this->assertSame('Medical leave', $record['inc_reason']);
+        $this->assertSame('2026-12-15', $record['inc_until']);
+        $this->assertEquals(50.0, (float) $record['calculated_percentage'], 'the grade itself is untouched');
+    }
+
+    public function testAnIncompleteSurvivesRecalculationAndAnOverride(): void
+    {
+        $g = $this->gradebook();
+        $this->engine->recalculateOffering($g['offering']);
+        $teacher = $this->instructor($g);
+        $this->engine->markIncomplete($teacher, $g['offering'], $g['strong']->id, 'Late project');
+
+        $this->engine->recalculateOffering($g['offering']);
+        $this->assertSame('INC', $this->record($g['offering'], $g['strong'])['remarks']);
+
+        $this->engine->overrideFinalGrade($teacher, $g['offering'], $g['strong']->id, 90.0, 'Re-evaluated');
+        $this->assertSame('INC', $this->record($g['offering'], $g['strong'])['remarks']);
+    }
+
+    public function testRemovingTheIncompleteGivesPassedOrFailedBack(): void
+    {
+        $g = $this->gradebook();
+        $this->engine->recalculateOffering($g['offering']);
+        $teacher = $this->instructor($g);
+        $this->engine->markIncomplete($teacher, $g['offering'], $g['strong']->id, 'Late project');
+
+        $result = $this->engine->clearIncomplete($teacher, $g['offering'], $g['strong']->id);
+
+        $this->assertTrue($result['success']);
+        $record = $this->record($g['offering'], $g['strong']);
+        $this->assertSame('Passed', $record['remarks']);
+        $this->assertNull($record['inc_set_at']);
+        $this->assertNull($record['inc_reason']);
+    }
+
+    public function testAnIncompleteNeedsAReasonAndARealDate(): void
+    {
+        $g = $this->gradebook();
+        $teacher = $this->instructor($g);
+
+        $this->assertFalse($this->engine->markIncomplete($teacher, $g['offering'], $g['weak']->id, '   ')['success']);
+        $this->assertFalse($this->engine->markIncomplete($teacher, $g['offering'], $g['weak']->id, 'Why', '2026-13-45')['success']);
+        $this->assertFalse($this->engine->markIncomplete($teacher, $g['offering'], $g['weak']->id, 'Why', 'next week')['success']);
+        $this->assertFalse($this->engine->clearIncomplete($teacher, $g['offering'], $g['weak']->id)['success'], 'nothing to remove');
+    }
+
+    public function testSomeoneNotInTheSectionCannotBeMarkedIncomplete(): void
+    {
+        $g = $this->gradebook();
+
+        $result = $this->engine->markIncomplete($this->instructor($g), $g['offering'], CourseFactory::user('student')->id, 'Why');
+
+        $this->assertFalse($result['success']);
+    }
+
+    public function testAStudentWhoWithdrewIsTaggedWithdrawnAndKeepsTheirGrade(): void
+    {
+        $g = $this->gradebook();
+        $this->engine->recalculateOffering($g['offering']);
+
+        db_connect()->table('enrollments')->where('offering_id', $g['offering'])->where('student_user_id', $g['weak']->id)->update(['status' => 'withdrawn']);
+        $this->engine->recalculateOffering($g['offering']);
+
+        $record = $this->record($g['offering'], $g['weak']);
+        $this->assertSame('Withdrawn', $record['remarks']);
+        $this->assertEquals(50.0, (float) $record['calculated_percentage'], 'the grade they had stays on record');
+    }
+
+    public function testEnrolmentChangesMoveTheTagAtOnceAndBack(): void
+    {
+        $g = $this->gradebook();
+        $this->engine->recalculateOffering($g['offering']);
+        $enrol = static fn (string $status) => db_connect()->table('enrollments')->where('offering_id', $g['offering'])->where('student_user_id', $g['strong']->id)->update(['status' => $status]);
+
+        $enrol('dropped');
+        $this->engine->syncEnrolment($g['offering'], $g['strong']->id);
+        $this->assertSame('Withdrawn', $this->record($g['offering'], $g['strong'])['remarks']);
+
+        $enrol('enrolled');
+        $this->engine->syncEnrolment($g['offering'], $g['strong']->id);
+        $this->assertSame('Passed', $this->record($g['offering'], $g['strong'])['remarks']);
+    }
+
+    public function testSyncingAStudentWithoutARecordDoesNothing(): void
+    {
+        $g = $this->gradebook();
+
+        $this->engine->syncEnrolment($g['offering'], $g['none']->id);
+
+        $this->assertNull($this->record($g['offering'], $g['none']));
+    }
+
     /** An instructor user for override calls (any user works; the service only records who changed it). */
     private function instructor(array $gradebook): User
     {

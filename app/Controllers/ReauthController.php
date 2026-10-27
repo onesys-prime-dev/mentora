@@ -88,6 +88,13 @@ class ReauthController extends BaseController
     /** Where someone with nothing pending lands after confirming. */
     private function home(): string
     {
-        return $this->isAdmin() ? 'admin/dashboard' : 'institution/dashboard';
+        if ($this->isAdmin()) {
+            return 'admin/dashboard';
+        }
+
+        // A dean confirms their password for sign-off; the institution's administrator for their own actions.
+        $user = auth()->user();
+
+        return $user->inGroup('dean') && ! $user->inGroup('institutional_admin') ? 'dean/dashboard' : 'institution/dashboard';
     }
 }
