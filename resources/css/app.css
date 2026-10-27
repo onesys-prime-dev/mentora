@@ -508,12 +508,12 @@ html[data-theme="dark"] .border-\[\#A9A9A9\] { border-color: var(--dk-line-stron
 }
 
 /*
- * The system administrator's shell: a calm flat page instead of the wallpaper,
+ * The system administrator's shell: a calm flat blue-grey page instead of the wallpaper,
  * so the filter bar and the table sit on something. Their cards get an edge
  * as well as a shadow, and a list keeps a sensible height when it is short.
  */
 body.admin-flat {
-    background-color: #eceff4;
+    background-color: #dbe4f2;
     background-image: none;
 }
 
