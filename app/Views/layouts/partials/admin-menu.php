@@ -23,7 +23,7 @@ $current = 'bg-brand font-semibold text-white';
 $idle    = 'text-brand hover:bg-brand-tint';
 $home    = $isCurrent('admin/dashboard') || $menuPath === 'admin';
 ?>
-<nav class="border-b border-b-black/10 bg-white lg:w-64 lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:border-r-black/10" aria-label="Administration" data-admin-menu>
+<nav class="border-b border-b-black/10 bg-white lg:w-64 lg:shrink-0 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:border-b-0 lg:border-r lg:border-r-black/10" aria-label="Administration" data-admin-menu>
 
     <input type="checkbox" id="admin-menu-toggle" class="peer sr-only">
     <label for="admin-menu-toggle" class="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-brand peer-focus-visible:ring-2 peer-focus-visible:ring-inset peer-focus-visible:ring-brand/50 sm:px-8 lg:hidden">
