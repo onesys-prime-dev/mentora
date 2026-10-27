@@ -49,7 +49,9 @@ class CourseService
      */
     public function getCourseOfferings(User $user, bool $past = false): array
     {
-        if ($user->inGroup('student')) {
+        $as = self::listRole($user);
+
+        if ($as === 'student') {
 
             return $this->withCardDetails(
                 $this->enrollmentModel->retrieveStudentCourseOfferings($user->id, $past),
@@ -58,7 +60,7 @@ class CourseService
 
         }
 
-        if ($user->inGroup('instructor')) {
+        if ($as === 'instructor') {
 
             return $this->withCardDetails(
                 $this->instructorAssignmentModel->retrieveInstructorCourseOfferings($user->id, $past),
@@ -66,7 +68,7 @@ class CourseService
             );
         }
 
-        if ($user->inGroup('chairperson')) {
+        if ($as === 'chairperson') {
 
             return $this->withCardDetails(
                 $this->chairpersonAssignmentModel->retrieveChairedCourseOfferings($user->id, $past),
@@ -75,6 +77,30 @@ class CourseService
         }
 
         return [];
+    }
+
+    /**
+     * Whose list of courses a person sees: the role they are acting as, when it
+     * is one that has courses; otherwise (a dean or an administrator who also
+     * teaches) the first such role they hold. Only the signed-in person has a
+     * role they act as: a parent looking at a child's courses must not resolve
+     * (and so save) one for the child.
+     */
+    public static function listRole(User $user): ?string
+    {
+        $active = (int) auth()->id() === (int) $user->id ? (new \App\Services\Auth\ActiveRoleService())->resolve($user) : '';
+
+        if (in_array($active, CourseMembership::ROLES, true)) {
+            return $active;
+        }
+
+        foreach (CourseMembership::ROLES as $role) {
+            if ($user->inGroup($role)) {
+                return $role;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -203,32 +229,12 @@ class CourseService
             return (new \App\Services\Courses\CourseReadAccess())->offering($user, $offeringId);
         }
 
-        if ($user->inGroup('student')) {
-
-            return $this->enrollmentModel
-                ->retrieveStudentCourseOffering(
-                    $user->id,
-                    $offeringId
-                );
-
-        }
-
-        if ($user->inGroup('instructor')) {
-            return $this->instructorAssignmentModel
-                ->retrieveInstructorCourseOffering(
-                    $user->id,
-                    $offeringId
-                );
-        }
-
-        if ($user->inGroup('chairperson')) {
-            return $this->chairpersonAssignmentModel
-                ->retrieveChairedCourseOffering(
-                    $user->id,
-                    $offeringId
-                );
-        }
-
-        return null;
+        // What they are in this course decides how it is read (9.1), not the groups they hold.
+        return match ((new CourseMembership())->roleIn($user, $offeringId)) {
+            'student'     => $this->enrollmentModel->retrieveStudentCourseOffering($user->id, $offeringId),
+            'instructor'  => $this->instructorAssignmentModel->retrieveInstructorCourseOffering($user->id, $offeringId),
+            'chairperson' => $this->chairpersonAssignmentModel->retrieveChairedCourseOffering($user->id, $offeringId),
+            default       => null,
+        };
     }
 }

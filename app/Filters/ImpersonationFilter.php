@@ -33,6 +33,11 @@ class ImpersonationFilter implements FilterInterface
     {
         $state = Impersonation::current();
 
+        // Nothing is saved for the person being viewed (3.2), not even their "last active" time: Shield's session
+        // filter, which runs after this global one, stamps it only while the setting is on. Set on every request,
+        // from the configured value, so a view never leaves it off for the next one.
+        config('Auth')->recordActiveDate = $state === null && (new \Config\Auth())->recordActiveDate;
+
         if ($state === null) {
             return null;
         }

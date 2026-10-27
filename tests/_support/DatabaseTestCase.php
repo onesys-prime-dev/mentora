@@ -56,6 +56,9 @@ abstract class DatabaseTestCase extends CIUnitTestCase
 
         parent::setUp();
 
+        // The course of the last request is not this test's (a real request starts with none).
+        service('courseContext')->clear();
+
         if ($this->isolateTests) {
             if (! isset(self::$emptied[static::class])) {
                 $this->emptyAllTables();

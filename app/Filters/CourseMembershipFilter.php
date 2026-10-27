@@ -46,6 +46,9 @@ class CourseMembershipFilter implements FilterInterface
             throw PageNotFoundException::forPageNotFound();
         }
 
+        // What they are in this course is this area's role: the checks deeper in the page ask it (9.1).
+        service('courseContext')->set((int) $offering, $role);
+
         return null;
     }
 

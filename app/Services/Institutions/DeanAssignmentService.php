@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Institutions;
 
 use App\Models\Assignments\DeanAssignmentModel;
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Courses\Grades\GradeOverrideRequestService;
 use App\Services\Sis\SisOwnership;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -43,6 +44,11 @@ class DeanAssignmentService
             ->countAllResults() > 0;
         if (! $member || $db->table('users')->where('id', $userId)->countAllResults() === 0) {
             throw StructureException::field('user_id', 'Choose a person who belongs to this institution.');
+        }
+
+        // Not the dean of courses they are a student of (9.5).
+        if (($clash = (new CourseRoleConflicts())->forDean($userId, $departmentId)) !== null) {
+            throw StructureException::field('user_id', CourseRoleConflicts::sentence($userId, $clash));
         }
 
         // A dean can also teach, but cannot also be a chairperson: the one who oversees a department

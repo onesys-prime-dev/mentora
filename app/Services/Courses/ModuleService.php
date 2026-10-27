@@ -69,24 +69,16 @@ class ModuleService
      */
     private function ensureInstructorOwnsOffering(User $user, int $offeringId): ?array
     {
-        if ($user->inGroup('chairperson')) {
-            return (new ChairpersonAccessService())->canAccess($user, $offeringId)
-                ? null
-                : ['success' => false, 'message' => 'Not authorized.'];
+        // Its instructor, or the chairperson of its program: what they are in this course (9.1).
+        if (in_array((new CourseMembership())->roleIn($user, $offeringId), ['instructor', 'chairperson'], true)) {
+            return null;
         }
 
         if (!$user->inGroup('instructor')) {
             return ['success' => false, 'message' => 'Not authorized.'];
         }
 
-        $assigned = $this->instructorAssignmentModel
-            ->retrieveInstructorCourseOffering($user->id, $offeringId);
-
-        if (!$assigned) {
-            return ['success' => false, 'message' => 'You are not assigned to this course offering.'];
-        }
-
-                return null;
+        return ['success' => false, 'message' => 'You are not assigned to this course offering.'];
     }
 
     /*

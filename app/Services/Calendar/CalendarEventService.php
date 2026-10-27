@@ -74,7 +74,10 @@ class CalendarEventService
         $labels = $this->courseLabels($courses);
 
         // The chairperson sees what an instructor does: every course of the program, drafts included.
-        $isInstructor = $user->inGroup('instructor') || $user->inGroup('chairperson');
+        // Per course, by what they are in it (9.1): someone who also studies sees that course as a student.
+        $membership = new \App\Services\Courses\CourseMembership();
+        $staff      = array_values(array_filter($offeringIds, static fn (int $id): bool => in_array($membership->roleIn($user, $id), ['instructor', 'chairperson'], true)));
+        $studied    = array_values(array_diff($offeringIds, $staff));
 
         $builder = db_connect()->table('assessments a')
             ->select([
@@ -88,28 +91,40 @@ class CalendarEventService
             ->where('a.due_date >=', $from)
             ->where('a.due_date <=', $to);
 
-        if ($isInstructor) {
+        $builder->join('learning_items li', 'li.id = a.learning_item_id', 'left')
+            ->join('learning_units lu', 'lu.id = li.learning_unit_id', 'left')
+            ->groupStart();
 
-            $builder->where('a.status !=', 'Archived');
+        if ($staff !== []) {
 
-        } else {
+            $builder->groupStart()
+                ->whereIn('cm.offering_id', $staff)
+                ->where('a.status !=', 'Archived')
+            ->groupEnd();
+
+        }
+
+        if ($studied !== []) {
 
             // Same rule as the course's own lists: a student only learns of
             // a due date while its module, and the unit and item it hangs
             // off (if any), are published.
-            $builder->where('a.status', 'Published')
+            $builder->orGroupStart()
+                ->whereIn('cm.offering_id', $studied)
+                ->where('a.status', 'Published')
                 ->where('cm.status', 'published')
-                ->join('learning_items li', 'li.id = a.learning_item_id', 'left')
-                ->join('learning_units lu', 'lu.id = li.learning_unit_id', 'left')
                 ->groupStart()
                     ->where('a.learning_item_id IS NULL', null, false)
                     ->orGroupStart()
                         ->where('li.status', 'published')
                         ->where('lu.status', 'published')
                     ->groupEnd()
-                ->groupEnd();
+                ->groupEnd()
+            ->groupEnd();
 
         }
+
+        $builder->groupEnd();
 
         return array_map(function (array $row) use ($labels) {
 
@@ -144,6 +159,7 @@ class CalendarEventService
 
         $role = match (true) {
             in_array($active, ['instructor', 'chairperson'], true) => $active,
+            $active === 'student'         => 'student',
             $user->inGroup('instructor')  => 'instructor',
             $user->inGroup('chairperson') => 'chairperson',
             default                       => 'student',

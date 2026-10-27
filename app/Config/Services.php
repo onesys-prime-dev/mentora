@@ -25,6 +25,16 @@ use CodeIgniter\Config\BaseService;
 class Services extends BaseService
 {
     /** The shared audit log writer; tests can replace it with injectMock('auditLogger', ...). */
+    /** The course the request is about, and the person's role in it (set by CourseMembershipFilter). */
+    public static function courseContext(bool $getShared = true): \App\Services\Courses\CourseContext
+    {
+        if ($getShared) {
+            return static::getSharedInstance('courseContext');
+        }
+
+        return new \App\Services\Courses\CourseContext();
+    }
+
     public static function auditLogger(bool $getShared = true): AuditLogger
     {
         if ($getShared) {

@@ -6,6 +6,7 @@ namespace App\Services\Users;
 
 use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\InvitationInput;
@@ -280,6 +281,15 @@ class UserAdminService
         $before = $user['roles'];
 
         $added = array_diff($roles, $before);
+
+        // Not an administrator of an institution whose courses they are a student of (9.5).
+        if (in_array('institutional_admin', $added, true)) {
+            foreach ($user['institutions'] as $institution) {
+                if (($clash = (new CourseRoleConflicts())->forAdministrator($userId, (int) $institution['id'])) !== null) {
+                    throw new InvalidArgumentException(CourseRoleConflicts::sentence($userId, $clash));
+                }
+            }
+        }
 
         if (in_array('student', $added, true)) {
             foreach ($user['institutions'] as $institution) {

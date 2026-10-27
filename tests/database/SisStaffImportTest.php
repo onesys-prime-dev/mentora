@@ -335,6 +335,33 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertSame($this->ian(), (int) $this->chairs()[0]['chairperson_user_id']);
     }
 
+    public function testAnEnrolmentRowForSomeoneWhoTeachesTheCourseFailsAloneAndTheRunContinues(): void
+    {
+        $this->giveRole($this->ian(), 'student');
+        $this->giveRole($this->ivy(), 'student');
+        $this->sync('instructor,I2,,,C1,A');
+
+        SisFixture::drop($this->institution, 'enrollments', "course_external_id,student_external_id,section,status\nC1,I2,A,enrolled\nC1,I1,A,enrolled\n");
+        $result = $this->run_();
+
+        $this->assertSame(['created' => 1, 'updated' => 0, 'skipped' => 0, 'failed' => 1], $result->datasets['enrollments']);
+        $this->assertStringContainsString('I2 teaches or has taught this course.', implode(' ', array_column($result->issues, 'reason')));
+        $this->assertSame(0, db_connect()->table('enrollments')->where('student_user_id', $this->ian())->countAllResults());
+    }
+
+    public function testAStaffRowForSomeoneEnrolledInTheCourseFailsAlone(): void
+    {
+        $this->giveRole($this->ivy(), 'student');
+        $this->sync('instructor,I2,,,C1,A'); // creates the section
+        db_connect()->table('enrollments')->insert(['offering_id' => (int) $this->offering('IT101', 'A'), 'student_user_id' => $this->ivy(), 'status' => 'enrolled', 'enrolled_at' => date('Y-m-d H:i:s')]);
+
+        $result = $this->sync('instructor,I2,,,C1,A', 'instructor,I1,,,C1,A');
+
+        $this->assertSame(1, $this->counts($result)['failed']);
+        $this->assertStringContainsString('is enrolled in this course this term', $result->issues[0]['reason']);
+        $this->assertSame([$this->ian()], $this->teachers((int) $this->offering('IT101', 'A')));
+    }
+
     public function testAPersonWhoDoesNotHoldTheChairpersonRoleIsRefusedAndNeverGrantedIt(): void
     {
         $result = $this->sync("chairperson,I2,,{$this->subCode()},,");

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Institutions;
 
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Sis\SisOwnership;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
@@ -43,9 +44,12 @@ class EnrolmentService
 
     private readonly SisOwnership $sis;
 
+    private readonly CourseRoleConflicts $conflicts;
+
     public function __construct(?SisOwnership $sis = null)
     {
-        $this->sis = $sis ?? new SisOwnership();
+        $this->sis       = $sis ?? new SisOwnership();
+        $this->conflicts = new CourseRoleConflicts();
     }
 
     /**
@@ -185,7 +189,12 @@ class EnrolmentService
 
             $existing = $db->table('enrollments')->where(['offering_id' => $offeringId, 'student_user_id' => $studentId])->get()->getRowArray();
 
-            if ($existing === null) {
+            // Not a student of a course they teach, chair or lead (9.2–9.5).
+            $clash = in_array($existing['status'] ?? null, ['enrolled', 'completed'], true) ? null : $this->conflicts->forEnrolment($studentId, $offeringId);
+
+            if ($clash !== null) {
+                $skipped[] = ['identifier' => $name, 'reason' => $clash];
+            } elseif ($existing === null) {
                 $new[$studentId] = $name;
             } elseif ($existing['status'] === 'enrolled') {
                 $skipped[] = ['identifier' => $name, 'reason' => 'is already enrolled'];
@@ -266,6 +275,10 @@ class EnrolmentService
         }
 
         if ($status === 'enrolled') {
+            if (($clash = $this->conflicts->forEnrolment((int) $row['student_user_id'], (int) $row['offering_id'])) !== null) {
+                throw new StructureException(CourseRoleConflicts::sentence((int) $row['student_user_id'], $clash));
+            }
+
             $this->checkCapacity($offering, 1, $overCapacity);
         }
 

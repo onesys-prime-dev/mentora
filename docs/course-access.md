@@ -94,6 +94,49 @@ Notifications are on the shared `/notifications` page (`docs/notifications.md`, 
 download is audited (`grades.report_exported`, the parent as actor). It is the student's report
 without the item-by-item part (no Points column, no Scores list), so it says no more than the Grades tab.
 
+## The role in a course decides (audit 9.1)
+
+What someone may do in a course depends only on their role **in that course**,
+never on the groups they hold. Someone who teaches one course and is enrolled in
+another is a student in the second: its quiz rules (attempt limit, availability,
+visibility, prerequisite locks), the student view of its pages, and the student's
+access to its files.
+
+- `CourseMembership::roleIn(user, offering)` answers `instructor`, `chairperson`,
+  `student` or null, in that order (only a chair who teaches can be two).
+- On a course route, `CourseMembershipFilter` records the offering and the area's
+  role in the shared `courseContext` service, so checks deep in a page
+  (`CourseViewer::seesInstructorView`, `CourseViewer::isStudentHere`) answer for
+  this course without being handed it. Outside a course they fall back to groups.
+- Lists across courses (course cards, dashboard widgets) follow the role the
+  signed-in person is acting as (`CourseService::listRole`).
+
+## Nobody is both student and staff of a course (9.2–9.7, D7, D10)
+
+`CourseRoleConflicts` gives the reason, the words after the person's name, and
+every writer refuses with it: the enrolment page (skipped with the reason), a
+status change back to enrolled, the SIS import and CSV upload (the row fails
+alone), instructor, chairperson and dean assignment, and granting the
+institutional administrator role.
+
+| Refused | Because the person | Words |
+|---|---|---|
+| enrolling in a course | has an instructor assignment on any of its sections, any term | "teaches or has taught this course" |
+| | has (or had) a chairperson assignment on its sub-department | "chairs or has chaired the sub-department of this course" |
+| | is (or was) the dean of its department | "is or was the dean of this course's department" |
+| | is an administrator of its institution | "is an administrator of this institution" |
+| teaching a section | is enrolled (or completed) in the same course this term | "is enrolled in this course this term" |
+| chairing a sub-department | is enrolled in one of its courses | "is enrolled in a course of this sub-department" |
+| being dean of a department | is enrolled in one of its courses | "is enrolled in a course of this department" |
+| the administrator role | is enrolled in one of the institution's courses | "is enrolled in a course of this institution" |
+
+An enrolment that ended (completed, dropped, withdrawn) never blocks a staff role
+in a later term: a former student may teach or chair the course later. Removing
+an instructor by hand deletes the assignment, so it no longer counts as "taught";
+roles keep no history, so a former administrator is not known. The migration
+`EndCourseRoleConflicts` dropped the enrolments that already clashed (the work
+kept, the staff role kept, audited as the system).
+
 ## How it is enforced
 
 - `CourseMembership` (`app/Services/Courses/`) answers the question, as the role

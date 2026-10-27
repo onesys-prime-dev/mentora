@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Institutions;
 
 use CodeIgniter\Shield\Entities\User;
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Sis\SisOwnership;
 
 /**
@@ -351,6 +352,11 @@ class OfferingService
 
         if ($db->table('instructor_assignments')->where(['offering_id' => $offeringId, 'instructor_user_id' => $userId])->countAllResults() > 0) {
             throw StructureException::field('user_id', "{$candidate['name']} already teaches this offering.");
+        }
+
+        // Not staff of a course they are a student of this term (9.2, D7).
+        if (($clash = (new CourseRoleConflicts())->forTeaching($userId, $offeringId)) !== null) {
+            throw StructureException::field('user_id', "{$candidate['name']} {$clash}.");
         }
 
         $now = date('Y-m-d H:i:s');

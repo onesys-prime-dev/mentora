@@ -51,6 +51,7 @@ class ScheduleService
 
         $role = match (true) {
             in_array($active, ['instructor', 'chairperson'], true) => $active,
+            $active === 'student'         => 'student',
             $user->inGroup('instructor')  => 'instructor',
             $user->inGroup('chairperson') => 'chairperson',
             default                       => 'student',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Institutions;
 
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Courses\Grades\GradeOverrideRequestService;
 use App\Services\Courses\Grades\OverrideRequestChain;
 use App\Services\Notifications\NotificationService;
@@ -131,6 +132,11 @@ class ChairAssignmentService
 
         if ($candidate === null) {
             throw StructureException::field('user_id', 'Choose one of the people who hold the chairperson role in your institution.');
+        }
+
+        // Not the chairperson of courses they are a student of (9.4).
+        if (($clash = (new CourseRoleConflicts())->forChairing($userId, $subDepartmentId)) !== null) {
+            throw StructureException::field('user_id', "{$candidate['name']} {$clash}.");
         }
 
         $existing = $db->table('chairperson_assignments')->where(['sub_department_id' => $subDepartmentId, 'chairperson_user_id' => $userId])->get()->getRowArray();

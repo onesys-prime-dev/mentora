@@ -100,6 +100,7 @@ Counts per dataset:
 
 - **All or nothing.** If anything unexpected goes wrong, the run is rolled back and recorded as failed; no partial data. System administrators are notified (urgent, also by email).
 - **Single bad rows do not stop the run.** They are counted as failed with their reason; the rest imports.
+- **Student and staff of one course never meet** (`course-access.md`): an enrolment row for someone who teaches, chairs or leads the course fails ("I2 teaches or has taught this course."), and a staff row for someone enrolled there fails with the assignment's own words ("Ivy Tan is enrolled in this course this term.").
 - **Preview (dry run).** Does exactly the work of a real run inside the transaction, then rolls it back. Its counts are what the real run produces, and nothing is written.
 - **First real import needs a preview** (any earlier successful import or preview counts; a connection test does not).
 - A real import needs: the `sis.sync` feature on, the connection enabled, and the institution active. A preview needs the feature and saved settings only.

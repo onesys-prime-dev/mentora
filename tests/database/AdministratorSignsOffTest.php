@@ -71,6 +71,11 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
     {
         PermissionMatrix::flush();
 
+        // Signed in by one test, so later tests don't run as this person.
+        if (auth()->loggedIn()) {
+            auth()->logout();
+        }
+
         parent::tearDown();
     }
 

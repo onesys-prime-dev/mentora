@@ -1,4 +1,4 @@
-<?php $panelIsStudent = $user->inGroup('student'); ?>
+<?php $panelIsStudent = \App\Services\Courses\CourseViewer::isStudentHere($user); ?>
 
 <aside class="w-80 shrink-0 flex flex-col bg-[#F9F9FC] border-r border-[#9E9E9E]">
 

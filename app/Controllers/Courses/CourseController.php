@@ -73,7 +73,8 @@ class CourseController extends BaseController
         // whichever role they're currently acting as, not just the first
         // group they happen to hold — otherwise a chairperson's own course
         // card would send them to the student section instead.
-        $prefix = \App\Services\Courses\CourseViewer::urlPrefix($user, active_role() ?: ($user->inGroup('instructor') ? 'instructor' : 'student'));
+        // What they are in this course decides the area it opens in (9.1).
+        $prefix = \App\Services\Courses\CourseViewer::urlPrefix($user, (new \App\Services\Courses\CourseMembership())->roleIn($user, (int) $offeringId) ?? (active_role() ?: 'student'));
 
         return redirect()->to(
             site_url(

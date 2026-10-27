@@ -6,6 +6,7 @@ namespace App\Services\Sis;
 
 use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Institutions\ChairAssignmentService;
 use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\OfferingService;
@@ -479,6 +480,13 @@ class SisImporter
             $offeringId = $this->offeringFor($courseId, $termId, $m['section']);
 
             $existing = $db->table('enrollments')->where(['offering_id' => $offeringId, 'student_user_id' => $studentId])->get()->getRowArray();
+
+            // Not a student of a course they teach, chair or lead (9.2–9.5); the row fails alone.
+            if (($clash = (new CourseRoleConflicts())->forExistingEnrolment($studentId, $offeringId, $m['status'])) !== null) {
+                $this->fail('enrollments', $item, "{$m['student_external_id']} {$clash}.");
+
+                continue;
+            }
 
             if ($existing === null) {
                 $stamp = $this->stamp();
