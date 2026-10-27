@@ -16,6 +16,9 @@
 |   bulk         html for the bulk bar (buttons inside a form[data-bulk-form])
 |   nounOne, nounMany   "person"/"people": the words in "3 people selected"
 |   emptyTitle, emptyText, emptyIcon   shown instead of the table when no rows
+|   fill         bool: from lg up the table fills the height its parent gives it and
+|                scrolls on its own, with the heading row pinned (the parent must be a
+|                flex column of a set height)
 |
 | Below the md breakpoint each row becomes a stacked card, so nothing needs a
 | horizontal scroll on a phone.
@@ -34,6 +37,7 @@ $nounMany   = $nounMany ?? 'rows';
 $emptyTitle = $emptyTitle ?? 'Nothing here yet';
 $emptyText  = $emptyText ?? '';
 $emptyIcon  = $emptyIcon ?? null;
+$fill       = $fill ?? false;
 $hasActions = false;
 
 foreach ($rows as $row) {
@@ -41,6 +45,9 @@ foreach ($rows as $row) {
 }
 
 $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
+
+// A pinned heading row needs a solid background, or the rows show through it.
+$pin = $fill ? ' sticky top-0 z-10 bg-gray-50' : '';
 ?>
 
 <?php if ($rows === []): ?>
@@ -51,7 +58,7 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
 
 <?php else: ?>
 
-    <div class="overflow-hidden rounded-2xl bg-white shadow-sm" data-table>
+    <div class="overflow-hidden rounded-2xl bg-white shadow-sm<?= $fill ? ' lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : '' ?>" data-table>
 
         <?php if ($selectable): ?>
             <div class="flex flex-wrap items-center gap-3 border-b border-gray-100 bg-brand-tint px-4 py-3 text-sm" data-bulk-bar hidden>
@@ -66,7 +73,7 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
             <thead class="max-md:sr-only border-b border-gray-100 bg-gray-50/70">
                 <tr>
                     <?php if ($selectable): ?>
-                        <th class="w-10 px-4 py-3" scope="col">
+                        <th class="w-10 px-4 py-3<?= $pin ?>" scope="col">
                             <input type="checkbox" data-select-all class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" aria-label="Select every row on this page">
                         </th>
                     <?php endif; ?>
@@ -77,7 +84,7 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
                         $ariaSort = $isSorted ? ($dir === 'asc' ? 'ascending' : 'descending') : 'none';
                         $next     = $isSorted && $dir === 'asc' ? 'desc' : 'asc';
                         ?>
-                        <th class="<?= $th ?> <?= esc($column['class'] ?? '') ?>" scope="col" <?= ! empty($column['sortable']) ? 'aria-sort="' . $ariaSort . '"' : '' ?>>
+                        <th class="<?= $th ?><?= $pin ?> <?= esc($column['class'] ?? '') ?>" scope="col" <?= ! empty($column['sortable']) ? 'aria-sort="' . $ariaSort . '"' : '' ?>>
                             <?php if (! empty($column['sortable']) && $sortUrl !== null): ?>
                                 <a class="inline-flex items-center gap-1 transition hover:text-brand <?= $isSorted ? 'text-brand' : '' ?>" href="<?= esc($sortUrl($column['key'], $next)) ?>">
                                     <?= esc($column['label']) ?><span aria-hidden="true"><?= $isSorted ? ($dir === 'asc' ? '▲' : '▼') : '' ?></span>
@@ -89,7 +96,7 @@ $th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#
                     <?php endforeach; ?>
 
                     <?php if ($hasActions): ?>
-                        <th class="<?= $th ?> text-right" scope="col"><span class="sr-only">Actions</span></th>
+                        <th class="<?= $th ?><?= $pin ?> text-right" scope="col"><span class="sr-only">Actions</span></th>
                     <?php endif; ?>
                 </tr>
             </thead>
