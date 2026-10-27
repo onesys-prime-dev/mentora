@@ -85,7 +85,7 @@ if (! function_exists('global_apps')) {
         // this is the same set as tiles, so the Apps menu is the same everywhere.
         if ($role === 'admin') {
             return [
-                ['key' => 'dashboard',    'label' => 'Home',          'icon' => 'apps',      'url' => site_url('admin/dashboard')],
+                ['key' => 'dashboard',    'label' => 'Home',          'icon' => 'home',      'url' => site_url('admin/dashboard')],
                 ['key' => 'institutions', 'label' => 'Institutions',  'icon' => 'hat',       'url' => site_url('admin/institutions')],
                 ['key' => 'plans',        'label' => 'Plans',         'icon' => 'points',    'url' => site_url('admin/plans')],
                 ['key' => 'users',        'label' => 'Users',         'icon' => 'user',      'url' => site_url('admin/users')],
