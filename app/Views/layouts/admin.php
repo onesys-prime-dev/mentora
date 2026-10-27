@@ -33,23 +33,28 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
 
     <?= $this->include('layouts/partials/page-progress') ?>
 
-    <div class="flex min-h-screen flex-col">
+    <?php // From lg up the header and the menu stay put and only the page scrolls; below it the whole page scrolls as usual. ?>
+    <div class="flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:overflow-hidden">
 
-        <?= $this->include('layouts/partials/header') ?>
+        <div class="relative z-30 shrink-0">
 
-        <?= $this->include('layouts/partials/announcement') ?>
+            <?= $this->include('layouts/partials/header') ?>
 
-        <?= $this->include('layouts/partials/notifications-strip') ?>
+            <?= $this->include('layouts/partials/announcement') ?>
+
+            <?= $this->include('layouts/partials/notifications-strip') ?>
+
+        </div>
 
         <?php if ($flashToasts ?? false): ?>
             <?= $this->include('layouts/partials/flash-toasts') ?>
         <?php endif; ?>
 
-        <div class="flex flex-1 flex-col lg:flex-row">
+        <div class="flex flex-1 flex-col lg:min-h-0 lg:flex-row">
 
             <?= $this->include('layouts/partials/admin-menu') ?>
 
-            <main class="min-w-0 flex-1 <?= $mainGutter ?> py-8">
+            <main class="min-w-0 flex-1 <?= $mainGutter ?> py-8 lg:overflow-y-auto">
 
                 <?= $this->renderSection('content') ?>
 
