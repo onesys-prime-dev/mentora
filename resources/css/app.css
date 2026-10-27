@@ -536,3 +536,13 @@ html[data-theme="dark"] .admin-flat [data-table].shadow-sm {
 .admin-flat [data-table] {
     min-height: 18rem;
 }
+
+/* Cards inside the page panel are outlined, since white on white has no edge. */
+.admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
+    border: 1px solid #d5dae3;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
+    border-color: var(--dk-line);
+}

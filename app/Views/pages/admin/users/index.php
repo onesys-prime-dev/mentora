@@ -70,7 +70,7 @@ $bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-
 <?= $this->section('content') ?>
 
 <?php // From lg up the page fills the screen and only the people table scrolls, on its own. ?>
-<div class="flex flex-col lg:h-full lg:min-h-[28rem]">
+<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:h-full lg:min-h-[28rem]" data-page-panel>
 
 <?= view('components/page-head', [
     'title'   => 'Users',

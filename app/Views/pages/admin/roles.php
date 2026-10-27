@@ -24,7 +24,7 @@ $ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col lg:h-full lg:min-h-[28rem]">
+<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:h-full lg:min-h-[28rem]" data-page-panel>
 
 <?= view('components/page-head', ['title' => 'Roles and permissions', 'icon' => 'lock'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-[#646464]">
