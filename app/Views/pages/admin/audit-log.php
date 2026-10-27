@@ -17,6 +17,43 @@ foreach ($actionNames as $actionName) {
     $actionOptions[$actionName] = $actionName;
 }
 
+$ctl   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+$label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
+
+// Quick date ranges: plain links, so they work without a script and can be shared.
+$ranges = [
+    'Any time'     => ['from' => null, 'to' => null],
+    'Today'        => ['from' => date('Y-m-d'), 'to' => null],
+    'Last 7 days'  => ['from' => date('Y-m-d', strtotime('-6 days')), 'to' => null],
+    'Last 30 days' => ['from' => date('Y-m-d', strtotime('-29 days')), 'to' => null],
+];
+$rangeActive = static fn (array $r): bool => $filters->from === $r['from'] && $filters->to === $r['to'];
+$customDates = ($filters->from !== null || $filters->to !== null) && array_filter($ranges, $rangeActive) === [];
+
+// The narrower filters sit behind "More filters", with a count so none hides.
+$moreCount = count(array_filter([$customDates, $filters->actor, $filters->targetType, $filters->institutionId]));
+
+// What is filtering the list right now, each removable on its own.
+$chips = [];
+if ($filters->q !== null) {
+    $chips['Search: ' . $filters->q] = 'q';
+}
+if ($filters->action !== null) {
+    $chips['Action: ' . $filters->action] = 'action';
+}
+if ($filters->actor !== null) {
+    $chips['Actor: ' . $filters->actor] = 'actor';
+}
+if ($filters->targetType !== null) {
+    $chips['Target: ' . $filters->targetType] = 'target_type';
+}
+if ($filters->institutionId !== null) {
+    $chips['Institution #' . $filters->institutionId] = 'institution';
+}
+if ($customDates) {
+    $chips['Dates: ' . ($filters->from ?? 'start') . ' to ' . ($filters->to ?? 'now')] = ['from', 'to'];
+}
+
 $auditRows = $rows;
 $rows      = [];
 
@@ -85,19 +122,59 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 
 <div class="mt-6 flex flex-col gap-4 lg:min-h-0 lg:flex-1">
 
-    <?= view('components/toolbar', [
-        'action'   => site_url('admin/audit-log'),
-        'filtered' => $filters->isFiltered(),
-        'fields'   => [
-            ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => 'Actor, action, target, institution', 'value' => $filters->q ?? '', 'span' => 'lg:col-span-2'],
-            ['type' => 'date', 'name' => 'from', 'label' => 'From', 'value' => $filters->from ?? ''],
-            ['type' => 'date', 'name' => 'to', 'label' => 'To', 'value' => $filters->to ?? ''],
-            ['type' => 'search', 'name' => 'actor', 'label' => 'Actor (email or user id)', 'value' => $filters->actor ?? ''],
-            ['type' => 'select', 'name' => 'action', 'label' => 'Action', 'options' => $actionOptions, 'value' => $filters->action ?? ''],
-            ['type' => 'search', 'name' => 'target_type', 'label' => 'Target type', 'placeholder' => 'e.g. user', 'value' => $filters->targetType ?? ''],
-            ['type' => 'search', 'name' => 'institution', 'label' => 'Institution id', 'value' => (string) ($filters->institutionId ?? ''), 'attrs' => ['inputmode' => 'numeric']],
-        ],
-    ], ['saveData' => false]) ?>
+    <form method="get" action="<?= site_url('admin/audit-log') ?>" role="search" class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4" data-toolbar data-audit-filters>
+        <?php if ($filters->sort !== 'created_at' || $filters->dir !== 'desc'): ?>
+            <input type="hidden" name="sort" value="<?= esc($filters->sort) ?>"><input type="hidden" name="dir" value="<?= esc($filters->dir) ?>">
+        <?php endif; ?>
+
+        <div class="flex flex-wrap items-end gap-3">
+            <label class="<?= $label ?> min-w-[14rem] flex-1">Search
+                <input class="<?= $ctl ?>" type="search" name="q" value="<?= esc($filters->q ?? '') ?>" placeholder="Actor, action, target, institution">
+            </label>
+            <label class="<?= $label ?> w-full sm:w-56">Action
+                <select class="<?= $ctl ?>" name="action" data-auto-submit>
+                    <?php foreach ($actionOptions as $optionValue => $optionLabel): ?>
+                        <option value="<?= esc((string) $optionValue) ?>" <?= (string) ($filters->action ?? '') === (string) $optionValue ? 'selected' : '' ?>><?= esc((string) $optionLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Search</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="text-xs font-medium text-gray-600">When</span>
+            <?php foreach ($ranges as $rangeLabel => $range): ?>
+                <?php $rangeQuery = $query($range + ['page' => null]); ?>
+                <a class="rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 <?= $rangeActive($range) ? 'border-brand bg-brand text-white' : 'border-brand/30 bg-white text-brand hover:bg-brand-tint' ?>"
+                   href="<?= site_url('admin/audit-log') . ($rangeQuery === '' ? '' : '?' . $rangeQuery) ?>" <?= $rangeActive($range) ? 'aria-current="true"' : '' ?>><?= esc($rangeLabel) ?></a>
+            <?php endforeach; ?>
+        </div>
+
+        <details class="group" <?= $moreCount > 0 ? 'open' : '' ?>>
+            <summary class="inline-flex cursor-pointer list-none items-center gap-2 rounded-full px-1 py-1 text-sm font-semibold text-brand hover:underline [&::-webkit-details-marker]:hidden">
+                More filters
+                <?php if ($moreCount > 0): ?><span class="rounded-full bg-brand px-2 text-xs text-white"><?= $moreCount ?></span><?php endif; ?>
+                <svg class="h-4 w-4 transition group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg>
+            </summary>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <label class="<?= $label ?>">From <input class="<?= $ctl ?>" type="date" name="from" value="<?= esc($filters->from ?? '') ?>"></label>
+                <label class="<?= $label ?>">To <input class="<?= $ctl ?>" type="date" name="to" value="<?= esc($filters->to ?? '') ?>"></label>
+                <label class="<?= $label ?>">Actor (email or user id) <input class="<?= $ctl ?>" type="search" name="actor" value="<?= esc($filters->actor ?? '') ?>"></label>
+                <label class="<?= $label ?>">Target type <input class="<?= $ctl ?>" type="search" name="target_type" value="<?= esc($filters->targetType ?? '') ?>" placeholder="e.g. user"></label>
+                <label class="<?= $label ?>">Institution id <input class="<?= $ctl ?>" type="search" name="institution" inputmode="numeric" value="<?= esc((string) ($filters->institutionId ?? '')) ?>"></label>
+            </div>
+        </details>
+    </form>
+
+    <?php if ($filters->isFiltered()): ?>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+            <?php foreach ($chips as $chipLabel => $keys): ?>
+                <?php $dropQuery = $query(array_fill_keys((array) $keys, null) + ['page' => null]); ?>
+                <a class="inline-flex items-center gap-1 rounded-full bg-brand-tint px-3 py-1 font-semibold text-brand hover:bg-brand/10" href="<?= site_url('admin/audit-log') . ($dropQuery === '' ? '' : '?' . $dropQuery) ?>" aria-label="Remove filter <?= esc($chipLabel, 'attr') ?>"><?= esc($chipLabel) ?> <span aria-hidden="true">×</span></a>
+            <?php endforeach; ?>
+            <a class="px-2 py-1 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log') ?>">Clear</a>
+        </div>
+    <?php endif; ?>
 
     <p class="text-sm text-[#646464]" aria-live="polite">
         <?= esc(number_format($total)) ?> <?= $total === 1 ? 'entry' : 'entries' ?><?= $filters->isFiltered() ? ' match' : '' ?>
@@ -137,4 +214,13 @@ $settingsForm = '<form data-dialog-form method="post" action="' . site_url('admi
 
 </div>
 
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+    // A choice in the Action list applies at once; the text boxes apply on Enter or Search.
+    document.querySelectorAll('[data-audit-filters] [data-auto-submit]').forEach(function (el) {
+        el.addEventListener('change', function () { el.form.requestSubmit(); });
+    });
+</script>
 <?= $this->endSection() ?>
