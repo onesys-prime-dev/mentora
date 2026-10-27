@@ -13,8 +13,8 @@
 $this->setVar('user', $user ?? auth()->user());
 $this->setVar('pageTitle', (string) (new App\Services\Admin\PlatformSettings())->get('systemName') . ' administration');
 
-// The same default gutter as the app shell, a little wider to the right so tables have room.
-$mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
+// A slim gutter beside the menu, so the page's panel and its tables have room.
+$mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
 ?>
 <!DOCTYPE html>
 <html lang="en" data-themeable>
