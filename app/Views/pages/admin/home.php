@@ -65,7 +65,8 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<?php // From lg up the panel fills the screen and only the activity list scrolls, on its own. ?>
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:h-full lg:min-h-[34rem]" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Home',
@@ -166,7 +167,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         </ul>
     </section>
 
-    <section class="flex flex-col gap-2" aria-labelledby="home-activity" data-section="activity">
+    <section class="flex flex-col gap-2 lg:min-h-0 lg:flex-1" aria-labelledby="home-activity" data-section="activity">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="home-activity" class="text-base font-bold text-brand">Recent activity</h2>
             <a class="text-sm font-semibold text-brand hover:underline <?= $ring ?>" href="<?= site_url('admin/audit-log') ?>">Audit log</a>
@@ -175,14 +176,14 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         <?php if ($homeActivity === []): ?>
             <p class="text-sm text-[#646464]" data-activity-empty>Nothing has been recorded yet.</p>
         <?php else: ?>
-            <div class="overflow-hidden rounded-2xl border <?= $rule ?>">
+            <div class="overflow-hidden rounded-2xl border <?= $rule ?> lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-activity-scroll>
             <table class="w-full text-sm">
                 <caption class="sr-only">Recent activity</caption>
                 <thead class="max-sm:sr-only border-b <?= $rule ?> bg-gray-50">
                     <tr>
-                        <th class="px-3 py-2 text-left <?= $cellLabel ?>" scope="col">Action</th>
-                        <th class="px-3 py-2 text-left <?= $cellLabel ?>" scope="col">Person</th>
-                        <th class="px-3 py-2 text-right <?= $cellLabel ?>" scope="col">When</th>
+                        <th class="sticky top-0 bg-gray-50 px-3 py-2 text-left <?= $cellLabel ?>" scope="col">Action</th>
+                        <th class="sticky top-0 bg-gray-50 px-3 py-2 text-left <?= $cellLabel ?>" scope="col">Person</th>
+                        <th class="sticky top-0 bg-gray-50 px-3 py-2 text-right <?= $cellLabel ?>" scope="col">When</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">

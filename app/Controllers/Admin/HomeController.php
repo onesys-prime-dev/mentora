@@ -26,7 +26,7 @@ class HomeController extends BaseController
             'homeAttention' => $home->needsAttention($now),
             'homeHealth'    => $home->health(),
             'homeSnapshot'  => $home->snapshot($now),
-            'homeActivity'  => $home->recentActivity(),
+            'homeActivity'  => $home->recentActivity(25),
         ]);
     }
 }
