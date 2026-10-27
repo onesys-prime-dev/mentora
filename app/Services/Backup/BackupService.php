@@ -143,20 +143,50 @@ class BackupService
                 throw new \RuntimeException('The backup file is empty.');
             }
 
+            // Only a dump that reads back to mysqldump's closing line is a backup (11.1).
+            if (! BackupFile::isComplete($path)) {
+                throw new \RuntimeException('The backup file is incomplete: it does not end the way a finished dump does.');
+            }
+
             $db->table('backups')->where('id', $id)->update([
                 'status' => 'succeeded', 'file_name' => $name, 'size_bytes' => $size, 'message' => null, 'finished_at' => $end(),
             ]);
 
             $this->prune($folder);
+            $this->copyOffsite($id, $path);
         } catch (Throwable $e) {
             log_message('error', 'Backup failed: ' . $e->getMessage());
 
+            // A failed backup leaves no file to be mistaken for one (11.1).
+            if (isset($path) && is_file($path)) {
+                @unlink($path);
+            }
+
+            $finished = $end();
+            $message  = mb_substr($e->getMessage(), 0, 500);
+
             $db->table('backups')->where('id', $id)->update([
-                'status' => 'failed', 'message' => mb_substr($e->getMessage(), 0, 500), 'finished_at' => $end(),
+                'status' => 'failed', 'message' => $message, 'finished_at' => $finished,
             ]);
+
+            // Told now, not at the next nightly run, and once per run of failures: the scheduler retries every
+            // few minutes while nothing succeeds, so the key is the streak's (as the nightly trigger's is).
+            $notices = new \App\Services\Notifications\NotificationService();
+
+            foreach ((new \App\Services\Notifications\NotificationRecipients())->administrators() as $admin) {
+                $notices->send($admin, 'backup.failed', 'Backups need attention', 'The latest backup failed: ' . $message, true, self::failureStreakKey(), null, 'admin/backups');
+            }
         }
 
         return $id;
+    }
+
+    /** One key per run of failures: what has failed since the last good backup is one problem, told once. */
+    public static function failureStreakKey(): string
+    {
+        $last = db_connect()->table('backups')->selectMax('finished_at')->where('status', 'succeeded')->get()->getRowArray()['finished_at'] ?? null;
+
+        return 'backup:failed:after:' . ($last ?? 'never');
     }
 
     /**
@@ -190,14 +220,48 @@ class BackupService
         return $last === null || strtotime((string) $last['finished_at']) <= $now->modify('-' . self::SCHEDULE_EVERY_HOURS . ' hours')->getTimestamp();
     }
 
-    /** Keeps the newest KEEP_FILES dumps. */
+    /**
+     * Copies a good backup off the server, when a command is configured (U3). The backup stays good whatever
+     * happens to the copy; a failed copy is recorded and told to the system administrators at once.
+     */
+    private function copyOffsite(int $id, string $path): void
+    {
+        $copier = service('offsiteCopier');
+
+        if ($copier === null) {
+            return;
+        }
+
+        try {
+            $copier->copy($path, rtrim(WRITEPATH, '/\\') . DIRECTORY_SEPARATOR . 'uploads');
+            db_connect()->table('backups')->where('id', $id)->update(['offsite_status' => 'copied', 'offsite_message' => null]);
+        } catch (Throwable $e) {
+            $message = mb_substr($e->getMessage(), 0, 500);
+            db_connect()->table('backups')->where('id', $id)->update(['offsite_status' => 'failed', 'offsite_message' => $message]);
+            log_message('error', 'Off-site backup copy failed: ' . $message);
+
+            $notices = new \App\Services\Notifications\NotificationService();
+
+            foreach ((new \App\Services\Notifications\NotificationRecipients())->administrators() as $admin) {
+                $notices->send($admin, 'backup.offsite_failed', 'Off-site backup copy failed', mb_substr($message, 0, 300), true, "backup:offsite:{$id}", null, 'admin/backups');
+            }
+        }
+    }
+
+    /**
+     * Keeps the files of the newest KEEP_FILES good backups (11.2): only a backup proven good counts toward
+     * them, and a file no good or running backup owns (left by a crashed run) is removed.
+     */
     private function prune(string $folder): void
     {
-        $files = glob($folder . DIRECTORY_SEPARATOR . 'mentora-*.sql.gz') ?: [];
-        rsort($files);
+        $db   = db_connect();
+        $keep = array_column($db->table('backups')->select('file_name')->where('status', 'succeeded')->where('file_name IS NOT NULL', null, false)->orderBy('finished_at', 'desc')->orderBy('id', 'desc')->limit(self::KEEP_FILES)->get()->getResultArray(), 'file_name');
+        $busy = $db->table('backups')->where('status', 'running')->countAllResults() > 0;
 
-        foreach (array_slice($files, self::KEEP_FILES) as $old) {
-            @unlink($old);
+        foreach (glob($folder . DIRECTORY_SEPARATOR . 'mentora-*.sql.gz') ?: [] as $file) {
+            if (! in_array(basename($file), $keep, true) && ! $busy) {
+                @unlink($file);
+            }
         }
     }
 }

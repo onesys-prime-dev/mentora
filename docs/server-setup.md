@@ -143,28 +143,105 @@ php8.5 spark admin:create you@yourdomain.com yourname
 
 Never run the demo seeders on a real server.
 
-## 6. Scheduled jobs (site user's crontab, or CloudPanel > Cron Jobs)
+## 6. Scheduled jobs, the scheduler check, and the off-server backup copy
 
-The application relies on its scheduler to run these commands. **Neither
-current server has them yet** (no crontab for either site user), so the
-monitoring page's "Scheduled jobs" check reads "never reported" and no backups
-are taken by the app until they are added. For each environment, as the site
-user (`crontab -e`):
+### The jobs (installed by the deploy)
+
+The deploy installs the seven scheduled jobs itself (audit D5): it writes the
+block between `# BEGIN mentora jobs` and `# END mentora jobs` in the site
+user's crontab from `deploy/crontab.txt`, with the site's folder and
+`PHP_BIN`, leaving every other line alone, and fails if afterwards `crontab -l`
+is missing one. The block it writes looks like this:
 
 ```cron
-*/5 * * * *  cd <site folder> && php8.5 spark backup:run          >> writable/logs/cron-backup.log 2>&1
-15 2 * * *   cd <site folder> && php8.5 spark subscriptions:sync  >> writable/logs/cron-sync.log 2>&1
-30 2 * * *   cd <site folder> && php8.5 spark institutions:purge-expired >> writable/logs/cron-purge.log 2>&1
-# tells parents what changed for their children (docs/notifications.md); without it only final grades are sent
-*/15 * * * * cd <site folder> && php8.5 spark parents:notify       >> writable/logs/cron-parents.log 2>&1
-# only when SIS is in use (sis-integration.md), in this order:
-0 3 * * *    cd <site folder> && php8.5 spark sis:sync            >> writable/logs/cron-sis.log 2>&1
-30 3 * * *   cd <site folder> && php8.5 spark sis:grades          >> writable/logs/cron-sis.log 2>&1
+# BEGIN mentora jobs
+*/5 * * * *  cd '<site folder>' && php8.5 spark backup:run >> writable/logs/cron-backup.log 2>&1
+15 2 * * *   cd '<site folder>' && php8.5 spark subscriptions:sync >> writable/logs/cron-sync.log 2>&1
+30 2 * * *   cd '<site folder>' && php8.5 spark institutions:purge-expired >> writable/logs/cron-purge.log 2>&1
+*/15 * * * * cd '<site folder>' && php8.5 spark parents:notify >> writable/logs/cron-parents.log 2>&1
+0 3 * * *    cd '<site folder>' && php8.5 spark sis:sync >> writable/logs/cron-sis.log 2>&1
+30 3 * * *   cd '<site folder>' && php8.5 spark sis:grades >> writable/logs/cron-sis.log 2>&1
+* * * * *    cd '<site folder>' && php8.5 spark exports:run >> writable/logs/cron-exports.log 2>&1
+# END mentora jobs
 ```
 
-Set `backup.path` in `.env` to a folder outside the site and, ideally, copy it
-off the server (`backup.md`). The app's backups and the deploy's pre-deploy
-dumps are separate things.
+All seven run on every server (6.4); the SIS jobs do nothing where no
+institution has SIS enabled. To change a schedule, edit `deploy/crontab.txt`
+and deploy: a hand edit inside the block is overwritten by the next deploy.
+To install it by hand (as the site user, from the site folder):
+
+```bash
+(crontab -l 2>/dev/null || true) | php8.5 spark jobs:crontab --no-header --site "$PWD" --php php8.5 > /tmp/next-crontab
+crontab /tmp/next-crontab && crontab -l | php8.5 spark jobs:crontab --no-header --verify
+```
+
+**Check once on staging:** that CloudPanel's **Cron Jobs** screen does not
+rewrite the crontab and drop lines it did not create (the repository can't tell).
+After a deploy, open the screen, save something unrelated, and run `crontab -l`:
+the block must still be there. If CloudPanel drops it, the jobs must be entered
+through CloudPanel instead, and the deploy step changed to only verify.
+
+### The scheduler check (alerts when a job stops)
+
+Set `scheduler.checkSecret` in `.env` to a long random value, and put the same
+value in the repository's Actions secrets as `SCHEDULER_SECRET_STAGING` or
+`SCHEDULER_SECRET_PRODUCTION`. The hourly uptime workflow then asks the site
+whether the jobs have reported, and the site emails every system administrator
+once when one stops and once when it is back (`uptime.md`, `monitoring.md`).
+
+### Off-server backup copy (required before the first real institution)
+
+The app's backups live on the same server as the app. Before the first real
+institution goes on production, each good backup must also be copied somewhere
+else (audit 11.4, U3). Production only: staging has no off-server copy.
+
+What is required (U3b, U3c):
+
+- **A different provider than Hostinger, under a separate account**, so one
+  provider's or account's trouble can't take both copies.
+- **Encrypted before it leaves the server.**
+- **Append-only from the server:** the server's key can add copies but can't
+  delete or overwrite them, so a compromised server can't destroy the history.
+- **Kept 30 days**, by the storage's own lifecycle rule.
+- **Both the database dumps and the uploaded files** (`writable/uploads`), which
+  are not in the dump.
+
+The recommended setup is [rclone](https://rclone.org/) (no root needed), with an
+S3-compatible bucket at another provider (for example Backblaze B2 or
+Cloudflare R2):
+
+1. In the provider's console: a bucket with **object lock or versioning** and a
+   **30-day lifecycle rule**, and an **application key limited to that bucket
+   that can write but not delete** (B2: `writeFiles` and `listFiles` only).
+2. As the site user, `rclone config`: a remote `offsite` for the bucket with that
+   key, then a `crypt` remote `offsite-crypt` on top of it (`offsite:mentora-prod`),
+   with a generated password and salt. **Keep both in the password manager**:
+   without them the copies can't be read.
+3. A script, for example `~/bin/mentora-offsite`, executable by the site user:
+
+   ```bash
+   #!/usr/bin/env bash
+   # $1 = the dump file, $2 = the uploads folder. Exit 0 only when the storage holds both.
+   set -euo pipefail
+   stamp=$(date +%Y%m%d)
+   rclone copy "$1" offsite-crypt:dumps/ --immutable
+   rclone check "$1" offsite-crypt:dumps/ --one-way --include "$(basename "$1")"
+   rclone copy "$2" "offsite-crypt:uploads/$stamp/" --immutable
+   rclone check "$2" "offsite-crypt:uploads/$stamp/" --one-way
+   ```
+
+4. In production's `.env`: `backup.offsiteCommand = /home/<site user>/bin/mentora-offsite`.
+5. Take a backup from `/admin/backups` and check its **Off-site copy** reads
+   **Copied**. A failed copy is shown there and emailed to the system
+   administrators.
+
+**Go-live check (U3d), done by the repository owner, once:** fetch one copy back
+to another machine (`rclone copy offsite-crypt:dumps/<file> .` and a sample of
+`offsite-crypt:uploads/<date>/`), then open both: `gunzip -t` the dump and load
+it into a scratch database, and open a few of the files. It counts as done only
+then. Record the date here:
+
+- Production go-live check: _not done yet_
 
 ## 7. The question-builder worker (root for the install, then the deploy keeps it current)
 

@@ -79,6 +79,15 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         return [$id, $admin, $student];
     }
 
+    /** Asks for an export and lets the job prepare it, as the server would (12.2). */
+    private function exportNow(int $institutionId, \CodeIgniter\Shield\Entities\User $admin, DateTimeImmutable $at): int
+    {
+        $id = $this->export->request($institutionId, $admin, $at);
+        $this->export->runQueued($at);
+
+        return $id;
+    }
+
     /** @return array<string, list<list<string>>> file name => rows (header first) */
     private function open(int $exportId): array
     {
@@ -110,7 +119,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         [$id, $admin] = $this->institutionWithData('active');
 
         $this->expectException(InvalidArgumentException::class);
-        $this->export->build($id, $admin, $this->now);
+        $this->exportNow($id, $admin, $this->now);
     }
 
     public function testAnInstitutionWhoseSubscriptionRanOutCanExportEvenBeforeTheNightlyJob(): void
@@ -121,7 +130,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         $db->table('plans')->insert(['name' => 'Lapsed plan', 'status' => 'active']);
         $db->table('subscriptions')->insert(['institution_id' => $id, 'plan_id' => (int) $db->insertID(), 'start_date' => '2025-01-01', 'end_date' => '2026-07-01']);
 
-        $this->export->build($id, $admin, $this->now);
+        $this->exportNow($id, $admin, $this->now);
 
         $this->assertSame(1, $db->table('institution_exports')->where(['institution_id' => $id, 'status' => 'ready'])->countAllResults());
     }
@@ -131,14 +140,14 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         [, $admin] = $this->institutionWithData();
 
         $this->expectException(InvalidArgumentException::class);
-        $this->export->build(999999, $admin, $this->now);
+        $this->exportNow(999999, $admin, $this->now);
     }
 
     public function testTheZipHoldsEveryDatasetWithItsRows(): void
     {
         [$id, $admin] = $this->institutionWithData();
 
-        $files = $this->open($this->export->build($id, $admin, $this->now));
+        $files = $this->open($this->exportNow($id, $admin, $this->now));
 
         foreach (['institution', 'terms', 'departments', 'sub_departments', 'programs', 'courses', 'offerings', 'people', 'enrollments', 'final_grades', 'assessments', 'submissions', 'announcements'] as $name) {
             $this->assertArrayHasKey("{$name}.csv", $files);
@@ -155,7 +164,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
     {
         [$id, $admin] = $this->institutionWithData();
 
-        $export = $this->open($this->export->build($id, $admin, $this->now));
+        $export = $this->open($this->exportNow($id, $admin, $this->now));
         $people = $export['people.csv'];
 
         $this->assertSame(['email', 'username', 'first_name', 'last_name', 'student_number', 'roles', 'active'], $people[0]);
@@ -171,7 +180,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
     {
         [$id, $admin] = $this->institutionWithData();
 
-        $files = $this->open($this->export->build($id, $admin, $this->now));
+        $files = $this->open($this->exportNow($id, $admin, $this->now));
 
         $cell = $files['submissions.csv'][1][9];
 
@@ -183,7 +192,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         [$id, $admin]  = $this->institutionWithData();
         [$otherId]     = $this->institutionWithData();
 
-        $files = $this->open($this->export->build($id, $admin, $this->now));
+        $files = $this->open($this->exportNow($id, $admin, $this->now));
 
         $this->assertNotSame($id, $otherId);
         $this->assertCount(2, $files['courses.csv']);
@@ -195,7 +204,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
     {
         [$id, $admin] = $this->institutionWithData();
 
-        $exportId = $this->export->build($id, $admin, $this->now);
+        $exportId = $this->exportNow($id, $admin, $this->now);
         $row      = db_connect()->table('institution_exports')->where('id', $exportId)->get()->getRowArray();
 
         $this->assertSame('ready', $row['status']);
@@ -214,7 +223,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         [$id, $admin] = $this->institutionWithData();
         [$otherId]    = $this->institutionWithData();
 
-        $exportId = $this->export->build($id, $admin, $this->now);
+        $exportId = $this->exportNow($id, $admin, $this->now);
 
         $this->assertNotNull($this->export->downloadable($id, $exportId, $this->now));
         $this->assertNull($this->export->downloadable($otherId, $exportId, $this->now), 'someone else\'s export');
@@ -226,7 +235,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
     {
         [$id, $admin] = $this->institutionWithData();
 
-        $exportId = $this->export->build($id, $admin, $this->now);
+        $exportId = $this->exportNow($id, $admin, $this->now);
         $row      = db_connect()->table('institution_exports')->where('id', $exportId)->get()->getRowArray();
         unlink($this->folder . DIRECTORY_SEPARATOR . $row['file_name']);
 
@@ -237,11 +246,11 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
     {
         [$id, $admin] = $this->institutionWithData();
 
-        $old = $this->export->build($id, $admin, $this->now->modify('-10 days'));
+        $old = $this->exportNow($id, $admin, $this->now->modify('-10 days'));
         $row = db_connect()->table('institution_exports')->where('id', $old)->get()->getRowArray();
 
         // Building a new one prunes the old one.
-        $new = $this->export->build($id, $admin, $this->now);
+        $new = $this->exportNow($id, $admin, $this->now);
 
         $this->assertNull(db_connect()->table('institution_exports')->where('id', $old)->get()->getRowArray());
         $this->assertFileDoesNotExist($this->folder . DIRECTORY_SEPARATOR . $row['file_name']);
@@ -257,14 +266,15 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         $this->assertTrue(is_file($this->folder));
 
         try {
-            $this->export->build($id, $admin, $this->now);
-            $this->fail('Expected an exception.');
-        } catch (RuntimeException $e) {
-            $this->assertStringContainsString('folder', $e->getMessage());
+            $exportId = $this->exportNow($id, $admin, $this->now);
         } finally {
             unlink($this->folder);
         }
 
-        $this->assertSame([], $this->export->history($id));
+        // Prepared in the background now (12.2): the export ends as failed, with why, and no file.
+        $row = db_connect()->table('institution_exports')->where('id', $exportId)->get()->getRowArray();
+        $this->assertSame('failed', $row['status']);
+        $this->assertStringContainsString('folder', (string) $row['message']);
+        $this->assertNull($row['file_name']);
     }
 }

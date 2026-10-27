@@ -59,6 +59,8 @@ jobs:
       ALERT_USER: waway647
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      # The secret the site's scheduler check expects (scheduler.checkSecret in its .env). Empty: the check is skipped.
+      SCHEDULER_SECRET: ${{ matrix.slug == 'production' && secrets.SCHEDULER_SECRET_PRODUCTION || secrets.SCHEDULER_SECRET_STAGING }}
 
     steps:
       - uses: actions/checkout@v7
@@ -88,6 +90,22 @@ jobs:
           done
           echo "::error::$ENV_NAME failed the smoke test three times in a row: $SITE_URL"
           exit 1
+
+      # Asks the site whether its scheduled jobs have reported recently. The site itself emails the system
+      # administrators once when a job stops and once when it is back (docs/uptime.md, audit U2); this step
+      # only fails when the check could not be made.
+      - name: Check the scheduled jobs
+        if: success()
+        # Never turns into a "site is down" issue: the site answered the smoke test.
+        continue-on-error: true
+        run: |
+          if [ -z "$SCHEDULER_SECRET" ]; then
+            echo "::notice::No scheduler secret for $ENV_NAME; the scheduled jobs were not checked (docs/uptime.md)."
+            exit 0
+          fi
+          # TLS_FLAG is left unquoted on purpose: empty means no argument at all.
+          curl -fsS -X POST -H "X-Scheduler-Secret: $SCHEDULER_SECRET" $TLS_FLAG "$SITE_URL/index.php/internal/scheduler-check"
+          echo
 
       # One open issue per site at a time (found by its title): a new failure
       # opens it, a repeat failure adds a comment, and recovery closes it. The

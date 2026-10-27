@@ -64,6 +64,21 @@ class Services extends BaseService
         return new MysqldumpRunner();
     }
 
+    /**
+     * Copies good backups off the server (audit U3): the command in `backup.offsiteCommand`, or null when none
+     * is set (staging). Tests give it their own with injectMock('offsiteCopier', ...).
+     */
+    public static function offsiteCopier(bool $getShared = true): ?\App\Services\Backup\OffsiteCopier
+    {
+        if ($getShared) {
+            return static::getSharedInstance('offsiteCopier');
+        }
+
+        $command = trim((string) env('backup.offsiteCommand', ''));
+
+        return $command === '' ? null : new \App\Services\Backup\ShellOffsiteCopier($command, (string) config('Database')->default['password']);
+    }
+
     /** Seals integration credentials; tests give it their own key with injectMock('credentialVault', ...). */
     public static function credentialVault(bool $getShared = true): CredentialVault
     {

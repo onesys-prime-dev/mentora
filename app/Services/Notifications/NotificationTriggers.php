@@ -83,10 +83,14 @@ class NotificationTriggers
             return 0;
         }
 
-        $latest = db_connect()->table('backups')->selectMax('finished_at')->where('status', $alert['kind'] === 'failed' ? 'failed' : 'succeeded')->get()->getRowArray()['finished_at'] ?? 'never';
         $this->admins = $this->recipients->administrators();
 
-        return $this->tell($this->admins, 'backup.' . $alert['kind'], 'Backups need attention', $alert['message'], true, 'backup:' . $alert['kind'] . ':' . $latest, null, 'admin/backups', $now);
+        // A failure shares backup:run's key (one per run of failures), so neither repeats the other.
+        $key = $alert['kind'] === 'failed'
+            ? BackupService::failureStreakKey()
+            : 'backup:' . $alert['kind'] . ':' . (db_connect()->table('backups')->selectMax('finished_at')->where('status', 'succeeded')->get()->getRowArray()['finished_at'] ?? 'never');
+
+        return $this->tell($this->admins, 'backup.' . $alert['kind'], 'Backups need attention', $alert['message'], true, $key, null, 'admin/backups', $now);
     }
 
     /**

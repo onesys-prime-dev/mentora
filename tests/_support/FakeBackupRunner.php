@@ -19,6 +19,9 @@ final class FakeBackupRunner implements BackupRunner
 {
     public bool $fail = false;
 
+    /** What the dump looks like: `complete` (gzip ending as mysqldump's does), `truncated` (cut mid-stream), `unfinished` (no closing line). */
+    public string $mode = 'complete';
+
     public int $calls = 0;
 
     public string $folder;
@@ -55,6 +58,16 @@ final class FakeBackupRunner implements BackupRunner
             throw new RuntimeException('mysqldump failed: access denied');
         }
 
-        file_put_contents($path, 'fake dump ' . $this->calls);
+        $sql = "-- MySQL dump\nCREATE TABLE t (id int);\nINSERT INTO t VALUES ({$this->calls});\n" . str_repeat("-- padding\n", 2000);
+
+        // mysqldump writes this line last, once every table is out.
+        if ($this->mode !== 'unfinished') {
+            $sql .= "-- Dump completed on 2026-10-10 12:00:00\n";
+        }
+
+        $gz = gzencode($sql, 9);
+
+        // A gzip stream cut short, as a disk filling up mid-dump leaves it.
+        file_put_contents($path, $this->mode === 'truncated' ? substr($gz, 0, intdiv(strlen($gz), 2)) : $gz);
     }
 }

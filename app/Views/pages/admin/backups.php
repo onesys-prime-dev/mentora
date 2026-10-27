@@ -27,6 +27,12 @@ foreach ($backupRows as $row) {
             'file'     => ['html' => '<span class="font-mono text-xs">' . esc((string) ($row['file_name'] ?? '—')) . '</span>'],
             'size'     => $row['size_bytes'] === null ? '—' : number_format((int) $row['size_bytes'] / 1048576, 1) . ' MB',
             'finished' => substr((string) ($row['finished_at'] ?? ''), 0, 16) ?: '—',
+            // The copy off the server (U3): only for a good backup, when an off-site command is set.
+            'offsite'  => ['html' => match ($row['offsite_status'] ?? null) {
+                'copied' => view('components/status-badge', ['label' => 'Copied', 'tone' => 'success'], ['saveData' => false]),
+                'failed' => view('components/status-badge', ['label' => 'Failed', 'tone' => 'danger'], ['saveData' => false]) . '<span class="mt-1 block text-xs text-[#C33939]">' . esc((string) $row['offsite_message']) . '</span>',
+                default  => '—',
+            }],
             'by'       => (string) ($row['requested_by_label'] ?? 'system'),
         ],
     ];
@@ -58,6 +64,7 @@ foreach ($backupRows as $row) {
             ['key' => 'trigger', 'label' => 'Trigger'],
             ['key' => 'status', 'label' => 'Status'],
             ['key' => 'file', 'label' => 'File'],
+            ['key' => 'offsite', 'label' => 'Off-site copy'],
             ['key' => 'size', 'label' => 'Size'],
             ['key' => 'finished', 'label' => 'Finished'],
             ['key' => 'by', 'label' => 'By'],

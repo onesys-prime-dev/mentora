@@ -50,17 +50,18 @@ class ExportController extends BaseController
             return redirect()->to('/');
         }
 
+        // Prepared in the background (12.2); the person who asked is told when it is ready.
         try {
-            (new InstitutionExport())->build((int) $institution['id'], auth()->user());
+            (new InstitutionExport())->request((int) $institution['id'], auth()->user());
         } catch (InvalidArgumentException $e) {
             return redirect()->to('institution/export')->with('error', $e->getMessage());
         } catch (Throwable $e) {
-            log_message('error', 'Institution export failed: ' . $e->getMessage());
+            log_message('error', 'Institution export request failed: ' . $e->getMessage());
 
-            return redirect()->to('institution/export')->with('error', 'The export could not be made. Please try again, or contact support.');
+            return redirect()->to('institution/export')->with('error', 'The export could not be asked for. Please try again, or contact support.');
         }
 
-        return redirect()->to('institution/export')->with('message', 'Your export is ready below.');
+        return redirect()->to('institution/export')->with('message', "Your export is being prepared. We'll tell you here and by email when it's ready.");
     }
 
     public function download(int $id): DownloadResponse|RedirectResponse

@@ -76,7 +76,10 @@ final class AdminMonitoringPageTest extends RouteTestCase
     {
         $this->assertMatchesRegularExpression('/data-check="jobs" data-status="degraded"/', $this->step('GET', 'admin/monitoring')->response()->getBody());
 
-        setting()->set('Monitoring.subscriptionSyncAt', time() - 3600);
+        // All seven report (6.2), not only the nightly one.
+        foreach (array_keys(\App\Services\Monitoring\ScheduledJobs::JOBS) as $command) {
+            \App\Services\Monitoring\ScheduledJobs::heartbeat($command, time() - 60);
+        }
 
         $this->assertMatchesRegularExpression('/data-check="jobs" data-status="up"/', $this->step('GET', 'admin/monitoring')->response()->getBody());
     }

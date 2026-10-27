@@ -120,11 +120,12 @@ final class CsrfProtectionTest extends RouteTestCase
         }
     }
 
-    public function testCsrfIsOnForEveryRequestExceptTheWorker(): void
+    public function testCsrfIsOnForEveryRequestExceptTheWorkerAndTheSchedulerCheck(): void
     {
         $before = config(\Config\Filters::class)->globals['before'];
 
-        $this->assertSame(['except' => ['internal/ai/*']], $before['csrf'] ?? null);
+        // Both are called by machines with their own shared secret, never from a page.
+        $this->assertSame(['except' => ['internal/ai/*', 'internal/scheduler-check']], $before['csrf'] ?? null);
     }
 
     public function testSigningInGivesANewToken(): void

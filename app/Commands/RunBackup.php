@@ -27,6 +27,18 @@ class RunBackup extends BaseCommand
 
     public function run(array $params)
     {
+        $code = $this->work($params);
+
+        // The scheduler check watches for this job going quiet (6.2); a dry run is not the job.
+        if (! array_key_exists('dry-run', $params) && CLI::getOption('dry-run') === null) {
+            \App\Services\Monitoring\ScheduledJobs::heartbeat('backup:run');
+        }
+
+        return $code;
+    }
+
+    private function work(array $params)
+    {
         $service = new BackupService();
         $ids     = $service->runDue();
 

@@ -119,8 +119,15 @@ final class InstitutionExportTest extends RouteTestCase
 
         $this->step('POST', 'institution/export');
 
+        // Prepared in the background (12.2): first it is being prepared, and no second one can be asked for.
+        $preparing = $this->step('GET', 'institution/export');
+        $preparing->assertSee('Being prepared');
+        $preparing->assertDontSee('Create an export');
+
+        (new \App\Services\Institutions\InstitutionExport())->runQueued();
+
         $row = db_connect()->table('institution_exports')->where('institution_id', $this->institution)->get()->getRowArray();
-        $this->assertNotNull($row);
+        $this->assertSame('ready', $row['status']);
         $this->assertSame(1, $this->actions('institution.exported'));
 
         $this->step('GET', 'institution/export')->assertSee('Download');
@@ -192,18 +199,34 @@ final class InstitutionExportTest extends RouteTestCase
         $this->assertSame(0, db_connect()->table('institution_exports')->countAllResults());
     }
 
-    public function testAFailureToMakeTheFileIsReportedAndNothingIsKept(): void
+    public function testAFailureToMakeTheFileIsShownAndAnotherCanBeAskedFor(): void
     {
-        // A file where the folder should be, so the folder cannot be made.
+        $this->step('POST', 'institution/export');
+
+        // A file where the folder should be, so the job cannot make the folder.
         file_put_contents($this->folder, 'x');
 
         try {
-            $response = $this->step('POST', 'institution/export');
+            (new \App\Services\Institutions\InstitutionExport())->runQueued();
         } finally {
             unlink($this->folder);
         }
 
-        $this->assertSame(0, db_connect()->table('institution_exports')->countAllResults());
-        $this->assertSame(302, $response->response()->getStatusCode());
+        $page = $this->step('GET', 'institution/export');
+        $this->assertStringContainsString('data-export="failed"', (string) $page->response()->getBody());
+        $page->assertSee('The export folder could not be created.'); // why it failed, under its badge
+        $page->assertSee('Create an export');
+    }
+
+    public function testEveryAdministratorSeesThatOneIsBeingPrepared(): void
+    {
+        $other = \Tests\Support\PeopleFactory::person('institutional_admin', 'Ben', 'Admin', 'ben@export.test', $this->institution);
+        (new \App\Services\Institutions\InstitutionExport())->request($this->institution, $other);
+
+        $page = $this->step('GET', 'institution/export');
+
+        $page->assertSee('An export is being prepared.');
+        $page->assertSee('ben@export.test');
+        $page->assertDontSee('Create an export');
     }
 }

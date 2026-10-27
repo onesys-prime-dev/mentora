@@ -70,6 +70,7 @@ class Filters extends BaseFilters
         'maintenance'   => MaintenanceFilter::class,
         'chairpersoncourseaudit' => ChairpersonCourseAudit::class,
         'aiworker'      => AiWorkerFilter::class,
+        'schedulercheck' => \App\Filters\SchedulerCheckFilter::class,
     ];
 
     /**
@@ -110,8 +111,8 @@ class Filters extends BaseFilters
         'before' => [
             // 'honeypot',
             // First: a page that was open too long is answered before anything else looks at the request.
-            // The AI worker is the one exception; it is authenticated by its own secret (aiworker).
-            'csrf' => ['except' => ['internal/ai/*']],
+            // The AI worker and the scheduler check are the exceptions; each is authenticated by its own secret.
+            'csrf' => ['except' => ['internal/ai/*', 'internal/scheduler-check']],
             // 'invalidchars',
 
             // A deactivated account, or a session an administrator ended, is turned away here.

@@ -13,7 +13,7 @@ nothing else).
 | File storage | writable folders can be written | | a writable folder is not writable |
 | Disk space | under 90% used | 90% or more | 97% or more |
 | Question-builder (AI) worker | the worker reported in the last 90 s | never reported, or silent for more than 90 s (generation waits in the queue) | |
-| Scheduled jobs | `subscriptions:sync` ran in the last 36 h | late (36 h to 72 h) or never reported | silent for 72 h or more |
+| Scheduled jobs | all seven reported within their allowed gap | one or more late, or never reported | one silent for three times its gap |
 
 The question-builder check reads the worker's heartbeat (the newest
 `ai_worker_heartbeats.last_seen_at`; the worker reports every 15 s while idle).
@@ -29,9 +29,25 @@ mentora-qb-worker-<env>`, see `deploy.md`).
 The overall badge is the worst of them. A check that throws is shown as down
 with a generic message (the detail goes to the log).
 
-The jobs check relies on the daily `subscriptions:sync` run recording its time
-(`Monitoring.subscriptionSyncAt`). On a new server it reads "never reported"
-until the scheduler's first run.
+The jobs check (audit 6.2) reads each scheduled job's heartbeat: every command
+records when it last ran to the end, a run with nothing to do included (a dry
+run does not count). `ScheduledJobs` holds the list:
+
+| Command | Heartbeat setting | Allowed gap |
+|---|---|---|
+| `backup:run` | `Monitoring.backupRunAt` | 15 min |
+| `parents:notify` | `Monitoring.parentsNotifyAt` | 45 min |
+| `exports:run` | `Monitoring.exportsRunAt` | 15 min |
+| `subscriptions:sync` | `Monitoring.subscriptionSyncAt` | 26 h |
+| `institutions:purge-expired` | `Monitoring.purgeExpiredAt` | 26 h |
+| `sis:sync` | `Monitoring.sisSyncAt` | 26 h (only while some institution has SIS enabled) |
+| `sis:grades` | `Monitoring.sisGradesAt` | 26 h (likewise) |
+
+The check names the late ones ("Not reporting: backup:run, parents:notify."), and
+the admin home shows the same warning. On a new server every job reads "never
+reported" until the scheduler's first runs. The system administrators are also
+emailed once when a job stops and once when it is back, by the hourly scheduler
+check (`uptime.md`).
 
 ## Also on the page
 - Platform counts: institutions, active users, active today, live sessions,

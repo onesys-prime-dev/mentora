@@ -185,7 +185,12 @@ test("TC-SA-06 A lapsed subscription makes the institution read-only, and its ad
 
     await page.getByRole("button", { name: "Create an export" }).click();
 
-    await expect(page.getByRole("status").filter({ hasText: "Your export is ready" })).toBeVisible();
+    // It is prepared in the background (audit 12.2): first the page says so, then the server's job makes it.
+    await expect(page.getByRole("status").filter({ hasText: "Your export is being prepared" })).toBeVisible();
+    await expect(page.locator("[data-export-preparing]")).toBeVisible();
+    spark("exports:run");
+    await page.reload();
+
     const link = page.locator('[data-export="ready"]').first();
     await expect(link).toBeVisible();
 

@@ -17,12 +17,36 @@ every few minutes (it exits at once when there is nothing to do). It:
 
 Dumps are `mysqldump | gzip` files named `mentora-YYYYMMDD-HHMMSS.sql.gz` in
 `writable/backups` (set `backup.path` in `.env` to put them elsewhere, ideally
-off the web server's disk). The newest 14 are kept. The password is passed to
+off the web server's disk).
+
+**A backup counts only once it is proven whole** (audit 11.1): mysqldump exited
+0, every write to the file succeeded, and the file reads back to the end as
+gzip with mysqldump's closing `-- Dump completed` line last. Otherwise it is
+**failed**, its file is deleted, and the system administrators are told at once
+(urgent, so by email), not at the next nightly run.
+
+**The newest 14 good backups are kept** (11.2): only proven-good ones count, so
+a failing run never pushes a good one out, and a file no good backup owns (left
+by a crashed run) is removed after the next good one. The password is passed to
 `mysqldump` in the environment, never on the command line. Each attempt is a
 row in `backups` (history, size, status, reason when it failed).
 
 The deploy workflow also takes its own pre-deploy dump in `~/backups`; that is
 separate from these.
+
+## The off-server copy (required before the first real institution)
+
+After each good backup, `backup:run` runs the command in `backup.offsiteCommand`
+(in `.env`) with two arguments, the dump's path and the uploads folder
+(`writable/uploads`), and records the result on the backup row: the **Off-site
+copy** column on `/admin/backups` reads Copied, Failed (with why) or "—" (no
+command set, or the backup was not good). A failed copy keeps the backup good and
+tells the system administrators at once (urgent). The command gets two hours.
+The database password is masked in anything it prints.
+
+Production only: leave `backup.offsiteCommand` unset on staging (audit U3a). What
+the command does, and where it sends the copy, is set up on the server: see
+`server-setup.md`, "Off-server backup copy", and its go-live check.
 
 ## Alerts
 
@@ -55,9 +79,9 @@ deliberate act on the server by someone who has read this.
    administrator.
 6. **Start the site again.**
 
-Uploaded files (`writable/uploads`) are not in the database dump; back them up
-with your normal file backup if you need them.
+Uploaded files (`writable/uploads`) are not in the database dump. The off-server
+copy holds them: restore them from there (`server-setup.md`).
 
 ## Not here yet
-Offsite copy of the dumps, and encryption of the dump files at rest, are left
-to the server's own tooling.
+A test restore of each backup (11.3: the read-back check is enough until real
+institutions arrive), and encryption of the dump files on the server itself.

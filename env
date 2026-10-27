@@ -94,6 +94,22 @@
 # questionBuilder.serviceUrl = http://127.0.0.1:8008
 
 #--------------------------------------------------------------------
+# SCHEDULED JOBS AND BACKUPS (docs/server-setup.md, section 6)
+#--------------------------------------------------------------------
+
+# The secret the hourly uptime workflow sends to POST internal/scheduler-check,
+# which emails the system administrators when a scheduled job stops. The SAME
+# value goes in GitHub's SCHEDULER_SECRET_STAGING or SCHEDULER_SECRET_PRODUCTION.
+# While empty, the check answers 503 on purpose.
+# scheduler.checkSecret =
+
+# Where the backups go (default writable/backups), and, on production only, the
+# command that copies each good backup off the server. It gets two arguments:
+# the dump's path and the uploads folder; exit 0 means the copy is verified.
+# backup.path =
+# backup.offsiteCommand =
+
+#--------------------------------------------------------------------
 # ENCRYPTION
 #--------------------------------------------------------------------
 

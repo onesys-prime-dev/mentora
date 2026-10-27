@@ -27,6 +27,10 @@ $routes->post('reset-password/(:segment)', 'PasswordResetController::complete/$1
 // is the other person's and must not need the admin group to get out (the filter allows it).
 $routes->post('impersonation/stop', 'Admin\ImpersonationController::stop');
 
+// The hourly scheduler check, called from GitHub's uptime workflow: no session, a shared secret only
+// (SchedulerCheckFilter, audit U2).
+$routes->post('internal/scheduler-check', 'Internal\SchedulerCheckController::run', ['filter' => 'schedulercheck']);
+
 // The question-builder worker's side of the job queue: no session, loopback and
 // a shared secret only (AiWorkerFilter).
 $routes->group('internal/ai', ['filter' => 'aiworker'], function ($routes) {

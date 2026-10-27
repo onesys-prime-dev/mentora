@@ -82,7 +82,7 @@ final class InstitutionExportRollbackTest extends DatabaseTestCase
         });
 
         try {
-            (new InstitutionExport())->build($id, $admin);
+            (new InstitutionExport())->request($id, $admin);
             $this->fail('Expected an exception.');
         } catch (RuntimeException $e) {
             $this->assertSame('audit down', $e->getMessage());
