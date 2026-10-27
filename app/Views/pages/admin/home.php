@@ -1,6 +1,6 @@
 <?php
 /**
- * The administrator's Home, laid out as a console: square, ruled, dense. A
+ * The administrator's Home, laid out as a console: ruled and dense, with the same rounded corners as the rest of the admin area. A
  * strip of platform checks, what needs fixing, the key numbers, shortcuts and a
  * table of recent activity.
  *
@@ -15,8 +15,8 @@ use App\Services\Monitoring\SystemHealth;
 $statusNames = ['pending' => 'Pending', 'read_only' => 'Read-only', 'past' => 'Past'];
 
 $ring    = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$primary = 'border border-brand bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark ' . $ring;
-$second  = 'border border-brand bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint ' . $ring;
+$primary = 'rounded-full border border-brand bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark ' . $ring;
+$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint ' . $ring;
 
 $cellLabel = 'text-[11px] font-semibold uppercase tracking-wide text-[#646464]';
 $rule      = 'border-gray-300';
@@ -65,7 +65,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 border <?= $rule ?> bg-white p-5 sm:p-6">
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Home',
@@ -80,8 +80,10 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
     <section aria-labelledby="home-attention" data-section="attention">
         <h2 id="home-attention" class="sr-only">Needs attention</h2>
 
+        <div class="overflow-hidden rounded-2xl border <?= $rule ?>">
+
         <?php if ($homeHealth !== []): ?>
-            <ul class="grid grid-cols-2 border-l border-t <?= $rule ?> sm:grid-cols-3 lg:grid-cols-5" data-health>
+            <ul class="-mr-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" data-health>
                 <?php foreach ($homeHealth as $cell): ?>
                     <?php [$dot, $word] = $healthTone[$cell['status']] ?? $healthTone[SystemHealth::DEGRADED]; ?>
                     <li class="border-b border-r <?= $rule ?> px-3 py-2.5" data-health-cell="<?= esc($cell['key']) ?>" title="<?= esc($cell['detail']) ?>">
@@ -96,11 +98,11 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         <?php endif; ?>
 
         <?php if ($homeAttention === []): ?>
-            <div class="flex items-center gap-3 border <?= $homeHealth !== [] ? 'border-t-0' : '' ?> <?= $rule ?> bg-gray-50 px-3 py-2.5 text-sm">
+            <div class="flex items-center gap-3 bg-gray-50 px-3 py-2.5 text-sm">
                 <p class="flex items-center gap-2 font-semibold text-[#1F5D39]" data-attention-empty><?= icon('check', 'h-4 w-4 text-[#2E7D4F]') ?> All systems normal. Nothing needs attention right now.</p>
             </div>
         <?php else: ?>
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border <?= $homeHealth !== [] ? 'border-t-0' : '' ?> <?= $rule ?> bg-gray-50 px-3 py-2.5 text-sm">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 bg-gray-50 px-3 py-2.5 text-sm">
                 <p class="flex items-center gap-2 font-semibold <?= $urgentCount > 0 ? 'text-[#C33939]' : 'text-[#946200]' ?>">
                     <?= icon($urgentCount > 0 ? 'warning' : 'attention', 'h-4 w-4 shrink-0 text-current') ?>
                     <?= esc((string) $attentionN) ?> to fix
@@ -108,7 +110,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
                 <ul class="flex flex-wrap gap-2">
                     <?php foreach ($homeAttention as $item): ?>
                         <li>
-                            <a class="inline-flex max-w-full items-center gap-1 border bg-white px-2.5 py-1 text-xs font-semibold transition hover:bg-brand-tint <?= $ring ?> <?= esc($chipTone[$item['severity']] ?? $chipTone['soon']) ?>" href="<?= site_url($item['link']) ?>" data-attention="<?= esc($item['severity']) ?>">
+                            <a class="inline-flex max-w-full items-center gap-1 rounded-full border bg-white px-3 py-1 text-xs font-semibold transition hover:bg-brand-tint <?= $ring ?> <?= esc($chipTone[$item['severity']] ?? $chipTone['soon']) ?>" href="<?= site_url($item['link']) ?>" data-attention="<?= esc($item['severity']) ?>">
                                 <span class="sr-only"><?= $item['severity'] === 'urgent' ? 'Urgent' : 'Soon' ?>: </span><span class="truncate"><?= esc($item['text']) ?></span><span aria-hidden="true">›</span>
                             </a>
                         </li>
@@ -116,12 +118,15 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
                 </ul>
             </div>
         <?php endif; ?>
+
+        </div>
     </section>
 
     <section class="flex flex-col gap-2" aria-labelledby="home-snapshot" data-section="snapshot">
         <h2 id="home-snapshot" class="text-base font-bold text-brand">Snapshot</h2>
 
-        <dl class="grid grid-cols-1 border-l border-t <?= $rule ?> sm:grid-cols-3">
+        <div class="overflow-hidden rounded-2xl border <?= $rule ?>">
+        <dl class="-mb-px -mr-px grid grid-cols-1 sm:grid-cols-3">
             <div class="border-b border-r <?= $rule ?> px-3 py-3" data-status-count="active">
                 <dt class="<?= $cellLabel ?>">Active institutions</dt>
                 <dd class="font-display text-3xl font-bold <?= $value($homeSnapshot['byStatus']['active']) ?>"><?= esc((string) $homeSnapshot['byStatus']['active']) ?></dd>
@@ -135,6 +140,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
                 <dd class="font-display text-3xl font-bold <?= $value($homeSnapshot['signedInToday']) ?>"><?= esc(number_format($homeSnapshot['signedInToday'])) ?></dd>
             </div>
         </dl>
+        </div>
 
         <dl class="flex flex-wrap gap-x-5 gap-y-1 text-sm text-[#646464]">
             <?php foreach ($statusNames as $key => $label): ?>
@@ -152,7 +158,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         <ul class="flex flex-wrap gap-2">
             <?php foreach ($shortcuts as [$label, $shortcutIcon, $path]): ?>
                 <li>
-                    <a class="flex items-center gap-2 border <?= $rule ?> bg-white px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint <?= $ring ?>" href="<?= site_url($path) ?>">
+                    <a class="flex items-center gap-2 rounded-xl border <?= $rule ?> bg-white px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint <?= $ring ?>" href="<?= site_url($path) ?>">
                         <?= icon($shortcutIcon, 'h-4 w-4 text-brand') ?><?= esc($label) ?>
                     </a>
                 </li>
@@ -169,7 +175,8 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         <?php if ($homeActivity === []): ?>
             <p class="text-sm text-[#646464]" data-activity-empty>Nothing has been recorded yet.</p>
         <?php else: ?>
-            <table class="w-full border <?= $rule ?> text-sm">
+            <div class="overflow-hidden rounded-2xl border <?= $rule ?>">
+            <table class="w-full text-sm">
                 <caption class="sr-only">Recent activity</caption>
                 <thead class="max-sm:sr-only border-b <?= $rule ?> bg-gray-50">
                     <tr>
@@ -188,6 +195,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
         <?php endif; ?>
     </section>
 
