@@ -26,8 +26,7 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-8 lg:px-12';
 </head>
 
 <body
-    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
-    style="--page-bg-light: url('<?= base_url('assets/images/background/light.png') ?>'); --page-bg-dark: url('<?= base_url('assets/images/background/dark.png') ?>'); background-image: var(--page-bg-light);"
+    class="admin-flat min-h-screen"
     data-page="<?= esc($page ?? 'admin') ?>"
     data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >
