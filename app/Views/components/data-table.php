@@ -58,7 +58,7 @@ $pin = $fill ? ' sticky top-0 z-10 bg-gray-50' : '';
 
 <?php else: ?>
 
-    <div class="overflow-hidden rounded-2xl bg-white shadow-sm<?= $fill ? ' lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : '' ?>" data-table>
+    <div class="overflow-hidden rounded-2xl bg-white shadow-sm<?= $fill ? ' lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : '' ?>"<?= $fill ? ' tabindex="0" role="region" aria-label="' . esc($caption, 'attr') . '"' : '' ?> data-table>
 
         <?php if ($selectable): ?>
             <div class="flex flex-wrap items-center gap-3 border-b border-gray-100 bg-brand-tint px-4 py-3 text-sm" data-bulk-bar hidden>

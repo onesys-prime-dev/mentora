@@ -112,7 +112,7 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
 
     <section class="flex flex-col lg:min-h-0 lg:flex-1" data-section="usage">
         <h2 class="mb-2 text-sm font-semibold text-brand">Usage against plans</h2>
-        <div class="overflow-auto rounded-2xl border border-gray-200 lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div class="overflow-auto rounded-2xl border border-gray-200 lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Usage against plans">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead>
                     <tr>

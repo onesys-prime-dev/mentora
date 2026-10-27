@@ -176,7 +176,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         <?php if ($homeActivity === []): ?>
             <p class="text-sm text-[#646464]" data-activity-empty>Nothing has been recorded yet.</p>
         <?php else: ?>
-            <div class="overflow-hidden rounded-2xl border <?= $rule ?> lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-activity-scroll>
+            <div class="overflow-hidden rounded-2xl border <?= $rule ?> lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Recent activity" data-activity-scroll>
             <table class="w-full text-sm">
                 <caption class="sr-only">Recent activity</caption>
                 <thead class="max-sm:sr-only border-b <?= $rule ?> bg-gray-50">

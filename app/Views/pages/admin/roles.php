@@ -51,7 +51,7 @@ $ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
     <span class="text-xs text-[#646464]" data-roles-count aria-live="polite"></span>
 </div>
 
-<div class="mt-4 overflow-auto rounded-lg bg-white shadow-sm lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-table>
+<div class="mt-4 overflow-auto rounded-lg bg-white shadow-sm lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Roles and permissions" data-table>
     <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead>
             <tr>

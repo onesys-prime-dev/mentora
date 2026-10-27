@@ -25,7 +25,7 @@ $home    = $isCurrent('admin/dashboard') || $menuPath === 'admin';
 ?>
 <nav class="border-b border-b-black/10 bg-white lg:w-64 lg:shrink-0 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:border-b-0 lg:border-r lg:border-r-black/10" aria-label="Administration" data-admin-menu>
 
-    <input type="checkbox" id="admin-menu-toggle" class="peer sr-only">
+    <input type="checkbox" id="admin-menu-toggle" class="peer sr-only" aria-label="Show the menu">
     <label for="admin-menu-toggle" class="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-brand peer-focus-visible:ring-2 peer-focus-visible:ring-inset peer-focus-visible:ring-brand/50 sm:px-8 lg:hidden">
         Menu
         <?= icon('settings', 'h-5 w-5 text-current') ?>
