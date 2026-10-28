@@ -561,6 +561,8 @@ The owner ruled on 2026-10-28 that the newer code is the single source of truth.
 | AMB-ASG-04 (password) | reopen needs the password | reopen needs a reason only |
 | AMB-AUTH-05 (one item) | sign-off reopen in the password list | removed from the list; the rest of the list stands |
 | AMB-COM-08 (message) | "Choose a supported reaction." | "Pick a reaction." |
+| AMB-ASM-06 (counting) | a cancelled attempt must not count against the limit | it counts (`testACancelledAttemptStillUsesUpAChance`); found after the baseline run of 2026-10-28 |
+| AMB-ASM-02 (starting) | students must not start an attempt on a published quiz with no questions | it can be started and submitted, graded with no percentage (`testAnEmptyQuizSubmitsAsGradedWithNoPercentage`); found after the baseline. Publishing an empty quiz is still expected to be refused. |
 
 ### I5. The inconsistencies (G3)
 

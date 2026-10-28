@@ -911,3 +911,7 @@ Next: Wave 4, the P3 scenarios, the exploratory charters and checks, and what is
 Wave 4 added 30 P3 cases to the catalog, 12 exploratory charters ([`exploratory-charters.md`](exploratory-charters.md)) and 8 checks ([`checks.md`](checks.md)); see [`wave-4-test-analysis.md`](wave-4-test-analysis.md).
 
 **Every one of the 415 scenarios is now placed:** 353 in catalog cases, 31 in charters, 7 in checks, 1 out of scope (PS-SIS-11). No case, charter or check has been run. The next step is execution, starting with the baseline run (CK-01).
+
+## Part L. Baseline run (2026-10-28)
+
+CK-01 ran on commit `5e7f0d7` (code of `ae86042`): PHPUnit 7,510 of 7,510 passed; Vitest 392 of 393 (one timeout under load, passes alone); Playwright 110 of 110. See [`baseline-2026-10-28.md`](baseline-2026-10-28.md). The tests named by every `FIX?` case pass; `REG` and `REG?` cases remain to be confirmed by running them. Two expectations were corrected to behavior a passing test pins (TC-QUIZ-10, TC-QUIZ-11 step 4; register Part I4).

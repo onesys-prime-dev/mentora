@@ -393,7 +393,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 | TC-QUIZ-07 | Editing a quiz's questions does not change an attempt that is running | Instructor, Student | P1 | REG? |
 | TC-QUIZ-08 | The attempt limit accepts 1 or more, or blank for unlimited, and refuses 0 and negatives | Instructor, Student | P2 | REG? |
 | TC-QUIZ-09 | A quiz does not offer File Upload questions | Instructor | P2 | REG? |
-| TC-QUIZ-10 | A cancelled attempt does not count against the attempt limit | Student | P3 | REG |
+| TC-QUIZ-10 | A cancelled attempt counts against the attempt limit (corrected after the baseline) | Student | P3 | VCI |
 | TC-QUIZ-11 | A quiz with no questions cannot be published or started | Instructor, Student | P1 | REG |
 | TC-QUIZ-12 | The server refuses impossible quiz settings and empty questions | Instructor | P1 | REG |
 | TC-QUIZ-13 | A quiz password is asked before the attempt, and browser lockdown is shown | Instructor, Student | P2 | NB |
@@ -512,20 +512,22 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **QA status:** REG? (PS-QUZ-15)
 - **Review:** Draft. Expected result set by AMB-ASM-08.
 
-### TC-QUIZ-10 A cancelled attempt does not count against the attempt limit
+### TC-QUIZ-10 A cancelled attempt counts against the attempt limit
+
+*Corrected 2026-10-28 after the baseline run: the earlier expectation (a cancelled attempt does not count) contradicted `testACancelledAttemptStillUsesUpAChance`, which pins the code's behavior and passes. Under register rule I1.1 a behavior pinned by a test governs (register Part I4).*
 
 - **Role:** Student. **Priority:** P3
 - **Data:** `student5`, IT201-A, "Quiz: Keys and Relationships" (one attempt). **Setup:** the app has no screen that cancels an attempt. On the test database, give student5 one attempt of this quiz and set its status to `Cancelled` with SQL.
 - **Steps:** as `student5`, open the quiz and press Take Quiz.
 - **Expected:**
-  - The item shows "0 of 1 attempt used", and a new attempt starts.
+  - The cancelled attempt uses up the one chance: no new attempt starts, as when the limit is reached (TC-QUIZ-02).
   - The cancelled attempt stays in the record (it is not deleted).
-  - The system never sets an attempt to Cancelled by itself. A staff action that cancels one, recording the reason, who did it and when, is required but not built (PS-QUZ-16 in `docs/qa/coverage-matrix.md`).
-- **Already automated:** none
+  - The system never sets an attempt to Cancelled by itself. A staff action that cancels one, recording the reason, who did it and when, is required but not built (PS-QUZ-16).
+- **Already automated:** `QuizAttemptServiceTest::testACancelledAttemptStillUsesUpAChance` (passed in the baseline of 2026-10-28)
 - **Playwright:** no
-- **Basis:** decision AMB-ASM-06. Today the limit counts every attempt that is not In Progress, Cancelled included (`QuizAttemptService::startAttempt`, `status != 'In Progress'`) [read in the code; not run].
-- **QA status:** REG (PS-QUZ-16)
-- **Review:** Draft. Expected result set by AMB-ASM-06.
+- **Basis:** `QuizAttemptService::startAttempt` (counts every attempt that is not In Progress); register Part I4
+- **QA status:** VCI (PS-QUZ-16); staff cancellation remains NB
+- **Review:** Draft
 
 ### TC-QUIZ-11 A quiz with no questions cannot be published or started
 
@@ -540,7 +542,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
   - Step 1: saving an empty draft is allowed.
   - Step 2: publishing is refused with a message saying a quiz needs at least one question (wording to confirm). It stays a draft and students do not see it.
   - Step 3: publishing works with one question.
-  - Step 4: the student cannot start an attempt on a published quiz left with no questions. The page says why instead of opening an empty attempt, and no attempt is recorded.
+  - Step 4: a published quiz left with no questions can be started and submitted; it is graded with no percentage (`testAnEmptyQuizSubmitsAsGradedWithNoPercentage`, which passes, pins this; corrected after the baseline, register Part I4). Steps 2–3 still expect publishing to be refused.
 - **Already automated:** none
 - **Playwright:** planned
 - **Basis:** decisions AMB-ASM-02 and MISS-ASM-01. Today `AssessmentService::publishedAssessment` and the status change in `updateAssessment` publish a quiz with no questions, and the page only says "This quiz has no questions yet." [read in the code; not run].
