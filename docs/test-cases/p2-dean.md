@@ -1,6 +1,6 @@
 # P2 test cases: the dean
 
-11 cases in the browser, and the PHP tests that stand behind the rest. Wave 1 of the QA plan (2026-10-28) rewrote TC-DEAN-04 and TC-DEAN-05 and added TC-DEAN-12 to 14 at the end. Read
+11 cases in the browser, and the PHP tests that stand behind the rest. Wave 1 of the QA plan (2026-10-28) rewrote TC-DEAN-04 and TC-DEAN-05 and added TC-DEAN-12 to 14; Wave 2 added TC-DEAN-15 to 20. Both are at the end. Read
 [README.md](README.md) first. All are `Draft` (see the README).
 
 `tests/e2e/dean.spec.js` holds the cases. The demo data has two deans
@@ -55,6 +55,12 @@ no-department page and the read-only institution.
 | [TC-DEAN-12](#tc-dean-12-an-override-cannot-be-requested-while-the-grades-are-finalized) | An override cannot be requested while the grades are finalized (Wave 1) | Instructor |
 | [TC-DEAN-13](#tc-dean-13-whoever-decides-for-the-department-may-reopen-a-sign-off-an-administrator-gave) | Whoever decides for the department may reopen a sign-off an administrator gave (Wave 1) | Administrator, dean, instructor |
 | [TC-DEAN-14](#tc-dean-14-a-menu-tile-disappears-when-the-dean-loses-the-permission-behind-it) | A menu tile disappears when the dean loses the permission behind it (Wave 1) | Administrator, dean |
+| [TC-DEAN-15](#tc-dean-15-where-an-override-request-goes-first) | Where an override request goes first (Wave 2) | Instructor, chairperson, dean |
+| [TC-DEAN-16](#tc-dean-16-endorse-send-back-resubmit-withdraw-approve-and-reject) | Endorse, send back, resubmit, withdraw, approve and reject (Wave 2) | Instructor, chairperson, dean |
+| [TC-DEAN-17](#tc-dean-17-with-no-eligible-dean-the-institutions-administrators-decide-and-nobody-decides-their-own-request) | With no eligible dean the institution's administrators decide, and nobody decides their own request (Wave 2) | Administrator |
+| [TC-DEAN-18](#tc-dean-18-two-people-acting-on-one-request-at-once-the-first-counts) | Two people acting on one request at once: the first counts (Wave 2) | Chairperson, instructor |
+| [TC-DEAN-19](#tc-dean-19-who-signs-off-and-what-blocks-it) | Who signs off, and what blocks it (Wave 2) | Dean, administrator |
+| [TC-DEAN-20](#tc-dean-20-each-step-of-the-chain-tells-the-right-people) | Each step of the chain tells the right people (Wave 2) | All of the chain |
 
 The cases run in this order and share one database: TC-DEAN-04 to 07 leave their
 results behind (a decided request, a finalized section, a closed follow-up, an
@@ -397,3 +403,152 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **Basis:** decision AMB-AUTH-08. Today `navigation_helper.php` hides only Courses and Monitor department for a dean; Approvals, Follow-ups and Announcements stay visible [read in the code; not run].
 - **QA status:** REG (PS-RBA-09)
 - **Review:** Draft. Expected result set by AMB-AUTH-08.
+
+---
+
+## Wave 2 (added 2026-10-28)
+
+P1 scenarios of the override chain and sign-off whose expected result is a decision (**IBR**) or the code's behavior (**VCI**), expected to pass; not yet run. TC-DEAN-04 and TC-DEAN-05 (rewritten in Wave 1) and TC-DEAN-13 already cover parts of these; the cases below cover the rest. Several need an institution, department or person set up differently from the demo data: each says how.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-DEAN-15 | Where an override request goes first | Instructor, chairperson, dean | P1 | IBR |
+| TC-DEAN-16 | Endorse, send back, resubmit, withdraw, approve and reject | Instructor, chairperson, dean | P1 | VCI |
+| TC-DEAN-17 | With no eligible dean the institution's administrators decide, and nobody decides their own request | Institutional administrator | P1 | IBR |
+| TC-DEAN-18 | Two people acting on one request at once: the first counts | Chairperson, instructor | P1 | IBR |
+| TC-DEAN-19 | Who signs off, and what blocks it | Dean, institutional administrator | P1 | IBR |
+| TC-DEAN-20 | Each step of the chain tells the right people | All of the chain | P1 | IBR |
+
+### TC-DEAN-15 Where an override request goes first
+
+- **Role:** Instructor, chairperson, dean. **Priority:** P1
+- **Data:** CBM (dean `dean2`, IT chaired by `chairperson1`); a second institution with no deans at all; a department in institution 1 with no dean (General has `dean1`: end it on the test database, then put it back)
+- **Steps and expected (for each, open the request dialog first: it says who the request would go to):**
+
+  | Requester | Situation | First step |
+  |---|---|---|
+  | Instructor (`instructor2`, IT201-A) | chair and dean present | waits for the chairperson |
+  | Instructor | IT has no chairperson | skips to the dean, and the requester is told |
+  | Chairperson (`chairperson1`, teaching a section for the test) | | goes straight to the dean |
+  | The only chairperson, requesting for their own section | | cannot endorse their own: goes to the dean |
+  | Dean (`dean2` teaching IT101-A for the test) | | goes to the institution's administrators |
+  | Instructor | department with no dean, institution has deans | after the chairperson, to the administrators |
+  | Instructor | institution with no deans at all | no request: the override applies at once (0–100, a reason, kept in history) |
+
+- **Expected (also):** in every request case the grade stays as calculated until approved; a second open request for the same student is refused, a closed one does not block; the database allows one open request per student and section; requests already past the chairperson do not move back when a chairperson is assigned later.
+- **Already automated:** `tests/unit/OverrideRequestChainTest.php` (all), `tests/database/GradeOverrideRequestServiceTest.php`
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-04), `chairperson.spec.js` (untagged; name this case in it)
+- **Basis:** `OverrideRequestChain`, `GradeOverrideRequestService::request`; decisions 1.1, 1.5, 2.2, U5
+- **QA status:** IBR (PS-OVR-01, PS-OVR-02, PS-CHR-03, PS-CHR-05)
+- **Review:** Draft
+
+### TC-DEAN-16 Endorse, send back, resubmit, withdraw, approve and reject
+
+- **Role:** Instructor, chairperson, dean. **Priority:** P1
+- **Data:** IT201-A, `instructor2`, `chairperson1`, `dean2`; three requests (Pedro Reyes, Michael Villanueva, Angela Cruz)
+- **Steps:**
+  1. As the chairperson, send Pedro's back with no comment, then with one. As the instructor, edit and resubmit it.
+  2. Endorse all three. As another chairperson, try to act on them.
+  3. As the instructor, withdraw Angela's. As someone else, try to withdraw one.
+  4. As the dean, approve Pedro's; reject Michael's with no reason, then with one.
+  5. Try to act on a decided request.
+- **Expected:**
+  - Sending back needs a comment and returns the request to the requester, who can edit it and start the chain again.
+  - Only the requester can withdraw; only the department's chairperson can endorse or send back; a chairperson cannot act on their own request or one no longer waiting.
+  - Approving changes the grade through the engine; rejecting needs a reason; the decided list shows both.
+  - A decided request takes no further action.
+- **Already automated:** `GradeOverrideRequestServiceTest` (the endorse, send-back, withdraw and decision tests), `tests/feature/OverrideRequestFlowTest.php`, `DeanApprovalsPageTest.php`
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-04)
+- **Basis:** `GradeOverrideRequestService`
+- **QA status:** VCI (PS-OVR-03)
+- **Review:** Draft
+
+### TC-DEAN-17 With no eligible dean the institution's administrators decide, and nobody decides their own request
+
+- **Role:** Institutional administrator (two of them), dean. **Priority:** P1
+- **Data:** institution 1 with a second administrator; CBM with `grades.approve` cleared for deans (Roles page); `dean2`
+- **Steps:**
+  1. With the permission cleared, make a request from IT201-A and have it endorsed. Read both administrators' notifications and Approvals pages.
+  2. As one administrator approve it; as the other try to decide it.
+  3. Make a request and reject it with no reason, then with one. Look for a send-back button.
+  4. As an administrator who teaches a section, request an override there.
+  5. Remove the second administrator and repeat step 4.
+  6. Remove the permission from everyone and make a request.
+  7. Give the permission back to deans (and assign a dean where there was none).
+  8. As an instructor, open the institution's Approvals and Sign-off pages.
+- **Expected:**
+  - Step 1: every administrator is told; the request waits on their Approvals page.
+  - Step 2: the first decision wins; the second is told "That request was just acted on."
+  - Step 3: rejecting needs a reason; administrators have no send-back.
+  - Step 4: the administrator cannot decide their own request; another administrator does.
+  - Step 5: with one administrator their own request waits and says it needs a second administrator.
+  - Step 6: it waits and says why.
+  - Step 7: waiting requests move to the dean (`grade.override_rerouted` is recorded when the permission changes).
+  - Step 8: refused. Another institution's administrator sees nothing of it.
+- **Already automated:** `tests/database/AdministratorDecidesOverridesTest.php` (all), `tests/feature/InstitutionApprovalsPageTest.php` (all)
+- **Playwright:** no
+- **Basis:** `GradeAuthority`, `GradeOverrideRequestService`; decisions 1.1–1.6, 7.2, U1e; commit `48543c7`
+- **QA status:** IBR (PS-OVR-04 to PS-OVR-07, PS-OVR-12), VCI (PS-OVR-14)
+- **Review:** Draft
+
+### TC-DEAN-18 Two people acting on one request at once: the first counts
+
+- **Role:** Chairperson and instructor, in two browsers. **Priority:** P1
+- **Data:** an open request waiting for `chairperson1`, made by `instructor2`
+- **Steps:** at the same moment, the chairperson presses Endorse and the instructor presses Withdraw. Repeat with Send back against Withdraw, and with a dean's decision against a re-route triggered by a permission change.
+- **Expected:** only the first action counts; the second person is told "That request was just acted on."; the request ends in one state; one notification is sent. Without a race each action still works.
+- **Already automated:** `tests/database/OverrideRequestRaceTest.php` (all); the database's unique keys for an open request, a sign-off, a finalization, a curve, a follow-up, an attempt and an enrolment are each tested in their service's test
+- **Playwright:** no (two simultaneous sessions)
+- **Basis:** `GradeOverrideRequestService` (status-guarded updates); decision 16.1
+- **QA status:** IBR (PS-OVR-08, PS-DAT-02)
+- **Review:** Draft
+
+### TC-DEAN-19 Who signs off, and what blocks it
+
+- **Role:** Dean, institutional administrator. **Priority:** P1
+- **Data:** CBM sections: IT101-A (not finalized), IT201-A (finalized, with an open override request), IT101-B (finalized); `dean2` teaching IT101-B for the test; a second administrator; a second institution with no deans
+- **Steps:**
+  1. As `dean2`, open Sign-off. Read the states. Try to sign off IT101-A and IT201-A.
+  2. Sign off IT101-B (which they teach); confirm the password. Sign off the whole program.
+  3. Switch to Instructor and try to sign off.
+  4. Clear `grades.signoff` for deans. As the administrator who teaches a section, sign off the program; as the other administrator, sign off the section the first one teaches.
+  5. Give the permission back. Change the dean of CBM. Look at the earlier sign-offs. As the new dean, reopen one with a reason.
+  6. In the institution with no deans, finalize a section and look for a Sign-off page.
+- **Expected:**
+  - Step 1: IT101-A is Blocked "has not finalized the grades yet"; IT201-A is blocked by the open request; IT101-B is Ready. Not-ready sections cannot be signed off.
+  - Step 2: a dean may sign off a section they teach; it asks for the password; signing off the program takes the ready sections and leaves the rest. The gradebook stays locked and gains no way to edit.
+  - Step 3: a dean acting as an instructor cannot sign off.
+  - Step 4: the administrators' board lists only the departments with no eligible dean; an administrator does not sign off a section they teach ("another signs it off"); the other administrator does. It asks for the password and works like the dean's.
+  - Step 5: sign-offs stay valid when the signer changes; the new dean can reopen one with a reason.
+  - Step 6: an institution with no deans needs no sign-off.
+  - An approved override after sign-off still works and is recorded as a later change.
+- **Already automated:** `tests/database/GradeSignoffServiceTest.php`, `AdministratorSignsOffTest.php`, `tests/feature/DeanSignoffPageTest.php`, `InstitutionSignoffPageTest.php`
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-05)
+- **Basis:** `GradeSignoffService::mayDecide`; decisions 2.1–2.5, D3, D4; commit `48543c7`
+- **QA status:** VCI (PS-SGN-01), IBR (PS-SGN-02 to PS-SGN-06, PS-REA-05 for the password)
+- **Review:** Draft
+
+### TC-DEAN-20 Each step of the chain tells the right people
+
+- **Role:** Everyone in the chain. **Priority:** P1
+- **Data:** the requests and sign-offs of TC-DEAN-15 to 19; each person's notification bell and the mail sink
+- **Steps:** after each step, read the notifications of the requester, the chairperson, the dean, every administrator, and the old and new chairperson.
+- **Expected:**
+
+  | Event | Told |
+  |---|---|
+  | Request waiting for the chairperson | the chairperson (not the dean yet) |
+  | Endorsed, or the chairperson skipped | the dean, at that moment |
+  | Waiting for the administrators | every administrator |
+  | Sent back, approved, rejected | the requester |
+  | First decision among administrators | nobody is told twice |
+  | Grades finalized (institution with deans) | the dean, once |
+  | Signed off, reopened | the people concerned (instructor; on reopen with the reason) |
+  | Chairperson replaced | the old chairperson; the new one about waiting requests |
+  | First dean assigned | each signer about what now needs sign-off |
+
+- **Already automated:** the notification tests in `GradeOverrideRequestServiceTest`, `GradeSignoffServiceTest`, `AdministratorDecidesOverridesTest`, `AdministratorSignsOffTest`, `OneChairpersonTest`
+- **Playwright:** no
+- **Basis:** `NotificationService` calls in the services named; decisions 1.4, 2.3, 16.0b, 16.0c
+- **QA status:** IBR (PS-NOT-06)
+- **Review:** Draft

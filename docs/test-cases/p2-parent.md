@@ -177,3 +177,64 @@ travels in it are tested in `tests/database/ParentNotifierTest.php`.
 - **Playwright:** `tests/e2e/parent.spec.js`
 - **Basis:** `app/Views/pages/institution/parents.php`
 - **Review:** Draft
+
+---
+
+## Wave 2 (added 2026-10-28)
+
+P1 scenarios of the parent portal whose expected result is the code's behavior (**VCI**), expected to pass; not yet run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-PRT-11 | Every parent page refuses everyone but the parent, and refuses another child or course | Every role | P1 | VCI |
+| TC-PRT-12 | The dashboard shows each child's current and past courses, what needs attention, and the next two weeks | Parent | P1 | VCI |
+| TC-PRT-13 | Parents are told each event once, emailed only when they chose to be, and never told a score | Parent | P1 | VCI |
+| TC-PRT-14 | No private work of the student reaches anything a parent can open | Parent | P1 | VCI |
+
+### TC-PRT-11 Every parent page refuses everyone but the parent, and refuses another child or course
+
+- **Role:** Every role. **Priority:** P1
+- **Data:** `parent1` (student1, student5), `parent2`, one account of each other role; the list of parent routes in `ParentAuthorizationMatrixTest`
+- **Steps:** as each other role and signed out, open every parent route. As `parent1`, open the routes with student2's id and with a course their child is not in. Send a change to every route. Switch the portal off and open the child routes.
+- **Expected:** other roles are turned away; a signed-out visitor goes to the login page; another child or course answers 404; their own child and course are served; only the two account forms (profile and email choices) accept a write; with the portal off no child data is shown on any child route.
+- **Already automated:** `tests/feature/ParentAuthorizationMatrixTest.php` (all). Its first test fails whenever a parent route is added without being listed, so keep it current.
+- **Playwright:** `tests/e2e/parent.spec.js` (TC-PRT-03, 04, 08)
+- **Basis:** the `parentchild` filter
+- **QA status:** VCI (PS-PRT-01)
+- **Review:** Draft
+
+### TC-PRT-12 The dashboard shows each child's current and past courses, what needs attention, and the next two weeks
+
+- **Role:** Parent. **Priority:** P1
+- **Data:** `parent1`; student1 and student5 with: a current course with a published scheme, one with a draft scheme, a dropped and a completed course, an at-risk course, an INC, a past-due assessment not handed in, one handed in, one excused, a final grade from 3 days ago and one from 20 days ago, deadlines in 5 and 20 days
+- **Steps:** open the dashboard for each child and switch between them.
+- **Expected:** current courses carry the standing the student sees, and no percentage or tag where the scheme is unpublished; dropped, withdrawn and completed courses are past; at-risk is flagged (never for INC or withdrawn); a past-due unsubmitted assessment is missing once, a handed-in or excused one is not, and a past course's misses do not count; a final grade is an attention item for 14 days; deadlines are the next 14 days, soonest first, without scores; a child with no courses gives empty lists; a child who is also staff shows courses but no grade or assessment data; looking never changes the parent's active role.
+- **Already automated:** `tests/database/ParentDashboardServiceTest.php` (all)
+- **Playwright:** `tests/e2e/parent.spec.js` (TC-PRT-01)
+- **Basis:** `ParentDashboardService`
+- **QA status:** VCI (PS-PRT-02)
+- **Review:** Draft
+
+### TC-PRT-13 Parents are told each event once, emailed only when they chose to be, and never told a score
+
+- **Role:** Parent. **Priority:** P1
+- **Data:** student1 linked to `parent1` and a second parent; `parent1` emailed about student1 only; the mail sink
+- **Steps:** finalize a grade; mark INC; withdraw the student; make the student at risk; post an announcement; let work go overdue in two courses; run `php spark parents:notify` twice on the same day; reopen and finalize again; switch the portal off and repeat one event.
+- **Expected:** both parents are told each event once, in the app; email only where the parent's switch for that child is on; announcements are never emailed; overdue work is one summary per parent per day; running again tells nobody twice; finalizing again after a reopen tells again; no message carries a grade or score; with the portal off nobody is told; a student who left the institution has nobody to tell; a parent of another child hears nothing.
+- **Already automated:** `tests/database/ParentNotifierTest.php` (all)
+- **Playwright:** no
+- **Basis:** `ParentNotifier`, `ParentsNotify` command
+- **QA status:** VCI (PS-PRT-03). The at-risk message is sent once per episode and re-armed on recovery (decision AMB-COM-04): that part is PS-PRT-06, Wave 4.
+- **Review:** Draft
+
+### TC-PRT-14 No private work of the student reaches anything a parent can open
+
+- **Role:** Parent. **Priority:** P1
+- **Data:** student1 with planted private items: a quiz answer, an essay, an assignment file and text, a discussion reply, an announcement reaction, a private feedback comment, each containing a unique word (for example `CANARY-7Q2`)
+- **Steps:** as `parent1`, open every page and API of the portal for student1 and download the grade report PDF. Search the responses for the planted words.
+- **Expected:** none of the planted words or scores appears on any page, API or PDF; the course offers only its four tabs; the grade report carries no item names or scores; a child who is also staff has no grades shown; a deactivated child stays reachable, a deleted one does not.
+- **Already automated:** `tests/feature/ParentPrivacyCanaryTest.php` (all)
+- **Playwright:** no
+- **Basis:** the parent controllers; decision PLN-09 (privacy tests are P1)
+- **QA status:** VCI (PS-PRT-04)
+- **Review:** Draft

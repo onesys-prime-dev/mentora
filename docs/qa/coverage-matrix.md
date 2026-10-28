@@ -894,3 +894,9 @@ The 35 Wave 1 scenarios are written as catalog cases in `docs/test-cases/`, and 
 
 Next: Wave 2, the P1 `READY-VCI` and `READY-IBR` scenarios of the critical and high-risk modules.
 
+## Part I. Wave 2 written (2026-10-28)
+
+165 P1 scenarios of the critical and high-risk modules are written as 75 catalog cases (several scenarios share a case), or mapped to an existing case. That includes the high-risk modules' P1 fixes and defects, which no wave had covered. None has been run. The scenario-to-case table is in [`wave-2-test-analysis.md`](wave-2-test-analysis.md) section 7.
+
+Next: Wave 3, the P2 scenarios.
+
