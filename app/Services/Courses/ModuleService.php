@@ -1633,6 +1633,13 @@ class ModuleService
             $payload
         )) {
 
+            // Publishing the item publishes its quiz, which needs a question first (QA AMB-ASM-02).
+            $quiz = $payload['status'] === 'published' ? $this->assessmentModel->findByLearningItem($learningItemId) : null;
+
+            if ($quiz && (new \App\Services\Courses\Assessments\AssessmentService())->isEmptyQuiz($quiz)) {
+                return ['success' => false, 'message' => \App\Services\Courses\Assessments\AssessmentService::NO_QUESTIONS];
+            }
+
             $update['status'] =
                 $payload['status'];
 

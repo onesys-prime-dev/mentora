@@ -41,6 +41,9 @@ class AssessmentService
     /** The statuses an assessment can hold (the database enum). */
     public const STATUSES = ['Draft', 'Published', 'Closed', 'Archived'];
 
+    /** A quiz is published only with a question to answer (QA AMB-ASM-02). */
+    public const NO_QUESTIONS = 'Add at least one question before publishing this quiz.';
+
     public function __construct()
     {
         $this->assessmentModel = new AssessmentModel();
@@ -234,6 +237,43 @@ class AssessmentService
      *
      * @return array{source: string, points: float}|null
      */
+    /** A quiz with no active question: it may be saved as a draft but not published. */
+    public function isEmptyQuiz(array $assessment): bool
+    {
+        $type = strtolower((string) ($this->assessmentTypeModel->find($assessment['assessment_type_id'])['name'] ?? ''));
+
+        return $type === 'quiz'
+            && $this->questionModel->where('assessment_id', (int) $assessment['id'])->where('status', 'Active')->countAllResults() === 0;
+    }
+
+    /**
+     * What is wrong with the dates and duration an update would leave (QA MISS-ASM-01), or null. The
+     * window must close after it opens, the due date must fall inside it, and a duration is a whole
+     * number of minutes above zero (blank means no time limit).
+     */
+    private function settingsProblem(array $assessment, array $data): ?string
+    {
+        $value = static fn (string $key) => array_key_exists($key, $data) ? $data[$key] : $assessment[$key];
+        $time  = static fn ($date) => $date === null || $date === '' ? null : strtotime((string) $date);
+
+        [$from, $due, $until] = [$time($value('available_from')), $time($value('due_date')), $time($value('available_until'))];
+
+        if ($from !== null && $until !== null && $until <= $from) {
+            return 'The closing date must come after the opening date.';
+        }
+
+        if ($due !== null && (($from !== null && $due < $from) || ($until !== null && $due > $until))) {
+            return 'The due date must fall between the opening and closing dates.';
+        }
+
+        if (array_key_exists('duration', $data) && $data['duration'] !== null && $data['duration'] !== ''
+            && (filter_var($data['duration'], FILTER_VALIDATE_INT) === false || (int) $data['duration'] < 1)) {
+            return 'The duration must be a whole number of minutes, at least 1 (leave it blank for no time limit).';
+        }
+
+        return null;
+    }
+
     private function derivedTotalPoints(array $assessment): ?array
     {
         $type = strtolower((string) ($this->assessmentTypeModel->find($assessment['assessment_type_id'])['name'] ?? ''));
@@ -1104,6 +1144,14 @@ class AssessmentService
                 ];
             }
 
+            if ($newStatus === 'Published' && $this->isEmptyQuiz($assessment)) {
+                return ['success' => false, 'message' => self::NO_QUESTIONS];
+            }
+
+            if ($problem = $this->settingsProblem($assessment, $data)) {
+                return ['success' => false, 'message' => $problem];
+            }
+
             /*
             |--------------------------------------------------------------------------
             | Transaction
@@ -1323,6 +1371,10 @@ class AssessmentService
                 'success' => false,
                 'message' => 'Assessment not found.'
             ];
+        }
+
+        if ($this->isEmptyQuiz($assessment)) {
+            return ['success' => false, 'message' => self::NO_QUESTIONS];
         }
 
         $this->assessmentModel->update(
