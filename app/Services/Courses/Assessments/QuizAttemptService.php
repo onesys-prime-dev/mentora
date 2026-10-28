@@ -80,6 +80,19 @@ class QuizAttemptService
     }
 
     /** The attempt as it is now. */
+    /**
+     * The questions an attempt is shown and scored with: those it started with, or, for an attempt
+     * from before attempts kept them, the quiz as it is now.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function questionsOf(array $submission): array
+    {
+        $kept = json_decode((string) ($submission['questions_snapshot'] ?? ''), true);
+
+        return is_array($kept) ? $kept : $this->questionModel->listForAssessment((int) $submission['assessment_id']);
+    }
+
     protected function submissionRow(int $submissionId): ?array
     {
         return $this->submissionModel->find($submissionId);
@@ -176,6 +189,8 @@ class QuizAttemptService
                         'attempt_number' => $attemptsTaken + 1,
                         'started_at' => date('Y-m-d H:i:s'),
                         'status' => 'In Progress',
+                        // The attempt keeps the questions it started with (QA AMB-ASM-03).
+                        'questions_snapshot' => json_encode($this->questionModel->listForAssessment($assessmentId)),
                     ]);
                 } catch (DatabaseException) {
                     $inserted = false;
@@ -198,7 +213,7 @@ class QuizAttemptService
 
         if ($submission) {
 
-            $questions = $this->questionModel->listForAssessment($assessmentId);
+            $questions = $this->questionsOf($submission);
 
             // Answer keys never reach the student's page.
             foreach ($questions as &$question) {
@@ -480,7 +495,7 @@ class QuizAttemptService
     {
         $assessment = $this->assessmentModel->find($submission['assessment_id']);
 
-        $questions = $this->questionModel->listForAssessment((int) $submission['assessment_id']);
+        $questions = $this->questionsOf($submission);
 
         $responses = $this->responseModel
             ->where('submission_id', $submissionId)
