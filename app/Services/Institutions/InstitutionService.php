@@ -240,11 +240,15 @@ class InstitutionService
     /**
      * Permanently removes a deleted institution and everything under it
      * (terms, departments, programs, courses, offerings, enrolments, work and
-     * grades: the database cascades from the institution row).
+     * grades: the database cascades from the institution row), with its
+     * accounts and their files (audit decisions 10.1–10.4).
      *
-     * User accounts are NOT removed: they are not part of an institution's
-     * tree. How many are left without any institution is written to the audit
-     * entry so they can be dealt with in user management.
+     * The accounts are those whose only membership is this institution (never
+     * a system administrator); deleting them cascades to their profiles,
+     * notifications, reminders and file rows. Their files, the institution's
+     * logo and its export zips are then deleted from disk, after the commit: a
+     * file that cannot be deleted is kept in `Purge.pendingFiles` and retried by
+     * the next scheduled purge. Audit entries stay (10.5).
      *
      * The audit entry is written first, so nothing irreversible happens
      * without a trace; if the removal then fails, a second entry says so.
@@ -267,6 +271,8 @@ class InstitutionService
             throw new InvalidArgumentException('Type the institution\'s exact name to confirm the purge.');
         }
 
+        [$accounts, $paths] = $this->personal($id, $institution);
+
         $details = [
             'target_type'    => 'institution',
             'target_id'      => $id,
@@ -274,6 +280,7 @@ class InstitutionService
             'old'            => array_merge(
                 ['name' => $institution['name'], 'code' => $institution['code'], 'status' => $institution['status'], 'deleted_at' => $institution['deleted_at']],
                 $this->contents($id),
+                ['accounts' => count($accounts), 'files' => count($paths)],
             ),
         ];
 
@@ -286,13 +293,107 @@ class InstitutionService
 
         $audit->log('institution.purged', $who, $details);
 
+        $db    = db_connect();
+        $depth = $db->transDepth;
+
         try {
+            $db->transException(true)->transStart();
+
+            // The logo's row, whoever uploaded it: it is the institution's (10.1).
+            if (! empty($institution['logo_file_id'])) {
+                $db->table('files')->where('id', (int) $institution['logo_file_id'])->delete();
+            }
+
             (new InstitutionModel())->delete($id, true);
+
+            if ($accounts !== []) {
+                $db->table('users')->whereIn('id', $accounts)->delete();
+            }
+
+            $db->transComplete();
         } catch (Throwable $e) {
+            // A failed query was rolled back already; anything else thrown in between was not.
+            if ($db->transDepth > $depth) {
+                $db->transRollback();
+            }
+
             $audit->log('institution.purge_failed', $who, array_merge($details, ['old' => null, 'new' => ['reason' => $e->getMessage()]]));
 
             throw $e;
+        } finally {
+            $db->transException(false);
         }
+
+        // From disk only once the rows are gone: a file left over is less harm than a row pointing at nothing.
+        $this->deleteFiles($paths);
+    }
+
+    /**
+     * The accounts that go with the institution (members with no other membership, never a system
+     * administrator) and the disk paths of everything personal to it: their files, its logo, its export zips.
+     *
+     * @param array<string, mixed> $institution
+     *
+     * @return array{list<int>, list<string>}
+     */
+    private function personal(int $id, array $institution): array
+    {
+        $db = db_connect();
+
+        $accounts = array_map('intval', array_column($db->table('institution_users iu')
+            ->select('iu.user_id')
+            ->where('iu.institution_id', $id)
+            ->where('NOT EXISTS (SELECT 1 FROM ' . $db->prefixTable('institution_users') . ' o WHERE o.user_id = iu.user_id AND o.institution_id <> ' . $id . ')', null, false)
+            ->where("NOT EXISTS (SELECT 1 FROM " . $db->prefixTable('auth_groups_users') . " g WHERE g.user_id = iu.user_id AND g.`group` = 'admin')", null, false)
+            ->get()->getResultArray(), 'user_id'));
+
+        $storage = new \App\Services\Storage\StorageService();
+        $keys    = $accounts === [] ? [] : array_column($db->table('files')->select('storage_key')->whereIn('owner_user_id', $accounts)->get()->getResultArray(), 'storage_key');
+
+        if (! empty($institution['logo_file_id'])) {
+            $keys[] = (string) $db->table('files')->select('storage_key')->where('id', (int) $institution['logo_file_id'])->get()->getRow('storage_key');
+        }
+
+        $paths = array_map(static fn (string $key): string => $storage->path($key), array_filter(array_unique($keys)));
+
+        foreach ($db->table('institution_exports')->select('file_name')->where('institution_id', $id)->where('file_name IS NOT NULL', null, false)->get()->getResultArray() as $row) {
+            $paths[] = InstitutionExport::folder() . DIRECTORY_SEPARATOR . $row['file_name'];
+        }
+
+        return [$accounts, array_values($paths)];
+    }
+
+    /**
+     * Deletes files from disk; one that cannot be deleted is kept for the next run.
+     *
+     * @param list<string> $paths
+     */
+    private function deleteFiles(array $paths): void
+    {
+        $left = [];
+
+        foreach ($paths as $path) {
+            if (file_exists($path) && ! (is_file($path) && @unlink($path))) {
+                log_message('error', 'Purge could not delete ' . $path . '; the next scheduled purge tries again.');
+                $left[] = $path;
+            }
+        }
+
+        $pending = json_decode((string) setting('Purge.pendingFiles'), true);
+        setting()->set('Purge.pendingFiles', json_encode(array_values(array_unique(array_merge(is_array($pending) ? $pending : [], $left)))));
+    }
+
+    /** Retries the files an earlier purge could not delete. */
+    private function retryPendingFiles(): void
+    {
+        $pending = json_decode((string) setting('Purge.pendingFiles'), true);
+
+        if (! is_array($pending) || $pending === []) {
+            return;
+        }
+
+        setting()->set('Purge.pendingFiles', json_encode([]));
+        $this->deleteFiles(array_values(array_filter($pending, 'is_string')));
     }
 
     /**
@@ -302,6 +403,10 @@ class InstitutionService
      */
     public function purgeExpired(DateTimeImmutable $now, bool $dryRun = false): array
     {
+        if (! $dryRun) {
+            $this->retryPendingFiles();
+        }
+
         $cutoff = PurgePolicy::cutoff($now, $this->retentionDays())->format('Y-m-d H:i:s');
 
         $due = (new InstitutionModel())->onlyDeleted()->where('institutions.deleted_at <=', $cutoff)->orderBy('institutions.deleted_at')->findAll();

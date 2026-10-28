@@ -21,7 +21,7 @@ final class AiWorkerEndpointsTest extends RouteTestCase
     {
         parent::setUp();
 
-        $_SERVER['questionBuilder.workerSecret'] = self::SECRET;
+        \Tests\Support\TestEnv::set('questionBuilder.workerSecret', self::SECRET);
         $_SERVER['REMOTE_ADDR']                  = '127.0.0.1';
 
         db_connect()->table('institutions')->insert(['name' => 'Worker Institution', 'code' => 'WRK1']);
@@ -30,7 +30,8 @@ final class AiWorkerEndpointsTest extends RouteTestCase
 
     protected function tearDown(): void
     {
-        unset($_SERVER['questionBuilder.workerSecret'], $_SERVER['REMOTE_ADDR']);
+        unset($_SERVER['REMOTE_ADDR']);
+        \Tests\Support\TestEnv::restore();
 
         parent::tearDown();
     }
@@ -45,7 +46,7 @@ final class AiWorkerEndpointsTest extends RouteTestCase
 
     public function testWithoutTheSecretConfiguredTheEndpointsAreUnavailable(): void
     {
-        $_SERVER['questionBuilder.workerSecret'] = '';
+        \Tests\Support\TestEnv::set('questionBuilder.workerSecret', '');
 
         $this->worker('claim', ['worker_id' => 'w1'])->assertStatus(503);
     }

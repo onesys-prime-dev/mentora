@@ -36,7 +36,7 @@ final class InstitutionExportRollbackTest extends DatabaseTestCase
         Services::resetSingle('settings');
 
         $this->folder        = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-export-' . bin2hex(random_bytes(4));
-        $_ENV['export.path'] = $this->folder;
+        \Tests\Support\TestEnv::set('export.path', $this->folder);
     }
 
     protected function tearDown(): void
@@ -46,7 +46,7 @@ final class InstitutionExportRollbackTest extends DatabaseTestCase
         }
 
         @rmdir($this->folder);
-        unset($_ENV['export.path']);
+        \Tests\Support\TestEnv::restore();
 
         $this->wipe();
 

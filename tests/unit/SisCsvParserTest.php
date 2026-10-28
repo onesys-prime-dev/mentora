@@ -126,7 +126,7 @@ final class SisCsvParserTest extends CIUnitTestCase
 
     public function testTheDatasetsAreTheInboundOnes(): void
     {
-        $this->assertSame(['students', 'instructors', 'courses', 'enrollments', 'staff_assignments'], SisCsvParser::datasets());
+        $this->assertSame(['students', 'instructors', 'courses', 'enrollments', 'staff_assignments', 'class_schedules'], SisCsvParser::datasets());
     }
 
     private const STAFF = "role,person_external_id,department_code,sub_department_code,course_external_id,section\n";

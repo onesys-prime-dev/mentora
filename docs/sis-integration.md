@@ -28,6 +28,8 @@ The SIS (or someone on its behalf) drops CSV files in a folder; grades are writt
                                     instructors.csv
                                     courses.csv
                                     enrollments.csv
+                                    staff_assignments.csv
+                                    class_schedules.csv
 <sis.path>/<institution id>/outbound/grades-<batch key>.csv
 ```
 
@@ -41,6 +43,8 @@ The SIS (or someone on its behalf) drops CSV files in a folder; grades are writt
 | instructors.csv | external_id, email, first_name, last_name | |
 | courses.csv | external_id, course_code, course_title | units, program_code |
 | enrollments.csv | course_external_id, student_external_id | section, status (enrolled, dropped, withdrawn, completed) |
+| staff_assignments.csv | role, person_external_id | department_code, sub_department_code, course_external_id, section |
+| class_schedules.csv | course_external_id, day_of_week, start_time, end_time | section ("A" when empty), room (up to 50 characters), delivery_mode (onsite, online, hybrid; onsite when empty) |
 
 Header names are matched without regard to case; spaces count as underscores; a byte order mark is ignored; unknown columns are ignored. A missing required column rejects the file. A bad row (empty required value, invalid email, units not 0 to 99.99, a value over 255 characters, wrong column count, repeated `external_id`) is rejected alone, with its row number (the header is row 1). Files over 10 MB or 50,000 rows are refused.
 
@@ -83,8 +87,8 @@ People, courses and enrolments flow from the SIS into one institution. **The SIS
 
 ## What a run does
 
-1. Reads whichever of `students.csv`, `instructors.csv`, `courses.csv`, `enrollments.csv` the SIS provided (a missing file is left alone). A file that cannot be read at all (bad columns, bad signature, too big) fails the whole run before anything is written.
-2. In **one database transaction**, applies people, then courses, then enrolments.
+1. Reads whichever of `students.csv`, `instructors.csv`, `courses.csv`, `enrollments.csv`, `staff_assignments.csv`, `class_schedules.csv` the SIS provided (a missing file is left alone). A file that cannot be read at all (bad columns, bad signature, too big) fails the whole run before anything is written.
+2. In **one database transaction**, applies people, then courses, then enrolments, then staff assignments, then class times.
 3. Records the run (counts per dataset, and the rows that were not imported with the reason, up to 200) in the run history.
 
 Counts per dataset:
@@ -105,6 +109,19 @@ Counts per dataset:
 - **First real import needs a preview** (any earlier successful import or preview counts; a connection test does not).
 - A real import needs: the `sis.sync` feature on, the connection enabled, and the institution active. A preview needs the feature and saved settings only.
 
+### Class times (class_schedules.csv)
+
+Each row is one weekly meeting of a section: `day_of_week` is `mon` to `sun` or the day's English name, in any case; times are `HH:MM`, 24-hour, in the platform's time zone. Rows are unique on course, section, day and start. Applied last, after staff assignments, into the **active term**, creating the section if it is not there yet (as enrolments do). The rules (audit decision D9):
+
+- **A section in the file gets exactly its rows**, replacing what was there (also what an administrator entered), and the SIS then owns it (`sis_class_schedules`).
+- **A section the SIS sent before and no longer lists** (in the active term) loses those times and is handed back to the administrator. It is counted as `removed`. Nothing is removed when a row of the file could not be read, since that row might have listed the section.
+- **A section the SIS never sent is untouched**, and **without the file nothing changes**.
+- **A bad row fails alone** (an unknown course, not a day, bad times, the end not after the start, the same day and start twice); the section keeps its other rows.
+- **Clashes are warnings**, not failures: a room, or an instructor, used by another section of the term at an overlapping time is listed with the issues ("Imported, with a clash: Room Rm 204 is also used by IT101 B on Monday 09:00–10:30."), and the row is imported.
+- Counts are per **section**: `created` (it had no times), `updated` (its times changed), `skipped` (the same), plus `removed`; `failed` counts rows.
+
+**The lock.** While the connection is enabled, a SIS-owned section's Class times page is read-only, with "These class times come from your student information system. Change them there; the next sync brings them here." and a "From the SIS" badge; the server refuses a save. Disabling the connection hands the times back.
+
 ## How records are matched
 
 `sis_links` remembers which Mentora person or course is which SIS id.
@@ -121,7 +138,7 @@ New people get an active account and **no password**. Send them a link from the 
 
 ## Fields the SIS owns
 
-While the connection is enabled, a person the SIS supplied cannot have their **name or email** changed in Mentora (the Users page shows the fields read-only, and the server refuses). Switching the connection off releases them. Courses and enrolments are SIS-owned too, but nothing in Mentora edits them by hand today, so nothing is locked yet.
+While the connection is enabled, a person the SIS supplied cannot have their **name or email** changed in Mentora (the Users page shows the fields read-only, and the server refuses). Switching the connection off releases them. Courses and enrolments are SIS-owned too, but nothing in Mentora edits them by hand today, so nothing is locked yet. Staff assignments and the class times the SIS sends are locked in the same way (see above).
 
 ## Schedule
 

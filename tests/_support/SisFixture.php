@@ -31,7 +31,7 @@ final class SisFixture
     public static function useFolder(): string
     {
         $folder           = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-sis-' . bin2hex(random_bytes(4));
-        $_ENV['sis.path'] = $folder;
+        \Tests\Support\TestEnv::set('sis.path', $folder);
 
         Services::injectMock('credentialVault', new CredentialVault('sis-fixture-encryption-key-0123456789'));
 
@@ -41,7 +41,7 @@ final class SisFixture
     public static function cleanup(string $folder): void
     {
         self::removeTree($folder);
-        unset($_ENV['sis.path']);
+        \Tests\Support\TestEnv::restore();
 
         Services::resetSingle('credentialVault');
     }

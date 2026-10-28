@@ -38,7 +38,7 @@ final class AdminIntegrationsTest extends RouteTestCase
         Services::injectMock('credentialVault', new CredentialVault('feature-test-encryption-key-0123456789'));
 
         $this->folder     = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-sis-' . bin2hex(random_bytes(4));
-        $_ENV['sis.path'] = $this->folder;
+        \Tests\Support\TestEnv::set('sis.path', $this->folder);
 
         $this->admin       = model(UserModel::class)->findById(CourseFactory::user('admin')->id);
         $this->institution = PeopleFactory::institution('SISFC', 'active', 'Sis College');
@@ -64,7 +64,7 @@ final class AdminIntegrationsTest extends RouteTestCase
         }
 
         @rmdir($this->folder);
-        unset($_ENV['sis.path']);
+        \Tests\Support\TestEnv::restore();
 
         Services::resetSingle('credentialVault');
         Services::resetSingle('settings');

@@ -33,7 +33,7 @@ final class InstitutionExportTest extends RouteTestCase
         Services::resetSingle('auditLogger');
 
         $this->folder        = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-export-' . bin2hex(random_bytes(4));
-        $_ENV['export.path'] = $this->folder;
+        \Tests\Support\TestEnv::set('export.path', $this->folder);
 
         $this->institution = PeopleFactory::institution('LEAVER', 'read_only', 'Leaver College');
         $this->admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', 'ada@leaver.example', $this->institution);
@@ -49,7 +49,7 @@ final class InstitutionExportTest extends RouteTestCase
         }
 
         @rmdir($this->folder);
-        unset($_ENV['export.path']);
+        \Tests\Support\TestEnv::restore();
 
         parent::tearDown();
     }

@@ -8,6 +8,7 @@ use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
 use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Institutions\ChairAssignmentService;
+use App\Services\Institutions\ClassScheduleService;
 use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\OfferingService;
 use App\Services\Institutions\StructureException;
@@ -62,6 +63,15 @@ use App\Services\Subscriptions\EffectiveStatus;
  * the SIS says someone teaches is created in the active term if it is not
  * there yet, as enrolments do.
  *
+ * Class times (class_schedules.csv) come after them (D9). A section the file
+ * lists gets exactly its rows, through ClassScheduleService, and the SIS then
+ * owns it (sis_class_schedules): locked on the Class times page while the
+ * connection is enabled. A section of the active term the SIS had sent and
+ * no longer lists loses those times and is handed back ("removed"). A section
+ * it never sent is untouched, and without the file nothing changes. Counts
+ * are per section; a failed row fails alone and the section keeps its other
+ * rows. Clashes are warnings: listed with the issues, never a failure.
+ *
  * Not safe to call twice at once on one instance (it keeps run counters).
  */
 class SisImporter
@@ -75,7 +85,7 @@ class SisImporter
 
     private DateTimeImmutable $now;
 
-    /** @var array<string, array{created: int, updated: int, skipped: int, failed: int, ended?: int}> */
+    /** @var array<string, array{created: int, updated: int, skipped: int, failed: int, ended?: int, removed?: int}> */
     private array $counts = [];
 
     /** @var list<array{dataset: string, item: string, reason: string}> */
@@ -158,7 +168,9 @@ class SisImporter
 
         try {
             foreach ($batches as $dataset => $batch) {
-                $this->counts[$dataset] = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0] + ($dataset === 'staff_assignments' ? ['ended' => 0] : []);
+                $this->counts[$dataset] = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0]
+                    + ($dataset === 'staff_assignments' ? ['ended' => 0] : [])
+                    + ($dataset === 'class_schedules' ? ['removed' => 0] : []);
 
                 foreach ($batch->rejected as $rejected) {
                     $this->fail($dataset, "row {$rejected['row']}", $rejected['reason']);
@@ -181,6 +193,10 @@ class SisImporter
 
             if (isset($batches['staff_assignments'])) {
                 $this->staffAssignments($batches['staff_assignments']);
+            }
+
+            if (isset($batches['class_schedules'])) {
+                $this->classSchedules($batches['class_schedules']);
             }
 
             $result = new SisImportResult($runId, true, $dryRun, $this->counts, $this->issues, $this->summary($dryRun));
@@ -624,6 +640,148 @@ class SisImporter
         $this->endUnlistedStaff($tracker, $dataset, $listed);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Class times
+    |--------------------------------------------------------------------------
+    */
+
+    private function classSchedules(SisBatch $batch): void
+    {
+        $dataset  = 'class_schedules';
+        $schedule = new ClassScheduleService();
+        $week     = [];  // offering id => its rows from the file
+        $listed   = [];  // every section the file names, even by a row that failed
+        $labels   = [];
+
+        foreach ($batch->records as $i => $record) {
+            $m    = SisMapper::classSchedule($record);
+            $item = "{$m['course_external_id']} {$m['section']}, {$record['day_of_week']} {$m['start']} (row " . ($batch->rows[$i] ?? '?') . ')';
+
+            $courseId = $this->linked('course', $m['course_external_id']);
+
+            if ($courseId === null || ($course = $this->courseRow($courseId)) === null) {
+                $this->fail($dataset, $item, "The course {$m['course_external_id']} is not known; list it in courses.csv.");
+
+                continue;
+            }
+
+            $termId = $this->activeTerm();
+
+            if ($termId === null) {
+                $this->fail($dataset, $item, 'The institution has no active term to put the section in.');
+
+                continue;
+            }
+
+            $offeringId          = $this->offeringFor($courseId, $termId, $m['section']);
+            $listed[$offeringId] = true;
+            $labels[$offeringId] = $course['course_code'] . ' ' . $m['section'];
+
+            if ($m['day'] === null) {
+                $this->fail($dataset, $item, "day_of_week \"{$record['day_of_week']}\" is not a day; use mon to sun, or the day's name.");
+
+                continue;
+            }
+
+            try {
+                $row = ClassScheduleService::checked(['day' => $m['day'], 'start' => $m['start'], 'end' => $m['end'], 'room' => $m['room'], 'mode' => $m['mode']]);
+            } catch (StructureException $e) {
+                $this->fail($dataset, $item, ucfirst($e->getMessage()));
+
+                continue;
+            }
+
+            foreach ($week[$offeringId] ?? [] as $other) {
+                if ($other['day'] === $row['day'] && $other['start'] === $row['start']) {
+                    $this->fail($dataset, $item, 'The section already meets on ' . ClassScheduleService::DAYS[$row['day']] . " at {$row['start']}.");
+
+                    continue 2;
+                }
+            }
+
+            $week[$offeringId][] = $row;
+        }
+
+        foreach ($week as $offeringId => $rows) {
+            $before = $schedule->forOffering($this->institutionId, $offeringId)['rows'];
+
+            if ($this->sameWeek($before, $rows)) {
+                $this->counts[$dataset]['skipped']++;
+            } else {
+                $saved = $schedule->save($this->institutionId, $offeringId, $rows, $this->actor, true);
+                $this->counts[$dataset][$before === [] ? 'created' : 'updated']++;
+
+                foreach ($saved['warnings'] as $warning) {
+                    $this->issues[] = ['dataset' => $dataset, 'item' => $labels[$offeringId], 'reason' => "Imported, with a clash: {$warning}"];
+                }
+            }
+
+            $this->trackSchedule($offeringId);
+        }
+
+        // As with staff: what the SIS no longer lists is cleared only when the whole file could be read.
+        if ($batch->rejected !== []) {
+            $this->issues[] = ['dataset' => $dataset, 'item' => 'the whole file', 'reason' => 'No class times were removed, because ' . count($batch->rejected) . ' row(s) of this file could not be read, so what the SIS no longer lists cannot be known.'];
+
+            return;
+        }
+
+        $termId = $this->activeTerm();
+
+        if ($termId === null) {
+            return;
+        }
+
+        $owned = db_connect()->table('sis_class_schedules s')->select('s.offering_id')
+            ->join('course_offerings o', 'o.id = s.offering_id')
+            ->where(['s.institution_id' => $this->institutionId, 'o.term_id' => $termId])
+            ->get()->getResultArray();
+
+        foreach ($owned as $o) {
+            $offeringId = (int) $o['offering_id'];
+
+            if (isset($listed[$offeringId])) {
+                continue;
+            }
+
+            $schedule->save($this->institutionId, $offeringId, [], $this->actor, true);
+            db_connect()->table('sis_class_schedules')->where('offering_id', $offeringId)->delete();
+            $this->counts[$dataset]['removed']++;
+        }
+    }
+
+    /**
+     * Whether two weeks hold the same meetings, in any order.
+     *
+     * @param list<array{day: string, start: string, end: string, room: ?string, mode: string}> $a
+     * @param list<array{day: string, start: string, end: string, room: ?string, mode: string}> $b
+     */
+    private function sameWeek(array $a, array $b): bool
+    {
+        $key = static function (array $rows): array {
+            $keys = array_map(static fn (array $r): string => implode('|', [$r['day'], $r['start'], $r['end'], (string) $r['room'], $r['mode']]), $rows);
+            sort($keys);
+
+            return $keys;
+        };
+
+        return $key($a) === $key($b);
+    }
+
+    private function trackSchedule(int $offeringId): void
+    {
+        $db = db_connect();
+
+        if ($db->table('sis_class_schedules')->where('offering_id', $offeringId)->countAllResults() > 0) {
+            $db->table('sis_class_schedules')->where('offering_id', $offeringId)->update(['updated_at' => $this->stamp()]);
+
+            return;
+        }
+
+        $db->table('sis_class_schedules')->insert(['institution_id' => $this->institutionId, 'offering_id' => $offeringId, 'created_at' => $this->stamp(), 'updated_at' => $this->stamp()]);
+    }
+
     /**
      * The department, sub-department or offering the row names (the offering is created when it is not there yet),
      * or null after failing the row with the reason.
@@ -923,6 +1081,7 @@ class SisImporter
         $result = new SisImportResult(0, true, $dryRun, $this->counts, [], '');
         $totals = $result->totals();
         $ended  = $result->ended() > 0 ? ", ended {$result->ended()}" : '';
+        $ended .= $result->removed() > 0 ? ", removed {$result->removed()}" : '';
 
         return ($dryRun ? 'Preview, nothing was written: ' : '') . "created {$totals['created']}, updated {$totals['updated']}, skipped {$totals['skipped']}{$ended}, failed {$totals['failed']}.";
     }

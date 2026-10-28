@@ -209,6 +209,17 @@ jobs:
         shell: bash
         run: vendor/bin/phpunit ${{ matrix.phpunit_args }} | tee phpunit-output.txt
 
+      # The same suite with every setting filled in (audit 14.2): a test that only passes while a setting
+      # is unset would pass above and fail on a developer's machine with a full .env. Once, on the leg
+      # without coverage.
+      - name: Run the tests with every setting filled in
+        if: matrix.coverage == 'none'
+        shell: bash
+        run: |
+          cp tests/_support/ci-full.env .env
+          vendor/bin/phpunit --no-coverage
+          rm .env
+
       # Overall line coverage may never drop below .github/coverage-floor.
       # Raise that number in the same PR that adds tests; never lower it.
       - name: Check the coverage floor

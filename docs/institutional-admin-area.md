@@ -103,6 +103,17 @@ On the Structure page, each sub-department shows its chairperson with **Assign c
 - **Instructors:** chosen from active people of the institution who hold the instructor role. Assigning and removing works on active offerings only; removing keeps past grades and the audit trail.
 - **Audit:** `structure.offering_created|updated|archived|reactivated|instructor_assigned|instructor_unassigned`.
 
+### Class times
+
+`/institution/offerings/{id}/schedule`, the "Class times" link on each row of the Offerings list (same permission, read-only institution and 404 for another institution's section as above). The list shows each section's week in a few words ("Mon 09:00–10:30 · Rm 204", or "—").
+
+- **A week of meetings:** day, start, end, room (optional, up to 50 characters) and delivery (onsite, online, hybrid), in the platform's time zone. The page shows the saved rows plus three blank ones; leaving a row empty removes it, and saving replaces the whole week (`ClassScheduleService`). No one-off exceptions: a cancelled class is an announcement.
+- **Refused, with the row:** no day, a time that is not `HH:MM`, the end not after the start, an unknown delivery, a room over 50 characters, or the same day and start twice ("Row 2: the section already meets on Monday at 09:00."). What was typed stays on the form.
+- **Clashes are warnings, never a refusal.** After a save, the page lists every other section of the same term that meets at an overlapping time on the same day in the same room (ignoring case; not for an online meeting or an empty room) or with an instructor in common: "Room Rm 204 is also used by IT101 B on Monday 09:30–11:00." / "Ivy Tan also teaches IT102 A on Tuesday 13:00–14:30."
+- **Only an active section** takes changes; an archived or completed one shows its times read-only.
+- **From the SIS:** a section whose times the SIS sends (`class_schedules.csv`, see `sis-integration.md`) shows them read-only, with a "From the SIS" badge and "These class times come from your student information system. Change them there; the next sync brings them here." The server refuses a save as well. Disabling the connection hands the times back.
+- **Audit:** `structure.offering_schedule_changed` with the week before and after.
+
 ## Enrolment
 
 `/institution/enrolments/offering/{id}` (permission `enrolments.manage`; read-only while the institution is read-only). Reached from the "enrolled / capacity" figure on the Offerings list.
@@ -323,6 +334,15 @@ Any offering of the institution can be opened and looked at, as its instructor s
 - **Scope** is the institution's own: an offering of another institution is a 404 on the page and on every API address (`InstitutionCourseFilter`), and the files a course shares (its resources and announcement attachments) open only for its own institution's administrator. A student's submitted work never does.
 - **One rule in one place:** `CourseViewer` says who sees the instructor's view; the services that used to ask "is this the instructor?" for what to show now ask it, and `InstitutionCourseAccess` decides reach. Writes keep their own checks (the assigned instructor, the program's chairperson).
 - **Read-only institutions** can still be looked at; viewing was never a write.
+- **A lesson's direct link** (`.../modules/items/{item}`, for the institution, the dean, the chairperson, the instructor and the student) opens the course page on that lesson: it answers with a redirect to `.../modules?item={item}`. A draft lesson opens for those who see the instructor's view, marked as a draft; a student sees only a published lesson. A deleted lesson, one from another course, and a course out of reach all give the same "not found" page.
+
+## When an institution is purged
+
+The system administrator's purge (by hand, or `institutions:purge-expired` once the retention period is over) removes the institution and everything under it, in one transaction:
+
+- **Its accounts go too:** every member who belongs to no other institution, except system administrators. Their profiles, roles, sign-ins and work go with them through the database's cascades.
+- **Its files go, row and disk:** everything those accounts uploaded, the institution's logo, and the export zips made for it. The files on disk are deleted after the database work is committed; a file that cannot be deleted then is remembered (`Purge.pendingFiles`) and tried again by the next scheduled purge.
+- **The audit entry** (`institution.purged`) records how many accounts and files went.
 
 ## Subscription
 

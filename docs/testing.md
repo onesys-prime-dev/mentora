@@ -147,6 +147,15 @@ file.
   floor, not a measure of quality; the coverage checks judge the depth.
 - Never call the AI question service from a test; use a fake that implements
   `App\Services\AI\QuestionGeneratorClientInterface`.
+- **A test never depends on what your `.env` says.** To give a setting a value
+  for a test, use `Tests\Support\TestEnv::set('backup.offsiteCommand', '')` (or
+  `unset`), and call `TestEnv::restore()` in `tearDown()`. CodeIgniter's `env()`
+  reads `$_ENV` first, and a `.env` value sits in `$_ENV`, `$_SERVER` and
+  `getenv()` at once, so setting only one of them (`putenv`, say) loses to the
+  file. `TestEnv` sets all three and puts back exactly what was there. A config
+  object read once per call (the logger in the testing environment builds a new
+  `Config\Logger` for every `log_message()`) is set the same way, not through
+  `config()`.
 
 ## In CI
 
@@ -154,6 +163,15 @@ The **Tests on MySQL** job starts a throwaway MySQL 8.4 container, runs
 `php spark migrate --all -g tests` on the empty database, then PHPUnit, on PHP
 8.2 (with a coverage report, downloadable from the run as `coverage-report`)
 and PHP 8.5 (the version the staging site runs).
+
+The PHP 8.5 run then runs PHPUnit **a second time with every setting filled
+in**: it copies `tests/_support/ci-full.env` (every key of the `env` template,
+with harmless values, both database groups on the test database) over `.env`.
+A test that passes only because a setting happens to be empty on a clean
+machine fails there. `tests/unit/CiFullEnvTest.php` keeps the file complete: a
+key added to `env` must be added to it too. To run the same check locally,
+back up your `.env`, copy `ci-full.env` over it, run `vendor/bin/phpunit
+--no-coverage`, and put your `.env` back.
 
 The **End-to-end (Playwright)** job runs the browser tests above: it builds the
 frontend, starts a MySQL 8.4 container, and runs `npm run e2e` (most of its time is

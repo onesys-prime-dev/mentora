@@ -39,7 +39,7 @@ final class InstitutionExportQueueTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         FakeEmail::install();
         $this->folder        = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-export-' . bin2hex(random_bytes(4));
-        $_ENV['export.path'] = $this->folder;
+        \Tests\Support\TestEnv::set('export.path', $this->folder);
         $this->now           = new DateTimeImmutable('2026-10-10 12:00:00');
 
         $offering          = CourseFactory::offering();
@@ -56,7 +56,7 @@ final class InstitutionExportQueueTest extends DatabaseTestCase
         }
 
         @rmdir($this->folder);
-        unset($_ENV['export.path']);
+        \Tests\Support\TestEnv::restore();
         Services::resetSingle('email');
 
         parent::tearDown();
@@ -124,11 +124,11 @@ final class InstitutionExportQueueTest extends DatabaseTestCase
     public function testAFailedBuildTellsTheRequesterAndFreesTheSlot(): void
     {
         $id = (new InstitutionExport())->request($this->institution, $this->ada, $this->now);
-        $_ENV['export.path'] = __FILE__ . DIRECTORY_SEPARATOR . 'cannot-be-a-folder';
+        \Tests\Support\TestEnv::set('export.path', __FILE__ . DIRECTORY_SEPARATOR . 'cannot-be-a-folder');
 
         (new InstitutionExport())->runQueued($this->now);
 
-        $_ENV['export.path'] = $this->folder;
+        \Tests\Support\TestEnv::set('export.path', $this->folder);
         $this->assertSame('failed', $this->row($id)['status']);
         $this->assertNull($this->row($id)['open_marker']);
         $this->assertSame(1, $this->told($this->ada, 'Your data export failed'));

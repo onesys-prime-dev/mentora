@@ -42,6 +42,7 @@ final class AdminTwoFactorPagesTest extends RouteTestCase
     {
         config('Auth')->actions['login'] = $this->originalAction;
         Services::resetSingle('email');
+        \Tests\Support\TestEnv::restore();
 
         parent::tearDown();
     }
@@ -60,6 +61,10 @@ final class AdminTwoFactorPagesTest extends RouteTestCase
     private function asInDevelopment(): void
     {
         config('Auth')->actions['login'] = DevelopmentAdminEmail2FA::class;
+
+        // The code is logged as a warning; a .env with a lower logger.threshold must not hide it (14.1). In
+        // testing, log_message() builds a new Config\Logger each time, so the setting is what counts.
+        \Tests\Support\TestEnv::set('logger.threshold', '9');
     }
 
     private function todaysLog(): string

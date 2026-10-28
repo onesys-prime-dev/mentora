@@ -11,6 +11,7 @@
  * @var array<string, mixed>       $offeringOptions      courses and terms the add form can use
  * @var list<array<string, mixed>> $offeringInstructors  people who can be assigned
  * @var array<int, true>             $offeringSisInstructors instructor assignments the SIS supplies (not editable here)
+ * @var array<int, string>         $offeringSchedules    each section's class times in a few words
  * @var bool                       $offeringCanEdit
  */
 $base    = 'institution/offerings';
@@ -87,8 +88,11 @@ foreach ($offeringRows as $o) {
         }
     }
 
-    // Everyone who can see the list can look at the course itself (read only).
-    $actions = '<a class="' . $link . ' mr-3" href="' . esc(site_url('institution/courses/' . $o['id'] . '/' . url_title((string) $o['course_title'], '-', true) . '/overview')) . '" data-view-course>View course</a>' . $actions;
+    // Everyone who can see the list can look at the course itself (read only), and at its class times.
+    $actions = '<a class="' . $link . ' mr-3" href="' . esc(site_url('institution/courses/' . $o['id'] . '/' . url_title((string) $o['course_title'], '-', true) . '/overview')) . '" data-view-course>View course</a>'
+        . '<a class="' . $link . ' mr-3" href="' . esc(site_url($base . '/' . $o['id'] . '/schedule')) . '" aria-label="Class times of ' . esc($o['course_code'] . ' ' . $o['section_code']) . '" data-class-times>Class times</a>' . $actions;
+
+    $meets = $offeringSchedules[(int) $o['id']] ?? null;
 
     $rows[] = [
         'id'      => $o['id'],
@@ -97,6 +101,7 @@ foreach ($offeringRows as $o) {
             'course'      => ['html' => '<span class="font-mono text-xs font-semibold">' . esc($o['course_code']) . '</span> <span class="font-medium">' . esc($o['course_title']) . '</span>'],
             'section'     => (string) $o['section_code'],
             'term'        => $o['term_name'] . ' ' . $o['academic_year'],
+            'meets'       => ['html' => $meets === null ? '<span class="text-[#646464]">—</span>' : '<span class="text-xs text-[#3D3D3D]" data-meets>' . esc($meets) . '</span>'],
             'instructors' => ['html' => $chips],
             'capacity'    => ['html' => '<a class="' . $link . '" href="' . esc(site_url('institution/enrolments/offering/' . $o['id'])) . '" aria-label="Roster of ' . esc($o['course_code'] . ' ' . $o['section_code']) . '">' . esc((string) $o['enrolled_count']) . ' / ' . esc((string) $o['capacity']) . '</a>'],
             'status'      => ['html' => view('components/status-badge', ['label' => ucfirst((string) $o['status']), 'tone' => $tones[$o['status']] ?? 'neutral'], ['saveData' => false])],
@@ -187,6 +192,7 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
             ['key' => 'course', 'label' => 'Course', 'sortable' => true],
             ['key' => 'section', 'label' => 'Section', 'sortable' => true],
             ['key' => 'term', 'label' => 'Term', 'sortable' => true],
+            ['key' => 'meets', 'label' => 'Meets'],
             ['key' => 'instructors', 'label' => 'Instructors'],
             ['key' => 'capacity', 'label' => 'Enrolled / capacity', 'sortable' => true],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],

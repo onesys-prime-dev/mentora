@@ -165,14 +165,15 @@ final class InstitutionPurgeTest extends DatabaseTestCase
         $this->assertSame(1, db_connect()->table('enrollments')->where('offering_id', $otherOffering)->countAllResults());
     }
 
-    public function testUserAccountsAreKeptButTheirMembershipGoes(): void
+    public function testTheInstitutionsAccountsAreRemoved(): void
     {
         $institution = $this->deletedInstitution(10);
         $alone       = $this->member($institution);
 
         $this->service->purge($institution, null, $this->admin);
 
-        $this->assertTrue($this->exists('users', 'id', (int) $alone->id), 'the account is not deleted');
+        // An account belongs to one institution (D1), so it goes with it (10.3); InstitutionPurgeFilesTest has the rest.
+        $this->assertFalse($this->exists('users', 'id', (int) $alone->id), 'the account is deleted');
         $this->assertSame(0, db_connect()->table('institution_users')->where('institution_id', $institution)->countAllResults());
     }
 

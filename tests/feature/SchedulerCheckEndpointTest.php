@@ -20,8 +20,7 @@ final class SchedulerCheckEndpointTest extends RouteTestCase
 
         Services::resetSingle('settings');
         FakeEmail::install();
-        putenv('scheduler.checkSecret=s3cret-for-tests');
-        $_ENV['scheduler.checkSecret'] = 's3cret-for-tests';
+        \Tests\Support\TestEnv::set('scheduler.checkSecret', 's3cret-for-tests');
 
         foreach (array_keys(ScheduledJobs::JOBS) as $command) {
             ScheduledJobs::heartbeat($command, time() - 60);
@@ -32,8 +31,7 @@ final class SchedulerCheckEndpointTest extends RouteTestCase
 
     protected function tearDown(): void
     {
-        putenv('scheduler.checkSecret');
-        unset($_ENV['scheduler.checkSecret']);
+        \Tests\Support\TestEnv::restore();
         Services::resetSingle('settings');
 
         parent::tearDown();
@@ -41,8 +39,7 @@ final class SchedulerCheckEndpointTest extends RouteTestCase
 
     public function testWithoutTheSecretConfiguredItAnswers503(): void
     {
-        putenv('scheduler.checkSecret');
-        unset($_ENV['scheduler.checkSecret']);
+        \Tests\Support\TestEnv::unset('scheduler.checkSecret');
 
         $response = $this->withHeaders(['X-Scheduler-Secret' => 'anything'])->call('POST', 'internal/scheduler-check');
 

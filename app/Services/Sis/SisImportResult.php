@@ -9,7 +9,8 @@ final class SisImportResult
 {
     /**
      * @param array<string, array{created: int, updated: int, skipped: int, failed: int, ended?: int}> $datasets keyed by dataset;
-     *        `ended` is only there for a dataset that can end things (staff_assignments): an assignment the SIS no longer lists
+     *        `ended` is only there for a dataset that can end things (staff_assignments): an assignment the SIS no longer lists;
+     *        `removed` only for class_schedules: a section whose SIS class times were cleared because the SIS no longer lists it
      * @param list<array{dataset: string, item: string, reason: string}>                  $issues   rows that were not imported
      */
     public function __construct(
@@ -32,6 +33,18 @@ final class SisImportResult
 
         foreach ($this->datasets as $counts) {
             $sum += $counts['ended'] ?? 0;
+        }
+
+        return $sum;
+    }
+
+    /** How many sections lose the class times the SIS had sent (or, for a preview, would): it no longer lists them. */
+    public function removed(): int
+    {
+        $sum = 0;
+
+        foreach ($this->datasets as $counts) {
+            $sum += $counts['removed'] ?? 0;
         }
 
         return $sum;

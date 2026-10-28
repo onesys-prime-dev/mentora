@@ -61,7 +61,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
 
     $routes->get('courses', 'Courses\CourseController::index', ['filter' => 'permission:courses.view']);
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:student']]);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => ['permission:courses.view', 'coursemember:student']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view', 'coursemember:student']]);
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:student']]);
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
@@ -133,7 +133,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 
     $routes->get('courses', 'Courses\CourseController::index', ['filter' => 'permission:courses.view']);
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
 
     $routes->get('calendar', 'Calendar\CalendarController::index');
@@ -372,7 +372,7 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     // tools are left out, as in the institution's view. The offering must be in the dean's
     // department, else 404 (deancourse).
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'deancourse']]);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3', ['filter' => ['permission:courses.view', 'deancourse']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view', 'deancourse']]);
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'deancourse']]);
 
     $routes->group('api/courses', ['filter' => ['permission:courses.view', 'deancourse', 'assessmentscope']], function ($routes) {
@@ -490,7 +490,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('terms', 'Courses\MonitorProgramController::terms');
     });
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
 
     $routes->group('api/courses', ['filter' => ['permission:courses.view', 'coursemember:chairperson', 'assessmentscope', 'closedoffering', 'chairpersoncourseaudit', 'coursepermission']], function ($routes) {
@@ -736,6 +736,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/reactivate', 'Institution\OfferingsController::reactivate/$1');
             $routes->post('(:num)/instructors', 'Institution\OfferingsController::assignInstructor/$1');
             $routes->post('instructors/(:num)/remove', 'Institution\OfferingsController::unassignInstructor/$1');
+            // A section's weekly class times (audit 13).
+            $routes->get('(:num)/schedule', 'Institution\OfferingScheduleController::show/$1');
+            $routes->post('(:num)/schedule', 'Institution\OfferingScheduleController::save/$1');
         });
 
         // Who is enrolled in an offering (enrolments.manage).
@@ -750,7 +753,7 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
         // post, patch or delete anything in a course, so nothing can be changed from this view.
         // The editors, the grading screens and the question-generation tools are left out too.
         $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'institutioncourse']]);
-        $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2/$3', ['filter' => ['permission:courses.view', 'institutioncourse']]);
+        $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view', 'institutioncourse']]);
         $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'institutioncourse']]);
 
         $routes->group('api/courses', ['filter' => ['permission:courses.view', 'institutioncourse', 'assessmentscope']], function ($routes) {

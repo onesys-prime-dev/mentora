@@ -32,7 +32,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
 
         $this->folder = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-export-' . bin2hex(random_bytes(4));
-        $_ENV['export.path'] = $this->folder;
+        \Tests\Support\TestEnv::set('export.path', $this->folder);
 
         $this->now    = new DateTimeImmutable('2026-10-10 12:00:00');
         $this->export = new InstitutionExport();
@@ -45,7 +45,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
         }
 
         @rmdir($this->folder);
-        unset($_ENV['export.path']);
+        \Tests\Support\TestEnv::restore();
         Services::resetSingle('auditLogger');
 
         parent::tearDown();

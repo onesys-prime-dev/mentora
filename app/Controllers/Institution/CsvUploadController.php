@@ -115,6 +115,7 @@ class CsvUploadController extends BaseController
             'message',
             "The upload was applied: {$totals['created']} created, {$totals['updated']} updated, {$totals['skipped']} unchanged"
                 . ($result->ended() > 0 ? ", {$result->ended()} ended" : '')
+                . ($result->removed() > 0 ? ', class times removed from ' . $result->removed() . ' section' . ($result->removed() === 1 ? '' : 's') : '')
                 . ($totals['failed'] > 0 ? ", {$totals['failed']} refused." : '.'),
         );
     }

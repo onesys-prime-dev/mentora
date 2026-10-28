@@ -31,7 +31,11 @@ final class FakeBackupRunner implements BackupRunner
         $fake         = new self();
         $fake->folder = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-backups-' . bin2hex(random_bytes(4));
 
-        $_SERVER['backup.path'] = $fake->folder;
+        \Tests\Support\TestEnv::set('backup.path', $fake->folder);
+
+        // No off-site copy unless a test gives one: a .env with backup.offsiteCommand set must not run it (14.2).
+        \Tests\Support\TestEnv::unset('backup.offsiteCommand');
+        Services::resetSingle('offsiteCopier');
 
         Services::injectMock('backupRunner', $fake);
 
@@ -46,8 +50,9 @@ final class FakeBackupRunner implements BackupRunner
 
         @rmdir($this->folder);
 
-        unset($_SERVER['backup.path']);
+        \Tests\Support\TestEnv::restore();
         Services::resetSingle('backupRunner');
+        Services::resetSingle('offsiteCopier');
     }
 
     public function dump(string $path): void

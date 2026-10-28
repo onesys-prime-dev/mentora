@@ -148,8 +148,9 @@ final class CsvUploadServiceTest extends DatabaseTestCase
         $applied = $this->service->apply($this->institution, $preview['token'], $this->actor);
 
         $this->assertTrue($applied->ok);
-        $this->assertSame(array_diff_key($kept['totals'], ['ended' => 0]), $applied->totals());
+        $this->assertSame(array_diff_key($kept['totals'], ['ended' => 0, 'removed' => 0]), $applied->totals());
         $this->assertSame($kept['totals']['ended'], $applied->ended(), 'and how many it ends is said on its own');
+        $this->assertSame($kept['totals']['removed'], $applied->removed(), 'as are the class times it removes');
         $this->assertGreaterThan($before['users'], $this->snapshot()['users']);
         $this->assertGreaterThan($before['enrollments'], $this->snapshot()['enrollments']);
     }

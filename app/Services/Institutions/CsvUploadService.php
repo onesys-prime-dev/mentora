@@ -148,11 +148,11 @@ class CsvUploadService
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'ended' => 0];
+        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'ended' => 0, 'removed' => 0];
 
         foreach ($data['datasets'] as $counts) {
             foreach (array_keys($totals) as $key) {
-                // Only a dataset that can end things (staff assignments) has an "ended" count.
+                // Only staff assignments have an "ended" count, and only class times a "removed" one.
                 $totals[$key] += (int) ($counts[$key] ?? 0);
             }
         }

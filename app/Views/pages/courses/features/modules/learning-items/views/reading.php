@@ -6,36 +6,40 @@ $blocks = $content['blocks'] ?? [];
 /**
  * Render inline text with formatting.
  */
-function renderInline(array $nodes): string
-{
-    $html = '';
+if (! function_exists('renderInline')) {
 
-    foreach ($nodes as $node) {
+    function renderInline(array $nodes): string
+    {
+        $html = '';
 
-        $text = esc($node['text'] ?? '');
+        foreach ($nodes as $node) {
 
-        foreach ($node['marks'] ?? [] as $mark) {
+            $text = esc($node['text'] ?? '');
 
-            switch ($mark) {
+            foreach ($node['marks'] ?? [] as $mark) {
 
-                case 'bold':
-                    $text = "<strong>{$text}</strong>";
-                    break;
+                switch ($mark) {
 
-                case 'italic':
-                    $text = "<em>{$text}</em>";
-                    break;
+                    case 'bold':
+                        $text = "<strong>{$text}</strong>";
+                        break;
 
-                case 'underline':
-                    $text = "<u>{$text}</u>";
-                    break;
+                    case 'italic':
+                        $text = "<em>{$text}</em>";
+                        break;
+
+                    case 'underline':
+                        $text = "<u>{$text}</u>";
+                        break;
+                }
             }
+
+            $html .= $text;
         }
 
-        $html .= $text;
+        return $html;
     }
 
-    return $html;
 }
 
 ?>

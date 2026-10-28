@@ -143,7 +143,8 @@ final class ViewAsWritesNothingTest extends RouteTestCase
         }
 
         if ($role === 'student') {
-            $this->assertContains(200, [$status['student/courses/' . $this->ids['courses'] . '/course/modules/items/' . $this->ids['items']] ?? null, $status['courses/' . $this->ids['courses'] . '/course/modules/items/' . $this->ids['items']] ?? null], 'the video item opens');
+            // A lesson link opens the course page on the lesson (a redirect to modules?item=, audit 5.1).
+            $this->assertContains(302, [$status['student/courses/' . $this->ids['courses'] . '/course/modules/items/' . $this->ids['items']] ?? null, $status['courses/' . $this->ids['courses'] . '/course/modules/items/' . $this->ids['items']] ?? null], 'the video item opens');
         }
 
         $this->assertSame([], $changed, 'tables written while viewing as a ' . $role);
