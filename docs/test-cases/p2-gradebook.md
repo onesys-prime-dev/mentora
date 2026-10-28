@@ -309,3 +309,64 @@ P1 scenarios whose expected result is the code's behavior (**VCI**) or a decisio
 - **Basis:** `GradeFinalizationService`
 - **QA status:** VCI (PS-FIN-01, PS-FIN-02, PS-FIN-03)
 - **Review:** Draft
+
+---
+
+## Wave 3 (added 2026-10-28)
+
+P2 scenarios. QA status as in the README; none has been run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-GBK-13 | A curve changes grades, never the entered scores, and can be undone | Instructor | P2 | VCI |
+| TC-GBK-14 | The gradebook's reports and downloads agree with the gradebook | Instructor, student | P2 | VCI |
+| TC-GBK-15 | Dropped and withdrawn students are left out of the calculation and tagged | Instructor | P2 | VCI |
+| TC-GBK-16 | Finalizing tells the signer and the parents, and reopening says what happens to grades already sent | Instructor | P2 | VCI |
+
+### TC-GBK-13 A curve changes grades, never the entered scores, and can be undone
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** `instructor1`, IT101-A; Quiz 1 with scores spread from 40 to 95; one student with an override, one excused
+- **Steps:** preview a curve on Quiz 1, then on the final grade (+5 points); apply each; enter a later score; apply a second curve to Quiz 1; curve another item; undo; finalize and try to curve; try to undo IT101-B's curve from IT101-A.
+- **Expected:** the preview shows before and after, how many would pass and reach full marks, and changes nothing; it refuses what cannot be curved; applying changes the grades but never the entered scores; the final-grade curve adds points but never passes 100; an override and excused work are never curved; a curve is kept as worked out when later scores change; a new curve on the same item replaces the old one, two items can each have one; undo puts every grade back; finalized grades cannot be curved until reopened; another section's curve cannot be undone; applying and undoing are audited; on a draft scheme a recalculation is flagged instead.
+- **Already automated:** `tests/database/GradeAdjustmentServiceTest.php` (all), `GradeRoutesTest::testTheCurveRoutesPreviewApplyAndRemoveOverHttp`
+- **Playwright:** `tests/e2e/gradebook.spec.js` (TC-GBK-03)
+- **Basis:** `GradeAdjustmentService`
+- **QA status:** VCI (PS-GBK-07)
+- **Review:** Draft
+
+### TC-GBK-14 The gradebook's reports and downloads agree with the gradebook
+
+- **Role:** Instructor, student. **Priority:** P2
+- **Data:** IT101-A with finalized grades including an excused item, an override and a curve; IT101-B with no grading set up
+- **Steps:** download the class report (PDF and Excel), the summary, the CSV and a student report; open IT101-B's report; as student1 download "my report"; as student5 try student1's.
+- **Expected:** a section without grading has no report; the class report carries exactly the gradebook's grades; the summary has mean, median, range and who is at or above passing, with each grade in one bucket; standing reads Passed or Failed only once final; excused items and overrides are noted; the CSV is data (an excused item is a blank score named in its own column; final, overridden and curved are yes or no flags), safe to open in a spreadsheet, and differs from the Excel report, which colours standings and has a summary sheet; a student report is only for someone in the section and can be held back until final; file names are safe; downloads are audited.
+- **Already automated:** `tests/database/GradeReportServiceTest.php` (all)
+- **Playwright:** `tests/e2e/gradebook.spec.js` (TC-GBK-05)
+- **Basis:** `GradeReportService`
+- **QA status:** VCI (PS-GBK-08)
+- **Review:** Draft
+
+### TC-GBK-15 Dropped and withdrawn students are left out of the calculation and tagged
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** IT101-A; drop student3 and withdraw student4 on the roster
+- **Steps:** recalculate; open the gradebook and the class summary; bring student3 back with a status change.
+- **Expected:** the dropped and withdrawn students are not graded by the engine, are tagged (Dropped, Withdrawn) in the gradebook, and are not counted in the summary; a status change back refreshes the tag and grades them again. (Bringing them back through Add is TC-ENR-07, expected to fail today.)
+- **Already automated:** `GradingEngineServiceTest::testStudentsWhoDroppedAreNotGraded`
+- **Playwright:** no
+- **Basis:** `GradingEngineService::syncEnrolment`
+- **QA status:** VCI (PS-GBK-11)
+- **Review:** Draft
+
+### TC-GBK-16 Finalizing tells the signer and the parents, and reopening says what happens to grades already sent
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** IT101-B (CBM has a dean); a section in a department with no eligible dean; parents linked to its students; an SIS connection; the parent notifier made to fail once
+- **Steps:** finalize each section; finalize with the parent notifier failing; send the grades to the SIS (`sis:grades`), then reopen; reopen a section never sent; read the chairperson's notifications.
+- **Expected:** finalizing tells the dean once (or the administrators where there is no eligible dean) and the students' parents at once; a failure telling parents never blocks finalizing; reopening grades already sent tells the instructor what happens next with the SIS; reopening grades never sent says nothing about the SIS; the chairperson is told of a reopen.
+- **Already automated:** `GradeFinalizationServiceTest` (`testFinalizingTellsTheStudentsParentsAtOnce`, `testAParentNotifierThatFailsNeverBlocksFinalizing`, `testReopeningGradesAlreadySentTellsTheInstructorWhatHappensNext`, `testReopeningGradesNeverSentSaysNothingAboutTheSis`), `GradeSignoffServiceTest::testTheDeanIsToldOnceTheGradesAreFinalized`
+- **Playwright:** no
+- **Basis:** `GradeFinalizationService`
+- **QA status:** VCI (PS-FIN-05)
+- **Review:** Draft

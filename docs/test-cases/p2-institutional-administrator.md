@@ -1,6 +1,6 @@
 # P2 test cases: the institutional administrator
 
-43 cases in two files, 5 added in Wave 1 of the QA plan (TC-CRS-03 rewritten) and 21 in Wave 2 (2026-10-28, at the end). Read [README.md](README.md) first. **All are `Draft`**
+43 cases in two files, 5 added in Wave 1 of the QA plan (TC-CRS-03 rewritten) 21 in Wave 2 and 18 in Wave 3 (2026-10-28, at the end). Read [README.md](README.md) first. **All are `Draft`**
 (see the README).
 
 - `tests/e2e/institution-structure.spec.js` holds the screen-by-screen cases
@@ -653,4 +653,252 @@ From the QA plan's Wave 2: P1 scenarios of the critical and high-risk modules. *
 - **Playwright:** no
 - **Basis:** `SisSync` command, `SisImporter`, the file connector
 - **QA status:** VCI (PS-SIS-09)
+- **Review:** Draft
+
+---
+
+## Wave 3 (added 2026-10-28)
+
+P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave took (CSV upload). QA status as in the README; none has been run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-IAA-13 | Every permission change is audited, and one that cannot be audited is undone | Institutional administrator | P2 | IBR |
+| TC-IAA-14 | The institution's audit log shows its own entries only, without addresses | Institutional administrator | P2 | VCI |
+| TC-IAA-15 | A read-only institution can still view as its people and export | Institutional administrator | P2 | VCI |
+| TC-STR-08 | Structure fields, inactive parents, and audit entries | Institutional administrator | P2 | VCI |
+| TC-TRM-07 | Term fields and their limits | Institutional administrator | P2 | VCI |
+| TC-TRM-08 | A term cannot be reopened while another term is active | Institutional administrator | P2 | REG? |
+| TC-TRM-09 | A term closes only when its sections' grades are finalized or signed off | Institutional administrator | P2 | NB |
+| TC-OFF-06 | A section is edited only while active, and archived only with nobody enrolled | Institutional administrator | P2 | VCI |
+| TC-OFF-07 | Class times are entered per section, and a clash warns but saves | Institutional administrator | P2 | FIX? |
+| TC-OFF-08 | Class times from the SIS replace a section's week and lock it | Institutional administrator | P2 | FIX? |
+| TC-ENR-06 | A former student may later teach; a former dean or administrator never enrols where they led | Institutional administrator | P2 | IBR |
+| TC-ENR-07 | Bringing a student back through Add refreshes the gradebook like a status change | Institutional administrator | P2 | REG |
+| TC-PPL-06 | A password link sent from People needs the password and goes to the person | Institutional administrator | P2 | VCI |
+| TC-UPL-03 | CSV upload: file limits, the header, and the staff-assignments file | Institutional administrator | P1 | VCI |
+| TC-UPL-04 | CSV upload: each row's rule, a preview equal to the result, and no upload while the SIS is connected | Institutional administrator | P1 | VCI |
+| TC-BRD-04 | Logo limits | Institutional administrator | P2 | VCI |
+| TC-ACD-02 | Academic defaults: new sections take the institution's, existing ones keep theirs | Institutional administrator | P2 | VCI |
+| TC-RPT-03 | Institution reports agree with Monitor Program, and their CSV is safe | Institutional administrator | P2 | VCI |
+
+### TC-IAA-13 Every permission change is audited, and one that cannot be audited is undone
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps:** change a box on Roles and permissions; read the audit log entry. Make the audit write fail (test database trigger) and change a box.
+- **Expected:** the entry names who, what, before and after, and the institution; when the audit cannot be written the change is undone and the earlier value (not just the default) is back.
+- **Already automated:** `PermissionMatrixChangeTest::testEveryChangeIsAuditedWithWhoWhatAndBeforeAndAfter`, `testAChangeIsUndoneWhenItCannotBeAudited`, `testAnAuditFailureRestoresTheEarlierValueNotJustTheDefault`
+- **Playwright:** no
+- **Basis:** `PermissionMatrix`; decision U1c
+- **QA status:** IBR (PS-RBA-05)
+- **Review:** Draft
+
+### TC-IAA-14 The institution's audit log shows its own entries only, without addresses
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** entries made by the institution's people, by a Mentora system administrator viewing as one of them, and by another institution
+- **Steps:** open the audit log; filter, sort, page; search for an IP address; export; try another institution's id; make the institution read-only and export again.
+- **Expected:** only the institution's own entries; filter choices come from them; no source address is shown, searched or exported; Mentora's staff appear as "Mentora support", not by account; a view-as entry shows who did it; SIS connection settings are not shown; changes show before and after; actions have plain labels; an unknown sort or a wildcard cannot break it; exporting is recorded and defuses formulas; a read-only institution can still read and export.
+- **Already automated:** `tests/feature/InstitutionAuditLogPageTest.php` (all)
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-AUD-01)
+- **Basis:** the institution audit controller
+- **QA status:** VCI (PS-AUD-04)
+- **Review:** Draft
+
+### TC-IAA-15 A read-only institution can still view as its people and export
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps:** make institution 1 read-only; view as student5 (TC-IAA-12); create and download the data export (TC-RPT-02).
+- **Expected:** both work; nothing else changes.
+- **Already automated:** `InstitutionViewAsTest::testAReadOnlyInstitutionCanStillViewAs`, `ReadOnlyModeTest`
+- **Playwright:** no
+- **Basis:** `ReadOnlyFilter` exceptions
+- **QA status:** VCI (PS-IMP-06)
+- **Review:** Draft
+
+### TC-STR-08 Structure fields, inactive parents, and audit entries
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps and expected (each field at its limits; a refusal names the field and saves nothing):**
+
+  | Field | Accepted | Refused |
+  |---|---|---|
+  | Code (department, sub-department, program) | 1 to 50 characters, starting with a letter or digit (the code's rule), stored in capitals | 51 characters; a code starting with a symbol; a duplicate within its parent (the same code under another parent, or in another institution, is fine) |
+  | Name | 3 and 255 characters | 2 and 256 characters |
+  | Established year | 1800 and the current year | 1799, next year, `abc` |
+
+- **Then:** create a sub-department under an inactive department, and reactivate a program under an inactive sub-department (both refused); save a department with nothing changed, then with a new name, and read the audit log.
+- **Expected (also):** an unchanged save writes no entry; each change writes a `structure.*` entry; renaming keeps the code free for itself.
+- **Already automated:** `tests/database/StructureServiceTest.php`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-STR-02, 03)
+- **Basis:** `StructureService`; decision AMB-DB-07 (year 1800 to the current year)
+- **QA status:** VCI (PS-STR-01, PS-STR-03, PS-STR-05)
+- **Review:** Draft
+
+### TC-TRM-07 Term fields and their limits
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps and expected:** name of 1, 2, 100 and 101 characters (2 to 100 accepted); school year `2026-2027`, `2026–2027`, `2026/2027`, `2026` and `26-27` (record which separators the code accepts); an end date before, equal to and after the start; a term of 800 and 801 days (800 is the limit); the same name and year twice (refused), the same name in another year (accepted). Each refusal names its field.
+- **Already automated:** `TermServiceTest::testBadInputIsRefusedWithTheFieldNamed`, `testTheSameNameInTheSameYearIsRefusedButAnotherYearOrInstitutionIsFine`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-TRM-02)
+- **Basis:** `TermService`
+- **QA status:** VCI (PS-TRM-01)
+- **Review:** Draft
+
+### TC-TRM-08 A term cannot be reopened while another term is active
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** "Test term" closed (TC-TRM-05); the 1st Semester active
+- **Steps:** reopen "Test term".
+- **Expected:** refused with a message naming the active term; nothing changes. With no other active term it reopens.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-INST-02. Suspected: reopening gives no warning and sets the term active whatever its dates [audit agent; not run].
+- **QA status:** REG? (PS-TRM-06)
+- **Review:** Draft
+
+### TC-TRM-09 A term closes only when its sections' grades are finalized or signed off
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** "Test term" with three sections: one not finalized, one finalized and not signed off (institution with deans), one signed off
+- **Steps:** close the term; read the preview; finalize and sign off the others; close again.
+- **Expected:** the preview names the sections that hold it up, and the close is refused while any section's grades are not finalized (and, where the institution has deans, signed off); once all are, it closes.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-INST-01. Today `TermCloseService` checks no grades [audit agent; not run].
+- **QA status:** NB (PS-TRM-05)
+- **Review:** Draft
+
+### TC-OFF-06 A section is edited only while active, and archived only with nobody enrolled
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps:** edit an active section; edit a completed one; lower capacity below the enrolled count; archive a section with students and one without; bring the archived one back into a closed term.
+- **Expected:** only an active section is edited, and only what changed is audited; capacity cannot drop below those enrolled; archiving is refused while students are enrolled; an archived section cannot be brought back into a closed term or edited.
+- **Already automated:** `OfferingServiceTest`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-OFF-03)
+- **Basis:** `OfferingService`
+- **QA status:** VCI (PS-OFF-02)
+- **Review:** Draft
+
+### TC-OFF-07 Class times are entered per section, and a clash warns but saves
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** IT101-A and IT102-A in the active term; a section of a completed term
+- **Steps:** from Offerings open IT101-A's Class times; enter Mon 08:00–09:30 room 101 face-to-face and Wed 08:00–09:30; save. Enter for IT102-A Mon 09:00–10:00 room 101 (room clash), and one taught by the same instructor at the same time (instructor clash); an online class at the same time; a row ending before it starts; the same start twice on a day; an unknown day; blank rows. Try the completed term's section, and a section of another institution.
+- **Expected:** rows save and read back in week order; saving replaces the week; blank rows are ignored and do not pile up after a refusal; an end not after the start, a repeated start and an unknown day or mode are refused, keeping what was typed; a room or instructor clash warns and saves; an online class never clashes on room; another term never clashes; a closed section is refused (even by a direct post); another institution's section is not found; the Offerings list shows the meetings; the change is audited; a read-only institution cannot save.
+- **Already automated:** `tests/database/ClassScheduleServiceTest.php`, `tests/feature/OfferingSchedulePageTest.php`
+- **Playwright:** no
+- **Basis:** `ClassScheduleService`; decisions 13.1, 13.3, 13.4; commit `2154a2f`. The page is reached from Offerings, not the offering form (the code governs).
+- **QA status:** FIX? (PS-OFF-06, PS-OFF-07)
+- **Review:** Draft
+
+### TC-OFF-08 Class times from the SIS replace a section's week and lock it
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** an SIS connection; `class_schedules.csv` listing IT101-A's week, and later without it
+- **Steps:** preview and run the file; open IT101-A's Class times and try to save by hand. Run a file without IT101-A. Run with no class-times file. Run a file with two rows for the same day and start, and one unreadable row. Disable the connection.
+- **Expected:** a section in the file gets exactly its rows and is locked; a SIS section left out loses its SIS times; a section never sent is untouched; no file changes nothing; a repeated row fails alone; an unreadable row stops the removals; the preview counts the removals; clashes are warnings; disabling the connection ends the lock, and a hand save hands the section back to the administrator.
+- **Already automated:** `tests/database/SisClassSchedulesTest.php`, `ClassScheduleServiceTest::testAHandSaveHandsASectionTheSisSentBackToTheAdministrator`
+- **Playwright:** no
+- **Basis:** `SisImporter` (class times); decisions D8, D9, 13.2; commit `2154a2f`
+- **QA status:** FIX? (PS-OFF-08)
+- **Review:** Draft
+
+### TC-ENR-06 A former student may later teach; a former dean or administrator never enrols where they led
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** a person who completed IT101 as a student in a past term; a former dean of CBM; a former administrator
+- **Steps:** assign the former student as IT101-A's instructor; make them chairperson of IT. Enrol the former dean in a CBM course; enrol the former administrator in a course of the institution.
+- **Expected:** the former student may teach and chair, keeping their old record; the former dean and administrator are refused in courses they led.
+- **Already automated:** `CourseRoleConflictsTest`, `EndCourseRoleConflictsTest` (the former-student part)
+- **Playwright:** no
+- **Basis:** `CourseRoleConflicts`; decisions D7, D10
+- **QA status:** IBR (PS-ENR-06)
+- **Review:** Draft
+
+### TC-ENR-07 Bringing a student back through Add refreshes the gradebook like a status change
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** student4 withdrawn from IT101-A (gradebook shows "Withdrawn")
+- **Steps:** on the roster, enrol student4 again through Add. Open the gradebook. Repeat with a dropped student brought back through the status change.
+- **Expected:** both ways the gradebook tag is cleared and the student is graded again, with the same result.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-INST-04. Today `EnrolmentService::add` reinstates without `syncEnrolment`, while `setStatus` calls it [read in the code; not run].
+- **QA status:** REG (PS-ENR-03)
+- **Review:** Draft
+
+### TC-PPL-06 A password link sent from People needs the password and goes to the person
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps:** on People choose student5 › Send a password link; confirm the password; read the mail sink.
+- **Expected:** the password is asked first; the link goes to student5's own address and works as TC-AUTH-09; the action is audited.
+- **Already automated:** `PeopleServiceTest::testSigningOutAndAPasswordLink`, `InstitutionPeopleTest`
+- **Playwright:** no
+- **Basis:** `PeopleService`
+- **QA status:** VCI (PS-PPL-05)
+- **Review:** Draft
+
+### TC-UPL-03 CSV upload: file limits, the header, and the staff-assignments file
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a people file of 10 MB and 10.1 MB; 50,000 and 50,001 rows; a file with a byte-order mark; headers in mixed case with spaces; an unknown column; a header-only file; a staff-assignments file naming a dean, a chairperson and an instructor
+- **Steps:** upload each through People › Upload; download each template.
+- **Expected:** up to 10 MB and 50,000 rows is read, beyond is refused; the byte-order mark and the header's case and spaces are handled; unknown columns are ignored; a header-only file is refused; each template is its header row. The staff file assigns the dean, the chairperson and the instructor, and its preview says what would be ended.
+- **Already automated:** `tests/database/CsvUploadServiceTest.php`, `tests/feature/InstitutionCsvUploadTest.php`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-UPL-01, 02)
+- **Basis:** `CsvUploadService`
+- **QA status:** VCI (PS-CSV-02, PS-CSV-05)
+- **Review:** Draft
+
+### TC-UPL-04 CSV upload: each row's rule, a preview equal to the result, and no upload while the SIS is connected
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** files for each dataset with one bad row per rule: a required field empty, a value over 255 characters, a bad email, bad units, an unknown status, a staff row targeting the wrong kind of place, a repeated key
+- **Steps:**
+  1. Upload; read the preview; apply (password asked). Compare.
+  2. Leave a preview for over an hour and apply. Use another institution's preview id.
+  3. Start over.
+  4. Enable an SIS connection and upload; enable it between preview and apply.
+  5. Make the apply fail partway.
+- **Expected:** each bad row is listed with its rule's message and the rest go through; the preview writes nothing and applying does exactly what it showed; the kept files are removed once applied or on starting over; a preview belongs to one institution and expires after 3600 seconds; upload and apply are refused while an SIS connection is enabled (configured but switched off does not block); a failure partway leaves nothing and keeps the files for a new try; records made by an upload are not SIS-owned. Abandoned previews are removed within an hour even without a new preview (decision AMB-INST-06; PS-CSV-06, Wave 4).
+- **Already automated:** `CsvUploadServiceTest` (all), `InstitutionCsvUploadTest`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-UPL-01, 02)
+- **Basis:** `CsvUploadService`
+- **QA status:** VCI (PS-CSV-01, PS-CSV-03, PS-CSV-04)
+- **Review:** Draft
+
+### TC-BRD-04 Logo limits
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** PNG, JPEG and WebP logos; an SVG; a 1 MB and a 1.1 MB PNG; images of 31, 32, 2000 and 2001 pixels; a text file renamed `.png`
+- **Steps:** upload each on Settings › Branding; replace a logo; remove it; check storage used.
+- **Expected:** PNG, JPEG and WebP up to 1 MB and 32 to 2000 pixels are accepted; SVG, larger, smaller, bigger and disguised files are refused beside the field; a logo counts toward storage; replacing or removing frees the old one; resetting the branding keeps the logo.
+- **Already automated:** `tests/database/InstitutionProfileServiceTest.php`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-BRD-01 to 03)
+- **Basis:** `InstitutionProfileService`
+- **QA status:** VCI (PS-BRD-02)
+- **Review:** Draft
+
+### TC-ACD-02 Academic defaults: new sections take the institution's, existing ones keep theirs
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps:** set the institution's default scale, passing mark and categories (with weights 60 / 30, then 60 / 40); add a new section and open its grades; open an existing section's grades; reset; set the high-load units and thresholds and look at Monitor Department.
+- **Expected:** weights must total 100 (refused beside the field otherwise); a new section starts from the institution's defaults, another institution still from the platform's, and a section that already has a scheme keeps it; reset goes back to the platform's for new sections; the high load and thresholds are the institution's for its own sections; every change is audited with old and new values.
+- **Already automated:** `tests/database/AcademicDefaultsTest.php` (all)
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-ACD-01)
+- **Basis:** `AcademicDefaults`
+- **QA status:** VCI (PS-ACD-01)
+- **Review:** Draft
+
+### TC-RPT-03 Institution reports agree with Monitor Program, and their CSV is safe
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** a course titled `=SUM(1,1)`; Monitor Program as `chairperson1`
+- **Steps:** open Reports; narrow by department, program and term; sort the comparison; open a course; export each CSV; compare the IT program's numbers with Monitor Program.
+- **Expected:** the numbers match Monitor Program; another institution's courses, departments and programs never show (not found); each export is CSV of the same scope and is logged; the at-risk CSV lists students and the reason; the formula-like title is defused; the institution's thresholds decide who needs attention; an institution with nothing yet says so.
+- **Already automated:** `tests/feature/InstitutionReportsTest.php` (all)
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-RPT-01)
+- **Basis:** the institution reports controller, `MonitorProgramService`
+- **QA status:** VCI (PS-RPT-01)
 - **Review:** Draft

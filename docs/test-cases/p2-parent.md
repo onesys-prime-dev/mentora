@@ -238,3 +238,36 @@ P1 scenarios of the parent portal whose expected result is the code's behavior (
 - **Basis:** the parent controllers; decision PLN-09 (privacy tests are P1)
 - **QA status:** VCI (PS-PRT-04)
 - **Review:** Draft
+
+---
+
+## Wave 3 (added 2026-10-28)
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-PRT-15 | The grade report PDF: only once final, without item scores, and recorded | Parent | P2 | VCI |
+| TC-PRT-16 | A future-dated announcement reaches parents on its date, not before | Parent | P2 | REG? |
+
+### TC-PRT-15 The grade report PDF: only once final, without item scores, and recorded
+
+- **Role:** Parent. **Priority:** P2
+- **Data:** `parent1`; student1 in IT101-A (finalized) and IT102-A (not)
+- **Steps:** download IT102-A's report, then IT101-A's; as student1 download their own; open the audit log; try another child's and another course; switch the portal off.
+- **Expected:** a report that is not final is refused with a plain message; the final one is a PDF without item scores or the class mean; the student's own report keeps the item scores; each parent download is audited with the parent as actor; another child or course is 404; with the portal off there is no report; other roles are turned away.
+- **Already automated:** `tests/feature/ParentGradeReportTest.php` (all)
+- **Playwright:** no
+- **Basis:** the parent grade report controller
+- **QA status:** VCI (PS-PRT-05)
+- **Review:** Draft
+
+### TC-PRT-16 A future-dated announcement reaches parents on its date, not before
+
+- **Role:** Parent. **Priority:** P2
+- **Data:** an announcement posted from the calendar in IT101-A dated 3 days ahead; `parent1`
+- **Steps:** run `parents:notify`; look at the parent's tab and notifications; move the clock to the date and run it again.
+- **Expected:** before the date the parent sees nothing and is told nothing; on the date it appears and they are told once.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-COM-01. Suspected: the notifier tells parents at once [audit agent; not run].
+- **QA status:** REG? (PS-PRT-07); the other screens are PS-ANN-05 (Wave 4)
+- **Review:** Draft

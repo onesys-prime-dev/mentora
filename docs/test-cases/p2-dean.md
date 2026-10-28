@@ -1,6 +1,6 @@
 # P2 test cases: the dean
 
-11 cases in the browser, and the PHP tests that stand behind the rest. Wave 1 of the QA plan (2026-10-28) rewrote TC-DEAN-04 and TC-DEAN-05 and added TC-DEAN-12 to 14; Wave 2 added TC-DEAN-15 to 20. Both are at the end. Read
+11 cases in the browser, and the PHP tests that stand behind the rest. Wave 1 of the QA plan (2026-10-28) rewrote TC-DEAN-04 and TC-DEAN-05 and added TC-DEAN-12 to 14; Wave 2 added TC-DEAN-15 to 20, Wave 3 TC-DEAN-21 to 31. All are at the end. Read
 [README.md](README.md) first. All are `Draft` (see the README).
 
 `tests/e2e/dean.spec.js` holds the cases. The demo data has two deans
@@ -551,4 +551,156 @@ P1 scenarios of the override chain and sign-off whose expected result is a decis
 - **Playwright:** no
 - **Basis:** `NotificationService` calls in the services named; decisions 1.4, 2.3, 16.0b, 16.0c
 - **QA status:** IBR (PS-NOT-06)
+- **Review:** Draft
+
+---
+
+## Wave 3 (added 2026-10-28)
+
+P2 scenarios, and the P1 scenarios of the dean area that no earlier wave took. QA status as in the README; none has been run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-DEAN-21 | The Approvals and Decided pages show each request's breakdown and reasons | Dean, institutional administrator | P2 | VCI |
+| TC-DEAN-22 | The requester sees why a request skipped a step or waits | Instructor | P2 | IBR |
+| TC-DEAN-23 | Sign-off holds later grade changes back from the SIS until it is signed again | Dean | P2 | VCI |
+| TC-DEAN-24 | The dashboard's attention items come in a fixed order from fixed rules | Dean | P2 | VCI |
+| TC-DEAN-25 | Teaching load, Monitor Department and the department report give the right figures | Dean | P2 | VCI |
+| TC-DEAN-26 | Chairperson review lists what chairs changed in courses they do not teach | Dean | P2 | VCI |
+| TC-DEAN-27 | A course the dean opens offers no way to change it | Dean | P2 | VCI |
+| TC-DEAN-28 | A dean confirming the password lands back in the dean's area | Dean | P2 | VCI |
+| TC-DEAN-29 | The dean reaches only the department they are dean of today | Dean | P1 | VCI |
+| TC-DEAN-30 | Follow-ups: who may ask whom, one open per subject, passing down, and closing | Dean, chairperson, instructor | P1 | VCI |
+| TC-DEAN-31 | Department and institution announcements reach the right people, and end | Dean, each audience | P1 | VCI |
+
+### TC-DEAN-21 The Approvals and Decided pages show each request's breakdown and reasons
+
+- **Role:** Dean, institutional administrator. **Priority:** P2
+- **Data:** waiting and decided requests from TC-DEAN-16 and 17
+- **Steps:** open Approvals and Decided as `dean2` and as the administrator; filter by program, section and status; open a request.
+- **Expected:** each list holds what it should; filters narrow it; a request shows the student, current and requested grade with the grade's breakdown, the reason, who endorsed it and their comment, and the decision reason; the approve dialog says what approving does ("This replaces the calculated …").
+- **Already automated:** `tests/feature/DeanApprovalsPageTest.php`, `InstitutionApprovalsPageTest.php`
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-04)
+- **Basis:** `app/Views/pages/dean/approvals.php`, `OverrideApprovalFilters`
+- **QA status:** VCI (PS-OVR-13)
+- **Review:** Draft
+
+### TC-DEAN-22 The requester sees why a request skipped a step or waits
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** the situations of TC-DEAN-15 and 17: no chairperson; the only administrator's own request; nobody holding `grades.approve`
+- **Steps:** make a request in each situation and open it in the gradebook.
+- **Expected:** the requester reads that the chairperson step was skipped and why; that the request needs a second administrator; that nobody can approve it yet (wording for each to confirm, from `OverrideRequestChain`'s words for each status).
+- **Already automated:** `OverrideRequestChainTest::testEveryOpenStatusHasWordsForWhoIsNext`, `AdministratorDecidesOverridesTest` (the "says why" tests)
+- **Playwright:** no
+- **Basis:** `OverrideRequestChain`; decisions U5, 7.3
+- **QA status:** IBR (PS-OVR-15)
+- **Review:** Draft
+
+### TC-DEAN-23 Sign-off holds later grade changes back from the SIS until it is signed again
+
+- **Role:** Dean. **Priority:** P2
+- **Data:** a signed-off section already sent to the SIS
+- **Steps:** look for anything sign-off locks that finalizing did not; approve an override and run `sis:grades`; reopen the sign-off, approve another, run it; sign off again and run it.
+- **Expected:** sign-off adds no lock of its own (finalizing already locks); an override approved after sign-off is sent once as an update; while the sign-off is reopened changes wait, and go when it is signed again.
+- **Already automated:** `SisGradeExporterTest` (`testAChangeApprovedAfterSignOffIsSentOnceAsAnUpdate`, `testChangesWaitWhileTheSignOffIsReopenedAndGoWhenItIsSignedAgain`), `GradeSignoffServiceTest::testSigningOffAddsNoWayToEditAndTheGradebookStaysLocked`
+- **Playwright:** no
+- **Basis:** `SisGradeExporter`, `GradeSignoffService`
+- **QA status:** VCI (PS-SGN-10)
+- **Review:** Draft
+
+### TC-DEAN-24 The dashboard's attention items come in a fixed order from fixed rules
+
+- **Role:** Dean. **Priority:** P2
+- **Data:** CBM with: overrides waiting, sections ready and sections holding up sign-off, overdue follow-ups, overdue grading in two sub-departments, quiet courses, students at risk; then with none of these
+- **Steps:** open the dashboard in each state.
+- **Expected:** nothing to report is an empty list; overrides waiting are one item linking to Approvals; ready and holding-up sections are two items linking to Sign-off; overdue follow-ups link to the overdue tab; overdue grading and quiet courses are one item per sub-department, most first, never for zero; students at risk link to Monitor Department; items come in that priority order; counts and words agree in number.
+- **Already automated:** `tests/unit/DeanAttentionRulesTest.php` (all)
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-01)
+- **Basis:** `DeanAttentionRules`
+- **QA status:** VCI (PS-DEA-01)
+- **Review:** Draft
+
+### TC-DEAN-25 Teaching load, Monitor Department and the department report give the right figures
+
+- **Role:** Dean. **Priority:** P2
+- **Data:** CBM: a section with two instructors, an instructor with no students, the institution's high-load units set to 18
+- **Steps:** open Teaching load; pick another term and a term outside the department; narrow to IT; sort by each column; open one instructor. Open Monitor Department and the department report, and export each. As `dean1`, open `instructor2`'s load.
+- **Expected:** each instructor's numbers are their own and a shared section counts for both; zeros and no turnaround for an instructor with nothing; a high load is marked at the institution's unit count; it opens on the newest term and falls back to it for a term not in the department; sorting puts missing values last and ties by name; another department's dean sees only their own sections of the same instructor; a dean with no department sees nothing. Exports hold the same figures. (The calculations were not read in detail: check the figures by hand once.)
+- **Already automated:** `tests/database/TeachingLoadServiceTest.php`, the Monitor Department and report tests
+- **Playwright:** no
+- **Basis:** `TeachingLoadService`, `DepartmentReportService`
+- **QA status:** VCI (PS-DEA-05)
+- **Review:** Draft
+
+### TC-DEAN-26 Chairperson review lists what chairs changed in courses they do not teach
+
+- **Role:** Dean. **Priority:** P2
+- **Data:** `chairperson1` changes something in IT101-A (does not teach it) and in a section they teach (set up for the test)
+- **Steps:** as `dean2`, open Chairperson review; filter by chairperson, sub-department and dates; mark entries reviewed; as `dean1` and as the chairperson, try to mark one.
+- **Expected:** it lists the chairpersons' changes in the department's courses, newest first, described in words, and leaves out what a chair did in a course they teach and anything of another department; filters narrow it (an outside filter finds nothing, not everything); marking moves an entry between tabs, changes nothing in the entry and is audited; only the dean of the department marks, and a new dean starts with none.
+- **Already automated:** `tests/database/ChairpersonReviewServiceTest.php` (all)
+- **Playwright:** no
+- **Basis:** `ChairpersonReviewService`
+- **QA status:** VCI (PS-DEA-06)
+- **Review:** Draft
+
+### TC-DEAN-27 A course the dean opens offers no way to change it
+
+- **Role:** Dean (also as the institutional administrator's course view). **Priority:** P2
+- **Data:** `dean2`; IT101-A (not theirs to teach); a section they teach
+- **Steps:** open IT101-A from the dean's Courses; look for any control that changes something; send writes to the course routes directly; open a course file and a student's submission file; open the section they teach as dean and as instructor.
+- **Expected:** the course opens view only and shows what the instructor sees, drafts included; no route exists to change anything and an attempt leaves the course untouched; no control is offered that would be refused; a course file opens, a student's submission does not; their own section is view only as dean and normal as instructor; a closed course says so too.
+- **Already automated:** `tests/feature/DeanCourseViewTest.php` (all)
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-03)
+- **Basis:** the dean course routes
+- **QA status:** VCI (PS-MOD-12)
+- **Review:** Draft
+
+### TC-DEAN-28 A dean confirming the password lands back in the dean's area
+
+- **Role:** Dean (not an administrator). **Priority:** P2
+- **Data:** `dean2`
+- **Steps:** sign off a section (password asked), confirm on the shared confirm page; repeat after the window with nothing pending (open the confirm page directly).
+- **Expected:** after confirming, the dean returns to the Sign-off page, or with nothing pending to the dean dashboard; never to an administrator area.
+- **Already automated:** none for a dean (GAP-AUTH-04)
+- **Playwright:** no
+- **Basis:** `ReauthService` (return page and fallback)
+- **QA status:** VCI (PS-REA-04)
+- **Review:** Draft
+
+### TC-DEAN-29 The dean reaches only the department they are dean of today
+
+- **Role:** Dean. **Priority:** P1
+- **Data:** `dean2` (CBM); `dean1` (General)
+- **Steps:** as `dean2`, open CBM's courses, people and programs, then General's by address. End `dean2`'s assignment (test database) and use the site. Send writes to the dean's course API.
+- **Expected:** reach is the assigned department only (its programs, offerings, the institution's members and their instructors); another department answers not found; an ended assignment reaches nothing at once and shows the explanation page; the dean's read-only course API has no write route.
+- **Already automated:** `tests/database/DeanAccessServiceTest.php`, `tests/feature/DeanCourseViewTest.php`
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-08, 11)
+- **Basis:** `DeanAccessService`
+- **QA status:** VCI (PS-DEA-02, PS-DEA-07)
+- **Review:** Draft
+
+### TC-DEAN-30 Follow-ups: who may ask whom, one open per subject, passing down, and closing
+
+- **Role:** Dean, chairperson, instructor. **Priority:** P1
+- **Data:** `dean2`, `chairperson1`, `instructor1`, `instructor2`
+- **Steps:** as the dean, ask the chairperson and the instructor of a section; ask yourself, a student, an instructor outside CBM. Ask about a student not in the course. Ask the same subject twice. As the chairperson, ask an instructor of IT; pass the dean's request down to an instructor of the course and to one outside it. Reply from both sides and from a third person. Close it twice. Leave one past its due date, and one a week without an answer.
+- **Expected:** a dean may ask the chairperson and instructors of their sections, never themselves; a chairperson only the instructors of their sub-departments; nobody outside the department; a student-related request must be about someone in the course; the same subject cannot be asked twice while open (the database refuses it too); bad input stores nothing; only the two sides reply and each is told; either side closes, once, audited and told; a chairperson passes only a dean's request, only to an instructor of the course, and the dean still sees it; a request is overdue after its due date or a week unanswered. Without `followups.manage`, a received follow-up can still be answered (TC-CHA-05).
+- **Already automated:** `tests/database/FollowUpServiceTest.php`, `tests/unit/FollowUpRulesTest.php`, `tests/feature/FollowUpsPageTest.php`
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-06)
+- **Basis:** `FollowUpService`
+- **QA status:** VCI (PS-DEA-03)
+- **Review:** Draft
+
+### TC-DEAN-31 Department and institution announcements reach the right people, and end
+
+- **Role:** Dean, then each audience. **Priority:** P1
+- **Data:** `dean2`; CBM with IT and another sub-department; an instructor teaching in two departments; a person who is both instructor and chairperson; a platform announcement (system administrator) and an institution announcement (institution's administrator)
+- **Steps:** post to the whole department, to IT only, to one program, and to staff only and students only; post to a group nobody is in; edit an active one and an ended one; end one; set one with a last day of today and look tomorrow.
+- **Expected:** the whole department reaches its students, instructors and chairpersons as they are right now; a sub-department reaches its programs and its chairperson; a program those in it and its sub-department's chairperson; the role filter narrows; an instructor in two departments sees each one's for their own sections; a person reached twice is told once; posting is audited and in-app only, and tells everyone except the dean; a post nobody is in says so but is kept; only an active one can be edited; ending keeps the history; the last day still counts. Platform and institution announcements show to their audience until their end date.
+- **Already automated:** `tests/database/DepartmentAnnouncementServiceTest.php`, `tests/feature/DepartmentAnnouncementsPageTest.php`, `InstitutionSecurityTest` (the institution announcement), `GeneralSettingsTest::testTheAnnouncementShowsForEveryoneAndNothingWhenEmpty`
+- **Playwright:** `tests/e2e/dean.spec.js` (TC-DEAN-07)
+- **Basis:** `DepartmentAnnouncementService`
+- **QA status:** VCI (PS-DEA-04, PS-ANN-08)
 - **Review:** Draft

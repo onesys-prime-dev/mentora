@@ -900,3 +900,9 @@ Next: Wave 2, the P1 `READY-VCI` and `READY-IBR` scenarios of the critical and h
 
 Next: Wave 3, the P2 scenarios.
 
+## Part J. Wave 3 written (2026-10-28)
+
+The P2 scenarios, the P1 scenarios of medium-risk modules, and two scenarios earlier cases only mentioned are written as 86 catalog cases (one new file, `p2-chairperson.md`), or mapped to earlier cases. None has been run. Every P1 and P2 scenario with an expected result is now covered. The scenario-to-case table is in [`wave-3-test-analysis.md`](wave-3-test-analysis.md) section 5.
+
+Next: Wave 4, the P3 scenarios, the exploratory charters and checks, and what is still blocked.
+

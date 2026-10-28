@@ -1,6 +1,6 @@
 # P2 test cases: the system administrator
 
-12 cases, automated in `tests/e2e/system-admin.spec.js`, 12 added in Wave 1 and 14 in Wave 2 of the QA plan (2026-10-28, at the end, in the full case format). Read [README.md](README.md)
+12 cases, automated in `tests/e2e/system-admin.spec.js`, 12 added in Wave 1, 14 in Wave 2 and 18 in Wave 3 of the QA plan (2026-10-28, at the end, in the full case format). Read [README.md](README.md)
 first. **All are `Draft`** (see the README).
 
 The administrator signs in with a 6-digit code the app emails. In the browser
@@ -577,4 +577,251 @@ P1 scenarios whose expected result is the code's behavior (**VCI**) or a decisio
 - **Playwright:** no
 - **Basis:** `tests/_support/TestEnv.php`, `.github/workflows/ci.yml`; decisions 14.1, 14.2; commit `2154a2f`
 - **QA status:** FIX? (PS-AIQ-13, PS-CI-01). This is the first thing the baseline run (register PLN-05) confirms.
+- **Review:** Draft
+
+---
+
+## Wave 3 (added 2026-10-28)
+
+P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave took (users, feature flags, the audit log). QA status as in the README; none has been run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-SA-39 | Deactivating people and changing their roles from the admin area | System administrator | P1 | VCI |
+| TC-SA-40 | Deleting a user keeps the history they created | System administrator | P1 | REG |
+| TC-SA-41 | Bulk actions and the users export | System administrator | P2 | VCI |
+| TC-SA-42 | Feature flags resolve in a fixed order, and each flag really gates its feature | System administrator | P1 | VCI |
+| TC-SA-43 | The audit log cannot be changed, and every security action is in it | System administrator | P1 | VCI |
+| TC-SA-44 | The platform audit log's export and addresses | System administrator | P2 | VCI |
+| TC-SA-45 | Platform settings: limits, the time zone, and their audit | System administrator | P2 | VCI, IBR |
+| TC-SA-46 | The audit retention setting archives old entries | System administrator | P2 | NB |
+| TC-SA-47 | System status and the home page's attention list | System administrator | P2 | VCI |
+| TC-SA-48 | The backup age alert, and the dump password | System administrator | P2 | VCI |
+| TC-SA-49 | Creating an institution: its code and name | System administrator | P2 | VCI |
+| TC-SA-50 | Renewals and corrections, and a history nobody can rewrite | System administrator | P2 | VCI |
+| TC-SA-51 | A renewal keeps a manual suspension; a restore follows the dates | System administrator | P2 | IBR |
+| TC-SA-52 | Lowering a plan below what an institution uses keeps what it has and stops growth | System administrator | P2 | IBR |
+| TC-SA-53 | An institution's own expiry timeline may only be stricter | Institutional administrator | P2 | VCI |
+| TC-SA-54 | Which other actions ask for the password again | System and institutional administrator | P2 | REG? |
+| TC-SA-55 | The database refuses impossible values | (database) | P2 | REG? |
+| TC-SA-56 | Seeds and the first administrator | (deploy) | P2 | VCI |
+
+## TC-SA-39 Deactivating people and changing their roles from the admin area
+
+- **Role:** System administrator. **Priority:** P1
+- **Data:** Users; `student5`; an SIS-managed student; a second system administrator; `chairperson1`; `dean2`; a plan with no free seat
+- **Steps:** deactivate yourself, the last active system administrator, the SIS-managed person, student5 (twice), and a system administrator while another is active; reactivate student5 with no seat; sign student5 out everywhere. Change roles: remove all, add `admin`, change a system administrator's roles, an unknown role, make someone a student with no seat, remove the chairperson role from `chairperson1` and the dean role from `dean2`; save with nothing changed.
+- **Expected:** you cannot deactivate yourself or the last active administrator; SIS-managed people are refused; deactivating twice is refused; sessions end (TC-AUTH-07); reactivating a student needs a seat; sign-out everywhere is recorded and leaves the account on; a person keeps at least one role; `admin` is never given and a system administrator's roles are not changed from the screen; an unknown role is refused; becoming a student needs a seat; removing the chairperson or dean role ends the assignment; an unchanged save writes no entry; every change is recorded.
+- **Already automated:** `tests/database/UserAdminServiceTest.php`, `tests/feature/AdminUsersPageTest.php`
+- **Playwright:** `tests/e2e/system-admin.spec.js` (TC-SA-11)
+- **Basis:** `UserAdminService`
+- **QA status:** VCI (PS-USR-01, PS-USR-02)
+- **Review:** Draft
+
+## TC-SA-40 Deleting a user keeps the history they created
+
+- **Role:** System administrator (database level). **Priority:** P1
+- **Data:** the test database; a user who created a dean assignment, an override request, a sign-off and a department announcement; a learning resource that uses a file
+- **Steps:** delete the user row; read those four records. Delete the resource's file row.
+- **Expected:** the records stay, with the creator reference cleared (SET NULL) and their other details kept; deleting a file that a learning resource uses is refused (RESTRICT). Routine removal stays deactivation; a purge follows its own rules (TC-SA-13).
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision PLN-02. Today seven foreign keys cascade because of reversed arguments, so the records are deleted with the user (inventory V10) [read in the code; not run].
+- **QA status:** REG (PS-USR-05)
+- **Review:** Draft
+
+## TC-SA-41 Bulk actions and the users export
+
+- **Role:** System administrator. **Priority:** P2
+- **Steps:** tick five people including yourself, the last administrator and an SIS-managed person; Deactivate; Reactivate including a student with no seat; send an unknown action and no one. Export the users list with 10,000 and 10,001 rows (test data) and a name that looks like a formula.
+- **Expected:** bulk does everyone it can and reports a reason per skipped person; one refusal does not stop the rest; the last administrator is never deactivated; the same id twice is done once; no one or an unknown action is refused. The export is capped at 10,000 rows, defuses formulas and is audited.
+- **Already automated:** `UserAdminServiceTest` (bulk tests), `tests/unit/UserExportTest.php`
+- **Playwright:** `tests/e2e/system-admin.spec.js` (TC-SA-11)
+- **Basis:** `UserAdminService`, `UserExport`
+- **QA status:** VCI (PS-USR-03, PS-USR-04)
+- **Review:** Draft
+
+## TC-SA-42 Feature flags resolve in a fixed order, and each flag really gates its feature
+
+- **Role:** System administrator. **Priority:** P1
+- **Data:** the flags `sis.sync`, `ai.question_generation` and `parent.portal` (`app/Config/FeatureFlags.php`); institution 1 on a plan that grants one of them
+- **Steps and expected (one flag; each row replaces the last):**
+
+  | Setting | Result for institution 1 |
+  |---|---|
+  | nothing set | the code's default |
+  | plan grants it, default off | on |
+  | global on row | on for everyone |
+  | institution override off, plan grants it | off |
+  | institution override on, global on | on |
+  | global off (kill switch), override on | off for everyone |
+  | override that ended yesterday | ignored |
+  | override ending today | still applies |
+  | kill switch that has ended | no longer kills |
+
+- **Then:** with each of the three flags off for institution 1, try an SIS sync, AI generation and the parent portal.
+- **Expected (also):** each is refused while its flag is off and works when on; the time of day does not matter; an unknown flag is a mistake; switching is audited.
+- **Already automated:** `tests/unit/FeatureFlagResolverTest.php`, `tests/database/FeatureFlagsTest.php`, `FeatureFlagAdminTest.php`, `SisImporterTest::testARunNeedsTheFeature`, `QuestionGenerationSafetyTest::testGenerationIsRefusedWhenTheInstitutionSwitchedItOff`, `ParentPortalTest`
+- **Playwright:** no
+- **Basis:** `FeatureFlagResolver`
+- **QA status:** VCI (PS-FLG-01, PS-FLG-03)
+- **Review:** Draft
+
+## TC-SA-43 The audit log cannot be changed, and every security action is in it
+
+- **Role:** System administrator (and database level). **Priority:** P1
+- **Steps:** try to update, save over, batch-update, delete, purge and replace an audit row through the model; then do each security action of the inventory (sign-in success and failure, lockout, password reset, role change, deactivation, permission change, view-as start and end, purge, export, backup request, settings change) as a multi-role person and while viewing as someone, and read the log.
+- **Expected:** every change to an existing row is refused and leaves it as it was; new entries can still be added and read. Each action writes an entry with the actor, the role they were acting in (their actual active role), their institution, the time, and the administrator when viewing as someone; old and new values are stored without secrets; an entry keeps its label if the user is deleted.
+- **Already automated:** `tests/database/AuditLogTest.php` (all), `tests/feature/AuditAuthEventsTest.php`
+- **Playwright:** `tests/e2e/system-admin.spec.js` (TC-SA-09)
+- **Basis:** `AuditLogger`, the audit model
+- **QA status:** VCI (PS-AUD-01, PS-AUD-02)
+- **Review:** Draft
+
+## TC-SA-44 The platform audit log's export and addresses
+
+- **Role:** System administrator. **Priority:** P2
+- **Steps:** export the audit log at and over its cap, with a formula-like value; export it again and look for the export's own entry; turn the setting that shows IP addresses off and on.
+- **Expected:** the export stops at its cap, defuses formulas and is itself audited; addresses are shown only while the setting is on.
+- **Already automated:** `tests/feature/AdminAuditLogPageTest.php`
+- **Playwright:** no
+- **Basis:** the admin audit controller
+- **QA status:** VCI (PS-AUD-03)
+- **Review:** Draft
+
+## TC-SA-45 Platform settings: limits, the time zone, and their audit
+
+- **Role:** System administrator. **Priority:** P2
+- **Data:** General and Security settings
+- **Steps:** save each setting at its minimum, its maximum and one past each (for example the idle limit 4, 5, 120, 121 minutes; the impersonation limit 4, 5, 240, 241); save without confirming the password. Change the time zone from Asia/Manila to UTC and look at a due date, an audit time and a class time. Make the audit write fail and save. Set the system name and an announcement.
+- **Expected:** each limit is enforced with the reason and nothing is saved on a bad value; saving needs the password; every time in the app moves with the zone, class times included; an unknown stored zone is ignored; a change that cannot be audited is undone; the system name shows in the admin header and the announcement for everyone (nothing when empty).
+- **Already automated:** `tests/feature/GeneralSettingsTest.php`, `SecuritySettingsTest.php`
+- **Playwright:** no
+- **Basis:** `PlatformSettings`, `GeneralSettings`; decisions 13.5, U4
+- **QA status:** VCI (PS-SET-01, PS-SET-04), IBR (PS-SET-02)
+- **Review:** Draft
+
+## TC-SA-46 The audit retention setting archives old entries
+
+- **Role:** System administrator. **Priority:** P2
+- **Data:** audit entries 800 and 700 days old; `auditRetentionDays` 730; an entry under a legal hold (if holds exist)
+- **Steps:** run the retention process; change the setting to 365 and run it again; set an invalid value.
+- **Expected:** entries older than the setting are archived (kept in an archive readable by authorized roles) before leaving active storage, never silently deleted; held entries stay; the run is logged and a failure can be retried; an invalid value is refused.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision MISS-OPS-01. Today the setting has no effect (inventory V1).
+- **QA status:** NB (PS-SET-03)
+- **Review:** Draft
+
+## TC-SA-47 System status and the home page's attention list
+
+- **Role:** System administrator. **Priority:** P2
+- **Data:** the test server; a way to slow the database (a sleeping query) and to fill the disk to 90% and 97% (a test volume)
+- **Steps:** open System status in each state: database answering in 999 and 1001 ms; disk at 89%, 90%, 97%; storage not writable; the AI worker's heartbeat old; a check that throws. Open Home with subscriptions in each stage, limits near and at their cap, a failed backup and a service down.
+- **Expected:** a slow database (over 1000 ms) is degraded; disk at 90% is degraded and at 97% down (an unreadable disk is degraded); unwritable storage is shown; with jobs on only the worker's heartbeat counts; a check that throws is down and does not stop the rest; the overall status is the worst. Home lists the subscription stages with the urgent first, limits near and at cap, a backup problem as urgent, a service down with a link to the status page; nothing when all is fine; the snapshot counts and recent activity are right.
+- **Already automated:** `tests/unit/SystemHealthTest.php`, `tests/database/AdminHomeTest.php`, `tests/feature/AdminMonitoringPageTest.php`
+- **Playwright:** `tests/e2e/system-admin.spec.js` (TC-SA-03)
+- **Basis:** `SystemHealth`, `AdminHome`
+- **QA status:** VCI (PS-MON-02, PS-MON-03)
+- **Review:** Draft
+
+## TC-SA-48 The backup age alert, and the dump password
+
+- **Role:** System administrator. **Priority:** P2
+- **Data:** `backupAlertHours` 24 (the default); the last good backup 23 h 59 min and 24 h 1 min old
+- **Steps:** open Backups and Home at each age; set the setting to 26 and look again. Make `mysqldump` fail with the password in its command.
+- **Expected:** the alert appears once the last good backup is older than the setting (24 hours by default), and the administrators are told once; the setting moves the threshold. The database password never appears in an error, the backup row or the log, and a failing tool leaves no file.
+- **Already automated:** `BackupServiceTest::testTheAlertFollowsTheHistory`, `tests/database/MysqldumpRunnerTest.php`
+- **Playwright:** no
+- **Basis:** `BackupStatus::assess`, `MysqldumpRunner`; register Part H (the code's 24 hours supersedes the 26 in the sign-off)
+- **QA status:** VCI (PS-BAK-07, PS-BAK-08)
+- **Review:** Draft
+
+## TC-SA-49 Creating an institution: its code and name
+
+- **Role:** System administrator. **Priority:** P2
+- **Steps:** onboard with codes `E2E`, `e2ecol` (an existing code in another case), a deleted institution's code, and codes at and past the length limit; names of 1 and 2 characters (record the minimum); rename one; try to change a code.
+- **Expected:** a duplicate code is refused even in another case and even when the other institution is deleted; a created institution starts pending; the code never changes after creation; a too-short name is refused; renaming is audited with before and after, and renaming to the same name does nothing.
+- **Already automated:** `tests/database/InstitutionServiceTest.php`
+- **Playwright:** `tests/e2e/system-admin.spec.js` (TC-SA-04)
+- **Basis:** `InstitutionService`
+- **QA status:** VCI (PS-INS-01)
+- **Review:** Draft
+
+## TC-SA-50 Renewals and corrections, and a history nobody can rewrite
+
+- **Role:** System administrator. **Priority:** P2
+- **Steps:** renew with an end date before the current end, on the same date, and after; move to another active plan and to a retired plan; stay on a retired plan; record a correction of the payment; renew after a lapse. Then try to update, save over and delete a history row (model and SQL through the app's model).
+- **Expected:** a renewal must end after the current end and may move to an active plan (or stay on its plan, even a retired one); a correction changes only the payment; each adds a history row, newest first; history rows can never be edited or deleted.
+- **Already automated:** `tests/database/SubscriptionServiceTest.php`
+- **Playwright:** `tests/e2e/system-admin.spec.js` (TC-SA-07)
+- **Basis:** `SubscriptionService`
+- **QA status:** VCI (PS-SUB-02, PS-SUB-08)
+- **Review:** Draft
+
+## TC-SA-51 A renewal keeps a manual suspension; a restore follows the dates
+
+- **Role:** System administrator. **Priority:** P2
+- **Steps:** suspend an active institution by hand, then record a renewal. Delete an institution, move its subscription's end into the past, and restore it.
+- **Expected:** the renewal does not lift the manual suspension; the restored institution shows the status its dates give (read-only or past), not the one it had.
+- **Already automated:** `ReadOnlyOwnThingsTest::testARenewalRecordedBeforeTheJobRunsAllowsWritingAtOnce` (the normal renewal)
+- **Playwright:** no
+- **Basis:** `SubscriptionService::statusAfterRenewal`, `EffectiveStatus`; decisions AMB-OPS-01, AMB-OPS-02
+- **QA status:** IBR (PS-INS-08, PS-INS-09)
+- **Review:** Draft
+
+## TC-SA-52 Lowering a plan below what an institution uses keeps what it has and stops growth
+
+- **Role:** System administrator, institutional administrator. **Priority:** P2
+- **Data:** institution 1 with 9 students on a plan of 10 seats
+- **Steps:** lower the plan to 5 seats; as the institution, open People and the courses; invite a student, reactivate one, enrol one; drop students until 4 remain and invite again.
+- **Expected:** existing students stay enrolled and active; anything that adds a seat is refused while usage is at or above the new limit; it works again once usage is below it.
+- **Already automated:** none for a lowered plan
+- **Playwright:** no
+- **Basis:** `PlanLimits`; decision AMB-OPS-06
+- **QA status:** IBR (PS-SUB-06)
+- **Review:** Draft
+
+## TC-SA-53 An institution's own expiry timeline may only be stricter
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Steps:** set the institution's warning, grace and read-only days shorter than the platform's, then longer.
+- **Expected:** shorter values are accepted and used for this institution's subscription stages; longer ones are refused naming the field.
+- **Already automated:** `InstitutionSecurityTest` (stricter-only rules)
+- **Playwright:** no
+- **Basis:** `InstitutionSecurity`
+- **QA status:** VCI (PS-SUB-07)
+- **Review:** Draft
+
+## TC-SA-54 Which other actions ask for the password again
+
+- **Role:** System administrator, institutional administrator. **Priority:** P2
+- **Steps:** without a fresh confirmation, try each: delete an institution, suspend one, deactivate a user, reactivate one, sign a user out everywhere, bulk reactivate, change a per-institution flag, test and preview an integration.
+- **Expected:** each asks for the password first (decision AMB-AUTH-05). Reopening a sign-off asks for a reason only (register Part I4).
+- **Already automated:** the routes with the `reauth` filter have their own tests
+- **Playwright:** no
+- **Basis:** decision AMB-AUTH-05. Today restore, purge and sign-off ask; the actions listed are suspected not to [audit agent; not run].
+- **QA status:** REG? (PS-REA-06)
+- **Review:** Draft
+
+## TC-SA-55 The database refuses impossible values
+
+- **Role:** (database level). **Priority:** P2
+- **Steps:** insert directly: an enrolment of a non-student; two students with the same `student_number` in one institution (and in two); `progress_percent` 101; `passing_percentage` 101; negative units; capacity 0; a term ending before it starts; two settings rows with the same key; two responses for one question of one attempt; a prerequisite cycle (through the app).
+- **Expected:** a duplicate `student_number` within one institution is refused (two institutions may share one); range rules (percent 0–100, units ≥ 0, capacity ≥ 1, end after start) are refused by the database where they are row rules, and by the app with a clear message; duplicate settings rows are refused by their natural key; one response per question (already enforced since `5140068`); a non-student enrolment and a prerequisite cycle are refused by the app.
+- **Already automated:** `QuizTwoTabsTest::testTheDatabaseKeepsOneAnswerPerQuestion`; the rest none
+- **Playwright:** no
+- **Basis:** decision MISS-DB-01. Suspected missing for most (inventory section 12) [audit agent; not run].
+- **QA status:** REG? (PS-DAT-04)
+- **Review:** Draft
+
+## TC-SA-56 Seeds and the first administrator
+
+- **Role:** (deploy). **Priority:** P2
+- **Steps:** run `php spark db:seed DatabaseSeeder` twice on an empty test database; run the demo seeder with the production environment; run `php spark admin:create` on a server with a placeholder email, a real-looking one, mismatched passwords and an invalid email.
+- **Expected:** a second seed run changes nothing; the demo seeder refuses in production; `admin:create` refuses a placeholder email on a server and creates nothing, accepts a real one (flagging mail not set), asks for the password twice and hidden, and creates nothing on a mismatch or an invalid email.
+- **Already automated:** `tests/database/CreateSystemAdminCommandTest.php`
+- **Playwright:** no
+- **Basis:** `app/Database/Seeds/`, `CreateSystemAdmin`
+- **QA status:** VCI (PS-DAT-06)
 - **Review:** Draft

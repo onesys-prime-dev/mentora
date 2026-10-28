@@ -1,6 +1,6 @@
 # P1 test cases: the critical journeys
 
-17 P1 journey cases, 11 quiz cases added in Wave 1 of the QA plan, and 25 cases added in Wave 2 (2026-10-28, at the end of this file, each with its own priority). Read [README.md](README.md) first for the format, the demo accounts and
+17 P1 journey cases, 11 quiz cases added in Wave 1 of the QA plan, 25 cases added in Wave 2 and 28 in Wave 3 (2026-10-28, at the end of this file, each with its own priority). Read [README.md](README.md) first for the format, the demo accounts and
 how to reseed. **All are `Draft`**: derived from the code, the seed data and the
 existing automated tests, awaiting a person to confirm each expected result.
 "(wording to confirm)" marks on-screen text read from code but not yet seen in
@@ -1124,4 +1124,395 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
 - **Playwright:** no
 - **Basis:** decision AMB-ASG-06. Today `GradeWorkService::reopenGrading` and `submitGrade` do not check finalization; the frozen `final_percentage` still protects the final grade [read in the code; not run].
 - **QA status:** REG (PS-GRD-06)
+- **Review:** Draft
+
+---
+
+## Wave 3 (added 2026-10-28)
+
+From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave took (discussions, announcements, calendar). QA status as in the README: **VCI** and **IBR** are expected to pass; **FIX?** a committed fix, expected to pass; **REG** a defect seen in the code and **REG?** a suspected one, expected to fail until fixed; **NB** not built, expected to fail. None has been run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-AUTH-11 | The emailed sign-in code for other roles, for several roles, and when mail fails | Instructor, dean | P2 | VCI, IBR |
+| TC-AUTH-12 | A person with no usable role gets an explanation, not a crash | Anonymous | P2 | VCI |
+| TC-AUTH-13 | A signed-in person changes their own password, also in a read-only institution | Student | P2 | NB |
+| TC-MOD-09 | The Resources tab lists the course's files and links by module and unit | Instructor, student | P2 | VCI |
+| TC-MOD-10 | A quiz, assignment or discussion item brings its own assessment or thread | Instructor | P2 | VCI |
+| TC-QUIZ-22 | Rubrics: building one, reusing one, and the assignment's total following it | Instructor | P2 | VCI |
+| TC-QUIZ-23 | An assessment reads Closed by its dates, at the code's boundary second | Instructor, student | P2 | IBR |
+| TC-QUIZ-24 | Question import limits, and what the checker calls an error or a warning | Instructor | P2 | VCI |
+| TC-QUIZ-25 | Printing a quiz: versions, shuffles, the key, and paper size | Instructor | P2 | VCI |
+| TC-QUIZ-26 | Generating questions without the job queue, and what the provider is sent | Instructor | P2 | VCI, IBR |
+| TC-QUIZ-27 | A generation request asks for 1 to 50 questions, and only questions made count toward the allowance | Instructor | P2 | REG? |
+| TC-QUIZ-28 | Generated questions are measured against a recorded baseline before release | (QA, AI owner) | P2 | NB |
+| TC-ASG-05 | Assignment uploads accept only the allowed file types | Student | P2 | NB |
+| TC-GRD-08 | The feedback thread on a piece of work | Instructor, student | P2 | VCI |
+| TC-DSC-01 | Discussions: titles, replies, attachments, unread marks and filters | Instructor, student | P2 | VCI |
+| TC-ANN-03 | Announcement attachments, replies and reactions | Instructor, student | P2 | VCI |
+| TC-ANN-04 | An author with two roles appears once per post in the course feed | Student | P2 | REG? |
+| TC-ANN-05 | A course announcement can be a draft, scheduled or published | Instructor, student, parent | P2 | NB |
+| TC-ANN-06 | Students and instructors are told of a new course announcement | Student, instructor | P2 | NB |
+| TC-CAL-01 | The calendar's date range, and the student's schedule page | Student, instructor | P2 | VCI |
+| TC-NOT-01 | Marking one notification read never marks the others | Student | P2 | REG? |
+| TC-FIL-02 | How a file is served: ranges, inline or download, and the logo | Every role | P2 | VCI |
+| TC-STU-01 | The student dashboard and profile | Student | P2 | VCI |
+| TC-FE-01 | Every screen not yet checked passes the accessibility check, fits three widths, and works by keyboard | Student, instructor, chairperson, parent | P2 | VCI |
+| TC-DSC-02 | Who may read, post and moderate a course discussion | Every course role | P1 | VCI, FIX? |
+| TC-ANN-07 | Who may change a course announcement, and the Announcements app | Instructor, student | P1 | VCI |
+| TC-ANN-08 | An announcement posted from the calendar for a later day stays hidden until that day | Instructor, student, parent | P1 | REG? |
+| TC-CAL-02 | What the calendar shows each person, and their reminders | Student, instructor, chairperson | P1 | VCI, IBR |
+
+### TC-AUTH-11 The emailed sign-in code for other roles, for several roles, and when mail fails
+
+- **Role:** Instructor, dean (`dean2`, also an instructor). **Priority:** P2
+- **Data:** platform Security settings › roles that need a code; institution 1's own setting; the mail sink
+- **Steps:**
+  1. Add "instructor" to the platform's roles. Sign in as `instructor1`: password, then the code from the mail sink. Enter a wrong code first.
+  2. Remove it; as institution 1 add "dean". Sign in as `dean2` while their active role is Instructor.
+  3. Stop the mail sink in a non-development environment and sign in as a role that needs a code. Repeat in development and read the log.
+  4. Try to remove "admin" from the roles (page and by hand-editing the setting).
+- **Expected:**
+  - Step 1: a chosen role needs the code after the password; a wrong code does not sign in; signing out means the code is asked again.
+  - Step 2: a person holding any chosen role gets a code, whichever role is active (decision AMB-AUTH-07).
+  - Step 3: outside development a mail failure stops the sign-in with a message; in development the code is written to the log.
+  - Step 4: administrators always need a code.
+- **Already automated:** `tests/feature/AdminTwoFactorTest.php`, `tests/database/SecurityPoliciesTest.php` (role choice, unit level), `InstitutionSecurityTest::testTheEmailedCodeAppliesToTheRolesTheInstitutionAddedForItsOwnPeople`
+- **Playwright:** no
+- **Basis:** the two-factor action, `twoFactorRoles`
+- **QA status:** VCI (PS-AUT-07, PS-AUT-08), IBR (PS-AUT-20)
+- **Review:** Draft
+
+### TC-AUTH-12 A person with no usable role gets an explanation, not a crash
+
+- **Role:** a test account in no group. **Priority:** P2
+- **Steps:** create an account with no role on the test database; sign in.
+- **Expected:** a 403 page explains there is no area to open; no error page. A dean with no department and no other role reaches the dean explanation page instead (TC-AUTH-10).
+- **Already automated:** `AuthFlowTest::testSomeoneWithoutAnyRoleGetsAForbiddenPageNotACrash`
+- **Playwright:** no
+- **Basis:** `RedirectController`
+- **QA status:** VCI (PS-AUT-13)
+- **Review:** Draft
+
+### TC-AUTH-13 A signed-in person changes their own password, also in a read-only institution
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5`; institution 1 active, then read-only
+- **Steps:**
+  1. Find "Change password" in the profile or account menu. Change it with a wrong current password, a new one below the institution's minimum, two that do not match, then validly.
+  2. Sign in with the old and the new password.
+  3. Make the institution read-only and change the password again.
+  4. Signed out, use "Forgot password" for student5 and for an unknown email.
+- **Expected:**
+  - Step 1: the current password is required; the policy is enforced with a reason beside the field; a valid change is saved with the framework's hashing.
+  - Step 2: only the new password works.
+  - Step 3: allowed: it is an account-security action, not an institution record (decision DOC-16).
+  - Step 4: the reset link flow works as TC-AUTH-09, and answers the same for an unknown email.
+- **Already automated:** none (the reset link: `PasswordResetLinkTest`)
+- **Playwright:** no
+- **Basis:** decisions MISS-AUTH-01 and DOC-16. Today there is no change-password page [read in the code; not run].
+- **QA status:** NB (PS-AUT-17, PS-ROM-03)
+- **Review:** Draft
+
+### TC-MOD-09 The Resources tab lists the course's files and links by module and unit
+
+- **Role:** Instructor, student. **Priority:** P2
+- **Data:** IT101-A; a draft module, a draft unit and a draft item; a PDF behind an unfinished prerequisite
+- **Steps:** as each role open Resources: the top level, a module, a unit; search, sort by name and by course order, filter by type, switch list and grid; open a file and a link. As a dropped student and an outsider, open it.
+- **Expected:** the top level lists modules and a module lists its units; students do not see drafts at any level; a unit lists its files and links; an empty unit says so; search also matches a resource's own title; only `list` or `grid` is accepted as a view; a file has protected view and download addresses and a label, a link opens its address and has no download or size; a locked resource has no view or download address for a student until the prerequisite is done; instructors are never locked; outsiders and dropped students are turned away; a module or unit of another section is not found.
+- **Already automated:** `tests/database/ResourceServiceTest.php` (all)
+- **Playwright:** no
+- **Basis:** `ResourceService`
+- **QA status:** VCI (PS-MOD-16)
+- **Review:** Draft
+
+### TC-MOD-10 A quiz, assignment or discussion item brings its own assessment or thread
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** IT101-B, a unit
+- **Steps:** add a quiz item, an assignment item and a discussion item; edit the discussion item's prompt and only its status; delete each item; delete a quiz from Assessments that has an item.
+- **Expected:** each item creates its assessment or thread; editing the discussion item keeps its thread in step, and a status-only change leaves the thread alone; deleting an item deletes its assessment too; deleting the discussion item keeps its thread as a general discussion; deleting an assessment deletes its item.
+- **Already automated:** `ModuleServiceTest` (`testAQuizItemBringsItsOwnAssessment`, `testADiscussionItemBringsItsOwnThread`, `testEditingADiscussionItemKeepsItsThreadInStep`, `testChangingOnlyTheStatusLeavesTheThreadAlone`), `ContentDeletionServiceTest`
+- **Playwright:** no
+- **Basis:** `ModuleService`, `ContentDeletionService`
+- **QA status:** VCI (PS-MOD-15). The planning scenario said deleting the item leaves the assessment attached to the course; the code deletes it, and the code governs.
+- **Review:** Draft
+
+### TC-QUIZ-22 Rubrics: building one, reusing one, and the assignment's total following it
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** `instructor1`; an assignment in IT101-A, another in IT101-B, one in IT201-A (`instructor2`)
+- **Steps:** create a rubric with three criteria; create one with no details; add and remove criteria; open the library from another assignment of IT101-A, select a rubric, edit the copy; try to select IT201-A's rubric; archive a rubric; delete one.
+- **Expected:** criteria are kept in order and their points add up to the assignment's total, whatever changes the rubric; a rubric with no details gets a default title; creating or selecting replaces the assessment's current rubric; selecting copies the rubric and leaves the source alone; the library lists the course's rubrics except the assessment's own, never another course's, and leaves archived ones out; deleting takes the criteria with it.
+- **Already automated:** `tests/database/RubricServiceTest.php` (all)
+- **Playwright:** no
+- **Basis:** `RubricService`
+- **QA status:** VCI (PS-ASM-10)
+- **Review:** Draft
+
+### TC-QUIZ-23 An assessment reads Closed by its dates, at the code's boundary second
+
+- **Role:** Instructor, student. **Priority:** P2
+- **Data:** a quiz and an assignment in IT101-B with `available_until` set one minute ahead and `due_date` two minutes ahead
+- **Steps:** read the status on the instructor's list and the student's item at 30 seconds before, at, and 30 seconds after `available_until`; then around `due_date`. Try to save the status "Closed" directly.
+- **Expected:** Closed is worked out from the dates and the clock, not a stored choice: the item reads closed from the boundary second the code uses (record it: "at" or "after") and refuses new attempts or submissions from then on; around the due date only "late" changes. A request to store Closed by hand is not an independent state (decision AMB-ASM-01).
+- **Already automated:** `QuizAttemptServiceTest::testAQuizPastItsAvailabilityWindowDoesNotStart`; `AssignmentSubmissionServiceTest::testSubmissionsAreRefusedWhenTheAssignmentIsNotOpen`
+- **Playwright:** no
+- **Basis:** `AssessmentService::quizAvailabilityReason`, `AssignmentSubmissionService::blockingReason`; decision AMB-ASM-01 (register Part I3)
+- **QA status:** IBR (PS-ASM-05)
+- **Review:** Draft
+
+### TC-QUIZ-24 Question import limits, and what the checker calls an error or a warning
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** files of 4.9, 5 and 5.1 MB; pasted text of 199,999, 200,000 and 200,001 characters; files of 300 and 301 questions; an `.exe` renamed `.docx`; a `.tst` file; a scanned PDF; a file with a question repeated exactly, and one with two questions about 90% alike
+- **Steps:** import or paste each, and read the preview.
+- **Expected:** 5 MB, 200,000 characters and 300 questions are the limits: at the limit it is read, one over is refused; a refused extension and a `.tst` file are refused with a sentence; a scanned PDF is refused (or read through OCR when the question-builder service runs, TC-QUIZ-14); each rule's problem is listed as an error or a warning near its paragraph; an exact repeat is an error and a question at least 85% alike is flagged; warnings do not block.
+- **Already automated:** `QuestionImportHardeningTest` (`testEachRuleCatchesItsProblemAsAnError`, `testAGoodQuestionHasNoProblemsAndWarningsDoNotBlock`, `testAFileTheSameQuestionTwiceIsAProblemAndALikeQuestionIsFlagged`, `testMoreQuestionsThanTheLimitAreRefused`, `testADamagedOrDisguisedFileIsASentenceNotAnError`)
+- **Playwright:** no
+- **Basis:** `QuestionImportValidator`, `QuestionImportService`
+- **QA status:** VCI (PS-QBK-03, PS-QBK-05)
+- **Review:** Draft
+
+### TC-QUIZ-25 Printing a quiz: versions, shuffles, the key, and paper size
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** Quiz 1 of IT101-A; an empty quiz
+- **Steps:** export as Word, RTF, PDF and HTML; one version, with and without shuffling; four versions; five versions; key only; Letter and an unknown paper size; print the same export twice. Export the empty quiz and an unknown format.
+- **Expected:** the test numbers every question with its points and marks no answer; the key gives the right answer of every kind and says when a question has none; the key comes after a page break (Word), after the questions (RTF), on later pages (PDF); the Word file opens again; typed text is escaped in HTML; one version keeps the quiz order unless shuffling is asked; versions are letters, A being the quiz as written, at most four; each version's key follows its own shuffle, and the shuffle is the same every time; choices that point at each other ("all of the above") are not shuffled; key only leaves out the questions; an unknown paper falls back to A4; an empty quiz still prints saying so; an unknown format is refused.
+- **Already automated:** `tests/database/PrintableTestExportTest.php` (all)
+- **Playwright:** no
+- **Basis:** `PrintableTestExport`
+- **QA status:** VCI (PS-QBK-07)
+- **Review:** Draft
+
+### TC-QUIZ-26 Generating questions without the job queue, and what the provider is sent
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** jobs switched off (`useJobs=false`) with the legacy question-builder service running, then stopped; a unit with a reading, a PDF and a scanned PDF; a proxy or log that captures the request sent to the provider
+- **Steps:** generate 5 questions from all three sources. Stop the legacy service and generate again. Read the captured request.
+- **Expected:** with the service running, the scanned PDF is read through its OCR and the batch is made; with it stopped, the scanned PDF is skipped and named in a message, and the other sources still work. The request carries only the chosen source material and the generation settings: no student data, no names, emails or user ids (decision DOC-19).
+- **Already automated:** `QuestionGenerationServiceTest` (`testChosenItemsThatCannotBeReadAreReportedByName`, `testAnUnavailableGeneratorFailsTheBatchWithItsReason`)
+- **Playwright:** no
+- **Basis:** `LocalQuestionBuilderClient`, `PdfTextExtractor`; decision DOC-19
+- **QA status:** VCI (PS-AIQ-08), IBR (PS-AIQ-11)
+- **Review:** Draft
+
+### TC-QUIZ-27 A generation request asks for 1 to 50 questions, and only questions made count toward the allowance
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** a plan allowing 60 generated questions a term; the fake backend
+- **Steps:** ask for 0, 1, 50 and 51 questions. Ask for 10 and let the backend make 6 (partial). Cancel a batch halfway. Top up 3 and replace 2. Read the allowance used after each.
+- **Expected:** 0 and 51 are refused with a message; 1 and 50 start; a partial batch counts only the 6 made and says it was partial; a cancelled or failed batch counts only what was made; a top-up and a replacement count only the new questions. A question whose check could not run stays marked unverified and needs review.
+- **Already automated:** none for the bounds or the accounting
+- **Playwright:** no
+- **Basis:** decision AMB-ASM-10. Today PHP has no upper bound on the count, and the accounting was not read [audit agent; not run].
+- **QA status:** REG? (PS-AIQ-10)
+- **Review:** Draft
+
+### TC-QUIZ-28 Generated questions are measured against a recorded baseline before release
+
+- **Role:** QA and the AI builder's owner (Shuay). **Priority:** P2
+- **Data:** a version-controlled set of 25 cases (reading passages with the expected kinds of questions, a malformed output, a too-short source) and the provider settings in use
+- **Steps:** run the set through the builder; record the provider, model, prompt version, set version, criteria and results; have the reviewer sign it off. Run the PHP-to-worker contract test with a missing field, a wrong type, a timeout and a worker failure.
+- **Expected:** a question is accepted only when every check and save succeeds, with nothing half-saved; the baseline and its review are recorded with a date; the set passes the agreed criteria; the contract test catches each incompatible change before release.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision MISS-AI-01 (register Part I3)
+- **QA status:** NB (PS-AIQ-09)
+- **Review:** Draft
+
+### TC-ASG-05 Assignment uploads accept only the allowed file types
+
+- **Role:** Student. **Priority:** P2
+- **Data:** an assignment in IT101-B allowing files; files: `.pdf`, `.docx`, `.xlsx`, `.pptx`, `.txt`, `.jpg`, `.png`, `.zip`, `.exe`, `.js`, a PDF renamed `.png`, an `.exe` renamed `.pdf`, a 20 MB and a 20.1 MB PDF
+- **Steps:** submit each (also through the API).
+- **Expected:** PDF, Word, Excel, PowerPoint, text, JPEG and PNG up to 20 MB are accepted; archives, programs and scripts are refused, and so is a file whose content does not match its name, with a clear message; over 20 MB: "The file is larger than the 20 MB limit."
+- **Already automated:** the size limit only (`AssignmentSubmissionServiceTest`)
+- **Playwright:** no
+- **Basis:** decision MISS-ASG-02. Today the size is checked but there is no type allowlist [read in the code; not run].
+- **QA status:** NB (PS-ASG-04)
+- **Review:** Draft
+
+### TC-GRD-08 The feedback thread on a piece of work
+
+- **Role:** Instructor, student. **Priority:** P2
+- **Data:** student5's submitted (ungraded) assignment in IT101-A, and student1's graded one
+- **Steps:** as student5, post on their ungraded work. As the instructor, post on it, then grade it with a note; grade again with the same note, then a new one. As student5, reply; post on student1's work; post an empty message.
+- **Expected:** the instructor may post before grading; the student can reply only once the work is graded and the instructor has written; a grading note adds an instructor message, the same note is not repeated (even after a student reply), a blank one adds nothing; nobody posts on someone else's submission; an empty message is refused.
+- **Already automated:** `tests/database/AssessmentFeedbackServiceTest.php` (all)
+- **Playwright:** no
+- **Basis:** `AssessmentFeedbackService`
+- **QA status:** VCI (PS-GRD-04)
+- **Review:** Draft
+
+### TC-DSC-01 Discussions: titles, replies, attachments, unread marks and filters
+
+- **Role:** Instructor, student. **Priority:** P2
+- **Data:** IT101-A Discussions; files of each allowed type, a disallowed type, and 25 MB and 25.1 MB files
+- **Steps:**
+  1. Start a thread with no title, a 255-character title and a 256-character one. Edit one to 300 characters. Reply empty, then with a long body.
+  2. Attach each file.
+  3. As student5, open the list: use each filter (all, pinned, mine, unanswered, modules, unread) and each sort; page through more than 10 threads; open a thread and come back.
+- **Expected:** a title is required and at most 255 (create refuses longer, edit cuts it to 255); an empty reply is refused and a body has no length limit; allowed types up to 25 MB are kept, others refused with their message; unread marks clear on opening; filters and sorts work; 10 threads a page.
+- **Already automated:** `tests/database/DiscussionServiceTest.php`
+- **Playwright:** no
+- **Basis:** `DiscussionService`
+- **QA status:** VCI (PS-DSC-02, PS-DSC-04, PS-DSC-06)
+- **Review:** Draft
+
+### TC-ANN-03 Announcement attachments, replies and reactions
+
+- **Role:** Instructor, student. **Priority:** P2
+- **Data:** IT101-A; eleven small files; a file of another user (its id); a 25.1 MB file; student3 dropped from IT101-A for the test
+- **Steps:** as `instructor1`, post with ten attachments, then eleven; attach another user's file by id; upload a 25.1 MB and a disallowed file; edit to remove two attachments; delete the post. As students, reply (empty and not), react twice with the same and a different emoji. As the dropped student, reply and react.
+- **Expected:** up to ten attachments in order; the eleventh, another user's file, a too-large and a disallowed file are refused ("That file type is not allowed. Use images, PDFs, or office documents." for the type); removed attachments' files are deleted, and deleting the post removes its replies, reactions and files but never a file that is not the author's; any viewer except a dropped student may reply and react; one reaction per person; empty replies are refused.
+- **Already automated:** `tests/database/AnnouncementServiceTest.php`
+- **Playwright:** `tests/e2e/announcements.spec.js`
+- **Basis:** `AnnouncementService`
+- **QA status:** VCI (PS-ANN-02, PS-ANN-03)
+- **Review:** Draft
+
+### TC-ANN-04 An author with two roles appears once per post in the course feed
+
+- **Role:** Student. **Priority:** P2
+- **Data:** a person holding two roles (for example `dean2`, dean and instructor) who posts in a course they teach; a parent of a student in it
+- **Steps:** as the author post one announcement; as a student open the course feed; as the parent open the course's announcements tab.
+- **Expected:** the post appears exactly once in each, whatever the author's roles or groups.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-COM-03. Suspected: the feed joins the author's roles, which can repeat a post [audit agent; not run].
+- **QA status:** REG? (PS-ANN-06)
+- **Review:** Draft
+
+### TC-ANN-05 A course announcement can be a draft, scheduled or published
+
+- **Role:** Instructor, student, parent. **Priority:** P2
+- **Data:** IT101-A; `parent1`
+- **Steps:** save an announcement as a draft; schedule another for tomorrow 08:00; post a third now. As a student and a parent, open the feed, the dashboard, the Announcements app, the parent tab and the calendar; open the draft's and the scheduled one's addresses directly. Move the clock past 08:00 and look again.
+- **Expected:** the draft is seen only by its author and course staff; the scheduled one is hidden from students and parents everywhere (and by direct address) until its time, then appears and is treated as just posted; the author can edit both before then; the published one is seen at once. Notifications go out only on publication.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decisions MISS-COM-01, AMB-COM-01. Today announcements have no draft or scheduled state.
+- **QA status:** NB (PS-ANN-09)
+- **Review:** Draft
+
+### TC-ANN-06 Students and instructors are told of a new course announcement
+
+- **Role:** Student, instructor. **Priority:** P2
+- **Data:** IT101-A with two instructors (add `instructor2` for the test); a scheduled announcement (TC-ANN-05)
+- **Steps:** post an announcement; edit it; publish the scheduled one when its time comes; make the mail fail once.
+- **Expected:** each enrolled student and each other instructor gets one notification on publication (parents as their own rules say); editing does not notify again; a scheduled one notifies when it is published, not before; the links respect each person's access; a failed delivery is recorded and retried without duplicates.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision MISS-COM-02. Today only parents are told (`parents:notify`).
+- **QA status:** NB (PS-ANN-10)
+- **Review:** Draft
+
+### TC-CAL-01 The calendar's date range, and the student's schedule page
+
+- **Role:** Student, instructor. **Priority:** P2
+- **Data:** `student5`; events on the first and last day of a month
+- **Steps:** ask the events feed for a month (from the 1st to the 31st); ask with `from` after `to`, with a malformed date, and with none. Create a reminder valid and invalid; mark it done and delete it; try someone else's. Open the student Schedule page.
+- **Expected:** the range includes both end days; an invalid range answers 400; a reminder is created (201) or refused (422); only the owner can mark or delete theirs, others get 404; the Schedule page opens with the student's class times (there is no route test for it today).
+- **Already automated:** `tests/feature/CalendarRoutesTest.php`
+- **Playwright:** no
+- **Basis:** the calendar controllers, `ScheduleService`
+- **QA status:** VCI (PS-CAL-02, PS-CAL-06)
+- **Review:** Draft
+
+### TC-NOT-01 Marking one notification read never marks the others
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5` with five unread notifications
+- **Steps:** mark one read from the full list. Send `POST notifications/read` with no id, with `abc`, with another user's id, and with an id that does not exist. Use "mark all read" if offered.
+- **Expected:** only the chosen one is read; a missing or malformed id is refused and marks nothing; another user's notification is never touched; marking all is a separate, explicit action.
+- **Already automated:** `NotificationsTest::testReadingAndCounting` (the normal path)
+- **Playwright:** no
+- **Basis:** decision AMB-COM-02. Suspected: a malformed id falls through to marking everything read [audit agent; not run].
+- **QA status:** REG? (PS-NOT-04)
+- **Review:** Draft
+
+### TC-FIL-02 How a file is served: ranges, inline or download, and the logo
+
+- **Role:** Every role. **Priority:** P2
+- **Data:** a 10 MB video and a PDF in IT101-A; an HTML file uploaded as a resource; institution 1's logo; a person of another institution
+- **Steps:** request the video with `Range: bytes=0-` and with a range past its end; open the PDF and the HTML file; add the download flag; read the headers. Open the logo as a member of institution 1, as a member of another institution, and signed out. Request a file you have no right to, and one that does not exist.
+- **Expected:** a range gets at most a 2 MB slice; a range past the end is 416; only safe types open inline (an HTML file downloads); every response has `X-Content-Type-Options: nosniff` and private caching; the file name is safe even with quotes and accents; no right and no file look the same (404); signed out goes to login. The logo is visible to members of its institution only.
+- **Already automated:** `tests/feature/FileRouteTest.php`; the logo has no test
+- **Playwright:** no
+- **Basis:** the file controller, `FileAccessService`
+- **QA status:** VCI (PS-FIL-04, PS-FIL-07). If the logo opens for another institution's member, it is a defect.
+- **Review:** Draft
+
+### TC-STU-01 The student dashboard and profile
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student1` (two parents linked for the test: `parent1` and a second), `student4` (no parent), more than 8 open tasks and announcements and more than 6 reminders
+- **Steps:** open the dashboard; open the profile; switch the parent portal off and open the profile again.
+- **Expected:** the dashboard shows the student widgets: courses with progress (zero, not an error, for a course with no published content), at most 8 tasks soonest first with urgency (handed-in work is not overdue), at most 8 newest announcements across their courses, at most 6 pending reminders; the profile lists their parents by name, never by email; "No parent can see your progress." when none; with the portal off no parent is listed; nothing can be changed on it.
+- **Already automated:** `tests/database/DashboardServiceTest.php`, `tests/feature/StudentProfilePageTest.php` (no page test for the dashboard)
+- **Playwright:** no
+- **Basis:** `DashboardService`, the student profile controller
+- **QA status:** VCI (PS-STU-01, PS-STU-02)
+- **Review:** Draft
+
+### TC-FE-01 Every screen not yet checked passes the accessibility check, fits three widths, and works by keyboard
+
+- **Role:** Student, instructor, chairperson, parent. **Priority:** P2
+- **Data:** each role's screens: dashboard, courses, each course tab (Modules, Assessments, Discussions, Announcements, Resources, Grades), the quiz attempt, Grade Work, the gradebook, the calendar, the chairperson's Monitor Program and Override requests, the parent dashboard and child course
+- **Steps:** on each screen, run the automated check (axe, WCAG 2 A and AA); view it at 360, 768 and 1440 pixels; then do its main task with the keyboard alone (open and close dialogs, use editors and menus, take a quiz).
+- **Expected:** no serious or critical problem; no sideways scroll at any width; every task can be done by keyboard, focus is visible and returns to where it was after a dialog closes. (The dean's and the administrators' screens are TC-DEAN-09, 10, TC-IAA-04, 05, TC-SA-10.)
+- **Already automated:** none for these screens
+- **Playwright:** planned (as `dean.spec.js` TC-DEAN-10 does)
+- **Basis:** the interface rules in `docs/`
+- **QA status:** VCI (PS-FE-01, PS-FE-02, PS-FE-03)
+- **Review:** Draft
+
+### TC-DSC-02 Who may read, post and moderate a course discussion
+
+- **Role:** Student, instructor, chairperson, dean, institutional administrator. **Priority:** P1
+- **Data:** IT101-A Discussions; `student5` (enrolled), `student2`'s thread; a dropped student; `instructor2` (another section); `chairperson1` (IT, not teaching IT101-A); `dean2`; the institution's administrator
+- **Steps:** as each, open the list and a thread, start a thread, reply, edit another's thread, delete another's reply, pin, lock, mark an answer.
+- **Expected:** enrolled students and the course's instructor read and post; the chairperson posts and moderates as an instructor of the program's courses; the dean and the administrator read only; a non-enrolled or dropped student, another section's instructor and an outsider get not found; only the author edits; the author or the instructor deletes; only the instructor pins and locks; only the thread's author or the instructor marks an answer; a locked thread takes no replies until unlocked; moderation follows `discussions.manage` (TC-IAA-07).
+- **Already automated:** `tests/database/DiscussionServiceTest.php`, `CourseRoleChecksTest.php`
+- **Playwright:** no
+- **Basis:** `DiscussionService`; decisions D6, 9.4; commit `5140068`
+- **QA status:** VCI (PS-DSC-01), FIX? (PS-DSC-08)
+- **Review:** Draft
+
+### TC-ANN-07 Who may change a course announcement, and the Announcements app
+
+- **Role:** Instructor, student. **Priority:** P1
+- **Data:** IT101-A with a second instructor (`instructor2`, added for the test); posts by each; the Announcements app with department, institution and platform announcements
+- **Steps:** as `instructor2`, edit and delete `instructor1`'s post, then pin it. As a student, use the instructor's post route; open another section's announcement. Open the Announcements app; search with two words; use `?level=` with a known and an unknown level; make the feed fail to load.
+- **Expected:** only the author edits and deletes; any instructor of the section pins; a student cannot post; another section's announcement is not found; the app shows four levels in order; a search matches only posts containing all the words; an unknown level falls back to all; counts are shown before searching; a load failure shows an error, not an empty list.
+- **Already automated:** `tests/database/AnnouncementServiceTest.php`, `tests/feature/AnnouncementRoutesTest.php`, `AnnouncementHelperTest.php`
+- **Playwright:** `tests/e2e/announcements.spec.js` (TC-ANN-01, 02)
+- **Basis:** `AnnouncementService`, the announcements app
+- **QA status:** VCI (PS-ANN-01, PS-ANN-07)
+- **Review:** Draft
+
+### TC-ANN-08 An announcement posted from the calendar for a later day stays hidden until that day
+
+- **Role:** Instructor, student, parent. **Priority:** P1
+- **Data:** `instructor1`, IT101-A, the calendar; `student5`; `parent1`
+- **Steps:** from the calendar post an announcement on a day three days ahead; try a day in the past. As the student look at the course feed, the dashboard, the Announcements app and the calendar; as the parent the course's announcements tab and notifications. Move the clock to that day and look again.
+- **Expected:** a past day is refused; before the day nobody but the author sees it anywhere, and parents are not told; on the day it appears everywhere and parents are told once (TC-PRT-16).
+- **Already automated:** `AnnouncementRoutesTest::testThePostFromTheCalendarLandsOnTheChosenDayAndRefusesThePast` (the date only)
+- **Playwright:** no
+- **Basis:** decision AMB-COM-01. Suspected: the post shows at once on every screen [audit agent; not run].
+- **QA status:** REG? (PS-ANN-05)
+- **Review:** Draft
+
+### TC-CAL-02 What the calendar shows each person, and their reminders
+
+- **Role:** Student, instructor, chairperson. **Priority:** P1
+- **Data:** IT101-A: a published quiz, a draft assignment, a quiz in a draft unit, an archived assessment, an assessment with no module, an announcement; `student5`, a dropped student, `instructor1`, `chairperson1`; a closed section; a read-only institution
+- **Steps:** open the calendar as each. As the student, add a reminder (title of 150 and 151 characters, none, no date), tie it to IT101-A and to IT201-A, mark it done, delete it; as another student, open, mark or delete it. Make the institution read-only and add one; add one for the closed section.
+- **Expected:** a student sees only published assessments in a published module, unit and item; the instructor and chairperson also see drafts, muted; archived and module-less assessments are left off; an announcement links to its course tab with an 80-character preview; a dropped student no longer sees the course; reminders are private to their owner (others get 404), need a title (at most 150) and a date, may be tied only to the person's own courses, are muted when done, and work in a read-only institution but not for a closed section.
+- **Already automated:** `tests/database/CalendarEventServiceTest.php`, `ReminderServiceTest.php`, `ReadOnlyOwnThingsTest::testAStudentCanStillKeepTheirOwnReminders`
+- **Playwright:** no
+- **Basis:** `CalendarEventService`, `ReminderService`; decision 8.2
+- **QA status:** VCI (PS-CAL-01), IBR (PS-CAL-03)
 - **Review:** Draft

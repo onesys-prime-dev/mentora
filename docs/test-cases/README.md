@@ -28,7 +28,7 @@ Every case has the same fields:
 - **ID**: `TC-<AREA>-<NN>`, never reused. Areas: `AUTH`, `ANN` (announcements),
   `MOD` (modules and progress), `QUIZ`, `ASG` (assignments), `GRD` (grading and
   grades), `GBK` (the gradebook, in [p2-gradebook.md](p2-gradebook.md)), `PRT` (the parent portal, in [p2-parent.md](p2-parent.md)), `DEAN` (the dean, in
-  [p2-dean.md](p2-dean.md)), `SA` (the system administrator, in [p2-system-administrator.md](p2-system-administrator.md)), `FIL` (files, in [p1-critical-journeys.md](p1-critical-journeys.md)), and the institutional administrator's areas (`STR`, `CRS`, `TRM`, `OFF`, `ENR`, `PPL`, `PAR`, `RPT`, `SIS`, `IAA` and others, in [p2-institutional-administrator.md](p2-institutional-administrator.md)).
+  [p2-dean.md](p2-dean.md)), `SA` (the system administrator, in [p2-system-administrator.md](p2-system-administrator.md)), `FIL` (files), `DSC` (discussions), `CAL` (calendar), `NOT` (notifications), `STU` (the student's own pages) and `FE` (screens across roles), all in [p1-critical-journeys.md](p1-critical-journeys.md); `CHA` (the chairperson, in [p2-chairperson.md](p2-chairperson.md)), and the institutional administrator's areas (`STR`, `CRS`, `TRM`, `OFF`, `ENR`, `PPL`, `PAR`, `RPT`, `SIS`, `IAA` and others, in [p2-institutional-administrator.md](p2-institutional-administrator.md)).
 - **Role**: who performs it (Student, Instructor, Dean, or Anonymous).
 - **Data**: the demo accounts, course and item it uses (see below), so any two
   people run the same case.
