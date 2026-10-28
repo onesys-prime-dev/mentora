@@ -55,6 +55,18 @@ final class InstitutionRolesTest extends DatabaseTestCase
         $this->assertFalse((new RolePermissions())->allows(PeopleFactory::person('instructor', institutionId: $this->institution), 'grading.manage'));
     }
 
+    public function testABoxWhoseRowIsAlreadyThereIsUpdatedInPlace(): void
+    {
+        // The row another request has just written for the same box (the race the single statement closes).
+        db_connect()->table('role_permissions')->insert(['institution_id' => $this->institution, 'role' => 'instructor', 'permission' => 'grading.manage', 'granted' => 1]);
+
+        $this->assertTrue((new InstitutionRoles())->set($this->institution, 'instructor', 'grading.manage', false, $this->admin));
+
+        $rows = db_connect()->table('role_permissions')->where(['institution_id' => $this->institution, 'role' => 'instructor', 'permission' => 'grading.manage'])->get()->getResultArray();
+        $this->assertCount(1, $rows);
+        $this->assertSame(0, (int) $rows[0]['granted']);
+    }
+
     public function testSettingThePlatformValueBackRemovesTheRow(): void
     {
         $roles = new InstitutionRoles();

@@ -36,7 +36,9 @@ class ShellOffsiteCopier implements OffsiteCopier
         $output   = '';
         $deadline = time() + self::TIME_LIMIT_SECONDS;
 
-        while (proc_get_status($process)['running']) {
+        // The exit code is kept from the last poll: once the process has been seen to end, a second
+        // proc_get_status() only returns it on PHP 8.3+ (before that, -1 on Linux).
+        while (($status = proc_get_status($process))['running']) {
             $output .= (string) stream_get_contents($pipes[1]);
 
             if (time() > $deadline) {
@@ -50,7 +52,7 @@ class ShellOffsiteCopier implements OffsiteCopier
         }
 
         $output .= (string) stream_get_contents($pipes[1]);
-        $code    = proc_get_status($process)['exitcode'];
+        $code    = $status['exitcode'];
         proc_close($process);
 
         if ($code !== 0) {

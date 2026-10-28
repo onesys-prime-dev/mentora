@@ -129,7 +129,13 @@ file.
   The schema is built once per run. Set `protected bool $isolateTests = true;`
   and each test runs inside a transaction that is rolled back afterwards (the
   tables are emptied once before the class's first test), so tests never see
-  each other's rows and the suite stays fast.
+  each other's rows and the suite stays fast. Every database test also starts
+  with the permission caches empty (`RolePermissions::flush()` in `setUp()`):
+  they are static, and a user id can come back in another institution.
+- A test that needs DDL (a trigger that makes the database refuse a write, say)
+  cannot run inside that transaction, because DDL commits it. Leave
+  `$isolateTests` false and drop what it made in `tearDown()`, as
+  `QuizAttemptFailureTest` does.
 - Build data with `Tests\Support\CourseFactory` (users in a role, an offering,
   enrolments, modules, units, items, progress). A test then reads as the
   situation it sets up, for example `CourseFactory::items($unitId, [[], ['mode' => 'previous']])`.

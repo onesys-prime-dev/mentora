@@ -88,6 +88,13 @@ class QuizAttemptService
     /** Seconds past the timer a late save or submit is still accepted (the browser's own delay). */
     public const TIME_LIMIT_GRACE_SECONDS = 60;
 
+    /** What the student is told when the database refuses the write. */
+    public const START_FAILED = 'The quiz could not be started. Reload the page to try again.';
+
+    public const ANSWER_NOT_SAVED = 'Your answer could not be saved. Try again.';
+
+    public const NOT_SUBMITTED = 'The quiz could not be submitted. Your answers are kept; try submitting again.';
+
     public function startAttempt(User $user, int $assessmentId, ?int $offeringId = null): array
     {
         $assessment = $this->assessmentModel->find($assessmentId);
@@ -137,6 +144,8 @@ class QuizAttemptService
 
         $blocked = $lock !== null || $unavailable !== null;
 
+        $startFailed = false;
+
         // Viewing as this person saves nothing for them (3.2): no attempt is started, and the page shows the
         // quiz's landing, or the attempt already running, read-only (3.1).
         $viewAs = Impersonation::current() === null ? null : $this->viewAsLanding($user, $assessment) + ['teaches' => $teaches];
@@ -175,6 +184,9 @@ class QuizAttemptService
                 $submission = $inserted
                     ? $this->submissionModel->find($this->submissionModel->getInsertID())
                     : $this->inProgressAttempt($assessmentId, (int) $user->id);
+
+                // Not the other tab's attempt either: the database refused it, and the page says so.
+                $startFailed = ! $submission;
 
             }
 
@@ -239,6 +251,7 @@ class QuizAttemptService
                     'responsesByQuestion' => $responsesByQuestion,
                     'endsAt' => $endsAt,
                     'viewAs' => $viewAs,
+                    'startFailed' => $startFailed,
                 ]
             ),
         ];
@@ -297,20 +310,31 @@ class QuizAttemptService
         // submitting takes too: the last save wins, and none lands once the
         // attempt is handed in (15.2).
         $db = db_connect();
-        $db->transStart();
 
-        if (! $this->lockInProgress($submissionId)) {
-            $db->transComplete();
+        try {
+            $db->transException(true)->transStart();
 
-            return ['success' => false, 'message' => 'This attempt is no longer in progress.'];
+            if (! $this->lockInProgress($submissionId)) {
+                $db->transComplete();
+
+                return ['success' => false, 'message' => 'This attempt is no longer in progress.'];
+            }
+
+            $db->table('assessment_question_responses')
+                ->setData($responseData + ['created_at' => date('Y-m-d H:i:s')])
+                ->updateFields(['selected_choice_id', 'selected_choice_ids', 'response_text', 'updated_at'])
+                ->upsert();
+
+            $saved = $db->transComplete();
+        } catch (DatabaseException) {
+            $saved = false;
+        } finally {
+            $db->transException(false);
         }
 
-        $db->table('assessment_question_responses')
-            ->setData($responseData + ['created_at' => date('Y-m-d H:i:s')])
-            ->updateFields(['selected_choice_id', 'selected_choice_ids', 'response_text', 'updated_at'])
-            ->upsert();
-
-        $db->transComplete();
+        if (! $saved) {
+            return ['success' => false, 'message' => self::ANSWER_NOT_SAVED];
+        }
 
         return ['success' => true, 'message' => 'Answer saved.'];
     }
@@ -412,14 +436,48 @@ class QuizAttemptService
         // The same lock as a save: a save waiting on it is refused once this
         // commits, and a second submit (another tab) finds it handed in.
         $db = db_connect();
-        $db->transStart();
 
-        if (! $this->lockInProgress($submissionId)) {
-            $db->transComplete();
+        try {
+            $db->transException(true)->transStart();
 
-            return ['success' => false, 'message' => 'This attempt has already been submitted.'];
+            if (! $this->lockInProgress($submissionId)) {
+                $db->transComplete();
+
+                return ['success' => false, 'message' => 'This attempt has already been submitted.'];
+            }
+
+            $submitted = $this->handIn($submissionId, $submission, $db);
+        } catch (DatabaseException) {
+            $submitted = false;
+        } finally {
+            $db->transException(false);
         }
 
+        // Rolled back: nothing counts, nothing completes, and the student can submit again.
+        if (! $submitted) {
+            return ['success' => false, 'message' => self::NOT_SUBMITTED];
+        }
+
+        // Fully auto-graded → it counts now (no-op while partly/un-graded).
+        (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $user->id);
+
+        // Handing the quiz in completes its item in the module, whatever its grade state.
+        (new LearningProgressService())->completeOnSubmission((int) $user->id, (int) $submission['assessment_id']);
+
+        return [
+            'success' => true,
+            'message' => 'Quiz submitted successfully.',
+            'submission' => $this->submissionModel->find($submissionId),
+        ];
+    }
+
+    /**
+     * Scores what grades itself and hands the attempt in, inside the caller's transaction.
+     *
+     * @return bool whether the transaction committed
+     */
+    private function handIn(int $submissionId, array $submission, \CodeIgniter\Database\BaseConnection $db): bool
+    {
         $assessment = $this->assessmentModel->find($submission['assessment_id']);
 
         $questions = $this->questionModel->listForAssessment((int) $submission['assessment_id']);
@@ -506,18 +564,6 @@ class QuizAttemptService
 
         $this->submissionModel->update($submissionId, $submissionData);
 
-        $db->transComplete();
-
-        // Fully auto-graded → it counts now (no-op while partly/un-graded).
-        (new GradebookSyncService())->syncItemScore((int) $submission['assessment_id'], (int) $user->id);
-
-        // Handing the quiz in completes its item in the module, whatever its grade state.
-        (new LearningProgressService())->completeOnSubmission((int) $user->id, (int) $submission['assessment_id']);
-
-        return [
-            'success' => true,
-            'message' => 'Quiz submitted successfully.',
-            'submission' => $this->submissionModel->find($submissionId),
-        ];
+        return $db->transComplete();
     }
 }

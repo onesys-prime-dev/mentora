@@ -7,6 +7,7 @@ use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\PeopleFactory;
 use Tests\Support\TestEnv;
 
 /**
@@ -152,6 +153,27 @@ final class InstitutionPurgeFilesTest extends DatabaseTestCase
         $this->assertFileDoesNotExist($logo['path']);
         $this->assertSame(0, $this->rows('users', 'id', (int) $ada->id));
         $this->assertSame('[]', (string) (service('settings')->get('Purge.pendingFiles') ?? '[]'), 'the path is deleted once, so nothing is left to retry');
+    }
+
+    public function testAFileStillUsedByAnotherRowStaysOnDisk(): void
+    {
+        $institution = $this->deletedInstitution();
+        $ann         = $this->member($institution);
+        $file        = $this->fileOf($ann);
+
+        // Someone of another institution has a row for the same stored file (same storage key).
+        $other = $this->member(PeopleFactory::institution('KEEPKEY'));
+        $copy  = db_connect()->table('files')->where('id', $file['id'])->get()->getRowArray();
+        unset($copy['id']);
+        $copy['owner_user_id'] = $other->id;
+        db_connect()->table('files')->insert($copy);
+        $kept = (int) db_connect()->insertID();
+
+        $this->service->purge($institution, null, $this->admin);
+
+        $this->assertSame(0, $this->rows('files', 'id', $file['id']), 'the row of the purged account goes');
+        $this->assertSame(1, $this->rows('files', 'id', $kept));
+        $this->assertFileExists($file['path'], 'the other row still points at it');
     }
 
     public function testAuditEntriesStay(): void

@@ -172,6 +172,26 @@ final class OneChairpersonTest extends DatabaseTestCase
         }
     }
 
+    public function testTwoAdministratorsAssigningAtOnceGetTheRaceMessage(): void
+    {
+        // What the other administrator's save leaves for a moment: the active place is taken (active_marker),
+        // while the read of who chairs it no longer sees an active chair.
+        db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $this->sub, 'chairperson_user_id' => $this->old->id])->update(['status' => 'revoked']);
+        $notifications = db_connect()->table('notifications')->countAllResults();
+        $new           = $this->newChair();
+        $name          = (string) db_connect()->table('sub_departments')->where('id', $this->sub)->get()->getRow('name');
+
+        try {
+            (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $new->id, $this->admin);
+            $this->fail('expected the race to be told');
+        } catch (StructureException $e) {
+            $this->assertSame("Someone else just changed the chairperson of {$name}. Reload the page to see who chairs it now.", $e->getMessage());
+        }
+
+        $this->assertNull($this->statusOf($new), 'the choice of the second administrator left no row');
+        $this->assertSame($notifications, db_connect()->table('notifications')->countAllResults(), 'nobody is told of a change that did not happen');
+    }
+
     public function testTheDatabaseKeepsOneActiveChair(): void
     {
         $new = $this->newChair();

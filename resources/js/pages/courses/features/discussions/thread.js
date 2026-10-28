@@ -1,3 +1,5 @@
+import { csrfExpired } from "../../../../shared/csrf-expired.js";
+
 /*
 |--------------------------------------------------------------------------
 | Thread screen: open a thread, reply, react, mark an answer, delete a reply.
@@ -178,7 +180,7 @@ async function handleToggle(body, threadId, button, request, key) {
         const result = await request(Number(threadId), next);
 
         if (!result.success) {
-            alert(result.message);
+            if (!csrfExpired(result)) alert(result.message);
             return;
         }
 
@@ -213,7 +215,7 @@ async function handleDeleteThread(threadId, backToList) {
         const result = await deleteThread(Number(threadId));
 
         if (!result.success) {
-            alert(result.message);
+            if (!csrfExpired(result)) alert(result.message);
             return;
         }
 
@@ -445,7 +447,7 @@ function bindReplyBox(body, threadId) {
                 const result = await uploadDiscussionAttachment(file);
 
                 if (!result.success) {
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
                     continue;
                 }
 
@@ -477,7 +479,7 @@ function bindReplyBox(body, threadId) {
             const result = await postReply(threadId, text, attachments.map((a) => a.file_id));
 
             if (!result.success) {
-                alert(result.message);
+                if (!csrfExpired(result)) alert(result.message);
                 return;
             }
 

@@ -9,6 +9,8 @@ $previewLabels = [
 
 // Viewing as the student (3.1): the landing, or the running attempt read-only; nothing is saved for them.
 $viewAs = $viewAs ?? null;
+// The database refused the new attempt (not the same as one already handed in).
+$startFailed = $startFailed ?? false;
 $inProgress = $submission && $submission['status'] === 'In Progress';
 $readOnly = $viewAs !== null;
 
@@ -195,6 +197,16 @@ $answeredCount = count(array_filter($responsesByQuestion ?? [], static fn (array
             <span class="text-sm text-[#767676]">
                 You've used all <?= esc((int) ($currentAssessment['attempt_limit'] ?? 1)) ?> allowed attempt<?= (int) ($currentAssessment['attempt_limit'] ?? 1) === 1 ? '' : 's' ?> for this quiz.
             </span>
+
+        </div>
+
+    <?php elseif ($startFailed): ?>
+
+        <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center" data-quiz-start-failed>
+
+            <span class="text-lg font-bold text-[#646464]">The quiz did not start</span>
+
+            <span class="text-sm text-[#767676]"><?= esc(\App\Services\Courses\Assessments\QuizAttemptService::START_FAILED) ?></span>
 
         </div>
 

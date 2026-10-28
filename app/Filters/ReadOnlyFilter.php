@@ -29,7 +29,7 @@ class ReadOnlyFilter implements FilterInterface
      * and the role switch are outside the read-only areas already.
      */
     public const OWN_ACCOUNT = [
-        '#^(student|instructor|chairperson)/api/calendar/reminders(/|$)#',
+        '#^(student|instructor|chairperson)/api/calendar/reminders(/\d+(/done)?)?$#',
         '#^parent/profile/(notifications|password-link)$#',
     ];
 

@@ -62,6 +62,10 @@ Events::on('login', [AuditAuthListener::class, 'login']);
 Events::on('failedLogin', [AuditAuthListener::class, 'failedLogin']);
 Events::on('logout', [AuditAuthListener::class, 'logout']);
 
-// A new CSRF token at every sign-in. The token lives in the session, and the session keeps its data when its id
-// changes at sign-in, so a page from before signing in must not keep working.
+// A new CSRF token at every sign-in, so a page from before signing in stops working. Shield already rotates it
+// in Session::startLogin outside the testing environment; this makes it hold in every environment, tests
+// included, and a second rotation in production is harmless.
 Events::on('login', static fn () => service('security')->generateHash());
+
+// The permission caches are static: a long-running worker starts each request with them empty, as PHP-FPM does.
+Events::on('pre_system', [\App\Services\Auth\RolePermissions::class, 'flush']);

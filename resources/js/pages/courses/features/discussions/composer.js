@@ -11,6 +11,7 @@ import { createThread, updateThread, uploadDiscussionAttachment } from "./api.js
 import { initializeComposerEditor, getComposerEditor, destroyComposerEditor } from "../announcements/composer/tiptap.js";
 import { initializeComposerToolbar } from "../announcements/composer/toolbar.js";
 import { serializeMessage } from "../announcements/composer/serializer.js";
+import { csrfExpired } from "../../../../shared/csrf-expired.js";
 
 /**
  * @param {HTMLElement} root
@@ -137,7 +138,7 @@ export function setupComposer(root, onSaved, { onChange = null } = {}) {
                 const result = await uploadDiscussionAttachment(file);
 
                 if (!result.success) {
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
                     continue;
                 }
 
@@ -178,7 +179,7 @@ export function setupComposer(root, onSaved, { onChange = null } = {}) {
                 : await createThread(payload);
 
             if (!result.success) {
-                alert(result.message);
+                if (!csrfExpired(result)) alert(result.message);
                 return;
             }
 

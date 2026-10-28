@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const showToast = vi.fn();
 vi.mock("../../../resources/js/shared/toast.js", () => ({ showToast: (...a) => showToast(...a) }));
 
-const { installCsrf } = await import("../../../resources/js/shared/csrf.js");
+const { installCsrf, csrfExpired } = await import("../../../resources/js/shared/csrf.js");
 
 const EXPIRED = { error: "csrf_expired", message: "This page was open too long. Reload it and try again." };
 
@@ -73,6 +73,20 @@ describe("csrf", () => {
         await window.fetch("/x", { method: "POST" });
 
         expect(showToast).not.toHaveBeenCalled();
+    });
+
+    it("accepts null as init, as native fetch does", async () => {
+        await window.fetch("/x", null);
+
+        expect(original).toHaveBeenCalledOnce();
+    });
+
+    it("says when the toast was already shown", () => {
+        expect(csrfExpired({ error: "csrf_expired" })).toBe(true);
+        expect(csrfExpired({ error: "reauth_required" })).toBe(false);
+        expect(csrfExpired({})).toBe(false);
+        expect(csrfExpired(null)).toBe(false);
+        expect(csrfExpired(undefined)).toBe(false);
     });
 
     it("wraps fetch only once", async () => {

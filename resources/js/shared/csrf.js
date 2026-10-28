@@ -13,6 +13,8 @@
 
 import { showToast } from "./toast.js";
 
+export { csrfExpired } from "./csrf-expired.js";
+
 const SAFE = ["GET", "HEAD", "OPTIONS"];
 
 export function csrfToken(doc = document) {
@@ -26,7 +28,10 @@ export function installCsrf(win = window) {
 
     const original = win.fetch;
 
-    const wrapped = async (input, init = {}) => {
+    const wrapped = async (input, init) => {
+        // Native fetch takes null (or nothing) for the options.
+        init = init ?? {};
+
         const method = (init.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
         const url = new URL(input instanceof Request ? input.url : String(input), win.location.href);
         const token = csrfToken(win.document);

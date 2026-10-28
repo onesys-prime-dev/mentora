@@ -59,7 +59,8 @@ $legend = array_values(array_filter([
         data-courses-api-base="<?= esc($calendarCoursesApiBase) ?>"
         data-initial-events="<?= esc(json_encode($events), 'attr') ?>"
         data-courses="<?= esc(json_encode($courses), 'attr') ?>"
-        data-assessment-types="<?= esc(json_encode($assessmentTypes), 'attr') ?>">
+        data-assessment-types="<?= esc(json_encode($assessmentTypes), 'attr') ?>"
+        data-abilities="<?= esc(json_encode(in_array($calendarRole, ['instructor', 'chairperson'], true) ? \App\Services\Courses\CourseAbilities::for($user) : []), 'attr') ?>">
 
         <!-- Toolbar -->
         <div class="shrink-0 flex flex-wrap items-center justify-between gap-4">

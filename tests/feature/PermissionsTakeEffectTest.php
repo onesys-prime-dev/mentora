@@ -72,6 +72,7 @@ final class PermissionsTakeEffectTest extends RouteTestCase
         yield 'dean follow-up'      => ['dean', 'followups.manage', 'POST', 'dean/follow-ups'];
         yield 'instructor courses'  => ['instructor', 'courses.view', 'GET', 'instructor/courses'];
         yield 'chairperson courses' => ['chairperson', 'courses.view', 'GET', 'chairperson/courses'];
+        yield 'dean courses'        => ['dean', 'courses.view', 'GET', 'dean/courses'];
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('provideGuardedRoutes')]
@@ -132,6 +133,38 @@ final class PermissionsTakeEffectTest extends RouteTestCase
         }
 
         $this->assertContains($filter, (array) ($options['filter'] ?? []));
+    }
+
+    public function testADeanWithoutCoursesViewHasNoCoursesEntryButStillAHome(): void
+    {
+        $this->clear('dean', 'courses.view');
+        $dean = PeopleFactory::person('dean', institutionId: $this->institution);
+        $this->loggedInAs($dean);
+
+        $urls = array_column(global_apps('dean'), 'url');
+
+        $this->assertNotContains(site_url('dean/courses'), $urls);
+        $this->assertContains(site_url('dean/dashboard'), $urls);
+
+        auth()->logout();
+        $this->withSession([]);
+        $this->assertFalse($this->refused($dean, 'GET', 'dean/dashboard'), 'the dashboard still opens');
+    }
+
+    public function testADeanWhoAlsoTeachesLosesTheDeansCoursesWithTheDeansPermission(): void
+    {
+        $home = \Tests\Support\DeanFactory::department('TKD', $this->institution);
+        $dean = \Tests\Support\DeanFactory::dean($this->institution, $home['department']);
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $dean->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
+        $dean = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
+
+        $this->clear('dean', 'courses.view');
+
+        // Their instructor role still has courses.view; acting as dean, it is the dean's that counts.
+        $this->assertTrue($this->refused($dean, 'GET', 'dean/courses'));
+
+        $this->loggedInAs($dean);
+        $this->assertNotContains(site_url('dean/courses'), array_column(global_apps('dean'), 'url'));
     }
 
     public function testNavigationLeavesOutAMonitorThePersonCannotOpen(): void

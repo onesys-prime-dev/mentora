@@ -49,6 +49,12 @@ final class CourseViewer
     /** A student of this course (the one named, else the request's): the student's own progress and work apply. */
     public static function isStudentHere(User $user, ?int $offeringId = null): bool
     {
+        // Looking at a course (a dean as dean, the institution's administrator) is never studying it, even for
+        // someone who studies elsewhere; the dean and institution routes set no course to ask about.
+        if (self::isReadOnlyViewer($user)) {
+            return false;
+        }
+
         $role = self::roleHere($user, $offeringId);
 
         return $role === false ? $user->inGroup('student') : $role === 'student';

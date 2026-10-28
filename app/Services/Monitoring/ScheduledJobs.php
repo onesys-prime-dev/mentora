@@ -49,11 +49,10 @@ final class ScheduledJobs
      */
     public static function stale(int $now): array
     {
-        $sisInUse = db_connect()->table('sis_connections')->where('enabled', 1)->countAllResults() > 0;
-        $stale    = [];
+        $stale = [];
 
         foreach (self::JOBS as $command => $job) {
-            if ($job['sisOnly'] && ! $sisInUse) {
+            if (! self::watched($command)) {
                 continue;
             }
 
@@ -65,6 +64,16 @@ final class ScheduledJobs
         }
 
         return $stale;
+    }
+
+    /** Whether the job is checked at all: a SIS job only while some institution has an enabled SIS connection. */
+    public static function watched(string $command): bool
+    {
+        if (! (self::JOBS[$command]['sisOnly'] ?? false)) {
+            return true;
+        }
+
+        return db_connect()->table('sis_connections')->where('enabled', 1)->countAllResults() > 0;
     }
 
     /** @return array{status: string, detail: string} */

@@ -17,6 +17,12 @@ use App\Services\Notifications\NotificationService;
  * in the setting `Monitoring.staleJobs` (command => its last heartbeat when it
  * went stale, 0 for never); the notifications' dedupe keys keep a repeat check
  * from telling anyone twice.
+ *
+ * A job that reported and stopped again between two checks starts a new
+ * period ("running again", then "stopped" again). A period is only kept once
+ * somebody was told, so the first administrator still hears of a job that
+ * stopped before they existed. A SIS job no longer checked (SIS went out of
+ * use) is forgotten without a word.
  */
 final class SchedulerCheck
 {
@@ -30,24 +36,35 @@ final class SchedulerCheck
         $alerted = 0;
 
         foreach (array_keys(ScheduledJobs::JOBS) as $command) {
-            $last = ScheduledJobs::lastRun($command);
+            $last     = ScheduledJobs::lastRun($command);
+            $recorded = array_key_exists($command, $periods);
 
             if (in_array($command, $stale, true)) {
-                if (array_key_exists($command, $periods)) {
-                    continue;
+                if ($recorded && $periods[$command] === ($last ?? 0)) {
+                    continue; // the same stop, already told
                 }
 
-                $periods[$command] = $last ?? 0;
-                $since             = $last === null ? 'it was installed' : date('Y-m-d H:i', $last);
-
-                foreach ($admins as $admin) {
-                    $alerted += (int) $notices->send($admin, 'jobs.stale', "Scheduled job stopped: {$command}", "{$command} has not reported since {$since}. Check the server's crontab (docs/server-setup.md, section 6).", true, "jobs:stale:{$command}:" . ($last ?? 'never'), null, 'admin/monitoring');
+                // It reported since the stop it was told about, and stopped again: that is a new period.
+                if ($recorded) {
+                    $alerted += $this->tell($admins, $notices, 'jobs.recovered', "Scheduled job running again: {$command}", "{$command} reported again at " . date('Y-m-d H:i', (int) $last) . '.', "jobs:recovered:{$command}:{$last}");
+                    unset($periods[$command]);
                 }
-            } elseif (array_key_exists($command, $periods)) {
+
+                $since = $last === null ? 'it was installed' : date('Y-m-d H:i', $last);
+                $sent  = $this->tell($admins, $notices, 'jobs.stale', "Scheduled job stopped: {$command}", "{$command} has not reported since {$since}. Check the server's crontab (docs/server-setup.md, section 6).", "jobs:stale:{$command}:" . ($last ?? 'never'));
+
+                // Kept only once somebody knows, so an administrator added later is still told.
+                if ($sent > 0) {
+                    $periods[$command] = $last ?? 0;
+                }
+
+                $alerted += $sent;
+            } elseif ($recorded) {
                 unset($periods[$command]);
 
-                foreach ($admins as $admin) {
-                    $alerted += (int) $notices->send($admin, 'jobs.recovered', "Scheduled job running again: {$command}", "{$command} reported again at " . date('Y-m-d H:i', (int) $last) . '.', true, "jobs:recovered:{$command}:{$last}", null, 'admin/monitoring');
+                // Out of use (SIS turned off) is not "running again": nothing ran.
+                if (ScheduledJobs::watched($command) && $last !== null) {
+                    $alerted += $this->tell($admins, $notices, 'jobs.recovered', "Scheduled job running again: {$command}", "{$command} reported again at " . date('Y-m-d H:i', $last) . '.', "jobs:recovered:{$command}:{$last}");
                 }
             }
         }
@@ -55,6 +72,24 @@ final class SchedulerCheck
         setting()->set('Monitoring.staleJobs', json_encode($periods));
 
         return ['stale' => $stale, 'alerted' => $alerted];
+    }
+
+    /**
+     * Sends one urgent notification to each administrator.
+     *
+     * @param list<int|object> $admins
+     *
+     * @return int how many were sent
+     */
+    private function tell(array $admins, NotificationService $notices, string $type, string $title, string $body, string $key): int
+    {
+        $sent = 0;
+
+        foreach ($admins as $admin) {
+            $sent += (int) $notices->send($admin, $type, $title, $body, true, $key, null, 'admin/monitoring');
+        }
+
+        return $sent;
     }
 
     /** @return array<string, int> */

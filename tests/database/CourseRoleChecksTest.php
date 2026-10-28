@@ -91,6 +91,20 @@ final class CourseRoleChecksTest extends DatabaseTestCase
         $this->assertSame([$this->studied], array_map('intval', array_column((new CourseService())->getCourseOfferings($this->teacher), 'offering_id')));
     }
 
+    public function testADeanActingAsDeanIsNotAStudentOfACourseTheyLookAt(): void
+    {
+        // Studies elsewhere, and opens a department course as dean: the dean routes set no course of the request.
+        $home = DeanFactory::department('DSTU');
+        $dean = DeanFactory::dean($home['institution'], $home['department']);
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $dean->id, 'group' => 'student', 'created_at' => date('Y-m-d H:i:s')]);
+        $dean = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
+        session()->set('active_role', 'dean');
+        service('courseContext')->clear();
+
+        $this->assertTrue(CourseViewer::isReadOnlyViewer($dean));
+        $this->assertFalse(CourseViewer::isStudentHere($dean));
+    }
+
     public function testTheCourseTheyTeachOpensForThem(): void
     {
         $this->assertNotNull((new CourseService())->getCourseOffering($this->teacher, $this->taught));

@@ -5,6 +5,7 @@
 */
 
 import { createLearningItem } from "../api.js";
+import { csrfExpired } from "../../../../../shared/csrf-expired.js";
 
 export function bindLearningItemCreateModal({
     create,
@@ -86,7 +87,7 @@ export function bindLearningItemCreateModal({
 
                 if (!result.success) {
 
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
 
                     return;
 

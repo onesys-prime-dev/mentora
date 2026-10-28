@@ -60,7 +60,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       # The secret the site's scheduler check expects (scheduler.checkSecret in its .env). Empty: the check is skipped.
-      SCHEDULER_SECRET: ${{ matrix.slug == 'production' && secrets.SCHEDULER_SECRET_PRODUCTION || secrets.SCHEDULER_SECRET_STAGING }}
+      # Both are passed and the shell picks one: with `a && b || c`, an empty production secret fell through to the
+      # staging one, which was then sent to production.
+      SCHEDULER_SECRET_PRODUCTION: ${{ secrets.SCHEDULER_SECRET_PRODUCTION }}
+      SCHEDULER_SECRET_STAGING: ${{ secrets.SCHEDULER_SECRET_STAGING }}
 
     steps:
       - uses: actions/checkout@v7
@@ -99,12 +102,13 @@ jobs:
         # Never turns into a "site is down" issue: the site answered the smoke test.
         continue-on-error: true
         run: |
-          if [ -z "$SCHEDULER_SECRET" ]; then
+          if [ "$ENV_SLUG" = production ]; then SECRET="$SCHEDULER_SECRET_PRODUCTION"; else SECRET="$SCHEDULER_SECRET_STAGING"; fi
+          if [ -z "$SECRET" ]; then
             echo "::notice::No scheduler secret for $ENV_NAME; the scheduled jobs were not checked (docs/uptime.md)."
             exit 0
           fi
           # TLS_FLAG is left unquoted on purpose: empty means no argument at all.
-          curl -fsS -X POST -H "X-Scheduler-Secret: $SCHEDULER_SECRET" $TLS_FLAG "$SITE_URL/index.php/internal/scheduler-check"
+          curl -fsS -X POST -H "X-Scheduler-Secret: $SECRET" $TLS_FLAG "$SITE_URL/index.php/internal/scheduler-check"
           echo
 
       # One open issue per site at a time (found by its title): a new failure

@@ -36,8 +36,8 @@ Each role is offered only the permissions that have an effect for it (`AuthGroup
 
 ## What each permission controls
 
-- **`courses.view`**: the course pages and their data (student, instructor, chairperson, dean, institution).
-- **`courses.manage`**, **`grading.manage`**, **`announcements.manage`**, **`discussions.manage`**: changes in a course, by part; see `course-access.md`. In a course, what counts is the person's role there, not the groups they hold: an instructor enrolled in someone else's course is a student in it (`CourseMembership::roleIn`). Without one, that part of the course is shown as it is, without its controls, and the change is refused (403).
+- **`courses.view`**: the course pages and their data (student, instructor, chairperson, dean, institution), and each role's course list. Without it the dean's Apps menu has no Courses entry; the dashboard still opens.
+- **`courses.manage`**, **`grading.manage`**, **`announcements.manage`**, **`discussions.manage`**: changes in a course, by part; see `course-access.md`. In a course, what counts is the person's role there, not the groups they hold: an instructor enrolled in someone else's course is a student in it (`CourseMembership::roleIn`). Without one, that part of the course is shown as it is, without its controls, and the change is refused (403). The calendar follows the same rule: "Add Assessment" and "Edit Deadline" need `courses.manage`, "Add Announcement" needs `announcements.manage`.
 - **`program.monitor`**: the chairperson's Monitor Program page and its data.
 - **`department.monitor`**: the dean's Monitor Department page, its data and the department report.
 - **`followups.manage`**: sending a follow-up and passing one down. Replying to and closing a follow-up you received needs none.

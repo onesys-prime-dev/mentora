@@ -1,3 +1,5 @@
+import { csrfExpired } from "../../../../../shared/csrf-expired.js";
+
 /*
 |--------------------------------------------------------------------------
 | Learning Unit Modals
@@ -246,7 +248,7 @@ function bindLearningUnitEditor(
 
                 if (!result.success) {
 
-                    alert(
+                    if (!csrfExpired(result)) alert(
                         result.message
                     );
 
@@ -350,7 +352,7 @@ function bindLearningUnitDelete(
 
                 if (!result.success) {
 
-                    alert(
+                    if (!csrfExpired(result)) alert(
                         result.message
                     );
 

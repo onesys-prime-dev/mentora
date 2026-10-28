@@ -54,9 +54,14 @@ class RolesController extends BaseController
     public function toggle(): RedirectResponse
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
-        $role          = (string) $this->request->getPost('role');
-        $permission    = (string) $this->request->getPost('permission');
+        $role          = $this->request->getPost('role');
+        $permission    = $this->request->getPost('permission');
         $granted       = $this->request->getPost('granted');
+
+        // A hand-made form can send a list where one value belongs; it is told, not answered with an error page.
+        if (! is_string($role) || ! is_string($permission)) {
+            return redirect()->to('institution/roles')->with('error', 'Choose a role and a permission.');
+        }
 
         if ($granted !== '1' && $granted !== '0') {
             return redirect()->to('institution/roles')->with('error', 'Choose whether to grant or revoke the permission.');

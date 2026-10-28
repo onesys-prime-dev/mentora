@@ -47,7 +47,16 @@ The check names the late ones ("Not reporting: backup:run, parents:notify."), an
 the admin home shows the same warning. On a new server every job reads "never
 reported" until the scheduler's first runs. The system administrators are also
 emailed once when a job stops and once when it is back, by the hourly scheduler
-check (`uptime.md`).
+check (`uptime.md`). Three cases it handles on purpose:
+
+- **A second stall.** A job that reported and stopped again between two checks
+  is a new period: "running again", then "stopped" again, each told once.
+- **No administrator yet.** A stop is only remembered once somebody was told, so
+  the first system administrator still hears of a job that stopped before they
+  existed.
+- **SIS turned off.** A SIS job that had stopped and is no longer checked (no
+  institution has SIS enabled now) is forgotten without a word: nothing ran, so
+  nothing is "running again".
 
 ## Also on the page
 - Platform counts: institutions, active users, active today, live sessions,

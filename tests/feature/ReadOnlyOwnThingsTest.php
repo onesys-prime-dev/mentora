@@ -87,6 +87,30 @@ final class ReadOnlyOwnThingsTest extends RouteTestCase
         $this->assertStringContainsString('institution_read_only', (string) $this->api('POST', 'student/api/courses/1/announcements/1/react')->getBody());
     }
 
+    public function testARenewalRecordedBeforeTheJobRunsAllowsWritingAtOnce(): void
+    {
+        $student     = $this->personIn('student', 'read_only');
+        $institution = (int) db_connect()->table('institution_users')->where('user_id', $student->id)->get()->getRowArray()['institution_id'];
+
+        $db = db_connect();
+        $db->table('plans')->insert(['name' => 'Renewed plan', 'status' => 'active']);
+        $plan = (int) $db->insertID();
+        $db->table('subscriptions')->insert(['institution_id' => $institution, 'plan_id' => $plan, 'start_date' => '2024-01-01', 'end_date' => date('Y-m-d', strtotime('-30 days'))]);
+
+        $this->assertStringContainsString('institution_read_only', (string) $this->api('POST', 'student/api/courses/1/announcements/1/react')->getBody(), 'read-only before');
+
+        (new \App\Services\Subscriptions\SubscriptionService())->renew($institution, ['plan_id' => (string) $plan, 'period_start' => date('Y-m-d'), 'period_end' => date('Y-m-d', strtotime('+1 year')), 'amount' => '', 'currency' => '', 'reference' => '', 'notes' => ''], PeopleFactory::person('admin', 'Root', 'Admin', 'root@rown.example'));
+
+        // Past the read-only filter: what answers now is the route itself (there is no announcement 1).
+        try {
+            $body = (string) $this->api('POST', 'student/api/courses/1/announcements/1/react')->getBody();
+        } catch (\CodeIgniter\Exceptions\PageNotFoundException) {
+            $body = '';
+        }
+
+        $this->assertStringNotContainsString('institution_read_only', $body, 'writable at once, no job run');
+    }
+
     public function testTheAdministratorsHomeAgreesWithTheDates(): void
     {
         $admin       = $this->personIn('institutional_admin', 'active');

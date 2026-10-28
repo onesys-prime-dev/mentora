@@ -125,6 +125,29 @@ final class BackupOffsiteTest extends DatabaseTestCase
         $this->assertNull($row['offsite_status']);
     }
 
+    public function testACommandThatSucceedsIsASuccess(): void
+    {
+        $ok   = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'offsite-ok-' . bin2hex(random_bytes(3)) . '.php';
+        $fail = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'offsite-fail-' . bin2hex(random_bytes(3)) . '.php';
+        file_put_contents($ok, '<?php exit(0);');
+        file_put_contents($fail, '<?php exit(3);');
+
+        try {
+            // The exit code is read from the last poll: a second proc_get_status() only has it on PHP 8.3+.
+            (new ShellOffsiteCopier(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ok)))->copy('dump.sql.gz', 'uploads');
+
+            try {
+                (new ShellOffsiteCopier(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($fail)))->copy('dump.sql.gz', 'uploads');
+                $this->fail('a failing command throws');
+            } catch (RuntimeException $e) {
+                $this->assertStringContainsString('(exit 3)', $e->getMessage());
+            }
+        } finally {
+            @unlink($ok);
+            @unlink($fail);
+        }
+    }
+
     public function testTheShellCopierMasksThePassword(): void
     {
         $password = (string) config('Database')->default['password'];

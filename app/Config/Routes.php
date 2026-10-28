@@ -322,7 +322,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
 $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($routes) {
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
-    $routes->get('courses', 'Dean\DeanCoursesController::index');
+    $routes->get('courses', 'Dean\DeanCoursesController::index', ['filter' => 'permission:courses.view@dean']);
     // Grade-override requests of the department that wait for the dean: approve (the grade is
     // changed) or reject (with a reason). The only writes in this group besides the dean's own pages.
     $routes->get('approvals', 'Dean\ApprovalsController::index');
@@ -371,11 +371,11 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     // changed from this view; the editors, the grading screens and the question-generation
     // tools are left out, as in the institution's view. The offering must be in the dean's
     // department, else 404 (deancourse).
-    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'deancourse']]);
-    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view', 'deancourse']]);
-    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'deancourse']]);
+    $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view@dean', 'deancourse']]);
+    $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view@dean', 'deancourse']]);
+    $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view@dean', 'deancourse']]);
 
-    $routes->group('api/courses', ['filter' => ['permission:courses.view', 'deancourse', 'assessmentscope']], function ($routes) {
+    $routes->group('api/courses', ['filter' => ['permission:courses.view@dean', 'deancourse', 'assessmentscope']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');

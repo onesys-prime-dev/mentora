@@ -59,6 +59,10 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         // The course of the last request is not this test's (a real request starts with none).
         service('courseContext')->clear();
 
+        // Nor are who-belongs-where and the permission matrices an earlier test worked out: a user id can come
+        // back in another institution.
+        \App\Services\Auth\RolePermissions::flush();
+
         if ($this->isolateTests) {
             if (! isset(self::$emptied[static::class])) {
                 $this->emptyAllTables();

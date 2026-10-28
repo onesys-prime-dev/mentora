@@ -14,6 +14,7 @@ import { serializeMessage, plainTextFrom } from "./composer/serializer.js";
 import { mountEmojiPicker } from "./emoji-picker.js";
 import { closeAllActionMenus } from "../modules/action-menus.js";
 import { closeActiveCardEdit } from "./card-editor.js";
+import { csrfExpired } from "../../../../shared/csrf-expired.js";
 
 export function bindComposer(root, refresh) {
 
@@ -109,7 +110,7 @@ export function bindComposer(root, refresh) {
                 const result = await uploadAnnouncementAttachment(file);
 
                 if (!result.success) {
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
                     continue;
                 }
 
@@ -197,7 +198,7 @@ export function bindComposer(root, refresh) {
             const result = await createAnnouncement(payload);
 
             if (!result.success) {
-                alert(result.message);
+                if (!csrfExpired(result)) alert(result.message);
                 return;
             }
 

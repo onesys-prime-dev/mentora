@@ -102,6 +102,20 @@ final class InstitutionRolesPageTest extends RouteTestCase
         $this->assertStringContainsString('Revoked grading.manage for instructor', (string) $this->step('GET', 'institution/roles')->getBody());
     }
 
+    public function testAnArrayShapedPostIsToldNotFailed(): void
+    {
+        $this->asAdmin(true);
+
+        foreach ([['role' => ['x'], 'permission' => 'grading.manage', 'granted' => '0'], ['role' => 'instructor', 'permission' => ['x'], 'granted' => '0'], ['role' => 'instructor', 'permission' => 'grading.manage', 'granted' => ['0']]] as $post) {
+            $response = $this->step('POST', 'institution/roles/permissions', $post);
+
+            $this->assertStringEndsWith('institution/roles', $response->response()->getHeaderLine('Location'));
+            $this->assertNotEmpty(session('error'));
+        }
+
+        $this->assertSame(0, db_connect()->table('role_permissions')->where('institution_id', $this->institution)->countAllResults());
+    }
+
     public function testSomeoneWhoIsNotTheAdministratorCannotOpenIt(): void
     {
         $this->loggedInAs(PeopleFactory::person('instructor', institutionId: $this->institution));

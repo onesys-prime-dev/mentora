@@ -102,10 +102,17 @@ final class InstitutionRoles
     private function replaceRow(int $institutionId, string $role, string $permission, ?bool $granted): void
     {
         $model = new RolePermissionModel();
-        $model->where(['institution_id' => $institutionId, 'role' => $role, 'permission' => $permission])->delete();
 
-        if ($granted !== null) {
-            $model->insert(['institution_id' => $institutionId, 'role' => $role, 'permission' => $permission, 'granted' => $granted ? 1 : 0]);
+        if ($granted === null) {
+            $model->where(['institution_id' => $institutionId, 'role' => $role, 'permission' => $permission])->delete();
+        } else {
+            // One statement, so two changes of the same box at once cannot both insert (the unique key).
+            $db = db_connect();
+            $db->query(
+                'INSERT INTO ' . $db->prefixTable('role_permissions') . ' (institution_id, role, permission, granted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+                . ' ON DUPLICATE KEY UPDATE granted = VALUES(granted), updated_at = VALUES(updated_at)',
+                [$institutionId, $role, $permission, $granted ? 1 : 0, date('Y-m-d H:i:s'), date('Y-m-d H:i:s')],
+            );
         }
 
         RolePermissions::flush();

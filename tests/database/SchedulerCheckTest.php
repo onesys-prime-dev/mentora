@@ -52,6 +52,65 @@ final class SchedulerCheckTest extends DatabaseTestCase
         return db_connect()->table('notifications')->where(['user_id' => $admin->id, 'title' => $title])->countAllResults();
     }
 
+    public function testASecondStallIsANewPeriod(): void
+    {
+        ScheduledJobs::heartbeat('backup:run', $this->now - 3600);
+        (new SchedulerCheck())->run($this->now);
+
+        // It reported once, then stopped again before the next hourly check.
+        ScheduledJobs::heartbeat('backup:run', $this->now + 60);
+        $later  = $this->now + 60 + 3600;
+
+        foreach (array_diff(array_keys(ScheduledJobs::JOBS), ['backup:run']) as $command) {
+            ScheduledJobs::heartbeat($command, $later - 60); // the others kept running
+        }
+
+        $second = (new SchedulerCheck())->run($later);
+        $third  = (new SchedulerCheck())->run($later + 60);
+
+        $this->assertSame(4, $second['alerted'], 'running again, and stopped again, to each of the two');
+        $this->assertSame(0, $third['alerted'], 'the new period is told once');
+
+        foreach ($this->admins as $admin) {
+            $this->assertSame(1, $this->told($admin, 'Scheduled job running again: backup:run'));
+            $this->assertSame(2, $this->told($admin, 'Scheduled job stopped: backup:run'));
+        }
+    }
+
+    public function testNoPeriodIsRecordedBeforeThereIsAnAdministrator(): void
+    {
+        db_connect()->table('auth_groups_users')->where('group', 'admin')->delete();
+        ScheduledJobs::heartbeat('backup:run', $this->now - 3600);
+
+        $this->assertSame(0, (new SchedulerCheck())->run($this->now)['alerted']);
+        $this->assertArrayNotHasKey('backup:run', json_decode((string) setting('Monitoring.staleJobs'), true) ?? []);
+
+        // The first administrator arrives; the next check tells them.
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $this->admins[0]->id, 'group' => 'admin', 'created_at' => date('Y-m-d H:i:s')]);
+        (new SchedulerCheck())->run($this->now + 60);
+
+        $this->assertSame(1, $this->told($this->admins[0], 'Scheduled job stopped: backup:run'));
+    }
+
+    public function testASisJobLeftOutWhenSisIsOffIsDroppedQuietly(): void
+    {
+        $institution = PeopleFactory::institution('SCHK');
+        db_connect()->table('sis_connections')->insert(['institution_id' => $institution, 'connector' => 'file', 'enabled' => 1, 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')]);
+        // sis:sync has never reported (no heartbeat at all): the case that once said "1970".
+        setting()->forget('Monitoring.sisSyncAt');
+
+        $first = (new SchedulerCheck())->run($this->now);
+        $this->assertContains('sis:sync', $first['stale']);
+        $this->assertSame(1, $this->told($this->admins[0], 'Scheduled job stopped: sis:sync'));
+
+        db_connect()->table('sis_connections')->where('institution_id', $institution)->update(['enabled' => 0]);
+        $after = (new SchedulerCheck())->run($this->now + 60);
+
+        $this->assertSame(0, $after['alerted']);
+        $this->assertSame(0, db_connect()->table('notifications')->like('body', '1970')->countAllResults());
+        $this->assertArrayNotHasKey('sis:sync', json_decode((string) setting('Monitoring.staleJobs'), true) ?? []);
+    }
+
     public function testAStaleJobAlertsEverySystemAdministratorOnce(): void
     {
         ScheduledJobs::heartbeat('backup:run', $this->now - 3600);
