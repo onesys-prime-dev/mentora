@@ -1,6 +1,6 @@
 # P2 test cases: the dean
 
-11 cases in the browser, and the PHP tests that stand behind the rest. Read
+11 cases in the browser, and the PHP tests that stand behind the rest. Wave 1 of the QA plan (2026-10-28) rewrote TC-DEAN-04 and TC-DEAN-05 and added TC-DEAN-12 to 14 at the end. Read
 [README.md](README.md) first. All are `Draft` (see the README).
 
 `tests/e2e/dean.spec.js` holds the cases. The demo data has two deans
@@ -28,7 +28,7 @@ What these prove, in the order of the agreed definition of done:
 2. No cross-role leakage after a role switch (TC-DEAN-02).
 3. An override never takes effect without an approval, and goes through the
    chairperson first (TC-DEAN-04).
-4. A signed-off section can be reopened only by the dean (TC-DEAN-05).
+4. A signed-off section can be reopened only by whoever decides for the department: the dean who holds the sign-off permission, otherwise the institution's administrators (TC-DEAN-05, TC-DEAN-13).
 5. Every screen meets the interface rules: all states exist, no sideways scroll
    at 360, 768 and 1440 pixels, the keyboard is enough, and the automated
    accessibility check finds nothing serious (TC-DEAN-09, 10, 11).
@@ -45,13 +45,16 @@ no-department page and the read-only institution.
 | [TC-DEAN-02](#tc-dean-02-a-dean-who-also-teaches-switches-roles-and-the-app-follows) | A dean who also teaches switches roles and the app follows | Dean, instructor |
 | [TC-DEAN-03](#tc-dean-03-a-course-opened-by-its-dean-is-view-only) | A course opened by its dean is view only | Dean |
 | [TC-DEAN-04](#tc-dean-04-an-override-is-a-request-the-chairperson-endorses-it-the-dean-decides-it-and-the-grade-changes-only-then) | An override is a request: the chairperson endorses it, the dean decides it, and the grade changes only then | Instructor, chairperson, dean, student |
-| [TC-DEAN-05](#tc-dean-05-the-dean-signs-off-a-sections-final-grades-and-only-the-dean-can-reopen-the-sign-off) | The dean signs off a section's final grades, and only the dean can reopen the sign-off | Instructor, dean |
+| [TC-DEAN-05](#tc-dean-05-the-dean-signs-off-a-sections-final-grades-and-only-the-departments-decider-can-reopen-the-sign-off) | The dean signs off a section's final grades, and only the department's decider can reopen the sign-off | Instructor, dean |
 | [TC-DEAN-06](#tc-dean-06-a-dean-sends-a-follow-up-and-the-instructor-answers-it-and-closes-it) | A dean sends a follow-up and the instructor answers it and closes it | Dean, instructor |
 | [TC-DEAN-07](#tc-dean-07-a-dean-posts-a-department-announcement-that-its-people-read-and-ends-it) | A dean posts a department announcement that its people read, and ends it | Dean, student |
 | [TC-DEAN-08](#tc-dean-08-nothing-outside-the-deans-department-can-be-reached) | Nothing outside the dean's department can be reached | Dean |
 | [TC-DEAN-09](#tc-dean-09-the-deans-screens-work-with-the-keyboard-alone) | The dean's screens work with the keyboard alone | Dean |
 | [TC-DEAN-10](#tc-dean-10-every-screen-of-the-dean-fits-360-768-and-1440-pixels-and-passes-the-accessibility-check) | Every screen of the dean fits 360, 768 and 1440 pixels and passes the accessibility check | Dean |
 | [TC-DEAN-11](#tc-dean-11-the-states-of-a-dean-with-nothing-to-show-no-department-or-a-read-only-institution) | The states of a dean with nothing to show, no department, or a read-only institution | Dean |
+| [TC-DEAN-12](#tc-dean-12-an-override-cannot-be-requested-while-the-grades-are-finalized) | An override cannot be requested while the grades are finalized (Wave 1) | Instructor |
+| [TC-DEAN-13](#tc-dean-13-whoever-decides-for-the-department-may-reopen-a-sign-off-an-administrator-gave) | Whoever decides for the department may reopen a sign-off an administrator gave (Wave 1) | Administrator, dean, instructor |
+| [TC-DEAN-14](#tc-dean-14-a-menu-tile-disappears-when-the-dean-loses-the-permission-behind-it) | A menu tile disappears when the dean loses the permission behind it (Wave 1) | Administrator, dean |
 
 The cases run in this order and share one database: TC-DEAN-04 to 07 leave their
 results behind (a decided request, a finalized section, a closed follow-up, an
@@ -131,6 +134,8 @@ Filter with `-g` only for a case that stands alone (01, 02, 03, 08).
 
 ### TC-DEAN-04 An override is a request: the chairperson endorses it, the dean decides it, and the grade changes only then
 
+*Updated 2026-10-28 (register PLN-03): the dean decides only because CBM has a dean who holds `grades.approve`. Where a department has no such dean, the institution's administrators decide instead (decisions 1.1, 1.3; `GradeAuthority`). The steps below are unchanged.*
+
 - **Role:** Instructor, chairperson, dean, then student. **Priority:** P2
 - **Data:** IT201-A: Reyes, Pedro (`student2`, 50%) and Villanueva, Michael (`student5`, 94%);
   `instructor2`, `chairperson1`, `dean2`
@@ -152,15 +157,21 @@ Filter with `-g` only for a case that stands alone (01, 02, 03, 08).
   - Rejecting needs a reason and says who will read it.
   - Decided shows Approved for Pedro and Rejected for Michael.
   - Pedro sees 75%; Michael still sees 94% and neither sees any request.
+  - Nobody decides their own request. Two people acting on one request at once: the second is told "That request was just acted on."
+  - If the dean role loses `grades.approve`, the waiting requests move at once to the institution's administrators, who decide them on their own Approvals page.
 - **Already automated:** `tests/feature/OverrideRequestFlowTest.php`,
   `tests/feature/DeanApprovalsPageTest.php`, `tests/database/GradeOverrideRequestServiceTest.php`,
-  `tests/unit/OverrideRequestChainTest.php`
+  `tests/unit/OverrideRequestChainTest.php`; the administrators' path: `tests/database/AdministratorDecidesOverridesTest.php`,
+  `tests/feature/InstitutionApprovalsPageTest.php`; races: `tests/database/OverrideRequestRaceTest.php`
 - **Playwright:** `tests/e2e/dean.spec.js`
 - **Basis:** `app/Services/Courses/Grades/GradeOverrideRequestService.php`,
-  `app/Views/pages/dean/approvals.php`
+  `app/Services/Courses/Grades/GradeAuthority.php`, `app/Views/pages/dean/approvals.php`; commit `48543c7`
+- **QA status:** FIX? (PS-OVR-04)
 - **Review:** Draft
 
-### TC-DEAN-05 The dean signs off a section's final grades, and only the dean can reopen the sign-off
+### TC-DEAN-05 The dean signs off a section's final grades, and only the department's decider can reopen the sign-off
+
+*Updated 2026-10-28 (register PLN-03 and AMB-ASG-04): "only the dean" now means the department's decider, the dean who holds `grades.signoff`, otherwise the institution's administrators (TC-DEAN-13). Reopening needs a reason, not the password.*
 
 - **Role:** Instructor, then dean. **Priority:** P2
 - **Data:** IT101-B (no students), `instructor1`, `dean2`; IT101-A is blocked
@@ -176,14 +187,15 @@ Filter with `-g` only for a case that stands alone (01, 02, 03, 08).
     grades yet".
   - Signing off says "only you can" reopen it, then asks for the password.
   - IT101-B then reads Signed off.
-  - The instructor sees "Signed off by the dean" and has no Reopen button.
-  - Reopening needs a reason; afterwards IT101-B is Ready again.
+  - The instructor sees "Signed off by Diana Mendoza" (the dean who signed; name format to confirm) and has no Reopen button. **Expected to fail today:** the toolbar says "Signed off by the dean" (TC-GBK-07).
+  - Reopening needs a reason ("Give a reason for reopening, so the instructor knows why.") and does not ask for the password; afterwards IT101-B is Ready again.
   - The instructor can reopen their own finalization again.
 - **Already automated:** `tests/database/GradeSignoffServiceTest.php`,
   `tests/feature/DeanSignoffPageTest.php`, `tests/database/GradeFinalizationServiceTest.php`
 - **Playwright:** `tests/e2e/dean.spec.js`
-- **Basis:** `app/Services/Courses/Grades/GradeSignoffService.php`,
-  `app/Views/pages/dean/signoff.php`
+- **Basis:** `app/Services/Courses/Grades/GradeSignoffService.php` (`mayDecide`, `reopen`),
+  `app/Views/pages/dean/signoff.php`; decision AMB-ASG-04; commit `48543c7`
+- **QA status:** FIX? for the rule (PS-SGN-03, PS-SGN-04); REG for the instructor's wording (PS-FIN-04)
 - **Review:** Draft
 
 ### TC-DEAN-06 A dean sends a follow-up and the instructor answers it and closes it
@@ -315,3 +327,73 @@ Filter with `-g` only for a case that stands alone (01, 02, 03, 08).
 - **Playwright:** `tests/e2e/dean.spec.js`
 - **Basis:** `app/Views/pages/dean/no-assignment.php`, `app/Views/layouts/partials/read-only-banner.php`
 - **Review:** Draft
+
+---
+
+## Wave 1 (added 2026-10-28)
+
+From the QA plan's Wave 1. The expected results come from `docs/qa/decision-register.md`. QA status **REG**: the defect was seen in the code and the case is expected to fail until it is fixed; not yet run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-DEAN-12 | An override cannot be requested while the grades are finalized | Instructor | P2 | REG |
+| TC-DEAN-13 | Whoever decides for the department may reopen a sign-off an administrator gave | Administrator, dean, instructor | P2 | REG |
+| TC-DEAN-14 | A menu tile disappears when the dean loses the permission behind it | Institutional administrator, dean | P3 | REG |
+
+### TC-DEAN-12 An override cannot be requested while the grades are finalized
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** `instructor2`, IT201-A, with its grades finalized (finalize them in Grades first; IT201-A has graded students)
+- **Steps:**
+  1. Open the Gradebook and ask for an override of Pedro Reyes's grade to 75%, with a reason.
+  2. Send the same request directly (the override request route), so the page's own check is not what is tested.
+  3. Reopen the finalization with a reason, then ask for the override again.
+- **Expected:**
+  - Steps 1–2: refused with "The grades are finalized. Reopen them to make changes." No request is recorded, and nobody is told of one.
+  - Step 3: the request is accepted and goes to the chairperson, as in TC-DEAN-04.
+  - In an institution with no deans, the instructor's direct override after finalization keeps working as before. It is a separate, deliberate path.
+- **Already automated:** `tests/database/GradeOverrideRequestServiceTest.php` (the request flow, not this refusal)
+- **Playwright:** planned
+- **Basis:** decision AMB-ASG-05. Today `GradeOverrideRequestService::request` does not check finalization [read in the code; not run].
+- **QA status:** REG (PS-OVR-11)
+- **Review:** Draft. Expected result set by AMB-ASG-05.
+
+### TC-DEAN-13 Whoever decides for the department may reopen a sign-off an administrator gave
+
+- **Role:** Institutional administrator, then dean, then instructor. **Priority:** P2
+- **Data:** `institution.admin@mentora.test`, `dean2`, `instructor1`, IT101-B. **Setup:** take the `grades.signoff` permission away from the dean role on the Roles page, so CBM has no dean who may sign off.
+- **Steps:**
+  1. As `instructor1`, finalize IT101-B's grades.
+  2. As the administrator, open Sign-off. Sign off IT101-B, confirming the password.
+  3. Give `grades.signoff` back to the dean role.
+  4. As `dean2`, open Sign-off. Reopen IT101-B with no reason, then with a reason.
+  5. As `instructor1`, open IT101-B's Grades.
+- **Expected:**
+  - Step 2: the administrator's board lists only the departments with no eligible dean. The sign-off works and asks for the password.
+  - Step 4: the dean sees IT101-B as signed off by the administrator and may reopen it. A reason is required ("Give a reason for reopening, so the instructor knows why."); **no password** is asked. Afterwards IT101-B is Ready again.
+  - Step 5: before step 4 the instructor reads "Signed off by <the administrator's name>" (see TC-GBK-07); after it the sign-off tag is gone and the reason reaches the instructor.
+  - While the department has an eligible dean, the administrator cannot sign off or reopen there ("That section is not one you sign off.").
+- **Already automated:** `tests/database/AdministratorSignsOffTest.php` (`testAnAdministratorSignsOffWhereThereIsNoDean`, `testWhereThereIsADeanTheAdministratorCannot`, `testTheAdministratorReopensWithAReason`, `testExistingSignOffsStayWhenTheSignerChanges`); `tests/feature/InstitutionSignoffPageTest.php`
+- **Playwright:** planned
+- **Basis:** `GradeSignoffService::mayDecide` and `reopen`; `GradeAuthority`; decision AMB-ASG-04. Expected to fail only on the wording in step 5 (the toolbar's "Signed off by the dean"); the rest is the committed behavior of `48543c7`.
+- **QA status:** REG (PS-SGN-08)
+- **Review:** Draft. Expected result set by AMB-ASG-04.
+
+### TC-DEAN-14 A menu tile disappears when the dean loses the permission behind it
+
+- **Role:** Institutional administrator, then dean. **Priority:** P3
+- **Data:** `institution.admin@mentora.test`, `dean2`
+- **Steps:**
+  1. As the administrator, open Roles and permissions and clear, for the dean role, the permission behind Approvals (`grades.approve`). Then the ones behind Follow-ups and Announcements.
+  2. As `dean2`, sign in again and open the Apps menu and the sidebar after each change.
+  3. Open each page by its address.
+  4. Give the permissions back.
+- **Expected:**
+  - Each tile disappears from the menu as soon as its permission is cleared, and comes back when it is given back.
+  - The address is refused either way (the route checks the permission).
+  - Courses and Monitor department already behave this way.
+- **Already automated:** `tests/feature/PermissionsTakeEffectTest.php` (the routes)
+- **Playwright:** no
+- **Basis:** decision AMB-AUTH-08. Today `navigation_helper.php` hides only Courses and Monitor department for a dean; Approvals, Follow-ups and Announcements stay visible [read in the code; not run].
+- **QA status:** REG (PS-RBA-09)
+- **Review:** Draft. Expected result set by AMB-AUTH-08.

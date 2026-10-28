@@ -153,3 +153,52 @@ that run on every change.
 | Only finalized grades go to the SIS; the preview says who is left out and why | `SisGradeExporterTest`, `SisGradePayloadTest`, `InstitutionIntegrationsTest` |
 | Who can reach which grade route, other sections' ids, a closed section | `GradeRoutesTest`, `CourseMembershipTest`, `ClosedOfferingTest`, `ReadOnlyModeTest` |
 | How grades are written and summarized | `GradeFormattingTest` |
+
+---
+
+## Wave 1 (added 2026-10-28)
+
+From the QA plan's Wave 1. The expected results come from `docs/qa/decision-register.md`, so these two are **expected to fail until the defect is fixed** (QA status **REG**: the defect was seen in the code, not yet run).
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-GBK-06 | A published scheme's weights cannot be edited away from 100% | Instructor | P1 | REG |
+| TC-GBK-07 | A signed-off gradebook names who signed it off | Instructor | P2 | REG |
+
+### TC-GBK-06 A published scheme's weights cannot be edited away from 100%
+
+- **Role:** Instructor. **Priority:** P1
+- **Data:** `instructor1`, IT101-A. Its grading scheme is published with Quizzes 50% and Assignments 50%.
+- **Steps:**
+  1. Open Grades, then the grading scheme. Change Quizzes from 50 to 60 and save (the total becomes 110%).
+  2. Change Quizzes to 40 and save (90%).
+  3. Change Quizzes to 50.01 and to 49.99 (100.01% and 99.99%).
+  4. Change Quizzes to 60 and Assignments to 40 in one go, and save each order (Quizzes first, then Assignments).
+  5. Open the gradebook and read student1's final grade before and after each step.
+- **Expected:**
+  - Steps 1–3: each save is refused with "Category weights add up to 110% — they must total 100%." (with the actual total). The weights stay as they were, and the scheme stays published.
+  - Step 4: a change that ends at exactly 100% is accepted. The way the form saves two categories must not leave the scheme at an invalid total in between: if it saves one at a time, the instructor needs a way to change both together (record how).
+  - Step 5: no grade changes after a refused edit. The engine never silently rescales weights that do not total 100%.
+  - A scheme that uses periods follows the same rule for the period weights ("Period weights add up to …").
+- **Already automated:** the publish check: `GradingSchemeService::publishProblem` tests. Editing a published scheme has none.
+- **Playwright:** planned
+- **Basis:** decision AMB-ASG-02. Today `GradingSchemeService::updateCategory` does not re-check the total on a published scheme [read in the code; not run].
+- **QA status:** REG (PS-GBK-04)
+- **Review:** Draft. Expected result set by AMB-ASG-02.
+
+### TC-GBK-07 A signed-off gradebook names who signed it off
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** two sections whose grades are finalized and signed off. One was signed off by the dean (`dean2`, CBM). The other is in a department with no eligible dean, signed off by the institution's administrator (see TC-DEAN-13 for the setup).
+- **Steps:**
+  1. As each section's instructor, open Grades.
+  2. Press Reopen on the finalization (or send the reopen request directly).
+- **Expected:**
+  - The tag above the gradebook reads "Signed off by Diana Mendoza" (`dean2`) in the first section and "Signed off by Ines Administrador" (the administrator) in the second (name format to confirm). Neither says "the dean" when the dean did not sign.
+  - The detail line under it shows the same name.
+  - Reopening the finalization is refused while the sign-off stands. The message names the person who signed off and says the sign-off must be reopened first (wording to confirm). It does not say "Only the dean can reopen them" when an administrator signed off.
+- **Already automated:** `tests/database/GradeSignoffServiceTest.php`, `tests/database/AdministratorSignsOffTest.php` (the rule, not the wording)
+- **Playwright:** planned
+- **Basis:** decision AMB-ASG-04 (register Part I3: the wording is "Signed off by <signer's name>"). Today the toolbar tag always says "Signed off by the dean" (`gradebook-toolbar.php` line 58; the detail at line 164 names the signer), and the refusal is `GradeFinalizationService::SIGNED_OFF_MESSAGE`, "The dean has signed off these grades. Only the dean can reopen them." [read in the code; not run].
+- **QA status:** REG (PS-FIN-04)
+- **Review:** Draft. Expected result set by AMB-ASG-04.

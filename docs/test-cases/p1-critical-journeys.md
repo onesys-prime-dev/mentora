@@ -1,6 +1,6 @@
 # P1 test cases: the critical journeys
 
-17 cases. Read [README.md](README.md) first for the format, the demo accounts and
+17 P1 journey cases, and 11 quiz cases added in Wave 1 of the QA plan (2026-10-28, at the end of this file, each with its own priority). Read [README.md](README.md) first for the format, the demo accounts and
 how to reseed. **All are `Draft`**: derived from the code, the seed data and the
 existing automated tests, awaiting a person to confirm each expected result.
 "(wording to confirm)" marks on-screen text read from code but not yet seen in
@@ -376,3 +376,232 @@ works on a fresh seed. A full run needs a fresh seed.
 - **A quiz's essay score box stayed disabled after pressing Grade Work** (TC-GRD-02): the instructor had to select the student again before typing the points. Found while automating TC-GRD-02 and fixed.
 - **Two page routes crash.** Opening `/student/courses/<id>/<slug>/modules/items/<item id>` (and the instructor twin) answers with the error page: the route passes the controller three values but `ModuleController::viewLearningItem` takes two (found while automating TC-MOD-01). Nothing in the app links to that address (it uses `?item=` and the API), so only a typed or shared link hits it. Not fixed.
 - **No requirements to check against.** Expected results such as "a late submission is allowed only when the assignment says so", or "a quiz with an essay shows Partially Graded until the essay is marked", are what the code does. Whether they are what the product should do is for the product owner to confirm.
+
+---
+
+## Wave 1: quiz rules (added 2026-10-28)
+
+These cases come from the QA plan's Wave 1 (`docs/qa/coverage-matrix.md`, scenarios `PS-…`). Their expected results come from the decisions in `docs/qa/decision-register.md`, not only from the code. That is why some are **expected to fail until a defect is fixed**: the **QA status** line says which. None has been run yet. They carry their own priority, and several are P2 or P3 even though this file is the P1 file: they sit next to the quiz journeys they belong to.
+
+QA status values: **FIX?** a fix is committed and a test pins it; expected to pass, not yet run. **REG** the defect was seen in the code; expected to fail until fixed. **REG?** a suspected defect; the first run confirms it. **NB** required but not built; expected to fail.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-QUIZ-04 | A quiz opened in a second tab resumes the same attempt | Student | P1 | FIX? |
+| TC-QUIZ-05 | Between two tabs the last save wins, and nothing changes after the submit | Student | P1 | FIX? |
+| TC-QUIZ-06 | An instructor enrolled as a student in another course follows the student's quiz rules there | Instructor | P1 | FIX? |
+| TC-QUIZ-07 | Editing a quiz's questions does not change an attempt that is running | Instructor, Student | P1 | REG? |
+| TC-QUIZ-08 | The attempt limit accepts 1 or more, or blank for unlimited, and refuses 0 and negatives | Instructor, Student | P2 | REG? |
+| TC-QUIZ-09 | A quiz does not offer File Upload questions | Instructor | P2 | REG? |
+| TC-QUIZ-10 | A cancelled attempt does not count against the attempt limit | Student | P3 | REG |
+| TC-QUIZ-11 | A quiz with no questions cannot be published or started | Instructor, Student | P1 | REG |
+| TC-QUIZ-12 | The server refuses impossible quiz settings and empty questions | Instructor | P1 | REG |
+| TC-QUIZ-13 | A quiz password is asked before the attempt, and browser lockdown is shown | Instructor, Student | P2 | NB |
+| TC-QUIZ-14 | A question import is judged by its content, not its file name | Instructor | P3 | NB |
+
+### TC-QUIZ-04 A quiz opened in a second tab resumes the same attempt
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student5@mentora.test`, IT101-A, Quiz 1 (as TC-QUIZ-01; unlock it first by completing the two items before it)
+- **Steps:**
+  1. Open Quiz 1 and press Take Quiz. Answer question 1. Note the time left on the timer.
+  2. Copy the address, open it in a second tab, and press Take Quiz (or Resume) there.
+  3. In the second tab answer question 3. Go back to the first tab and reload it.
+  4. Repeat the start with a fresh seed, this time pressing Take Quiz in both tabs at the same moment (two windows side by side, or the browser test's two pages).
+- **Expected:**
+  - Both tabs show the same attempt: the same attempt number ("1 of 2 attempts used" stays at one attempt in progress), and the same time left, give or take a second. The timer does not restart.
+  - The answer from the first tab is already filled in on the second, and after the reload the first tab shows the answer given in the second.
+  - Step 4: no error page and no "could not be started" message. Exactly one attempt is in progress. Only if the database itself refuses the start does the page say "The quiz could not be started. Reload the page to try again."
+- **Already automated:** `tests/database/QuizTwoTabsTest.php::testASecondStartAtTheSameMomentResumesTheSameAttempt`; `QuizAttemptFailureTest::testAStartTheDatabaseRefusesSaysItCouldNotStart`
+- **Playwright:** planned
+- **Basis:** `QuizAttemptService::startAttempt` (unique quiz, student and attempt number; decision 15.1); commit `5140068`
+- **QA status:** FIX? (PS-QUZ-05)
+- **Review:** Draft. Expected result set by decision 15.1.
+
+### TC-QUIZ-05 Between two tabs the last save wins, and nothing changes after the submit
+
+- **Role:** Student. **Priority:** P1
+- **Data:** as TC-QUIZ-04, with the attempt open in two tabs
+- **Steps:**
+  1. In tab A choose an answer for question 1. In tab B choose a different answer for the same question.
+  2. In tab A press Submit Quiz and confirm.
+  3. In tab B change the answer to question 2 and then press Submit Quiz.
+  4. As `instructor1`, open IT101-A's Gradebook and student5's attempt.
+- **Expected:**
+  - Question 1 keeps tab B's answer (the later save). The attempt holds one answer per question, never two.
+  - Step 3: tab B's change is refused with "This attempt is no longer in progress." and its submit with "This attempt has already been submitted." Nothing tab B sends after the submit changes the attempt.
+  - The gradebook counts the attempt once: one score, one completion of the quiz item, attempts used = 1.
+- **Already automated:** `QuizTwoTabsTest`: `testTwoSavesOfOneQuestionLeaveOneRowWithTheLast`, `testASaveAfterTheOtherTabSubmittedIsRefused`, `testASecondSubmitIsRefusedAndChangesNothing`, `testTheDatabaseKeepsOneAnswerPerQuestion`; `QuizAttemptFailureTest::testTheSameSubmitWithoutARefusalScoresCountsAndCompletes`
+- **Playwright:** planned
+- **Basis:** `QuizAttemptService::saveAnswer`, `submitAttempt`; migration `2026-11-16-000002_OneResponsePerQuestion`; decision 15.2; commit `5140068`
+- **QA status:** FIX? (PS-QUZ-06)
+- **Review:** Draft. Expected result set by decision 15.2.
+
+### TC-QUIZ-06 An instructor enrolled as a student in another course follows the student's quiz rules there
+
+- **Role:** Instructor. **Priority:** P1
+- **Data:** `instructor2@mentora.test` (teaches IT102-A and IT201-A, not IT101-A). **Setup:** as the institution's administrator, enrol `instructor2@mentora.test` in IT101-A from the roster.
+- **Steps:**
+  1. As `instructor2`, open IT101-A. Open Quiz 1 before completing the items before it.
+  2. Complete the two items, take Quiz 1 and submit it. Take it a second time and submit.
+  3. Try a third attempt.
+  4. As `instructor1`, set a quiz in IT101-A to Draft. As `instructor2`, try to open it by its address.
+  5. As `instructor2`, open a quiz of IT201-A (which they teach).
+- **Expected:**
+  - In IT101-A they are a student: the quiz is locked until the items are done, the attempt limit of 2 stops the third attempt ("You've used all 2 attempts."), and the draft quiz is not found.
+  - They see no preview, edit or grading controls in IT101-A.
+  - In IT201-A they are still its instructor and preview the quiz as before.
+- **Already automated:** `tests/database/QuizCourseRoleTest.php` (all five tests); `tests/database/CourseRoleInTest.php`
+- **Playwright:** planned
+- **Basis:** `CourseMembership::roleIn`, `QuizAttemptService::startAttempt`; decision 9.1; commit `5140068`
+- **QA status:** FIX? (PS-QUZ-07)
+- **Review:** Draft. Expected result set by decision 9.1.
+
+### TC-QUIZ-07 Editing a quiz's questions does not change an attempt that is running
+
+- **Role:** Instructor, then Student. **Priority:** P1
+- **Data:** `student5`, `instructor1`, IT101-A, Quiz 1
+- **Steps:**
+  1. As `student5`, start Quiz 1 and answer question 1 with `"42"` (the correct answer). Leave the attempt running.
+  2. As `instructor1`, open Quiz 1 in the quiz builder. Change question 1's correct answer to another option, and change its text.
+  3. As `student5`, reload the attempt, then submit it.
+  4. Start the second attempt.
+- **Expected:**
+  - The running attempt keeps the question as it was when it started: the same text, and it is scored against the answer key it started with, so question 1 still earns its 3 points.
+  - The second attempt, started after the change, shows the new text and uses the new key.
+  - The edit itself is not refused (the instructor may edit), and it does not alter results of attempts already submitted except through the instructor's own rescore.
+- **Already automated:** none for a running attempt. `AssessmentRescoreService` rescoring skips attempts in progress.
+- **Playwright:** planned
+- **Basis:** decision AMB-ASM-03 (register Part I3): question edits must not change active attempts. Today questions are edited in place and the attempt reads the edited row (`QuestionService::updateQuestion`) [read in the code; not run].
+- **QA status:** REG? (PS-QUZ-19)
+- **Review:** Draft. Expected result set by AMB-ASM-03.
+
+### TC-QUIZ-08 The attempt limit accepts 1 or more, or blank for unlimited, and refuses 0 and negatives
+
+- **Role:** Instructor, then Student. **Priority:** P2
+- **Data:** `instructor1`, IT101-A. Create a quiz "Limit check" with one multiple-choice question and publish it.
+- **Steps (boundary values for the attempt limit):** in the quiz settings save each value in turn and read the reply: `-1`, `0`, `1`, `2`, `99`, blank, `1.5`, `abc`. For `1`, `2` and blank, take the quiz as `student5` until refused.
+- **Expected:**
+  - `-1`, `0`, `1.5` and `abc` are refused with a message beside the field saying the limit must be a whole number of at least 1, or blank for unlimited (wording to confirm). The previous value stays.
+  - `1`, `2` and `99` are saved. The student gets exactly that many attempts.
+  - Blank means unlimited: the item says no limit, and a further attempt always starts while the quiz is open.
+  - A new quiz saved without the field gets 1 attempt.
+  - The same rules apply on create, on edit, and in a quiz import.
+- **Already automated:** `QuizAttemptServiceTest::testTheDefaultLimitIsOneAttempt` (the default only)
+- **Playwright:** no
+- **Basis:** decision AMB-ASM-09 and MISS-ASM-01. Today nothing validates the field, and a blank (null) limit becomes 1, not unlimited (`QuizAttemptService` reads `attempt_limit ?? 1`) [read in the code; not run].
+- **QA status:** REG? (PS-QUZ-14)
+- **Review:** Draft. Expected result set by AMB-ASM-09.
+
+### TC-QUIZ-09 A quiz does not offer File Upload questions
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** `instructor1`, IT101-A, the quiz "Limit check" from TC-QUIZ-08, and an assignment in the same unit
+- **Steps:**
+  1. In the quiz builder open the list of question types.
+  2. Send the add-question request for the quiz with the type `File Upload` directly (the browser's network tools, or the API test).
+  3. Import a question file that contains a File Upload question into the quiz.
+  4. In the assignment, check that file submission is still offered.
+- **Expected:**
+  - The quiz's type list does not contain File Upload.
+  - The direct request and the import refuse the type with a message saying File Upload is not available in quizzes (wording to confirm). No question is added.
+  - Assignments still accept file submissions.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decisions AMB-ASM-08 and MISS-QZ-03. Today `QuestionService::createQuestion` accepts any type, and a student has no way to save a File Upload answer in a quiz [read in the code; not run].
+- **QA status:** REG? (PS-QUZ-15)
+- **Review:** Draft. Expected result set by AMB-ASM-08.
+
+### TC-QUIZ-10 A cancelled attempt does not count against the attempt limit
+
+- **Role:** Student. **Priority:** P3
+- **Data:** `student5`, IT201-A, "Quiz: Keys and Relationships" (one attempt). **Setup:** the app has no screen that cancels an attempt. On the test database, give student5 one attempt of this quiz and set its status to `Cancelled` with SQL.
+- **Steps:** as `student5`, open the quiz and press Take Quiz.
+- **Expected:**
+  - The item shows "0 of 1 attempt used", and a new attempt starts.
+  - The cancelled attempt stays in the record (it is not deleted).
+  - The system never sets an attempt to Cancelled by itself. A staff action that cancels one, recording the reason, who did it and when, is required but not built (PS-QUZ-16 in `docs/qa/coverage-matrix.md`).
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-ASM-06. Today the limit counts every attempt that is not In Progress, Cancelled included (`QuizAttemptService::startAttempt`, `status != 'In Progress'`) [read in the code; not run].
+- **QA status:** REG (PS-QUZ-16)
+- **Review:** Draft. Expected result set by AMB-ASM-06.
+
+### TC-QUIZ-11 A quiz with no questions cannot be published or started
+
+- **Role:** Instructor, then Student. **Priority:** P1
+- **Data:** `instructor1`, IT101-A, unit "Variables and Data Types"
+- **Steps:**
+  1. Add a new quiz "Empty quiz" and save it as a draft with no questions.
+  2. Try to publish it.
+  3. Add one multiple-choice question and publish it. Then delete the question.
+  4. As `student5`, open "Empty quiz".
+- **Expected:**
+  - Step 1: saving an empty draft is allowed.
+  - Step 2: publishing is refused with a message saying a quiz needs at least one question (wording to confirm). It stays a draft and students do not see it.
+  - Step 3: publishing works with one question.
+  - Step 4: the student cannot start an attempt on a published quiz left with no questions. The page says why instead of opening an empty attempt, and no attempt is recorded.
+- **Already automated:** none
+- **Playwright:** planned
+- **Basis:** decisions AMB-ASM-02 and MISS-ASM-01. Today `AssessmentService::publishedAssessment` and the status change in `updateAssessment` publish a quiz with no questions, and the page only says "This quiz has no questions yet." [read in the code; not run].
+- **QA status:** REG (PS-ASM-03)
+- **Review:** Draft. Expected result set by AMB-ASM-02.
+
+### TC-QUIZ-12 The server refuses impossible quiz settings and empty questions
+
+- **Role:** Instructor. **Priority:** P1
+- **Data:** `instructor1`, IT101-A, the quiz "Limit check". Send each change through the quiz settings, and again directly to `PATCH /instructor/api/courses/<id>/assessments/<id>` and the add-question request, so the browser's own checks are not what is tested.
+- **Steps and expected (each row is refused, the message is beside the field, and nothing is saved):**
+
+  | Change | Value |
+  |---|---|
+  | Close date before the open date | open tomorrow, close today |
+  | Due date after the close date | due in 5 days, close in 3 |
+  | Duration | `0`, `-5`, `abc` (accepted: `1`, blank for no time limit) |
+  | Attempt limit | `0`, `-1` (see TC-QUIZ-08) |
+  | Question points | `-1`, `1000000` (accepted: `0` to the upper limit; boundary values min−1, min, min+1, max−1, max, max+1 once the limit is set) |
+  | Question text | empty, only spaces |
+  | Question type | a type that does not exist, `File Upload` (TC-QUIZ-09) |
+
+- **Expected (also):** a refused change leaves the quiz exactly as it was, with no half-saved fields. A valid change in the same form saves.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision MISS-ASM-01. Today `AssessmentService::updateAssessment` checks only the status, and `QuestionService::createQuestion` saves an empty text and any points [read in the code; not run]. The upper bound for points is not set by any decision: record what the code does once it is added.
+- **QA status:** REG (PS-ASM-04)
+- **Review:** Draft. Expected result set by MISS-ASM-01.
+
+### TC-QUIZ-13 A quiz password is asked before the attempt, and browser lockdown is shown
+
+- **Role:** Instructor, then Student. **Priority:** P2
+- **Data:** `instructor1`, `student5`, the quiz "Limit check"
+- **Steps:**
+  1. In the quiz settings turn on "Require a password" and set `Quiz-123`. Turn on browser lockdown. Save.
+  2. As `student5`, open the quiz. Try to start it with no password, with `quiz-123`, then with `Quiz-123`.
+  3. Turn the password off. As the student, start a new attempt.
+  4. On the test database, read the stored password value.
+- **Expected:**
+  - The attempt starts only with the exact password. A wrong one is refused with a message, and no attempt is recorded.
+  - With the password off, nobody is asked for one.
+  - The stored value is a one-way hash, never the password itself, and the password never appears on a page or in an API reply.
+  - With lockdown on, the student sees that lockdown is active before and during the attempt. Which restrictions lockdown enforces must be documented before this part can be judged.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-DB-02. Today the settings `require_password` and `browser_lockdown` are stored but nothing enforces them.
+- **QA status:** NB (PS-ASM-12)
+- **Review:** Draft. Expected result set by AMB-DB-02.
+
+### TC-QUIZ-14 A question import is judged by its content, not its file name
+
+- **Role:** Instructor. **Priority:** P3
+- **Data:** `instructor1`, the quiz "Limit check", and four files: a real Aiken text file renamed to `.pdf`; a PNG image renamed to `.txt`; a real Moodle XML file; a scanned PDF (an image of a page, no text layer)
+- **Steps:** import each file through the quiz's Import, read the preview, and cancel.
+- **Expected:**
+  - A file whose content does not match its name is refused before it is read, with a message that names the problem and shows no path or stack trace. No question is created.
+  - The real Moodle XML file previews its questions as before.
+  - The scanned PDF: when the question-builder service is running, its text is read (OCR) and previewed. When the service is not running, the import says the PDF has no readable text (record the message the code gives).
+  - A refused or failed import never creates some of the questions.
+- **Already automated:** the parsers have unit tests (`tests/unit/*Parser*Test.php`); content checks have none
+- **Playwright:** no
+- **Basis:** decision MISS-ASM-02 (register Part I3). Today the format is chosen by the file extension (`QuestionImportService::previewFile`).
+- **QA status:** NB (PS-QBK-09)
+- **Review:** Draft. Expected result set by MISS-ASM-02.

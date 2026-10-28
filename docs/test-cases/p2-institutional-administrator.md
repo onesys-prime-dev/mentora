@@ -1,6 +1,6 @@
 # P2 test cases: the institutional administrator
 
-43 cases in two files. Read [README.md](README.md) first. **All are `Draft`**
+43 cases in two files, and 5 added in Wave 1 of the QA plan (2026-10-28, at the end; TC-CRS-03 rewritten). Read [README.md](README.md) first. **All are `Draft`**
 (see the README).
 
 - `tests/e2e/institution-structure.spec.js` holds the screen-by-screen cases
@@ -31,7 +31,7 @@ same institution (`DemoUsersSeeder`).
 | TC-STR-06 | An empty new department can be switched off and on again | Structure |
 | TC-CRS-01 | Adding a course files it under its program and shows it in the catalog | Courses |
 | TC-CRS-02 | A duplicate code shows its reason in the dialog; search finds the course | Courses |
-| TC-CRS-03 | A chairperson is assigned to a sub-department and removed again | Structure |
+| TC-CRS-03 | A sub-department has one chairperson: replacing needs confirmation and tells the old one (rewritten 2026-10-28, see Wave 1) | Structure |
 | TC-TRM-01 | An overlapping term goes through with a warning | Terms |
 | TC-TRM-02 | A term that ends before it starts is refused beside the date | Terms |
 | TC-TRM-03 | Closing a term says what changes, asks for the password, and can be undone | Terms |
@@ -111,3 +111,114 @@ title; the rules underneath are proved by PHPUnit
 - **Steps:** sign in. Open People and Offerings. Open Reports, the audit log and the data export.
 - **Expected:** the read-only banner is shown; no *Invite a person* or *Add an offering*; the three looking pages open.
 - **Already automated:** `tests/feature/ReadOnlyModeTest.php`, `tests/feature/InstitutionAuditLogPageTest.php`, `tests/feature/InstitutionHomeAttentionTest.php`.
+
+---
+
+## Wave 1 (added 2026-10-28)
+
+From the QA plan's Wave 1. The expected results come from `docs/qa/decision-register.md`; none has been run. QA status: **FIX?** a fix is committed and a test pins it, expected to pass; **NB** required but not built, expected to fail.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-CRS-03 | A sub-department has one chairperson: replacing needs confirmation and tells the old one (rewritten) | Institutional administrator | P1 | FIX? |
+| TC-CRS-04 | The database refuses a second active chairperson, whatever path writes it | (database) | P2 | FIX? |
+| TC-CRS-05 | Two administrators assigning a chairperson at once get one chair and a friendly message | Institutional administrator ×2 | P2 | FIX? |
+| TC-CRS-06 | A dean is assigned to a department, and the assignment ended, from the institution area | Institutional administrator | P2 | NB |
+| TC-IAA-07 | Taking away an instructor's discussion moderation stops it in the server, not only on the page | Institutional administrator, instructor | P2 | FIX? |
+
+### TC-CRS-03 A sub-department has one chairperson: replacing needs confirmation and tells the old one
+
+*Rewritten 2026-10-28 (register PLN-03). The earlier case assigned a chair and removed it, from before decision 16.0 (one chairperson per sub-department). The Playwright test keeps its ID and must be updated to these steps.*
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** `institution.admin@mentora.test`; the IT sub-department of CBM, chaired by `chairperson1@mentora.test`; `chairperson2@mentora.test` (Isabel Mendoza, holds the chairperson role and chairs nothing); `instructor2`, with a grade-override request for IT201-A waiting for the chairperson (make one as in TC-DEAN-04, step 1)
+- **Steps:**
+  1. Open Structure. On the IT sub-department, choose Isabel Mendoza and press Assign, without confirming.
+  2. Press Replace chairperson and confirm in the dialog.
+  3. As `chairperson1`, open the notifications. As the new chairperson, open Override requests.
+  4. As the administrator, press Remove on the new chairperson and confirm.
+  5. As `dean2`, open Approvals.
+  6. Try to assign `dean2` as chairperson of IT.
+- **Expected:**
+  - Step 1: refused beside the field: "Antonio Fernandez chairs IT. Assign Isabel Mendoza instead? Confirm to replace them." (name format to confirm). Nothing changes.
+  - Step 2: the dialog reads "Replace Antonio Fernandez as chairperson of IT? Their assignment ends and they are told." After it, IT has exactly one chairperson, the new one. The old assignment is kept in the history, ended.
+  - Step 3: `chairperson1` has "Chairperson assignment ended": "Isabel Mendoza now chairs IT, so your assignment there has ended." The waiting request is now the new chairperson's to endorse, and they are told "Grade overrides to endorse".
+  - Steps 4–5: with no chairperson left, the waiting request moves on to the dean (who now sees it in Approvals) instead of waiting for nobody. The page confirms "The chairperson was removed from the sub-department."
+  - Step 6: refused: "That person is a dean. A dean cannot also be a chairperson."
+  - An assignment the SIS supplies is refused before any confirmation, with "This assignment is managed by your student information system. Change it there; the next sync brings it here."
+- **Already automated:** `tests/database/OneChairpersonTest.php` (all), `tests/feature/StructureChairReplaceTest.php`, `tests/database/ChairAssignmentServiceTest.php`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (to update to these steps)
+- **Basis:** `ChairAssignmentService::assign`, `revoke`; `app/Views/pages/institution/structure.php`; decisions 16.0, 1.1; commit `48543c7`. The request moving on in step 4 is the code's behavior, which supersedes the sign-off entry AMB-INST-03 (register Part H).
+- **QA status:** FIX? (PS-CHR-01, PS-CHR-08)
+- **Review:** Draft. Expected result set by decision 16.0 and the code at `ae86042`.
+
+### TC-CRS-04 The database refuses a second active chairperson, whatever path writes it
+
+- **Role:** none (database level). **Priority:** P2
+- **Data:** the test database after migration `2026-11-15-000001_OneChairpersonPerSubDepartment`; the IT sub-department with its active chair
+- **Steps:**
+  1. Insert a second `chairperson_assignments` row for IT with status `active` directly with SQL.
+  2. Insert one with status `revoked`.
+  3. Run the migration on a copy that holds two active chairs for one sub-department (made before the migration).
+- **Expected:**
+  - Step 1 is refused by the unique key. IT keeps one active chair.
+  - Step 2 is accepted (ended assignments are history and do not count).
+  - Step 3: the migration keeps the most recently assigned chair active and ends the other.
+- **Already automated:** `OneChairpersonTest::testTheDatabaseKeepsOneActiveChair`, `testTheMigrationKeepsTheMostRecentlyAssigned`
+- **Playwright:** no
+- **Basis:** the migration's unique key (`active_marker`); decision 16.0; commit `48543c7`
+- **QA status:** FIX? (PS-CHR-06)
+- **Review:** Draft. Expected result set by decision 16.0.
+
+### TC-CRS-05 Two administrators assigning a chairperson at once get one chair and a friendly message
+
+- **Role:** Institutional administrator, in two browsers. **Priority:** P2
+- **Data:** a second institutional administrator for institution 1 (invite one from People), and two people who hold the chairperson role
+- **Steps:** both administrators open Structure on the same sub-department with no chairperson. Each picks a different person and presses Assign at the same moment.
+- **Expected:**
+  - Exactly one assignment is made.
+  - The other administrator sees, beside the field, "Someone else just changed the chairperson of <sub-department>. Reload the page to see who chairs it now." No database error, stack trace or blank page is shown.
+  - The unique key in the database stays the final safeguard (TC-CRS-04).
+- **Already automated:** `OneChairpersonTest::testTwoAdministratorsAssigningAtOnceGetTheRaceMessage`
+- **Playwright:** no (two simultaneous sessions)
+- **Basis:** `ChairAssignmentService::assign` (the `$raced` message); decision AMB-INST-07; commits `48543c7`, `67cc8bf`
+- **QA status:** FIX? (PS-CHR-07)
+- **Review:** Draft. Expected result set by AMB-INST-07.
+
+### TC-CRS-06 A dean is assigned to a department, and the assignment ended, from the institution area
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** `institution.admin@mentora.test`; the General department (dean `dean1`); a person who holds the dean role and no department
+- **Steps:**
+  1. Find the screen to assign a dean to a department. Assign the person to a department with no dean.
+  2. Try to assign a second dean to the same department, and to assign a chairperson as dean.
+  3. End `dean1`'s assignment.
+  4. Try to end an assignment the SIS supplies.
+- **Expected:**
+  - Assigning and ending are possible from the institution area. Each is audited, and an ended assignment stays in the history.
+  - A conflicting or invalid assignment is refused with a reason beside the field.
+  - The person who lost the department has no dean powers there from then on.
+  - An SIS-managed assignment is refused with "This assignment is managed by your student information system. Change it there; the next sync brings it here."
+- **Already automated:** `tests/database/DeanAssignmentServiceTest.php` (the service, which exists)
+- **Playwright:** no
+- **Basis:** decision MISS-INST-01 (register Part I3). Today `DeanAssignmentService::assign` and `end` exist but no controller or screen calls them: deans come only from the seed and the SIS [read in the code; not run].
+- **QA status:** NB (PS-CHR-12)
+- **Review:** Draft. Expected result set by MISS-INST-01.
+
+### TC-IAA-07 Taking away an instructor's discussion moderation stops it in the server, not only on the page
+
+- **Role:** Institutional administrator, then instructor. **Priority:** P2
+- **Data:** `institution.admin@mentora.test`, `instructor1`, IT101-A; a discussion thread started by `student1` with a reply by `student2`
+- **Steps:**
+  1. As the administrator, open Roles and permissions and clear `discussions.manage` for the instructor role.
+  2. As `instructor1`, open the thread. Then send directly the requests to delete the thread, delete student2's reply, mark the reply as the answer, pin and lock.
+  3. Give the permission back and repeat step 2.
+- **Expected:**
+  - Without the permission, every one of these requests is refused by the server ("You can only delete your own discussion." and "Only the discussion's author or the instructor can mark an answer." where these apply), and the page offers none of the buttons.
+  - With it, the instructor can do each one.
+  - The student who started the thread can still delete it and mark an answer either way.
+- **Already automated:** `tests/database/CourseRoleChecksTest.php`, `tests/feature/PermissionsTakeEffectTest.php`
+- **Playwright:** no
+- **Basis:** `DiscussionService::canModerate` (reads the permission through `CourseAbilities::viewOnly`); decision D6; commit `5140068`
+- **QA status:** FIX? (PS-RBA-12)
+- **Review:** Draft. Expected result set by decision D6.

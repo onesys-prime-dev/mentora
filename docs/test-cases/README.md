@@ -27,8 +27,8 @@ Every case has the same fields:
 
 - **ID**: `TC-<AREA>-<NN>`, never reused. Areas: `AUTH`, `ANN` (announcements),
   `MOD` (modules and progress), `QUIZ`, `ASG` (assignments), `GRD` (grading and
-  grades), `PRT` (the parent portal, in [p2-parent.md](p2-parent.md)), `DEAN` (the dean, in
-  [p2-dean.md](p2-dean.md)).
+  grades), `GBK` (the gradebook, in [p2-gradebook.md](p2-gradebook.md)), `PRT` (the parent portal, in [p2-parent.md](p2-parent.md)), `DEAN` (the dean, in
+  [p2-dean.md](p2-dean.md)), `SA` (the system administrator, in [p2-system-administrator.md](p2-system-administrator.md)), and the institutional administrator's areas (`STR`, `CRS`, `TRM`, `OFF`, `ENR`, `IAA` and others, in [p2-institutional-administrator.md](p2-institutional-administrator.md)).
 - **Role**: who performs it (Student, Instructor, Dean, or Anonymous).
 - **Data**: the demo accounts, course and item it uses (see below), so any two
   people run the same case.
@@ -40,6 +40,7 @@ Every case has the same fields:
 - **Playwright**: `planned` for P1 cases we will automate; `no` otherwise.
 - **Basis**: the code the expected result was read from.
 - **Review**: `Draft` (derived from code), or `Confirmed by <name>, <date>`.
+- **QA status** (cases added from the QA plan, `docs/qa/`, since 2026-10-28): what the case is expected to show before anyone runs it. **FIX?** a fix is committed and a test pins it: expected to pass, not yet run. **REG** a defect seen in the code: expected to fail until it is fixed. **REG?** a suspected defect: the first run confirms it. **NB** required but not built: expected to fail. A case without this line describes behavior the code already has. Their expected results come from the decisions in `docs/qa/decision-register.md`, and each case names its planning scenario (`PS-…`) from `docs/qa/coverage-matrix.md`.
 
 "Wording to confirm" in a case means the behaviour was read from the code, but
 the exact text on screen was not checked in a browser.
