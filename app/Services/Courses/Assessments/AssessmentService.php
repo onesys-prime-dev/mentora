@@ -249,7 +249,7 @@ class AssessmentService
     /**
      * What is wrong with the dates and duration an update would leave (QA MISS-ASM-01), or null. The
      * window must close after it opens, the due date must fall inside it, and a duration is a whole
-     * number of minutes above zero (blank means no time limit).
+     * number of minutes above zero (blank means no time limit), and an attempt limit at least 1.
      */
     private function settingsProblem(array $assessment, array $data): ?string
     {
@@ -269,6 +269,12 @@ class AssessmentService
         if (array_key_exists('duration', $data) && $data['duration'] !== null && $data['duration'] !== ''
             && (filter_var($data['duration'], FILTER_VALIDATE_INT) === false || (int) $data['duration'] < 1)) {
             return 'The duration must be a whole number of minutes, at least 1 (leave it blank for no time limit).';
+        }
+
+        // 0 would lock every student out; a blank limit is one attempt (QA AMB-ASM-09).
+        if (array_key_exists('attempt_limit', $data) && $data['attempt_limit'] !== null && $data['attempt_limit'] !== ''
+            && (filter_var($data['attempt_limit'], FILTER_VALIDATE_INT) === false || (int) $data['attempt_limit'] < 1)) {
+            return 'The attempt limit must be a whole number, at least 1.';
         }
 
         return null;
