@@ -1,6 +1,6 @@
 # P1 test cases: the critical journeys
 
-17 P1 journey cases, 11 quiz cases added in Wave 1 of the QA plan, 25 cases added in Wave 2 and 28 in Wave 3 (2026-10-28, at the end of this file, each with its own priority). Read [README.md](README.md) first for the format, the demo accounts and
+17 P1 journey cases, 11 quiz cases added in Wave 1 of the QA plan, 25 in Wave 2, 28 in Wave 3 and 15 in Wave 4 (2026-10-28, at the end of this file, each with its own priority). Read [README.md](README.md) first for the format, the demo accounts and
 how to reseed. **All are `Draft`**: derived from the code, the seed data and the
 existing automated tests, awaiting a person to confirm each expected result.
 "(wording to confirm)" marks on-screen text read from code but not yet seen in
@@ -1515,4 +1515,202 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Playwright:** no
 - **Basis:** `CalendarEventService`, `ReminderService`; decision 8.2
 - **QA status:** VCI (PS-CAL-01), IBR (PS-CAL-03)
+- **Review:** Draft
+
+---
+
+## Wave 4 (added 2026-10-28)
+
+The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is manual or covered by the PHP tests, so none is planned for Playwright. QA status as in the README; none has been run. The QA plan's exploratory charters and checks are not cases: they are in `docs/qa/exploratory-charters.md` and `docs/qa/checks.md`.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-AUTH-14 | "Remember me" and the idle limit | Student | P3 | IBR, VCI |
+| TC-AUTH-15 | Lockout notice, sign-in methods, compromised passwords, and sessions | Student | P3 | NB |
+| TC-MOD-11 | A course's participants and settings can be found | Instructor | P3 | IBR |
+| TC-MOD-12 | Uploaded files are scanned for viruses before anyone can open them | Instructor, student | P3 | NB |
+| TC-QUIZ-29 | Copying questions from another quiz of your own sections | Instructor, chairperson | P3 | VCI |
+| TC-QUIZ-30 | A generation job that finishes while nobody is watching tells its teacher | Instructor | P3 | VCI |
+| TC-ASG-06 | Only a student of the assignment's own section can submit to it | Student | P3 | REG? |
+| TC-ANN-09 | The course feed's order, pages and search | Student | P3 | VCI |
+| TC-ANN-10 | Only the four supported reactions are accepted | Student | P3 | REG? |
+| TC-CAL-03 | The weekly schedule grid, and closed sections on the calendar | Student, instructor | P3 | VCI, IBR |
+| TC-NOT-02 | The notification list and the bell panel's pages | Student | P3 | VCI |
+| TC-NOT-03 | Marking read from the bell, and paging past 50 | Student | P3 | NB |
+| TC-NOT-04 | A notification about a child who left opens a plain "not available" | Parent | P3 | IBR |
+| TC-FIL-03 | Uploads abandoned partway are cleaned up | Instructor | P3 | NB |
+| TC-FE-02 | Dark mode in every area | Every role | P3 | VCI |
+
+### TC-AUTH-14 "Remember me" and the idle limit
+
+- **Role:** Student. **Priority:** P3
+- **Data:** `student5`; the idle limit set to 5 minutes for the test; a page that polls (the notification bell)
+- **Steps:** sign in with "Remember me", close the browser, reopen it the next day (move the clock), and open a page. Sign in without it and leave a polling page open for 10 minutes, then click. Leave a non-polling page untouched for 10 minutes, then click.
+- **Expected:** a polling page keeps the session alive (decision AMB-AUTH-04: background polling counts as activity); an untouched page is signed out after the limit. Remember-me: record how the 30-day remember-me and the idle limit combine in the code (Shield's `rememberLength`); no decision covers it, so the code's behavior is the expected result.
+- **Already automated:** `SecuritySettingsTest::testARecentlyActiveSessionStaysInAndIsRefreshed`
+- **Playwright:** no
+- **Basis:** the idle-timeout filter, `app/Config/Auth.php`; decision AMB-AUTH-04
+- **QA status:** IBR, VCI (PS-AUT-15)
+- **Review:** Draft
+
+### TC-AUTH-15 Lockout notice, sign-in methods, compromised passwords, and sessions
+
+- **Role:** Student. **Priority:** P3
+- **Steps and expected (each is decided in register Part I3):**
+  1. Lock student5's email (TC-AUTH-06): the lock message is the notice; no email is sent and there is no administrator unlock.
+  2. Look for any sign-in method other than email and password (plus the code where required): none exists, and the documentation no longer describes an "allowed methods" setting.
+  3. Set a password known to be compromised (for example `Password123!`) through the reset link and the change-password page: refused with a message that does not say where the list came from. Cut the network to the lookup service and set one: accepted, and the failure logged. Existing passwords are not checked.
+  4. Open the profile's sessions list: each session with device, last activity and sign-in time, no token; revoke one, and all others; the revoked sessions are refused on their next request. There is no limit on sessions.
+- **Already automated:** none for 3 and 4
+- **Playwright:** no
+- **Basis:** decisions MISS-AUTH-04 to 07. Today parts 3 and 4 are not built.
+- **QA status:** NB (PS-AUT-21)
+- **Review:** Draft
+
+### TC-MOD-11 A course's participants and settings can be found
+
+- **Role:** Instructor. **Priority:** P3
+- **Steps:** as `instructor1`, find the list of IT101-A's students and instructors, and the course's settings (description, grading, submission defaults), without typing an address.
+- **Expected:** both can be reached from the course's own pages; a dedicated People tab or settings page is not required if another screen gives the same; changes are allowed only to those the server permits. If either cannot be found, record where it should be.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision MISS-CONT-01
+- **QA status:** IBR (PS-MOD-17)
+- **Review:** Draft
+
+### TC-MOD-12 Uploaded files are scanned for viruses before anyone can open them
+
+- **Role:** Instructor, student. **Priority:** P3
+- **Data:** the EICAR test file (a harmless file every scanner flags) as a PDF item, an assignment upload and an announcement attachment
+- **Steps:** upload it each way; try to open it as a student; stop the scanner and upload a clean file.
+- **Expected:** the flagged file is rejected or quarantined and never served; while the scanner is down, files are not treated as clean (held or refused, with a message). Transcoding, thumbnails and duration extraction are not required.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision MISS-CONT-02. Not built.
+- **QA status:** NB (PS-MOD-18)
+- **Review:** Draft
+
+### TC-QUIZ-29 Copying questions from another quiz of your own sections
+
+- **Role:** Instructor, chairperson. **Priority:** P3
+- **Steps:** in a quiz of IT101-A, open "Copy from another quiz": choose Quiz 1, tick two questions (one already in this quiz), copy. Try a quiz of `instructor2`'s section by id; copy from the quiz itself; copy nothing. As `chairperson1`, copy from a quiz of a section they chair.
+- **Expected:** only quizzes with questions in my sections are offered; questions show their answers and a flag when already in the quiz; copies keep their choices, keys and settings, and the total follows; another teacher's quiz is never copied from and nothing changes; copying from the same quiz or with nothing chosen is refused; a chairperson may take from their sections; copying is audited.
+- **Already automated:** `tests/database/QuestionPickerServiceTest.php` (all)
+- **Playwright:** no
+- **Basis:** `QuestionPickerService`
+- **QA status:** VCI (PS-QBK-10)
+- **Review:** Draft
+
+### TC-QUIZ-30 A generation job that finishes while nobody is watching tells its teacher
+
+- **Role:** Instructor. **Priority:** P3
+- **Steps:** with jobs on, start a generation and close the browser; let the job finish; let another fail; make the worker slow to start.
+- **Expected:** the finished job is applied once and the teacher is told, however often it is polled; a failed one tells them in plain words; a long wait says the builder is slow to start; settling twice tells once.
+- **Already automated:** `tests/database/AiJobGenerationTest.php`
+- **Playwright:** no
+- **Basis:** `AiJobGeneration`
+- **QA status:** VCI (PS-AIQ-12)
+- **Review:** Draft
+
+### TC-ASG-06 Only a student of the assignment's own section can submit to it
+
+- **Role:** Student. **Priority:** P3
+- **Data:** student5 enrolled in IT101-A only; an assignment of IT101-B (same course, another section)
+- **Steps:** as student5, send the submit request for IT101-B's assignment directly, through IT101-A's address and through IT101-B's.
+- **Expected:** refused both ways ("Only students enrolled in this course can submit." or not found); nothing is saved. The rule is checked in the service, not only by the route filter.
+- **Already automated:** `AssignmentSubmissionServiceTest::testOnlyEnrolledStudentsCanSubmit` (another course, not another section)
+- **Playwright:** no
+- **Basis:** decision AMB-ASG-03. `AssignmentSubmissionService` line 120 still accepts any student group member when no offering is found [read in the code; not run].
+- **QA status:** REG? (PS-ENR-09)
+- **Review:** Draft
+
+### TC-ANN-09 The course feed's order, pages and search
+
+- **Role:** Student. **Priority:** P3
+- **Data:** IT101-A with 25 announcements, two pinned
+- **Steps:** open the feed; scroll to load more; search a word; open a link to an old announcement (focus).
+- **Expected:** pinned posts first, then newest first; 10 a page; the search narrows; a focus link loads enough pages to show its post; only this section's posts.
+- **Already automated:** `AnnouncementServiceTest::testPinnedPostsLeadThenNewestFirst`, `testTheFeedOnlyHoldsThisOfferingsPosts`; `AnnouncementRoutesTest::testTheFocusAndSearchParametersReachTheFeed`
+- **Playwright:** no
+- **Basis:** `AnnouncementService`
+- **QA status:** VCI (PS-ANN-04)
+- **Review:** Draft
+
+### TC-ANN-10 Only the four supported reactions are accepted
+
+- **Role:** Student. **Priority:** P3
+- **Steps:** react with 👍, ❤️, 😂 and 😮 from the page. Send directly: an empty value, `🎉`, `abc`, a 33-character string.
+- **Expected:** the four are accepted; everything else is refused with "Pick a reaction." and nothing is stored.
+- **Already automated:** none for the allowed set
+- **Playwright:** no
+- **Basis:** decision AMB-COM-08 (register Part I3). Today the server accepts any value up to 32 characters (`AnnouncementService::react`) [read in the code; not run].
+- **QA status:** REG? (PS-ANN-11)
+- **Review:** Draft
+
+### TC-CAL-03 The weekly schedule grid, and closed sections on the calendar
+
+- **Role:** Student, instructor. **Priority:** P3
+- **Data:** class times for student5's sections (TC-OFF-07), including a 20-minute class and two classes on one day; a completed section
+- **Steps:** open Schedule as student5 and as `instructor1`; drop a course; open the calendar and the schedule after the section is closed, and follow a link to it.
+- **Expected:** the grid runs Monday to Sunday in 30-minute rows from the earliest start to the latest end, rounded out to the hour; each class sits in its day and row with its label, time, room, mode and a link (the instructor's to their side of the site); a very short class still takes a row; only the person's own classes appear and a dropped course leaves the grid; "no courses" and "no classes" are told apart. A closed section is left out of the active schedule but stays on the calendar as history, marked completed; a link that can no longer open shows a plain "not available" message, not a raw 404 (decision AMB-COM-06).
+- **Already automated:** `tests/database/ScheduleServiceTest.php` (all)
+- **Playwright:** no
+- **Basis:** `ScheduleService`, `CalendarEventService`
+- **QA status:** VCI (PS-CAL-04), IBR (PS-CAL-05)
+- **Review:** Draft
+
+### TC-NOT-02 The notification list and the bell panel's pages
+
+- **Role:** Student. **Priority:** P3
+- **Data:** student5 with 60 notifications, some unread, some urgent
+- **Steps:** open `/notifications`; open the bell and load more; send `?before=` with a count of 0 and of 100.
+- **Expected:** the list shows the newest 50 with urgency and a message when empty; the bell loads 7 at a time and says when there are more; the count is held between 1 and 50; each person sees only their own; signed out goes to sign in.
+- **Already automated:** `tests/feature/NotificationPagesTest.php`
+- **Playwright:** no
+- **Basis:** the notification controllers
+- **QA status:** VCI (PS-NOT-03)
+- **Review:** Draft
+
+### TC-NOT-03 Marking read from the bell, and paging past 50
+
+- **Role:** Student. **Priority:** P3
+- **Steps:** mark one notification read from the bell panel; make the request fail once; open the full list and page to the 60th.
+- **Expected:** it is marked read without leaving the panel and the unread count updates; a failure shows an error and does not pretend it was saved; the full list pages (or loads more) past the first 50, with a bounded query.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision MISS-COM-03. Not built.
+- **QA status:** NB (PS-NOT-05)
+- **Review:** Draft
+
+### TC-NOT-04 A notification about a child who left opens a plain "not available"
+
+- **Role:** Parent. **Priority:** P3
+- **Steps:** as `parent1`, receive a notification about student5's grade; move student5 to having left the institution (test database); open the notification.
+- **Expected:** the notification stays in the list; its link shows a plain unavailable or access-restricted message, not a raw 404 and not the record, and never another student's data.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-COM-07
+- **QA status:** IBR (PS-NOT-08)
+- **Review:** Draft
+
+### TC-FIL-03 Uploads abandoned partway are cleaned up
+
+- **Role:** Instructor. **Priority:** P3
+- **Steps:** start a large video upload and close the tab halfway; wait over an hour; run the cleanup; check storage used and the file rows. Start another and keep it progressing past an hour.
+- **Expected:** the abandoned `uploading` row and its partial data are removed after an hour, and its storage is released; a completed file and an upload still progressing are never touched; failures are recorded for retry.
+- **Already automated:** none
+- **Playwright:** no
+- **Basis:** decision AMB-DB-03. Today nothing cleans these rows.
+- **QA status:** NB (PS-FIL-06)
+- **Review:** Draft
+
+### TC-FE-02 Dark mode in every area
+
+- **Role:** Every role. **Priority:** P3
+- **Steps:** switch the system to dark mode; open each role's main screens (as in TC-FE-01) and the admin areas.
+- **Expected:** every screen follows the theme with readable contrast; nothing stays white or unreadable; dialogs, tables and charts too.
+- **Already automated:** none (the institution area: `institutional-admin.spec.js`)
+- **Playwright:** no
+- **Basis:** the theme tokens in `resources/css/app.css`
+- **QA status:** VCI (PS-FE-04)
 - **Review:** Draft

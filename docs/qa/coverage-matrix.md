@@ -906,3 +906,8 @@ The P2 scenarios, the P1 scenarios of medium-risk modules, and two scenarios ear
 
 Next: Wave 4, the P3 scenarios, the exploratory charters and checks, and what is still blocked.
 
+## Part K. Wave 4 written, and the plan complete (2026-10-28)
+
+Wave 4 added 30 P3 cases to the catalog, 12 exploratory charters ([`exploratory-charters.md`](exploratory-charters.md)) and 8 checks ([`checks.md`](checks.md)); see [`wave-4-test-analysis.md`](wave-4-test-analysis.md).
+
+**Every one of the 415 scenarios is now placed:** 353 in catalog cases, 31 in charters, 7 in checks, 1 out of scope (PS-SIS-11). No case, charter or check has been run. The next step is execution, starting with the baseline run (CK-01).

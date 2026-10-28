@@ -370,3 +370,23 @@ P2 scenarios. QA status as in the README; none has been run.
 - **Basis:** `GradeFinalizationService`
 - **QA status:** VCI (PS-FIN-05)
 - **Review:** Draft
+
+---
+
+## Wave 4 (added 2026-10-28)
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-GBK-17 | "Incomplete" (not yet calculated) and "INC" (a formal incomplete grade) are named apart everywhere | Instructor, student, parent | P3 | IBR |
+
+### TC-GBK-17 "Incomplete" (not yet calculated) and "INC" (a formal incomplete grade) are named apart everywhere
+
+- **Role:** Instructor, student, parent. **Priority:** P3
+- **Data:** IT101-B with a draft scheme (grades not calculated) and one student marked INC in IT101-A
+- **Steps:** read each student's grade in the gradebook, the student's Grades, the parent's dashboard and the reports.
+- **Expected:** a grade not yet calculated and a formal INC are labelled differently and consistently on every screen, so a student or parent can tell them apart.
+- **Already automated:** none for the labels
+- **Playwright:** no
+- **Basis:** decision AMB-ASG-10
+- **QA status:** IBR (PS-GBK-09)
+- **Review:** Draft

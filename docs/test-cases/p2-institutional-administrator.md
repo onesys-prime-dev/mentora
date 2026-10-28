@@ -1,6 +1,6 @@
 # P2 test cases: the institutional administrator
 
-43 cases in two files, 5 added in Wave 1 of the QA plan (TC-CRS-03 rewritten) 21 in Wave 2 and 18 in Wave 3 (2026-10-28, at the end). Read [README.md](README.md) first. **All are `Draft`**
+43 cases in two files, 5 added in Wave 1 of the QA plan (TC-CRS-03 rewritten) 21 in Wave 2, 18 in Wave 3 and 8 in Wave 4 (2026-10-28, at the end). Read [README.md](README.md) first. **All are `Draft`**
 (see the README).
 
 - `tests/e2e/institution-structure.spec.js` holds the screen-by-screen cases
@@ -901,4 +901,101 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-RPT-01)
 - **Basis:** the institution reports controller, `MonitorProgramService`
 - **QA status:** VCI (PS-RPT-01)
+- **Review:** Draft
+
+---
+
+## Wave 4 (added 2026-10-28)
+
+P3 scenarios. QA status as in the README; none has been run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-IAA-16 | An institution cannot turn its lockout off while the platform has one | Institutional administrator | P3 | IBR |
+| TC-IAA-17 | Giving someone the dean role before a department is assigned | Institutional administrator | P3 | IBR |
+| TC-IAA-18 | The institution's banner | Institutional administrator | P3 | VCI |
+| TC-UPL-05 | A CSV preview nobody applies is removed within an hour | Institutional administrator | P3 | REG? |
+| TC-STR-09 | A program's status: inactive, archived, reactivated | Institutional administrator | P3 | VCI |
+| TC-BRD-05 | Brand colours must keep text readable | Institutional administrator | P3 | VCI |
+| TC-HOM-02 | The home page's attention list | Institutional administrator | P3 | VCI |
+| TC-SIS-05 | The Integrations page hides connection tests and folder names | Institutional administrator | P3 | VCI |
+
+### TC-IAA-16 An institution cannot turn its lockout off while the platform has one
+
+- **Steps:** on Settings › Security set "Failed sign-ins before a lockout" to 0.
+- **Expected:** refused beside the field with a message naming the rule (an institution may only be stricter than the platform).
+- **Already automated:** `InstitutionSecurityTest::testALooserValueIsRefusedNamingTheFieldAndNothingIsSaved`
+- **Playwright:** no
+- **Basis:** decision AMB-AUTH-06
+- **QA status:** IBR (PS-AUT-19)
+- **Review:** Draft
+
+### TC-IAA-17 Giving someone the dean role before a department is assigned
+
+- **Steps:** on People give `instructor1` the dean role. Read the page. As `instructor1`, switch to Dean. Assign them to a department later (TC-CRS-06, not built today: on the test database), without removing the role.
+- **Expected:** the role is given with a clear warning that they have no dean authority until a department is assigned; meanwhile no dean-only action works (a dean with another role cannot act as dean; one with only the dean role sees the explanation page); once assigned they act as dean without the role being given again.
+- **Already automated:** `ActiveRoleServiceTest::testADeanWithoutAnAssignmentCannotActAsDeanWhileHoldingAnotherRole`
+- **Playwright:** no
+- **Basis:** decision AMB-INST-05
+- **QA status:** IBR (PS-PPL-04). Record whether the warning exists today.
+- **Review:** Draft
+
+### TC-IAA-18 The institution's banner
+
+- **Steps:** set a banner of 300 and 301 characters; one with `<b>`; with an end date of today; save it empty. View as a student, an instructor and the administrator.
+- **Expected:** up to 300 characters of plain text; `<` and `>` refused beside the field; shown to the institution's people (not its administrators) until its last day; saving it empty takes it down.
+- **Already automated:** `InstitutionSecurityTest` (the announcement tests)
+- **Playwright:** no
+- **Basis:** `InstitutionSecurity`
+- **QA status:** VCI (PS-IAS-02)
+- **Review:** Draft
+
+### TC-UPL-05 A CSV preview nobody applies is removed within an hour
+
+- **Steps:** upload a CSV and stop at the preview; do not start over or upload again; after an hour look for the kept file on disk. Cancel another preview with Start over.
+- **Expected:** the abandoned preview and its file are removed within an hour of being made, without a new preview; Start over removes it at once; a cleanup failure is logged and retried without exposing the file.
+- **Already automated:** `CsvUploadServiceTest::testStartingOverRemovesTheKeptFiles`
+- **Playwright:** no
+- **Basis:** decision AMB-INST-06. Suspected: abandoned previews are removed only at the next preview [audit agent; not run].
+- **QA status:** REG? (PS-CSV-06)
+- **Review:** Draft
+
+### TC-STR-09 A program's status: inactive, archived, reactivated
+
+- **Steps:** set an empty program inactive, archived, and active again; send an unknown status; reactivate a program under an inactive sub-department.
+- **Expected:** each allowed change works and is audited; an unknown status is refused; nothing is reactivated under an inactive parent.
+- **Already automated:** `StructureServiceTest::testAnUnknownProgramStatusIsRefused`, `testNothingIsCreatedUnderAnInactiveParent`
+- **Playwright:** no
+- **Basis:** `StructureService`
+- **QA status:** VCI (PS-STR-04)
+- **Review:** Draft
+
+### TC-BRD-05 Brand colours must keep text readable
+
+- **Steps:** set a primary colour that reaches 4.5:1 against the pale tint and one just below; an accent against white at and below 4.5:1; `#abc`, `red`, `#12345g`; reset.
+- **Expected:** a colour at 4.5:1 or more is accepted, below is refused with its ratio; the primary is judged on the pale background, not only white; short hex is normalised, anything else refused and never reaches the stylesheet; defaults store nothing; reset goes back to Mentora's colours and keeps the logo.
+- **Already automated:** `tests/unit/BrandColoursTest.php`, `InstitutionProfileServiceTest`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-BRD-02)
+- **Basis:** `BrandColours`
+- **QA status:** VCI (PS-BRD-01)
+- **Review:** Draft
+
+### TC-HOM-02 The home page's attention list
+
+- **Steps:** open Home in a quiet institution; then with a subscription ending soon, sections with no instructor, and other problems; then read-only.
+- **Expected:** each problem is listed with where to go; a quiet institution says so; another institution's problems are not shown; recent activity is its own entries, newest first, linking to the log; quick actions follow what may be done; a read-only institution is not told twice.
+- **Already automated:** `tests/feature/InstitutionHomeAttentionTest.php`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-HOM-01)
+- **Basis:** the institution home
+- **QA status:** VCI (PS-RPT-04)
+- **Review:** Draft
+
+### TC-SIS-05 The Integrations page hides connection tests and folder names
+
+- **Steps:** test the connection, run a preview and a sync, send grades, make a run fail with a folder path in its message; open Integrations.
+- **Expected:** connection tests are not among the runs; folder names are taken out of messages; only this institution's newest runs are listed; the latest import and the latest grade send are shown apart, with what the grade send left out.
+- **Already automated:** `tests/database/InstitutionIntegrationsTest.php`
+- **Playwright:** no
+- **Basis:** the integrations page service
+- **QA status:** VCI (PS-SIS-12)
 - **Review:** Draft

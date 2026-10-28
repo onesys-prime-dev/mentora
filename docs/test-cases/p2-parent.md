@@ -271,3 +271,22 @@ P1 scenarios of the parent portal whose expected result is the code's behavior (
 - **Basis:** decision AMB-COM-01. Suspected: the notifier tells parents at once [audit agent; not run].
 - **QA status:** REG? (PS-PRT-07); the other screens are PS-ANN-05 (Wave 4)
 - **Review:** Draft
+
+---
+
+## Wave 4 (added 2026-10-28)
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-PRT-17 | A parent cannot be linked to a student of another institution | Institutional administrator | P3 | IBR |
+
+### TC-PRT-17 A parent cannot be linked to a student of another institution
+
+- **Role:** Institutional administrator. **Priority:** P3
+- **Steps:** link `parent2` to a student of another institution by email and by student number; invite as a parent an address that belongs to another institution.
+- **Expected:** both refused; one account belongs to one institution, so a parent never follows children in two institutions and the notifier needs no case for it.
+- **Already automated:** `ParentLinkServiceTest::testAnotherInstitutionsParentsLinksAndNonParentsAreNotFound`
+- **Playwright:** no
+- **Basis:** decisions D1, AMB-COM-05
+- **QA status:** IBR (PS-PRT-08)
+- **Review:** Draft

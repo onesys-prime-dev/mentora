@@ -1,6 +1,6 @@
 # P2 test cases: the system administrator
 
-12 cases, automated in `tests/e2e/system-admin.spec.js`, 12 added in Wave 1, 14 in Wave 2 and 18 in Wave 3 of the QA plan (2026-10-28, at the end, in the full case format). Read [README.md](README.md)
+12 cases, automated in `tests/e2e/system-admin.spec.js`, 12 added in Wave 1, 14 in Wave 2, 18 in Wave 3 and 5 in Wave 4 of the QA plan (2026-10-28, at the end, in the full case format). Read [README.md](README.md)
 first. **All are `Draft`** (see the README).
 
 The administrator signs in with a 6-digit code the app emails. In the browser
@@ -824,4 +824,70 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Playwright:** no
 - **Basis:** `app/Database/Seeds/`, `CreateSystemAdmin`
 - **QA status:** VCI (PS-DAT-06)
+- **Review:** Draft
+
+---
+
+## Wave 4 (added 2026-10-28)
+
+P3 scenarios. QA status as in the README; none has been run.
+
+| ID | Case | Role | Priority | QA status |
+|---|---|---|---|---|
+| TC-SA-57 | During maintenance the institution's administrators keep working, and only the exact open paths stay open | Every role | P3 | REG? |
+| TC-SA-58 | Retiring and reinstating a plan | System administrator | P3 | VCI |
+| TC-SA-59 | Turning a flag on or off needs a note, and an end date cannot be in the past | System administrator | P3 | VCI |
+| TC-SA-60 | The smoke-test script after a deploy | (deploy) | P3 | VCI |
+| TC-SA-61 | What empty values mean, and which grading scheme applies | (database) | P3 | IBR, VCI |
+
+## TC-SA-57 During maintenance the institution's administrators keep working, and only the exact open paths stay open
+
+- **Role:** Every role. **Priority:** P3
+- **Steps:** turn maintenance mode on. As the institution's administrator, sign in and use their area; as a student, open a page. Open addresses that only contain an open word in another segment: `/student/courses/1/login-help`, `/auth-report`, `/x/health/y`.
+- **Expected:** the system administrator and the institution's administrators keep working; everyone else sees a "system under maintenance" page (503 with Retry-After); only the exact open paths (sign-in, sign-out, health, the reset and invitation links, the worker) stay open: a segment that merely contains the word does not.
+- **Already automated:** `GeneralSettingsTest` (maintenance tests)
+- **Playwright:** no
+- **Basis:** decisions AMB-AUTH-03, AMB-AUTH-09. Today only `admin` and impersonators bypass, and a path matches if any segment equals an open word (`MaintenanceFilter`) [read in the code; not run].
+- **QA status:** REG? (PS-ROM-08, PS-ROM-09)
+- **Review:** Draft
+
+## TC-SA-58 Retiring and reinstating a plan
+
+- **Steps:** retire a plan in use; onboard a new institution and look for it; renew an institution on it; reinstate it. Create plans with a duplicate name in another case, an unknown feature, and empty limits.
+- **Expected:** a retired plan cannot be chosen for new institutions but those on it keep it; reinstating offers it again; names are unique ignoring case; an unknown feature is refused and named; empty limits mean unlimited; changes are audited with before and after.
+- **Already automated:** `tests/database/PlanServiceTest.php`
+- **Playwright:** no
+- **Basis:** `PlanService`
+- **QA status:** VCI (PS-SUB-05)
+- **Review:** Draft
+
+## TC-SA-59 Turning a flag on or off needs a note, and an end date cannot be in the past
+
+- **Steps:** turn a flag on for institution 1 without a note, with a note; set an end date of yesterday, today; set it back to default without a note; use an unknown flag; a deleted institution.
+- **Expected:** a note is required for on or off (trimmed and bounded), not for going back to default, which removes the row; the last day must be today or later; unknown flags and missing or deleted institutions are refused; one institution's change does not touch another's.
+- **Already automated:** `tests/database/FeatureFlagAdminTest.php`
+- **Playwright:** no
+- **Basis:** `FeatureFlagAdmin`
+- **QA status:** VCI (PS-FLG-02)
+- **Review:** Draft
+
+## TC-SA-60 The smoke-test script after a deploy
+
+- **Steps:** run the deploy's smoke-test script against a healthy test site, then against one with: the health check degraded, a login page without its form, a missing or empty asset, a protected page that does not redirect, a server error, the site down. Watch the uptime workflow's issue.
+- **Expected:** a healthy site passes the four checks; each fault fails with its reason; the uptime issue opens on failure and closes on recovery.
+- **Already automated:** `tests/unit/SmokeTestScriptTest.php`
+- **Playwright:** no
+- **Basis:** `.github/scripts/smoke-test.php`, `.github/workflows`
+- **QA status:** VCI (PS-CI-03)
+- **Review:** Draft
+
+## TC-SA-61 What empty values mean, and which grading scheme applies
+
+- **Role:** (database level, read through the app). **Priority:** P3
+- **Steps:** make a notification with no institution (a platform notice) and a follow-up with student 0; list an institution's notifications and a student's follow-ups; run a report. Open a new section's grades in an institution with its own defaults and one without; switch a person's `active_role` on the database to a role they do not hold and sign in. Save a department with established year 1799 and the current year.
+- **Expected:** a notification with no institution is platform-wide and never appears in an institution's list as theirs; a follow-up with student 0 is about no student and never in a student's results; the scheme is the section's own, else a copy of the institution's defaults, else the platform's, never another institution's; an unheld active role falls back to the default; `program_id` is used for students only; the year must be 1800 to the current year, in the form and the service.
+- **Already automated:** `AcademicDefaultsTest`, `ActiveRoleServiceTest::testAStaleSessionRoleNoLongerHeldIsIgnored`, `StructureServiceTest`
+- **Playwright:** no
+- **Basis:** decisions AMB-DB-04 to 07 (register Part I3)
+- **QA status:** IBR (PS-DAT-08), VCI (PS-DAT-09)
 - **Review:** Draft
