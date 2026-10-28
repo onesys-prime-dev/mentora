@@ -25,8 +25,6 @@ final class QuizAttemptFailureTest extends DatabaseTestCase
 
     private const TRIGGER = 'mentora_test_refuse_quiz_write';
 
-    private static bool $emptied = false;
-
     private QuizAttemptService $service;
 
     private int $quiz;
@@ -46,10 +44,7 @@ final class QuizAttemptFailureTest extends DatabaseTestCase
         $this->dropTrigger();
 
         // Not rolled back, so an earlier run's rows (the same factory codes) are cleared first, once.
-        if (! self::$emptied) {
-            $this->emptyAllTables();
-            self::$emptied = true;
-        }
+        $this->emptyTablesOnce();
 
         $this->service = new QuizAttemptService();
         $offering      = CourseFactory::offering();
@@ -100,7 +95,7 @@ final class QuizAttemptFailureTest extends DatabaseTestCase
         $module = CourseFactory::module($this->offering);
         $item   = CourseFactory::items(CourseFactory::unit($module), [['type' => 'quiz']])[0];
         $quiz   = CourseFactory::assessment($this->offering, $this->instructor, $module, $item);
-        $mc   = AssessmentFactory::multipleChoice($quiz, $this->instructor, [true, false], 5);
+        $mc     = AssessmentFactory::multipleChoice($quiz, $this->instructor, [true, false], 5);
         AssessmentFactory::open($quiz);
         $gradeItem = GradeFactory::item(GradeFactory::scheme($this->offering), null, 'The quiz', 5, 1, $quiz);
 

@@ -81,7 +81,7 @@ final class SchedulerCheck
     /**
      * Sends one urgent notification to each administrator.
      *
-     * @param list<int|object> $admins
+     * @param list<int> $admins
      *
      * @return int how many were sent
      */
@@ -99,7 +99,7 @@ final class SchedulerCheck
     /**
      * Whether some administrator already holds this notice.
      *
-     * @param list<int|object> $admins
+     * @param list<int> $admins
      */
     private function known(array $admins, NotificationService $notices, string $key): bool
     {

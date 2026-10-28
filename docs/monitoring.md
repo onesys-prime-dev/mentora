@@ -58,8 +58,8 @@ check (`uptime.md`). Four cases it handles on purpose:
   institution has SIS enabled now) is forgotten without a word: nothing ran, so
   nothing is "running again".
 - **SIS turned back on while still stopped.** The stop is remembered again
-  without telling anyone twice, so "running again" is still sent when the job
-  reports.
+  without telling anyone twice (an administrator added while SIS was off is
+  told it stopped), so "running again" is still sent when the job reports.
 
 ## Also on the page
 - Platform counts: institutions, active users, active today, live sessions,
