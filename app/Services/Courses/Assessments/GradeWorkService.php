@@ -16,6 +16,7 @@ use App\Models\Courses\EnrollmentModel;
 use App\Models\Files\FileModel;
 use App\Models\Assessments\AssessmentFeedbackModel;
 use App\Services\Courses\Grades\GradebookSyncService;
+use App\Services\Courses\Grades\GradeFinalizationService;
 
 class GradeWorkService
 {
@@ -230,6 +231,17 @@ class GradeWorkService
      * feedback textarea opens empty, ready for a new message if the
      * regrade warrants one.
      */
+    /**
+     * While the section's grades are finalized nothing is graded, regraded or reopened (QA AMB-ASG-06):
+     * the instructor reopens the finalization first.
+     */
+    private function lockRefusal(array $submission): ?array
+    {
+        $offeringId = $this->assessmentModel->offeringIdOf((int) $submission['assessment_id']);
+
+        return $offeringId === null ? null : (new GradeFinalizationService())->lockRefusal($offeringId);
+    }
+
     public function reopenGrading(User $user, int $submissionId): array
     {
         $submission = $this->submissionModel->find($submissionId);
@@ -240,6 +252,10 @@ class GradeWorkService
 
         if ($submission['status'] !== 'Graded') {
             return ['success' => false, 'message' => 'Only graded work can be reopened.'];
+        }
+
+        if ($locked = $this->lockRefusal($submission)) {
+            return $locked;
         }
 
         $this->submissionModel->update($submissionId, [
@@ -305,6 +321,9 @@ class GradeWorkService
             return $this->notHandedIn();
         }
 
+        if ($locked = $this->lockRefusal($submission)) {
+            return $locked;
+        }
 
         $assessment = $this->assessmentModel->find($submission['assessment_id']);
 
@@ -441,6 +460,10 @@ class GradeWorkService
 
         if (!$this->wasHandedIn($submission)) {
             return $this->notHandedIn();
+        }
+
+        if ($locked = $this->lockRefusal($submission)) {
+            return $locked;
         }
 
         $assessment = $this->assessmentModel->find($submission['assessment_id']);
