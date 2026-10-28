@@ -563,6 +563,7 @@ The owner ruled on 2026-10-28 that the newer code is the single source of truth.
 | AMB-COM-08 (message) | "Choose a supported reaction." | "Pick a reaction." |
 | AMB-ASM-06 (counting) | a cancelled attempt must not count against the limit | it counts (`testACancelledAttemptStillUsesUpAChance`); found after the baseline run of 2026-10-28 |
 | AMB-ASM-02 (starting) | students must not start an attempt on a published quiz with no questions | it can be started and submitted, graded with no percentage (`testAnEmptyQuizSubmitsAsGradedWithNoPercentage`); found after the baseline. Publishing an empty quiz is still expected to be refused. |
+| AMB-ASG-03 (no module) | a student of another section must never submit | for an assignment in no module, any section of the course may submit; a code comment states it as deliberate (found during the defect check of 2026-10-28) |
 
 ### I5. The inconsistencies (G3)
 

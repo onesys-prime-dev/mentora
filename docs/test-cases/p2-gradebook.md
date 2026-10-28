@@ -183,7 +183,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **Already automated:** the publish check: `GradingSchemeService::publishProblem` tests. Editing a published scheme has none.
 - **Playwright:** planned
 - **Basis:** decision AMB-ASG-02. Today `GradingSchemeService::updateCategory` does not re-check the total on a published scheme [read in the code; not run].
-- **QA status:** REG (PS-GBK-04)
+- **QA status:** REG (PS-GBK-04) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASG-02.
 
 ### TC-GBK-07 A signed-off gradebook names who signed it off
@@ -200,7 +200,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **Already automated:** `tests/database/GradeSignoffServiceTest.php`, `tests/database/AdministratorSignsOffTest.php` (the rule, not the wording)
 - **Playwright:** planned
 - **Basis:** decision AMB-ASG-04 (register Part I3: the wording is "Signed off by <signer's name>"). Today the toolbar tag always says "Signed off by the dean" (`gradebook-toolbar.php` line 58; the detail at line 164 names the signer), and the refusal is `GradeFinalizationService::SIGNED_OFF_MESSAGE`, "The dean has signed off these grades. Only the dean can reopen them." [read in the code; not run].
-- **QA status:** REG (PS-FIN-04)
+- **QA status:** REG (PS-FIN-04) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASG-04.
 
 ---

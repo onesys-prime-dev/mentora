@@ -201,7 +201,7 @@ Filter with `-g` only for a case that stands alone (01, 02, 03, 08).
 - **Playwright:** `tests/e2e/dean.spec.js`
 - **Basis:** `app/Services/Courses/Grades/GradeSignoffService.php` (`mayDecide`, `reopen`),
   `app/Views/pages/dean/signoff.php`; decision AMB-ASG-04; commit `48543c7`
-- **QA status:** FIX? for the rule (PS-SGN-03, PS-SGN-04); REG for the instructor's wording (PS-FIN-04)
+- **QA status:** FIX? for the rule (PS-SGN-03, PS-SGN-04); REG for the instructor's wording (PS-FIN-04) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-DEAN-06 A dean sends a follow-up and the instructor answers it and closes it
@@ -361,7 +361,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **Already automated:** `tests/database/GradeOverrideRequestServiceTest.php` (the request flow, not this refusal)
 - **Playwright:** planned
 - **Basis:** decision AMB-ASG-05. Today `GradeOverrideRequestService::request` does not check finalization [read in the code; not run].
-- **QA status:** REG (PS-OVR-11)
+- **QA status:** REG (PS-OVR-11) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASG-05.
 
 ### TC-DEAN-13 Whoever decides for the department may reopen a sign-off an administrator gave
@@ -382,7 +382,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **Already automated:** `tests/database/AdministratorSignsOffTest.php` (`testAnAdministratorSignsOffWhereThereIsNoDean`, `testWhereThereIsADeanTheAdministratorCannot`, `testTheAdministratorReopensWithAReason`, `testExistingSignOffsStayWhenTheSignerChanges`); `tests/feature/InstitutionSignoffPageTest.php`
 - **Playwright:** planned
 - **Basis:** `GradeSignoffService::mayDecide` and `reopen`; `GradeAuthority`; decision AMB-ASG-04. Expected to fail only on the wording in step 5 (the toolbar's "Signed off by the dean"); the rest is the committed behavior of `48543c7`.
-- **QA status:** REG (PS-SGN-08)
+- **QA status:** REG (PS-SGN-08) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASG-04.
 
 ### TC-DEAN-14 A menu tile disappears when the dean loses the permission behind it
@@ -401,7 +401,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **Already automated:** `tests/feature/PermissionsTakeEffectTest.php` (the routes)
 - **Playwright:** no
 - **Basis:** decision AMB-AUTH-08. Today `navigation_helper.php` hides only Courses and Monitor department for a dean; Approvals, Follow-ups and Announcements stay visible [read in the code; not run].
-- **QA status:** REG (PS-RBA-09)
+- **QA status:** REG (PS-RBA-09) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-AUTH-08.
 
 ---

@@ -233,7 +233,7 @@ Several of these need a server, not only a browser: a crontab, the off-site copy
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-OPS-03 (register Part I3: two hours). Today any `running` row stops both a request and the nightly run (`BackupService` lines 62 and 107), so one crashed run blocks every later backup [read in the code; not run].
-- **QA status:** REG (PS-BAK-06)
+- **QA status:** REG (PS-BAK-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by MISS-OPS-03.
 
 ## TC-SA-19 A job that stops reporting is shown on Home and emailed once, and its recovery once
@@ -305,7 +305,7 @@ Several of these need a server, not only a browser: a crontab, the off-site copy
 - **Already automated:** `ScheduledJobsTest::testEachCommandRecordsItsHeartbeat`
 - **Playwright:** no
 - **Basis:** `ScheduledJobs`; decisions 6.2, D11, DOC-24; commit `5069228`
-- **QA status:** FIX? (PS-JOB-06) for steps 1 and 3. Step 2 is suspected to fail (REG?): `ParentsNotify::run` records the heartbeat whatever exit code the work returned; only an exception skips it [read in the code; not run].
+- **QA status:** FIX? (PS-JOB-06) for steps 1 and 3. Step 2 is suspected to fail (REG?): `ParentsNotify::run` records the heartbeat whatever exit code the work returned; only an exception skips it [read in the code; not run]. **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by DOC-24.
 
 ## TC-SA-23 Security headers, secure cookies and HTTPS in production
@@ -322,7 +322,7 @@ Several of these need a server, not only a browser: a crontab, the off-site copy
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-AUTH-02. Today `secureheaders` is commented out in `app/Config/Filters.php`, `CSPEnabled` and `forceGlobalSecureRequests` are false, and `Cookie::$secure` is false [read in the code; not run].
-- **QA status:** NB (PS-SEC-08)
+- **QA status:** NB (PS-SEC-08) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by MISS-AUTH-02.
 
 ## TC-SA-24 Invitation and password-reset links are rate limited
@@ -341,7 +341,7 @@ Several of these need a server, not only a browser: a crontab, the off-site copy
 - **Already automated:** none (the per-session re-entry counter: `tests/unit/ReauthServiceTest.php`)
 - **Playwright:** no
 - **Basis:** decision MISS-AUTH-03. Today no throttle protects these routes [read in the code; not run].
-- **QA status:** NB (PS-SEC-09)
+- **QA status:** NB (PS-SEC-09) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by MISS-AUTH-03.
 
 ---
@@ -627,7 +627,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision PLN-02. Today seven foreign keys cascade because of reversed arguments, so the records are deleted with the user (inventory V10) [read in the code; not run].
-- **QA status:** REG (PS-USR-05)
+- **QA status:** REG (PS-USR-05) **Defect confirmed 2026-10-28** by the database schema (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ## TC-SA-41 Bulk actions and the users export
@@ -710,7 +710,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-OPS-01. Today the setting has no effect (inventory V1).
-- **QA status:** NB (PS-SET-03)
+- **QA status:** NB (PS-SET-03) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ## TC-SA-47 System status and the home page's attention list
@@ -801,7 +801,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** the routes with the `reauth` filter have their own tests
 - **Playwright:** no
 - **Basis:** decision AMB-AUTH-05. Today restore, purge and sign-off ask; the actions listed are suspected not to [audit agent; not run].
-- **QA status:** REG? (PS-REA-06)
+- **QA status:** REG? (PS-REA-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ## TC-SA-55 The database refuses impossible values
@@ -812,7 +812,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** `QuizTwoTabsTest::testTheDatabaseKeepsOneAnswerPerQuestion`; the rest none
 - **Playwright:** no
 - **Basis:** decision MISS-DB-01. Suspected missing for most (inventory section 12) [audit agent; not run].
-- **QA status:** REG? (PS-DAT-04)
+- **QA status:** REG? (PS-DAT-04) **Defect confirmed 2026-10-28** by the database schema (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ## TC-SA-56 Seeds and the first administrator
@@ -848,7 +848,7 @@ P3 scenarios. QA status as in the README; none has been run.
 - **Already automated:** `GeneralSettingsTest` (maintenance tests)
 - **Playwright:** no
 - **Basis:** decisions AMB-AUTH-03, AMB-AUTH-09. Today only `admin` and impersonators bypass, and a path matches if any segment equals an open word (`MaintenanceFilter`) [read in the code; not run].
-- **QA status:** REG? (PS-ROM-08, PS-ROM-09)
+- **QA status:** REG? (PS-ROM-08, PS-ROM-09) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ## TC-SA-58 Retiring and reinstating a plan

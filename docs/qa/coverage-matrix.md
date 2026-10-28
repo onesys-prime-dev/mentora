@@ -915,3 +915,7 @@ Wave 4 added 30 P3 cases to the catalog, 12 exploratory charters ([`exploratory-
 ## Part L. Baseline run (2026-10-28)
 
 CK-01 ran on commit `5e7f0d7` (code of `ae86042`): PHPUnit 7,510 of 7,510 passed; Vitest 392 of 393 (one timeout under load, passes alone); Playwright 110 of 110. See [`baseline-2026-10-28.md`](baseline-2026-10-28.md). The tests named by every `FIX?` case pass; `REG` and `REG?` cases remain to be confirmed by running them. Two expectations were corrected to behavior a passing test pins (TC-QUIZ-10, TC-QUIZ-11 step 4; register Part I4).
+
+## Part M. Defects confirmed (2026-10-28)
+
+The catalog cases expected to fail were checked: 24 defects and 15 missing features are confirmed (see [`defects-2026-10-28.md`](defects-2026-10-28.md)), by probe tests, the database schema or the code. TC-ASG-06 turned out to be deliberate behavior and was corrected (register Part I4). TC-NOT-03 still needs a browser check. Nothing was fixed.

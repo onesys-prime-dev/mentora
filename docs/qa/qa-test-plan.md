@@ -6,6 +6,7 @@
 | **Date** | 2026-10-26 |
 | **Branch** | `docs/qa-test-cases`, from `fix/approvals` at `27f2012` (42 staged files of plan-4 approvals work and four untracked items are present and untouched) |
 | **Document owner** | _to be named (PLN-08)_ |
+| **Defects 2026-10-28** | 24 defects and 15 missing features confirmed, none fixed; ranked in `defects-2026-10-28.md` (one critical: deleting a user deletes grade-chain history). |
 | **Baseline 2026-10-28** | PHPUnit 7,510/7,510, Vitest 392/393 (one load-dependent timeout), Playwright 110/110 on MariaDB 10.4 locally; see `baseline-2026-10-28.md`. The risk scores in section 5 can now be re-scored against real results. |
 | **Test design complete 2026-10-28** | All four waves are written: 285 catalog cases in `docs/test-cases/` (Waves 1–4 and the cases that were there), 12 exploratory charters (`exploratory-charters.md`) and 8 checks (`checks.md`). Every one of the 415 planning scenarios is placed (`coverage-matrix.md` Part K). Nothing has been run: execution starts with the baseline (CK-01). |
 | **Decisions complete 2026-10-28** | Every open item was decided under the owner's delegation (register Part I). 415 scenarios, none blocked: READY-IBR 76, READY-VCI 221, REG 8, REG? 21, FIX? 33, NB 17, OUT 1, EXP 31, CHK 7. Owner and capacity: one person, 30 h a week, 25%% buffer (PLN-08). Privacy tests are P1 (PLN-09). The baseline runs first in execution (PLN-05). |

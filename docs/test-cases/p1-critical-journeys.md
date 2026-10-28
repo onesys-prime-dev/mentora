@@ -473,7 +473,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none for a running attempt. `AssessmentRescoreService` rescoring skips attempts in progress.
 - **Playwright:** planned
 - **Basis:** decision AMB-ASM-03 (register Part I3): question edits must not change active attempts. Today questions are edited in place and the attempt reads the edited row (`QuestionService::updateQuestion`) [read in the code; not run].
-- **QA status:** REG? (PS-QUZ-19)
+- **QA status:** REG? (PS-QUZ-19) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASM-03.
 
 ### TC-QUIZ-08 The attempt limit accepts 1 or more, or blank for unlimited, and refuses 0 and negatives
@@ -490,7 +490,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** `QuizAttemptServiceTest::testTheDefaultLimitIsOneAttempt` (the default only)
 - **Playwright:** no
 - **Basis:** decision AMB-ASM-09 and MISS-ASM-01. Today nothing validates the field, and a blank (null) limit becomes 1, not unlimited (`QuizAttemptService` reads `attempt_limit ?? 1`) [read in the code; not run].
-- **QA status:** REG? (PS-QUZ-14)
+- **QA status:** REG? (PS-QUZ-14) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASM-09.
 
 ### TC-QUIZ-09 A quiz does not offer File Upload questions
@@ -509,7 +509,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decisions AMB-ASM-08 and MISS-QZ-03. Today `QuestionService::createQuestion` accepts any type, and a student has no way to save a File Upload answer in a quiz [read in the code; not run].
-- **QA status:** REG? (PS-QUZ-15)
+- **QA status:** REG? (PS-QUZ-15) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASM-08.
 
 ### TC-QUIZ-10 A cancelled attempt counts against the attempt limit
@@ -546,7 +546,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none
 - **Playwright:** planned
 - **Basis:** decisions AMB-ASM-02 and MISS-ASM-01. Today `AssessmentService::publishedAssessment` and the status change in `updateAssessment` publish a quiz with no questions, and the page only says "This quiz has no questions yet." [read in the code; not run].
-- **QA status:** REG (PS-ASM-03)
+- **QA status:** REG (PS-ASM-03) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-ASM-02.
 
 ### TC-QUIZ-12 The server refuses impossible quiz settings and empty questions
@@ -569,7 +569,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-ASM-01. Today `AssessmentService::updateAssessment` checks only the status, and `QuestionService::createQuestion` saves an empty text and any points [read in the code; not run]. The upper bound for points is not set by any decision: record what the code does once it is added.
-- **QA status:** REG (PS-ASM-04)
+- **QA status:** REG (PS-ASM-04) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by MISS-ASM-01.
 
 ### TC-QUIZ-13 A quiz password is asked before the attempt, and browser lockdown is shown
@@ -589,7 +589,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-DB-02. Today the settings `require_password` and `browser_lockdown` are stored but nothing enforces them.
-- **QA status:** NB (PS-ASM-12)
+- **QA status:** NB (PS-ASM-12) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by AMB-DB-02.
 
 ### TC-QUIZ-14 A question import is judged by its content, not its file name
@@ -605,7 +605,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** the parsers have unit tests (`tests/unit/*Parser*Test.php`); content checks have none
 - **Playwright:** no
 - **Basis:** decision MISS-ASM-02 (register Part I3). Today the format is chosen by the file extension (`QuestionImportService::previewFile`).
-- **QA status:** NB (PS-QBK-09)
+- **QA status:** NB (PS-QBK-09) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by MISS-ASM-02.
 
 ---
@@ -1125,7 +1125,7 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
 - **Already automated:** none for these two actions
 - **Playwright:** no
 - **Basis:** decision AMB-ASG-06. Today `GradeWorkService::reopenGrading` and `submitGrade` do not check finalization; the frozen `final_percentage` still protects the final grade [read in the code; not run].
-- **QA status:** REG (PS-GRD-06)
+- **QA status:** REG (PS-GRD-06) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ---
@@ -1213,7 +1213,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** none (the reset link: `PasswordResetLinkTest`)
 - **Playwright:** no
 - **Basis:** decisions MISS-AUTH-01 and DOC-16. Today there is no change-password page [read in the code; not run].
-- **QA status:** NB (PS-AUT-17, PS-ROM-03)
+- **QA status:** NB (PS-AUT-17, PS-ROM-03) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-MOD-09 The Resources tab lists the course's files and links by module and unit
@@ -1309,7 +1309,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** none for the bounds or the accounting
 - **Playwright:** no
 - **Basis:** decision AMB-ASM-10. Today PHP has no upper bound on the count, and the accounting was not read [audit agent; not run].
-- **QA status:** REG? (PS-AIQ-10)
+- **QA status:** REG? (PS-AIQ-10) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-QUIZ-28 Generated questions are measured against a recorded baseline before release
@@ -1321,7 +1321,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-AI-01 (register Part I3)
-- **QA status:** NB (PS-AIQ-09)
+- **QA status:** NB (PS-AIQ-09) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-ASG-05 Assignment uploads accept only the allowed file types
@@ -1333,7 +1333,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** the size limit only (`AssignmentSubmissionServiceTest`)
 - **Playwright:** no
 - **Basis:** decision MISS-ASG-02. Today the size is checked but there is no type allowlist [read in the code; not run].
-- **QA status:** NB (PS-ASG-04)
+- **QA status:** NB (PS-ASG-04) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-GRD-08 The feedback thread on a piece of work
@@ -1384,7 +1384,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-COM-03. Suspected: the feed joins the author's roles, which can repeat a post [audit agent; not run].
-- **QA status:** REG? (PS-ANN-06)
+- **QA status:** REG? (PS-ANN-06) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-ANN-05 A course announcement can be a draft, scheduled or published
@@ -1396,7 +1396,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decisions MISS-COM-01, AMB-COM-01. Today announcements have no draft or scheduled state.
-- **QA status:** NB (PS-ANN-09)
+- **QA status:** NB (PS-ANN-09) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-ANN-06 Students and instructors are told of a new course announcement
@@ -1408,7 +1408,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-COM-02. Today only parents are told (`parents:notify`).
-- **QA status:** NB (PS-ANN-10)
+- **QA status:** NB (PS-ANN-10) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-CAL-01 The calendar's date range, and the student's schedule page
@@ -1432,7 +1432,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** `NotificationsTest::testReadingAndCounting` (the normal path)
 - **Playwright:** no
 - **Basis:** decision AMB-COM-02. Suspected: a malformed id falls through to marking everything read [audit agent; not run].
-- **QA status:** REG? (PS-NOT-04)
+- **QA status:** REG? (PS-NOT-04) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-FIL-02 How a file is served: ranges, inline or download, and the logo
@@ -1504,7 +1504,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** `AnnouncementRoutesTest::testThePostFromTheCalendarLandsOnTheChosenDayAndRefusesThePast` (the date only)
 - **Playwright:** no
 - **Basis:** decision AMB-COM-01. Suspected: the post shows at once on every screen [audit agent; not run].
-- **QA status:** REG? (PS-ANN-05)
+- **QA status:** REG? (PS-ANN-05) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-CAL-02 What the calendar shows each person, and their reminders
@@ -1533,7 +1533,7 @@ The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is man
 | TC-MOD-12 | Uploaded files are scanned for viruses before anyone can open them | Instructor, student | P3 | NB |
 | TC-QUIZ-29 | Copying questions from another quiz of your own sections | Instructor, chairperson | P3 | VCI |
 | TC-QUIZ-30 | A generation job that finishes while nobody is watching tells its teacher | Instructor | P3 | VCI |
-| TC-ASG-06 | Only a student of the assignment's own section can submit to it | Student | P3 | REG? |
+| TC-ASG-06 | Only a student of the assignment's own section can submit to it (corrected after the defect check) | Student | P3 | VCI |
 | TC-ANN-09 | The course feed's order, pages and search | Student | P3 | VCI |
 | TC-ANN-10 | Only the four supported reactions are accepted | Student | P3 | REG? |
 | TC-CAL-03 | The weekly schedule grid, and closed sections on the calendar | Student, instructor | P3 | VCI, IBR |
@@ -1566,7 +1566,7 @@ The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is man
 - **Already automated:** none for 3 and 4
 - **Playwright:** no
 - **Basis:** decisions MISS-AUTH-04 to 07. Today parts 3 and 4 are not built.
-- **QA status:** NB (PS-AUT-21)
+- **QA status:** NB (PS-AUT-21) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-MOD-11 A course's participants and settings can be found
@@ -1589,7 +1589,7 @@ The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is man
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-CONT-02. Not built.
-- **QA status:** NB (PS-MOD-18)
+- **QA status:** NB (PS-MOD-18) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-QUIZ-29 Copying questions from another quiz of your own sections
@@ -1619,11 +1619,11 @@ The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is man
 - **Role:** Student. **Priority:** P3
 - **Data:** student5 enrolled in IT101-A only; an assignment of IT101-B (same course, another section)
 - **Steps:** as student5, send the submit request for IT101-B's assignment directly, through IT101-A's address and through IT101-B's.
-- **Expected:** refused both ways ("Only students enrolled in this course can submit." or not found); nothing is saved. The rule is checked in the service, not only by the route filter.
+- **Expected:** for an assignment in a module, refused both ways ("Only students enrolled in this course can submit." or not found); nothing is saved; the service checks the section, not only the route filter. An assignment in no module accepts a student of any section of the course: the code states this as deliberate, so it governs (register Part I4).
 - **Already automated:** `AssignmentSubmissionServiceTest::testOnlyEnrolledStudentsCanSubmit` (another course, not another section)
 - **Playwright:** no
-- **Basis:** decision AMB-ASG-03. `AssignmentSubmissionService` line 120 still accepts any student group member when no offering is found [read in the code; not run].
-- **QA status:** REG? (PS-ENR-09)
+- **Basis:** `AssignmentSubmissionService::submit` ("A student of the assignment's section (9.1); one in no module falls back to any section of the course."); decision AMB-ASG-03 as limited by register Part I4
+- **QA status:** VCI (PS-ENR-09), corrected 2026-10-28
 - **Review:** Draft
 
 ### TC-ANN-09 The course feed's order, pages and search
@@ -1646,7 +1646,7 @@ The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is man
 - **Already automated:** none for the allowed set
 - **Playwright:** no
 - **Basis:** decision AMB-COM-08 (register Part I3). Today the server accepts any value up to 32 characters (`AnnouncementService::react`) [read in the code; not run].
-- **QA status:** REG? (PS-ANN-11)
+- **QA status:** REG? (PS-ANN-11) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-CAL-03 The weekly schedule grid, and closed sections on the calendar
@@ -1703,7 +1703,7 @@ The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is man
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-DB-03. Today nothing cleans these rows.
-- **QA status:** NB (PS-FIL-06)
+- **QA status:** NB (PS-FIL-06) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-FE-02 Dark mode in every area

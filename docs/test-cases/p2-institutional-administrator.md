@@ -202,7 +202,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **Already automated:** `tests/database/DeanAssignmentServiceTest.php` (the service, which exists)
 - **Playwright:** no
 - **Basis:** decision MISS-INST-01 (register Part I3). Today `DeanAssignmentService::assign` and `end` exist but no controller or screen calls them: deans come only from the seed and the SIS [read in the code; not run].
-- **QA status:** NB (PS-CHR-12)
+- **QA status:** NB (PS-CHR-12) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft. Expected result set by MISS-INST-01.
 
 ### TC-IAA-07 Taking away an instructor's discussion moderation stops it in the server, not only on the page
@@ -754,7 +754,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-INST-02. Suspected: reopening gives no warning and sets the term active whatever its dates [audit agent; not run].
-- **QA status:** REG? (PS-TRM-06)
+- **QA status:** REG? (PS-TRM-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-TRM-09 A term closes only when its sections' grades are finalized or signed off
@@ -766,7 +766,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-INST-01. Today `TermCloseService` checks no grades [audit agent; not run].
-- **QA status:** NB (PS-TRM-05)
+- **QA status:** NB (PS-TRM-05) **Not built: confirmed 2026-10-28** by not found in the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-OFF-06 A section is edited only while active, and archived only with nobody enrolled
@@ -825,7 +825,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-INST-04. Today `EnrolmentService::add` reinstates without `syncEnrolment`, while `setStatus` calls it [read in the code; not run].
-- **QA status:** REG (PS-ENR-03)
+- **QA status:** REG (PS-ENR-03) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-PPL-06 A password link sent from People needs the password and goes to the person
@@ -957,7 +957,7 @@ P3 scenarios. QA status as in the README; none has been run.
 - **Already automated:** `CsvUploadServiceTest::testStartingOverRemovesTheKeptFiles`
 - **Playwright:** no
 - **Basis:** decision AMB-INST-06. Suspected: abandoned previews are removed only at the next preview [audit agent; not run].
-- **QA status:** REG? (PS-CSV-06)
+- **QA status:** REG? (PS-CSV-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
 ### TC-STR-09 A program's status: inactive, archived, reactivated
