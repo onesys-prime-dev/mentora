@@ -324,6 +324,11 @@ secrets print hashes only.
 - [ ] The first system administrator signs in and receives the emailed code.
 - [ ] Backups: `php8.5 spark backup:run` works and the monitoring Backups row is up.
 - [ ] Scheduled jobs are in the site user's crontab; "Scheduled jobs" reads up after the first night.
+- [ ] Staging, once: CloudPanel's Cron Jobs screen keeps the mentora block after an unrelated save (section 6).
+- [ ] `scheduler.checkSecret` is set, and the latest uptime run's **Check the scheduled jobs** log shows the site's answer, not "No scheduler secret" or a curl error: the step stays green either way, and the secret in GitHub can't be read back (section 6).
+- [ ] Production: a backup's **Off-site copy** reads **Copied** on `/admin/backups` (section 6).
+- [ ] Production, once: fetched back to another machine, the dump passes `gunzip -t` and loads into a scratch database, and a sample of the uploads opens; the date is recorded in section 6 (go-live check).
+- [ ] Before go-live, once: the 2,000,000-submission export finished under `memory_limit=128M`, time recorded (`institution-data-export.md`, Scale).
 - [ ] Worker: unit active, secrets file `root:root 600`, the worker's secret hash equals the site `.env`'s, and the Groq key hash differs from the other environment's (`deploy.md`, "Reviewing a server against this").
 - [ ] A test question generation completes on staging before production is touched.
 - [ ] Production's `TLS_INSECURE` is `false` and a deploy with a real certificate passes.

@@ -111,6 +111,70 @@ final class SchedulerCheckTest extends DatabaseTestCase
         $this->assertArrayNotHasKey('sis:sync', json_decode((string) setting('Monitoring.staleJobs'), true) ?? []);
     }
 
+    /** @return array<string, int> */
+    private function periods(): array
+    {
+        return json_decode((string) setting('Monitoring.staleJobs'), true) ?? [];
+    }
+
+    private function sisStall(): int
+    {
+        $institution = PeopleFactory::institution('SCHK');
+        db_connect()->table('sis_connections')->insert(['institution_id' => $institution, 'connector' => 'file', 'enabled' => 1, 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')]);
+        ScheduledJobs::heartbeat('sis:sync', $this->now - 30 * 3600);
+
+        return $institution;
+    }
+
+    private function sis(int $institution, bool $enabled): void
+    {
+        db_connect()->table('sis_connections')->where('institution_id', $institution)->update(['enabled' => $enabled ? 1 : 0]);
+    }
+
+    public function testASisStallStillThereWhenSisComesBackIsToldWhenItEnds(): void
+    {
+        $institution = $this->sisStall();
+        (new SchedulerCheck())->run($this->now);
+
+        foreach ($this->admins as $admin) {
+            $this->assertSame(1, $this->told($admin, 'Scheduled job stopped: sis:sync'));
+        }
+
+        $this->sis($institution, false);
+        (new SchedulerCheck())->run($this->now + 60);
+        $this->sis($institution, true);
+        $back = (new SchedulerCheck())->run($this->now + 120);
+
+        $this->assertSame(0, $back['alerted'], 'everyone already knows');
+        $this->assertArrayHasKey('sis:sync', $this->periods(), 'the stop is remembered again');
+
+        ScheduledJobs::heartbeat('sis:sync', $this->now + 180);
+        (new SchedulerCheck())->run($this->now + 240);
+
+        foreach ($this->admins as $admin) {
+            $this->assertSame(1, $this->told($admin, 'Scheduled job running again: sis:sync'));
+        }
+
+        $this->assertArrayNotHasKey('sis:sync', $this->periods());
+    }
+
+    public function testAnAdministratorAddedWhileSisWasOffIsToldOfTheStallAndItIsKept(): void
+    {
+        db_connect()->table('auth_groups_users')->where(['user_id' => $this->admins[1]->id, 'group' => 'admin'])->delete();
+        $institution = $this->sisStall();
+        (new SchedulerCheck())->run($this->now);
+
+        $this->sis($institution, false);
+        (new SchedulerCheck())->run($this->now + 60);
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $this->admins[1]->id, 'group' => 'admin', 'created_at' => date('Y-m-d H:i:s')]);
+        $this->sis($institution, true);
+        (new SchedulerCheck())->run($this->now + 120);
+
+        $this->assertSame(1, $this->told($this->admins[0], 'Scheduled job stopped: sis:sync'));
+        $this->assertSame(1, $this->told($this->admins[1], 'Scheduled job stopped: sis:sync'));
+        $this->assertArrayHasKey('sis:sync', $this->periods());
+    }
+
     public function testAStaleJobAlertsEverySystemAdministratorOnce(): void
     {
         ScheduledJobs::heartbeat('backup:run', $this->now - 3600);

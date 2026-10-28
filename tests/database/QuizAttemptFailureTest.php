@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Services\Courses\Assessments\QuizAttemptService;
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\AssessmentFactory;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\GradeFactory;
 
 /**
  * When the database refuses a quiz write, the student is told so, and nothing claims it worked: a submit is not
@@ -23,6 +25,8 @@ final class QuizAttemptFailureTest extends DatabaseTestCase
 
     private const TRIGGER = 'mentora_test_refuse_quiz_write';
 
+    private static bool $emptied = false;
+
     private QuizAttemptService $service;
 
     private int $quiz;
@@ -31,11 +35,21 @@ final class QuizAttemptFailureTest extends DatabaseTestCase
 
     private User $student;
 
+    private int $offering;
+
+    private User $instructor;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->dropTrigger();
+
+        // Not rolled back, so an earlier run's rows (the same factory codes) are cleared first, once.
+        if (! self::$emptied) {
+            $this->emptyAllTables();
+            self::$emptied = true;
+        }
 
         $this->service = new QuizAttemptService();
         $offering      = CourseFactory::offering();
@@ -43,6 +57,8 @@ final class QuizAttemptFailureTest extends DatabaseTestCase
         CourseFactory::assignInstructor($offering, $instructor);
         $this->student = CourseFactory::user('student');
         CourseFactory::enroll($offering, $this->student);
+        $this->offering   = $offering;
+        $this->instructor = $instructor;
 
         $this->quiz     = CourseFactory::assessment($offering, $instructor, CourseFactory::module($offering));
         $this->question = AssessmentFactory::question($this->quiz, $instructor, 'Essay', 5);
@@ -73,16 +89,72 @@ final class QuizAttemptFailureTest extends DatabaseTestCase
         return db_connect()->table('assessment_submissions')->where(['assessment_id' => $this->quiz, 'student_id' => $this->student->id])->get()->getRowArray();
     }
 
+    /**
+     * A quiz that grades itself whole (one multiple-choice question worth 5), with a module item and a gradebook
+     * item, started by the student, who picked the right choice.
+     *
+     * @return array{attempt: int, response: int, item: int, gradeItem: int}
+     */
+    private function gradedQuiz(): array
+    {
+        $module = CourseFactory::module($this->offering);
+        $item   = CourseFactory::items(CourseFactory::unit($module), [['type' => 'quiz']])[0];
+        $quiz   = CourseFactory::assessment($this->offering, $this->instructor, $module, $item);
+        $mc   = AssessmentFactory::multipleChoice($quiz, $this->instructor, [true, false], 5);
+        AssessmentFactory::open($quiz);
+        $gradeItem = GradeFactory::item(GradeFactory::scheme($this->offering), null, 'The quiz', 5, 1, $quiz);
+
+        $this->service->startAttempt($this->student, $quiz);
+        $attempt  = (int) db_connect()->table('assessment_submissions')->where(['assessment_id' => $quiz, 'student_id' => $this->student->id])->get()->getRow('id');
+        $response = AssessmentFactory::response($attempt, $mc['question'], ['selected_choice_id' => $mc['choices'][0]]);
+
+        return ['attempt' => $attempt, 'response' => $response, 'item' => $item, 'gradeItem' => $gradeItem];
+    }
+
+    private function gradebookScores(int $gradeItem): int
+    {
+        return db_connect()->table('gradebook_item_scores')->where(['grade_item_id' => $gradeItem, 'student_id' => $this->student->id])->countAllResults();
+    }
+
+    private function completions(int $item): int
+    {
+        return db_connect()->table('learning_completions')->where(['learning_item_id' => $item, 'student_user_id' => $this->student->id, 'status' => 'completed'])->countAllResults();
+    }
+
+    public function testTheSameSubmitWithoutARefusalScoresCountsAndCompletes(): void
+    {
+        // What the refused submit below must not leave: without the refusal, all of it is written.
+        $quiz = $this->gradedQuiz();
+
+        $this->assertTrue($this->service->submitAttempt($this->student, $quiz['attempt'])['success']);
+        $this->assertEquals(5, db_connect()->table('assessment_question_responses')->where('id', $quiz['response'])->get()->getRow('score'));
+        $this->assertSame(1, $this->gradebookScores($quiz['gradeItem']));
+        $this->assertSame(1, $this->completions($quiz['item']));
+    }
+
     public function testASubmitTheDatabaseRefusesSaysSoAndChangesNothing(): void
     {
-        $attempt = $this->attempt();
+        $quiz = $this->gradedQuiz();
         $this->refuse('BEFORE UPDATE', 'assessment_submissions');
 
-        $result = $this->service->submitAttempt($this->student, (int) $attempt['id']);
+        $result = $this->service->submitAttempt($this->student, $quiz['attempt']);
 
         $this->assertFalse($result['success']);
         $this->assertSame('The quiz could not be submitted. Your answers are kept; try submitting again.', $result['message']);
-        $this->assertSame('In Progress', db_connect()->table('assessment_submissions')->where('id', $attempt['id'])->get()->getRow('status'));
+        $this->assertSame('In Progress', db_connect()->table('assessment_submissions')->where('id', $quiz['attempt'])->get()->getRow('status'));
+
+        $response = db_connect()->table('assessment_question_responses')->where('id', $quiz['response'])->get()->getRowArray();
+        // The column's default (0), not the 5 the scoring wrote before the refusal.
+        $this->assertEquals(0, $response['score'], 'the scoring was rolled back');
+        $this->assertSame(0, (int) $response['is_auto_graded']);
+        $this->assertNull($response['graded_at']);
+
+        $db = db_connect();
+        $this->assertSame(0, $db->transDepth, 'no transaction left open');
+        $this->assertFalse((new ReflectionProperty(BaseConnection::class, 'transException'))->getValue($db), 'exceptions are off again');
+
+        $this->assertSame(0, $this->gradebookScores($quiz['gradeItem']), 'nothing counted');
+        $this->assertSame(0, $this->completions($quiz['item']), 'nothing completed');
     }
 
     public function testAnAnswerTheDatabaseRefusesSaysSo(): void

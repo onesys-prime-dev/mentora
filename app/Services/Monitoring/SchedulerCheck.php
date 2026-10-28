@@ -22,7 +22,9 @@ use App\Services\Notifications\NotificationService;
  * period ("running again", then "stopped" again). A period is only kept once
  * somebody was told, so the first administrator still hears of a job that
  * stopped before they existed. A SIS job no longer checked (SIS went out of
- * use) is forgotten without a word.
+ * use) is forgotten without a word; if SIS comes back while it is still
+ * stopped, the stop is remembered again (everyone already knows), so its
+ * "running again" is still sent.
  */
 final class SchedulerCheck
 {
@@ -51,10 +53,12 @@ final class SchedulerCheck
                 }
 
                 $since = $last === null ? 'it was installed' : date('Y-m-d H:i', $last);
-                $sent  = $this->tell($admins, $notices, 'jobs.stale', "Scheduled job stopped: {$command}", "{$command} has not reported since {$since}. Check the server's crontab (docs/server-setup.md, section 6).", "jobs:stale:{$command}:" . ($last ?? 'never'));
+                $key   = "jobs:stale:{$command}:" . ($last ?? 'never');
+                $sent  = $this->tell($admins, $notices, 'jobs.stale', "Scheduled job stopped: {$command}", "{$command} has not reported since {$since}. Check the server's crontab (docs/server-setup.md, section 6).", $key);
 
-                // Kept only once somebody knows, so an administrator added later is still told.
-                if ($sent > 0) {
+                // Kept once somebody knows, told now or before (SIS off and on again), so an administrator
+                // added later is still told, and "running again" still follows.
+                if ($sent > 0 || $this->known($admins, $notices, $key)) {
                     $periods[$command] = $last ?? 0;
                 }
 
@@ -90,6 +94,22 @@ final class SchedulerCheck
         }
 
         return $sent;
+    }
+
+    /**
+     * Whether some administrator already holds this notice.
+     *
+     * @param list<int|object> $admins
+     */
+    private function known(array $admins, NotificationService $notices, string $key): bool
+    {
+        foreach ($admins as $admin) {
+            if ($notices->has($admin, $key)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return array<string, int> */

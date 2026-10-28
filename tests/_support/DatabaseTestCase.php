@@ -99,7 +99,8 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         (new \ReflectionProperty($db, 'transStatus'))->setValue($db, true);
     }
 
-    private function emptyAllTables(): void
+    /** Also for a class that can't be isolated but must not meet an earlier run's rows. */
+    protected function emptyAllTables(): void
     {
         $db = db_connect();
 
