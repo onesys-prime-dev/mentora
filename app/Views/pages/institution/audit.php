@@ -74,6 +74,7 @@ foreach ($auditRows as $row) {
 
     <?= view('components/toolbar', [
         'surface'  => 'tinted', // on the page's white panel a white card would not stand out
+        'inline'   => '2xl',
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
