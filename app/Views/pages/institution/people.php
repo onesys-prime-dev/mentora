@@ -229,7 +229,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         </p>
 
         <?php // Only the table scrolls; the heading, the tabs, the filters, the count and the pages stay put (lg and up). ?>
-        <div class="flex flex-col gap-6" data-panel-scroll>
+        <div class="flex flex-col gap-6" data-panel-scroll="inner">
 
         <?php
         $bulk = $peopleCanEdit
@@ -255,6 +255,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
             'nounOne'    => 'person',
             'nounMany'   => 'people',
             'bulk'       => $bulk,
+            'fill'       => true, // the table scrolls under its own heading row
             'emptyIcon'  => 'user',
             'emptyTitle' => $filtered ? 'No one matches these filters' : 'No people yet',
             'emptyText'  => $filtered ? 'Try a different name, role or status.' : 'Invite the first person to get started.',
@@ -266,12 +267,13 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
 
     <?php else: ?>
 
-        <div class="flex flex-col gap-6" data-panel-scroll>
+        <div class="flex flex-col gap-6" data-panel-scroll="inner">
 
         <p class="text-sm text-[#646464]" aria-live="polite">Invitations that were sent and not used yet. The account is made when the person chooses a password.</p>
 
         <?= view('components/data-table', [
             'caption'    => 'Invitations',
+            'fill'       => true,
             'columns'    => [
                 ['key' => 'name', 'label' => 'Person'],
                 ['key' => 'role', 'label' => 'Role'],

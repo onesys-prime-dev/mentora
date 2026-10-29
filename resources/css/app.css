@@ -637,6 +637,11 @@ html[data-theme="dark"] .admin-flat [data-page-panel] thead th {
         display: none;
     }
 
+    /* A region whose table scrolls under its own heading row does not scroll itself. */
+    main[data-pinned-panel] > div > [data-page-panel] > [data-panel-scroll="inner"] {
+        overflow-y: hidden;
+    }
+
     /* Boxes that clip their own overflow (a table) would shrink to fit instead of making this scroll. */
     main[data-pinned-panel] > div > [data-page-panel] > [data-panel-scroll] > * {
         flex-shrink: 0;
