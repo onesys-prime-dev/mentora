@@ -37,8 +37,10 @@ class ParentsNotify extends BaseCommand
     {
         $code = $this->work($params);
 
-        // The scheduler check watches for this job going quiet (6.2); a dry run is not the job.
-        if (! array_key_exists('dry-run', $params) && CLI::getOption('dry-run') === null) {
+        // The scheduler check watches for this job going quiet (6.2); a dry run is not the job. Only a sweep
+        // that ran to the end reports: a failed one is told by nothing else, so failures in a row go quiet and
+        // the system administrators hear of it (QA DOC-24).
+        if ($code === EXIT_SUCCESS && ! array_key_exists('dry-run', $params) && CLI::getOption('dry-run') === null) {
             \App\Services\Monitoring\ScheduledJobs::heartbeat('parents:notify');
         }
 

@@ -184,6 +184,33 @@ final class ParentsNotifyCommandTest extends DatabaseTestCase
         $this->assertSame([], $this->mailer->sent);
     }
 
+    /**
+     * The heartbeat says the sweep ran to the end (docs/monitoring.md): a failed sweep does not record one, so
+     * failures in a row make the job go quiet and the system administrators are told (QA DOC-24).
+     */
+    public function testAFailedSweepRecordsNoHeartbeatAndAFinishedOneDoes(): void
+    {
+        $this->everything();
+        $db = db_connect();
+
+        $db->query('RENAME TABLE parent_alerted_items TO parent_alerted_items_away');
+
+        try {
+            command('parents:notify');
+        } finally {
+            $db->query('RENAME TABLE parent_alerted_items_away TO parent_alerted_items');
+        }
+
+        Services::resetSingle('settings');
+        $this->assertStringContainsString('The sweep failed', $this->getStreamFilterBuffer());
+        $this->assertNull(\App\Services\Monitoring\ScheduledJobs::lastRun('parents:notify'));
+
+        command('parents:notify');
+
+        Services::resetSingle('settings');
+        $this->assertNotNull(\App\Services\Monitoring\ScheduledJobs::lastRun('parents:notify'));
+    }
+
     public function testTheCommandWithNothingToTellSaysSo(): void
     {
         command('parents:notify');
