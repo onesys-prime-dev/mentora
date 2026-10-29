@@ -573,3 +573,39 @@ html[data-theme="dark"] .admin-flat [data-page-panel] thead th {
     background-color: rgb(91 141 239 / .12);
     color: inherit;
 }
+
+/*
+ * Beside the institution menu a page's panel stays put and scrolls inside itself (lg and up),
+ * so the header, the menu, the way back and the panel's edge never move. Only a page that
+ * draws a panel does this; any other page (the dashboard) still scrolls as a whole.
+ */
+@media (min-width: 64rem) {
+    main[data-pinned-panel]:has(> div > [data-page-panel]) {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    main[data-pinned-panel] > div:has(> [data-page-panel]) {
+        display: flex;
+        flex: 1 1 0%;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    main[data-pinned-panel] > div > [data-page-panel] {
+        flex: 1 1 0%;
+        min-height: 0;
+        overflow-y: auto;
+        scrollbar-width: none;
+    }
+
+    main[data-pinned-panel] > div > [data-page-panel]::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* A column that is squeezed would shrink its children; here it scrolls instead. */
+    main[data-pinned-panel] > div > [data-page-panel] > * {
+        flex-shrink: 0;
+    }
+}
