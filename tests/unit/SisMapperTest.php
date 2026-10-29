@@ -12,6 +12,23 @@ use CodeIgniter\Test\CIUnitTestCase;
  */
 final class SisMapperTest extends CIUnitTestCase
 {
+    public function testAStaffAssignmentTakesItsTargetFromTheColumnOfItsRole(): void
+    {
+        $dean       = SisMapper::staffAssignment(['role' => 'Dean', 'person_external_id' => 'P1', 'department_code' => 'CCS', 'sub_department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
+        $chair      = SisMapper::staffAssignment(['role' => 'chairperson', 'person_external_id' => 'P2', 'department_code' => 'CCS', 'sub_department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
+        $instructor = SisMapper::staffAssignment(['role' => 'INSTRUCTOR', 'person_external_id' => 'P3', 'department_code' => 'CCS', 'sub_department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
+
+        $this->assertSame(['role' => 'dean', 'person_external_id' => 'P1', 'target' => 'CCS', 'section' => 'A'], $dean, 'a section means nothing for a dean');
+        $this->assertSame(['role' => 'chairperson', 'person_external_id' => 'P2', 'target' => 'IT', 'section' => 'A'], $chair);
+        $this->assertSame(['role' => 'instructor', 'person_external_id' => 'P3', 'target' => 'C1', 'section' => 'B'], $instructor);
+    }
+
+    public function testAnInstructorWithNoSectionTeachesSectionA(): void
+    {
+        $this->assertSame('A', SisMapper::staffAssignment(['role' => 'instructor', 'person_external_id' => 'P3', 'course_external_id' => 'C1', 'section' => ''])['section']);
+        $this->assertSame('A', SisMapper::staffAssignment(['role' => 'instructor', 'person_external_id' => 'P3', 'course_external_id' => 'C1'])['section']);
+    }
+
     public function testAPersonIsMappedWithALowerCasedEmailAndAnOptionalStudentNumber(): void
     {
         $this->assertSame(

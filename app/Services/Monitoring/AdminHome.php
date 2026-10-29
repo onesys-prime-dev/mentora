@@ -21,6 +21,9 @@ class AdminHome
 
     public const WARNING = 'warning';
 
+    /** @var array<string, array{status: string, detail: string}>|null */
+    private ?array $healthResults = null;
+
     /** @param SystemHealth|null $health replaced in tests so no real disk or service is read */
     public function __construct(private readonly ?SystemHealth $health = null)
     {
@@ -71,10 +74,7 @@ class AdminHome
             $items[] = ['severity' => self::URGENT, 'text' => $backup['message'], 'link' => 'admin/backups'];
         }
 
-        // The question-builder service is optional and is probed over the network; it is left to the status page.
-        $health = ($this->health ?? new SystemHealth(['ai' => static fn (): array => ['status' => SystemHealth::UP, 'detail' => '']]))->run();
-
-        foreach ($health as $name => $result) {
+        foreach ($this->healthResults() as $name => $result) {
             if ($name !== 'backups' && $result['status'] !== SystemHealth::UP) {
                 $items[] = [
                     'severity' => $result['status'] === SystemHealth::DOWN ? self::URGENT : self::WARNING,
@@ -87,6 +87,37 @@ class AdminHome
         usort($items, static fn (array $a, array $b): int => ($a['severity'] === self::URGENT ? 0 : 1) <=> ($b['severity'] === self::URGENT ? 0 : 1));
 
         return $items;
+    }
+
+    /**
+     * One cell per platform check, for the strip at the top of the page. The
+     * question-builder service is left out: it is optional and probed over the
+     * network, so it stays on the status page.
+     *
+     * @return list<array{key: string, label: string, status: string, detail: string}>
+     */
+    public function health(): array
+    {
+        $cells = [];
+
+        foreach ($this->healthResults() as $name => $result) {
+            if ($name !== 'ai') {
+                $cells[] = ['key' => $name, 'label' => SystemHealth::LABELS[$name], 'status' => $result['status'], 'detail' => $result['detail']];
+            }
+        }
+
+        return $cells;
+    }
+
+    /**
+     * The checks run once per request, however many parts of the page read them.
+     *
+     * @return array<string, array{status: string, detail: string}>
+     */
+    private function healthResults(): array
+    {
+        // The question-builder service is optional and is probed over the network; it is left to the status page.
+        return $this->healthResults ??= ($this->health ?? new SystemHealth(['ai' => static fn (): array => ['status' => SystemHealth::UP, 'detail' => '']]))->run();
     }
 
     /**

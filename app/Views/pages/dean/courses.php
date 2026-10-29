@@ -46,18 +46,22 @@ foreach ($statuses as $status) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Courses',
         'icon'        => 'hat',
         'description' => 'Every course in your department. You can look, not change.',
-        'backUrl'     => site_url('dean/dashboard'),
-        'backLabel'   => 'Back to dashboard',
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
         'action'   => $base,
+        'surface'  => 'tinted', // it sits on the page's white panel, where a white card would not stand out
         'filtered' => $filters->isFiltered(),
         'fields'   => [
             ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => 'Course code, title or section', 'value' => $filters->q ?? '', 'span' => 'sm:col-span-2'],
@@ -121,6 +125,8 @@ foreach ($statuses as $status) {
         <?= view('components/pagination', ['page' => $filters->page, 'pages' => $pages, 'total' => $total, 'baseUrl' => $base, 'query' => $query], ['saveData' => false]) ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

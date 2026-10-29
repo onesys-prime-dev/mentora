@@ -127,6 +127,22 @@ final class StorageServiceTest extends DatabaseTestCase
         @unlink($tmp);
     }
 
+    public function testOnlySafeTypesAreShownInlineEverythingElseDownloads(): void
+    {
+        mkdir($this->storage->root() . 'tests-serve', 0775, true);
+        file_put_contents($this->storage->path('tests-serve/x'), '<script>alert(1)</script>');
+
+        foreach (['text/html' => false, 'image/svg+xml' => false, 'image/png' => true, 'application/pdf' => true] as $mime => $inline) {
+            $file = ['storage_key' => 'tests-serve/x', 'mime_type' => $mime, 'original_filename' => 'x'];
+            $sent = $this->storage->stream($file, service('request'), service('response'));
+
+            $this->assertSame($inline, str_starts_with($sent->getHeaderLine('Content-Disposition'), 'inline'), $mime);
+        }
+
+        @unlink($this->storage->path('tests-serve/x'));
+        @rmdir($this->storage->root() . 'tests-serve');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Deleting

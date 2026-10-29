@@ -69,6 +69,9 @@ $bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-
 
 <?= $this->section('content') ?>
 
+<?php // From lg up the page fills the screen and only the people table scrolls, on its own. ?>
+<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:h-full lg:min-h-[28rem]" data-page-panel>
+
 <?= view('components/page-head', [
     'title'   => 'Users',
     'icon'    => 'user',
@@ -83,7 +86,7 @@ $bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<div class="mt-6 flex flex-col gap-4">
+<div class="mt-6 flex flex-col gap-4 lg:min-h-0 lg:flex-1">
 
     <?= view('components/toolbar', [
         'action'   => site_url('admin/users'),
@@ -115,6 +118,7 @@ $bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-
         'dir'        => $f->dir,
         'sortUrl'    => $sortUrl,
         'selectable' => true,
+        'fill'       => true,
         'bulk'       => $bulk,
         'nounOne'    => 'person',
         'nounMany'   => 'people',
@@ -124,6 +128,8 @@ $bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $f->page, 'pages' => $userPages, 'total' => $userTotal, 'baseUrl' => site_url('admin/users'), 'query' => $f->toQuery(['page' => null])], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

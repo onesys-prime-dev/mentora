@@ -63,6 +63,25 @@ final class SisMapper
     }
 
     /**
+     * @param array<string, string> $record a staff_assignments.csv record
+     *
+     * @return array{role: string, person_external_id: string, target: string, section: string}
+     *         `target` is the department code, sub-department code or course id the role's column names;
+     *         `section` only means something for an instructor (the default section when none is named).
+     */
+    public static function staffAssignment(array $record): array
+    {
+        $role = strtolower($record['role']);
+
+        return [
+            'role'               => $role,
+            'person_external_id' => $record['person_external_id'],
+            'target'             => $record[SisCsvParser::STAFF_TARGET_COLUMN[$role]],
+            'section'            => $role === 'instructor' && ($record['section'] ?? '') !== '' ? $record['section'] : self::DEFAULT_SECTION,
+        ];
+    }
+
+    /**
      * The fields of `$incoming` that differ from `$current`. A field the SIS
      * left empty (null) is not a change: the SIS only overrides what it says.
      *

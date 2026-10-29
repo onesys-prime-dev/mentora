@@ -10,6 +10,7 @@
  * @var array<string, mixed>       $offeringChoices      terms and programs for the filters
  * @var array<string, mixed>       $offeringOptions      courses and terms the add form can use
  * @var list<array<string, mixed>> $offeringInstructors  people who can be assigned
+ * @var array<int, true>             $offeringSisInstructors instructor assignments the SIS supplies (not editable here)
  * @var bool                       $offeringCanEdit
  */
 $base    = 'institution/offerings';
@@ -47,7 +48,9 @@ foreach ($offeringRows as $o) {
     foreach ($o['instructors'] as $i) {
         $chips .= '<span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1 text-xs" data-instructor="' . esc((string) $i['assignment_id']) . '">' . esc($i['name']);
 
-        if ($offeringCanEdit && $open) {
+        if (isset($offeringSisInstructors[(int) $i['assignment_id']])) {
+            $chips .= ' <span class="inline-flex items-center gap-1 text-[#646464]" data-sis-managed title="Managed by your student information system. Change it there; the next sync brings it here.">' . icon('lock', 'h-3 w-3') . 'From the SIS</span>';
+        } elseif ($offeringCanEdit && $open) {
             $chips .= ' <button type="button" class="rounded font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
                 . ' aria-label="Remove ' . esc($i['name']) . ' from ' . esc($o['course_code'] . ' ' . $o['section_code']) . '"'
                 . ' data-dialog-open="offering-confirm"'
@@ -127,14 +130,17 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Offerings',
         'icon'        => 'modules',
         'description' => 'A course taught in a term, in a section, and who teaches it.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
         'actions'     => $canAdd
             ? '<button type="button" class="' . $primary . '" data-dialog-open="offering-add" data-dialog-title="Add an offering" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add offering">Add an offering</button>'
             : '',
@@ -163,6 +169,7 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
     <?php endif; ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
@@ -198,6 +205,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $offeringPage, 'pages' => $offeringPages, 'total' => $offeringTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

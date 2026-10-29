@@ -66,7 +66,7 @@ class ActiveRoleService
 
     /**
      * The highest role held opens first (dean, then chairperson); otherwise
-     * their only or first group.
+     * their first group, a parent only when it is all they hold.
      *
      * @param list<string> $groups
      */
@@ -74,6 +74,13 @@ class ActiveRoleService
     {
         foreach (['dean', 'chairperson'] as $role) {
             if (in_array($role, $groups, true)) {
+                return $role;
+            }
+        }
+
+        // A parent is the lowest role: anything else held opens first.
+        foreach ($groups as $role) {
+            if ($role !== 'parent') {
                 return $role;
             }
         }

@@ -29,7 +29,8 @@ final class SisImporterRollbackTest extends DatabaseTestCase
 
     /** Touched by these tests; emptied with foreign keys off. */
     private const TABLES = [
-        'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'course_offerings', 'courses',
+        'sis_runs', 'sis_links', 'sis_staff_assignments', 'dean_assignments', 'chairperson_assignments', 'instructor_assignments',
+        'sis_connections', 'feature_flag_overrides', 'enrollments', 'course_offerings', 'courses',
         'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs', 'notifications',
     ];
@@ -93,6 +94,36 @@ final class SisImporterRollbackTest extends DatabaseTestCase
         }
 
         return $counts;
+    }
+
+    public function testAPreviewOfStaffAssignmentsWritesNothingAndItsCountsAreWhatTheRealRunThenDoes(): void
+    {
+        // People and courses go in first, for real, so the staff rows have someone and something to refer to.
+        (new SisImporter())->run($this->institution, $this->actor, true);
+        $this->assertTrue((new SisImporter())->run($this->institution, $this->actor, false)->ok);
+
+        $dept = (string) db_connect()->table('departments')->where('institution_id', $this->institution)->get()->getRow('code');
+        SisFixture::drop($this->institution, 'staff_assignments', "role,person_external_id,department_code,sub_department_code,course_external_id,section\n"
+            . "dean,I1,{$dept},,,\n"
+            . "instructor,I1,,,C1,A\n"
+            . "instructor,I1,,,C1,B\n");
+
+        $tables = ['dean_assignments', 'instructor_assignments', 'sis_staff_assignments', 'course_offerings', 'auth_groups_users'];
+        $count  = static fn (): array => array_combine($tables, array_map(static fn (string $t): int => db_connect()->table($t)->countAllResults(), $tables));
+
+        $before  = $count();
+        $preview = (new SisImporter())->run($this->institution, $this->actor, true);
+
+        $this->assertTrue($preview->ok);
+        $this->assertSame(['created' => 3, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'ended' => 0], $preview->datasets['staff_assignments']);
+        $this->assertSame($before, $count(), 'a preview must assign nothing, create no section, grant no role and track nothing');
+
+        $real = (new SisImporter())->run($this->institution, $this->actor, false);
+
+        $this->assertSame($preview->datasets['staff_assignments'], $real->datasets['staff_assignments'], 'what the preview said is what the run does');
+        $this->assertSame(1, db_connect()->table('dean_assignments')->where('status', 'active')->countAllResults());
+        $this->assertSame(2, db_connect()->table('instructor_assignments')->countAllResults());
+        $this->assertSame(3, db_connect()->table('sis_staff_assignments')->countAllResults());
     }
 
     public function testAPreviewWritesNothingAndItsCountsAreWhatTheRealRunThenDoes(): void

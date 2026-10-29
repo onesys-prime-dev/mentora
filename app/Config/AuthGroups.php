@@ -101,6 +101,7 @@ class AuthGroups extends ShieldAuthGroups
         'department.monitor'    => 'Monitor a whole department',
         'grades.approve'        => 'Approve final-grade overrides',
         'grades.signoff'        => 'Sign off term-end grades',
+        'children.view'         => 'View the courses and grades of the students linked to the account',
         'followups.manage'      => 'Manage department follow-ups',
         'department.announce'   => 'Publish department announcements',
 
@@ -149,7 +150,7 @@ class AuthGroups extends ShieldAuthGroups
         'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor'],
         'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage'],
         'student'             => ['courses.view'],
-        'parent'              => ['courses.view'],
+        'parent'              => ['children.view'],
     ];
 
     /** @var array<string, list<string>> */

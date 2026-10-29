@@ -101,6 +101,8 @@ foreach ($institutionRows as $row) {
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Institutions', 'icon' => 'hat', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/institutions/new') . '">Add an institution</a>'], ['saveData' => false]) ?>
 
 <?php if (session()->has('message')): ?>
@@ -113,6 +115,7 @@ foreach ($institutionRows as $row) {
 <div class="mt-6 flex flex-col gap-4">
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url('admin/institutions'),
         'filtered' => $f->isFiltered(),
         'fields'   => [
@@ -145,6 +148,8 @@ foreach ($institutionRows as $row) {
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $f->page, 'pages' => $institutionPages, 'total' => $institutionTotal, 'baseUrl' => site_url('admin/institutions'), 'query' => $f->toQuery(['page' => null])], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

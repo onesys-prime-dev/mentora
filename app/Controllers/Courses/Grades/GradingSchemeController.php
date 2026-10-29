@@ -3,6 +3,7 @@
 namespace App\Controllers\Courses\Grades;
 
 use App\Controllers\BaseController;
+use App\Services\Courses\Grades\GradeAudit;
 use App\Services\Courses\Grades\GradeOverrideRequestService;
 use App\Services\Courses\Grades\GradingSchemeService;
 
@@ -16,6 +17,28 @@ class GradingSchemeController extends BaseController
     public function __construct()
     {
         $this->schemeService = new GradingSchemeService();
+    }
+
+    /** @return array<string, mixed> */
+    private function payload(): array
+    {
+        return $this->request->getJSON(true) ?? [];
+    }
+
+    /**
+     * Sends a service result back, recording the change in the grade audit
+     * trail when it went through.
+     *
+     * @param array<string, mixed> $result
+     * @param array<string, mixed> $details what was changed
+     */
+    private function audited(string $action, int $offeringId, array $result, array $details = [])
+    {
+        if (!empty($result['success'])) {
+            GradeAudit::record($action, $offeringId, ['new' => $details]);
+        }
+
+        return $this->response->setJSON($result);
     }
 
     public function show(int $offeringId)
@@ -32,62 +55,81 @@ class GradingSchemeController extends BaseController
 
     public function update(int $offeringId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->updateScheme(auth()->user(), $offeringId, $this->request->getJSON(true) ?? [])
-        );
+        $data = $this->payload();
+
+        return $this->audited('grades.scheme_updated', $offeringId, $this->schemeService->updateScheme(auth()->user(), $offeringId, $data), $data);
     }
 
     public function storeCategory(int $offeringId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->createCategory($offeringId, $this->request->getJSON(true) ?? [])
-        );
+        $data = $this->payload();
+
+        return $this->audited('grades.category_created', $offeringId, $this->schemeService->createCategory($offeringId, $data), $data);
     }
 
     public function updateCategory(int $offeringId, int $categoryId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->updateCategory($offeringId, $categoryId, $this->request->getJSON(true) ?? [])
-        );
+        $data = $this->payload();
+
+        return $this->audited('grades.category_updated', $offeringId, $this->schemeService->updateCategory($offeringId, $categoryId, $data), ['category_id' => $categoryId] + $data);
     }
 
     public function deleteCategory(int $offeringId, int $categoryId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->deleteCategory($offeringId, $categoryId)
-        );
+        return $this->audited('grades.category_deleted', $offeringId, $this->schemeService->deleteCategory($offeringId, $categoryId), ['category_id' => $categoryId]);
     }
 
     public function storeItem(int $offeringId, int $categoryId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->createManualItem(auth()->user(), $offeringId, $categoryId, $this->request->getJSON(true) ?? [])
-        );
+        $data = $this->payload();
+
+        return $this->audited('grades.item_created', $offeringId, $this->schemeService->createManualItem(auth()->user(), $offeringId, $categoryId, $data), ['category_id' => $categoryId] + $data);
     }
 
     public function updateItem(int $offeringId, int $itemId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->updateItem(auth()->user(), $offeringId, $itemId, $this->request->getJSON(true) ?? [])
-        );
+        $data = $this->payload();
+
+        return $this->audited('grades.item_updated', $offeringId, $this->schemeService->updateItem(auth()->user(), $offeringId, $itemId, $data), ['item_id' => $itemId] + $data);
     }
 
     public function deleteItem(int $offeringId, int $itemId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->deleteItem(auth()->user(), $offeringId, $itemId)
-        );
+        return $this->audited('grades.item_deleted', $offeringId, $this->schemeService->deleteItem(auth()->user(), $offeringId, $itemId), ['item_id' => $itemId]);
+    }
+
+    public function restoreItem(int $offeringId, int $itemId)
+    {
+        return $this->response->setJSON($this->schemeService->restoreItem(auth()->user(), $offeringId, $itemId));
+    }
+
+    public function restoreCategory(int $offeringId, int $categoryId)
+    {
+        return $this->response->setJSON($this->schemeService->restoreCategory($offeringId, $categoryId));
+    }
+
+    public function reorderCategories(int $offeringId)
+    {
+        $data = $this->payload();
+
+        return $this->response->setJSON($this->schemeService->reorderCategories($offeringId, (array) ($data['ids'] ?? [])));
+    }
+
+    public function reorderItems(int $offeringId, int $categoryId)
+    {
+        $data = $this->payload();
+
+        return $this->response->setJSON($this->schemeService->reorderItems($offeringId, $categoryId, (array) ($data['ids'] ?? [])));
     }
 
     public function resyncItem(int $offeringId, int $itemId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->resyncItem(auth()->user(), $offeringId, $itemId)
-        );
+        return $this->audited('grades.item_resynced', $offeringId, $this->schemeService->resyncItem(auth()->user(), $offeringId, $itemId), ['item_id' => $itemId]);
     }
 
     public function recalculate(int $offeringId)
     {
+        // Recorded by the service, with how many students were recalculated.
         return $this->response->setJSON(
             $this->schemeService->recalculate($offeringId)
         );
@@ -101,23 +143,21 @@ class GradingSchemeController extends BaseController
 
     public function storePeriod(int $offeringId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->createPeriod($offeringId, $this->request->getJSON(true) ?? [])
-        );
+        $data = $this->payload();
+
+        return $this->audited('grades.period_created', $offeringId, $this->schemeService->createPeriod($offeringId, $data), $data);
     }
 
     public function updatePeriod(int $offeringId, int $periodId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->updatePeriod($offeringId, $periodId, $this->request->getJSON(true) ?? [])
-        );
+        $data = $this->payload();
+
+        return $this->audited('grades.period_updated', $offeringId, $this->schemeService->updatePeriod($offeringId, $periodId, $data), ['period_id' => $periodId] + $data);
     }
 
     public function deletePeriod(int $offeringId, int $periodId)
     {
-        return $this->response->setJSON(
-            $this->schemeService->deletePeriod($offeringId, $periodId)
-        );
+        return $this->audited('grades.period_deleted', $offeringId, $this->schemeService->deletePeriod($offeringId, $periodId), ['period_id' => $periodId]);
     }
 
     /**
@@ -143,25 +183,42 @@ class GradingSchemeController extends BaseController
 
     public function updateManualScore(int $offeringId, int $itemId, int $studentId)
     {
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->payload();
 
         $score = array_key_exists('score', $payload) && $payload['score'] !== null && $payload['score'] !== ''
             ? (float) $payload['score']
             : null;
 
+        // Recorded by the service, with the previous and the new score.
         return $this->response->setJSON(
-            $this->schemeService->updateManualScore(auth()->user(), $offeringId, $itemId, $studentId, $score)
+            $this->schemeService->updateManualScore(auth()->user(), $offeringId, $itemId, $studentId, $score, !empty($payload['excused']))
+        );
+    }
+
+    /** Marks a student's grade Incomplete (INC) or takes it off. */
+    public function setIncomplete(int $offeringId, int $studentId)
+    {
+        $payload = $this->payload();
+
+        $incomplete = !empty($payload['incomplete']);
+
+        $until = isset($payload['until']) && $payload['until'] !== '' ? (string) $payload['until'] : null;
+
+        // Recorded by the engine (grades.incomplete_set / grades.incomplete_cleared).
+        return $this->response->setJSON(
+            $this->schemeService->setIncomplete(auth()->user(), $offeringId, $studentId, $incomplete, (string) ($payload['reason'] ?? ''), $until)
         );
     }
 
     public function overrideGrade(int $offeringId, int $studentId)
     {
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->payload();
 
         $percentage = array_key_exists('percentage', $payload) && $payload['percentage'] !== null && $payload['percentage'] !== ''
             ? (float) $payload['percentage']
             : null;
 
+        // Recorded by the engine (audit entry and the per-student grade history).
         // Where the institution has deans an override is a request that climbs the chain and the
         // grade stays as calculated until it is approved; elsewhere it applies at once, as it always did.
         $requests = new GradeOverrideRequestService();

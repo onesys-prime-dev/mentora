@@ -163,6 +163,55 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         $this->assertStringContainsString('Start over', $body);
     }
 
+    /**
+     * A kept preview of a staff file that lists nobody, in an institution where a chairperson was assigned by an
+     * earlier upload of one: applying it would end that chairperson and nothing else. (A test transaction cannot be
+     * rolled back by a preview, so this only reads what the preview said; that a preview really writes nothing is
+     * proven in SisImporterRollbackTest.)
+     */
+    private function keepAFileThatEndsAChairperson(): string
+    {
+        $service = new CsvUploadService($this->base);
+        $db      = db_connect();
+
+        $people = "external_id,email,first_name,last_name\nI2,ian@example.com,Ian,Ong\n";
+        $header = "role,person_external_id,department_code,sub_department_code,course_external_id,section\n";
+        $sub    = (string) $db->table('sub_departments sd')->select('sd.code')->join('departments d', 'd.id = sd.department_id')->where('d.institution_id', $this->institution)->get()->getRow('code');
+
+        // First upload: the person, then the chairperson, applied for real.
+        $service->apply($this->institution, $service->preview($this->institution, ['instructors' => $people], $this->admin)['token'], $this->admin);
+        $ian = (int) $db->table('auth_identities')->where('secret', 'ian@example.com')->get()->getRow('user_id');
+        $db->table('auth_groups_users')->insert(['user_id' => $ian, 'group' => 'chairperson', 'created_at' => date('Y-m-d H:i:s')]);
+        $service->apply($this->institution, $service->preview($this->institution, ['staff_assignments' => $header . "chairperson,I2,,{$sub},,\n"], $this->admin)['token'], $this->admin);
+
+        $this->assertSame(1, $db->table('chairperson_assignments')->where('status', 'active')->countAllResults(), 'assigned by the first upload');
+
+        // Second upload: the same kind of file, now listing nobody.
+        return $service->preview($this->institution, ['staff_assignments' => $header], $this->admin)['token'];
+    }
+
+    public function testThePreviewSaysOnItsOwnWhatWouldBeEndedAndOffersToApplyIt(): void
+    {
+        $token = $this->keepAFileThatEndsAChairperson();
+
+        $body = html_entity_decode($this->step('GET', "institution/people/upload/{$token}")->response()->getBody());
+
+        $this->assertStringContainsString('Will be ended', $body, 'a card of its own: somebody losing a job is not an update');
+        $this->assertMatchesRegularExpression('/data-upload-file="staff_assignments".*?1 to end/s', $body);
+        $this->assertStringContainsString('0 to update', $body);
+        $this->assertStringContainsString('grid-cols-5', $body, 'five cards when there is something to end');
+        $this->assertMatchesRegularExpression('/Apply 1 changes?/', $body, 'ending is the only change, and it can still be applied');
+    }
+
+    public function testAPreviewThatEndsNothingShowsNoEndedCard(): void
+    {
+        $body = $this->step('GET', 'institution/people/upload/' . $this->keep())->response()->getBody();
+
+        $this->assertStringNotContainsString('Will be ended', $body);
+        $this->assertStringNotContainsString('to end', $body);
+        $this->assertStringContainsString('grid-cols-4', $body);
+    }
+
     public function testApplyingNeedsThePasswordThenImportsAndSaysWhatHappened(): void
     {
         $token = $this->keep();

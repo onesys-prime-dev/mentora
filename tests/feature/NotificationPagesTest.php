@@ -77,6 +77,41 @@ final class NotificationPagesTest extends RouteTestCase
         $this->assertStringNotContainsString('For somebody else', $body);
     }
 
+    public function testTheBellPanelFeedGivesSevenAtATimeOfOnlyMyNotifications(): void
+    {
+        $mine = $this->signIn('instructor', 'feed@example.com');
+        $other = (int) PeopleFactory::person('instructor', 'Else', 'One', 'else2@example.com', $this->acme)->id;
+
+        for ($i = 1; $i <= 9; $i++) {
+            $this->tell($mine, 'Mine ' . $i);
+        }
+
+        $this->tell($other, 'Somebody elses');
+
+        $first = json_decode($this->step('GET', 'notifications/feed')->response()->getBody(), true);
+
+        $this->assertSame(7, $first['count']);
+        $this->assertTrue($first['has_more']);
+        $this->assertStringContainsString('Mine 9', $first['html']);
+        $this->assertStringNotContainsString('Mine 2', $first['html']);
+        $this->assertStringNotContainsString('Somebody elses', $first['html']);
+
+        $second = json_decode($this->step('GET', 'notifications/feed?before=' . $first['next_before'])->response()->getBody(), true);
+
+        $this->assertSame(2, $second['count']);
+        $this->assertFalse($second['has_more']);
+        $this->assertStringContainsString('Mine 1', $second['html']);
+        $this->assertStringNotContainsString('Mine 9', $second['html']);
+    }
+
+    public function testTheFeedIsForSignedInPeopleOnly(): void
+    {
+        auth()->logout();
+        $this->withSession([]);
+
+        $this->assertStringContainsString('login', $this->step('GET', 'notifications/feed')->response()->getHeaderLine('Location'));
+    }
+
     public function testEveryRoleCanOpenTheList(): void
     {
         foreach (['student', 'instructor', 'chairperson', 'institutional_admin', 'parent', 'admin'] as $role) {

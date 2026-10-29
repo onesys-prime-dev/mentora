@@ -17,6 +17,8 @@ $later   = 'rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <div class="mx-auto max-w-3xl">
     <?= view('components/page-head', ['title' => 'Onboard ' . $onbInstitution['name'], 'icon' => 'hat', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
     <p class="mt-1 text-sm text-[#646464]"><span class="font-mono text-xs"><?= esc($onbInstitution['code']) ?></span> &middot; pending: nothing here can be used until onboarding is finished.</p>
@@ -57,6 +59,8 @@ $later   = 'rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-
             </div>
         </form>
     </div>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

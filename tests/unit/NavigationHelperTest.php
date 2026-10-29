@@ -23,12 +23,30 @@ final class NavigationHelperTest extends CIUnitTestCase
         $student = global_apps('student');
         $instructor = global_apps('instructor');
 
-        $this->assertSame(array_column($student, 'key'), array_column($instructor, 'key'));
-        $this->assertSame(['courses', 'calendar', 'schedule', 'grades', 'announcements', 'inbox', 'monitor-program'], array_column($student, 'key'));
+        // The instructor has the student's apps, and the Requests a dean or chairperson sent them.
+        $this->assertSame([...array_column($student, 'key'), 'follow-ups'], array_column($instructor, 'key'));
+        $this->assertSame(['courses', 'calendar', 'schedule', 'grades', 'announcements', 'inbox'], array_column($student, 'key'));
 
         $this->assertSame(site_url('student/courses'), $student[0]['url']);
         $this->assertSame(site_url('instructor/calendar'), $instructor[1]['url']);
         $this->assertSame(site_url('instructor/schedule'), $instructor[2]['url']);
+    }
+
+    public function testFollowUpsAreLinkedForTheDeanTheChairpersonAndTheInstructorOnly(): void
+    {
+        foreach (['dean', 'chairperson', 'instructor'] as $role) {
+            $this->assertSame(site_url($role . '/follow-ups'), array_column(global_apps($role), 'url', 'key')['follow-ups'], $role);
+        }
+
+        $this->assertArrayNotHasKey('follow-ups', array_column(global_apps('student'), 'url', 'key'));
+        $this->assertSame('Requests', array_column(global_apps('instructor'), 'label', 'key')['follow-ups']);
+    }
+
+    public function testAnnouncementsLeadToTheOneListForTheRolesThatHaveIt(): void
+    {
+        foreach (['student', 'instructor', 'chairperson', 'dean'] as $role) {
+            $this->assertSame(site_url($role . '/announcements'), array_column(global_apps($role), 'url', 'key')['announcements'], $role);
+        }
     }
 
     public function testPagesThatAreNotBuiltYetHaveNoUrl(): void
@@ -36,15 +54,35 @@ final class NavigationHelperTest extends CIUnitTestCase
         $apps = array_column(global_apps('student'), 'url', 'key');
 
         $this->assertNull($apps['grades']);
-        $this->assertNull($apps['announcements']);
         $this->assertNull($apps['inbox']);
-        $this->assertNull($apps['monitor-program'], 'chairperson-only outside the chairperson role');
         $this->assertNotNull($apps['courses']);
+    }
+
+    public function testAParentOnlyGetsTilesThatLeadSomewhere(): void
+    {
+        $apps = global_apps('parent');
+
+        $this->assertSame(['dashboard', 'calendar', 'notifications', 'profile'], array_column($apps, 'key'));
+        $this->assertSame(site_url('parent/dashboard'), $apps[0]['url']);
+        $this->assertSame(site_url('parent/calendar'), $apps[1]['url']);
+        $this->assertSame(site_url('notifications'), $apps[2]['url']);
+        $this->assertSame(site_url('parent/profile'), $apps[3]['url']);
+
+        $collection = \Config\Services::routes(false);
+        $collection->loadRoutes();
+
+        foreach ($apps as $app) {
+            $path = trim(str_replace(rtrim(site_url(), '/'), '', $app['url']), '/');
+
+            $this->assertArrayHasKey($path, $collection->getRoutes('GET'), $app['key']);
+        }
     }
 
     public function testMonitorProgramIsOnlyLinkedForAChairperson(): void
     {
-        $this->assertNull(array_column(global_apps('instructor'), 'url', 'key')['monitor-program']);
+        foreach (['student', 'instructor'] as $role) {
+            $this->assertArrayNotHasKey('monitor-program', array_column(global_apps($role), 'url', 'key'), $role . ' has no Monitor Program tile');
+        }
 
         $url = array_column(global_apps('chairperson'), 'url', 'key')['monitor-program'];
 

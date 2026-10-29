@@ -36,9 +36,11 @@ class GradeItemModel extends Model
      * Active items of a scheme, each with its assessment's live total_points
      * (current_points) and type, so callers can spot out-of-sync snapshots.
      */
-    public function listForScheme(int $schemeId): array
+    public function listForScheme(int $schemeId, bool $countedOnly = false): array
     {
-        return $this->builder()
+        $builder = $this->builder();
+
+        $builder
             ->select([
                 'grade_items.*',
                 // Live title, so renaming the quiz renames its gradebook item.
@@ -50,7 +52,18 @@ class GradeItemModel extends Model
             ->join('assessments a', 'a.id = grade_items.assessment_id', 'left')
             ->join('assessment_types at', 'at.id = a.assessment_type_id', 'left')
             ->where('grade_items.grading_scheme_id', $schemeId)
-            ->where('grade_items.status', 'Active')
+            ->where('grade_items.status', 'Active');
+
+        // What the calculation counts: manual items, and assessments students
+        // can actually see (a Draft or Archived one is not part of the grade).
+        if ($countedOnly) {
+            $builder->groupStart()
+                ->where('grade_items.assessment_id IS NULL', null, false)
+                ->orWhereIn('a.status', ['Published', 'Closed'])
+                ->groupEnd();
+        }
+
+        return $builder
             ->orderBy('grade_items.sort_order', 'ASC')
             ->orderBy('grade_items.id', 'ASC')
             ->get()

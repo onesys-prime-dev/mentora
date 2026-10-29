@@ -68,6 +68,64 @@ class MonitorDepartmentService
     }
 
     /**
+     * What each instructor of the department did in the filtered scope: sections, content updates,
+     * announcements and grading turnaround (weighted by work graded). An instructor teaching in
+     * two departments only counts the sections of the dean's own. Sections without an instructor
+     * are left out; most active first, then by name so the order is stable.
+     *
+     * @return list<array{instructor_id: int, name: string, sections: int, content_updates: int, announcements: int, graded_count: int, avg_grading_turnaround_hours: ?float}>
+     */
+    public function instructorActivity(User $user, MonitorDepartmentFilters $filters): array
+    {
+        $offeringRows = $this->monitor->offeringRowsForPrograms($this->programIds($user, $filters), $filters->base);
+        $activity     = $this->monitor->instructorActivity(
+            array_map(static fn (array $row): int => (int) $row['offering_id'], $offeringRows),
+            $filters->base
+        );
+
+        $byInstructor = [];
+
+        foreach ($offeringRows as $row) {
+            if (empty($row['instructor_id'])) {
+                continue;
+            }
+
+            $id = (int) $row['instructor_id'];
+            $a  = $activity[(int) $row['offering_id']] ?? null;
+
+            $byInstructor[$id] ??= [
+                'instructor_id' => $id, 'name' => trim((string) ($row['instructor_name'] ?? '')) ?: 'Unnamed instructor',
+                'sections' => 0, 'content_updates' => 0, 'announcements' => 0, 'graded_count' => 0, 'turnaround_sum' => 0.0,
+            ];
+
+            $byInstructor[$id]['sections']++;
+            $byInstructor[$id]['content_updates'] += $a['content_updates'] ?? 0;
+            $byInstructor[$id]['announcements']   += $a['announcements'] ?? 0;
+
+            if ($a !== null && $a['avg_grading_turnaround_hours'] !== null && $a['graded_count'] > 0) {
+                $byInstructor[$id]['graded_count']    += $a['graded_count'];
+                $byInstructor[$id]['turnaround_sum']  += $a['avg_grading_turnaround_hours'] * $a['graded_count'];
+            }
+        }
+
+        $rows = array_map(static function (array $i): array {
+            $sum = $i['turnaround_sum'];
+            unset($i['turnaround_sum']);
+
+            return $i + ['avg_grading_turnaround_hours' => $i['graded_count'] === 0 ? null : round($sum / $i['graded_count'], 1)];
+        }, array_values($byInstructor));
+
+        usort($rows, static function (array $a, array $b): int {
+            $left  = $a['content_updates'] + $a['announcements'] + $a['graded_count'];
+            $right = $b['content_updates'] + $b['announcements'] + $b['graded_count'];
+
+            return $right <=> $left ?: strcasecmp($a['name'], $b['name']);
+        });
+
+        return $rows;
+    }
+
+    /**
      * The terms the department's courses run in, for the term filter.
      *
      * @return list<array<string, mixed>>
@@ -186,7 +244,7 @@ class MonitorDepartmentService
             $rows[] = ['id' => (int) $definition['id'], 'name' => (string) $definition['name'], 'context' => $definition['context'] ?? null] + $this->metrics($members, $facts);
         }
 
-        return $this->sorted($rows, $filters->sort, $filters->dir);
+        return RowSort::by($rows, $filters->sort, $filters->dir);
     }
 
     /**
@@ -264,37 +322,6 @@ class MonitorDepartmentService
             'at_risk'          => $atRisk,
             'last_activity'    => $last,
         ];
-    }
-
-    /**
-     * Sorted by a column; a missing value (no data yet) always sorts last whatever the direction,
-     * and equal values keep name order, so the order never jumps between reloads.
-     *
-     * @param list<array<string, mixed>> $rows
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function sorted(array $rows, string $sort, string $dir): array
-    {
-        usort($rows, static function (array $a, array $b) use ($sort, $dir): int {
-            $left  = $a[$sort] ?? null;
-            $right = $b[$sort] ?? null;
-
-            if ($left === null && $right !== null) {
-                return 1;
-            }
-
-            if ($right === null && $left !== null) {
-                return -1;
-            }
-
-            $result = $left === $right ? 0 : ($left <=> $right);
-            $result = $dir === 'desc' ? -$result : $result;
-
-            return $result !== 0 ? $result : strcasecmp((string) $a['name'], (string) $b['name']);
-        });
-
-        return $rows;
     }
 
     /**

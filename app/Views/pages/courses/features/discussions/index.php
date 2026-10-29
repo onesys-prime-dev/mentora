@@ -8,7 +8,10 @@ $searching = $filters['search'] !== '' || $filters['filter'] !== 'all';
 <div class="flex flex-col gap-6 p-10" data-discussions-page>
 
     <?php
-    ob_start(); ?>
+    ob_start();
+
+    // Someone who only looks (the dean, the institution's administrator) cannot start a discussion, so is not offered one.
+    if (! \App\Services\Courses\CourseViewer::isReadOnlyViewer(auth()->user())): ?>
         <button
             type="button"
             data-composer-open
@@ -16,6 +19,7 @@ $searching = $filters['search'] !== '' || $filters['filter'] !== 'all';
             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
             New discussion
         </button>
+    <?php endif; ?>
     <?php $headerActions = ob_get_clean(); ?>
 
     <?= view('components/page-header', [

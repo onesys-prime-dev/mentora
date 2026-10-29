@@ -148,6 +148,7 @@ class GradeService
                     ? array_sum($percentages) / count($percentages)
                     : null,
                 'passing_count'  => $passingCount,
+                'graded_students' => count($percentages),
                 'total_students' => $totalStudents,
                 'needs_review'   => $needsReview,
             ],
@@ -230,13 +231,53 @@ class GradeService
                 'points_earned' => $breakdown['points_earned'] ?? 0,
                 'points_possible' => $breakdown['points_possible'] ?? 0,
                 'remarks' => $isPublished ? ($record['remarks'] ?? 'Incomplete') : 'Incomplete',
+                'is_final' => $isPublished && !empty($record['finalized_at']),
+                'is_adjusted' => $isPublished && $context !== null && ($context['adjustments']['items'] !== [] || !empty($context['adjustments']['final'])),
+                'tag' => $isPublished
+                    ? \App\Services\Courses\Grades\GradingEngineService::displayTag($record['remarks'] ?? 'Incomplete', !empty($record['finalized_at']))
+                    : 'Incomplete',
+                'inc_reason' => $isPublished ? ($record['inc_reason'] ?? null) : null,
+                'inc_until' => $isPublished ? ($record['inc_until'] ?? null) : null,
                 'graded_count' => count($graded),
                 'total_count' => count($assessments),
                 'is_override' => $isPublished && !empty($record['is_override']),
                 'passing_percentage' => (float) $scheme['passing_percentage'],
             ],
+            'manualItems' => $isPublished && $context ? $this->manualItemsFor($context, (int) $user->id) : [],
             'categoryBreakdown' => $isPublished ? ($breakdown['categories'] ?? []) : [],
             'periodBreakdown' => $isPublished ? ($breakdown['periods'] ?? []) : [],
         ];
+    }
+    /**
+     * The student's scores on the items the instructor enters by hand, for
+     * the categories that count toward the grade.
+     *
+     * @return list<array{name: string, category: string, score: ?float, max: float, excused: bool}>
+     */
+    private function manualItemsFor(array $context, int $studentId): array
+    {
+        $categories = array_column($context['categories'], 'name', 'id');
+
+        $rows = [];
+
+        foreach ($context['items'] as $item) {
+
+            if (!empty($item['assessment_id']) || !isset($categories[(int) $item['category_id']])) {
+                continue;
+            }
+
+            $cell = $context['scores'][(int) $item['id']][$studentId] ?? null;
+
+            $rows[] = [
+                'name' => (string) $item['name'],
+                'category' => (string) $categories[(int) $item['category_id']],
+                'score' => $cell && $cell['raw_score'] !== null ? (float) $cell['raw_score'] : null,
+                'max' => (float) $item['max_points'],
+                'excused' => !empty($cell['is_missing']),
+            ];
+
+        }
+
+        return $rows;
     }
 }

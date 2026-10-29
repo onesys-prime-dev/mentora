@@ -277,6 +277,16 @@ final class AssignmentSubmissionServiceTest extends DatabaseTestCase
         $this->assertSame([1, 2], array_map('intval', array_column($this->submissions($twice), 'attempt_number')));
     }
 
+    public function testTwoSubmitsWithTheSameAttemptNumberCannotBothBeSaved(): void
+    {
+        $this->submit(['submission_text' => 'One']);
+        $row = $this->submissions()[0];
+        unset($row['id']);
+
+        $this->assertFalse(db_connect()->table('assessment_submissions')->insert($row));
+        $this->assertSame(1062, db_connect()->error()['code']);
+    }
+
     public function testASingleSubmissionAssignmentSaysSoWhenYouTryAgain(): void
     {
         $this->submit(['submission_text' => 'One']);

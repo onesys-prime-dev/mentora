@@ -43,11 +43,21 @@ class GradeItemSyncService
     {
         $assessment = $this->assessmentModel->find($assessmentId);
 
-        if (!$assessment || !in_array($assessment['status'], self::COUNTED_STATUSES, true)) {
+        if (!$assessment) {
+            return;
+        }
+
+        // Moved out of Published/Closed (Draft, Archived): it stops counting.
+        if (!in_array($assessment['status'], self::COUNTED_STATUSES, true)) {
+            $this->assessmentStatusChanged($assessmentId);
+
             return;
         }
 
         if ($this->itemModel->findForAssessment($assessmentId)) {
+            // Published again: it counts again.
+            $this->assessmentStatusChanged($assessmentId);
+
             return;
         }
 
@@ -107,6 +117,34 @@ class GradeItemSyncService
             $scores->syncAssessmentScores((int) $assessment['id']);
 
         }
+    }
+
+    /**
+     * An assessment was published, unpublished or archived. The engine counts
+     * only Published/Closed assessments, so the offering's grades are brought
+     * up to date now (a live scheme) or flagged for the next recalculation.
+     */
+    public function assessmentStatusChanged(int $assessmentId): void
+    {
+        $item = $this->itemModel->findForAssessment($assessmentId);
+
+        if (!$item || $item['status'] !== 'Active') {
+            return;
+        }
+
+        $scheme = $this->schemeModel->find((int) $item['grading_scheme_id']);
+
+        if (!$scheme || empty($scheme['course_offering_id'])) {
+            return;
+        }
+
+        if ($scheme['status'] === 'Published') {
+            (new GradingEngineService())->recalculateOffering((int) $scheme['course_offering_id']);
+
+            return;
+        }
+
+        $this->schemeModel->markNeedsRecalculation((int) $scheme['id']);
     }
 
     /**

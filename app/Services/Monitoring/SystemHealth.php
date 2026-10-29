@@ -6,6 +6,7 @@ namespace App\Services\Monitoring;
 
 use App\Services\AI\AiJobService;
 use App\Services\AI\LocalQuestionBuilderClient;
+use App\Services\Courses\Assessments\AiJobGeneration;
 use Closure;
 use DateTimeImmutable;
 use Throwable;
@@ -194,17 +195,35 @@ class SystemHealth
     /** @return array{status: string, detail: string} */
     private function ai(): array
     {
-        // A worker that is reporting is the answer; until one does, the
-        // original HTTP service is what the app still talks to.
-        $jobs     = new AiJobService();
-        $lastSeen = $jobs->lastWorkerSeen();
+        $lastSeen = (new AiJobService())->lastWorkerSeen();
         $now      = (new DateTimeImmutable())->getTimestamp();
 
-        if ($lastSeen !== null && ($now - $lastSeen) <= AiJobService::WORKER_STALE_SECONDS) {
+        return self::aiStatus(
+            AiJobGeneration::enabled(),
+            $lastSeen,
+            $now,
+            static fn (): bool => (new LocalQuestionBuilderClient())->isAvailable(),
+        );
+    }
+
+    /**
+     * With background jobs on, only the worker's heartbeat counts: the
+     * original HTTP service is not what generation talks to, so its silence
+     * must not read as "up" and its absence must not hide a stopped worker.
+     * With jobs off, a worker that is reporting is still the answer, and
+     * otherwise the original service is.
+     *
+     * @param callable(): bool $serviceAnswers only called when it can matter
+     *
+     * @return array{status: string, detail: string}
+     */
+    public static function aiStatus(bool $useJobs, ?int $lastSeen, int $now, callable $serviceAnswers): array
+    {
+        if ($useJobs || ($lastSeen !== null && ($now - $lastSeen) <= AiJobService::WORKER_STALE_SECONDS)) {
             return AiJobService::workerStatus($lastSeen, $now);
         }
 
-        return (new LocalQuestionBuilderClient())->isAvailable()
+        return $serviceAnswers()
             ? ['status' => self::UP, 'detail' => 'The service answers.']
             : ['status' => self::DEGRADED, 'detail' => 'The service does not answer; question generation is unavailable.'];
     }

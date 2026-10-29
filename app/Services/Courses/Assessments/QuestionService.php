@@ -83,6 +83,8 @@ class QuestionService
 
         $this->questionModel->recalculateAssessmentTotal($assessmentId);
 
+        (new AssessmentRescoreService())->afterQuestionsChanged($assessmentId);
+
         return [
             'success' => true,
             'message' => 'Question added successfully.',
@@ -123,6 +125,8 @@ class QuestionService
         // The answer key, points or type may have changed: answers already
         // handed in are marked against the key as it is now.
         $this->regradeAnswers($questionId, (int) $question['assessment_id']);
+
+        (new AssessmentRescoreService())->afterQuestionsChanged((int) $question['assessment_id']);
 
         return [
             'success' => true,
@@ -255,6 +259,8 @@ class QuestionService
 
         $this->questionModel->recalculateAssessmentTotal($assessmentId);
 
+        (new AssessmentRescoreService())->afterQuestionsChanged($assessmentId);
+
         return [
             'success' => true,
             'message' => 'Question duplicated successfully.',
@@ -304,6 +310,8 @@ class QuestionService
 
         $this->questionModel->recalculateAssessmentTotal($assessmentId);
 
+        (new AssessmentRescoreService())->afterQuestionsChanged($assessmentId);
+
         return [
             'success' => true,
             'message' => 'Question deleted successfully.',
@@ -329,6 +337,8 @@ class QuestionService
             ->delete();
 
         $this->questionModel->recalculateAssessmentTotal($assessmentId);
+
+        (new AssessmentRescoreService())->afterQuestionsChanged($assessmentId);
 
         return [
             'success' => true,

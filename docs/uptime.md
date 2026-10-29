@@ -1,24 +1,29 @@
 # Uptime check (runbook)
 
 A scheduled GitHub Actions workflow, `.github/workflows/uptime.yml`, checks the
-staging site once an hour. It runs the same smoke test as the end of every
-deploy (`.github/scripts/smoke-test.php`, 11 checks) and tells you when staging
-is down or broken, without anyone having to look.
+staging site and the production site once an hour. It runs the same smoke test
+as the end of every deploy (`.github/scripts/smoke-test.php`, 11 checks) against
+each, and tells you when either is down or broken, without anyone having to look.
+The two are checked independently (two jobs of one run), so one being down never
+hides the other.
 
 ## How it works
 
 1. Every hour (at minute 17 UTC) GitHub starts the workflow.
-2. It runs the smoke test against `https://mentora.srv1404227.hstgr.cloud`:
-   `/health`, the login page, the built CSS and JS, and that anonymous visitors
-   are sent to login.
+2. It runs the smoke test against `https://mentora.staging.srv1404227.hstgr.cloud`
+   and `https://mentora.onesyssolutions.com`: `/health`, the login page, the built
+   CSS and JS, and that anonymous visitors are sent to login. Production's
+   certificate is verified; staging's self-signed one is not (see "Settings").
 3. A failed check is retried twice, 30 seconds apart, so one network blip does
    not raise an alert. Three failures in a row mean the site is really in trouble.
-4. Then it **opens a GitHub issue** titled "Staging is down or broken", labelled
-   `uptime` and assigned to `waway647`, with a link to the failed run. GitHub
-   emails the assignee. The failed run also emails whoever last edited the
-   schedule.
-5. While it keeps failing, each hourly run adds a comment to the same issue (no
-   duplicates). When a run passes, the issue **closes itself** with a comment.
+4. Then it **opens a GitHub issue** for that site, titled "Staging is down or
+   broken" or "Production is down or broken", labelled `uptime` and
+   `uptime-staging` / `uptime-production`, assigned to `waway647`, with a link to
+   the failed run. GitHub emails the assignee. The failed run also emails whoever
+   last edited the schedule.
+5. While a site keeps failing, each hourly run adds a comment to its issue (no
+   duplicates, and one issue per site). When that site passes, its issue
+   **closes itself** with a comment. Production being down is the urgent one.
 
 You can also start it by hand: Actions tab, "Uptime check", "Run workflow".
 
@@ -48,17 +53,21 @@ itself afterwards; or disable the workflow while you work (Actions tab,
 
 ## Cost (read before making it more frequent)
 
-On a private repository, every run is billed at least one Actions minute, and
-the free plan includes 2,000 minutes a month, shared with CI and Deploy. At the
-current hourly schedule this check uses about **720 minutes a month** (24 runs
-a day times 30 days, about a minute each; a failing run takes about 3 minutes).
+On a private repository, every job is billed at least one Actions minute, and
+the free plan includes 2,000 minutes a month, shared with CI and Deploy. Each
+run now has two jobs (staging and production), so at the hourly schedule this
+check uses about **1,440 minutes a month** (24 runs a day times 30 days times
+two sites, about a minute each; a failing job takes about 3 minutes).
 
-| Schedule | Minutes a month | Share of the free 2,000 |
+| Schedule | Minutes a month (both sites) | Share of the free 2,000 |
 |---|---|---|
-| Every 2 hours | about 360 | 18% |
-| **Hourly (now)** | **about 720** | **36%** |
-| Every 30 minutes | about 1,440 | 72%, too much next to CI |
-| Every 15 minutes | about 2,880 | over the whole allowance |
+| Every 4 hours | about 360 | 18% |
+| Every 2 hours | about 720 | 36% |
+| **Hourly (now)** | **about 1,440** | **72%, heavy next to CI** |
+| Every 30 minutes | about 2,880 | over the whole allowance |
+
+If the allowance is tight, check production hourly and staging less often, or
+move to an external uptime service for production (see below).
 
 Check what the repository really uses under Settings, Billing and plans,
 Usage. To change the schedule edit the `cron:` line in `uptime.yml`; GitHub's
@@ -90,8 +99,10 @@ the backup.
   "Actions" notifications and issue emails are on.
 - **Issues must be enabled** for the repository, because that is how the alert
   is delivered.
-- **Certificate:** staging uses a self-signed certificate, so the check runs with
-  `--insecure`. Remove that flag in `uptime.yml` (and the matching ones in
-  `deploy.yml`) once the site has a real certificate.
-- **Production:** when it exists, copy the job in `uptime.yml` with the
-  production URL and a different issue title and label.
+- **Certificate:** staging uses a self-signed certificate, so its entry in the
+  `matrix` of `uptime.yml` has `insecure: true`. Set it to `false` once staging has
+  a real certificate (and `TLS_INSECURE` in the staging environment, see
+  `docs/github-environments.md`). Production is always verified.
+- **Addresses:** the two sites' URLs are in the `matrix` at the top of the job in
+  `uptime.yml`. Change them there if a site moves; keep them equal to each
+  environment's `SITE_URL` in GitHub.
