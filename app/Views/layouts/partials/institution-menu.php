@@ -15,7 +15,8 @@ $apps = [];
 
 foreach (global_apps('institutional_admin') as $app) {
     if ($app['url'] !== null) {
-        $apps[$app['key']] = $app;
+        // Home is the house here, as in the system administrator's menu; the Apps grid stays Quick Access's.
+        $apps[$app['key']] = $app['key'] === 'dashboard' ? ['icon' => 'home'] + $app : $app;
     }
 }
 
