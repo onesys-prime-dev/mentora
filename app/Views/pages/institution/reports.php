@@ -131,6 +131,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
 
     <?= view('components/toolbar', [
         'surface'  => 'tinted', // on the page's white panel a white card would not stand out
+        'inline'   => true,
         'action'   => $here,
         'filtered' => $filtered,
         'fields'   => [

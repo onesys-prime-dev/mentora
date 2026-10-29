@@ -18,6 +18,9 @@
 | A field may carry 'attrs' (name => value, values escaped here), for a script that
 | works on the control, such as a dependent select.
 |
+| inline (bool): from lg up, lay the fields and the Apply button out in one row
+| instead of four columns, for a bar with five or so short fields.
+|
 | Filters travel in the address (GET), so a filtered view can be bookmarked or
 | shared, and every sort and paging link keeps them.
 |--------------------------------------------------------------------------
@@ -26,12 +29,15 @@
 $filtered = $filtered ?? false;
 $clearUrl = $clearUrl ?? $action;
 $hidden   = $hidden ?? [];
+$inline   = $inline ?? false;
+$columns  = $inline ? 'lg:[grid-template-columns:var(--toolbar-cols)]' : 'lg:grid-cols-4';
+$span     = $inline ? 'lg:col-span-1' : 'lg:col-span-4';
 $surface  = ($surface ?? 'raised') === 'tinted' ? 'border border-brand/20 bg-brand-tint' : 'bg-white shadow-sm';
 
 $input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 ?>
 
-<form method="get" action="<?= esc($action) ?>" role="search" class="grid gap-3 rounded-2xl <?= $surface ?> p-4 sm:grid-cols-2 lg:grid-cols-4" data-toolbar>
+<form method="get" action="<?= esc($action) ?>" role="search" class="grid gap-3 rounded-2xl <?= $surface ?> p-4 sm:grid-cols-2 <?= $columns ?>"<?= $inline ? ' style="--toolbar-cols: repeat(' . count($fields) . ', minmax(0, 1fr)) auto"' : '' ?> data-toolbar>
 
     <?php foreach ($hidden as $hiddenName => $hiddenValue): ?>
         <input type="hidden" name="<?= esc((string) $hiddenName) ?>" value="<?= esc((string) $hiddenValue) ?>">
@@ -54,7 +60,7 @@ $input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm fo
         </label>
     <?php endforeach; ?>
 
-    <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-4">
+    <div class="flex items-end gap-2 sm:col-span-2 <?= $span ?>">
         <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Apply</button>
         <?php if ($filtered): ?>
             <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= esc($clearUrl) ?>">Clear</a>
