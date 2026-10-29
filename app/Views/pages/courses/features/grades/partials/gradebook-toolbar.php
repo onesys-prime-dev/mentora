@@ -53,9 +53,14 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
             <?php endif; ?>
 
             <?php if ($finalization !== null && ($gradebook['signoff'] ?? null) !== null): ?>
+                <?php
+                // Who signed off: the dean, or an administrator where the department has none (QA AMB-ASG-04).
+                $signerRole = (int) ($gradebook['signoff']['signed_by_dean'] ?? 1) === 1 ? 'the dean' : 'the administrator';
+                $signerName = trim((string) ($gradebook['signoff']['signed_by_name'] ?? ''));
+                ?>
                 <span class="inline-flex items-center gap-2 rounded-xl border border-[#2B7549]/30 bg-[#E8F5EC] px-4 py-2 text-sm font-semibold text-[#1F5A38]" data-signed-off-tag>
                     <?= icon('check', 'h-4 w-4 text-current') ?>
-                    Signed off by the dean
+                    Signed off by <?= esc($signerRole . ($signerName !== '' ? ', ' . $signerName : '')) ?>
                 </span>
             <?php elseif ($finalization !== null && ! $viewOnly): ?>
                 <button
@@ -161,9 +166,10 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
                 <?php $signoff = $gradebook['signoff'] ?? null; ?>
                 <?php if ($signoff !== null): ?>
                     <span data-signoff-note>
-                        Signed off by <?= esc(trim((string) ($signoff['signed_by_name'] ?? '')) !== '' ? $signoff['signed_by_name'] : 'the dean') ?>
+                        <?php $byDean = (int) ($signoff['signed_by_dean'] ?? 1) === 1; ?>
+                        Signed off by <?= esc(trim((string) ($signoff['signed_by_name'] ?? '')) !== '' ? $signoff['signed_by_name'] : ($byDean ? 'the dean' : 'an administrator')) ?>
                         on <?= esc(date('M j, Y', strtotime((string) $signoff['signed_at']))) ?>.
-                        Scores, the grading scheme and imports are locked, and only the dean can reopen the grades.
+                        Scores, the grading scheme and imports are locked, and only <?= $byDean ? 'the dean' : 'an administrator' ?> can reopen the grades.
                     </span>
                 <?php else: ?>
                     Scores, the grading scheme and imports are locked until you reopen them.

@@ -96,6 +96,26 @@ final class InstitutionSignoffPageTest extends RouteTestCase
         $this->assertSame(1, db_connect()->table('grade_signoffs')->where('offering_id', $this->offering)->countAllResults());
     }
 
+    /** The instructor reads who signed off; it is not "the dean" when an administrator did (QA AMB-ASG-04). */
+    public function testTheInstructorReadsThatTheAdministratorSignedOff(): void
+    {
+        $teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
+        CourseFactory::assignInstructor($this->offering, $teacher);
+        $this->assertTrue((new \App\Services\Courses\Grades\GradeSignoffService())->signOff($this->admin, $this->offering)['success']);
+
+        $this->loggedInAs($teacher);
+        $html = html_entity_decode((string) (json_decode((string) $this->withHeaders(['Accept' => 'application/json'])->call('get', "instructor/api/courses/{$this->offering}/grades")->getJSON(), true)['html'] ?? ''));
+
+        $this->assertStringContainsString('data-signed-off-tag', $html);
+        $this->assertStringContainsString('Signed off by the administrator, Ada Admin', $html);
+        $this->assertStringContainsString('only an administrator can reopen the grades', $html);
+        $this->assertStringNotContainsString('the dean', $html);
+
+        $refusal = (new \App\Services\Courses\Grades\GradeFinalizationService())->reopen($teacher, $this->offering, 'A late regrade');
+        $this->assertFalse($refusal['success']);
+        $this->assertStringNotContainsString('dean', $refusal['message']);
+    }
+
     public function testTheAdministratorsOwnSectionSaysAnotherSignsItOff(): void
     {
         $this->admin->addGroup('instructor');

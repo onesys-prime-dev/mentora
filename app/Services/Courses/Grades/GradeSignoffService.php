@@ -42,11 +42,21 @@ class GradeSignoffService
         return (new GradeOverrideRequestService())->appliesTo($offeringId);
     }
 
-    /** @return array<string, mixed>|null the current sign-off with who signed, or null */
+    /**
+     * @return array<string, mixed>|null the current sign-off with who signed, or null. `signed_by_dean` is 1 when the
+     *                                   signer is (or was) a dean of the section's department, else an administrator
+     *                                   signed it off (QA AMB-ASG-04).
+     */
     public function current(int $offeringId): ?array
     {
         $row = db_connect()->table('grade_signoffs s')
             ->select("s.*, CONCAT_WS(' ', up.first_name, up.last_name) AS signed_by_name", false)
+            ->select('EXISTS (SELECT 1 FROM dean_assignments da'
+                . ' JOIN sub_departments sd ON sd.department_id = da.department_id'
+                . ' JOIN programs p ON p.sub_department_id = sd.id'
+                . ' JOIN courses c ON c.program_id = p.id'
+                . ' JOIN course_offerings co ON co.course_id = c.id'
+                . ' WHERE co.id = s.offering_id AND da.dean_user_id = s.signed_by) AS signed_by_dean', false)
             ->join('user_profiles up', 'up.user_id = s.signed_by', 'left')
             ->where(['s.offering_id' => $offeringId, 's.open_marker' => 1])
             ->get()->getRowArray();

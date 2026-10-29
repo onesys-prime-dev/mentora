@@ -22,7 +22,8 @@ class GradeFinalizationService
 {
     public const LOCKED_MESSAGE = 'The grades are finalized. Reopen them to make changes.';
 
-    public const SIGNED_OFF_MESSAGE = 'The dean has signed off these grades. Only the dean can reopen them.';
+    /** Whoever signed off, the dean or an administrator where the department has none (QA AMB-ASG-04). */
+    public const SIGNED_OFF_MESSAGE = 'These grades are signed off. The sign-off must be reopened before the grades can be.';
 
     /** @return array<string, mixed>|null the section's current finalization, who and when */
     public function current(int $offeringId): ?array
@@ -253,7 +254,7 @@ class GradeFinalizationService
             return ['success' => false, 'message' => 'The grades are not finalized.'];
         }
 
-        // Once the dean has signed the grades off, only the dean can reopen them (GradeSignoffService::reopen).
+        // Once signed off (by the dean, or an administrator where there is none), the sign-off is reopened first (GradeSignoffService::reopen).
         if ((new GradeSignoffService())->isSignedOff($offeringId)) {
             return ['success' => false, 'message' => self::SIGNED_OFF_MESSAGE];
         }
