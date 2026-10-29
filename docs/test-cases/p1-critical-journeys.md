@@ -473,44 +473,43 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none for a running attempt. `AssessmentRescoreService` rescoring skips attempts in progress.
 - **Playwright:** planned
 - **Basis:** decision AMB-ASM-03 (register Part I3): question edits must not change active attempts. Today questions are edited in place and the attempt reads the edited row (`QuestionService::updateQuestion`) [read in the code; not run].
-- **QA status:** REG? (PS-QUZ-19) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG? (PS-QUZ-19) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`). **Fixed in `b0c942b` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft. Expected result set by AMB-ASM-03.
 
-### TC-QUIZ-08 The attempt limit accepts 1 or more, or blank for unlimited, and refuses 0 and negatives
+### TC-QUIZ-08 The attempt limit accepts 1 or more and refuses 0, negatives and text; blank means one attempt
+
+*Corrected 2026-10-29: blank means one attempt, not unlimited, because `QuizAttemptServiceTest::testTheDefaultLimitIsOneAttempt` pins it (register Part I4). The refusals are the fix of D-08.*
 
 - **Role:** Instructor, then Student. **Priority:** P2
-- **Data:** `instructor1`, IT101-A. Create a quiz "Limit check" with one multiple-choice question and publish it.
+- **Data:** `instructor1`, IT101-A. Create a quiz "Limit check" with one multiple-choice question, allow multiple attempts, and publish it.
 - **Steps (boundary values for the attempt limit):** in the quiz settings save each value in turn and read the reply: `-1`, `0`, `1`, `2`, `99`, blank, `1.5`, `abc`. For `1`, `2` and blank, take the quiz as `student5` until refused.
 - **Expected:**
-  - `-1`, `0`, `1.5` and `abc` are refused with a message beside the field saying the limit must be a whole number of at least 1, or blank for unlimited (wording to confirm). The previous value stays.
-  - `1`, `2` and `99` are saved. The student gets exactly that many attempts.
-  - Blank means unlimited: the item says no limit, and a further attempt always starts while the quiz is open.
-  - A new quiz saved without the field gets 1 attempt.
-  - The same rules apply on create, on edit, and in a quiz import.
-- **Already automated:** `QuizAttemptServiceTest::testTheDefaultLimitIsOneAttempt` (the default only)
+  - `-1`, `0`, `1.5` and `abc` are refused with "The attempt limit must be a whole number, at least 1." The previous value stays.
+  - `1`, `2` and `99` are saved, and the student gets exactly that many attempts.
+  - Blank means one attempt.
+  - With multiple attempts switched off, the limit is 1 whatever is sent.
+- **Already automated:** `tests/database/QuizAttemptLimitIsCheckedTest.php` (on `fix/qa-defects`); `QuizAttemptServiceTest::testTheDefaultLimitIsOneAttempt`
 - **Playwright:** no
-- **Basis:** decision AMB-ASM-09 and MISS-ASM-01. Today nothing validates the field, and a blank (null) limit becomes 1, not unlimited (`QuizAttemptService` reads `attempt_limit ?? 1`) [read in the code; not run].
-- **QA status:** REG? (PS-QUZ-14) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
-- **Review:** Draft. Expected result set by AMB-ASM-09.
+- **Basis:** `AssessmentService::settingsProblem` (on `fix/qa-defects`); decision AMB-ASM-09 as limited by register Part I4
+- **QA status:** FIX? (PS-QUZ-14): fixed in `c94fc6f` on `fix/qa-defects`, not yet merged.
+- **Review:** Draft
 
-### TC-QUIZ-09 A quiz does not offer File Upload questions
+### TC-QUIZ-09 The quiz builder offers File Upload, and the student is told it is not available yet
 
-- **Role:** Instructor. **Priority:** P2
-- **Data:** `instructor1`, IT101-A, the quiz "Limit check" from TC-QUIZ-08, and an assignment in the same unit
-- **Steps:**
-  1. In the quiz builder open the list of question types.
-  2. Send the add-question request for the quiz with the type `File Upload` directly (the browser's network tools, or the API test).
-  3. Import a question file that contains a File Upload question into the quiz.
-  4. In the assignment, check that file submission is still offered.
+*Corrected 2026-10-29: the earlier expectation contradicted a passing test that pins the code's behavior; under register rule I1.1 the tested behavior governs (register Part I4).*
+
+- **Role:** Instructor, then Student. **Priority:** P2
+- **Data:** `instructor1`, IT101-B; a quiz with a File Upload question
+- **Steps:** open the quiz builder's question types; add a File Upload question; publish; as a student, take the quiz.
 - **Expected:**
-  - The quiz's type list does not contain File Upload.
-  - The direct request and the import refuse the type with a message saying File Upload is not available in quizzes (wording to confirm). No question is added.
-  - Assignments still accept file submissions.
-- **Already automated:** none
+  - The builder offers Multiple Choice, Short Answer, Essay and File Upload.
+  - On the student's page the File Upload question says "File upload isn't available yet for this quiz." and nothing can be uploaded.
+  - Answering a File Upload question in a quiz is a missing feature (N-16 in `docs/qa/defects-2026-10-28.md`).
+- **Already automated:** `tests/unit/AiGenerateModalViewTest.php::testTheModalOffersEveryTypeTheBuilderHasWithTheSameNames`
 - **Playwright:** no
-- **Basis:** decisions AMB-ASM-08 and MISS-QZ-03. Today `QuestionService::createQuestion` accepts any type, and a student has no way to save a File Upload answer in a quiz [read in the code; not run].
-- **QA status:** REG? (PS-QUZ-15) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
-- **Review:** Draft. Expected result set by AMB-ASM-08.
+- **Basis:** `quiz-builder-palette.php`, `quiz-answer-form.php`; register Part I4 (AMB-ASM-08)
+- **QA status:** VCI (PS-QUZ-15). Was D-09; not a defect. The student's answer is NB.
+- **Review:** Draft
 
 ### TC-QUIZ-10 A cancelled attempt counts against the attempt limit
 
@@ -546,7 +545,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none
 - **Playwright:** planned
 - **Basis:** decisions AMB-ASM-02 and MISS-ASM-01. Today `AssessmentService::publishedAssessment` and the status change in `updateAssessment` publish a quiz with no questions, and the page only says "This quiz has no questions yet." [read in the code; not run].
-- **QA status:** REG (PS-ASM-03) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG (PS-ASM-03) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`). **Fixed in `d8e93ea` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft. Expected result set by AMB-ASM-02.
 
 ### TC-QUIZ-12 The server refuses impossible quiz settings and empty questions
@@ -569,7 +568,7 @@ QA status values: **FIX?** a fix is committed and a test pins it; expected to pa
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision MISS-ASM-01. Today `AssessmentService::updateAssessment` checks only the status, and `QuestionService::createQuestion` saves an empty text and any points [read in the code; not run]. The upper bound for points is not set by any decision: record what the code does once it is added.
-- **QA status:** REG (PS-ASM-04) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG (PS-ASM-04) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`). **Fixed in `d8e93ea` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft. Expected result set by MISS-ASM-01.
 
 ### TC-QUIZ-13 A quiz password is asked before the attempt, and browser lockdown is shown
@@ -1125,7 +1124,7 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
 - **Already automated:** none for these two actions
 - **Playwright:** no
 - **Basis:** decision AMB-ASG-06. Today `GradeWorkService::reopenGrading` and `submitGrade` do not check finalization; the frozen `final_percentage` still protects the final grade [read in the code; not run].
-- **QA status:** REG (PS-GRD-06) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG (PS-GRD-06) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`). **Fixed in `0873eeb` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft
 
 ---
@@ -1384,7 +1383,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-COM-03. Suspected: the feed joins the author's roles, which can repeat a post [audit agent; not run].
-- **QA status:** REG? (PS-ANN-06) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG? (PS-ANN-06) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`). **Fixed in `e927390` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft
 
 ### TC-ANN-05 A course announcement can be a draft, scheduled or published
@@ -1432,7 +1431,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** `NotificationsTest::testReadingAndCounting` (the normal path)
 - **Playwright:** no
 - **Basis:** decision AMB-COM-02. Suspected: a malformed id falls through to marking everything read [audit agent; not run].
-- **QA status:** REG? (PS-NOT-04) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG? (PS-NOT-04) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`). **Fixed in `e927390` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there. "Mark all as read" still sends no id and marks everything (pinned by `NotificationPagesTest`); only an id that is there but not a number marks nothing.
 - **Review:** Draft
 
 ### TC-FIL-02 How a file is served: ranges, inline or download, and the logo
@@ -1504,7 +1503,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 - **Already automated:** `AnnouncementRoutesTest::testThePostFromTheCalendarLandsOnTheChosenDayAndRefusesThePast` (the date only)
 - **Playwright:** no
 - **Basis:** decision AMB-COM-01. Suspected: the post shows at once on every screen [audit agent; not run].
-- **QA status:** REG? (PS-ANN-05) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG? (PS-ANN-05) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`). **Fixed in `e927390` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft
 
 ### TC-CAL-02 What the calendar shows each person, and their reminders

@@ -564,6 +564,12 @@ The owner ruled on 2026-10-28 that the newer code is the single source of truth.
 | AMB-ASM-06 (counting) | a cancelled attempt must not count against the limit | it counts (`testACancelledAttemptStillUsesUpAChance`); found after the baseline run of 2026-10-28 |
 | AMB-ASM-02 (starting) | students must not start an attempt on a published quiz with no questions | it can be started and submitted, graded with no percentage (`testAnEmptyQuizSubmitsAsGradedWithNoPercentage`); found after the baseline. Publishing an empty quiz is still expected to be refused. |
 | AMB-ASG-03 (no module) | a student of another section must never submit | for an assignment in no module, any section of the course may submit; a code comment states it as deliberate (found during the defect check of 2026-10-28) |
+| AMB-ASG-02 (editing) | a published scheme refuses an edit that leaves the weights off 100% | the edit is saved; publishing and recalculation are refused until the weights total 100% (`GradingSchemeServiceTest`); found while fixing D-03, 2026-10-29 |
+| AMB-ASG-05 | a new override request is refused while the grades are finalized | it is accepted: an appeal after finalization and sign-off goes through the chain (`GradeSignoffServiceTest::testAnApprovedOverrideStillWorksAfterSignOffAndIsRecordedAsALaterChange`); found while fixing D-05 |
+| AMB-ASM-08 (authoring) | File Upload is not offered in quizzes | the quiz builder offers it (`AiGenerateModalViewTest`), and the student's page says it is not available yet; answering it is a missing feature (N-16); found while fixing D-09 |
+| AMB-ASM-09 (blank) | a blank attempt limit means unlimited | it means one attempt (`QuizAttemptServiceTest::testTheDefaultLimitIsOneAttempt`); the refusal of 0, negatives and text stands and is fixed |
+| AMB-COM-02 (no id) | marking read needs an id; mark-all is separate | "Mark all as read" sends no id and marks everything (`NotificationPagesTest`); only an id that is there but not a number marks nothing, which is fixed |
+| AMB-AUTH-05 (one flag) | a per-institution flag change asks for the password | it does not (`AdminFlagsPageTest::testAnOverrideDoesNotNeedThePasswordAndShowsItsReason`); the other listed actions now do |
 
 ### I5. The inconsistencies (G3)
 

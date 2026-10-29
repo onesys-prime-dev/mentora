@@ -346,23 +346,25 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 | TC-DEAN-13 | Whoever decides for the department may reopen a sign-off an administrator gave | Administrator, dean, instructor | P2 | REG |
 | TC-DEAN-14 | A menu tile disappears when the dean loses the permission behind it | Institutional administrator, dean | P3 | REG |
 
-### TC-DEAN-12 An override cannot be requested while the grades are finalized
+### TC-DEAN-12 An override can be requested after the grades are finalized, as an appeal through the chain
 
-- **Role:** Instructor. **Priority:** P2
-- **Data:** `instructor2`, IT201-A, with its grades finalized (finalize them in Grades first; IT201-A has graded students)
+*Corrected 2026-10-29: the earlier expectation contradicted a passing test that pins the code's behavior; under register rule I1.1 the tested behavior governs (register Part I4).*
+
+- **Role:** Instructor, chairperson, dean. **Priority:** P2
+- **Data:** `instructor2`, `chairperson1`, `dean2`; IT201-A finalized and signed off
 - **Steps:**
-  1. Open the Gradebook and ask for an override of Pedro Reyes's grade to 75%, with a reason.
-  2. Send the same request directly (the override request route), so the page's own check is not what is tested.
-  3. Reopen the finalization with a reason, then ask for the override again.
+  1. As the chairperson (or the instructor), ask for an override of Pedro Reyes's grade to 91%, with a reason.
+  2. Follow the request through the chain; as the dean, approve it.
+  3. Read the grade and the SIS grade export.
 - **Expected:**
-  - Steps 1–2: refused with "The grades are finalized. Reopen them to make changes." No request is recorded, and nobody is told of one.
-  - Step 3: the request is accepted and goes to the chairperson, as in TC-DEAN-04.
-  - In an institution with no deans, the instructor's direct override after finalization keeps working as before. It is a separate, deliberate path.
-- **Already automated:** `tests/database/GradeOverrideRequestServiceTest.php` (the request flow, not this refusal)
+  - The request is accepted while finalized and signed off, and goes through the chain as in TC-DEAN-04 and TC-DEAN-15.
+  - Approving changes the grade and is recorded as a later change; the change is sent to the SIS once as an update (TC-DEAN-23).
+  - In an institution with no deans the instructor's direct override after finalization still works.
+- **Already automated:** `GradeSignoffServiceTest::testAnApprovedOverrideStillWorksAfterSignOffAndIsRecordedAsALaterChange`, `SisGradeExporterTest::testAChangeApprovedAfterSignOffIsSentOnceAsAnUpdate`
 - **Playwright:** planned
-- **Basis:** decision AMB-ASG-05. Today `GradeOverrideRequestService::request` does not check finalization [read in the code; not run].
-- **QA status:** REG (PS-OVR-11) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
-- **Review:** Draft. Expected result set by AMB-ASG-05.
+- **Basis:** `GradeOverrideRequestService::request`; register Part I4 (AMB-ASG-05)
+- **QA status:** VCI (PS-OVR-11). Was D-05; not a defect.
+- **Review:** Draft
 
 ### TC-DEAN-13 Whoever decides for the department may reopen a sign-off an administrator gave
 

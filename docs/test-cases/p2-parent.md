@@ -269,7 +269,7 @@ P1 scenarios of the parent portal whose expected result is the code's behavior (
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision AMB-COM-01. Suspected: the notifier tells parents at once [audit agent; not run].
-- **QA status:** REG? (PS-PRT-07); the other screens are PS-ANN-05 (Wave 4) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG? (PS-PRT-07); the other screens are PS-ANN-05 (Wave 4) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`). **Fixed in `e927390` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft
 
 ---

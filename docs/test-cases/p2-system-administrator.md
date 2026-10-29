@@ -627,7 +627,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Already automated:** none
 - **Playwright:** no
 - **Basis:** decision PLN-02. Today seven foreign keys cascade because of reversed arguments, so the records are deleted with the user (inventory V10) [read in the code; not run].
-- **QA status:** REG (PS-USR-05) **Defect confirmed 2026-10-28** by the database schema (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG (PS-USR-05) **Defect confirmed 2026-10-28** by the database schema (`docs/qa/defects-2026-10-28.md`). **Fixed in `c461dc3` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft
 
 ## TC-SA-41 Bulk actions and the users export
@@ -797,11 +797,11 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 
 - **Role:** System administrator, institutional administrator. **Priority:** P2
 - **Steps:** without a fresh confirmation, try each: delete an institution, suspend one, deactivate a user, reactivate one, sign a user out everywhere, bulk reactivate, change a per-institution flag, test and preview an integration.
-- **Expected:** each asks for the password first (decision AMB-AUTH-05). Reopening a sign-off asks for a reason only (register Part I4).
+- **Expected:** each asks for the password first (decision AMB-AUTH-05), except changing a flag for one institution, which `AdminFlagsPageTest::testAnOverrideDoesNotNeedThePasswordAndShowsItsReason` pins as needing none (register Part I4). Reopening a sign-off asks for a reason only.
 - **Already automated:** the routes with the `reauth` filter have their own tests
 - **Playwright:** no
 - **Basis:** decision AMB-AUTH-05. Today restore, purge and sign-off ask; the actions listed are suspected not to [audit agent; not run].
-- **QA status:** REG? (PS-REA-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
+- **QA status:** REG? (PS-REA-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`). **Fixed in `57a9c92` on `fix/qa-defects`** (2026-10-29), not yet merged to `main`; expected to pass there.
 - **Review:** Draft
 
 ## TC-SA-55 The database refuses impossible values

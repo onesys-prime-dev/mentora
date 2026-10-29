@@ -165,26 +165,27 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 | TC-GBK-06 | A published scheme's weights cannot be edited away from 100% | Instructor | P1 | REG |
 | TC-GBK-07 | A signed-off gradebook names who signed it off | Instructor | P2 | REG |
 
-### TC-GBK-06 A published scheme's weights cannot be edited away from 100%
+### TC-GBK-06 Editing a published scheme's weights away from 100% holds back publishing and recalculation until they are right
+
+*Corrected 2026-10-29: the earlier expectation contradicted a passing test that pins the code's behavior; under register rule I1.1 the tested behavior governs (register Part I4).*
 
 - **Role:** Instructor. **Priority:** P1
 - **Data:** `instructor1`, IT101-A. Its grading scheme is published with Quizzes 50% and Assignments 50%.
 - **Steps:**
   1. Open Grades, then the grading scheme. Change Quizzes from 50 to 60 and save (the total becomes 110%).
-  2. Change Quizzes to 40 and save (90%).
-  3. Change Quizzes to 50.01 and to 49.99 (100.01% and 99.99%).
-  4. Change Quizzes to 60 and Assignments to 40 in one go, and save each order (Quizzes first, then Assignments).
-  5. Open the gradebook and read student1's final grade before and after each step.
+  2. Press Recalculate, and try to publish.
+  3. Change Assignments to 40 (back to 100%), then recalculate.
+  4. Add a category with a weight, and remove one, on the published scheme.
 - **Expected:**
-  - Steps 1–3: each save is refused with "Category weights add up to 110% — they must total 100%." (with the actual total). The weights stay as they were, and the scheme stays published.
-  - Step 4: a change that ends at exactly 100% is accepted. The way the form saves two categories must not leave the scheme at an invalid total in between: if it saves one at a time, the instructor needs a way to change both together (record how).
-  - Step 5: no grade changes after a refused edit. The engine never silently rescales weights that do not total 100%.
-  - A scheme that uses periods follows the same rule for the period weights ("Period weights add up to …").
-- **Already automated:** the publish check: `GradingSchemeService::publishProblem` tests. Editing a published scheme has none.
+  - Step 1: the edit is saved; the scheme is flagged for recalculation.
+  - Step 2: recalculating and publishing are refused with "Category weights add up to 110% — they must total 100%." The grades shown stay those of the last valid calculation.
+  - Step 3: once the weights total 100%, recalculation goes through.
+  - Step 4: adding and removing categories are accepted the same way, with the same refusal until the total is right. A scheme with periods follows the same rule for its period weights.
+- **Already automated:** `GradingSchemeServiceTest`: `testCategoryWeightsMustTotalOneHundred`, `testRecalculateIsRefusedUntilTheWeightsAreRight`, `testPublishingIsRefusedWhileTheWeightsAreWrong`, `testANewCategoryGoesLastAndFlagsARecalculation`
 - **Playwright:** planned
-- **Basis:** decision AMB-ASG-02. Today `GradingSchemeService::updateCategory` does not re-check the total on a published scheme [read in the code; not run].
-- **QA status:** REG (PS-GBK-04) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
-- **Review:** Draft. Expected result set by AMB-ASG-02.
+- **Basis:** `GradingSchemeService::publishProblem`, `recalculate`; register Part I4 (AMB-ASG-02)
+- **QA status:** VCI (PS-GBK-04). Was D-03; not a defect.
+- **Review:** Draft
 
 ### TC-GBK-07 A signed-off gradebook names who signed it off
 

@@ -919,3 +919,8 @@ CK-01 ran on commit `5e7f0d7` (code of `ae86042`): PHPUnit 7,510 of 7,510 passed
 ## Part M. Defects confirmed (2026-10-28)
 
 The catalog cases expected to fail were checked: 24 defects and 15 missing features are confirmed (see [`defects-2026-10-28.md`](defects-2026-10-28.md)), by probe tests, the database schema or the code. TC-ASG-06 turned out to be deliberate behavior and was corrected (register Part I4). TC-NOT-03 still needs a browser check. Nothing was fixed.
+
+## Part N. Fixing (2026-10-29)
+
+Defects are being fixed on `fix/qa-defects`; see the "Fix status" table in [`defects-2026-10-28.md`](defects-2026-10-28.md). So far D-01, D-02, D-04, D-06, D-07, D-08 (in part), D-10 to D-13 are fixed. D-03, D-05 and D-09 turned out to be behavior pinned by existing tests, and their cases (TC-GBK-06, TC-DEAN-12, TC-QUIZ-09) now expect it; TC-QUIZ-08 and TC-NOT-01 were narrowed the same way (register Part I4). Both branches are up to date with `main`.
+
