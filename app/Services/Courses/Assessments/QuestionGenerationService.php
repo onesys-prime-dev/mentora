@@ -52,6 +52,9 @@ class QuestionGenerationService
 
     private const MAX_CHOICES = 8;
 
+    /** The most questions one request (or one top-up) asks for: the generate form's own limit. */
+    public const MAX_PER_REQUEST = 100;
+
     /** Similarity to the source at or above which a question needs a look before it is accepted in bulk. */
     private const SOURCE_SIMILARITY_HARD = 0.6;
 
@@ -135,6 +138,13 @@ class QuestionGenerationService
 
         if (! $this->generationEnabled($user)) {
             return ['success' => false, 'code' => 'disabled', 'message' => 'AI question generation is turned off for your institution.'];
+        }
+
+        // The form's range (1 to 100, as a top-up), whatever was sent (QA AMB-ASM-10).
+        $count = (int) ($data['count'] ?? 10);
+
+        if ($count < 1 || $count > self::MAX_PER_REQUEST) {
+            return ['success' => false, 'message' => 'Ask for 1 to ' . self::MAX_PER_REQUEST . ' questions at a time.'];
         }
 
         // The institution's plan caps AI question generations per term. Checked before anything is
@@ -937,7 +947,7 @@ class QuestionGenerationService
             return ['success' => false, 'message' => 'Choose how many more questions to write.'];
         }
 
-        $count = min($count, 100);
+        $count = min($count, self::MAX_PER_REQUEST);
 
         if (! $this->generationEnabled($user)) {
             return ['success' => false, 'code' => 'disabled', 'message' => 'AI question generation is turned off for your institution.'];
