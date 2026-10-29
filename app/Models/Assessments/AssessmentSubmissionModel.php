@@ -33,6 +33,7 @@ class AssessmentSubmissionModel extends Model
         'status',
         'grading_mode',
         'rubric_scores',
+        'questions_snapshot',
     ];
 
     /**

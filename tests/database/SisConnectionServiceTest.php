@@ -41,7 +41,7 @@ final class SisConnectionServiceTest extends DatabaseTestCase
         Services::injectMock('credentialVault', new CredentialVault('database-test-encryption-key-0123456789'));
 
         $this->folder = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-sis-' . bin2hex(random_bytes(4));
-        $_ENV['sis.path'] = $this->folder;
+        \Tests\Support\TestEnv::set('sis.path', $this->folder);
 
         $this->institution = PeopleFactory::institution('SISCO', 'active');
         $this->actor       = PeopleFactory::person('admin', 'Root', 'Admin', 'root@example.com');
@@ -51,7 +51,7 @@ final class SisConnectionServiceTest extends DatabaseTestCase
     protected function tearDown(): void
     {
         $this->removeTree($this->folder);
-        unset($_ENV['sis.path']);
+        \Tests\Support\TestEnv::restore();
 
         Services::resetSingle('credentialVault');
         Services::resetSingle('auditLogger');

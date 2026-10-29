@@ -217,6 +217,29 @@ final class GeneralSettingsTest extends RouteTestCase
         $this->assertSame(200, $this->step('GET', 'health')->response()->getStatusCode());
     }
 
+    /** Only the open paths themselves stay open: an open word as some later segment does not (QA AMB-AUTH-09). */
+    public function testAnOpenWordElsewhereInTheAddressDoesNotGetPastMaintenance(): void
+    {
+        $this->maintenanceOn();
+        $this->signInAs('student');
+
+        foreach (['student/courses/1/login', 'student/courses/1/health', 'student/courses/1/auth/a', 'student/courses/1/invitation/x'] as $path) {
+            $this->assertSame(503, $this->step('GET', $path)->response()->getStatusCode(), $path);
+        }
+    }
+
+    public function testTheOpenPathsAndWhatIsUnderThemStayOpen(): void
+    {
+        $this->maintenanceOn();
+
+        auth()->logout();
+        $this->withSession([]);
+
+        foreach (['login', 'login/magic-link', 'health', 'reset-password/some-token', 'invitation/some-token'] as $path) {
+            $this->assertNotSame(503, $this->step('GET', $path)->response()->getStatusCode(), $path);
+        }
+    }
+
     public function testAScriptGetsAJsonRefusal(): void
     {
         $this->maintenanceOn();

@@ -14,15 +14,18 @@ class DiscussionReplyModel extends Model
 
     protected $allowedFields = ['thread_id', 'author_id', 'body'];
 
+    /** One role per author, preferring instructor: joining the author's groups listed a reply once per role (QA F-02). */
+    private const AUTHOR_ROLE = "(SELECT g.`group` FROM auth_groups_users g WHERE g.user_id = discussion_replies.author_id"
+        . " ORDER BY g.`group` = 'instructor' DESC, g.`group` LIMIT 1) AS author_role";
+
     private function withAuthor()
     {
         return $this->select([
             'discussion_replies.*',
             "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS author_name",
-            'auth_groups_users.group AS author_role',
         ])
-            ->join('user_profiles', 'user_profiles.user_id = discussion_replies.author_id', 'left')
-            ->join('auth_groups_users', 'auth_groups_users.user_id = discussion_replies.author_id', 'left');
+            ->select(self::AUTHOR_ROLE, false)
+            ->join('user_profiles', 'user_profiles.user_id = discussion_replies.author_id', 'left');
     }
 
     /** Oldest first — a thread reads top to bottom. */

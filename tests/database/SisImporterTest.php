@@ -100,6 +100,17 @@ final class SisImporterTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
+    public function testAnInstitutionWhoseSubscriptionRanOutIsNotSyncedEvenBeforeTheNightlyJob(): void
+    {
+        $db = db_connect();
+        $db->table('plans')->insert(['name' => 'Lapsed plan', 'status' => 'active']);
+        $db->table('subscriptions')->insert(['institution_id' => $this->institution, 'plan_id' => (int) $db->insertID(), 'start_date' => '2025-01-01', 'end_date' => '2026-07-01']);
+
+        $this->expectExceptionMessage('Only an active institution can be synced.');
+
+        $this->run_();
+    }
+
     public function testARunCreatesPeopleCoursesAndEnrolmentsAndCountsEachDataset(): void
     {
         SisFixture::dropAll($this->institution);

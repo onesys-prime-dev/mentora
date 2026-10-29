@@ -82,11 +82,12 @@ final class ParentCalendarEventsTest extends DatabaseTestCase
     {
         db_connect()->table('announcements')->insert([
             'offering_id' => $this->offering, 'author_id' => $this->teacher->id, 'subject' => 'Room change', 'message' => 'We move to room 4.',
-            'created_at' => '2026-11-05 08:00:00', 'updated_at' => '2026-11-05 08:00:00',
+            'created_at' => '2026-10-05 08:00:00', 'updated_at' => '2026-10-05 08:00:00',
         ]);
         $id = (int) db_connect()->insertID();
 
-        $events = $this->events();
+        // A post shows once its day has come (QA AMB-COM-01), so this one is dated in the past.
+        $events = (new ParentCalendarEvents())->forRange($this->child, '2026-10-01 00:00:00', '2026-10-31 23:59:59')['events'];
 
         $this->assertSame(['Room change'], array_column($events, 'title'));
         $this->assertSame('announcement', $events[0]['kind']);

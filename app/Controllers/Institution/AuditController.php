@@ -45,7 +45,7 @@ class AuditController extends BaseController
         $filters       = AuditLogFilters::fromInput($this->request->getGet());
 
         $stream = fopen('php://temp', 'r+');
-        fputcsv($stream, ['time', 'who', 'acting_role', 'via', 'what', 'action', 'target_type', 'target_id', 'old_values', 'new_values']);
+        fputcsv($stream, ['time', 'who', 'acting_role', 'via', 'what', 'action', 'target_type', 'target_id', 'old_values', 'new_values'], ',', '"', '');
 
         $count = 0;
 
@@ -53,7 +53,7 @@ class AuditController extends BaseController
             fputcsv($stream, array_map(self::safeCell(...), [
                 $row['created_at'], $row['actor'], $row['acting_role'], $row['via'], $row['action_label'],
                 $row['action'], $row['target_type'], $row['target_id'], $row['old_values'], $row['new_values'],
-            ]));
+            ]), ',', '"', '');
             $count++;
         }
 

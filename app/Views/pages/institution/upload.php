@@ -20,6 +20,7 @@ $labels = [
     'courses'     => ['Courses', 'external_id, course_code, course_title; units and program_code are optional.'],
     'enrollments' => ['Enrolments', 'course_external_id, student_external_id; section and status are optional.'],
     'staff_assignments' => ['Staff assignments', 'role (dean, chairperson or instructor), person_external_id, and what they lead or teach: department_code for a dean, sub_department_code for a chairperson, course_external_id (and section) for an instructor. People and courses must be known already or be in the same upload. Whoever is no longer listed, among those a file like this assigned before, is ended.'],
+    'class_schedules' => ['Class times', 'course_external_id, day_of_week (mon to sun, or the day\'s name), start_time and end_time (as 09:00); section, room and delivery_mode (onsite, online or hybrid) are optional. The rows for a section are its whole week. A section this kind of file set before and no longer lists loses those times.'],
 ];
 ?>
 
@@ -37,7 +38,7 @@ $labels = [
     <?= view('components/page-head', [
         'title'       => 'Upload from CSV',
         'icon'        => 'user',
-        'description' => 'Add many students, instructors, courses, enrolments and staff assignments at once from spreadsheet files.',
+        'description' => 'Add many students, instructors, courses, enrolments, staff assignments and class times at once from spreadsheet files.',
     ], ['saveData' => false]) ?>
 
     <?= view('components/stepper', ['steps' => ['Upload', 'Preview', 'Apply'], 'current' => $uploadStep], ['saveData' => false]) ?>
@@ -60,7 +61,7 @@ $labels = [
         <form method="post" action="<?= esc(site_url($base)) ?>" enctype="multipart/form-data" class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-upload-form>
             <?= csrf_field() ?>
 
-            <p class="text-sm text-[#3D3D3D]">Choose the files you have; none is required, but at least one is. People and courses go in first, then enrolments and staff assignments, so those files can refer to people and courses in the same upload. Nothing is saved until you have looked at the preview.</p>
+            <p class="text-sm text-[#3D3D3D]">Choose the files you have; none is required, but at least one is. People and courses go in first, then enrolments, staff assignments and class times, so those files can refer to people and courses in the same upload. Nothing is saved until you have looked at the preview.</p>
 
             <?php foreach ($uploadDatasets as $dataset): ?>
                 <div class="flex flex-col gap-1" data-field="<?= esc($dataset) ?>">
@@ -95,10 +96,19 @@ $labels = [
             $tones['ended'] = 'warning';
         }
 
-        $apply = $totals['created'] + $totals['updated'] + $ended;
+        // Likewise for class times a section loses because the file no longer lists it.
+        $removed = (int) ($totals['removed'] ?? 0);
+
+        if ($removed > 0) {
+            $names['removed'] = 'Class times removed';
+            $tones['removed'] = 'warning';
+        }
+
+        $apply = $totals['created'] + $totals['updated'] + $ended + $removed;
+        $cards = count($names);
         ?>
 
-        <div class="grid grid-cols-2 gap-4 <?= $ended > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4' ?>" data-upload-totals>
+        <div class="grid grid-cols-2 gap-4 <?= ['lg:grid-cols-4', 'lg:grid-cols-5', 'lg:grid-cols-6'][$cards - 4] ?>" data-upload-totals>
             <?php foreach ($names as $key => $label): ?>
                 <?= view('components/metric-card', ['label' => $label, 'value' => (string) $totals[$key], 'icon' => $key === 'failed' ? 'warning' : 'info', 'tone' => in_array($tones[$key], ['danger', 'success', 'warning'], true) ? $tones[$key] : 'neutral'], ['saveData' => false]) ?>
             <?php endforeach; ?>
@@ -110,7 +120,7 @@ $labels = [
                 <?php foreach ($uploadKept['datasets'] as $dataset => $counts): ?>
                     <li class="flex flex-wrap items-center justify-between gap-2" data-upload-file="<?= esc($dataset) ?>">
                         <span class="font-medium"><?= esc($dataset) ?>.csv</span>
-                        <span class="text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged<?= isset($counts['ended']) ? ' · ' . esc((string) $counts['ended']) . ' to end' : '' ?> · <?= esc((string) $counts['failed']) ?> refused</span>
+                        <span class="text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged<?= isset($counts['ended']) ? ' · ' . esc((string) $counts['ended']) . ' to end' : '' ?><?= isset($counts['removed']) ? ' · ' . esc((string) $counts['removed']) . ' to remove' : '' ?> · <?= esc((string) $counts['failed']) ?> refused</span>
                     </li>
                 <?php endforeach; ?>
             </ul>

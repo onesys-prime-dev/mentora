@@ -158,6 +158,18 @@ class TermCloseService
             return "Offerings were copied from {$term['name']} into another term, so it stays closed.";
         }
 
+        // One active term at a time (QA AMB-INST-02): a reopened term becomes active.
+        $active = db_connect()->table('academic_terms')
+            ->select('name')
+            ->where('institution_id', (int) $term['institution_id'])
+            ->where('status', 'active')
+            ->where('id !=', (int) $term['id'])
+            ->get()->getRowArray();
+
+        if ($active !== null) {
+            return "{$active['name']} is the active term. Close it before reopening {$term['name']}.";
+        }
+
         return null;
     }
 

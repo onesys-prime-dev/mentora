@@ -40,7 +40,10 @@ $rows = [];
 
 foreach ($institutionRows as $row) {
     $isDeleted = $row['deleted_at'] !== null;
-    [$statusLabel, $statusTone] = $statusLabels[$row['status']] ?? [$row['status'], 'neutral'];
+    // The badge says what the dates make it; the record catches up at the nightly update (never for a deleted one,
+    // which the update leaves alone, so it shows its record).
+    $effective = $isDeleted ? (string) $row['status'] : (string) ($row['effective_status'] ?? $row['status']);
+    [$statusLabel, $statusTone] = $statusLabels[$effective] ?? [$effective, 'neutral'];
     $id = (string) $row['id'];
 
     $name = $isDeleted
@@ -48,7 +51,8 @@ foreach ($institutionRows as $row) {
         : '<a class="font-medium text-brand hover:underline" href="' . site_url('admin/institutions/' . $id) . '">' . esc($row['name']) . '</a>';
 
     $badges = view('components/status-badge', ['label' => $statusLabel, 'tone' => $statusTone], ['saveData' => false])
-        . ($isDeleted ? ' ' . view('components/status-badge', ['label' => 'Deleted', 'tone' => 'neutral'], ['saveData' => false]) : '');
+        . ($isDeleted ? ' ' . view('components/status-badge', ['label' => 'Deleted', 'tone' => 'neutral'], ['saveData' => false]) : '')
+        . ($effective !== $row['status'] && ! $isDeleted ? '<p class="mt-1 text-xs text-[#646464]" data-recorded-status>Recorded as ' . esc($statusLabels[$row['status']][0] ?? $row['status']) . ' until the nightly update.</p>' : '');
 
     $actions = '<div class="flex flex-wrap items-start justify-end gap-2 max-md:justify-start">';
 
@@ -69,7 +73,7 @@ foreach ($institutionRows as $row) {
                 . '<button type="submit" class="' . $btn . ' border-[#946200] bg-white text-[#946200] hover:bg-[#FFF1D6]">Suspend</button></form>';
         }
 
-        if ($row['status'] !== 'active') {
+        if ($effective !== 'active') {
             $actions .= '<details class="text-left">'
                 . '<summary class="' . $btn . ' cursor-pointer border-[#C33939] bg-white text-[#C33939] hover:bg-[#FDEDEC]">Delete</summary>'
                 . '<form method="post" action="' . site_url('admin/institutions/' . $id . '/delete') . '" class="mt-2 flex w-64 flex-col gap-2">' . csrf_field()

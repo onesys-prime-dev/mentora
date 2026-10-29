@@ -172,18 +172,6 @@ final class PlanLimitsTest extends DatabaseTestCase
         $this->assertNull($this->limits->seatBlock($institution, 0), 'parents alone never block');
     }
 
-    public function testAStudentInTwoInstitutionsTakesASeatInEach(): void
-    {
-        $a = $this->institution('A');
-        $b = $this->institution('B');
-
-        $student = $this->member($a);
-        db_connect()->table('institution_users')->insert(['institution_id' => $b, 'user_id' => $student->id]);
-
-        $this->assertSame(1, $this->limits->usage($a)['seats']);
-        $this->assertSame(1, $this->limits->usage($b)['seats']);
-    }
-
     public function testASeatIsOnlyCountedOnceEvenIfMembershipIsRepeated(): void
     {
         $institution = $this->institution();
@@ -400,6 +388,23 @@ final class PlanLimitsTest extends DatabaseTestCase
         $this->batch($offering, $teacher, 'completed', 40, 40, '2026-07-31 23:59:59');   // last term
 
         $this->assertSame(28, $this->limits->usage($institution, $now)['ai']);
+    }
+
+    /**
+     * A batch that failed part-way still made questions that can be accepted: they count, and only they do
+     * (QA AMB-ASM-10, finding F-04). A cancelled job's batch is marked failed, so it counts the same way.
+     */
+    public function testAFailedBatchCountsTheQuestionsItMadeBeforeItFailed(): void
+    {
+        $offering    = CourseFactory::offering();
+        $institution = $this->institutionOf($offering);
+        $teacher     = $this->member($institution, 'instructor');
+        $this->term($institution, '2026-08-01', '2026-12-20');
+
+        $this->batch($offering, $teacher, 'failed', 10, 6, '2026-10-01 10:00:00');  // 6 made, then the generator failed
+        $this->batch($offering, $teacher, 'failed', 30, 0, '2026-10-02 10:00:00');  // nothing made: free
+
+        $this->assertSame(6, $this->limits->usage($institution, new DateTimeImmutable('2026-10-12'))['ai']);
     }
 
     public function testAnotherInstitutionsGenerationsAreNotCounted(): void

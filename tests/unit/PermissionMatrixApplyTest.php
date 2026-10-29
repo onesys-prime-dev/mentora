@@ -14,6 +14,31 @@ use CodeIgniter\Test\CIUnitTestCase;
  */
 final class PermissionMatrixApplyTest extends CIUnitTestCase
 {
+    /** Every role offered every permission, so these tests see apply()'s own rules. */
+    private const ANY = [
+        'admin'      => ['users.manage', 'roles.manage', 'courses.view', 'courses.manage', 'grading.manage', 'program.monitor'],
+        'instructor' => ['users.manage', 'roles.manage', 'courses.view', 'courses.manage', 'grading.manage', 'program.monitor'],
+        'student'    => ['users.manage', 'roles.manage', 'courses.view', 'courses.manage', 'grading.manage', 'program.monitor'],
+    ];
+
+    /**
+     * @param list<array{role: string, permission: string, granted: int|string|bool}> $overrides
+     * @param list<string>|null                                                    $known
+     *
+     * @return array<string, list<string>>
+     */
+    private static function open(array $overrides, ?array $known = null): array
+    {
+        return PermissionMatrix::apply(self::DEFAULTS, $overrides, $known, self::ANY);
+    }
+
+    public function testAPermissionTheRoleIsNotOfferedIsIgnored(): void
+    {
+        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('student', 'grading.manage', 1)], null, ['student' => ['courses.view']]);
+
+        $this->assertSame(['courses.view'], $matrix['student']);
+    }
+
     private const DEFAULTS = [
         'admin'      => ['users.manage', 'roles.manage'],
         'instructor' => ['courses.view', 'courses.manage', 'grading.manage'],
@@ -28,12 +53,12 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testNoCustomisationsGivesTheDefaults(): void
     {
-        $this->assertSame(self::DEFAULTS, PermissionMatrix::apply(self::DEFAULTS, []));
+        $this->assertSame(self::DEFAULTS, self::open([]));
     }
 
     public function testAGrantAddsAPermissionToThatRoleOnly(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('student', 'grading.manage', 1)]);
+        $matrix = self::open([self::row('student', 'grading.manage', 1)]);
 
         $this->assertSame(['courses.view', 'grading.manage'], $matrix['student']);
         $this->assertSame(self::DEFAULTS['instructor'], $matrix['instructor']);
@@ -41,7 +66,7 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testADenialRemovesAPermissionFromThatRoleOnly(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('instructor', 'grading.manage', 0)]);
+        $matrix = self::open([self::row('instructor', 'grading.manage', 0)]);
 
         $this->assertSame(['courses.view', 'courses.manage'], $matrix['instructor']);
         $this->assertSame(['courses.view'], $matrix['student']);
@@ -49,7 +74,7 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testGrantedMayBeAnyOfTheFormsADatabaseReturns(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [
+        $matrix = self::open([
             self::row('student', 'courses.manage', '1'),
             self::row('instructor', 'courses.manage', '0'),
             self::row('instructor', 'grading.manage', false),
@@ -61,21 +86,21 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testGrantingWhatARoleAlreadyHasChangesNothing(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('instructor', 'courses.view', 1)]);
+        $matrix = self::open([self::row('instructor', 'courses.view', 1)]);
 
         $this->assertSame(self::DEFAULTS['instructor'], $matrix['instructor']);
     }
 
     public function testDenyingWhatARoleNeverHadChangesNothing(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('student', 'grading.manage', 0)]);
+        $matrix = self::open([self::row('student', 'grading.manage', 0)]);
 
         $this->assertSame(self::DEFAULTS['student'], $matrix['student']);
     }
 
     public function testTheLaterRowWinsWhenTwoDisagree(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [
+        $matrix = self::open([
             self::row('student', 'grading.manage', 1),
             self::row('student', 'grading.manage', 0),
         ]);
@@ -85,14 +110,14 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testPermissionNamesAreCaseInsensitive(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('instructor', 'Grading.Manage', 0)]);
+        $matrix = self::open([self::row('instructor', 'Grading.Manage', 0)]);
 
         $this->assertSame(['courses.view', 'courses.manage'], $matrix['instructor']);
     }
 
     public function testTheListStaysAListWithNoGaps(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('instructor', 'courses.view', 0)]);
+        $matrix = self::open([self::row('instructor', 'courses.view', 0)]);
 
         $this->assertSame([0, 1], array_keys($matrix['instructor']));
     }
@@ -105,14 +130,14 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testTheAdminRoleCannotLoseAPermission(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('admin', 'roles.manage', 0)]);
+        $matrix = self::open([self::row('admin', 'roles.manage', 0)]);
 
         $this->assertSame(self::DEFAULTS['admin'], $matrix['admin']);
     }
 
     public function testTheAdminRoleCannotGainAPermission(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('admin', 'courses.manage', 1)]);
+        $matrix = self::open([self::row('admin', 'courses.manage', 1)]);
 
         $this->assertSame(self::DEFAULTS['admin'], $matrix['admin']);
     }
@@ -125,14 +150,14 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testARowForAnUnknownRoleIsIgnored(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('wizard', 'courses.view', 1)]);
+        $matrix = self::open([self::row('wizard', 'courses.view', 1)]);
 
         $this->assertSame(self::DEFAULTS, $matrix);
     }
 
     public function testARowForAnUnknownPermissionIsIgnored(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('student', 'rockets.launch', 1)]);
+        $matrix = self::open([self::row('student', 'rockets.launch', 1)]);
 
         $this->assertSame(self::DEFAULTS, $matrix);
     }
@@ -141,14 +166,14 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
     {
         $known = ['users.manage', 'roles.manage', 'courses.view', 'courses.manage', 'grading.manage', 'program.monitor'];
 
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('student', 'program.monitor', 1)], $known);
+        $matrix = self::open([self::row('student', 'program.monitor', 1)], $known);
 
         $this->assertSame(['courses.view', 'program.monitor'], $matrix['student']);
     }
 
     public function testAPermissionOutsideTheKnownListIsIgnoredEvenIfSomeoneHasIt(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('student', 'grading.manage', 1)], ['courses.view']);
+        $matrix = self::open([self::row('student', 'grading.manage', 1)], ['courses.view']);
 
         $this->assertSame(['courses.view'], $matrix['student']);
     }
@@ -161,14 +186,14 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testDenyingARolesLastPermissionKeepsItsDefaults(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [self::row('student', 'courses.view', 0)]);
+        $matrix = self::open([self::row('student', 'courses.view', 0)]);
 
         $this->assertSame(['courses.view'], $matrix['student']);
     }
 
     public function testDenyingEverythingARoleHasRestoresItsDefaultsNotJustOnePermission(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [
+        $matrix = self::open([
             self::row('instructor', 'courses.view', 0),
             self::row('instructor', 'courses.manage', 0),
             self::row('instructor', 'grading.manage', 0),
@@ -179,7 +204,7 @@ final class PermissionMatrixApplyTest extends CIUnitTestCase
 
     public function testSwappingAllPermissionsForOthersIsAllowed(): void
     {
-        $matrix = PermissionMatrix::apply(self::DEFAULTS, [
+        $matrix = self::open([
             self::row('student', 'grading.manage', 1),
             self::row('student', 'courses.view', 0),
         ], ['courses.view', 'grading.manage', 'users.manage', 'roles.manage', 'courses.manage']);

@@ -37,6 +37,9 @@ class DiscussionService
     private const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
     private const PAGE_SIZE = 10;
     private const SORTS = ['activity', 'newest', 'replies'];
+
+    /** The reactions a post offers (partials/hover-menu.php); there is no picker here, so nothing else is taken (QA F-05). */
+    public const REACTIONS = ['👍', '❤️', '😂', '😮'];
     private const FILTERS = ['all', 'pinned', 'mine', 'unanswered', 'modules', 'unread'];
 
     protected DiscussionThreadModel $threadModel;
@@ -71,15 +74,16 @@ class DiscussionService
     /** Instructor here, or the chairperson of the program it belongs to — same posting rights either way. */
     private function isInstructorHere(User $user, int $offeringId): bool
     {
-        if ($user->inGroup('instructor')) {
-            return (bool) $this->instructorAssignmentModel->retrieveInstructorCourseOffering($user->id, $offeringId);
-        }
+        return in_array((new CourseMembership())->roleIn($user, $offeringId), ['instructor', 'chairperson'], true);
+    }
 
-        if ($user->inGroup('chairperson')) {
-            return (new ChairpersonAccessService())->canAccess($user, $offeringId);
-        }
-
-        return false;
+    /**
+     * The instructor (or chairperson) here who may moderate: pin, lock, delete someone else's post, mark
+     * someone else's answer. Their institution can take that away (discussions.manage, decision D6).
+     */
+    private function canModerate(User $user, int $offeringId): bool
+    {
+        return $this->isInstructorHere($user, $offeringId) && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'discussions');
     }
 
     private function canViewOffering(User $user, int $offeringId): bool
@@ -110,16 +114,17 @@ class DiscussionService
     }
 
     /** What the viewer may do with a thread — computed server-side so the client never receives controls it can't use. */
-    private function threadPermissions(array $thread, User $user, bool $isInstructor): array
+    /** @param bool $moderates the instructor here, allowed to moderate (discussions.manage, decision D6) */
+    private function threadPermissions(array $thread, User $user, bool $moderates): array
     {
         $isAuthor = (int) $thread['author_id'] === (int) $user->id;
 
         return [
             'can_edit' => $isAuthor,
-            'can_delete' => $isAuthor || $isInstructor,
-            'can_pin' => $isInstructor,
-            'can_lock' => $isInstructor,
-            'can_mark_answer' => $isAuthor || $isInstructor,
+            'can_delete' => $isAuthor || $moderates,
+            'can_pin' => $moderates,
+            'can_lock' => $moderates,
+            'can_mark_answer' => $isAuthor || $moderates,
             'can_reply' => !$thread['is_locked'],
         ];
     }
@@ -206,8 +211,10 @@ class DiscussionService
 
         $hasMore = count($rows) > self::PAGE_SIZE;
 
+        $moderates = $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'discussions');
+
         $threads = array_map(
-            fn (array $t) => $t + $this->threadPermissions($t, $user, $isInstructor),
+            fn (array $t) => $t + $this->threadPermissions($t, $user, $moderates),
             array_slice($rows, 0, self::PAGE_SIZE)
         );
 
@@ -229,6 +236,8 @@ class DiscussionService
             throw PageNotFoundException::forPageNotFound();
         }
 
+        $moderates = $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'discussions');
+
         $replies = $this->replyModel->retrieveForThread($threadId);
         $counts = $this->reactionModel->retrieveCounts($threadId);
         $own = $this->reactionModel->retrieveOwn($threadId, (int) $user->id);
@@ -248,12 +257,12 @@ class DiscussionService
             $reply['own_reaction'] = $own['replies'][$id] ?? null;
             $reply['attachments'] = $withUrl($attachments['replies'][$id] ?? []);
             $reply['is_answer'] = (int) $thread['answer_reply_id'] === $id;
-            $reply['can_delete'] = $isAuthor || $isInstructor;
+            $reply['can_delete'] = $isAuthor || $moderates;
 
         }
         unset($reply);
 
-        $thread = $thread + $this->threadPermissions($thread, $user, $isInstructor) + [
+        $thread = $thread + $this->threadPermissions($thread, $user, $moderates) + [
             'reaction_counts' => $counts['thread'],
             'own_reaction' => $own['thread'],
             'attachments' => $withUrl($attachments['thread']),
@@ -368,9 +377,7 @@ class DiscussionService
             return $this->deny('Discussion not found.');
         }
 
-        $isInstructor = $this->isInstructorHere($user, $offeringId);
-
-        if ((int) $thread['author_id'] !== (int) $user->id && !$isInstructor) {
+        if ((int) $thread['author_id'] !== (int) $user->id && !$this->canModerate($user, $offeringId)) {
             return $this->deny('You can only delete your own discussion.');
         }
 
@@ -395,7 +402,7 @@ class DiscussionService
 
     private function moderate(User $user, int $offeringId, int $threadId, array $change, string $what): array
     {
-        if (!$this->isInstructorHere($user, $offeringId)) {
+        if (!$this->canModerate($user, $offeringId)) {
             return $this->deny("Only the instructor can {$what}.");
         }
 
@@ -473,7 +480,7 @@ class DiscussionService
             'reply_count' => (int) $thread['reply_count'] + 1,
             'html' => view('pages/courses/features/discussions/partials/reply', [
                 'reply' => $row,
-                'canMarkAnswer' => (int) $thread['author_id'] === (int) $user->id || $this->isInstructorHere($user, $offeringId),
+                'canMarkAnswer' => (int) $thread['author_id'] === (int) $user->id || $this->canModerate($user, $offeringId),
             ], ['saveData' => false]),
         ];
     }
@@ -487,7 +494,7 @@ class DiscussionService
             return $this->deny('Reply not found.');
         }
 
-        if ((int) $reply['author_id'] !== (int) $user->id && !$this->isInstructorHere($user, $offeringId)) {
+        if ((int) $reply['author_id'] !== (int) $user->id && !$this->canModerate($user, $offeringId)) {
             return $this->deny('You can only delete your own reply.');
         }
 
@@ -517,7 +524,7 @@ class DiscussionService
             return $this->deny('Discussion not found.');
         }
 
-        if ((int) $thread['author_id'] !== (int) $user->id && !$this->isInstructorHere($user, $offeringId)) {
+        if ((int) $thread['author_id'] !== (int) $user->id && !$this->canModerate($user, $offeringId)) {
             return $this->deny('Only the discussion\'s author or the instructor can mark an answer.');
         }
 
@@ -557,7 +564,7 @@ class DiscussionService
 
         }
 
-        if (trim($emoji) === '' || mb_strlen($emoji) > 32) {
+        if (! in_array($emoji, self::REACTIONS, true)) {
             return $this->deny('Pick a reaction.');
         }
 

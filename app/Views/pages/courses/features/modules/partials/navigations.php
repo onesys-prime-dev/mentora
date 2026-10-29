@@ -18,7 +18,7 @@
 |--------------------------------------------------------------------------
 */
 
-$isStudent = $user->inGroup('student');
+$isStudent = \App\Services\Courses\CourseViewer::isStudentHere($user);
 
 $isLocked = !empty($currentLock);
 

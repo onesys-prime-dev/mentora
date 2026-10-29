@@ -92,6 +92,22 @@ final class DiscussionServiceTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
+    /** An author with two roles is still one author: each thread and reply shows once (QA finding F-02, as D-13). */
+    public function testAThreadAndAReplyShowOnceWhateverTheirAuthorsRoles(): void
+    {
+        $this->instructor->addGroup('chairperson');
+
+        $id = $this->thread('From someone with two roles', $this->instructor);
+        $this->replyTo($id, $this->instructor);
+
+        $this->assertSame([$id], $this->ids($this->author));
+
+        $thread = $this->service->getThread($this->author, $this->offering, $id);
+        $this->assertCount(1, $thread['replies']);
+        $this->assertSame('instructor', $thread['thread']['author_role']);
+        $this->assertSame('instructor', $thread['replies'][0]['author_role']);
+    }
+
     public function testAStudentWhoIsNotEnrolledCannotReadOrStart(): void
     {
         $id = $this->thread();
@@ -444,6 +460,22 @@ final class DiscussionServiceTest extends DatabaseTestCase
         $this->assertSame('Pick a reaction.', $this->service->react($this->author, $this->offering, $id, null, str_repeat('x', 33))['message']);
         $this->assertSame('Reply not found.', $this->service->react($this->author, $this->offering, $id, $otherThreadReply, '👍')['message']);
         $this->assertSame('Discussion not found.', $this->service->react($this->outsider, $this->offering, $id, null, '👍')['message']);
+    }
+
+    /** A discussion offers four reactions and no picker, so only those four are taken (QA finding F-05, as D-20). */
+    public function testOnlyTheFourOfferedReactionsAreTaken(): void
+    {
+        $id = $this->thread();
+
+        foreach (['abc', 'hello', '🎉', '👍👍', 'like'] as $bad) {
+            $this->assertSame('Pick a reaction.', $this->service->react($this->author, $this->offering, $id, null, $bad)['message'], $bad);
+        }
+
+        $this->assertSame(0, db_connect()->table('discussion_reactions')->countAllResults());
+
+        foreach (['👍', '❤️', '😂', '😮'] as $good) {
+            $this->assertTrue($this->service->react($this->classmate, $this->offering, $id, null, $good)['success'], $good);
+        }
     }
 
     /*

@@ -334,7 +334,7 @@ class DashboardService
 
     protected function getAnnouncementsData(User $user): array
     {
-        $offerings = $user->inGroup('student')
+        $offerings = \App\Services\Courses\CourseService::listRole($user) === 'student'
             ? $this->enrollmentModel->retrieveStudentCourseOfferings($user->id)
             : $this->scopedSections($user);
 
@@ -704,11 +704,13 @@ class DashboardService
     /** Which "my courses" list a role-agnostic widget should scope itself to. */
     protected function scopedSections(User $user): array
     {
-        if ($user->inGroup('instructor')) {
+        $as = \App\Services\Courses\CourseService::listRole($user);
+
+        if ($as === 'instructor') {
             return $this->instructorSections($user);
         }
 
-        if ($user->inGroup('chairperson')) {
+        if ($as === 'chairperson') {
             return $this->chairpersonSections($user);
         }
 

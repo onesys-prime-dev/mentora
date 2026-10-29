@@ -640,6 +640,8 @@ final class ModuleServiceTest extends DatabaseTestCase
         [$module, , $item] = $this->tree('quiz', 'draft');
         $assessmentId = CourseFactory::assessment($this->offeringId, $this->instructor, $module, $item);
         db_connect()->table('assessments')->where('id', $assessmentId)->update(['total_points' => 20]);
+        // A quiz is published only with a question (QA AMB-ASM-02).
+        \Tests\Support\AssessmentFactory::question($assessmentId, $this->instructor, 'Essay', 0.0);
         $schemeId = \Tests\Support\GradeFactory::scheme($this->offeringId);
 
         $this->service->updateLearningItem($this->instructor, $this->offeringId, $item, ['status' => 'published']);

@@ -5,12 +5,17 @@
  * grade is made up, and Approve (the grade is changed) or Reject (with a reason). "Decided" is the history.
  * A student's work is not shown, only the numbers asked for and the reason.
  *
+ * Also the institution administrator's Approvals ($area 'institution'): the requests of departments
+ * with no dean who may approve them (audit decision 1.1), with the same dialog.
+ *
  * @var App\Services\Courses\Grades\OverrideApprovalFilters $filters
  * @var list<array<string, mixed>> $requests
+ * @var string $area 'dean' or 'institution'
  */
 use App\Services\Courses\Grades\OverrideRequestChain;
 
-$base = site_url('dean/approvals');
+$area ??= 'dean';
+$base = site_url($area . '/approvals');
 
 $pct = static fn ($value): string => $value === null ? '—' : rtrim(rtrim(number_format((float) $value, 1), '0'), '.') . '%';
 
@@ -78,14 +83,14 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
 <div class="py-3">
 
 <?php // The way back stays on the background, above the panel, not in the box. ?>
-<?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+<?= view('components/back-link', ['backUrl' => site_url($area . '/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
 
 <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Grade overrides',
         'icon'        => 'tasks',
-        'description' => 'Requests to change a final grade in your department. Approving changes the grade; rejecting leaves it as it is.',
+        'description' => ($area === 'dean' ? 'Requests to change a final grade in your department.' : 'Requests to change a final grade in a department with no dean who decides them.') . ' Approving changes the grade; rejecting leaves it as it is.',
     ], ['saveData' => false]) ?>
 
     <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
@@ -125,7 +130,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             'dir'        => $filters->direction(),
             'sortUrl'    => $sortUrl,
             'emptyTitle' => $filters->isFiltered() ? 'No requests match these filters' : ($decided ? 'Nothing decided yet' : 'Nothing waiting for you'),
-            'emptyText'  => $filters->isFiltered() ? 'Try a different search, program or requester.' : ($decided ? 'Requests you approve or reject are listed here.' : 'When a chairperson endorses a request to change a final grade in your department, it appears here.'),
+            'emptyText'  => $filters->isFiltered() ? 'Try a different search, program or requester.' : ($decided ? 'Requests you approve or reject are listed here.' : ($area === 'dean' ? 'When a chairperson endorses a request to change a final grade in your department, it appears here.' : 'When a request to change a final grade waits for an administrator, it appears here.')),
             'emptyIcon'  => 'tasks',
         ], ['saveData' => false]) ?>
 
@@ -173,13 +178,13 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             $body = '<div class="flex flex-col gap-4">' . $details . $drift
                 . ($breakdown !== '' ? '<div><p class="mb-1 text-xs font-semibold uppercase tracking-wide text-[#646464]">How the grade is made up</p><ul class="flex flex-col gap-1 rounded-xl bg-gray-50 px-3 py-2 text-sm" data-breakdown>' . $breakdown . '</ul></div>' : '')
 
-                . '<form method="post" action="' . esc(site_url("dean/approvals/{$id}/approve"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
+                . '<form method="post" action="' . esc(site_url("{$area}/approvals/{$id}/approve"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
                 . '<p class="text-sm font-medium text-[#1A1C1E]">' . esc($consequence) . '</p>'
                 . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
                 . '<div class="flex justify-end"><button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($removal ? 'Approve removal' : 'Approve ' . $asked) . '</button></div>'
                 . '</form>'
 
-                . '<form method="post" action="' . esc(site_url("dean/approvals/{$id}/reject"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
+                . '<form method="post" action="' . esc(site_url("{$area}/approvals/{$id}/reject"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
                 . $field(['name' => 'reason', 'label' => 'Or reject, and say why', 'type' => 'textarea', 'maxlength' => 2000, 'help' => esc(trim((string) $r['requester_name']) ?: 'The requester') . ' will read this. The grade stays as it is.'])
                 . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
                 . '<div class="flex flex-wrap items-center justify-end gap-3">' . $closeButton . '<button type="submit" data-dialog-label class="rounded-full border border-[#C33939]/50 px-5 py-2 text-sm font-semibold text-[#C33939] transition hover:bg-[#FDEDEC]">Reject</button></div>'

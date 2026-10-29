@@ -26,12 +26,50 @@ final class CourseViewer
      * The instructor, the chairperson overseeing the program, or someone with
      * a read-only view of the course. The chairperson is not enrolled, so the
      * student view (their own submissions and grades) has nothing to show them.
+     *
+     * What counts is the person's role in this course (9.1): the offering named,
+     * else the course of the request (CourseContext). Only outside any course
+     * does the group answer.
      */
-    public static function seesInstructorView(User $user): bool
+    public static function seesInstructorView(User $user, ?int $offeringId = null): bool
     {
-        return $user->inGroup('instructor')
-            || $user->inGroup('chairperson')
-            || self::isReadOnlyViewer($user);
+        if (self::isReadOnlyViewer($user)) {
+            return true;
+        }
+
+        $role = self::roleHere($user, $offeringId);
+
+        if ($role !== false) {
+            return in_array($role, ['instructor', 'chairperson'], true);
+        }
+
+        return $user->inGroup('instructor') || $user->inGroup('chairperson');
+    }
+
+    /** A student of this course (the one named, else the request's): the student's own progress and work apply. */
+    public static function isStudentHere(User $user, ?int $offeringId = null): bool
+    {
+        // Looking at a course (a dean as dean, the institution's administrator) is never studying it, even for
+        // someone who studies elsewhere; the dean and institution routes set no course to ask about.
+        if (self::isReadOnlyViewer($user)) {
+            return false;
+        }
+
+        $role = self::roleHere($user, $offeringId);
+
+        return $role === false ? $user->inGroup('student') : $role === 'student';
+    }
+
+    /** The role in the named offering, else in the request's course; false when there is no course to ask about. */
+    private static function roleHere(User $user, ?int $offeringId): string|false|null
+    {
+        if ($offeringId !== null) {
+            return (new CourseMembership())->roleIn($user, $offeringId);
+        }
+
+        $context = service('courseContext');
+
+        return $context->offeringId() === null ? false : $context->role();
     }
 
     /**

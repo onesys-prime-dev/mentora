@@ -46,6 +46,9 @@ if (! function_exists('global_apps')) {
                 ['key' => 'terms',       'label' => 'Terms',       'icon' => 'calendar', 'url' => site_url('institution/terms')],
                 ['key' => 'offerings',   'label' => 'Offerings',   'icon' => 'modules',  'url' => site_url('institution/offerings')],
                 ['key' => 'people',      'label' => 'People',      'icon' => 'user',     'url' => site_url('institution/people')],
+                ['key' => 'roles',       'label' => 'Roles and permissions', 'icon' => 'lock', 'url' => site_url('institution/roles')],
+                ['key' => 'approvals',   'label' => 'Approvals',   'icon' => 'tasks',    'url' => site_url('institution/approvals')],
+                ['key' => 'signoff',     'label' => 'Sign-off',    'icon' => 'check',    'url' => site_url('institution/signoff')],
                 ['key' => 'reports',     'label' => 'Reports',     'icon' => 'score',    'url' => site_url('institution/reports')],
                 ['key' => 'settings',    'label' => 'Settings',    'icon' => 'settings', 'url' => site_url('institution/settings')],
                 ['key' => 'subscription', 'label' => 'Subscription', 'icon' => 'info',   'url' => site_url('institution/subscription')],
@@ -57,7 +60,7 @@ if (! function_exists('global_apps')) {
 
         // The dean's tools arrive one branch at a time; until then only the landing page exists.
         if ($role === 'dean') {
-            return [
+            $dean = [
                 ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('dean/dashboard')],
                 ['key' => 'courses', 'label' => 'Courses', 'icon' => 'hat', 'url' => site_url('dean/courses')],
                 ['key' => 'approvals', 'label' => 'Approvals', 'icon' => 'tasks', 'url' => site_url('dean/approvals')],
@@ -68,6 +71,24 @@ if (! function_exists('global_apps')) {
                 ['key' => 'chairperson-review', 'label' => 'Chairperson review', 'icon' => 'tasks', 'url' => site_url('dean/chairperson-review')],
                 ['key' => 'monitor-department', 'label' => 'Monitor Department', 'icon' => 'score', 'url' => site_url('dean/monitor-department')],
             ];
+
+            // Only what their institution lets them open (QA AMB-AUTH-08): each tile's page refuses without its
+            // permission. Follow-ups stays: what was received can be answered without followups.manage.
+            if (($user = auth()->user()) !== null) {
+                $permissions = new \App\Services\Auth\RolePermissions();
+                $gates       = [
+                    'courses'            => 'courses.view',
+                    'approvals'          => 'grades.approve',
+                    'signoff'            => 'grades.signoff',
+                    'announcements'      => 'department.announce',
+                    'monitor-department' => 'department.monitor',
+                ];
+                // Asked of the dean role only: what another role of theirs has does not open the dean's pages.
+                $hidden      = array_keys(array_filter($gates, static fn (string $p): bool => ! $permissions->allows($user, $p, 'dean')));
+                $dean        = array_values(array_filter($dean, static fn (array $app): bool => ! in_array($app['key'], $hidden, true)));
+            }
+
+            return $dean;
         }
 
         // A parent's tools: their children's dashboard and calendar, the shared notifications list,
@@ -111,7 +132,11 @@ if (! function_exists('global_apps')) {
 
         // Two of the chairperson's own pages. No other role is shown these tiles.
         if ($role === 'chairperson') {
-            $apps[] = ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url($role . '/monitor-program')];
+            // Only when their institution lets them (program.monitor).
+            if (($user = auth()->user()) === null || (new \App\Services\Auth\RolePermissions())->allows($user, 'program.monitor')) {
+                $apps[] = ['key' => 'monitor-program', 'label' => 'Monitor Program', 'icon' => 'score', 'url' => site_url($role . '/monitor-program')];
+            }
+
             $apps[] = ['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')];
             $apps[] = ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('chairperson/follow-ups')];
         }

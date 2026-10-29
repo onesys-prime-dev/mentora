@@ -81,22 +81,16 @@ final class PeopleServiceTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testTheListHoldsOnlyThisInstitutionsPeopleAndHidesOtherMemberships(): void
+    public function testTheListHoldsOnlyThisInstitutionsPeople(): void
     {
         $this->person('student', 'Ann');
         $this->person('student', 'Zed', $this->other);
 
-        $shared = $this->person('instructor', 'Ivy');
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->other, 'user_id' => $shared->id, 'created_at' => date('Y-m-d H:i:s')]);
-
         $result = $this->service->list($this->institution, [], (int) $this->actor->id);
 
-        $this->assertSame(['Ada', 'Ann', 'Ivy'], $this->names($result));
-        $this->assertSame(3, $result['total']);
-
-        $ivy = array_values(array_filter($result['rows'], static fn (array $r): bool => $r['first_name'] === 'Ivy'))[0];
-        $this->assertTrue($ivy['elsewhere']);
-        $this->assertArrayNotHasKey('institutions', $ivy, 'no other institution is named');
+        $this->assertSame(['Ada', 'Ann'], $this->names($result));
+        $this->assertSame(2, $result['total']);
+        $this->assertArrayNotHasKey('institutions', $result['rows'][0], 'no institution is named in the list');
     }
 
     public function testTheListIsFilteredSearchedSortedAndPaged(): void
@@ -403,39 +397,6 @@ final class PeopleServiceTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testAnAccountSharedWithAnotherInstitutionCanOnlyBeRemoved(): void
-    {
-        $ivy = $this->person('instructor', 'Ivy');
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->other, 'user_id' => $ivy->id, 'created_at' => date('Y-m-d H:i:s')]);
-        $id = (int) $ivy->id;
-
-        foreach ([
-            fn () => $this->service->update($this->institution, $id, ['first_name' => 'Ivy', 'last_name' => 'Person', 'email' => 'new@people.test'], $this->actor),
-            fn () => $this->service->deactivate($this->institution, $id, $this->actor),
-            fn () => $this->service->setRoles($this->institution, $id, ['student'], $this->actor),
-            fn () => $this->service->signOut($this->institution, $id, $this->actor),
-            fn () => $this->service->resetPassword($this->institution, $id, $this->actor),
-        ] as $do) {
-            $e = $this->refused($do);
-            $this->assertStringContainsString('another institution', $e->getMessage());
-        }
-
-        $this->service->removeFromInstitution($this->institution, $id, $this->actor);
-
-        $this->assertSame(1, db_connect()->table('users')->where(['id' => $id, 'active' => 1])->countAllResults(), 'still active');
-        $this->assertSame(0, db_connect()->table('institution_users')->where(['user_id' => $id, 'institution_id' => $this->institution])->countAllResults());
-        $this->assertSame(1, db_connect()->table('institution_users')->where(['user_id' => $id, 'institution_id' => $this->other])->countAllResults());
-    }
-
-    public function testSomeoneWhoBelongsOnlyHereCannotBeRemoved(): void
-    {
-        $ann = $this->person('student', 'Ann');
-
-        $e = $this->refused(fn () => $this->service->removeFromInstitution($this->institution, (int) $ann->id, $this->actor));
-
-        $this->assertStringContainsString('Deactivate', $e->getMessage());
-    }
-
     public function testAnotherInstitutionsPeopleAndSystemAdministratorsAreNotFound(): void
     {
         $zed   = $this->person('student', 'Zed', $this->other);
@@ -447,7 +408,6 @@ final class PeopleServiceTest extends DatabaseTestCase
                 fn () => $this->service->deactivate($this->institution, $id, $this->actor),
                 fn () => $this->service->reactivate($this->institution, $id, $this->actor),
                 fn () => $this->service->setRoles($this->institution, $id, ['student'], $this->actor),
-                fn () => $this->service->removeFromInstitution($this->institution, $id, $this->actor),
             ] as $do) {
                 try {
                     $do();
@@ -481,7 +441,6 @@ final class PeopleServiceTest extends DatabaseTestCase
     public function testTheExportNamesOnlyThisInstitution(): void
     {
         $ivy = $this->person('instructor', 'Ivy');
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->other, 'user_id' => $ivy->id, 'created_at' => date('Y-m-d H:i:s')]);
 
         $rows = iterator_to_array($this->service->each($this->institution, [], 100), false);
 

@@ -57,6 +57,10 @@ class QuestionService
             ];
         }
 
+        if ($problem = $this->problemWith($data + ['question_text' => ''])) {
+            return ['success' => false, 'message' => $problem];
+        }
+
         $order = $this->questionModel
             ->where('assessment_id', $assessmentId)
             ->countAllResults();
@@ -92,6 +96,23 @@ class QuestionService
         ];
     }
 
+    /**
+     * What is wrong with the text or points being saved (QA MISS-ASM-01), or null. Only the fields
+     * sent are checked, so an edit of something else leaves them alone.
+     */
+    private function problemWith(array $data): ?string
+    {
+        if (array_key_exists('question_text', $data) && trim((string) $data['question_text']) === '') {
+            return 'Write the question before saving it.';
+        }
+
+        if (array_key_exists('points', $data) && $data['points'] !== null && (! is_numeric($data['points']) || (float) $data['points'] < 0)) {
+            return 'Points must be a number, 0 or more.';
+        }
+
+        return null;
+    }
+
     public function updateQuestion(User $user, int $questionId, array $data): array
     {
         $question = $this->questionModel->find($questionId);
@@ -101,6 +122,10 @@ class QuestionService
                 'success' => false,
                 'message' => 'Question not found.',
             ];
+        }
+
+        if ($problem = $this->problemWith($data)) {
+            return ['success' => false, 'message' => $problem];
         }
 
         $this->questionModel->update($questionId, array_merge([

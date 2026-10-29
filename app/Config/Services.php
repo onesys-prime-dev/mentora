@@ -25,6 +25,16 @@ use CodeIgniter\Config\BaseService;
 class Services extends BaseService
 {
     /** The shared audit log writer; tests can replace it with injectMock('auditLogger', ...). */
+    /** The course the request is about, and the person's role in it (set by CourseMembershipFilter). */
+    public static function courseContext(bool $getShared = true): \App\Services\Courses\CourseContext
+    {
+        if ($getShared) {
+            return static::getSharedInstance('courseContext');
+        }
+
+        return new \App\Services\Courses\CourseContext();
+    }
+
     public static function auditLogger(bool $getShared = true): AuditLogger
     {
         if ($getShared) {
@@ -52,6 +62,21 @@ class Services extends BaseService
         }
 
         return new MysqldumpRunner();
+    }
+
+    /**
+     * Copies good backups off the server (audit U3): the command in `backup.offsiteCommand`, or null when none
+     * is set (staging). Tests give it their own with injectMock('offsiteCopier', ...).
+     */
+    public static function offsiteCopier(bool $getShared = true): ?\App\Services\Backup\OffsiteCopier
+    {
+        if ($getShared) {
+            return static::getSharedInstance('offsiteCopier');
+        }
+
+        $command = trim((string) env('backup.offsiteCommand', ''));
+
+        return $command === '' ? null : new \App\Services\Backup\ShellOffsiteCopier($command, (string) config('Database')->default['password']);
     }
 
     /** Seals integration credentials; tests give it their own key with injectMock('credentialVault', ...). */

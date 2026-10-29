@@ -151,6 +151,20 @@ final class NotificationPagesTest extends RouteTestCase
         $this->assertSame(0, (new NotificationService())->unreadCount($id));
     }
 
+    /** Only "Mark all as read" sends no id; an id that is there but not a number marks nothing (QA AMB-COM-02). */
+    public function testAMalformedIdMarksNothingRead(): void
+    {
+        $id = $this->signIn('instructor', 'mine@example.com');
+        $this->tell($id, 'One');
+        $this->tell($id, 'Two');
+
+        foreach (['abc', '1; DROP', '', '-1', '12345678901'] as $bad) {
+            $this->step('POST', 'notifications/read', ['id' => $bad]);
+        }
+
+        $this->assertSame(2, (new NotificationService())->unreadCount($id));
+    }
+
     public function testSomeoneElsesCannotBeMarkedRead(): void
     {
         $other = (int) PeopleFactory::person('instructor', 'Else', 'One', 'else@example.com', $this->acme)->id;

@@ -52,10 +52,12 @@ class MaintenanceFilter implements FilterInterface
         }
 
         /** @var IncomingRequest $request */
-        $path = trim($request->getUri()->getPath(), '/');
+        // The path within the app, without the folder the site is served from.
+        $path = trim($request->getPath(), '/');
 
+        // The open path itself or what is under it; the same word later in an address does not open it (QA AMB-AUTH-09).
         foreach (self::OPEN_PATHS as $open) {
-            if (preg_match('#(^|/)' . preg_quote($open, '#') . '(/|$)#', $path) === 1) {
+            if ($path === $open || str_starts_with($path, $open . '/')) {
                 return null;
             }
         }

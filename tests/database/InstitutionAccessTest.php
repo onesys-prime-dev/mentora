@@ -77,18 +77,6 @@ final class InstitutionAccessTest extends DatabaseTestCase
         $this->assertTrue($this->access->canWrite(999999));
     }
 
-    public function testSomeoneInSeveralInstitutionsIsRestrictedOnlyIfNoneAllowsChanges(): void
-    {
-        $active   = $this->institution('ACT', 'active');
-        $readOnly = $this->institution('RO', 'read_only');
-        $past     = $this->institution('PST', 'past');
-
-        $this->assertSame('writable', $this->access->stateFor($this->member($active, $past)));
-        $this->assertSame('writable', $this->access->stateFor($this->member($readOnly, $active)));
-        $this->assertSame('read_only', $this->access->stateFor($this->member($readOnly, $this->institution('RO2', 'read_only'))));
-        $this->assertSame('past', $this->access->stateFor($this->member($readOnly, $past)), 'the more final state wins when none allows changes');
-    }
-
     public function testItFollowsAStatusChangeStraightAway(): void
     {
         $institution = $this->institution('SWING', 'read_only');

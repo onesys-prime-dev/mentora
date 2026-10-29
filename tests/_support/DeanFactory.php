@@ -41,7 +41,8 @@ final class DeanFactory
     public static function term(int $institution, string $name = 'First', string $start = '2026-08-01'): int
     {
         db_connect()->table('academic_terms')->insert([
-            'institution_id' => $institution, 'name' => $name, 'academic_year' => '2026-2027', 'start_date' => $start, 'end_date' => '2026-12-20',
+            // Ends 141 days after it starts (2026-08-01 to 2026-12-20 by default): a term ends after it starts.
+            'institution_id' => $institution, 'name' => $name, 'academic_year' => '2026-2027', 'start_date' => $start, 'end_date' => date('Y-m-d', strtotime($start . ' +141 days')),
         ]);
 
         return (int) db_connect()->insertID();
@@ -79,6 +80,8 @@ final class DeanFactory
 
         db_connect()->table('chairperson_assignments')->insert([
             'sub_department_id' => $subDepartment, 'chairperson_user_id' => $chair->id, 'status' => $status, 'assigned_at' => date('Y-m-d H:i:s'),
+            // One active chairperson per sub-department (decision 16.0).
+            'active_marker' => $status === 'active' ? 1 : null,
         ]);
 
         return $chair;

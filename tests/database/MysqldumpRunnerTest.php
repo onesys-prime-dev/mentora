@@ -39,6 +39,7 @@ final class MysqldumpRunnerTest extends DatabaseTestCase
     {
         @unlink($this->file);
         putenv('FAKE_DUMP');
+        \Tests\Support\TestEnv::restore();
         Services::resetSingle('settings');
         Services::resetSingle('auditLogger');
         Services::resetSingle('backupRunner');
@@ -95,7 +96,7 @@ final class MysqldumpRunnerTest extends DatabaseTestCase
     public function testABackupFolderThatCannotBeMadeIsAFailureWithAReason(): void
     {
         $runner = FakeBackupRunner::install();
-        $_SERVER['backup.path'] = $this->file . DIRECTORY_SEPARATOR . 'inside'; // under a path that is not a folder
+        \Tests\Support\TestEnv::set('backup.path', $this->file . DIRECTORY_SEPARATOR . 'inside'); // under a path that is not a folder
         file_put_contents($this->file, 'x');
 
         $service = new BackupService();

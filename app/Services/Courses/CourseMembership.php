@@ -35,6 +35,33 @@ class CourseMembership
         return $this->canAccessAs($user, $role, $offeringId);
     }
 
+    /** @var array<string, ?string> roleIn's answers, by "user:offering" */
+    private array $roles = [];
+
+    /**
+     * What this person is in this offering, whatever groups they hold (9.1): its instructor, the chairperson of
+     * its sub-department, or a student enrolled in it (or who completed it); null for none. Teaching comes first,
+     * then chairing: once a student can't also be staff of a course, only a chair who teaches can be two.
+     */
+    public function roleIn(User $user, int $offeringId): ?string
+    {
+        $key = $user->id . ':' . $offeringId;
+
+        if (! array_key_exists($key, $this->roles)) {
+            $this->roles[$key] = null;
+
+            foreach (['instructor', 'chairperson', 'student'] as $role) {
+                if ($this->canAccessAs($user, $role, $offeringId)) {
+                    $this->roles[$key] = $role;
+
+                    break;
+                }
+            }
+        }
+
+        return $this->roles[$key];
+    }
+
     /** As the named role, whatever else the person may also be. */
     public function canAccessAs(User $user, string $role, int $offeringId): bool
     {

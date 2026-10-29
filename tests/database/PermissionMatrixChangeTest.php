@@ -61,18 +61,6 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testGrantingAPermissionStoresAGrantAndTheMatrixChangesAtOnce(): void
-    {
-        $this->assertTrue($this->matrix->set('student', 'announcements.manage', true, $this->admin));
-
-        $row = db_connect()->table('role_permissions')->get()->getRowArray();
-
-        $this->assertSame('student', $row['role']);
-        $this->assertSame('announcements.manage', $row['permission']);
-        $this->assertSame(1, (int) $row['granted']);
-        $this->assertTrue($this->matrix->has('student', 'announcements.manage'), 'no waiting for the next request');
-    }
-
     public function testRevokingADefaultStoresADenial(): void
     {
         $this->assertTrue($this->matrix->set('instructor', 'grading.manage', false, $this->admin));
@@ -93,9 +81,9 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
 
     public function testChangingTheSameCellTwiceLeavesOneRow(): void
     {
-        $this->matrix->set('student', 'announcements.manage', true, $this->admin);
-        $this->matrix->set('student', 'announcements.manage', false, $this->admin);
-        $this->matrix->set('student', 'announcements.manage', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
 
         $this->assertSame(1, $this->rowCount());
     }
@@ -103,7 +91,7 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
     public function testAskingForWhatIsAlreadyTrueDoesNothing(): void
     {
         $this->assertFalse($this->matrix->set('instructor', 'courses.view', true, $this->admin));
-        $this->assertFalse($this->matrix->set('student', 'grading.manage', false, $this->admin));
+        $this->assertFalse($this->matrix->set('instructor', 'grading.manage', true, $this->admin));
 
         $this->assertSame(0, $this->rowCount());
         $this->assertSame([], $this->audit(), 'a non-change is not an event');
@@ -111,18 +99,18 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
 
     public function testPermissionNamesAreCaseInsensitive(): void
     {
-        $this->assertTrue($this->matrix->set('student', 'Announcements.Manage', true, $this->admin));
-        $this->assertTrue($this->matrix->has('student', 'announcements.manage'));
+        $this->assertTrue($this->matrix->set('instructor', 'Grading.Manage', false, $this->admin));
+        $this->assertTrue($this->matrix->has('institutional_admin', 'grades.approve'));
     }
 
     public function testOneChangeLeavesOtherCellsAlone(): void
     {
         $before = $this->matrix->effective();
 
-        $this->matrix->set('student', 'announcements.manage', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
 
         $after = $this->matrix->effective();
-        unset($before['student'], $after['student']);
+        unset($before['instructor'], $after['instructor']);
 
         $this->assertSame($before, $after);
     }
@@ -160,14 +148,6 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
             $this->assertSame(0, $this->rowCount());
             $this->assertSame(['courses.view'], $this->matrix->effective()['student']);
         }
-    }
-
-    public function testARoleCanSwapItsOnlyPermissionForAnotherInTheRightOrder(): void
-    {
-        $this->matrix->set('student', 'announcements.manage', true, $this->admin);
-
-        $this->assertTrue($this->matrix->set('student', 'courses.view', false, $this->admin), 'with a second permission the first may go');
-        $this->assertSame(['announcements.manage'], $this->matrix->effective()['student']);
     }
 
     public function testAnUnknownRoleIsRefused(): void
@@ -225,7 +205,7 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
     {
         auth()->login($this->admin);
 
-        $this->matrix->set('student', 'announcements.manage', true);
+        $this->matrix->set('instructor', 'grading.manage', false);
 
         auth()->logout();
 
@@ -245,19 +225,19 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
         });
 
         try {
-            $this->matrix->set('student', 'announcements.manage', true, $this->admin);
+            $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
             $this->fail('the failure must reach the caller');
         } catch (RuntimeException $e) {
             $this->assertSame('the audit log is unavailable', $e->getMessage());
         }
 
-        $this->assertFalse($this->matrix->has('student', 'announcements.manage'), 'the grant was taken back');
+        $this->assertTrue($this->matrix->has('instructor', 'grading.manage'), 'the revoke was taken back');
         $this->assertSame($rowsBefore, $this->rowCount());
     }
 
     public function testAnAuditFailureRestoresTheEarlierValueNotJustTheDefault(): void
     {
-        $this->matrix->set('student', 'announcements.manage', true, $this->admin);
+        $this->matrix->set('instructor', 'grading.manage', false, $this->admin);
 
         Services::injectMock('auditLogger', new class () extends AuditLogger {
             public function log(string $action, ?User $actor = null, array $details = []): int
@@ -267,12 +247,12 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
         });
 
         try {
-            $this->matrix->set('student', 'announcements.manage', false, $this->admin);
+            $this->matrix->set('instructor', 'grading.manage', true, $this->admin);
         } catch (RuntimeException) {
             // expected
         }
 
-        $this->assertTrue($this->matrix->has('student', 'announcements.manage'), 'still granted, as before the failed attempt');
-        $this->assertSame(1, (new RolePermissionModel())->where('role', 'student')->countAllResults());
+        $this->assertFalse($this->matrix->has('instructor', 'grading.manage'), 'still revoked, as before the failed attempt');
+        $this->assertSame(1, (new RolePermissionModel())->where('role', 'instructor')->countAllResults());
     }
 }

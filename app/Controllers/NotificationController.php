@@ -57,10 +57,12 @@ class NotificationController extends BaseController
     {
         $id = $this->request->getPost('id');
 
-        (new NotificationService())->markRead(
-            (int) auth()->id(),
-            is_string($id) && preg_match('/^\d{1,10}$/', $id) === 1 ? (int) $id : null,
-        );
+        // No id is "Mark all as read"; an id that is there but not a notification's marks nothing (QA AMB-COM-02).
+        if ($id !== null && ! (is_string($id) && preg_match('/^\d{1,10}$/', $id) === 1)) {
+            return redirect()->to('notifications');
+        }
+
+        (new NotificationService())->markRead((int) auth()->id(), $id === null ? null : (int) $id);
 
         return redirect()->to('notifications');
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Institutions;
 
 use App\Models\Assignments\DeanAssignmentModel;
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Courses\Grades\GradeOverrideRequestService;
 use App\Services\Sis\SisOwnership;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -45,6 +46,11 @@ class DeanAssignmentService
             throw StructureException::field('user_id', 'Choose a person who belongs to this institution.');
         }
 
+        // Not the dean of courses they are a student of (9.5).
+        if (($clash = (new CourseRoleConflicts())->forDean($userId, $departmentId)) !== null) {
+            throw StructureException::field('user_id', CourseRoleConflicts::sentence($userId, $clash));
+        }
+
         // A dean can also teach, but cannot also be a chairperson: the one who oversees a department
         // does not lead one of its sub-departments.
         if (
@@ -64,6 +70,9 @@ class DeanAssignmentService
                 }
             }
         }
+
+        // The institution's first dean brings sign-off with it: grades already finalized now wait for one (2.3).
+        $firstDean = ! \App\Services\Courses\Grades\GradeAuthority::usesApproval($institutionId);
 
         $now = date('Y-m-d H:i:s');
         $db->transStart();
@@ -100,6 +109,10 @@ class DeanAssignmentService
 
         // Requests waiting for the department's dean now wait for this one (or, if it is their own, for the administrator).
         (new GradeOverrideRequestService())->retargetDepartment($departmentId);
+
+        if ($firstDean) {
+            (new \App\Services\Courses\Grades\GradeSignoffService())->announceNowNeeded($institutionId);
+        }
 
         service('auditLogger')->log('structure.dean_assigned', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $id, 'institution_id' => $institutionId,

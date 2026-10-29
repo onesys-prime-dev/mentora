@@ -80,6 +80,19 @@ class SisOwnership
         return array_fill_keys(array_map(static fn (array $r): int => (int) $r['local_id'], $rows), true);
     }
 
+    /**
+     * Whether the SIS is currently the owner of this section's class times (D9): it sent them and its
+     * connection is enabled. Disabling the connection hands them back to the administrator.
+     */
+    public function managesSchedule(int $offeringId): bool
+    {
+        return db_connect()->table('sis_class_schedules')
+            ->join('sis_connections', 'sis_connections.institution_id = sis_class_schedules.institution_id')
+            ->where('sis_class_schedules.offering_id', $offeringId)
+            ->where('sis_connections.enabled', 1)
+            ->countAllResults() > 0;
+    }
+
     /** Whether the SIS owns this student's place in this course (it knows both). */
     public function managesEnrolment(int $courseId, int $studentId): bool
     {

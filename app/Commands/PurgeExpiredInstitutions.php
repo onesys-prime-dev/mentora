@@ -32,6 +32,18 @@ class PurgeExpiredInstitutions extends BaseCommand
 
     public function run(array $params)
     {
+        $code = $this->work($params);
+
+        // The scheduler check watches for this job going quiet (6.2); a dry run is not the job.
+        if (! array_key_exists('dry-run', $params) && CLI::getOption('dry-run') === null) {
+            \App\Services\Monitoring\ScheduledJobs::heartbeat('institutions:purge-expired');
+        }
+
+        return $code;
+    }
+
+    private function work(array $params)
+    {
         // The flag arrives in $params, and also through CLI::getOption() when run from the shell.
         // Either one means a dry run: a flag that is missed must never turn into a real purge.
         $dryRun = array_key_exists('dry-run', $params) || CLI::getOption('dry-run') !== null;

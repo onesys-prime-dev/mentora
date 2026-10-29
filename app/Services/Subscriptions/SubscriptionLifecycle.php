@@ -28,7 +28,7 @@ class SubscriptionLifecycle
 {
     use RecordsAuditedChanges;
 
-    private const RANK = [
+    public const RANK = [
         InstitutionModel::ACTIVE    => 1,
         InstitutionModel::READ_ONLY => 2,
         InstitutionModel::PAST      => 3,

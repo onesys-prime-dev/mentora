@@ -19,6 +19,9 @@ final class FakeBackupRunner implements BackupRunner
 {
     public bool $fail = false;
 
+    /** What the dump looks like: `complete` (gzip ending as mysqldump's does), `truncated` (cut mid-stream), `unfinished` (no closing line). */
+    public string $mode = 'complete';
+
     public int $calls = 0;
 
     public string $folder;
@@ -28,7 +31,11 @@ final class FakeBackupRunner implements BackupRunner
         $fake         = new self();
         $fake->folder = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-backups-' . bin2hex(random_bytes(4));
 
-        $_SERVER['backup.path'] = $fake->folder;
+        \Tests\Support\TestEnv::set('backup.path', $fake->folder);
+
+        // No off-site copy unless a test gives one: a .env with backup.offsiteCommand set must not run it (14.2).
+        \Tests\Support\TestEnv::unset('backup.offsiteCommand');
+        Services::resetSingle('offsiteCopier');
 
         Services::injectMock('backupRunner', $fake);
 
@@ -43,8 +50,9 @@ final class FakeBackupRunner implements BackupRunner
 
         @rmdir($this->folder);
 
-        unset($_SERVER['backup.path']);
+        \Tests\Support\TestEnv::restore();
         Services::resetSingle('backupRunner');
+        Services::resetSingle('offsiteCopier');
     }
 
     public function dump(string $path): void
@@ -55,6 +63,16 @@ final class FakeBackupRunner implements BackupRunner
             throw new RuntimeException('mysqldump failed: access denied');
         }
 
-        file_put_contents($path, 'fake dump ' . $this->calls);
+        $sql = "-- MySQL dump\nCREATE TABLE t (id int);\nINSERT INTO t VALUES ({$this->calls});\n" . str_repeat("-- padding\n", 2000);
+
+        // mysqldump writes this line last, once every table is out.
+        if ($this->mode !== 'unfinished') {
+            $sql .= "-- Dump completed on 2026-10-10 12:00:00\n";
+        }
+
+        $gz = gzencode($sql, 9);
+
+        // A gzip stream cut short, as a disk filling up mid-dump leaves it.
+        file_put_contents($path, $this->mode === 'truncated' ? substr($gz, 0, intdiv(strlen($gz), 2)) : $gz);
     }
 }

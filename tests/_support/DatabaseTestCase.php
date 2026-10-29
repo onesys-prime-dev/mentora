@@ -56,12 +56,15 @@ abstract class DatabaseTestCase extends CIUnitTestCase
 
         parent::setUp();
 
-        if ($this->isolateTests) {
-            if (! isset(self::$emptied[static::class])) {
-                $this->emptyAllTables();
-                self::$emptied[static::class] = true;
-            }
+        // The course of the last request is not this test's (a real request starts with none).
+        service('courseContext')->clear();
 
+        // Nor are who-belongs-where and the permission matrices an earlier test worked out: a user id can come
+        // back in another institution.
+        \App\Services\Auth\RolePermissions::flush();
+
+        if ($this->isolateTests) {
+            $this->emptyTablesOnce();
             self::forgetEarlierQueryFailure();
             db_connect()->transBegin();
         }
@@ -90,6 +93,18 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         $db = db_connect();
 
         (new \ReflectionProperty($db, 'transStatus'))->setValue($db, true);
+    }
+
+    /**
+     * Empties the tables before this class's first test. Isolated classes do it themselves; a class that can't be
+     * isolated (it runs DDL) but must not meet an earlier run's rows calls it from setUp.
+     */
+    protected function emptyTablesOnce(): void
+    {
+        if (! isset(self::$emptied[static::class])) {
+            $this->emptyAllTables();
+            self::$emptied[static::class] = true;
+        }
     }
 
     private function emptyAllTables(): void

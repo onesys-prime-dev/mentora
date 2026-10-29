@@ -12,15 +12,17 @@ use App\Filters\LoginLockoutFilter;
 use App\Filters\MaintenanceFilter;
 use App\Filters\ClosedOfferingFilter;
 use App\Filters\CourseMembershipFilter;
+use App\Filters\CoursePermissionFilter;
+use App\Filters\CsrfFilter;
 use App\Filters\InstitutionCourseFilter;
 use App\Filters\ParentChildFilter;
 use App\Filters\ParentPortalFilter;
+use App\Filters\PermissionFilter;
 use App\Filters\ReadOnlyFilter;
 use App\Filters\ReauthFilter;
 use App\Filters\RoleFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
-use CodeIgniter\Filters\CSRF;
 use CodeIgniter\Filters\DebugToolbar;
 use CodeIgniter\Filters\ForceHTTPS;
 use CodeIgniter\Filters\Honeypot;
@@ -41,7 +43,7 @@ class Filters extends BaseFilters
      * or [filter_name => [classname1, classname2, ...]]
      */
     public array $aliases = [
-        'csrf'          => CSRF::class,
+        'csrf'          => CsrfFilter::class,
         'toolbar'       => DebugToolbar::class,
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
@@ -56,6 +58,7 @@ class Filters extends BaseFilters
         'ajaxredirect'  => AjaxRedirectFilter::class,
         'readonly'      => ReadOnlyFilter::class,
         'closedoffering' => ClosedOfferingFilter::class,
+        'coursepermission' => CoursePermissionFilter::class,
         'institutioncourse' => InstitutionCourseFilter::class,
         'deancourse'    => InstitutionCourseFilter::class,
         'role'          => RoleFilter::class,
@@ -67,6 +70,7 @@ class Filters extends BaseFilters
         'maintenance'   => MaintenanceFilter::class,
         'chairpersoncourseaudit' => ChairpersonCourseAudit::class,
         'aiworker'      => AiWorkerFilter::class,
+        'schedulercheck' => \App\Filters\SchedulerCheckFilter::class,
     ];
 
     /**
@@ -106,7 +110,9 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            // 'csrf',
+            // First: a page that was open too long is answered before anything else looks at the request.
+            // The AI worker and the scheduler check are the exceptions; each is authenticated by its own secret.
+            'csrf' => ['except' => ['internal/ai/*', 'internal/scheduler-check']],
             // 'invalidchars',
 
             // A deactivated account, or a session an administrator ended, is turned away here.
@@ -146,4 +152,13 @@ class Filters extends BaseFilters
      * @var array<string, array<string, list<string>>>
      */
     public array $filters = [];
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // After Shield's registrar has added its own: `permission:` reads the person's institution's
+        // settings on top of the platform's (audit decision U1b).
+        $this->aliases['permission'] = PermissionFilter::class;
+    }
 }

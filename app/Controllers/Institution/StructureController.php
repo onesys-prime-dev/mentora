@@ -159,7 +159,8 @@ class StructureController extends BaseController
     public function assignChairperson(int $subDepartmentId): ResponseInterface|RedirectResponse
     {
         return $this->run(
-            fn (int $inst) => (new ChairAssignmentService())->assign($inst, $subDepartmentId, (int) ($this->input()['user_id'] ?? 0), auth()->user()),
+            // replace=1: the administrator confirmed replacing the sub-department's chairperson (16.0b).
+            fn (int $inst) => (new ChairAssignmentService())->assign($inst, $subDepartmentId, (int) ($this->input()['user_id'] ?? 0), auth()->user(), (string) ($this->input()['replace'] ?? '') === '1'),
             'The chairperson was assigned.',
             self::BACK,
         );

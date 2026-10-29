@@ -80,12 +80,12 @@ final class AiGenerateModalViewTest extends CIUnitTestCase
 
     public function testTheDisclosureNoLongerPromisesNothingLeavesTheServerWhenAHostedProviderIsUsed(): void
     {
-        $_SERVER['questionBuilder.useJobs'] = 'true';
+        \Tests\Support\TestEnv::set('questionBuilder.useJobs', 'true');
 
         try {
             $html = $this->render($this->unit([['id' => 1, 'title' => 'A', 'type' => 'reading', 'status' => 'published']]));
         } finally {
-            unset($_SERVER['questionBuilder.useJobs']);
+            \Tests\Support\TestEnv::restore();
         }
 
         $this->assertStringContainsString('sent to an external AI service (Groq)', $html);

@@ -9,6 +9,7 @@ How its screens are built (tokens, components, patterns and the acceptance list)
 - The institution is **decided on the server** from the signed-in person (`InstitutionScope`, built on `PlanLimits::institutionOf`), never from an id in the address or a form.
 - Every id a page is handed (department, sub-department, program, course, offering, term, person) is checked with `InstitutionScope::require()` before anything is read or written. A foreign or missing id answers **404**, not 403, so the page does not confirm it exists elsewhere.
 - A person removed from the platform (soft-deleted) is not owned.
+- **Read-only** follows the institution's effective status (`EffectiveStatus`): the subscription dates count even before the nightly `subscriptions:sync` has moved the stored status. A person's own things stay open in a read-only or past institution: their calendar reminders, and a parent's email choices and password link (`ReadOnlyFilter::OWN_ACCOUNT`).
 
 ## Routes
 
@@ -70,11 +71,14 @@ To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', '
 
 ## Chairpersons
 
-On the Structure page, each sub-department lists its chairpersons with **Assign chairperson** and **Remove** (`ChairAssignmentService`).
+On the Structure page, each sub-department shows its chairperson with **Assign chairperson** (when it has none), **Replace chairperson** and **Remove** (`ChairAssignmentService`).
 
-- A sub-department can have several chairpersons and a person can chair several sub-departments. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active sub-department.
-- Removing keeps the row (`revoked`); assigning again reuses it. A chairperson's reach is derived live from these rows, so it follows on their next request.
-- Audit: `structure.chairperson_assigned|revoked`.
+- **One chairperson per sub-department** (audit 16.0); a person can chair several sub-departments. The database keeps it so: `active_marker` is 1 on the one active row and a unique key covers `(sub_department_id, active_marker)`. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active sub-department.
+- **Replacing:** assigning someone to a sub-department that has a chairperson is refused ("… chairs …. Confirm to replace them.") unless the administrator confirms (`replace=1`, the Replace chairperson dialog). The old assignment then ends (`revoked`, history kept) and the old chair is told; override requests waiting for a chairperson's endorsement pass to the new chair, who is told. A request the new chair made themselves moves on to the dean (or the administrators), since nobody else could endorse it. If another administrator changed the chair at the same moment, the second is told to reload.
+- **The SIS:** a chairperson the SIS supplies is replaced or removed there, not by hand (no Replace button; a request anyway gets the SIS message). The SIS sync replaces the chair it lists, and a file listing two chairpersons for one sub-department fails the second row.
+- **Existing data:** the migration `OneChairpersonPerSubDepartment` keeps each sub-department's most recently assigned chair and ends the others.
+- Removing keeps the row (`revoked`); assigning again reuses it. Requests that were waiting for the removed chair move on to the dean (or the administrators) instead of waiting for nobody (`grade.override_rerouted`). A chairperson's reach is derived live from these rows, so it follows on their next request.
+- Audit: `structure.chairperson_assigned|revoked` (a replacement records both, the revoked one with `replaced_by`).
 - Giving someone the chairperson role is done on the People page (a later branch).
 
 ## Terms
@@ -99,12 +103,23 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Instructors:** chosen from active people of the institution who hold the instructor role. Assigning and removing works on active offerings only; removing keeps past grades and the audit trail.
 - **Audit:** `structure.offering_created|updated|archived|reactivated|instructor_assigned|instructor_unassigned`.
 
+### Class times
+
+`/institution/offerings/{id}/schedule`, the "Class times" link on each row of the Offerings list (same permission, read-only institution and 404 for another institution's section as above). The list shows each section's week in a few words ("Mon 09:00–10:30 · Rm 204", or "—").
+
+- **A week of meetings:** day, start, end, room (optional, up to 50 characters) and delivery (onsite, online, hybrid), in the platform's time zone. The page shows the saved rows plus three blank ones; leaving a row empty removes it, and saving replaces the whole week (`ClassScheduleService`). No one-off exceptions: a cancelled class is an announcement.
+- **Refused, with the row:** no day, a time that is not `HH:MM`, the end not after the start, an unknown delivery, a room over 50 characters, or the same day and start twice ("Row 2: the section already meets on Monday at 09:00."). What was typed stays on the form.
+- **Clashes are warnings, never a refusal.** After a save, the page lists every other section of the same term that meets at an overlapping time on the same day in the same room (ignoring case; not for an online meeting or an empty room) or with an instructor in common: "Room Rm 204 is also used by IT101 B on Monday 09:30–11:00." / "Ivy Tan also teaches IT102 A on Tuesday 13:00–14:30."
+- **Only an active section** takes changes; an archived or completed one shows its times read-only.
+- **From the SIS:** a section whose times the SIS sends (`class_schedules.csv`, see `sis-integration.md`) shows them read-only, with a "From the SIS" badge and "These class times come from your student information system. Change them there; the next sync brings them here." The server refuses a save as well. Disabling the connection hands the times back.
+- **Audit:** `structure.offering_schedule_changed` with the week before and after.
+
 ## Enrolment
 
 `/institution/enrolments/offering/{id}` (permission `enrolments.manage`; read-only while the institution is read-only). Reached from the "enrolled / capacity" figure on the Offerings list.
 
 - **Roster:** students of one offering with status (enrolled, dropped, withdrawn, completed), student number, email and since-date; search (name, number, email), status filter, sort, 25 per page, and a places bar that says "over capacity by N" when it is.
-- **Add students:** paste student numbers or email addresses, one per line or separated by commas (up to 500). They must be active people of the institution holding the student role. Anyone who cannot be enrolled is skipped and named with the reason ("is already enrolled", "has an inactive account", "does not hold the student role", "is managed by your student information system"); the rest go in together. If nobody can be enrolled the dialog says why, beside the field. A student with a dropped or withdrawn place is reinstated on the same row.
+- **Add students:** paste student numbers or email addresses, one per line or separated by commas (up to 500). They must be active people of the institution holding the student role. Anyone who cannot be enrolled is skipped and named with the reason ("is already enrolled", "has an inactive account", "does not hold the student role", "is managed by your student information system", or a course-role conflict such as "teaches or has taught this course", see `course-access.md`); the rest go in together. If nobody can be enrolled the dialog says why, beside the field. A student with a dropped or withdrawn place is reinstated on the same row.
 - **Capacity:** a guide with a deliberate override. Going over it is refused with "over capacity by N" until the box "Enrol even if the section goes over capacity" is ticked; the same applies to bringing someone back. Nothing is partly added.
 - **Status:** change one place at a time. Dropping or withdrawing never deletes anything: the student's work and grades stay and the place can be reinstated.
 - **Only an active offering** takes changes; an archived or completed one shows its roster with a closed note.
@@ -112,11 +127,47 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Seats** count student accounts, not places, so enrolling an existing student never uses one.
 - **Audit:** `enrolment.added|status_changed` (target type `enrollment`).
 
+## Roles and permissions
+
+`/institution/roles` (permission `institution.roles`; a change also needs the password; read-only while the institution is read-only). The Apps tile "Roles and permissions".
+
+- **What:** the academic permissions of the institution's dean, chairperson, instructor, student and parent roles, on top of the platform's defaults. The same grid as the system administrator's page; "Edited" marks a box that differs from the platform's, and a box never changed follows the platform, later changes included.
+- **Not here:** the institutional administrator and system administrator roles, and any platform or institution-administration permission.
+- **Rules:** a role keeps at least one permission; a permission a role is not offered cannot be set.
+- **Audit:** `roles.permission_changed` with the institution. More in `roles-and-permissions.md`.
+- **Warnings:** where nobody can approve grade overrides or sign off grades in a department ("Nobody can … in …"), the page says so; the system administrator's Roles page lists the same for every institution (`GradeAuthority::gaps`).
+
+## Who decides grade overrides and sign-off
+
+`GradeAuthority` answers it for the override chain, sign-off and the SIS grade export.
+
+- **Whether approval is used:** an institution uses approval and sign-off once it has any active dean assignment. With none, overrides stay direct and finalized grades go straight to the SIS, as before. When the first dean is assigned, the finalized sections whose grades were not sent yet are announced to whoever now signs them off: the new dean for their department, the administrators for the rest.
+- **Who:** in a department, its dean if they hold the permission as dean (`grades.approve`, `grades.signoff`); otherwise the institution's active administrators who hold it. Both permissions are institutional administrator defaults.
+- **Nobody decides their own request**, and an administrator never signs off a section they teach (another administrator does). A dean may sign off a section they teach.
+- **Changing the permission** (either Roles page) moves waiting requests to whoever now decides them.
+
+## Approvals
+
+`/institution/approvals` (permission `grades.approve`; read-only while the institution is read-only). The dean's Approvals page, for the requests waiting for the institution (`awaiting_institution`).
+
+- **Pending:** the requests of the institution waiting for an administrator, with the same filters as the dean's. **Decided:** those decided by the institution's administrators.
+- **Deciding:** approve or reject, never your own. The first administrator to decide wins; the next is told "That request was just decided or withdrawn." Every administrator who may decide it is told when one arrives (link to this page).
+- **When it can't be decided:** the requester is told why it waits ("This needs another administrator…" or "Nobody in your institution can decide this yet…").
+
+## Sign-off
+
+`/institution/signoff` (permission `grades.signoff`; signing off a section or a program also needs the password). The dean's Sign-off board, for the programs of departments with no dean who signs off.
+
+- **Board:** term filter, programs with their ready sections; signing off one section or a whole program, and reopening.
+- **Own sections:** a section the administrator teaches is marked and can't be signed off by them ("You teach this section, so another administrator signs it off."). "Sign off all N ready" leaves them out of N and says how many were left for another administrator.
+- **Notices:** when a section is ready, the administrators who may sign it off are told, minus the section's instructors.
+- **Not here:** the dean's CSV export and follow-ups.
+
 ## People
 
 `/institution/people` (permission `people.view` to look and export, `people.manage` to change; read-only while the institution is read-only). The Apps tile "People".
 
-- **List:** people of the institution (never system administrators, never another institution), searchable by name or email, filterable by role and status, sortable, 25 per page, with a CSV export of the current filters or only the ticked rows. A person who also belongs to another institution is marked, and the other institution is never named.
+- **List:** people of the institution (never system administrators, never another institution), searchable by name or email, filterable by role and status, sortable, 25 per page, with a CSV export of the current filters or only the ticked rows.
 - **Invitations tab:** invitations still waiting or expired. Send again (the earlier link stops working) or cancel. The account is made when the person chooses a password. A student invitation takes a seat and is refused when none is left.
 - **Edit details:** name and email. Locked while the SIS manages the person.
 - **Roles:** student, instructor, chairperson, parent, institutional administrator; at least one. Never system administrator.
@@ -125,9 +176,9 @@ On the Structure page, each sub-department lists its chairpersons with **Assign 
 - **Protected:**
   - The last active institutional administrator cannot be deactivated, demoted or removed, and nobody takes the administrator role from themselves.
   - Nobody deactivates their own account.
-  - A person who also belongs to another institution has an account that is not this administrator's: only "Remove from my institution" is offered. Someone who belongs only here is deactivated instead.
-- **Chairperson assignments** end when the role is taken away, the person is deactivated or removed (history kept).
-- **Audit:** `user.updated|deactivated|reactivated|signed_out|roles_changed|password_reset_sent|membership_removed`, `invitation.created|resent|revoked`, `users.exported`.
+  - An account belongs to one institution (decision D1), so a person is never removed from it: they are deactivated instead.
+- **Chairperson assignments** end when the role is taken away or the person is deactivated (history kept).
+- **Audit:** `user.updated|deactivated|reactivated|signed_out|roles_changed|password_reset_sent`, `invitation.created|resent|revoked`, `users.exported`.
 - **Not yet:** deans (their role arrives with the dean handout) and parent-student links (a later branch).
 
 ## Parents
@@ -161,7 +212,7 @@ Institution settings has a **Parents** tab (`institution/settings/parents`, `ins
 - **It is the SIS import with a different source.** `UploadConnections` stands in for a SIS connection and points `SisImporter` at the uploaded files, so the importer runs unchanged and gives the same guarantees: a preview that writes nothing and reports exactly what applying does, one transaction (all or nothing), and a bad row refused with its reason while the rest still go in. Same columns as the SIS files (`docs/sis-integration.md`); a header-only template of each file can be downloaded.
 - **Upload:** any of students, instructors, courses and enrolments (at least one). A file that cannot be used as a whole (missing column, empty, over 10 MB) is refused and nothing is kept.
 - **Preview:** counts to create, to update, unchanged and refused (as a whole and per file), the refused rows with their reason, and "Nothing has been saved yet". The files are kept for an hour under a random token inside the institution's own folder (`writable/csv-uploads/<institution>/<token>`, or `upload.csvPath`); another institution's token is a 404.
-- **Apply:** behind the password, uses the kept files, removes them, and says how many were created, updated and refused. If the run fails part-way nothing is changed and the files are kept for another try. Starting over removes them.
+- **Apply:** behind the password, uses the kept files, removes them, and says how many were created, updated and refused. If the run fails part-way nothing is changed and the files are kept for another try. Starting over removes them, and a preview nobody applies is removed once its hour is up by the every-minute `exports:run` job (it does not wait for the next upload).
 - **Refused while a SIS connection is enabled:** one source of truth at a time (a connection that is configured but switched off does not block it).
 - **Records linked by an upload** are not SIS-owned and stay editable while no connection is enabled; if one is enabled later, matching external ids become SIS-owned as usual.
 - **History:** preview and apply appear in the run history like any import (trigger "manual"); applying is audited as `sis.import_run`.
@@ -283,6 +334,15 @@ Any offering of the institution can be opened and looked at, as its instructor s
 - **Scope** is the institution's own: an offering of another institution is a 404 on the page and on every API address (`InstitutionCourseFilter`), and the files a course shares (its resources and announcement attachments) open only for its own institution's administrator. A student's submitted work never does.
 - **One rule in one place:** `CourseViewer` says who sees the instructor's view; the services that used to ask "is this the instructor?" for what to show now ask it, and `InstitutionCourseAccess` decides reach. Writes keep their own checks (the assigned instructor, the program's chairperson).
 - **Read-only institutions** can still be looked at; viewing was never a write.
+- **A lesson's direct link** (`.../modules/items/{item}`, for the institution, the dean, the chairperson, the instructor and the student) opens the course page on that lesson: it answers with a redirect to `.../modules?item={item}`. A draft lesson opens for those who see the instructor's view, marked as a draft; a student sees only a published lesson. A deleted lesson, one from another course, and a course out of reach all give the same "not found" page.
+
+## When an institution is purged
+
+The system administrator's purge (by hand, or `institutions:purge-expired` once the retention period is over) removes the institution and everything under it, in one transaction:
+
+- **Its accounts go too:** every member who belongs to no other institution, except system administrators. Their profiles, roles, sign-ins and work go with them through the database's cascades.
+- **Its files go, row and disk:** everything those accounts uploaded, the institution's logo, and the export zips made for it. The files on disk are deleted after the database work is committed; a file that cannot be deleted then is remembered (`Purge.pendingFiles`) and tried again by the next scheduled purge.
+- **The audit entry** (`institution.purged`) records how many accounts and files went.
 
 ## Subscription
 
@@ -309,9 +369,10 @@ What it holds and what it never shows:
 
 On the People page, `Actions` has `View as this person` (permission `institution.impersonate`). It asks for a reason (5 to 500 characters, kept in the audit log) and the administrator's password, then shows the site as that person sees it.
 
-- **View only.** Every request that would change something is refused on the server, whatever the page or a script sends; reading works. A banner on every page names the person, the minutes left and the reason, with `Exit view`. Signing out also just ends the view.
+- **View only.** Every request that would change something is refused on the server, whatever the page or a script sends; reading works.
+- **Nothing is saved for the person, even by opening a page** (audit 3.2): no quiz attempt is started, and their "last active" time is not stamped. Opening a quiz shows its landing instead: "You are viewing as {name}. Opening the quiz here does not start an attempt.", whether it is open, the attempts used of the limit, and the past results; an attempt already running is shown read-only (its saved answers and minutes left, no saving or submitting). `ViewAsWritesNothingTest` opens every page of each role while viewing and checks no table changed but the audit log (and the course gradebook set up on first opening, which is nobody's). A banner on every page names the person, the minutes left and the reason, with `Exit view`. Signing out also just ends the view.
 - **Time limited** by the platform's `impersonationMinutes` setting. When it passes, the next request ends the view and returns to People.
-- **Who can be viewed:** a live account of this institution: student, instructor, chairperson or parent. Never an administrator of any kind, never oneself, never a person who is also at another institution (the view would show that institution's data), and a person of another institution is answered as one who does not exist.
+- **Who can be viewed:** a live account of this institution: student, instructor, chairperson or parent. Never an administrator of any kind, never oneself, and a person of another institution is answered as one who does not exist.
 - **Works in a read-only institution**, since it changes nothing.
 - **Recorded:** start and end are audit entries (reason, time watched), and every entry made in between carries the administrator as impersonator, which the audit page shows as "viewing as, by ...".
 

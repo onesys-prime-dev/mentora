@@ -113,12 +113,15 @@ final class PermissionRouteTest extends RouteTestCase
 
     public function testAGrantedPermissionLetsTheRoleIn(): void
     {
-        $this->asRole('student');
+        $this->override('instructor', 'grading.manage', false);
+
+        $this->asRole('instructor');
         $this->assertSame(302, $this->statusOf('probe/grading'));
 
-        $this->override('student', 'grading.manage', true);
+        db_connect()->table('role_permissions')->where(['role' => 'instructor', 'permission' => 'grading.manage'])->delete();
+        PermissionMatrix::flush();
 
-        $this->asRole('student');
+        $this->asRole('instructor');
         $this->assertSame(200, $this->statusOf('probe/grading'));
     }
 

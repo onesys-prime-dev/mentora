@@ -1,3 +1,5 @@
+import { csrfExpired } from "../../../../../shared/csrf-expired.js";
+
 import {
     createModule,
     updateModule,
@@ -173,7 +175,7 @@ function bindEditor(modal, refresh) {
 
                 if (!result.success) {
 
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
 
                     return;
 
@@ -260,7 +262,7 @@ function bindDelete(modal, onDeleted) {
 
                 if (!result.success) {
 
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
 
                     return;
 

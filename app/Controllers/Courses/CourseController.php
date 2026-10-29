@@ -63,6 +63,24 @@ class CourseController extends BaseController
         ]);
     }
 
+    /** A lesson of this offering, and one this person may see: drafts too for staff and read-only viewers. */
+    private function lessonIsVisible(\CodeIgniter\Shield\Entities\User $user, int $offeringId, int $learningItemId): bool
+    {
+        $lesson = db_connect()->table('learning_items li')
+            ->select('li.status AS item, lu.status AS unit, cm.status AS module')
+            ->join('learning_units lu', 'lu.id = li.learning_unit_id')
+            ->join('course_modules cm', 'cm.id = lu.module_id')
+            ->where(['li.id' => $learningItemId, 'cm.offering_id' => $offeringId])
+            ->get()->getRowArray();
+
+        if ($lesson === null) {
+            return false;
+        }
+
+        return \App\Services\Courses\CourseViewer::seesInstructorView($user, $offeringId)
+            || ($lesson['item'] === 'published' && $lesson['unit'] === 'published' && $lesson['module'] === 'published');
+    }
+
     public function redirect(
         int $offeringId,
         string $slug
@@ -73,7 +91,8 @@ class CourseController extends BaseController
         // whichever role they're currently acting as, not just the first
         // group they happen to hold — otherwise a chairperson's own course
         // card would send them to the student section instead.
-        $prefix = \App\Services\Courses\CourseViewer::urlPrefix($user, active_role() ?: ($user->inGroup('instructor') ? 'instructor' : 'student'));
+        // What they are in this course decides the area it opens in (9.1).
+        $prefix = \App\Services\Courses\CourseViewer::urlPrefix($user, (new \App\Services\Courses\CourseMembership())->roleIn($user, (int) $offeringId) ?? (active_role() ?: 'student'));
 
         return redirect()->to(
             site_url(
@@ -82,11 +101,17 @@ class CourseController extends BaseController
         );
     }
 
+    /**
+     * The course page on a tab. With a lesson (a link to one: `.../modules/items/{id}`), the lesson must be this
+     * course's, and visible to this person (any status for its staff and read-only viewers, published only for a
+     * student), else not found (audit 5.3); the page then opens on it through `modules?item=` (5.1).
+     */
     public function view(
         int $offeringId,
         string $slug,
-        string $activeFeature
-    ): string {
+        string $activeFeature,
+        ?int $learningItemId = null
+    ): string|\CodeIgniter\HTTP\RedirectResponse {
 
         $user = auth()->user();
 
@@ -107,6 +132,16 @@ class CourseController extends BaseController
             '-',
             true
         );
+
+        if ($learningItemId !== null) {
+            if (! $this->lessonIsVisible($user, $offeringId, $learningItemId)) {
+                throw PageNotFoundException::forPageNotFound();
+            }
+
+            $modules = preg_replace('#/items/\d+$#', '', uri_string());
+
+            return redirect()->to(site_url($modules) . '?item=' . $learningItemId);
+        }
 
         return view(
             'pages/courses/view',

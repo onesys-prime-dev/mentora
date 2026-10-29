@@ -57,7 +57,7 @@ class AuditLogController extends BaseController
         array_push($header, 'old_values', 'new_values');
 
         $stream = fopen('php://temp', 'r+');
-        fputcsv($stream, $header);
+        fputcsv($stream, $header, ',', '"', '');
 
         $count = 0;
 
@@ -73,7 +73,7 @@ class AuditLogController extends BaseController
 
             array_push($cells, $row['old_values'], $row['new_values']);
 
-            fputcsv($stream, array_map(self::safeCell(...), $cells));
+            fputcsv($stream, array_map(self::safeCell(...), $cells), ',', '"', '');
             $count++;
         }
 

@@ -69,24 +69,16 @@ class ModuleService
      */
     private function ensureInstructorOwnsOffering(User $user, int $offeringId): ?array
     {
-        if ($user->inGroup('chairperson')) {
-            return (new ChairpersonAccessService())->canAccess($user, $offeringId)
-                ? null
-                : ['success' => false, 'message' => 'Not authorized.'];
+        // Its instructor, or the chairperson of its program: what they are in this course (9.1).
+        if (in_array((new CourseMembership())->roleIn($user, $offeringId), ['instructor', 'chairperson'], true)) {
+            return null;
         }
 
         if (!$user->inGroup('instructor')) {
             return ['success' => false, 'message' => 'Not authorized.'];
         }
 
-        $assigned = $this->instructorAssignmentModel
-            ->retrieveInstructorCourseOffering($user->id, $offeringId);
-
-        if (!$assigned) {
-            return ['success' => false, 'message' => 'You are not assigned to this course offering.'];
-        }
-
-                return null;
+        return ['success' => false, 'message' => 'You are not assigned to this course offering.'];
     }
 
     /*
@@ -1640,6 +1632,13 @@ class ModuleService
             'status',
             $payload
         )) {
+
+            // Publishing the item publishes its quiz, which needs a question first (QA AMB-ASM-02).
+            $quiz = $payload['status'] === 'published' ? $this->assessmentModel->findByLearningItem($learningItemId) : null;
+
+            if ($quiz && (new \App\Services\Courses\Assessments\AssessmentService())->isEmptyQuiz($quiz)) {
+                return ['success' => false, 'message' => \App\Services\Courses\Assessments\AssessmentService::NO_QUESTIONS];
+            }
 
             $update['status'] =
                 $payload['status'];

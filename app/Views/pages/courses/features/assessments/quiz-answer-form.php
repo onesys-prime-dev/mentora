@@ -6,6 +6,16 @@ $previewLabels = [
     'Short Answer' => 'Type a short answer.',
     'Essay' => 'Write a longer response.',
 ];
+
+// Viewing as the student (3.1): the landing, or the running attempt read-only; nothing is saved for them.
+$viewAs = $viewAs ?? null;
+// The database refused the new attempt (not the same as one already handed in).
+$startFailed = $startFailed ?? false;
+$inProgress = $submission && $submission['status'] === 'In Progress';
+$readOnly = $viewAs !== null;
+
+// The page script counts answers as they are given; a read-only view has no script, so count them here.
+$answeredCount = count(array_filter($responsesByQuestion ?? [], static fn (array $r): bool => $r['selected_choice_id'] !== null || !empty($r['selected_choice_ids']) || trim((string) ($r['response_text'] ?? '')) !== ''));
 ?>
 
 <div class="flex min-w-0 flex-1 flex-col p-10">
@@ -29,7 +39,7 @@ $previewLabels = [
             <div class="flex items-center gap-2">
 
                 <span class="text-xl font-bold text-brand">
-                    Take Quiz
+                    <?= $readOnly ? 'View Quiz' : 'Take Quiz' ?>
                 </span>
 
                 <span class="text-gray-300">
@@ -44,7 +54,13 @@ $previewLabels = [
 
         </div>
 
-        <?php if (!$blocked && $submission && $submission['status'] === 'In Progress'): ?>
+        <?php if ($readOnly && $inProgress && !empty($endsAt)): ?>
+
+            <div class="flex items-center gap-1.5 rounded-full bg-[#FFF1D6] px-3 py-1.5 text-sm font-bold text-[#946200]">
+                <?= max(0, (int) ceil((strtotime($endsAt) - time()) / 60)) ?> min left
+            </div>
+
+        <?php elseif (!$readOnly && !$blocked && $inProgress): ?>
 
             <div class="flex items-center gap-4">
 
@@ -81,7 +97,74 @@ $previewLabels = [
 
     </div>
 
-    <?php if (!empty($lock)): ?>
+    <?php if ($viewAs !== null): ?>
+
+        <div class="mt-6 rounded-2xl border border-[#F3D9A4] bg-[#FFF8E8] px-4 py-3 text-sm font-medium text-[#7A5600]" data-view-as-notice>
+            You are viewing as <?= esc($viewAs['name']) ?>. Opening the quiz here does not start an attempt.
+        </div>
+
+    <?php endif; ?>
+
+    <?php if ($viewAs !== null && !empty($viewAs['teaches'])): ?>
+
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-5 py-8" data-view-as-landing>
+            <p class="text-sm text-[#646464]">
+                <?= esc($viewAs['name']) ?> teaches this course, so they would preview the quiz here. Viewing as them shows no preview.
+            </p>
+        </div>
+
+    <?php elseif ($viewAs !== null && !$inProgress): ?>
+
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-5 py-8" data-view-as-landing>
+
+            <div class="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-[#F9F9FC] p-4 text-sm">
+                <span class="font-semibold text-[#1A1C1E]">
+                    <?php if (!empty($lock)): ?>
+                        Locked: <?= esc($lock['message']) ?>
+                    <?php elseif (!empty($unavailableReason)): ?>
+                        Not available: <?= esc($unavailableReason) ?>
+                    <?php else: ?>
+                        Open now
+                    <?php endif; ?>
+                </span>
+                <span class="text-[#646464]"><?= esc($viewAs['used']) ?> of <?= esc($viewAs['limit']) ?> attempts used</span>
+            </div>
+
+            <?php if ($viewAs['attempts'] === []): ?>
+
+                <p class="text-sm text-[#767676]">No attempts yet.</p>
+
+            <?php else: ?>
+
+                <table class="w-full text-left text-sm">
+                    <thead class="text-xs font-semibold uppercase text-[#767676]">
+                        <tr><th class="py-2">Attempt</th><th class="py-2">Submitted</th><th class="py-2">Score</th><th class="py-2">Status</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <?php foreach ($viewAs['attempts'] as $attempt): ?>
+                            <tr>
+                                <td class="py-2 font-semibold text-[#1A1C1E]">Attempt <?= esc((int) $attempt['attempt_number']) ?></td>
+                                <td class="py-2 text-[#646464]"><?= $attempt['submitted_at'] ? esc(date('M j, Y g:i A', strtotime($attempt['submitted_at']))) : '—' ?></td>
+                                <?php $score = esc(rtrim(rtrim(number_format((float) $attempt['score'], 2), '0'), '.')) . ' / ' . esc((int) $totalPoints); ?>
+                                <td class="py-2 text-[#646464]">
+                                    <?= match ($attempt['status']) {
+                                        'Submitted'        => 'Waiting for grading',
+                                        'Partially Graded' => $score . ' so far',
+                                        'Cancelled'        => '—',
+                                        default            => $score,
+                                    } ?>
+                                </td>
+                                <td class="py-2 text-[#646464]"><?= esc($attempt['status']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+            <?php endif; ?>
+
+        </div>
+
+    <?php elseif (!empty($lock)): ?>
 
         <div class="flex flex-1 flex-col items-center justify-center gap-3 py-24 text-center">
 
@@ -117,6 +200,16 @@ $previewLabels = [
 
         </div>
 
+    <?php elseif ($startFailed): ?>
+
+        <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center" data-quiz-start-failed>
+
+            <span class="text-lg font-bold text-[#646464]">The quiz did not start</span>
+
+            <span class="text-sm text-[#767676]"><?= esc(\App\Services\Courses\Assessments\QuizAttemptService::START_FAILED) ?></span>
+
+        </div>
+
     <?php elseif (!$submission || $submission['status'] !== 'In Progress'): ?>
 
         <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
@@ -139,7 +232,7 @@ $previewLabels = [
                     <div class="flex items-center justify-between text-sm">
 
                         <span class="font-semibold text-[#1A1C1E]" data-quiz-progress-label>
-                            0 of <?= esc(count($questions)) ?> answered
+                            <?= esc($answeredCount) ?> of <?= esc(count($questions)) ?> answered
                         </span>
 
                         <span class="font-bold text-brand">
@@ -151,12 +244,13 @@ $previewLabels = [
                     <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                         <div
                             data-quiz-progress-bar
-                            class="h-full w-0 rounded-full bg-brand transition-all"></div>
+                            style="width: <?= count($questions) > 0 ? round($answeredCount / count($questions) * 100) : 0 ?>%"
+                            class="h-full rounded-full bg-brand transition-all"></div>
                     </div>
 
                 </div>
 
-                <form id="quiz-answer-form" data-submission-id="<?= esc($submission['id']) ?>">
+                <form <?= $readOnly ? 'data-view-only' : 'id="quiz-answer-form"' ?> data-submission-id="<?= esc($submission['id']) ?>">
 
                     <div class="flex flex-col gap-5">
 
@@ -236,7 +330,8 @@ $previewLabels = [
                                                     value="<?= esc($choice['id']) ?>"
                                                     data-quiz-choice-input
                                                     class="h-4 w-4 shrink-0 accent-brand"
-                                                    <?= $isSelected ? 'checked' : '' ?>>
+                                                    <?= $isSelected ? 'checked' : '' ?>
+                                                    <?= $readOnly ? 'disabled' : '' ?>>
 
                                                 <?= esc($choice['choice_text']) ?>
 
@@ -259,6 +354,7 @@ $previewLabels = [
                                         data-quiz-text-input
                                         placeholder="<?= esc($previewLabels[$question['question_type']] ?? 'Type your answer...') ?>"
                                         class="ml-9 rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-brand"
+                                        <?= $readOnly ? 'disabled' : '' ?>
                                     ><?= esc($response['response_text'] ?? '') ?></textarea>
 
                                 <?php endif; ?>
@@ -277,6 +373,8 @@ $previewLabels = [
 
                     </div>
 
+                    <?php if (!$readOnly): ?>
+
                     <div class="sticky bottom-0 mt-6 flex items-center justify-end gap-3 rounded-2xl border border-gray-200 bg-white/95 p-4 backdrop-blur">
 
                         <button
@@ -289,6 +387,8 @@ $previewLabels = [
                         </button>
 
                     </div>
+
+                    <?php endif; ?>
 
                 </form>
 

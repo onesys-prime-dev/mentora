@@ -53,7 +53,7 @@ test("TC-AUTH-04 Signing out ends the session", async ({ page }) => {
     await expect(page).toHaveURL(/\/student\/dashboard$/);
 
     await page.getByRole("button", { name: "Account menu" }).click();
-    await page.getByRole("link", { name: "Log out" }).click();
+    await page.getByRole("button", { name: "Log out" }).click();
     await expect(page).toHaveURL(/\/login$/);
 
     // A protected page now sends you back to login.

@@ -36,6 +36,9 @@ final class SisCsvParser
         // Who leads a department, who chairs a sub-department, who teaches which section. Which of the three
         // target columns a row needs depends on its role (see problem()).
         'staff_assignments' => ['required' => ['role', 'person_external_id'], 'optional' => ['department_code', 'sub_department_code', 'course_external_id', 'section'], 'unique' => ['role', 'person_external_id', 'department_code', 'sub_department_code', 'course_external_id', 'section']],
+
+        // A section's weekly class times (D8, D9): the rows the file lists for a section are its whole week.
+        'class_schedules' => ['required' => ['course_external_id', 'day_of_week', 'start_time', 'end_time'], 'optional' => ['section', 'room', 'delivery_mode'], 'unique' => ['course_external_id', 'section', 'day_of_week', 'start_time']],
     ];
 
     /** @return list<string> */

@@ -66,15 +66,7 @@ class AnnouncementService
     /** Instructor here, or the chairperson of the program it belongs to — same posting rights either way. */
     private function isInstructorHere(User $user, int $offeringId): bool
     {
-        if ($user->inGroup('instructor')) {
-            return (bool) $this->instructorAssignmentModel->retrieveInstructorCourseOffering($user->id, $offeringId);
-        }
-
-        if ($user->inGroup('chairperson')) {
-            return (new ChairpersonAccessService())->canAccess($user, $offeringId);
-        }
-
-        return false;
+        return in_array((new CourseMembership())->roleIn($user, $offeringId), ['instructor', 'chairperson'], true);
     }
 
     private function canViewOffering(User $user, int $offeringId): bool
@@ -111,7 +103,8 @@ class AnnouncementService
         $isInstructor = $this->isInstructorHere($user, $offeringId);
 
         $page = max(1, (int) ($filters['page'] ?? 1));
-        $queryFilters = $this->normalizeFilters($filters);
+        // The course's instructors also see posts dated for a later day (QA AMB-COM-01).
+        $queryFilters = $this->normalizeFilters($filters) + ['scheduled' => $isInstructor];
 
         $pages = 1;
         $focusId = (int) ($filters['focus'] ?? 0);
@@ -144,12 +137,14 @@ class AnnouncementService
         $pinned = $this->announcementModel->retrieveForOffering($offeringId, [
             'pinned_only' => true,
             'limit' => self::PINNED_SIDEBAR_LIMIT,
+            'scheduled' => $isInstructor,
         ]);
 
         return [
             'html' => view('pages/courses/features/announcements/index', [
                 'user' => $user,
                 'isInstructor' => $isInstructor,
+                'canManage' => $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'announcements'),
                 'announcements' => $announcements,
                 'pinned' => $pinned,
                 'filters' => $queryFilters,
@@ -174,7 +169,7 @@ class AnnouncementService
         $isInstructor = $this->isInstructorHere($user, $offeringId);
 
         $page = max(1, (int) ($filters['page'] ?? 2));
-        $queryFilters = $this->normalizeFilters($filters);
+        $queryFilters = $this->normalizeFilters($filters) + ['scheduled' => $isInstructor];
 
         $rows = $this->announcementModel->retrieveForOffering($offeringId, $queryFilters + [
             'limit' => self::PAGE_SIZE + 1,
@@ -213,6 +208,9 @@ class AnnouncementService
     /** Attaches replies, reaction state, attachments, and per-row permission flags. */
     private function hydrate(array $announcements, User $user, bool $isInstructor): array
     {
+        // Posting, editing and pinning are the instructor's, unless their institution took it away (7.4).
+        $isInstructor = $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'announcements');
+
         $ids = array_column($announcements, 'id');
 
         $repliesByAnnouncement = $this->replyModel->retrieveForAnnouncements($ids);
@@ -510,7 +508,7 @@ class AnnouncementService
 
         $emoji = trim($emoji);
 
-        if ($emoji === '' || mb_strlen($emoji) > 32) {
+        if (! self::isReaction($emoji)) {
             return ['success' => false, 'message' => 'Pick a reaction.'];
         }
 
@@ -520,5 +518,22 @@ class AnnouncementService
             'success' => true,
             'reaction_counts' => $this->reactionModel->retrieveCounts([$announcementId])[$announcementId] ?? [],
         ];
+    }
+
+    /** The card's quick reactions, stored by key. */
+    public const QUICK_REACTIONS = ['like', 'heart', 'haha', 'wow'];
+
+    /**
+     * A quick reaction's key, or one emoji picked from "More reactions" (QA AMB-COM-08): a single character
+     * (skin tones, flags and joined emoji count as one) that is an emoji. Words are not reactions.
+     */
+    public static function isReaction(string $value): bool
+    {
+        if (in_array($value, self::QUICK_REACTIONS, true)) {
+            return true;
+        }
+
+        return $value !== '' && strlen($value) <= 32 && grapheme_strlen($value) === 1
+            && preg_match('/^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[#*0-9]\x{FE0F}?\x{20E3})/u', $value) === 1;
     }
 }

@@ -5,6 +5,8 @@ namespace App\Services\Courses\Assessments;
 use CodeIgniter\Shield\Entities\User;
 
 use App\Models\Assessments\AssessmentFeedbackModel;
+use App\Models\Assessments\AssessmentModel;
+use App\Services\Courses\CourseMembership;
 use App\Models\Assessments\AssessmentSubmissionModel;
 
 /**
@@ -37,7 +39,11 @@ class AssessmentFeedbackService
             return ['success' => false, 'message' => 'Submission not found.'];
         }
 
-        $isInstructor = $user->inGroup('instructor');
+        // Staff of the submission's course, by what they are in it (9.1).
+        $offeringId   = (new AssessmentModel())->offeringIdOf((int) $submission['assessment_id']);
+        $isInstructor = $offeringId === null
+            ? $user->inGroup('instructor')
+            : in_array((new CourseMembership())->roleIn($user, $offeringId), ['instructor', 'chairperson'], true);
 
         if (!$isInstructor && (int) $submission['student_id'] !== (int) $user->id) {
             return ['success' => false, 'message' => 'You can only reply to your own submission.'];

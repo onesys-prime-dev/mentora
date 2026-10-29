@@ -35,6 +35,20 @@ class ParentsNotify extends BaseCommand
 
     public function run(array $params)
     {
+        $code = $this->work($params);
+
+        // The scheduler check watches for this job going quiet (6.2); a dry run is not the job. Only a sweep
+        // that ran to the end reports: a failed one is told by nothing else, so failures in a row go quiet and
+        // the system administrators hear of it (QA DOC-24).
+        if ($code === EXIT_SUCCESS && ! array_key_exists('dry-run', $params) && CLI::getOption('dry-run') === null) {
+            \App\Services\Monitoring\ScheduledJobs::heartbeat('parents:notify');
+        }
+
+        return $code;
+    }
+
+    private function work(array $params)
+    {
         // The flag arrives in $params, and also through CLI::getOption() when run from the shell.
         // Either one means a dry run: a flag that is missed must never turn into real messages.
         $dryRun = array_key_exists('dry-run', $params) || CLI::getOption('dry-run') !== null;

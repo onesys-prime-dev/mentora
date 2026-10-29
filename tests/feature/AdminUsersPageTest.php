@@ -459,6 +459,7 @@ final class AdminUsersPageTest extends RouteTestCase
 
     public function testDeactivatingAndReactivatingFromThePersonPage(): void
     {
+        $this->confirmedPassword();
         $user = PeopleFactory::person('student', 'Maria', 'Santos', 'maria@example.com', $this->acme);
 
         $this->submit("admin/users/{$user->id}/deactivate");
@@ -482,6 +483,7 @@ final class AdminUsersPageTest extends RouteTestCase
 
     public function testTheLastAdministratorCannotBeDeactivated(): void
     {
+        $this->confirmedPassword();
         $other = PeopleFactory::person('admin', 'Other', 'Admin', 'other.admin@example.com');
         db_connect()->table('users')->where('id', $this->admin->id)->update(['active' => 0]);
 
@@ -493,6 +495,7 @@ final class AdminUsersPageTest extends RouteTestCase
 
     public function testSigningSomeoneOutEverywhere(): void
     {
+        $this->confirmedPassword();
         $user = PeopleFactory::person('student', 'Maria', 'Santos', null, $this->acme);
 
         $this->submit("admin/users/{$user->id}/sign-out");
@@ -567,20 +570,6 @@ final class AdminUsersPageTest extends RouteTestCase
         $this->assertStringContainsString('at least one role', $this->body("admin/users/{$user->id}"));
     }
 
-    public function testAddingAndRemovingAnInstitution(): void
-    {
-        $this->confirmedPassword();
-        $user = PeopleFactory::person('instructor', 'Ivo', 'Teacher', null, $this->acme);
-
-        $this->submit("admin/users/{$user->id}/memberships", ['institution_id' => (string) $this->beta]);
-
-        $this->assertSame(['Acme University', 'Beta College'], array_column($this->directoryRow($user)['institutions'], 'name'));
-
-        $this->submit("admin/users/{$user->id}/memberships/{$this->acme}/remove");
-
-        $this->assertSame(['Beta College'], array_column($this->directoryRow($user)['institutions'], 'name'));
-    }
-
     /*
     |--------------------------------------------------------------------------
     | Bulk
@@ -589,6 +578,7 @@ final class AdminUsersPageTest extends RouteTestCase
 
     public function testBulkDeactivatingTheTickedPeople(): void
     {
+        $this->confirmedPassword();
         $a    = PeopleFactory::person('student', 'Ann', 'One', null, $this->acme);
         $b    = PeopleFactory::person('student', 'Ben', 'Two', null, $this->acme);
         $left = PeopleFactory::person('student', 'Cy', 'Three', null, $this->acme);
@@ -604,6 +594,7 @@ final class AdminUsersPageTest extends RouteTestCase
 
     public function testBulkSaysWhoCouldNotBeDone(): void
     {
+        $this->confirmedPassword();
         $a = PeopleFactory::person('student', 'Ann', 'One', null, $this->acme);
 
         $this->submit('admin/users/bulk', ['action' => 'deactivate', 'ids' => [(string) $a->id, (string) $this->admin->id]]);
@@ -619,6 +610,7 @@ final class AdminUsersPageTest extends RouteTestCase
 
     public function testBulkReactivating(): void
     {
+        $this->confirmedPassword();
         $a = PeopleFactory::person('student', 'Ann', 'One', null, $this->acme);
         (new App\Services\Users\AccountControl())->deactivate((int) $a->id);
 
@@ -629,6 +621,7 @@ final class AdminUsersPageTest extends RouteTestCase
 
     public function testBulkNeedsPeopleAndARealAction(): void
     {
+        $this->confirmedPassword();
         $a = PeopleFactory::person('student', 'Ann', 'One', null, $this->acme);
 
         $this->submit('admin/users/bulk', ['action' => 'deactivate']);

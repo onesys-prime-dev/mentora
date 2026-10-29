@@ -11,7 +11,7 @@ $file = $resource['file'] ?? null;
 |--------------------------------------------------------------------------
 */
 
-$trackProgress = $user->inGroup('student');
+$trackProgress = \App\Services\Courses\CourseViewer::isStudentHere($user);
 
 $progressAttributes = $trackProgress
     ? 'data-video-progress data-learning-item-id="' . esc($currentItem['id']) . '" data-progress="' . (int) ($currentItem['progress_percent'] ?? 0) . '"'

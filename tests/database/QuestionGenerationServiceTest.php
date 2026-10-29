@@ -260,6 +260,23 @@ final class QuestionGenerationServiceTest extends DatabaseTestCase
         $this->assertSame([$this->reading, $second], $this->sourceIds($result));
     }
 
+    /** 1 to 100 questions at a time, the form's own range, whatever was sent (QA AMB-ASM-10). */
+    public function testAskingForTooFewOrTooManyIsRefusedBeforeAnythingIsStarted(): void
+    {
+        foreach ([0, -3, 101, 5000] as $count) {
+            $result = $this->start(['count' => $count]);
+
+            $this->assertFalse($result['success'], (string) $count);
+            $this->assertSame('Ask for 1 to 100 questions at a time.', $result['message']);
+        }
+
+        $this->assertSame(0, db_connect()->table('ai_generation_batches')->countAllResults());
+        $this->assertSame([], $this->generator->calls);
+
+        $this->assertTrue($this->start(['count' => 100])['success']);
+        $this->assertTrue($this->start(['count' => 1])['success']);
+    }
+
     public function testAnEmptySelectionIsRefusedBeforeAnythingIsStarted(): void
     {
         $result = $this->start(['learning_item_ids' => []]);

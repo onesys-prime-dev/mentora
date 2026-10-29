@@ -16,7 +16,6 @@ $sections = [
     'Inside an institution' => $academicPerms,
 ];
 
-$th  = 'sticky top-0 z-10 bg-gray-50 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[#646464]';
 $ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/50';
 ?>
 
@@ -31,6 +30,11 @@ $ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
     What each role may do. Changes apply on the next request and need your password. The system administrator role is locked,
     and every role keeps at least one permission. <span class="font-semibold text-amber-700">Edited</span> marks a cell that differs from the default.
 </p>
+
+<?php $duty = ['grades.approve' => 'approve grade overrides', 'grades.signoff' => 'sign off grades']; ?>
+<?php foreach ($roleGaps ?? [] as $gap): ?>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'warning', 'text' => $gap['institution'] . ': nobody can ' . $duty[$gap['permission']] . ' in ' . $gap['department'] . '. Its requests and sign-offs wait.'], ['saveData' => false]) ?></div>
+<?php endforeach; ?>
 
 <?php if (session()->has('message')): ?>
     <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
@@ -51,70 +55,11 @@ $ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
     <span class="text-xs text-[#646464]" data-roles-count aria-live="polite"></span>
 </div>
 
-<div class="mt-4 overflow-auto rounded-lg bg-white shadow-sm lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Roles and permissions" data-table>
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead>
-            <tr>
-                <th class="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]">Permission</th>
-                <?php foreach ($roleTitles as $role => $roleTitle): ?>
-                    <th class="<?= $th ?>">
-                        <?= esc($roleTitle) ?>
-                        <?php if ($role === $lockedRole): ?><span class="block text-[10px] font-normal normal-case text-[#646464]">locked</span><?php endif; ?>
-                    </th>
-                <?php endforeach; ?>
-            </tr>
-        </thead>
-
-        <?php foreach ($sections as $sectionTitle => $permissions): ?>
-            <tbody class="divide-y divide-gray-100" data-roles-section-body="<?= esc($sectionTitle) ?>">
-                <tr class="bg-gray-50" data-roles-section-head><th class="px-3 py-1.5 text-left text-xs font-semibold text-brand" colspan="<?= count($roleTitles) + 1 ?>"><?= esc($sectionTitle) ?></th></tr>
-
-                <?php foreach ($permissions as $permission => $description): ?>
-                    <?php
-                    $rowEdited = false;
-                    foreach ($roleTitles as $role => $unused) {
-                        $rowEdited = $rowEdited || in_array($permission, $currentMatrix[$role] ?? [], true) !== in_array($permission, $defaultMatrix[$role] ?? [], true);
-                    }
-                    ?>
-                    <tr data-roles-row data-search="<?= esc(strtolower($permission . ' ' . $description)) ?>" data-edited="<?= $rowEdited ? '1' : '0' ?>">
-                        <td class="px-3 py-2">
-                            <span class="font-mono text-xs"><?= esc($permission) ?></span>
-                            <span class="block text-xs text-[#646464]"><?= esc($description) ?></span>
-                        </td>
-
-                        <?php foreach ($roleTitles as $role => $roleTitle): ?>
-                            <?php
-                            $has       = in_array($permission, $currentMatrix[$role] ?? [], true);
-                            $edited    = $has !== in_array($permission, $defaultMatrix[$role] ?? [], true);
-                            $isLocked  = $role === $lockedRole;
-                            $verb      = $has ? 'Revoke' : 'Grant';
-                            ?>
-                            <td class="px-3 py-2 text-center <?= $edited ? 'bg-amber-50' : '' ?>">
-                                <?php if ($isLocked): ?>
-                                    <span class="<?= $has ? 'text-gray-700' : 'text-gray-300' ?>" title="Locked"><?= $has ? '✓' : '—' ?></span>
-                                <?php else: ?>
-                                    <form data-dialog-form method="post" action="<?= site_url('admin/roles/permissions') ?>">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="role" value="<?= esc($role) ?>">
-                                        <input type="hidden" name="permission" value="<?= esc($permission) ?>">
-                                        <input type="hidden" name="granted" value="<?= $has ? '0' : '1' ?>">
-                                        <button
-                                            type="submit"
-                                            class="h-7 w-7 rounded border <?= $has ? 'border-brand bg-brand text-white' : 'border-gray-300 bg-white text-gray-300' ?> hover:opacity-80"
-                                            aria-label="<?= esc("{$verb} {$permission} for {$roleTitle}") ?>"
-                                            title="<?= esc("{$verb} {$permission} for {$roleTitle}") ?>"><?= $has ? '✓' : '+' ?></button>
-                                    </form>
-                                    <?php if ($edited): ?><span class="text-[10px] font-semibold text-amber-700">Edited</span><?php endif; ?>
-                                <?php endif; ?>
-                            </td>
-                        <?php endforeach; ?>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        <?php endforeach; ?>
-    </table>
-    <p class="hidden px-3 py-10 text-center text-sm text-[#646464]" data-roles-empty>No permissions match.</p>
-</div>
+<?= view('components/permission-grid', [
+    'roleTitles' => $roleTitles, 'sections' => $sections, 'lockedRole' => $lockedRole,
+    'currentMatrix' => $currentMatrix, 'defaultMatrix' => $defaultMatrix, 'gridAction' => site_url('admin/roles/permissions'),
+    'gridScrollable' => true,
+], ['saveData' => false]) ?>
 
 </div>
 

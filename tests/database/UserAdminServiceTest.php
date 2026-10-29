@@ -434,44 +434,6 @@ final class UserAdminServiceTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testAddingAndRemovingAMembership(): void
-    {
-        $beta = PeopleFactory::institution('BETA', 'active', 'Beta College');
-        $user = PeopleFactory::person('instructor', 'Ivo', 'Teacher', null, $this->acme);
-
-        $this->service->addMembership((int) $user->id, $beta, $this->admin);
-
-        $this->assertSame(2, db_connect()->table('institution_users')->where('user_id', $user->id)->countAllResults());
-        $this->assertSame($beta, (int) $this->audit('user.membership_added')[0]['institution_id']);
-
-        $this->service->removeMembership((int) $user->id, $this->acme, $this->admin);
-
-        $this->assertSame([$beta], array_map('intval', array_column(db_connect()->table('institution_users')->where('user_id', $user->id)->get()->getResultArray(), 'institution_id')));
-        $this->assertCount(1, $this->audit('user.membership_removed'));
-        $this->assertSame(1, db_connect()->table('users')->where('id', $user->id)->countAllResults(), 'the account stays');
-    }
-
-    public function testMembershipRefusals(): void
-    {
-        $pending = PeopleFactory::institution('NEWCO', 'pending');
-        $user    = PeopleFactory::person('instructor', 'Ivo', 'Teacher', null, $this->acme);
-        $other   = PeopleFactory::person('admin', 'Other', 'Admin');
-
-        $this->refused(fn () => $this->service->addMembership((int) $user->id, $this->acme, $this->admin), 'already belongs');
-        $this->refused(fn () => $this->service->addMembership((int) $user->id, $pending, $this->admin), 'Finish onboarding');
-        $this->refused(fn () => $this->service->addMembership((int) $user->id, 999999, $this->admin), 'does not exist');
-        $this->refused(fn () => $this->service->addMembership((int) $other->id, $this->acme, $this->admin), 'belong to no institution');
-        $this->refused(fn () => $this->service->removeMembership((int) $user->id, 999999, $this->admin), 'does not belong');
-    }
-
-    public function testAStudentCannotJoinAnInstitutionWithNoFreeSeat(): void
-    {
-        $this->fillSeats();
-        $student = PeopleFactory::person('student', 'Cara', 'Visitor');
-
-        $this->refused(fn () => $this->service->addMembership((int) $student->id, $this->acme, $this->admin), 'seats');
-    }
-
     /*
     |--------------------------------------------------------------------------
     | In bulk

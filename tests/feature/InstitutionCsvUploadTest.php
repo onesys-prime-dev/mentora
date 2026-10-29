@@ -39,7 +39,7 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         FakeEmail::install();
 
         $this->base               = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mentora-csv-feature-' . bin2hex(random_bytes(4));
-        $_SERVER['upload.csvPath'] = $this->base;
+        \Tests\Support\TestEnv::set('upload.csvPath', $this->base);
 
         $this->institution = SisFixture::institution('UPFA');
         $this->other       = SisFixture::institution('UPFB');
@@ -50,7 +50,7 @@ final class InstitutionCsvUploadTest extends RouteTestCase
 
     protected function tearDown(): void
     {
-        unset($_SERVER['upload.csvPath']);
+        \Tests\Support\TestEnv::restore();
 
         foreach (glob($this->base . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
             @unlink($file);
@@ -201,6 +201,24 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         $this->assertStringContainsString('0 to update', $body);
         $this->assertStringContainsString('grid-cols-5', $body, 'five cards when there is something to end');
         $this->assertMatchesRegularExpression('/Apply 1 changes?/', $body, 'ending is the only change, and it can still be applied');
+    }
+
+    public function testThePreviewSaysWhatClassTimesWouldBeRemovedAndOffersToApplyIt(): void
+    {
+        $service = new CsvUploadService($this->base);
+        $header  = "course_external_id,section,day_of_week,start_time,end_time,room,delivery_mode\n";
+        SisFixture::course($this->institution, 'C1', 'IT101');
+        SisFixture::course($this->institution, 'C2', 'IT102');
+
+        // First upload: times for both sections. Second: only C2, unchanged, so C1's times would go.
+        $service->apply($this->institution, $service->preview($this->institution, ['class_schedules' => $header . "C1,A,mon,09:00,10:00,,\nC2,A,tue,09:00,10:00,,\n"], $this->admin)['token'], $this->admin);
+        $token = $service->preview($this->institution, ['class_schedules' => $header . "C2,A,tue,09:00,10:00,,\n"], $this->admin)['token'];
+
+        $body = html_entity_decode($this->step('GET', "institution/people/upload/{$token}")->response()->getBody());
+
+        $this->assertStringContainsString('Class times removed', $body, 'a card of its own');
+        $this->assertMatchesRegularExpression('/data-upload-file="class_schedules".*?1 to remove/s', $body);
+        $this->assertMatchesRegularExpression('/Apply 1 changes?/', $body, 'the removal is the only change, and it can be applied');
     }
 
     public function testAPreviewThatEndsNothingShowsNoEndedCard(): void

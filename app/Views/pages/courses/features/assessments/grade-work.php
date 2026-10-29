@@ -33,8 +33,13 @@ $existingGradingMode = $submission['grading_mode'] ?? 'Default';
 |--------------------------------------------------------------------------
 */
 
+// An instructor whose institution took grading away (grading.manage) reads the work and its grade, nothing more.
+$gradingViewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'grading');
+
 $panelState = match (true) {
     !$submission => 'disabled',
+    $gradingViewOnly && $submissionStatus === 'Graded' => 'locked',
+    $gradingViewOnly => 'disabled',
     $submissionStatus === 'Graded' => 'locked',
     $submissionStatus === 'Grading' => 'editing',
     in_array($submissionStatus, ['Submitted', 'Partially Graded'], true) => 'collapsed',
@@ -534,7 +539,11 @@ $attemptTabs ??= [];
                         <?= $existingScore !== null ? esc((int) $existingScore) . '/' . esc((int) $totalPoints) : 'No Score Yet' ?>
                     </span>
 
-                    <?php if ($panelState === 'locked'): ?>
+                    <?php if ($gradingViewOnly): ?>
+
+                        <!-- Grading taken away by the institution: the work and its grade, no controls -->
+
+                    <?php elseif ($panelState === 'locked'): ?>
 
                         <!-- Graded: read-only; changing the grade needs a confirmation -->
                         <button

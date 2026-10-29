@@ -61,7 +61,8 @@ $canViewThread = $isInstructor || $submissionGraded;
 
 // The instructor can always add a message once a submission exists; a
 // student can reply once the instructor has started the thread.
-$canCompose = !empty($submission) && ($isInstructor ? true : ($submissionGraded && $hasInstructorMessage));
+// The instructor's feedback is part of grading, which their institution can take away (grading.manage).
+$canCompose = !empty($submission) && ($isInstructor ? ! \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'grading') : ($submissionGraded && $hasInstructorMessage));
 
 $scoreCaption = null;
 

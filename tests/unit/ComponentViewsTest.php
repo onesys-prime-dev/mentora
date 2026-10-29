@@ -260,7 +260,7 @@ final class ComponentViewsTest extends CIUnitTestCase
         $this->assertStringContainsString('data-confirm-match="Ann Lee"', $html);
         $this->assertStringContainsString('data-confirm-submit', $html);
         $this->assertStringContainsString('bg-[#C33939]', $html);
-        $this->assertStringContainsString('name="csrf_test_name"', $html . 'name="csrf_test_name"', 'a CSRF field is rendered by csrf_field()');
+        $this->assertStringContainsString('name="csrf_test_name"', $html, 'a CSRF field is rendered by csrf_field()');
     }
 
     public function testAConfirmWithoutTypedTextHasNoMatchBox(): void

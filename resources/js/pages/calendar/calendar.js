@@ -1,3 +1,5 @@
+import { csrfExpired } from "../../shared/csrf-expired.js";
+
 /*
 |--------------------------------------------------------------------------
 | Calendar
@@ -36,6 +38,9 @@ const KIND_META = {
 
 let root, apiBase, coursesApiBase, role, courses, assessmentTypes;
 
+// What the person's institution lets them change (CourseAbilities): none when the page does not say.
+let abilities = {};
+
 let view = "month";
 let cursor; // the date driving the visible period
 let eventsByDate = new Map();
@@ -57,6 +62,7 @@ function initialize()
     coursesApiBase = root.dataset.coursesApiBase;
     courses = JSON.parse(root.dataset.courses || "[]");
     assessmentTypes = JSON.parse(root.dataset.assessmentTypes || "[]");
+    abilities = JSON.parse(root.dataset.abilities || "{}");
 
     cursor = parseDate(root.dataset.today);
 
@@ -72,6 +78,18 @@ function initialize()
 function isCourseStaff()
 {
     return role === "instructor" || role === "chairperson";
+}
+
+/** Adding an assessment and moving a deadline need courses.manage. */
+function canChangeContent()
+{
+    return isCourseStaff() && abilities.content === true;
+}
+
+/** Adding an announcement needs announcements.manage. */
+function canAnnounce()
+{
+    return isCourseStaff() && abilities.announcements === true;
 }
 
 /** A parent only looks: nothing can be added, edited or deleted from their calendar. */
@@ -692,7 +710,7 @@ function openDateMenu(dateStr)
 {
     const events = eventsByDate.get(dateStr) || [];
 
-    const isInstructor = isCourseStaff();
+    const changesContent = canChangeContent();
 
     const actionButton = (action, label, iconPath) => `
         <button
@@ -710,8 +728,8 @@ function openDateMenu(dateStr)
     const plusIcon = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />';
 
     const actions = isReadOnly() ? "" : [
-        isInstructor ? actionButton("add-assessment", "Add Assessment", plusIcon) : "",
-        isInstructor && dateStr >= isoDate(new Date()) ? actionButton("add-announcement", "Add Announcement", plusIcon) : "",
+        changesContent ? actionButton("add-assessment", "Add Assessment", plusIcon) : "",
+        canAnnounce() && dateStr >= isoDate(new Date()) ? actionButton("add-announcement", "Add Announcement", plusIcon) : "",
         actionButton("add-reminder", "Add Reminder", plusIcon),
     ].join("");
 
@@ -721,7 +739,7 @@ function openDateMenu(dateStr)
 
     const assessmentEvents = events.filter((e) => e.kind === "assessment");
 
-    const editLinks = isInstructor && assessmentEvents.length > 0 ? `
+    const editLinks = changesContent && assessmentEvents.length > 0 ? `
 
         <div class="flex flex-col gap-2">
             <span class="text-xs font-bold uppercase text-[#878787]">Already due this day</span>
@@ -739,7 +757,7 @@ function openDateMenu(dateStr)
 
     ` : "";
 
-    const readOnlyList = !isInstructor && events.length > 0 ? `
+    const readOnlyList = !changesContent && events.length > 0 ? `
 
         <div class="flex flex-col gap-2">
             <span class="text-xs font-bold uppercase text-[#878787]">On this day</span>
@@ -773,7 +791,7 @@ function openDateMenu(dateStr)
 
 function openEventDetail(event)
 {
-    if (event.kind === "assessment" && isCourseStaff()) {
+    if (event.kind === "assessment" && canChangeContent()) {
         openEditDeadlineForm(event);
         return;
     }
@@ -1175,7 +1193,7 @@ function openAnnouncementForm(dateStr)
                 const result = await response.json();
 
                 if (!result.success) {
-                    alert(result.message || "Unable to upload that file.");
+                    if (!csrfExpired(result)) alert(result.message || "Unable to upload that file.");
                     continue;
                 }
 

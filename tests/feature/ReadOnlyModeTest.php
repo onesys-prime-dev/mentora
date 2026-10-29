@@ -41,6 +41,13 @@ final class ReadOnlyModeTest extends RouteTestCase
                 $uri = str_replace('([0-9]+)', '1', $route);
                 $uri = preg_replace('/\([^()]*\)/', 'x', $uri);
 
+                // A person's own things stay open in a read-only institution (decision 8.2).
+                foreach (App\Filters\ReadOnlyFilter::OWN_ACCOUNT as $pattern) {
+                    if (preg_match($pattern, $uri) === 1) {
+                        continue 2;
+                    }
+                }
+
                 $found[] = [$verb, $uri, $prefix];
             }
         }
@@ -281,6 +288,6 @@ final class ReadOnlyModeTest extends RouteTestCase
     {
         $this->signIn($this->userIn('student', 'past'));
 
-        $this->assertStringContainsString('login', $this->step('GET', 'logout')->response()->getHeaderLine('Location'));
+        $this->assertStringContainsString('login', $this->step('POST', 'logout')->response()->getHeaderLine('Location'));
     }
 }

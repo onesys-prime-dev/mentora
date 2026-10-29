@@ -16,6 +16,15 @@ $date   = static fn (string $d): string => date('j M Y', strtotime($d));
 
 $rows = [];
 
+// One active term at a time (QA AMB-INST-02): a closed term is reopened only while none is active.
+$activeTerm = null;
+
+foreach ($termRows as $row) {
+    if ($row['status'] === 'active') {
+        $activeTerm = $row;
+    }
+}
+
 foreach ($termRows as $term) {
     $closed = in_array($term['status'], ['completed', 'archived'], true);
 
@@ -41,9 +50,11 @@ foreach ($termRows as $term) {
     if ($termCanEdit && $term['status'] === 'completed') {
         $actions .= '<a class="' . $link . '" href="' . esc(site_url($base . '/copy') . '?source=' . $term['id']) . '">Copy offerings</a>';
 
-        if ($term['close_snapshot'] !== null && (int) $term['copied_count'] === 0) {
+        if ($term['close_snapshot'] !== null && (int) $term['copied_count'] === 0 && $activeTerm === null) {
             $actions .= ' <form class="ml-3 inline" method="post" action="' . esc(site_url($base . '/' . $term['id'] . '/reopen')) . '">' . csrf_field()
                 . '<button type="submit" class="' . $link . '">Reopen</button></form>';
+        } elseif ($term['close_snapshot'] !== null && (int) $term['copied_count'] === 0) {
+            $actions .= ' <span class="ml-3 text-xs text-[#646464]" data-active-term-note>' . esc($activeTerm['name']) . ' is the active term; close it to reopen this one.</span>';
         } elseif ($term['close_snapshot'] !== null) {
             $actions .= ' <span class="ml-3 text-xs text-[#646464]" data-copied-note>Copied into another term, so it stays closed.</span>';
         }

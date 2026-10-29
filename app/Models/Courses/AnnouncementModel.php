@@ -24,20 +24,32 @@ class AnnouncementModel extends Model
     ];
 
     /**
-     * Pinned posts always lead; sort controls the created_at tiebreak.
+     * The author's role, one per post however many groups they hold (QA AMB-COM-03): instructor when
+     * they hold it, so a post shows once and its card says who wrote it.
+     */
+    private const AUTHOR_ROLE = "(SELECT g.`group` FROM auth_groups_users g WHERE g.user_id = announcements.author_id"
+        . " ORDER BY g.`group` = 'instructor' DESC, g.`group` LIMIT 1) AS author_role";
+
+    /**
+     * Pinned posts always lead; sort controls the created_at tiebreak. A post dated for a later
+     * day is left out until then (QA AMB-COM-01) unless `scheduled` asks for it: the course's own
+     * instructors see theirs in the feed.
      *
-     * @param array{search?: string, sort?: string, pinned_only?: bool, limit?: int, offset?: int} $options
+     * @param array{search?: string, sort?: string, pinned_only?: bool, limit?: int, offset?: int, scheduled?: bool} $options
      */
     public function retrieveForOffering(int $offeringId, array $options = []): array
     {
         $builder = $this->select([
             'announcements.*',
             "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS author_name",
-            'auth_groups_users.group AS author_role',
         ])
+            ->select(self::AUTHOR_ROLE, false)
             ->join('user_profiles', 'user_profiles.user_id = announcements.author_id', 'left')
-            ->join('auth_groups_users', 'auth_groups_users.user_id = announcements.author_id', 'left')
             ->where('announcements.offering_id', $offeringId);
+
+        if (empty($options['scheduled'])) {
+            $builder->where('announcements.created_at <=', date('Y-m-d H:i:s'));
+        }
 
         if (!empty($options['pinned_only'])) {
             $builder->where('announcements.is_pinned', 1);
@@ -68,7 +80,8 @@ class AnnouncementModel extends Model
     /**
      * Newest posts across a set of offerings (e.g. every course a student
      * is enrolled in), for the dashboard's Announcements widget — pinned
-     * status doesn't matter at this scale, just recency.
+     * status doesn't matter at this scale, just recency. Posts dated for a later
+     * day wait for it.
      */
     public function retrieveForOfferings(array $offeringIds, int $limit = 8): array
     {
@@ -79,11 +92,11 @@ class AnnouncementModel extends Model
         return $this->select([
             'announcements.*',
             "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS author_name",
-            'auth_groups_users.group AS author_role',
         ])
+            ->select(self::AUTHOR_ROLE, false)
             ->join('user_profiles', 'user_profiles.user_id = announcements.author_id', 'left')
-            ->join('auth_groups_users', 'auth_groups_users.user_id = announcements.author_id', 'left')
             ->whereIn('announcements.offering_id', $offeringIds)
+            ->where('announcements.created_at <=', date('Y-m-d H:i:s'))
             ->orderBy('announcements.created_at', 'DESC')
             ->orderBy('announcements.id', 'DESC')
             ->limit($limit)
@@ -100,7 +113,7 @@ class AnnouncementModel extends Model
         return $this->select('announcements.*')
             ->whereIn('announcements.offering_id', $offeringIds)
             ->where('announcements.created_at >=', $from)
-            ->where('announcements.created_at <=', $to)
+            ->where('announcements.created_at <=', min($to, date('Y-m-d H:i:s')))
             ->orderBy('announcements.created_at', 'DESC')
             ->findAll();
     }
@@ -144,10 +157,9 @@ class AnnouncementModel extends Model
         return $this->select([
             'announcements.*',
             "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS author_name",
-            'auth_groups_users.group AS author_role',
         ])
+            ->select(self::AUTHOR_ROLE, false)
             ->join('user_profiles', 'user_profiles.user_id = announcements.author_id', 'left')
-            ->join('auth_groups_users', 'auth_groups_users.user_id = announcements.author_id', 'left')
             ->where('announcements.id', $id)
             ->first();
     }

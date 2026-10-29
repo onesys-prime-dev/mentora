@@ -50,14 +50,29 @@ class MysqldumpRunner implements BackupRunner
             throw new RuntimeException('The backup file could not be created. Check the backup folder is writable.');
         }
 
+        // Every write is checked (11.1): a full disk leaves a short file that must not count as a backup.
+        $written = true;
+
         while (! feof($pipes[1])) {
-            gzwrite($gz, (string) fread($pipes[1], 65536));
+            $chunk = (string) fread($pipes[1], 65536);
+
+            if ($chunk !== '' && gzwrite($gz, $chunk) !== strlen($chunk)) {
+                $written = false;
+
+                break;
+            }
         }
 
         $errors = trim((string) stream_get_contents($pipes[2]));
-        gzclose($gz);
+        $closed = gzclose($gz);
 
         $code = proc_close($process);
+
+        if (! $written || ! $closed) {
+            @unlink($path);
+
+            throw new RuntimeException('The backup file could not be written completely.');
+        }
 
         if ($code !== 0) {
             @unlink($path);

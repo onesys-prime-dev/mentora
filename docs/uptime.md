@@ -25,6 +25,14 @@ hides the other.
    duplicates, and one issue per site). When that site passes, its issue
    **closes itself** with a comment. Production being down is the urgent one.
 
+6. When the smoke test passes, it also asks the site whether its **scheduled
+   jobs** have reported recently (`POST /index.php/internal/scheduler-check`,
+   with the header `X-Scheduler-Secret`; audit U2). The site itself then emails
+   every system administrator once when a job stops reporting and once when it is
+   back (`monitoring.md` has the jobs and their allowed gaps). A stopped cron can't
+   report its own silence, which is why the check comes from here. The step never
+   opens a "site is down" issue, even when the check can't be made.
+
 You can also start it by hand: Actions tab, "Uptime check", "Run workflow".
 
 ## When you get the alert
@@ -103,6 +111,11 @@ the backup.
   `matrix` of `uptime.yml` has `insecure: true`. Set it to `false` once staging has
   a real certificate (and `TLS_INSECURE` in the staging environment, see
   `docs/github-environments.md`). Production is always verified.
+- **The scheduler check's secret:** the same random value goes in the site's
+  `.env` as `scheduler.checkSecret` and in the repository's Actions secrets as
+  `SCHEDULER_SECRET_STAGING` or `SCHEDULER_SECRET_PRODUCTION`. Without the GitHub
+  secret the step is skipped with a notice; without the `.env` value the site
+  answers 503 and the step shows the error (it never fails the uptime check).
 - **Addresses:** the two sites' URLs are in the `matrix` at the top of the job in
   `uptime.yml`. Change them there if a site moves; keep them equal to each
   environment's `SITE_URL` in GitHub.

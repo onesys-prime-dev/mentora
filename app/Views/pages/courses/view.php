@@ -151,6 +151,9 @@ window.coursesConfig = <?= json_encode([
 
     'activeFeature' => $activeFeature,
 
+    // Which parts of the course this person may change (content, grading, announcements, discussions).
+    'can' => \App\Services\Courses\CourseAbilities::for(auth()->user()),
+
 ]) ?>;
 </script>
 

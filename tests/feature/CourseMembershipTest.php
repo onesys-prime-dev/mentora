@@ -206,10 +206,12 @@ final class CourseMembershipTest extends RouteTestCase
     public function testTheLearningItemAddressOpensTheModulesInsteadOfFailing(): void
     {
         $this->as($this->teacher);
+        [$lesson] = CourseFactory::items(CourseFactory::unit(CourseFactory::module($this->mine)), [[]]);
 
-        $response = $this->step('GET', "instructor/courses/{$this->mine}/x/modules/items/1")->response();
+        $response = $this->step('GET', "instructor/courses/{$this->mine}/x/modules/items/{$lesson}")->response();
 
-        $this->assertNotSame(500, $response->getStatusCode());
-        $this->assertContains($response->getStatusCode(), [200, 302]);
+        // The course page, opened on that lesson (audit 5.1); a lesson of another course is not found (5.3).
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertStringEndsWith("instructor/courses/{$this->mine}/x/modules?item={$lesson}", $response->getHeaderLine('Location'));
     }
 }

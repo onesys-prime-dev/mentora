@@ -31,11 +31,6 @@ class SystemHealth
 
     public const DOWN = 'down';
 
-    /** Seconds without a daily job run before it is late / dead (36 hours, 72 hours). */
-    private const JOB_LATE = 129600;
-
-    private const JOB_DEAD = 259200;
-
     /** @var array<string, Closure(): array{status: string, detail: string}> */
     private array $probes;
 
@@ -115,27 +110,6 @@ class SystemHealth
             $exact >= 97 => ['status' => self::DOWN, 'detail' => $detail],
             $exact >= 90 => ['status' => self::DEGRADED, 'detail' => $detail],
             default     => ['status' => self::UP, 'detail' => $detail],
-        };
-    }
-
-    /**
-     * @param int|null $lastRun unix time of the last run, null if it never ran
-     *
-     * @return array{status: string, detail: string}
-     */
-    public static function jobStatus(?int $lastRun, int $now): array
-    {
-        if ($lastRun === null) {
-            return ['status' => self::DEGRADED, 'detail' => 'The daily subscription job has not reported a run yet.'];
-        }
-
-        $age    = max(0, $now - $lastRun);
-        $detail = 'Daily subscription job last ran ' . date('Y-m-d H:i', $lastRun) . '.';
-
-        return match (true) {
-            $age >= self::JOB_DEAD => ['status' => self::DOWN, 'detail' => $detail . ' It has not run for more than 3 days.'],
-            $age >= self::JOB_LATE => ['status' => self::DEGRADED, 'detail' => $detail . ' It is late.'],
-            default                => ['status' => self::UP, 'detail' => $detail],
         };
     }
 
@@ -238,11 +212,23 @@ class SystemHealth
             : ['status' => self::DEGRADED, 'detail' => $alert['message']];
     }
 
-    /** @return array{status: string, detail: string} */
+    /**
+     * All seven scheduled jobs (6.2): degraded while any has missed its window, down once one has been silent
+     * for three times its allowed gap.
+     *
+     * @return array{status: string, detail: string}
+     */
     private function jobs(): array
     {
-        $last = setting('Monitoring.subscriptionSyncAt');
+        $now   = (new DateTimeImmutable())->getTimestamp();
+        $stale = ScheduledJobs::stale($now);
 
-        return self::jobStatus(is_numeric($last) ? (int) $last : null, (new DateTimeImmutable())->getTimestamp());
+        if ($stale === []) {
+            return ['status' => self::UP, 'detail' => 'All seven scheduled jobs reported on time.'];
+        }
+
+        $dead = array_filter($stale, static fn (string $command): bool => ($last = ScheduledJobs::lastRun($command)) !== null && $now - $last >= 3 * ScheduledJobs::JOBS[$command]['gap']);
+
+        return ['status' => $dead === [] ? self::DEGRADED : self::DOWN, 'detail' => 'Not reporting: ' . implode(', ', $stale) . '.'];
     }
 }

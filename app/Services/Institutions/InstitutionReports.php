@@ -279,11 +279,11 @@ class InstitutionReports
         }
 
         $stream = fopen('php://temp', 'r+');
-        fputcsv($stream, $header);
+        fputcsv($stream, $header, ',', '"', '');
 
         foreach ($lines as $line) {
             // A name or title is typed by people: never let a spreadsheet read it as a formula.
-            fputcsv($stream, array_map(static fn ($cell): string => UserExport::safeCell($cell), $line));
+            fputcsv($stream, array_map(static fn ($cell): string => UserExport::safeCell($cell), $line), ',', '"', '');
         }
 
         rewind($stream);

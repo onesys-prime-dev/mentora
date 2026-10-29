@@ -148,11 +148,11 @@ class CsvUploadService
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'ended' => 0];
+        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'ended' => 0, 'removed' => 0];
 
         foreach ($data['datasets'] as $counts) {
             foreach (array_keys($totals) as $key) {
-                // Only a dataset that can end things (staff assignments) has an "ended" count.
+                // Only staff assignments have an "ended" count, and only class times a "removed" one.
                 $totals[$key] += (int) ($counts[$key] ?? 0);
             }
         }
@@ -234,26 +234,55 @@ class CsvUploadService
         return $folder;
     }
 
-    /** Removes this institution's previews that are past their time. */
-    private function forget(int $institutionId): void
+    /**
+     * Removes every institution's previews that are past their hour (QA AMB-INST-06). The server's every-minute
+     * job runs it, so an abandoned preview's personal data does not wait for the next upload.
+     *
+     * @return int how many were removed
+     */
+    public function forgetExpired(): int
     {
-        $dir = $this->base . DIRECTORY_SEPARATOR . $institutionId;
+        $removed = 0;
+
+        foreach (is_dir($this->base) ? (scandir($this->base) ?: []) : [] as $entry) {
+            if (ctype_digit($entry)) {
+                $removed += $this->forget((int) $entry);
+            }
+        }
+
+        return $removed;
+    }
+
+    /** Removes this institution's previews that are past their time. */
+    private function forget(int $institutionId): int
+    {
+        $dir     = $this->base . DIRECTORY_SEPARATOR . $institutionId;
+        $removed = 0;
 
         foreach (is_dir($dir) ? (scandir($dir) ?: []) : [] as $entry) {
             $path = $dir . DIRECTORY_SEPARATOR . $entry;
 
             if ($entry !== '.' && $entry !== '..' && is_dir($path) && (int) filemtime($path) < time() - self::KEEP_SECONDS) {
-                $this->remove($path);
+                $removed += $this->remove($path) ? 1 : 0;
             }
         }
+
+        return $removed;
     }
 
-    private function remove(string $folder): void
+    /** False, and logged, when something could not be removed; the next sweep tries again. */
+    private function remove(string $folder): bool
     {
         foreach (glob($folder . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
             @unlink($file);
         }
 
-        @rmdir($folder);
+        if (! @rmdir($folder) && is_dir($folder)) {
+            log_message('error', 'A CSV upload preview could not be removed: {folder}. The next sweep tries again.', ['folder' => basename(dirname($folder)) . '/' . basename($folder)]);
+
+            return false;
+        }
+
+        return true;
     }
 }

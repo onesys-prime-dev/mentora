@@ -123,6 +123,35 @@ final class AdminInstitutionsPageTest extends RouteTestCase
         $this->assertNull($this->row($id)['deleted_at']);
     }
 
+    public function testTheListShowsWhatTheDatesSayAndWhatIsRecorded(): void
+    {
+        $id = $this->seeded('ROLIST', 'active', 'Read Only College');
+        db_connect()->table('plans')->insert(['name' => 'Gold', 'status' => 'active']);
+        db_connect()->table('subscriptions')->insert(['institution_id' => $id, 'plan_id' => (int) db_connect()->insertID(), 'start_date' => '2024-01-01', 'end_date' => date('Y-m-d', strtotime('-30 days'))]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression('/Read Only College.*?Read-only/s', $body);
+        $this->assertStringContainsString('Recorded as Active until the nightly update.', $body);
+    }
+
+    public function testADeletedInstitutionShowsItsRecordWithNoNightlyNote(): void
+    {
+        // The nightly update leaves deleted institutions alone, so "until the nightly update" would never come true.
+        $id = $this->seeded('DELRO', 'read_only', 'Deleted Read Only College');
+        db_connect()->table('plans')->insert(['name' => 'Gold', 'status' => 'active']);
+        db_connect()->table('subscriptions')->insert(['institution_id' => $id, 'plan_id' => (int) db_connect()->insertID(), 'start_date' => '2023-01-01', 'end_date' => date('Y-m-d', strtotime('-2 years'))]);
+        db_connect()->table('institutions')->where('id', $id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
+
+        $_GET = ['status' => 'deleted'];
+        service('superglobals')->setGetArray($_GET);
+        $body = $this->body('admin/institutions?status=deleted');
+
+        $this->assertStringContainsString('Deleted Read Only College', $body);
+        $this->assertStringNotContainsString('until the nightly update', $body);
+        $this->assertMatchesRegularExpression('/Deleted Read Only College.*?Read-only/s', $body, 'its record');
+    }
+
     public function testAdminHomeLinksToInstitutions(): void
     {
         $this->assertStringContainsString('admin/institutions', $this->body('admin/dashboard'));
@@ -365,6 +394,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testSuspendingMakesAnActiveInstitutionPast(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('ACME', 'active', 'Acme University');
 
         $this->submit("admin/institutions/{$id}/suspend");
@@ -376,6 +406,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testSuspendingSomethingNotActiveShowsWhy(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('PEN', 'pending');
 
         $this->submit("admin/institutions/{$id}/suspend");
@@ -393,6 +424,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testDeletingWithTheRightNameHidesTheInstitution(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('OLD', 'past', 'Old College');
 
         $this->submit("admin/institutions/{$id}/delete", ['confirm_name' => 'Old College']);
@@ -404,6 +436,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testDeletingWithTheWrongNameChangesNothingAndSaysWhy(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('OLD', 'past', 'Old College');
 
         $this->submit("admin/institutions/{$id}/delete", ['confirm_name' => 'old college']);
@@ -424,6 +457,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testAnActiveInstitutionCannotBeDeletedEvenWithTheRightName(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('LIVE', 'active', 'Live College');
 
         $this->submit("admin/institutions/{$id}/delete", ['confirm_name' => 'Live College']);
@@ -484,6 +518,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testAddFindSuspendDeleteAndRestoreAnInstitution(): void
     {
+        $this->confirmedPassword();
         $this->submit('admin/institutions', ['name' => 'Journey University', 'code' => 'JOURNEY']);
         $id = (int) db_connect()->table('institutions')->where('code', 'JOURNEY')->get()->getRowArray()['id'];
 

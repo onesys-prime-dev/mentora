@@ -16,6 +16,7 @@ import { initializeComposerToolbar } from "./composer/toolbar.js";
 import { serializeMessage } from "./composer/serializer.js";
 import { mountEmojiPicker } from "./emoji-picker.js";
 import { closeAllActionMenus } from "../modules/action-menus.js";
+import { csrfExpired } from "../../../../shared/csrf-expired.js";
 
 let activeCard = null;
 let activeCleanup = null;
@@ -122,7 +123,7 @@ export function openCardEditor(card, { onBeforeOpen, onSaved } = {}) {
                 const result = await uploadAnnouncementAttachment(file);
 
                 if (!result.success) {
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
                     continue;
                 }
 
@@ -194,7 +195,7 @@ export function openCardEditor(card, { onBeforeOpen, onSaved } = {}) {
             const result = await updateAnnouncement(announcementId, payload);
 
             if (!result.success) {
-                alert(result.message);
+                if (!csrfExpired(result)) alert(result.message);
                 return;
             }
 

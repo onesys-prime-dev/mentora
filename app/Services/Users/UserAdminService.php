@@ -6,6 +6,7 @@ namespace App\Services\Users;
 
 use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
+use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\InvitationInput;
@@ -16,7 +17,6 @@ use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -282,6 +282,15 @@ class UserAdminService
 
         $added = array_diff($roles, $before);
 
+        // Not an administrator of an institution whose courses they are a student of (9.5).
+        if (in_array('institutional_admin', $added, true)) {
+            foreach ($user['institutions'] as $institution) {
+                if (($clash = (new CourseRoleConflicts())->forAdministrator($userId, (int) $institution['id'])) !== null) {
+                    throw new InvalidArgumentException(CourseRoleConflicts::sentence($userId, $clash));
+                }
+            }
+        }
+
         if (in_array('student', $added, true)) {
             foreach ($user['institutions'] as $institution) {
                 if (($blocked = (new PlanLimits())->seatBlock((int) $institution['id'])) !== null) {
@@ -310,82 +319,6 @@ class UserAdminService
             }
 
             $this->audit('user.roles_changed', $actor, $userId, $user, ['old' => ['roles' => $before], 'new' => ['roles' => $roles]]);
-        });
-    }
-
-    /**
-     * Makes a person a member of an institution too.
-     *
-     * @throws InvalidArgumentException
-     * @throws Throwable                whatever stopped the audit entry from being written; nothing is changed then
-     */
-    public function addMembership(int $userId, int $institutionId, ?User $actor = null): void
-    {
-        $user = $this->find($userId);
-
-        if (in_array('admin', $user['roles'], true)) {
-            throw new InvalidArgumentException('System administrators belong to no institution.');
-        }
-
-        $institution = (new InstitutionModel())->find($institutionId)
-            ?? throw new InvalidArgumentException('That institution does not exist.');
-
-        if ($institution['status'] === InstitutionModel::PENDING) {
-            throw new InvalidArgumentException('Finish onboarding that institution before adding people to it.');
-        }
-
-        if (in_array($institutionId, array_column($user['institutions'], 'id'), true)) {
-            throw new InvalidArgumentException('That person already belongs to ' . $institution['name'] . '.');
-        }
-
-        if (in_array('student', $user['roles'], true) && (int) $user['active'] === 1 && ($blocked = (new PlanLimits())->seatBlock($institutionId)) !== null) {
-            throw new InvalidArgumentException($blocked);
-        }
-
-        $this->inTransaction(function () use ($userId, $institutionId, $institution, $actor, $user): void {
-            $stamp = date('Y-m-d H:i:s');
-
-            $added = db_connect()->table('institution_users')->insert([
-                'institution_id' => $institutionId,
-                'user_id'        => $userId,
-                'created_at'     => $stamp,
-                'updated_at'     => $stamp,
-            ]);
-
-            if (! $added) {
-                throw new RuntimeException('The membership could not be saved.');
-            }
-
-            $this->audit('user.membership_added', $actor, $userId, $user, ['new' => ['institution' => $institution['name']]], $institutionId);
-        });
-    }
-
-    /**
-     * Takes a person out of an institution. They keep their account.
-     *
-     * @throws InvalidArgumentException
-     * @throws Throwable                whatever stopped the audit entry from being written; nothing is changed then
-     */
-    public function removeMembership(int $userId, int $institutionId, ?User $actor = null): void
-    {
-        $user = $this->find($userId);
-
-        $member = null;
-
-        foreach ($user['institutions'] as $institution) {
-            if ((int) $institution['id'] === $institutionId) {
-                $member = $institution;
-            }
-        }
-
-        if ($member === null) {
-            throw new InvalidArgumentException('That person does not belong to that institution.');
-        }
-
-        $this->inTransaction(function () use ($userId, $institutionId, $member, $actor, $user): void {
-            db_connect()->table('institution_users')->where(['user_id' => $userId, 'institution_id' => $institutionId])->delete();
-
-            $this->audit('user.membership_removed', $actor, $userId, $user, ['old' => ['institution' => $member['name']]], $institutionId);
         });
     }
 

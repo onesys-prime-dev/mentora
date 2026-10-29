@@ -111,14 +111,9 @@ class FileAccessService
 
             $offeringId = (int) $resource['offering_id'];
 
-            if ($isInstructor) {
-
-                if ($this->teachesOffering($user, $offeringId)) {
-                    return true;
-                }
-
-                continue;
-
+            // Staff where they teach; where they don't, the student rules below (9.1).
+            if ($isInstructor && $this->teachesOffering($user, $offeringId)) {
+                return true;
             }
 
             $visible = $resource['item_status'] === 'published'
@@ -164,7 +159,8 @@ class FileAccessService
 
         foreach ($work as $row) {
 
-            if (! $isInstructor && (int) $row['student_id'] === $userId) {
+            // Their own work, in a course they study, whatever else they teach.
+            if ((int) $row['student_id'] === $userId) {
                 return true;
             }
 
@@ -230,7 +226,7 @@ class FileAccessService
 
             $offeringId = (int) $row['offering_id'];
 
-            if ($isInstructor ? $this->teachesOffering($user, $offeringId) : $this->enrolledInOffering($userId, $offeringId)) {
+            if (($isInstructor && $this->teachesOffering($user, $offeringId)) || $this->enrolledInOffering($userId, $offeringId)) {
                 return true;
             }
 

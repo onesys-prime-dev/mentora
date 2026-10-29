@@ -76,6 +76,14 @@ final class AssessmentServiceTest extends DatabaseTestCase
         return ['assessment' => $result['assessment_id'], 'item' => $result['learning_item_id']];
     }
 
+    /** A quiz is published only with a question (QA AMB-ASM-02): gives it one worth nothing, so its total is unchanged. */
+    private function publishable(array $ids): array
+    {
+        AssessmentFactory::question((int) $ids['assessment'], $this->instructor, 'Essay', 0.0);
+
+        return $ids;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Creating
@@ -294,7 +302,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testChangingTheStatusFollowsToTheLearningItem(): void
     {
-        $ids = $this->create();
+        $ids = $this->publishable($this->create());
 
         foreach ([['Published', 'published'], ['Draft', 'draft'], ['Published', 'published'], ['Archived', 'draft']] as [$status, $item]) {
             $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => $status]);
@@ -328,7 +336,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testEveryRealStatusIsAccepted(): void
     {
-        $id = $this->create()['assessment'];
+        $id = $this->publishable($this->create())['assessment'];
 
         foreach (['Published', 'Closed', 'Archived', 'Draft'] as $status) {
             $this->assertTrue($this->service->updateAssessment($this->instructor, $id, ['status' => $status])['success'], $status);
@@ -338,7 +346,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testAStatusLeftNullKeepsTheCurrentOne(): void
     {
-        $id = $this->create()['assessment'];
+        $id = $this->publishable($this->create())['assessment'];
         $this->service->updateAssessment($this->instructor, $id, ['status' => 'Published']);
 
         $this->assertTrue($this->service->updateAssessment($this->instructor, $id, ['status' => null, 'title' => 'Renamed'])['success']);
@@ -348,7 +356,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testTheStatusShortcutsKeepTheLearningItemInStep(): void
     {
-        $ids = $this->create();
+        $ids = $this->publishable($this->create());
 
         foreach ([['publishedAssessment', 'published'], ['unpublishedAssessment', 'draft'], ['publishedAssessment', 'published'], ['archiveAssessment', 'draft'], ['restoreAssessment', 'draft']] as [$method, $item]) {
             $this->service->{$method}($this->instructor, $ids['assessment']);
@@ -359,7 +367,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testClosingKeepsTheLearningItemVisible(): void
     {
-        $ids = $this->create();
+        $ids = $this->publishable($this->create());
         $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => 'Published']);
 
         $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => 'Closed']);
@@ -382,7 +390,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testEditingWithoutAStatusLeavesTheLearningItemAlone(): void
     {
-        $ids = $this->create();
+        $ids = $this->publishable($this->create());
         $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => 'Published']);
 
         $this->service->updateAssessment($this->instructor, $ids['assessment'], ['title' => 'Renamed']);
@@ -481,7 +489,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testPublishUnpublishArchiveAndRestoreSetTheStatus(): void
     {
-        $id = $this->create()['assessment'];
+        $id = $this->publishable($this->create())['assessment'];
 
         foreach ([
             ['publishedAssessment', 'Published'],
@@ -501,7 +509,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
     public function testPublishingThroughTheShortcutAddsTheGradebookItem(): void
     {
         GradeFactory::scheme($this->offering);
-        $id = $this->create(['total_points' => 10])['assessment'];
+        $id = $this->publishable($this->create(['total_points' => 10]))['assessment'];
 
         $this->service->publishedAssessment($this->instructor, $id);
 
@@ -528,7 +536,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testADuplicateGetsItsOwnLearningItemAtTheEndOfTheUnit(): void
     {
-        $ids = $this->create(['title' => 'Quiz']);
+        $ids = $this->publishable($this->create(['title' => 'Quiz']));
         $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => 'Published']);
         [$other] = CourseFactory::items($this->unit, [[]]);
         db_connect()->table('learning_items')->where('id', $other)->update(['order_index' => 2]);
@@ -811,7 +819,7 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     public function testTheAssessmentPagesRender(): void
     {
-        $ids = $this->create();
+        $ids = $this->publishable($this->create());
         $this->service->updateAssessment($this->instructor, $ids['assessment'], ['status' => 'Published']);
 
         $this->assertIsString($this->service->getAssessmentIndex($this->instructor, $this->offering)['html']);

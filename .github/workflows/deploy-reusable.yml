@@ -279,6 +279,32 @@ jobs:
           "$2" spark migrate --all
           REMOTE_SCRIPT
 
+      # The scheduled jobs (audit D5): the block between "# BEGIN mentora jobs" and "# END mentora jobs" in the
+      # site user's crontab is written from deploy/crontab.txt with this site's folder and PHP binary; nothing
+      # else in the crontab is touched. Then every job is checked to be there, and a missing one fails the deploy.
+      - name: Install the scheduled jobs
+        run: |
+          ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" "$PHP_BIN" <<'REMOTE_SCRIPT' || { echo "::error::The scheduled jobs are not installed; see docs/server-setup.md section 6."; exit 1; }
+          set -euo pipefail
+          cd "$1"
+          next=$(mktemp)
+          err=$(mktemp)
+          # Only "no crontab for <user>" means empty; any other failure to read it stops here, so the
+          # site user's other lines are never lost to a crontab rewritten from nothing.
+          if current=$(crontab -l 2> "$err"); then
+            :
+          elif grep -qi "no crontab for" "$err"; then
+            current=""
+          else
+            cat "$err" >&2
+            exit 1
+          fi
+          printf '%s\n' "$current" | "$2" spark jobs:crontab --no-header --site "$1" --php "$2" > "$next"
+          crontab "$next"
+          rm -f "$next" "$err"
+          crontab -l | "$2" spark jobs:crontab --no-header --verify
+          REMOTE_SCRIPT
+
       # The PHP-FPM pools revalidate files every 2 s (opcache.validate_timestamps),
       # so new code needs no FPM restart. The file cache is cleared so nothing
       # computed by the old code or schema is served. Not worth failing a

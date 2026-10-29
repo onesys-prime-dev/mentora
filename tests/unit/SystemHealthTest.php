@@ -57,26 +57,6 @@ final class SystemHealthTest extends CIUnitTestCase
         $this->assertSame(SystemHealth::DEGRADED, SystemHealth::diskStatus(0.0, 0.0)['status']);
     }
 
-    /** @return iterable<string, array{?int, string}> */
-    public static function provideJobs(): iterable
-    {
-        $now = 1_800_000_000;
-
-        yield 'never ran' => [null, SystemHealth::DEGRADED];
-        yield 'an hour ago' => [$now - 3600, SystemHealth::UP];
-        yield 'just under 36 hours' => [$now - 129599, SystemHealth::UP];
-        yield '36 hours' => [$now - 129600, SystemHealth::DEGRADED];
-        yield 'just under 72 hours' => [$now - 259199, SystemHealth::DEGRADED];
-        yield '72 hours' => [$now - 259200, SystemHealth::DOWN];
-        yield 'a clock a little ahead' => [$now + 60, SystemHealth::UP];
-    }
-
-    #[DataProvider('provideJobs')]
-    public function testJobAgeMapsToAStatus(?int $lastRun, string $expected): void
-    {
-        $this->assertSame($expected, SystemHealth::jobStatus($lastRun, 1_800_000_000)['status']);
-    }
-
     public function testASlowDatabaseIsDegraded(): void
     {
         $this->assertSame(SystemHealth::UP, SystemHealth::databaseStatus(999)['status']);

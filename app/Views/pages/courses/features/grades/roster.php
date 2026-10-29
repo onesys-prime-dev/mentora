@@ -17,8 +17,9 @@ $overrideRoute = $overrideRoute ?? '';
 $openRequests  = $openRequests ?? [];
 $isRequestMode = $overrideMode === 'request';
 
-// Someone who only looks (the dean, the institution's administrator) reads the grade and the standing; neither is a button.
-$viewOnly = \App\Services\Courses\CourseViewer::isReadOnlyViewer(auth()->user());
+// Someone who only looks (the dean, the institution's administrator, an instructor without grading.manage) reads
+// the grade and the standing; neither is a button.
+$viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'grading');
 ?>
 
 <div class="p-10 flex flex-col gap-6" data-gradebook-roster data-override-mode="<?= esc($overrideMode, 'attr') ?>" data-override-route="<?= esc($overrideRoute, 'attr') ?>">

@@ -41,7 +41,26 @@ class RolesController extends BaseController
             'academicPerms'  => array_diff_key($permissions, $platform),
             'currentMatrix'  => $matrix->effective(),
             'defaultMatrix'  => $matrix->defaults(),
+            'roleGaps'       => $this->gaps(),
         ]);
+    }
+
+    /**
+     * Every institution where nobody may approve overrides or sign off grades in some department (U1f).
+     *
+     * @return list<array{institution: string, department: string, permission: string}>
+     */
+    private function gaps(): array
+    {
+        $gaps = [];
+
+        foreach (db_connect()->table('institutions')->select('id, name')->where('deleted_at IS NULL', null, false)->orderBy('name')->get()->getResultArray() as $institution) {
+            foreach (\App\Services\Courses\Grades\GradeAuthority::gaps((int) $institution['id']) as $gap) {
+                $gaps[] = ['institution' => (string) $institution['name']] + $gap;
+            }
+        }
+
+        return $gaps;
     }
 
     /** Grants or revokes one permission for one role. */

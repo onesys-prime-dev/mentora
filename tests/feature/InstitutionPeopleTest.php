@@ -126,19 +126,6 @@ final class InstitutionPeopleTest extends RouteTestCase
         $this->assertStringContainsString('aria-sort="descending"', $this->page('?sort=name&dir=desc'));
     }
 
-    public function testSomeoneWhoAlsoBelongsElsewhereIsMarkedAndOffersOnlyRemoval(): void
-    {
-        $ivy = $this->person('instructor', 'Ivy');
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->other, 'user_id' => $ivy->id, 'created_at' => date('Y-m-d H:i:s')]);
-
-        $body = $this->page();
-
-        $this->assertStringContainsString('data-elsewhere', $body);
-        $this->assertStringContainsString('Remove from my institution', $body);
-        $this->assertStringNotContainsString('PPLFB', $body);
-        $this->assertStringNotContainsString('Institution PPLFB', $body);
-    }
-
     public function testSomeoneIsInvitedThroughTheDialogAndShownOnTheInvitationsTab(): void
     {
         $this->withHeaders(['Accept' => 'application/json']);
@@ -260,7 +247,6 @@ final class InstitutionPeopleTest extends RouteTestCase
     {
         $this->person('student', 'Ann');
         $ivy = $this->person('instructor', 'Ivy');
-        db_connect()->table('institution_users')->insert(['institution_id' => $this->other, 'user_id' => $ivy->id, 'created_at' => date('Y-m-d H:i:s')]);
 
         $all = $this->step('GET', 'institution/people/export')->response();
 

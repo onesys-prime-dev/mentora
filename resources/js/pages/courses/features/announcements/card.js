@@ -1,3 +1,5 @@
+import { csrfExpired } from "../../../../shared/csrf-expired.js";
+
 /*
 |--------------------------------------------------------------------------
 | Announcement card bindings: quick reacts, more-reactions picker, more-
@@ -133,7 +135,7 @@ function bindCard(card, refreshMain, composerApi) {
             const result = await replyToAnnouncement(announcementId, message);
 
             if (!result.success) {
-                alert(result.message);
+                if (!csrfExpired(result)) alert(result.message);
                 return;
             }
 

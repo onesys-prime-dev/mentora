@@ -13,6 +13,7 @@
 */
 
 import { gradeQuestion } from "../api.js";
+import { csrfExpired } from "../../../../../shared/csrf-expired.js";
 
 export function bindQuestionScoring(offeringId, reload) {
 
@@ -60,7 +61,7 @@ export function bindQuestionScoring(offeringId, reload) {
                         );
 
                         if (result.success === false) {
-                            window.alert(result.message);
+                            if (!csrfExpired(result)) window.alert(result.message);
                             return;
                         }
 
@@ -110,7 +111,7 @@ export function bindQuestionScoring(offeringId, reload) {
                     );
 
                     if (result.success === false) {
-                        window.alert(result.message);
+                        if (!csrfExpired(result)) window.alert(result.message);
                         return;
                     }
 

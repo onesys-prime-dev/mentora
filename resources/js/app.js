@@ -1,5 +1,8 @@
 import "../css/app.css";
 
+// First: it wraps fetch as it loads, before any other module can send a change.
+import "./shared/csrf";
+
 import "./shared/profile-menu";
 import "./shared/app-menu";
 import "./shared/institution-menu";

@@ -116,6 +116,21 @@ final class InstitutionEnrolmentsTest extends RouteTestCase
         $this->assertStringContainsString('data-usage', $body);
     }
 
+    public function testAStudentWhoTeachesTheCourseIsSkippedWithTheReason(): void
+    {
+        $ann = $this->student('Ann', '2026-001');
+        $ann->addGroup('instructor');
+        CourseFactory::assignInstructor($this->offering, $ann);
+        $bob = $this->student('Bob', '2026-002');
+        $this->withHeaders(['Accept' => 'application/json']);
+
+        $payload = json_decode($this->step('POST', $this->url(), ['students' => "2026-001\n2026-002"])->getJSON(), true);
+
+        $this->assertStringContainsString('2026-001 teaches or has taught this course', $payload['message']);
+        $this->assertNull($this->placeOf($ann));
+        $this->assertSame('enrolled', $this->placeOf($bob));
+    }
+
     public function testStudentsAreAddedThroughTheDialogAndListed(): void
     {
         $ann = $this->student('Ann', '2026-001');

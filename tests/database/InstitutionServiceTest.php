@@ -261,6 +261,38 @@ final class InstitutionServiceTest extends DatabaseTestCase
         $this->assertNotNull($this->row($id)['deleted_at']);
     }
 
+    public function testAnInstitutionPastByItsDatesCanBeDeletedBeforeTheJobRuns(): void
+    {
+        // Still recorded as active: the nightly job has not caught up with dates two years gone.
+        $id = $this->seeded('LAPSED', 'active', 'Lapsed University');
+        $this->subscribe($id, $this->plan('Gold'), '2023-01-01', date('Y-m-d', strtotime('-2 years')));
+
+        $this->service->delete($id, 'Lapsed University', $this->admin);
+
+        $this->assertNotNull($this->row($id)['deleted_at']);
+    }
+
+    public function testAnInstitutionActiveByItsDatesIsStillRefused(): void
+    {
+        $id = $this->seeded('LIVE', 'active', 'Live University');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('This institution is active. Suspend it before deleting it.');
+
+        $this->service->delete($id, 'Live University', $this->admin);
+    }
+
+    public function testEachRowSaysWhatItsDatesMakeIt(): void
+    {
+        $id = $this->seeded('RO', 'active', 'Read Only University');
+        $this->subscribe($id, $this->plan('Gold'), '2024-01-01', date('Y-m-d', strtotime('-30 days')));
+
+        $row = $this->service->search(InstitutionFilters::fromInput([]))['rows'][0];
+
+        $this->assertSame('active', $row['status'], 'the record is left as it is');
+        $this->assertSame('read_only', $row['effective_status']);
+    }
+
     public function testASubscriptionThatEndsTodayStillBlocksDeletion(): void
     {
         $id = $this->seeded('TODAY', 'past', 'Today University');

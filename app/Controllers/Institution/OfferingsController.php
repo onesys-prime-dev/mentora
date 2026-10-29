@@ -53,6 +53,7 @@ class OfferingsController extends BaseController
             'pageTitle'          => 'Offerings',
             'user'               => auth()->user(),
             'offeringRows'       => $result['rows'],
+            'offeringSchedules'  => (new \App\Services\Institutions\ClassScheduleService())->summaries(array_map(static fn (array $o): int => (int) $o['id'], $result['rows'])),
             'offeringTotal'      => $result['total'],
             'offeringPages'      => $result['pages'],
             'offeringPage'       => $result['page'],

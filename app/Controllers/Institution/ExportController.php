@@ -12,6 +12,7 @@ use CodeIgniter\HTTP\DownloadResponse;
 use CodeIgniter\HTTP\RedirectResponse;
 use InvalidArgumentException;
 use Throwable;
+use App\Services\Subscriptions\EffectiveStatus;
 
 /**
  * An institutional administrator's own data export (SA13). It works while
@@ -35,7 +36,7 @@ class ExportController extends BaseController
             'pageTitle'     => 'Data export',
             'user'          => auth()->user(),
             'exportName'    => (string) $institution['name'],
-            'exportAllowed' => InstitutionExport::isEligible((string) $institution['status']),
+            'exportAllowed' => InstitutionExport::isEligible(EffectiveStatus::of((int) $institution['id'])),
             'exportRows'    => (new InstitutionExport())->history((int) $institution['id']),
             'exportDays'    => InstitutionExport::KEEP_DAYS,
         ]);
@@ -49,17 +50,18 @@ class ExportController extends BaseController
             return redirect()->to('/');
         }
 
+        // Prepared in the background (12.2); the person who asked is told when it is ready.
         try {
-            (new InstitutionExport())->build((int) $institution['id'], auth()->user());
+            (new InstitutionExport())->request((int) $institution['id'], auth()->user());
         } catch (InvalidArgumentException $e) {
             return redirect()->to('institution/export')->with('error', $e->getMessage());
         } catch (Throwable $e) {
-            log_message('error', 'Institution export failed: ' . $e->getMessage());
+            log_message('error', 'Institution export request failed: ' . $e->getMessage());
 
-            return redirect()->to('institution/export')->with('error', 'The export could not be made. Please try again, or contact support.');
+            return redirect()->to('institution/export')->with('error', 'The export could not be asked for. Please try again, or contact support.');
         }
 
-        return redirect()->to('institution/export')->with('message', 'Your export is ready below.');
+        return redirect()->to('institution/export')->with('message', "Your export is being prepared. We'll tell you here and by email when it's ready.");
     }
 
     public function download(int $id): DownloadResponse|RedirectResponse

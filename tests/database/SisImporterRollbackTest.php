@@ -29,7 +29,7 @@ final class SisImporterRollbackTest extends DatabaseTestCase
 
     /** Touched by these tests; emptied with foreign keys off. */
     private const TABLES = [
-        'sis_runs', 'sis_links', 'sis_staff_assignments', 'dean_assignments', 'chairperson_assignments', 'instructor_assignments',
+        'sis_runs', 'sis_links', 'sis_staff_assignments', 'sis_class_schedules', 'course_schedules', 'dean_assignments', 'chairperson_assignments', 'instructor_assignments',
         'sis_connections', 'feature_flag_overrides', 'enrollments', 'course_offerings', 'courses',
         'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs', 'notifications',
@@ -124,6 +124,34 @@ final class SisImporterRollbackTest extends DatabaseTestCase
         $this->assertSame(1, db_connect()->table('dean_assignments')->where('status', 'active')->countAllResults());
         $this->assertSame(2, db_connect()->table('instructor_assignments')->countAllResults());
         $this->assertSame(3, db_connect()->table('sis_staff_assignments')->countAllResults());
+    }
+
+    public function testAPreviewOfClassTimesWritesNothingAndItsCountsAreWhatTheRealRunThenDoes(): void
+    {
+        $header = "course_external_id,section,day_of_week,start_time,end_time,room,delivery_mode\n";
+
+        (new SisImporter())->run($this->institution, $this->actor, true);
+        SisFixture::drop($this->institution, 'class_schedules', $header . "C1,A,mon,09:00,10:00,Rm 1,\n");
+        $this->assertTrue((new SisImporter())->run($this->institution, $this->actor, false)->ok);
+
+        // Section A is no longer listed (its times would go); section B is new (it would be created, with times).
+        SisFixture::drop($this->institution, 'class_schedules', $header . "C1,B,tue,09:00,10:00,,\n");
+
+        $tables = ['course_schedules', 'sis_class_schedules', 'course_offerings'];
+        $count  = static fn (): array => array_combine($tables, array_map(static fn (string $t): int => db_connect()->table($t)->countAllResults(), $tables));
+
+        $before  = $count();
+        $preview = (new SisImporter())->run($this->institution, $this->actor, true);
+
+        $this->assertTrue($preview->ok);
+        $this->assertSame(['created' => 1, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'removed' => 1], $preview->datasets['class_schedules']);
+        $this->assertSame($before, $count(), 'a preview must set no times, clear none, create no section and track nothing');
+
+        $real = (new SisImporter())->run($this->institution, $this->actor, false);
+
+        $this->assertSame($preview->datasets['class_schedules'], $real->datasets['class_schedules'], 'what the preview said is what the run does');
+        $this->assertSame(['tue'], array_column(db_connect()->table('course_schedules')->get()->getResultArray(), 'day_of_week'));
+        $this->assertSame(1, db_connect()->table('sis_class_schedules')->countAllResults());
     }
 
     public function testAPreviewWritesNothingAndItsCountsAreWhatTheRealRunThenDoes(): void

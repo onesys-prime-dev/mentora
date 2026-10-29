@@ -11,6 +11,7 @@ use App\Models\Assessments\AssessmentSettingsModel;
 use App\Models\Assessments\AssessmentSubmissionModel;
 use App\Models\Assessments\AssessmentTypeModel;
 use App\Models\Files\FileModel;
+use App\Services\Courses\CourseMembership;
 use App\Services\Courses\LearningProgressService;
 use App\Services\Storage\StorageService;
 
@@ -113,7 +114,13 @@ class AssignmentSubmissionService
             return ['success' => false, 'message' => 'Assignment not found.'];
         }
 
-        if (!$user->inGroup('student') || !$this->isEnrolled((int) $user->id, (int) $assessment['course_id'])) {
+        // A student of the assignment's section (9.1); one in no module falls back to any section of the course.
+        $offeringId = $this->assessmentModel->offeringIdOf($assessmentId);
+        $isStudent  = $offeringId === null
+            ? $user->inGroup('student') && $this->isEnrolled((int) $user->id, (int) $assessment['course_id'])
+            : (new CourseMembership())->roleIn($user, $offeringId) === 'student';
+
+        if (!$isStudent) {
             return ['success' => false, 'message' => 'Only students enrolled in this course can submit.'];
         }
 

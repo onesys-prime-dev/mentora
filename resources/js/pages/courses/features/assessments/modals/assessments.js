@@ -5,6 +5,7 @@
 */
 
 import { createAssessment } from "../api.js";
+import { csrfExpired } from "../../../../../shared/csrf-expired.js";
 
 export function bindAssessmentCreateModal({
     create,
@@ -134,7 +135,7 @@ export function bindAssessmentCreateModal({
 
                 if (!result.success) {
 
-                    alert(result.message);
+                    if (!csrfExpired(result)) alert(result.message);
 
                     return;
 

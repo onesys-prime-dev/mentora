@@ -376,6 +376,16 @@ final class ParentNotifierTest extends DatabaseTestCase
         return (int) db_connect()->insertID();
     }
 
+    /** A post dated for a later day tells parents on that day, not before (QA AMB-COM-01). */
+    public function testAnAnnouncementDatedLaterTellsParentsOnItsDay(): void
+    {
+        $day = (new DateTimeImmutable())->modify('+3 days');
+        $this->announce('Field trip', $day->format('Y-m-d 08:00:00'));
+
+        $this->assertSame(0, $this->notifier->announcements(), 'nobody is told before the day');
+        $this->assertSame(2, $this->notifier->announcements($day->setTime(9, 0)), 'both parents on the day');
+    }
+
     public function testAnAnnouncementTellsEachParentOnceInTheAppOnly(): void
     {
         $id = $this->announce();

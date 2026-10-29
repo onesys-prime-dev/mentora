@@ -789,7 +789,7 @@ class LearningProgressService
      */
     private function visibleItemForStudent(User $user, int $offeringId, int $learningItemId): ?array
     {
-        if (! $user->inGroup('student')) {
+        if ((new CourseMembership())->roleIn($user, $offeringId) !== 'student') {
             return null;
         }
 

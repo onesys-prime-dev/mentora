@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Sis;
 
+use App\Services\Institutions\ClassScheduleService;
+
 /**
  * Turns a record read from the SIS into the values Mentora stores, and says
  * which of them changed. Pure: no database, no clock.
@@ -78,6 +80,28 @@ final class SisMapper
             'person_external_id' => $record['person_external_id'],
             'target'             => $record[SisCsvParser::STAFF_TARGET_COLUMN[$role]],
             'section'            => $role === 'instructor' && ($record['section'] ?? '') !== '' ? $record['section'] : self::DEFAULT_SECTION,
+        ];
+    }
+
+    /**
+     * @param array<string, string> $record a class_schedules.csv record
+     *
+     * @return array{course_external_id: string, section: string, day: ?string, start: string, end: string, room: string, mode: string}
+     *         `day` is mon–sun, from that or the day's English name in any case, or null when it is neither
+     */
+    public static function classSchedule(array $record): array
+    {
+        $day   = strtolower(trim($record['day_of_week']));
+        $names = array_map('strtolower', ClassScheduleService::DAYS);
+
+        return [
+            'course_external_id' => $record['course_external_id'],
+            'section'            => ($record['section'] ?? '') === '' ? self::DEFAULT_SECTION : $record['section'],
+            'day'                => isset($names[$day]) ? $day : (array_search($day, $names, true) ?: null),
+            'start'              => $record['start_time'],
+            'end'                => $record['end_time'],
+            'room'               => $record['room'] ?? '',
+            'mode'               => $record['delivery_mode'] ?? '',
         ];
     }
 

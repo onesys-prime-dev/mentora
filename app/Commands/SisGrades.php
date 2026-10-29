@@ -35,6 +35,18 @@ class SisGrades extends BaseCommand
 
     public function run(array $params)
     {
+        $code = $this->work($params);
+
+        // The scheduler check watches for this job going quiet (6.2); a dry run is not the job.
+        if (! array_key_exists('dry-run', $params) && CLI::getOption('dry-run') === null) {
+            \App\Services\Monitoring\ScheduledJobs::heartbeat('sis:grades');
+        }
+
+        return $code;
+    }
+
+    private function work(array $params)
+    {
         $dryRun = array_key_exists('dry-run', $params) || CLI::getOption('dry-run') !== null;
         $only   = $params['institution'] ?? CLI::getOption('institution');
 
