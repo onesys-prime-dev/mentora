@@ -439,6 +439,27 @@ final class AnnouncementServiceTest extends DatabaseTestCase
         $this->assertSame(0, db_connect()->table('announcement_reactions')->countAllResults());
     }
 
+    /**
+     * A reaction is one of the four quick ones or a single emoji from "More reactions"; words and strings of
+     * emoji are refused (QA AMB-COM-08).
+     */
+    public function testAReactionIsAQuickOneOrASingleEmoji(): void
+    {
+        $id = $this->post();
+
+        foreach (['abc', 'hello', '🎉🎉', 'x🎉', '1', 'like!'] as $bad) {
+            $result = $this->service->react($this->student, $this->offering, $id, $bad);
+            $this->assertFalse($result['success'], $bad);
+            $this->assertSame('Pick a reaction.', $result['message']);
+        }
+
+        $this->assertSame(0, db_connect()->table('announcement_reactions')->countAllResults());
+
+        foreach (['like', 'heart', 'haha', 'wow', '🎉', '👍🏽', '🇵🇭', '👨‍👩‍👧'] as $good) {
+            $this->assertTrue($this->service->react($this->student, $this->offering, $id, $good)['success'], $good);
+        }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Feed

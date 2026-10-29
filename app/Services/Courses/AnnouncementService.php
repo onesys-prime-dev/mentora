@@ -508,7 +508,7 @@ class AnnouncementService
 
         $emoji = trim($emoji);
 
-        if ($emoji === '' || mb_strlen($emoji) > 32) {
+        if (! self::isReaction($emoji)) {
             return ['success' => false, 'message' => 'Pick a reaction.'];
         }
 
@@ -518,5 +518,22 @@ class AnnouncementService
             'success' => true,
             'reaction_counts' => $this->reactionModel->retrieveCounts([$announcementId])[$announcementId] ?? [],
         ];
+    }
+
+    /** The card's quick reactions, stored by key. */
+    public const QUICK_REACTIONS = ['like', 'heart', 'haha', 'wow'];
+
+    /**
+     * A quick reaction's key, or one emoji picked from "More reactions" (QA AMB-COM-08): a single character
+     * (skin tones, flags and joined emoji count as one) that is an emoji. Words are not reactions.
+     */
+    public static function isReaction(string $value): bool
+    {
+        if (in_array($value, self::QUICK_REACTIONS, true)) {
+            return true;
+        }
+
+        return $value !== '' && strlen($value) <= 32 && grapheme_strlen($value) === 1
+            && preg_match('/^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[#*0-9]\x{FE0F}?\x{20E3})/u', $value) === 1;
     }
 }

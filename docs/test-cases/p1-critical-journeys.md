@@ -1637,15 +1637,15 @@ The P3 scenarios: small rules, rare paths and cosmetic checks. README: P3 is man
 - **QA status:** VCI (PS-ANN-04)
 - **Review:** Draft
 
-### TC-ANN-10 Only the four supported reactions are accepted
+### TC-ANN-10 A reaction is a quick one or a single emoji, never words
 
 - **Role:** Student. **Priority:** P3
-- **Steps:** react with 👍, ❤️, 😂 and 😮 from the page. Send directly: an empty value, `🎉`, `abc`, a 33-character string.
-- **Expected:** the four are accepted; everything else is refused with "Pick a reaction." and nothing is stored.
-- **Already automated:** none for the allowed set
+- **Steps:** react with 👍, ❤️, 😂 and 😮 from the page, and with 🎉 from "More reactions". Send directly: an empty value, `abc`, `🎉🎉`, `x🎉`, a 33-character string.
+- **Expected:** the four quick reactions and any single emoji from the picker (skin tones, flags and joined emoji count as one) are accepted; everything else is refused with "Pick a reaction." and nothing is stored.
+- **Already automated:** `AnnouncementServiceTest::testAReactionIsAQuickOneOrASingleEmoji`, `testNonsenseReactionsAreRefused`
 - **Playwright:** no
-- **Basis:** decision AMB-COM-08 (register Part I3). Today the server accepts any value up to 32 characters (`AnnouncementService::react`) [read in the code; not run].
-- **QA status:** REG? (PS-ANN-11) **Defect confirmed 2026-10-28** by a probe test failed against the decided behavior (`docs/qa/defects-2026-10-28.md`).
+- **Basis:** decision AMB-COM-08, read with rule I1.1: the "More reactions" emoji picker is built (feature commits `26e0953`, `a3cca9e`; the card's header comment), so a single emoji from it stays accepted. Before the fix the server took any text up to 32 characters, words included (`AnnouncementService::react`).
+- **QA status:** REG (PS-ANN-11). **Defect D-20 fixed:** words and strings of several emoji are refused; the picker's single emoji are kept.
 - **Review:** Draft
 
 ### TC-CAL-03 The weekly schedule grid, and closed sections on the calendar
