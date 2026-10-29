@@ -37,6 +37,9 @@ foreach ($backupRows as $row) {
 
 <?= $this->section('content') ?>
 
+<?php // From lg up the page fills the screen and only the table scrolls, on its own. ?>
+<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:h-full lg:min-h-[28rem]" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Backups', 'icon' => 'folder', 'actions' => '<form data-dialog-form method="post" action="' . site_url('admin/backups') . '">' . csrf_field() . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50" ' . ($busy ? 'disabled' : '') . '>Back up now</button></form>'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]">The server takes the backups (<span class="font-mono">php spark backup:run</span>); this page shows what it did. Restoring is a manual procedure: see <span class="font-mono">docs/backup.md</span>.</p>
 
@@ -50,7 +53,7 @@ foreach ($backupRows as $row) {
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
 <?php endif; ?>
 
-<div class="mt-6">
+<div class="mt-6 flex flex-col lg:min-h-0 lg:flex-1">
     <?= view('components/data-table', [
         'caption'    => 'Backups',
         'columns'    => [
@@ -63,10 +66,13 @@ foreach ($backupRows as $row) {
             ['key' => 'by', 'label' => 'By'],
         ],
         'rows'       => $backupTable,
+        'fill'       => true,
         'emptyIcon'  => 'folder',
         'emptyTitle' => 'No backups recorded yet',
         'emptyText'  => 'Use "Back up now", or let the server\'s scheduled job take them; each one is listed here.',
     ], ['saveData' => false]) ?>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

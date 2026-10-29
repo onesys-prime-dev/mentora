@@ -127,7 +127,7 @@ final class CourseMembershipTest extends RouteTestCase
     {
         $this->as($this->teacher);
 
-        foreach (['modules', 'grades', 'grades/scheme', 'grades/roster', 'grades/export', 'overview', 'announcements', 'resources', 'discussions', 'assessments'] as $tab) {
+        foreach (['modules', 'grades', 'grades/scheme', 'grades/roster', 'grades/export', 'grades/report/class', 'grades/report/summary', 'overview', 'announcements', 'resources', 'discussions', 'assessments'] as $tab) {
             $this->assertSame(404, $this->answer('GET', "instructor/api/courses/{$this->theirs}/{$tab}"), "their {$tab}");
         }
 

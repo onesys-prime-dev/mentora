@@ -38,9 +38,10 @@ final class CourseViewer
      * Someone looking at courses, never changing them: the institutional
      * administrator, or the dean while acting as dean.
      */
-    public static function isReadOnlyViewer(User $user): bool
+    public static function isReadOnlyViewer(?User $user): bool
     {
-        return self::isInstitutionViewer($user) || self::isDeanViewer($user);
+        // Nobody signed in (a page drawn outside a request, such as a test) is nobody's read-only view.
+        return $user !== null && (self::isInstitutionViewer($user) || self::isDeanViewer($user));
     }
 
     /** The institutional administrator (who does not also teach). */

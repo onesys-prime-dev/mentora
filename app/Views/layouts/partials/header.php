@@ -24,9 +24,10 @@ $studentMeta = $userRole === 'student'
 
 $avatarUrl = base_url('assets/images/placeholder/profile.png');
 
-// Not built yet — shown so the menu's shape is settled, but inert.
+// Not built yet — shown so the menu's shape is settled, but inert. "My Profile" is real for the
+// roles that have a profile page (a student's, to read; a parent's, with their email choices).
 $accountLinks = [
-    ['label' => 'My Profile', 'icon' => 'user'],
+    ['label' => 'My Profile', 'icon' => 'user', 'url' => in_array($userRole, ['student', 'parent'], true) ? site_url($userRole . '/profile') : null],
     ['label' => 'Settings', 'icon' => 'settings'],
     ['label' => 'Help & Support', 'icon' => 'help'],
 ];
@@ -70,12 +71,45 @@ $accountLinks = [
     </div>
 
     <div class="flex gap-4 items-center">
-        <a
-            href="<?= site_url('notifications') ?>"
-            aria-label="Notifications"
-            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
-            <?= icon('bell', 'h-4 w-4 text-current') ?>
-        </a>
+        <div class="relative">
+            <button
+                id="notifications-button"
+                type="button"
+                aria-label="Notifications"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="notifications-panel"
+                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
+                <?= icon('bell', 'h-4 w-4 text-current') ?>
+            </button>
+
+            <!-- Latest notifications, 7 at a time; more load as the list is scrolled -->
+            <div
+                id="notifications-panel"
+                data-feed-url="<?= site_url('notifications/feed') ?>"
+                class="hidden z-50 absolute right-0 top-full mt-2 w-80 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+
+                <div class="flex items-center justify-between px-5 pt-4 pb-2">
+                    <span class="text-md font-display">Notifications</span>
+                </div>
+
+                <div class="max-h-96 overflow-y-auto" data-notifications-scroll>
+                    <ul class="flex flex-col divide-y divide-gray-100" data-notifications-list></ul>
+                    <p class="hidden px-5 py-8 text-center text-sm text-[#767676]" data-notifications-empty>You have no notifications yet.</p>
+                    <p class="hidden px-5 py-6 text-center text-sm text-[#C33939]" data-notifications-error>
+                        Could not load notifications.
+                        <button type="button" class="font-semibold underline" data-notifications-retry>Try again</button>
+                    </p>
+                </div>
+
+                <a
+                    href="<?= site_url('notifications') ?>"
+                    class="block border-t border-gray-100 px-5 py-3 text-center text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55">
+                    View all notifications
+                </a>
+
+            </div>
+        </div>
         <button
             type="button"
             data-theme-toggle aria-pressed="false" aria-label="Dark mode is off. Switch to dark mode" title="Switch to dark mode"
@@ -225,6 +259,22 @@ $accountLinks = [
                 <nav class="flex flex-col p-2" aria-label="Account">
 
                     <?php foreach ($accountLinks as $link): ?>
+
+                        <?php if (! empty($link['url'])): ?>
+
+                            <a
+                                href="<?= esc($link['url']) ?>"
+                                class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#1A1C1E] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+
+                                <?= icon($link['icon'], 'h-4 w-4 text-brand') ?>
+
+                                <span class="flex-1"><?= esc($link['label']) ?></span>
+
+                            </a>
+
+                            <?php continue; ?>
+
+                        <?php endif; ?>
 
                         <span
                             class="flex cursor-default items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-500"

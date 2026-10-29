@@ -213,6 +213,70 @@ final class GradeItemSyncServiceTest extends DatabaseTestCase
         $this->assertFalse($this->needsRecalculation($schemeId));
     }
 
+    /** A published scheme with one counted quiz the student scored 15/20 on. @return array{0: int, 1: User} assessment id and student */
+    private function countedQuiz(): array
+    {
+        $schemeId = $this->scheme();
+        db_connect()->table('grading_schemes')->where('id', $schemeId)->update(['status' => 'Published']);
+        GradeFactory::category($schemeId, 'Quizzes', 100);
+        $student = CourseFactory::user('student');
+        CourseFactory::enroll($this->offeringId, $student);
+        $assessmentId = $this->assessment('Quiz', 'Published', 20);
+
+        $this->sync->syncFromAssessment($assessmentId);
+        GradeFactory::score($this->offeringId, $student, (int) $this->itemFor($assessmentId)['id'], 15);
+        (new \App\Services\Courses\Grades\GradingEngineService())->recalculateOffering($this->offeringId);
+
+        return [$assessmentId, $student];
+    }
+
+    private function calculated(User $student): ?float
+    {
+        $row = db_connect()->table('gradebook_records')->where('student_id', $student->id)->get()->getRowArray();
+
+        return $row['calculated_percentage'] === null ? null : (float) $row['calculated_percentage'];
+    }
+
+    public function testAnAssessmentThatIsNoLongerPublishedStopsCountingAndCountsAgainOnRepublish(): void
+    {
+        [$assessmentId, $student] = $this->countedQuiz();
+        $this->assertEquals(75.0, $this->calculated($student));
+
+        db_connect()->table('assessments')->where('id', $assessmentId)->update(['status' => 'Draft']);
+        $this->sync->syncFromAssessment($assessmentId);
+
+        $this->assertNull($this->calculated($student), 'a Draft quiz is not part of the grade');
+
+        db_connect()->table('assessments')->where('id', $assessmentId)->update(['status' => 'Published']);
+        $this->sync->syncFromAssessment($assessmentId);
+
+        $this->assertEquals(75.0, $this->calculated($student));
+    }
+
+    public function testAnArchivedAssessmentStopsCounting(): void
+    {
+        [$assessmentId, $student] = $this->countedQuiz();
+
+        db_connect()->table('assessments')->where('id', $assessmentId)->update(['status' => 'Archived']);
+        $this->sync->assessmentStatusChanged($assessmentId);
+
+        $this->assertNull($this->calculated($student));
+    }
+
+    public function testAStatusChangeOnADraftSchemeOnlyFlagsARecalculation(): void
+    {
+        $schemeId = $this->scheme();
+        db_connect()->table('grading_schemes')->where('id', $schemeId)->update(['status' => 'Draft', 'needs_recalculation' => 0]);
+        $assessmentId = $this->assessment('Quiz', 'Published', 20);
+        $this->sync->syncFromAssessment($assessmentId);
+        $this->clearRecalculationFlag($schemeId);
+
+        db_connect()->table('assessments')->where('id', $assessmentId)->update(['status' => 'Draft']);
+        $this->sync->assessmentStatusChanged($assessmentId);
+
+        $this->assertTrue($this->needsRecalculation($schemeId));
+    }
+
     public function testAnOfferingWithoutASchemeGetsOneCopiedFromTheDefaultWhenAnAssessmentIsPublished(): void
     {
         GradeFactory::systemDefault();

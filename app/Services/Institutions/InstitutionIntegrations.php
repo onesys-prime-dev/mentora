@@ -72,6 +72,7 @@ class InstitutionIntegrations
             'label'      => (string) $type['label'],
             'runs'       => $runs,
             'latest'     => $this->latestImport($runs, $institutionId),
+            'latestGrades' => $this->latestRun($runs, $institutionId, SisRunLog::OUTBOUND),
         ];
     }
 
@@ -112,8 +113,19 @@ class InstitutionIntegrations
      */
     private function latestImport(array $runs, int $institutionId): ?array
     {
+        return $this->latestRun($runs, $institutionId, SisRunLog::INBOUND);
+    }
+
+    /**
+     * The newest finished run in one direction, with what it left out: the
+     * rows an import refused, or the grades a send did not hand over.
+     *
+     * @return array{dry_run: bool, message: string, issues: list<array<string, string>>, truncated: bool}|null
+     */
+    private function latestRun(array $runs, int $institutionId, string $direction): ?array
+    {
         foreach ($runs as $run) {
-            if ($run['direction'] !== SisRunLog::INBOUND || $run['status'] === 'running') {
+            if ($run['direction'] !== $direction || $run['status'] === 'running') {
                 continue;
             }
 

@@ -303,4 +303,6 @@ tests, which makes them confusing to track down.
   The numbers in its comments were measured on a repeat visit; if a legitimate
   change adds a query, raise the budget in the same PR and say why, rather
   than loosening it silently.
+- The question-builder worker's unit tests run with `python -m pytest tests -q` from `python-question-builder-service/` (CI runs them too). They include the stop and restart signals the deploy relies on (`StopRequest` in `qb/worker.py`). The monitoring status rules for the worker are in `tests/unit/SystemHealthTest.php`.
+- After a deploy, the worker's health is checked by hand on the monitoring page: "Question-builder (AI) worker" must read up within a minute of the restart. The deploy itself only confirms the unit has a new process that stays up.
 - The question-builder worker has an evaluation runner (`python -m eval.qb_run`, see `python-question-builder-service/README.md`). It calls the real model, so it is run by hand and is not part of CI.

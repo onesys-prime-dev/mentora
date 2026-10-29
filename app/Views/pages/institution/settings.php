@@ -21,14 +21,17 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Institution settings',
         'icon'        => 'settings',
         'description' => 'How your institution presents itself in Mentora.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
     ], ['saveData' => false]) ?>
 
     <?php if (! $settingsCanEdit): ?>
@@ -48,11 +51,12 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         ['label' => 'Academic', 'href' => site_url($base . '/academic'), 'active' => $settingsTab === 'academic'],
         ['label' => 'Announcement', 'href' => site_url($base . '/announcement'), 'active' => $settingsTab === 'announcement'],
         ['label' => 'Security', 'href' => site_url($base . '/security'), 'active' => $settingsTab === 'security'],
+        ['label' => 'Parents', 'href' => site_url($base . '/parents'), 'active' => $settingsTab === 'parents'],
     ]], ['saveData' => false]) ?>
 
     <?php if ($settingsTab === 'profile'): ?>
 
-        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
+        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md">
             <?= csrf_field() ?>
 
             <?= $field(['name' => 'name', 'label' => 'Display name', 'value' => (string) $d['name'], 'required' => true, 'maxlength' => 150, 'help' => 'Shown to your students, instructors and parents.']) ?>
@@ -83,7 +87,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-            <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" data-announcement-form>
+            <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-announcement-form>
                 <?= csrf_field() ?>
 
                 <p class="text-sm text-[#3D3D3D]">One line for everyone in your institution, shown at the top of their pages under the Mentora announcement. People can hide it for themselves.</p>
@@ -103,7 +107,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <?php endif; ?>
             </form>
 
-            <section class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="announcement-preview">
+            <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="announcement-preview">
                 <h2 id="announcement-preview" class="text-sm font-bold text-brand">As your people will see it</h2>
 
                 <?php if ($n['text'] === ''): ?>
@@ -125,6 +129,40 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         </div>
 
+    <?php elseif ($settingsTab === 'parents'): ?>
+
+        <?php $pp = $settingsParents; ?>
+
+        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form class="flex max-w-2xl flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-parent-portal-form>
+            <?= csrf_field() ?>
+
+            <fieldset class="flex flex-col gap-3" <?= $disabled ?>>
+                <legend class="text-sm font-bold text-brand">Parent portal</legend>
+                <p class="text-sm text-[#3D3D3D]">Lets linked parents see their child's courses and grades, read-only. Switching it off hides it from every parent at once; nothing is deleted.</p>
+
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                        <input type="radio" name="enabled" value="1" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? 'checked' : '' ?> <?= $disabled ?>>
+                        On
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                        <input type="radio" name="enabled" value="0" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? '' : 'checked' ?> <?= $disabled ?>>
+                        Off
+                    </label>
+                </div>
+            </fieldset>
+
+            <?php if (! $pp['platform']): ?>
+                <?= view('components/lock-note', ['kind' => 'platform', 'text' => 'Switched off by Mentora for your institution. You cannot turn it on.'], ['saveData' => false]) ?>
+            <?php endif; ?>
+
+            <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
+
+            <?php if ($settingsCanEdit): ?>
+                <div class="flex justify-end"><button type="submit" class="<?= $primary ?>">Save parent portal</button></div>
+            <?php endif; ?>
+        </form>
+
     <?php elseif ($settingsTab === 'security'): ?>
 
         <?php
@@ -135,10 +173,10 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             'lockoutAttempts'       => ['Failed sign-ins before a lockout', 'attempts', 'Fewer attempts than the platform.'],
             'lockoutMinutes'        => ['Lockout length', 'minutes', 'Longer than the platform.'],
         ];
-        $roleNames = ['institutional_admin' => 'Institutional administrators', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
+        $roleNames = ['institutional_admin' => 'Institutional administrators', 'dean' => 'Deans', 'chairperson' => 'Chairpersons', 'instructor' => 'Instructors', 'student' => 'Students', 'parent' => 'Parents'];
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm" data-security-form>
+        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-security-form>
             <?= csrf_field() ?>
 
             <p class="text-sm text-[#3D3D3D]">Your institution can be <strong>stricter</strong> than the platform, never looser. Leave a box empty to follow the platform. Changing these asks for your password.</p>
@@ -224,7 +262,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         }
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm" data-academic-form>
+        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form class="flex max-w-3xl flex-col gap-6 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-academic-form>
             <?= csrf_field() ?>
 
             <section class="flex flex-col gap-4" aria-labelledby="new-offerings">
@@ -257,13 +295,14 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             <section class="flex flex-col gap-4" aria-labelledby="thresholds">
                 <div>
                     <h2 id="thresholds" class="text-sm font-bold text-brand">What counts as needing attention</h2>
-                    <p class="text-xs text-[#646464]">Used by reports and by the chairperson and instructor dashboards, so everyone reads the same numbers.</p>
+                    <p class="text-xs text-[#646464]">Used by reports, by the chairperson, instructor and dean pages, so everyone reads the same numbers.</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <?= $field(['name' => 'inactive_days', 'label' => 'No recent activity (days)', 'type' => 'number', 'value' => (string) $a['inactiveDays'], 'attrs' => 'min="1" max="365" inputmode="numeric"' . $off, 'help' => 'A student or course silent for this long. ' . $source($a['inactiveFromInstitution'])]) ?>
                     <?= $field(['name' => 'behind_below_percent', 'label' => 'Behind below (%)', 'type' => 'number', 'value' => (string) $a['behindBelow'], 'attrs' => 'min="1" max="100" inputmode="numeric"' . $off, 'help' => 'Progress through the published items. ' . $source($a['behindFromInstitution'])]) ?>
                     <?= $field(['name' => 'overdue_grading_days', 'label' => 'Overdue grading (days)', 'type' => 'number', 'value' => (string) $a['overdueGradingDays'], 'attrs' => 'min="1" max="90" inputmode="numeric"' . $off, 'help' => 'Work waiting this long to be graded. ' . $source($a['overdueFromInstitution'])]) ?>
+                    <?= $field(['name' => 'high_load_units', 'label' => 'High teaching load (units)', 'type' => 'number', 'value' => (string) $a['highLoadUnits'], 'attrs' => 'min="1" max="100" inputmode="numeric"' . $off, 'help' => 'An instructor teaching this many units in a term is marked on the dean Teaching load page. ' . $source($a['highLoadFromInstitution'])]) ?>
                 </div>
             </section>
 
@@ -289,7 +328,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
             <div class="flex flex-col gap-6">
 
-                <section class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="logo-heading">
+                <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="logo-heading">
                     <h2 id="logo-heading" class="text-sm font-bold text-brand">Logo</h2>
 
                     <?php if ($d['logo_file_id'] !== null): ?>
@@ -322,7 +361,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                     </form>
                 </section>
 
-                <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="colours-heading">
+                <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="colours-heading">
                     <h2 id="colours-heading" class="text-sm font-bold text-brand">Colours</h2>
 
                     <form method="post" action="<?= esc(site_url($base . '/branding')) ?>" data-dialog-form data-brand-form class="mt-4 flex flex-col gap-4">
@@ -364,7 +403,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
             </div>
 
-            <section class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="preview-heading">
+            <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="preview-heading">
                 <h2 id="preview-heading" class="text-sm font-bold text-brand">Preview</h2>
                 <p class="text-xs text-[#646464]">This is how buttons, links and badges will look. Nothing changes until you save.</p>
 
@@ -392,6 +431,8 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         </div>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

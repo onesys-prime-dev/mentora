@@ -139,7 +139,7 @@ final class DeanCourseViewTest extends RouteTestCase
 
     public function testAnotherDepartmentsCourseIsNotFoundOnEveryReadingRouteInTheSameInstitutionOrAnother(): void
     {
-        $paths = ['overview', 'announcements', 'announcements/more', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster', 'grades/export'];
+        $paths = ['overview', 'announcements', 'announcements/more', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster', 'grades/export', 'grades/report/class', 'grades/report/summary'];
 
         foreach (['another department' => $this->sibling, 'another institution' => $this->foreign] as $where => $offering) {
             foreach ($paths as $path) {
@@ -205,7 +205,15 @@ final class DeanCourseViewTest extends RouteTestCase
         }
 
         $this->assertGreaterThan(50, $checked, 'the course write routes were found and each one was refused');
-        $this->assertSame([], array_filter(array_keys($routes->getRoutes('POST')), static fn (string $p): bool => str_starts_with($p, 'dean/')), 'the dean area has no POST route at all yet');
+        // The dean has pages of their own that change things (approving an override request, signing off
+        // grades), but nothing inside a course: no write route under the course pages or their API.
+        $writes = [];
+
+        foreach (['POST', 'PUT', 'PATCH', 'DELETE'] as $verb) {
+            $writes = array_merge($writes, array_filter(array_keys($routes->getRoutes($verb)), static fn (string $p): bool => str_starts_with($p, 'dean/courses') || str_starts_with($p, 'dean/api/')));
+        }
+
+        $this->assertSame([], array_values($writes), 'the dean can write nothing in a course');
     }
 
     public function testAnAttemptToWriteLeavesTheCourseUntouched(): void
@@ -331,6 +339,82 @@ final class DeanCourseViewTest extends RouteTestCase
 
         $this->assertSame(302, $this->step('GET', "dean/courses/{$this->offering}/intro-to-computing/overview")->response()->getStatusCode());
         $this->assertSame(302, $this->step('GET', "dean/api/courses/{$this->offering}/overview")->response()->getStatusCode());
+    }
+
+    /**
+     * What each tab of a course draws, as its HTML, for the person signed in now.
+     *
+     * @return array<string, string>
+     */
+    private function tabs(string $area): array
+    {
+        $html = [];
+
+        foreach (['modules', 'discussions', 'assessments', 'grades', 'grades/roster'] as $path) {
+            $this->withHeaders(['Accept' => 'application/json']);
+            $response = $this->call('get', "{$area}/api/courses/{$this->offering}/{$path}")->response();
+
+            $this->assertSame(200, $response->getStatusCode(), "{$area} {$path}");
+
+            $html[$path] = (string) $response->getBody();
+        }
+
+        return $html;
+    }
+
+    public function testTheDeanIsOfferedNoControlThatWouldBeRefused(): void
+    {
+        $tabs = $this->tabs('dean');
+
+        $this->assertStringNotContainsString('data-create-module-button', $tabs['modules']);
+        $this->assertStringNotContainsString('data-composer-open', $tabs['discussions']);
+        $this->assertStringNotContainsString('data-create-assessment-button', $tabs['assessments']);
+
+        foreach (['data-open-finalize', 'data-open-reopen', 'data-open-curve', 'data-open-grading-scheme', 'data-toggle-grade-sheet-menu', 'data-open-grade-sheet-import'] as $control) {
+            $this->assertStringNotContainsString($control, $tabs['grades'], $control);
+        }
+
+        $this->assertStringContainsString('data-toggle-report-menu', $tabs['grades'], 'reports are for reading, so they stay');
+
+        // The gradebook lists each student's grade and standing as text, with no button to change them.
+        $this->assertStringContainsString('data-roster-row', $tabs['grades/roster']);
+        $this->assertStringContainsString('data-grade-readout', $tabs['grades/roster']);
+        $this->assertStringNotContainsString('data-open-override', $tabs['grades/roster']);
+        $this->assertStringNotContainsString('data-open-incomplete', $tabs['grades/roster']);
+    }
+
+    public function testTheInstructorOfTheSameCourseStillHasEveryControl(): void
+    {
+        $this->signIn($this->teacher);
+        $tabs = $this->tabs('instructor');
+
+        $this->assertStringContainsString('data-create-module-button', $tabs['modules']);
+        $this->assertStringContainsString('data-composer-open', $tabs['discussions']);
+        $this->assertStringContainsString('data-create-assessment-button', $tabs['assessments']);
+
+        foreach (['data-open-finalize', 'data-open-curve', 'data-open-grading-scheme', 'data-toggle-grade-sheet-menu', 'data-open-grade-sheet-import'] as $control) {
+            $this->assertStringContainsString($control, $tabs['grades'], $control);
+        }
+
+        $this->assertStringContainsString('data-open-override', $tabs['grades/roster']);
+        $this->assertStringContainsString('data-open-incomplete', $tabs['grades/roster']);
+        $this->assertStringNotContainsString('data-grade-readout', $tabs['grades/roster']);
+    }
+
+    public function testADeanWhoAlsoTeachesGetsTheInstructorsControlsOnTheirOwnCourse(): void
+    {
+        $both = PeopleFactory::person('dean', 'Dual', 'Role', 'dual@dcv.example', $this->institution);
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $both->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
+        CourseFactory::assignInstructor($this->offering, $both);
+
+        $this->signIn($both);
+        $this->assertSame(200, $this->call('post', 'role/switch', ['role' => 'instructor'])->response()->getStatusCode());
+        $this->withSession();
+
+        $tabs = $this->tabs('instructor');
+
+        $this->assertStringContainsString('data-create-module-button', $tabs['modules'], 'acting as the instructor, the controls are theirs');
+        $this->assertStringContainsString('data-open-finalize', $tabs['grades']);
     }
 
     public function testTheInstructorsAndStudentsOwnPagesAreUnchanged(): void

@@ -10,6 +10,7 @@ use App\Models\Assignments\DeanAssignmentModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Services\Auth\ActiveRoleService;
 use App\Services\Courses\ChairpersonAccessService;
+use App\Services\Courses\DeanAccessService;
 use App\Services\Notifications\NotificationService;
 use CodeIgniter\Shield\Entities\User;
 
@@ -112,6 +113,8 @@ class GradeOverrideRequestService
             }
         }
 
+        $this->tellDeanIfWaiting($id, $status, $context, 'requested');
+
         return [
             'success' => true,
             'message' => 'Request sent. The grade stays as it is until it is approved.',
@@ -169,6 +172,8 @@ class GradeOverrideRequestService
                 $this->tell($chairId, "grade-override:{$requestId}:chair:" . date('YmdHis'), 'Grade override to endorse', $this->label($context) . ': a request you sent back was edited and sent again.', (int) $context['institution_id'], site_url('chairperson/override-requests'));
             }
         }
+
+        $this->tellDeanIfWaiting($requestId, $status, $context, 'resubmitted:' . date('YmdHis'));
 
         return ['success' => true, 'message' => 'Request sent again.', 'request' => $this->present($this->requests->find($requestId))];
     }
@@ -230,6 +235,8 @@ class GradeOverrideRequestService
             (int) $context['institution_id'],
             $this->gradebookLink($row, $context),
         );
+
+        $this->tellDeanIfWaiting($requestId, $status, $context, 'endorsed');
 
         return ['success' => true, 'message' => 'Endorsed. It now waits for ' . OverrideRequestChain::waitingFor($status) . '.'];
     }
@@ -370,6 +377,335 @@ class GradeOverrideRequestService
             'waiting_for'          => OverrideRequestChain::waitingFor($status),
             'returned'             => $status === OverrideRequestChain::RETURNED,
         ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The dean's decision
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * The dean approves a request: the override (or its removal) is written through the grading
+     * engine, so the remarks and the grade history stay consistent, and the request is closed.
+     * The request is claimed first (only one decision can win), and given back if the grade
+     * could not be changed.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function approve(User $dean, int $requestId, string $comment = ''): array
+    {
+        $row = $this->decidable($dean, $requestId);
+
+        if ($row === null) {
+            return $this->refused('That request is not waiting for you.');
+        }
+
+        if (! $this->claim($requestId, OverrideRequestChain::APPROVED, $dean, $comment)) {
+            return $this->refused('That request was just decided or withdrawn.');
+        }
+
+        $applied = (new GradingEngineService())->overrideFinalGrade(
+            $dean,
+            (int) $row['offering_id'],
+            (int) $row['student_id'],
+            $row['requested_percentage'] === null ? null : (float) $row['requested_percentage'],
+            (string) $row['reason']
+        );
+
+        if (! $applied['success']) {
+            // Nothing changed: the request goes back to waiting for the dean.
+            $this->requests->update($requestId, [
+                'status' => OverrideRequestChain::AWAITING_DEAN, 'open_marker' => 1, 'decided_by' => null, 'decided_at' => null, 'decision_reason' => null,
+            ]);
+
+            return $this->refused('The grade could not be changed: ' . $applied['message']);
+        }
+
+        $context = $this->context((int) $row['offering_id']) ?? [];
+
+        $this->audit('grade.override_approved', $dean, $requestId, $context, ['status' => $row['status']], [
+            'status' => OverrideRequestChain::APPROVED, 'requested_percentage' => $row['requested_percentage'], 'student_id' => (int) $row['student_id'], 'comment' => trim($comment),
+            // A change to grades the dean had already signed off: recorded as such, for what is handed to the SIS.
+            'after_signoff' => (new GradeSignoffService())->isSignedOff((int) $row['offering_id']),
+        ]);
+
+        $this->tell(
+            (int) $row['requested_by'],
+            "grade-override:{$requestId}:approved",
+            'Override request approved',
+            $this->label($context) . ': the dean approved your request' . ($row['requested_percentage'] === null ? ': the override was removed.' : ': the final grade is now ' . rtrim(rtrim(number_format((float) $row['requested_percentage'], 2), '0'), '.') . '%.'),
+            (int) ($context['institution_id'] ?? 0),
+            $this->gradebookLink($row, $context),
+        );
+
+        return ['success' => true, 'message' => $row['requested_percentage'] === null ? 'Approved. The override was removed.' : 'Approved. The final grade was changed.'];
+    }
+
+    /**
+     * The dean rejects a request, with the reason the requester will read. The grade is not touched.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function reject(User $dean, int $requestId, string $reason): array
+    {
+        if (trim($reason) === '') {
+            return $this->refused('Say why, so the requester knows what happened.');
+        }
+
+        $row = $this->decidable($dean, $requestId);
+
+        if ($row === null) {
+            return $this->refused('That request is not waiting for you.');
+        }
+
+        if (! $this->claim($requestId, OverrideRequestChain::REJECTED, $dean, $reason)) {
+            return $this->refused('That request was just decided or withdrawn.');
+        }
+
+        $context = $this->context((int) $row['offering_id']) ?? [];
+
+        $this->audit('grade.override_rejected', $dean, $requestId, $context, ['status' => $row['status']], ['status' => OverrideRequestChain::REJECTED, 'reason' => trim($reason)]);
+
+        $this->tell(
+            (int) $row['requested_by'],
+            "grade-override:{$requestId}:rejected",
+            'Override request rejected',
+            $this->label($context) . ': the dean rejected your request: ' . trim($reason),
+            (int) ($context['institution_id'] ?? 0),
+            $this->gradebookLink($row, $context),
+        );
+
+        return ['success' => true, 'message' => 'Rejected. The grade is unchanged.'];
+    }
+
+    /**
+     * Sends the requests of a department that are past the chairperson to whoever is next now: the dean,
+     * or the institution's administrator when the department has no dean (or the dean asked themselves).
+     * Run when a dean is assigned or a deanship ends, so a request is never left waiting for someone who
+     * is gone: it moves up one level, and moves back when a new dean arrives. Idempotent.
+     *
+     * @return int how many requests moved
+     */
+    public function retargetDepartment(int $departmentId): int
+    {
+        $deanId = $this->deanId($departmentId);
+
+        $rows = db_connect()->table('grade_override_requests r')
+            ->select(['r.id', 'r.offering_id', 'r.requested_by', 'r.status'])
+            ->join('course_offerings co', 'co.id = r.offering_id')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->where('sd.department_id', $departmentId)
+            ->whereIn('r.status', [OverrideRequestChain::AWAITING_DEAN, OverrideRequestChain::AWAITING_INSTITUTION])
+            ->get()->getResultArray();
+
+        $moved = 0;
+
+        foreach ($rows as $row) {
+            $next = OverrideRequestChain::afterChair((int) $row['requested_by'], $deanId);
+
+            if ($next === $row['status']) {
+                continue;
+            }
+
+            $this->requests->update((int) $row['id'], ['status' => $next]);
+            $moved++;
+
+            $context = $this->context((int) $row['offering_id']);
+
+            service('auditLogger')->log('grade.override_rerouted', null, [
+                'actor_label' => 'system', 'acting_role' => 'system', 'target_type' => 'grade_override_request', 'target_id' => (int) $row['id'],
+                'institution_id' => isset($context['institution_id']) ? (int) $context['institution_id'] : null,
+                'old' => ['status' => $row['status']], 'new' => ['status' => $next],
+            ]);
+
+            if ($context !== null) {
+                $this->tellDeanIfWaiting((int) $row['id'], $next, $context, 'rerouted:' . date('YmdHis'));
+            }
+        }
+
+        return $moved;
+    }
+
+    /** How many requests wait for this dean. */
+    public function pendingCountForDean(User $dean): int
+    {
+        return count($this->listForDean($dean, new OverrideApprovalFilters()));
+    }
+
+    /**
+     * The requests of the dean's department: what waits for them (oldest first), or what was decided
+     * (newest first). A dean's own request never waits for them (the chain sends it to the
+     * administrator).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listForDean(User $dean, OverrideApprovalFilters $filters): array
+    {
+        $department = (new DeanAccessService())->departmentFor($dean);
+
+        if ($department === null) {
+            return [];
+        }
+
+        $builder = db_connect()->table('grade_override_requests r')
+            ->select([
+                'r.*', 'c.course_code', 'c.course_title', 'co.section_code', 'p.id AS program_id', 'p.name AS program_name',
+                "CONCAT(sp.first_name, ' ', sp.last_name) AS student_name",
+                "CONCAT(rp.first_name, ' ', rp.last_name) AS requester_name",
+                "CONCAT(ep.first_name, ' ', ep.last_name) AS endorser_name",
+                'g.calculated_percentage AS current_calculated', 'g.is_override AS current_is_override', 'g.overridden_percentage AS current_overridden',
+            ], false)
+            ->join('course_offerings co', 'co.id = r.offering_id')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('user_profiles sp', 'sp.user_id = r.student_id', 'left')
+            ->join('user_profiles rp', 'rp.user_id = r.requested_by', 'left')
+            ->join('user_profiles ep', 'ep.user_id = r.endorsed_by', 'left')
+            ->join('gradebook_records g', 'g.course_offering_id = r.offering_id AND g.student_id = r.student_id', 'left')
+            ->where('sd.department_id', (int) $department['department_id']);
+
+        if ($filters->view === 'decided') {
+            $builder->whereIn('r.status', [OverrideRequestChain::APPROVED, OverrideRequestChain::REJECTED]);
+        } else {
+            $builder->where('r.status', OverrideRequestChain::AWAITING_DEAN)->where('r.requested_by !=', (int) $dean->id);
+        }
+
+        if ($filters->programId !== null) {
+            $builder->where('p.id', $filters->programId);
+        }
+
+        if ($filters->requesterId !== null) {
+            $builder->where('r.requested_by', $filters->requesterId);
+        }
+
+        if ($filters->q !== null) {
+            $literal = db_connect()->escapeLikeString($filters->q);
+
+            $builder->groupStart()
+                ->where("CONCAT(sp.first_name, ' ', sp.last_name) LIKE " . db_connect()->escape('%' . $literal . '%') . " ESCAPE '!'", null, false)
+                ->orLike('c.course_code', $literal, 'both', true)
+                ->orLike('c.course_title', $literal, 'both', true)
+                ->groupEnd();
+        }
+
+        // Sorted by the chosen column (ties by when it was asked, so the order never jumps between reloads).
+        $direction = strtoupper($filters->direction());
+        $columns   = match ($filters->sort) {
+            'student'   => ['sp.last_name', 'sp.first_name'],
+            'course'    => ['c.course_code', 'co.section_code'],
+            'requested' => ['r.requested_percentage'],
+            'requester' => ['rp.last_name', 'rp.first_name'],
+            default     => [$filters->view === 'decided' ? 'r.decided_at' : 'r.created_at'],
+        };
+
+        foreach ($columns as $column) {
+            $builder->orderBy($column, $direction);
+        }
+
+        return $builder->orderBy('r.id', $direction)->limit(100)->get()->getResultArray();
+    }
+
+    /**
+     * The people who asked, for the Approvals filter.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public function requestersForDean(User $dean): array
+    {
+        $department = (new DeanAccessService())->departmentFor($dean);
+
+        if ($department === null) {
+            return [];
+        }
+
+        return db_connect()->table('grade_override_requests r')
+            ->select(['r.requested_by AS id', "CONCAT(rp.first_name, ' ', rp.last_name) AS name"], false)
+            ->join('course_offerings co', 'co.id = r.offering_id')
+            ->join('courses c', 'c.id = co.course_id')
+            ->join('programs p', 'p.id = c.program_id')
+            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('user_profiles rp', 'rp.user_id = r.requested_by', 'left')
+            ->where('sd.department_id', (int) $department['department_id'])
+            ->distinct()->orderBy('name', 'ASC')->get()->getResultArray();
+    }
+
+    /**
+     * How a student's grade is made up, for the dean to judge a request by: each category (or period)
+     * with its percentage, as the instructor's gradebook computes it.
+     *
+     * @return list<array{name: string, percentage: ?float}>
+     */
+    public function breakdown(int $offeringId, int $studentId): array
+    {
+        $engine  = new GradingEngineService();
+        $context = $engine->context($offeringId, [$studentId]);
+
+        if ($context === null || ! in_array($studentId, $context['studentIds'], true)) {
+            return [];
+        }
+
+        $result = $engine->compute($context, $studentId);
+        $groups = ! empty($context['scheme']['uses_periods']) && ($result['periods'] ?? []) !== [] ? $result['periods'] : ($result['categories'] ?? []);
+
+        return array_map(static fn (array $group): array => ['name' => (string) $group['name'], 'percentage' => $group['percentage'] === null ? null : (float) $group['percentage']], array_values($groups));
+    }
+
+    /** The request, if it waits for this dean: in their department, not their own, acting as dean. */
+    private function decidable(User $dean, int $requestId): ?array
+    {
+        $row = $this->requests->find($requestId);
+
+        if ($row === null || $row['status'] !== OverrideRequestChain::AWAITING_DEAN || (int) $row['requested_by'] === (int) $dean->id) {
+            return null;
+        }
+
+        if ((new ActiveRoleService())->resolve($dean) !== 'dean' || ! (new DeanAccessService())->canAccessOffering($dean, (int) $row['offering_id'])) {
+            return null;
+        }
+
+        return $row;
+    }
+
+    /**
+     * Closes a request that is still waiting for the dean, in one step, so two decisions (or a decision
+     * and a withdrawal) cannot both win. False when it was no longer waiting.
+     */
+    private function claim(int $requestId, string $status, User $dean, string $reason): bool
+    {
+        $db = db_connect();
+
+        $db->table('grade_override_requests')
+            ->where(['id' => $requestId, 'status' => OverrideRequestChain::AWAITING_DEAN])
+            ->update([
+                'status'          => $status,
+                'open_marker'     => null,
+                'decided_by'      => (int) $dean->id,
+                'decided_at'      => date('Y-m-d H:i:s'),
+                'decision_reason' => trim($reason) !== '' ? trim($reason) : null,
+                'updated_at'      => date('Y-m-d H:i:s'),
+            ]);
+
+        return $db->affectedRows() === 1;
+    }
+
+    /** @param array<string, mixed> $context */
+    private function tellDeanIfWaiting(int $requestId, string $status, array $context, string $arrival): void
+    {
+        if ($status !== OverrideRequestChain::AWAITING_DEAN) {
+            return;
+        }
+
+        $deanId = $this->deanId((int) $context['department_id']);
+
+        if ($deanId === null) {
+            return;
+        }
+
+        $this->tell($deanId, "grade-override:{$requestId}:dean:{$arrival}", 'Grade override to decide', $this->label($context) . ': a final-grade override is waiting for your decision.', (int) $context['institution_id'], site_url('dean/approvals'));
     }
 
     /*

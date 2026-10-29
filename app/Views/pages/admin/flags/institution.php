@@ -22,6 +22,8 @@ $reasons = [
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Feature flags', 'icon' => 'pin', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]"><?= esc($flagInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($flagInstitution['code']) ?>)</span></p>
 
@@ -91,6 +93,8 @@ $reasons = [
             </details>
         </section>
     <?php endforeach; ?>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

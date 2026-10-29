@@ -74,14 +74,17 @@ foreach ($termRows as $term) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Terms',
         'icon'        => 'calendar',
         'description' => 'The periods your offerings run in. One is usually active at a time.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
         'actions'     => $termCanEdit
             ? '<a class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc(site_url($base . '/copy')) . '">Copy offerings</a> '
                 . '<button type="button" class="' . $primary . '" data-dialog-open="term-form" data-dialog-title="Add a term" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add term">Add a term</button>'
@@ -121,6 +124,8 @@ foreach ($termRows as $term) {
         'emptyTitle' => 'No terms yet',
         'emptyText'  => $termCanEdit ? 'Add your first term, then start it when it begins.' : 'Terms will be listed here.',
     ], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

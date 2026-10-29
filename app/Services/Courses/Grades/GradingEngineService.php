@@ -80,6 +80,8 @@ class GradingEngineService
             'last_recalculated_at' => date('Y-m-d H:i:s'),
         ]);
 
+        $this->tagWithdrawn($offeringId);
+
         return count($context['studentIds']);
     }
 
@@ -132,7 +134,7 @@ class GradingEngineService
 
         $categories = $this->categoryModel->listForScheme((int) $scheme['id']);
 
-        $items = $this->itemModel->listForScheme((int) $scheme['id']);
+        $items = $this->itemModel->listForScheme((int) $scheme['id'], true);
 
         return [
             'offeringId' => $offeringId,
@@ -142,6 +144,8 @@ class GradingEngineService
             'items' => $items,
             'studentIds' => $studentIds,
             'scores' => $this->scoreModel->mapForItems(array_map('intval', array_column($items, 'id')), $studentIds),
+            // Curves that count now: how an item's scores, or the final percentage, are read.
+            'adjustments' => (new \App\Models\Grades\GradeAdjustmentModel())->liveFor($offeringId),
             'bands' => !empty($scheme['grade_scale_id'])
                 ? $this->scaleItemModel->listForScale((int) $scheme['grade_scale_id'])
                 : [],
@@ -154,7 +158,7 @@ class GradingEngineService
      * @return array{percentage: ?float, points_earned: float, points_possible: float,
      *               categories: list<array>, periods: list<array>, band: ?array, remarks: string}
      */
-    public function compute(array $context, int $studentId, array $overrideScores = []): array
+    public function compute(array $context, int $studentId, array $overrideScores = [], bool $missingAsZero = false): array
     {
         $categories = [];
         $pointsEarned = 0.0;
@@ -174,8 +178,28 @@ class GradingEngineService
 
                 $score = $this->scoreFor($context, $overrideScores, (int) $item['id'], $studentId);
 
-                if ($score === null) {
+                // An excused item is left out of the grade altogether.
+                if ($score === null && !empty($context['scores'][(int) $item['id']][$studentId]['is_missing'])) {
                     continue;
+                }
+
+                // A final grade counts work that was never graded or handed in as zero.
+                if ($score === null && !$missingAsZero) {
+                    continue;
+                }
+
+                $wasScored = $score !== null;
+
+                $score ??= 0.0;
+
+                // A curve changes the score that counts, never the one that was entered. Work that
+                // was never done (counted as zero in a final grade) is not curved.
+                if ($wasScored && isset($context['adjustments']['items'][(int) $item['id']])) {
+
+                    $curve = $context['adjustments']['items'][(int) $item['id']];
+
+                    $score = GradeAdjustmentService::adjust($curve['method'], $curve['params'], $score, (float) $item['max_points']);
+
                 }
 
                 $earned += $score;
@@ -241,6 +265,15 @@ class GradingEngineService
                 static fn (array $category) => [$category['percentage'], $category['weight']],
                 $categories
             ));
+
+        }
+
+        // A curve on the final grade moves the calculated percentage (an override still wins, elsewhere).
+        if ($final !== null && !empty($context['adjustments']['final'])) {
+
+            $curve = $context['adjustments']['final'];
+
+            $final = GradeAdjustmentService::adjust($curve['method'], $curve['params'], $final, 100.0);
 
         }
 
@@ -316,6 +349,39 @@ class GradingEngineService
         return $bands[count($bands) - 1] ?? null;
     }
 
+    /**
+     * The tag a record carries: Incomplete (INC) when the instructor set it,
+     * otherwise Passed / Failed / Incomplete (nothing graded) from the grade
+     * that counts.
+     */
+    public function tagFor(?array $record, ?float $effective, float $passing): string
+    {
+        if (!empty($record['inc_set_at'])) {
+            return 'INC';
+        }
+
+        return $this->remarksFor($effective, $passing);
+    }
+
+    /**
+     * What a grade is called on screen. Passed and Failed are for a final
+     * grade; before the grades are finalized the same standing reads "On
+     * track" or "At risk", because more work is still to come. Incomplete
+     * (INC) and Withdrawn read the same either way.
+     */
+    public static function displayTag(string $remarks, bool $isFinal): string
+    {
+        if ($isFinal) {
+            return $remarks;
+        }
+
+        return match ($remarks) {
+            'Passed' => 'On track',
+            'Failed' => 'At risk',
+            default => $remarks,
+        };
+    }
+
     public function remarksFor(?float $percentage, float $passing): string
     {
         return match (true) {
@@ -341,15 +407,17 @@ class GradingEngineService
 
         $record = $this->recordModel->findForStudent($context['offeringId'], $studentId);
 
-        $effective = !empty($record['is_override'])
-            ? ($record['overridden_percentage'] === null ? null : (float) $record['overridden_percentage'])
-            : $result['percentage'];
+        $effective = match (true) {
+            !empty($record['is_override']) => $record['overridden_percentage'] === null ? null : (float) $record['overridden_percentage'],
+            !empty($record['finalized_at']) => $record['final_percentage'] === null ? null : (float) $record['final_percentage'],
+            default => $result['percentage'],
+        };
 
         $values = [
             'grading_scheme_id' => $context['scheme']['id'],
             'calculated_percentage' => $result['percentage'],
             'calculated_grade_scale_item_id' => $result['band']['id'] ?? null,
-            'remarks' => $this->remarksFor($effective, (float) $context['scheme']['passing_percentage']),
+            'remarks' => $this->tagFor($record, $effective, (float) $context['scheme']['passing_percentage']),
             'last_calculated_at' => $now,
             'updated_at' => $now,
         ];
@@ -398,9 +466,11 @@ class GradingEngineService
 
         $isOverride = $percentage !== null;
 
+        $fallback = !empty($record['finalized_at']) ? $record['final_percentage'] : $record['calculated_percentage'];
+
         $effective = $isOverride
             ? $percentage
-            : ($record['calculated_percentage'] === null ? null : (float) $record['calculated_percentage']);
+            : ($fallback === null ? null : (float) $fallback);
 
         $now = date('Y-m-d H:i:s');
 
@@ -410,9 +480,14 @@ class GradingEngineService
             'overridden_grade_scale_item_id' => $isOverride ? ($this->bandFor($context['bands'], $percentage)['id'] ?? null) : null,
             'override_reason' => $isOverride ? trim($reason) : null,
             'overridden_by' => $isOverride ? $user->id : null,
-            'remarks' => $this->remarksFor($effective, (float) $context['scheme']['passing_percentage']),
+            'remarks' => $this->tagFor($record, $effective, (float) $context['scheme']['passing_percentage']),
             'updated_at' => $now,
         ]);
+
+        GradeAudit::record($isOverride ? 'grades.override_set' : 'grades.override_removed', $offeringId, [
+            'old' => ['student_id' => $studentId, 'percentage' => $previous],
+            'new' => ['student_id' => $studentId, 'percentage' => $effective, 'reason' => trim($reason)],
+        ], $user);
 
         $this->historyModel->insert([
             'gradebook_record_id' => $record['id'],
@@ -424,5 +499,197 @@ class GradingEngineService
         ]);
 
         return ['success' => true, 'message' => $isOverride ? 'Final grade overridden.' : 'Override removed.'];
+    }
+    /*
+    |--------------------------------------------------------------------------
+    | Tags: Incomplete (INC) and Withdrawn
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Marks a student's grade Incomplete (INC): neither passed nor failed,
+     * with the reason and, optionally, the date to finish by. The grade
+     * itself is untouched.
+     */
+    public function markIncomplete(User $user, int $offeringId, int $studentId, string $reason, ?string $until = null): array
+    {
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            return ['success' => false, 'message' => 'Give a reason for the Incomplete.'];
+        }
+
+        if ($until !== null && $until !== '') {
+            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $until);
+
+            if ($date === false || $date->format('Y-m-d') !== $until) {
+                return ['success' => false, 'message' => 'Enter the finish-by date as year-month-day.'];
+            }
+        } else {
+            $until = null;
+        }
+
+        $record = $this->recordFor($offeringId, $studentId);
+
+        if (!$record) {
+            return ['success' => false, 'message' => 'Student is not enrolled in this section.'];
+        }
+
+        $now = date('Y-m-d H:i:s');
+
+        $this->recordModel->update($record['id'], [
+            'remarks' => 'INC',
+            'inc_set_at' => $now,
+            'inc_set_by' => $user->id,
+            'inc_reason' => $reason,
+            'inc_until' => $until,
+            'updated_at' => $now,
+        ]);
+
+        GradeAudit::record('grades.incomplete_set', $offeringId, [
+            'new' => ['student_id' => $studentId, 'reason' => $reason, 'until' => $until],
+        ], $user);
+
+        return ['success' => true, 'message' => 'Marked Incomplete.'];
+    }
+
+    /** Takes the Incomplete off: the grade shows Passed or Failed again. */
+    public function clearIncomplete(User $user, int $offeringId, int $studentId): array
+    {
+        $record = $this->recordModel->findForStudent($offeringId, $studentId);
+
+        if (!$record || empty($record['inc_set_at'])) {
+            return ['success' => false, 'message' => 'This student is not marked Incomplete.'];
+        }
+
+        $this->recordModel->update($record['id'], [
+            'inc_set_at' => null,
+            'inc_set_by' => null,
+            'inc_reason' => null,
+            'inc_until' => null,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->recalculateStudent($offeringId, $studentId);
+
+        GradeAudit::record('grades.incomplete_cleared', $offeringId, [
+            'old' => ['student_id' => $studentId, 'reason' => $record['inc_reason']],
+        ], $user);
+
+        return ['success' => true, 'message' => 'Incomplete removed.'];
+    }
+
+    /**
+     * Brings one student's tag in step with their enrolment: a student who
+     * dropped or withdrew is tagged Withdrawn (their grade is kept, frozen);
+     * one who is enrolled again gets a normal tag back.
+     */
+    public function syncEnrolment(int $offeringId, int $studentId): void
+    {
+        $record = $this->recordModel->findForStudent($offeringId, $studentId);
+
+        if (!$record) {
+            return;
+        }
+
+        $status = db_connect()->table('enrollments')
+            ->select('status')
+            ->where('offering_id', $offeringId)
+            ->where('student_user_id', $studentId)
+            ->get()->getRowArray()['status'] ?? null;
+
+        if (in_array($status, ['dropped', 'withdrawn'], true)) {
+
+            if ($record['remarks'] !== 'Withdrawn') {
+                $this->recordModel->update($record['id'], ['remarks' => 'Withdrawn', 'updated_at' => date('Y-m-d H:i:s')]);
+            }
+
+            return;
+        }
+
+        if ($record['remarks'] === 'Withdrawn') {
+            $this->recalculateStudent($offeringId, $studentId);
+        }
+    }
+
+    /** Every student who dropped or withdrew from the section carries the Withdrawn tag. */
+    private function tagWithdrawn(int $offeringId): void
+    {
+        $students = db_connect()->table('enrollments')
+            ->select('student_user_id')
+            ->where('offering_id', $offeringId)
+            ->whereIn('status', ['dropped', 'withdrawn'])
+            ->get()->getResultArray();
+
+        foreach ($students as $row) {
+            $this->syncEnrolment($offeringId, (int) $row['student_user_id']);
+        }
+    }
+
+    /** The student's record, calculated first if they have none yet. */
+    private function recordFor(int $offeringId, int $studentId): ?array
+    {
+        $record = $this->recordModel->findForStudent($offeringId, $studentId);
+
+        if (!$record) {
+            $this->recalculateStudent($offeringId, $studentId);
+            $record = $this->recordModel->findForStudent($offeringId, $studentId);
+        }
+
+        return $record;
+    }
+    /*
+    |--------------------------------------------------------------------------
+    | Finalizing
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Freezes one student's final grade: computed with work that was never
+     * graded counted as zero, then stored beside the live calculation. An
+     * Incomplete stays Incomplete; everyone else is tagged Passed or Failed.
+     * Returns false when the student has no record to freeze.
+     */
+    public function freezeStudent(array $context, int $studentId, int $finalizedBy, string $now): bool
+    {
+        $this->store($context, $studentId, $this->compute($context, $studentId));
+
+        $record = $this->recordModel->findForStudent($context['offeringId'], $studentId);
+
+        if (!$record) {
+            return false;
+        }
+
+        $final = $this->compute($context, $studentId, [], true);
+
+        $effective = !empty($record['is_override'])
+            ? ($record['overridden_percentage'] === null ? null : (float) $record['overridden_percentage'])
+            : $final['percentage'];
+
+        $this->recordModel->update($record['id'], [
+            'finalized_at' => $now,
+            'finalized_by' => $finalizedBy,
+            'final_percentage' => $final['percentage'],
+            'final_grade_scale_item_id' => $final['band']['id'] ?? null,
+            'remarks' => $this->tagFor($record, $effective, (float) $context['scheme']['passing_percentage']),
+            'updated_at' => $now,
+        ]);
+
+        return true;
+    }
+
+    /** Lifts the frozen final grades of a section: grades follow the live calculation again. */
+    public function unfreezeOffering(int $offeringId): void
+    {
+        db_connect()->table('gradebook_records')
+            ->where('course_offering_id', $offeringId)
+            ->update([
+                'finalized_at' => null,
+                'finalized_by' => null,
+                'final_percentage' => null,
+                'final_grade_scale_item_id' => null,
+            ]);
+
+        $this->recalculateOffering($offeringId);
     }
 }

@@ -75,6 +75,55 @@ final class SisGradePayloadTest extends CIUnitTestCase
         $this->assertSame(1, $plan['skipped']);
     }
 
+    public function testEveryGradeLeftOutNamesWhy(): void
+    {
+        $plan = SisGradePayload::plan([
+            self::candidate(1, 10, 91.0),
+            self::candidate(1, 11, 80.0) + ['skip' => SisGradePayload::NOT_FINAL],
+            self::candidate(1, 12, 80.0) + ['skip' => SisGradePayload::WITHDRAWN],
+            self::candidate(1, 13, 80.0) + ['skip' => SisGradePayload::INCOMPLETE],
+            self::candidate(1, 14, 80.0) + ['skip' => SisGradePayload::NOT_IN_SIS],
+            self::candidate(1, 15, null, 'Incomplete'),
+            self::candidate(1, 16, 70.0),
+        ], ['1:16' => ['percentage' => 70.0, 'remarks' => 'Passed']]);
+
+        $this->assertSame(1, $plan['created']);
+        $this->assertSame(6, $plan['skipped']);
+        $this->assertSame(
+            [
+                11 => SisGradePayload::NOT_FINAL,
+                12 => SisGradePayload::WITHDRAWN,
+                13 => SisGradePayload::INCOMPLETE,
+                14 => SisGradePayload::NOT_IN_SIS,
+                15 => SisGradePayload::NO_GRADE,
+                16 => SisGradePayload::UNCHANGED,
+            ],
+            array_column($plan['left_out'], 'reason', 'student_id')
+        );
+    }
+
+    public function testAGradeTheDeanHasNotSignedOffIsLeftOutAndNeverSentOrCounted(): void
+    {
+        $plan = SisGradePayload::plan([
+            self::candidate(1, 10, 91.0),
+            self::candidate(2, 11, 80.0) + ['skip' => SisGradePayload::NOT_SIGNED_OFF],
+            self::candidate(2, 12, 75.0) + ['skip' => SisGradePayload::NOT_SIGNED_OFF],
+        ], []);
+
+        $this->assertSame(1, $plan['created']);
+        $this->assertSame(2, $plan['skipped']);
+        $this->assertSame(['S10'], array_column($plan['rows'], 'student_external_id'));
+        $this->assertSame([11 => SisGradePayload::NOT_SIGNED_OFF, 12 => SisGradePayload::NOT_SIGNED_OFF], array_column($plan['left_out'], 'reason', 'student_id'));
+        $this->assertSame('The dean has not signed off the grades yet', SisGradePayload::REASONS[SisGradePayload::NOT_SIGNED_OFF]);
+    }
+
+    public function testEveryReasonHasWordsForThePersonReadingThePreview(): void
+    {
+        foreach ([SisGradePayload::NOT_FINAL, SisGradePayload::NOT_SIGNED_OFF, SisGradePayload::WITHDRAWN, SisGradePayload::INCOMPLETE, SisGradePayload::NO_GRADE, SisGradePayload::NOT_IN_SIS, SisGradePayload::UNCHANGED] as $reason) {
+            $this->assertNotSame('', SisGradePayload::REASONS[$reason] ?? '', $reason);
+        }
+    }
+
     public function testASubCentGradeChangeIsNotAChange(): void
     {
         $plan = SisGradePayload::plan([self::candidate(1, 10, 91.001)], ['1:10' => ['percentage' => 91.0, 'remarks' => 'Passed']]);

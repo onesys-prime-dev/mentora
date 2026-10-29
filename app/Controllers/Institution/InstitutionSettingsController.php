@@ -13,6 +13,8 @@ use App\Services\Institutions\InstitutionAnnouncement;
 use App\Services\Institutions\InstitutionProfileService;
 use App\Services\Institutions\InstitutionSecurity;
 use App\Services\Institutions\InstitutionScope;
+use App\Services\Institutions\StructureException;
+use App\Services\Parents\ParentPortal;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -34,6 +36,8 @@ class InstitutionSettingsController extends BaseController
     private const ANNOUNCEMENT = 'institution/settings/announcement';
 
     private const SECURITY = 'institution/settings/security';
+
+    private const PARENTS = 'institution/settings/parents';
 
     private InstitutionProfileService $profiles;
 
@@ -90,6 +94,29 @@ class InstitutionSettingsController extends BaseController
         return $this->run(function (int $inst): void {
             (new InstitutionAnnouncement())->remove($inst);
         }, 'The announcement was removed.', self::ANNOUNCEMENT);
+    }
+
+    public function parents(): string
+    {
+        return $this->show('parents');
+    }
+
+    public function saveParents(): ResponseInterface|RedirectResponse
+    {
+        $choice = $this->input()['enabled'] ?? null;
+
+        return $this->run(function (int $inst) use ($choice): bool {
+            if (! in_array($choice, ['0', '1'], true)) {
+                throw StructureException::field('enabled', 'Choose on or off.');
+            }
+
+            $portal = new ParentPortal();
+            $portal->setInstitutionOn($inst, $choice === '1');
+
+            return $portal->enabled($inst);
+        }, static fn (bool $on): string => $on
+            ? 'The parent portal is on.'
+            : ($choice === '1' ? 'Mentora has the parent portal switched off for your institution, so it stays off.' : 'The parent portal is switched off.'), self::PARENTS);
     }
 
     public function security(): string
@@ -152,6 +179,7 @@ class InstitutionSettingsController extends BaseController
             'reauthDialog'  => $tab === 'security',
             'settingsAnnouncement' => $tab === 'announcement' ? (new InstitutionAnnouncement())->get($institutionId) : null,
             'settingsSecurity' => $tab === 'security' ? (new InstitutionSecurity())->forInstitution($institutionId) : null,
+            'settingsParents' => $tab === 'parents' ? ['own' => ! (new ParentPortal())->institutionSwitchedOff($institutionId), 'platform' => (new ParentPortal())->platformOn($institutionId)] : null,
             'settingsAcademic' => $tab === 'academic' ? (new AcademicDefaults())->forInstitution($institutionId) : null,
             'settingsCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'settingsDefaults' => ['primary' => BrandColours::DEFAULT_PRIMARY, 'accent' => BrandColours::DEFAULT_ACCENT],

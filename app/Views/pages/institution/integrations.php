@@ -35,6 +35,12 @@ foreach ($c['runs'] as $i => $run) {
     ];
 }
 
+$gradeIssueRows = [];
+
+foreach (($c['latestGrades']['issues'] ?? []) as $i => $issue) {
+    $gradeIssueRows[] = ['id' => $i, 'label' => $issue['item'], 'cells' => ['record' => $issue['item'], 'reason' => $issue['reason']]];
+}
+
 $issueRows = [];
 
 if ($c['latest'] !== null) {
@@ -48,14 +54,17 @@ if ($c['latest'] !== null) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Integrations',
         'icon'        => 'link',
         'description' => 'People, courses and enrolments from your student information system, and final grades back to it.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
     ], ['saveData' => false]) ?>
 
     <?php if (session()->has('message')): ?>
@@ -65,7 +74,7 @@ if ($c['latest'] !== null) {
         <?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?>
     <?php endif; ?>
 
-    <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="state-heading" data-connection>
+    <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="state-heading" data-connection>
         <div class="flex flex-wrap items-center gap-3">
             <h2 id="state-heading" class="text-lg font-bold text-brand"><?= esc($c['label']) ?></h2>
             <?php if (! $c['available']): ?>
@@ -95,7 +104,7 @@ if ($c['latest'] !== null) {
 
     <?php if ($ready): ?>
 
-        <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="import-heading" data-section="import">
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="import-heading" data-section="import">
             <h2 id="import-heading" class="text-sm font-bold text-brand">Import from the SIS</h2>
             <p class="mt-1 text-sm text-[#3D3D3D]">A preview does the whole job and then undoes it, so you see the counts and any rows that would be refused. Run one before the first real import. A real import asks for your password.</p>
 
@@ -132,9 +141,9 @@ if ($c['latest'] !== null) {
             <?php endif; ?>
         </section>
 
-        <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="grades-heading" data-section="grades">
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="grades-heading" data-section="grades">
             <h2 id="grades-heading" class="text-sm font-bold text-brand">Final grades to the SIS</h2>
-            <p class="mt-1 text-sm text-[#3D3D3D]">Only final grades go out (course, student, percentage, remarks), and only those new or changed since they were last sent. Sending the same grades again replaces the delivery, so nothing is duplicated. Sending asks for your password.</p>
+            <p class="mt-1 text-sm text-[#3D3D3D]">Only final grades go out (course, student, percentage, remarks): a section's grades are final once its instructor finalizes them. Only those new or changed since they were last sent are included. Sending the same grades again replaces the delivery, so nothing is duplicated. Sending asks for your password.</p>
 
             <div class="mt-4 flex flex-wrap gap-3">
                 <form method="post" action="<?= esc(site_url($base . '/grades/preview')) ?>"><?= csrf_field() ?>
@@ -144,6 +153,25 @@ if ($c['latest'] !== null) {
                     <button type="submit" class="<?= $primary ?>" data-grades-send <?= $running ? '' : 'disabled' ?>>Send final grades now</button>
                 </form>
             </div>
+
+            <?php if (($c['latestGrades'] ?? null) !== null): ?>
+                <h3 class="mt-5 text-sm font-semibold text-[#1A1C1E]" data-latest-grades>
+                    Latest <?= $c['latestGrades']['dry_run'] ? 'preview' : 'send' ?>: <?= esc($c['latestGrades']['message']) ?>
+                </h3>
+
+                <?php if ($gradeIssueRows !== []): ?>
+                    <div class="mt-3" data-grade-issues>
+                        <?= view('components/data-table', [
+                            'caption' => 'Grades that were not sent',
+                            'columns' => [['key' => 'record', 'label' => 'Student or section'], ['key' => 'reason', 'label' => 'Why it was not sent']],
+                            'rows'    => $gradeIssueRows,
+                        ], ['saveData' => false]) ?>
+                        <?php if ($c['latestGrades']['truncated']): ?>
+                            <p class="mt-2 text-xs text-[#646464]">Only the first part is listed; the counts cover every grade.</p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
         </section>
 
     <?php endif; ?>
@@ -170,6 +198,8 @@ if ($c['latest'] !== null) {
             'emptyText'  => 'Imports and grade deliveries are listed here, newest first.',
         ], ['saveData' => false]) ?>
     </section>
+
+</div>
 
 </div>
 

@@ -126,6 +126,46 @@ final class GradeServiceTest extends DatabaseTestCase
         return $service->page($this->instructor, $this->offering());
     }
 
+    public function testAStudentSeesTheirManualScoresOnceTheGradingIsPublished(): void
+    {
+        $this->publish(true);
+        GradeFactory::score($this->offeringId, $this->ada, $this->examItem, 85);
+
+        $items = $this->studentPage($this->ada)['manualItems'];
+
+        $this->assertCount(1, $items, 'the quiz is an assessment, not a manual item');
+        $this->assertSame('Midterm', $items[0]['name']);
+        $this->assertSame('Exams', $items[0]['category']);
+        $this->assertSame(85.0, $items[0]['score']);
+        $this->assertSame(100.0, $items[0]['max']);
+        $this->assertFalse($items[0]['excused']);
+    }
+
+    public function testAnExcusedItemShowsAsExcusedAndANotYetGradedOneHasNoScore(): void
+    {
+        $this->publish(true);
+        GradeFactory::score($this->offeringId, $this->bob, $this->examItem, null, true);
+
+        $bob = $this->studentPage($this->bob)['manualItems'][0];
+        $ada = $this->studentPage($this->ada)['manualItems'][0];
+
+        $this->assertTrue($bob['excused']);
+        $this->assertNull($bob['score']);
+        $this->assertFalse($ada['excused']);
+        $this->assertNull($ada['score']);
+    }
+
+    public function testManualScoresAreHiddenWhileTheGradingIsADraftAndNeverShowSomeoneElses(): void
+    {
+        GradeFactory::score($this->offeringId, $this->ada, $this->examItem, 85);
+
+        $this->publish(false);
+        $this->assertSame([], $this->studentPage($this->ada)['manualItems']);
+
+        $this->publish(true);
+        $this->assertSame([], array_filter($this->studentPage($this->bob)['manualItems'], static fn (array $i): bool => $i['score'] !== null));
+    }
+
     /*
     |--------------------------------------------------------------------------
     | show()

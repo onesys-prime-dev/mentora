@@ -18,7 +18,7 @@ $invitationBadge = [
 ];
 
 $roleNames = [
-    'admin' => 'System administrator', 'institutional_admin' => 'Institutional administrator', 'chairperson' => 'Chairperson',
+    'admin' => 'System administrator', 'institutional_admin' => 'Institutional administrator', 'dean' => 'Dean', 'chairperson' => 'Chairperson',
     'instructor' => 'Instructor', 'student' => 'Student', 'parent' => 'Parent',
 ];
 
@@ -29,6 +29,8 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
 <?= $this->extend('layouts/admin') ?>
 
 <?= $this->section('content') ?>
+
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
 <?= view('components/page-head', ['title' => 'Users', 'icon' => 'user', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]"><?= esc($peopleInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($peopleInstitution['code']) ?>)</span></p>
@@ -155,5 +157,7 @@ $isDeleted = $peopleInstitution['deleted_at'] !== null;
         <?php endif; ?>
     <?php endif; ?>
 </section>
+
+</div>
 
 <?= $this->endSection() ?>

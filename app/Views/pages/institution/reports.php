@@ -86,14 +86,17 @@ $gradedAny = array_sum($d['distribution']) > 0;
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Reports',
         'icon'        => 'score',
         'description' => 'How your courses are doing: enrolment, grades, grading and who needs attention.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
         'actions'     => implode(' ', array_map(
             static fn (string $kind, string $label): string => '<a class="' . $second . '" href="' . esc(site_url($base . '/export/' . $kind) . ($query === [] ? '' : '?' . http_build_query($query))) . '" data-export="' . esc($kind) . '">' . esc($label) . ' (CSV)</a>',
             array_keys($reportExports),
@@ -102,6 +105,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
@@ -115,7 +119,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
 
     <?php if ($d['rows'] === []): ?>
 
-        <div class="rounded-2xl bg-white/70">
+        <div class="rounded-2xl border border-gray-200 bg-gray-50">
             <?= view('components/empty-state', [
                 'icon'  => 'score',
                 'title' => $filtered ? 'No courses match these filters' : 'No courses to report on yet',
@@ -133,7 +137,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
             <?= view('components/metric-card', ['label' => 'Graded', 'value' => $d['grading']['percent'] === null ? '—' : $d['grading']['percent'] . '%', 'icon' => 'grades', 'tone' => 'neutral', 'detail' => $d['grading']['turnaround'] === null ? 'Published grades only' : 'Typically ' . $d['grading']['turnaround'] . ' h to grade'], ['saveData' => false]) ?>
         </div>
 
-        <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="distribution" data-report-distribution>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="distribution" data-report-distribution>
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 id="distribution" class="text-sm font-bold text-brand">Grade distribution</h2>
                 <?php if ($d['grading']['average'] !== null): ?>
@@ -204,6 +208,8 @@ $gradedAny = array_sum($d['distribution']) > 0;
         </section>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

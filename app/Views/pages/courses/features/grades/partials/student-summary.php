@@ -5,10 +5,15 @@
  */
 $finalGrade = $summary['overall_percentage'] ?? null;
 
-$remarksMeta = match ($summary['remarks'] ?? null) {
+$isFinal = !empty($summary['is_final']);
+
+$remarksMeta = match ($summary['tag'] ?? ($summary['remarks'] ?? null)) {
     'Passed'     => ['label' => 'Passed',      'tone' => 'success', 'icon' => 'check'],
     'Failed'     => ['label' => 'Failed',      'tone' => 'danger',  'icon' => 'attention'],
+    'On track'   => ['label' => 'On track',    'tone' => 'success', 'icon' => 'in-progress'],
+    'At risk'    => ['label' => 'At risk',     'tone' => 'warning', 'icon' => 'attention'],
     'Withdrawn'  => ['label' => 'Withdrawn',   'tone' => 'neutral', 'icon' => 'attention'],
+    'INC'        => ['label' => 'Incomplete (INC)', 'tone' => 'warning', 'icon' => 'in-progress'],
     default      => ['label' => 'In Progress', 'tone' => 'warning', 'icon' => 'in-progress'],
 };
 
@@ -20,7 +25,7 @@ $gradeLabel = $summary['grade_label'] ?? null;
 ?>
 
 <?php
-$overallValue = $finalGrade !== null ? number_format((float) $finalGrade, 2) . '%' : '—';
+$overallValue = grade_percent($finalGrade);
 
 $overallHtml = esc($overallValue);
 
@@ -28,6 +33,16 @@ if ($gradeLabel !== null) {
     $overallHtml .= ' <span class="ml-1 rounded-full bg-brand/10 px-2 py-0.5 text-sm" data-grades-scale-grade>' . esc($gradeLabel) . '</span>';
 }
 ?>
+
+<?php if ($isFinal): ?>
+    <div class="flex justify-end">
+        <button type="button" data-report-path="mine" data-report-format="pdf" data-my-grade-report
+            class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+            <?= icon('grades', 'h-4 w-4 text-current') ?>
+            Download my grade report
+        </button>
+    </div>
+<?php endif; ?>
 
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
@@ -39,7 +54,8 @@ if ($gradeLabel !== null) {
         'detail' => match (true) {
             !$isPublished => "Your instructor hasn't published the grading yet",
             !empty($summary['is_override']) => 'Set by your instructor',
-            $finalGrade !== null => 'From your graded work so far',
+            $isFinal && $finalGrade !== null => 'Final grade' . (!empty($summary['is_adjusted']) ? ' · adjusted by your instructor' : ''),
+            $finalGrade !== null => 'So far, from your graded work' . (!empty($summary['is_adjusted']) ? ' · adjusted by your instructor' : ''),
             default => 'Nothing graded yet',
         },
     ], ['saveData' => false]) ?>
@@ -48,7 +64,7 @@ if ($gradeLabel !== null) {
         'label' => 'Points Earned',
         'icon' => 'score',
         'size' => 'prominent',
-        'value' => round((float) ($summary['points_earned'] ?? 0), 2) . '/' . round((float) ($summary['points_possible'] ?? 0), 2),
+        'value' => grade_number($summary['points_earned'] ?? 0) . '/' . grade_number($summary['points_possible'] ?? 0),
         'detail' => $gradedCount . ' of ' . $totalCount . ' graded',
         'detail_attrs' => 'data-grades-graded-count',
     ], ['saveData' => false]) ?>
@@ -59,7 +75,9 @@ if ($gradeLabel !== null) {
         'size' => 'prominent',
         'tone' => $remarksMeta['tone'],
         'value' => $remarksMeta['label'],
-        'detail' => '',
+        'detail' => ($summary['remarks'] ?? null) === 'INC'
+            ? trim((string) ($summary['inc_reason'] ?? '') . (!empty($summary['inc_until']) ? ' (finish by ' . date('M j, Y', strtotime((string) $summary['inc_until'])) . ')' : ''))
+            : '',
     ], ['saveData' => false]) ?>
 
 </div>

@@ -63,6 +63,7 @@ class StructureController extends BaseController
             'structureCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'structureChairs'  => (new ChairAssignmentService())->bySubDepartment($institutionId),
             'structureCandidates' => (new ChairAssignmentService())->candidates($institutionId),
+            'structureSisChairs' => (new \App\Services\Sis\SisOwnership())->managedAssignments('chairperson', $institutionId),
         ]);
     }
 

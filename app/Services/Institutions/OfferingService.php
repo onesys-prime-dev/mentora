@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Institutions;
 
 use CodeIgniter\Shield\Entities\User;
+use App\Services\Sis\SisOwnership;
 
 /**
  * An institution's course offerings (a course taught in a term, in a
@@ -317,10 +318,14 @@ class OfferingService
         ], $rows);
     }
 
+    public const SIS_LOCK = 'This assignment is managed by your student information system. Change it there; the next sync brings it here.';
+
     /**
+     * @return int the new assignment row
+     *
      * @throws StructureException
      */
-    public function assignInstructor(int $institutionId, int $offeringId, int $userId, ?User $actor = null): void
+    public function assignInstructor(int $institutionId, int $offeringId, int $userId, ?User $actor = null): int
     {
         $this->scope($institutionId)->require('offering', $offeringId);
 
@@ -350,14 +355,20 @@ class OfferingService
 
         $now = date('Y-m-d H:i:s');
         $db->table('instructor_assignments')->insert(['offering_id' => $offeringId, 'instructor_user_id' => $userId, 'assigned_at' => $now, 'updated_at' => $now]);
+        $id = (int) $db->insertID();
 
         $this->audit('structure.offering_instructor_assigned', $actor, $institutionId, $offeringId, null, ['instructor_user_id' => $userId]);
+
+        return $id;
     }
 
     /**
+     * @param bool $ignoreSisLock true for the SIS sync itself, which is the owner the lock protects
+     *
      * @throws \CodeIgniter\Exceptions\PageNotFoundException when the assignment is not this institution's
+     * @throws StructureException when the SIS owns this assignment and the connection is enabled
      */
-    public function unassignInstructor(int $institutionId, int $assignmentId, ?User $actor = null): void
+    public function unassignInstructor(int $institutionId, int $assignmentId, ?User $actor = null, bool $ignoreSisLock = false): void
     {
         $db  = db_connect();
         $row = $db->table('instructor_assignments ia')
@@ -375,6 +386,10 @@ class OfferingService
 
         if ($this->row((int) $row['offering_id'])['status'] !== 'active') {
             throw new StructureException('This offering is closed, so its instructors cannot be changed.');
+        }
+
+        if (! $ignoreSisLock && (new SisOwnership())->managesAssignment('instructor', $assignmentId)) {
+            throw new StructureException(self::SIS_LOCK);
         }
 
         $db->table('instructor_assignments')->where('id', $assignmentId)->delete();

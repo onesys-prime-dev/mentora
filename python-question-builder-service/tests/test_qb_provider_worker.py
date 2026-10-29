@@ -13,7 +13,7 @@ from qb.errors import (
 )
 from qb.php_client import PhpClient, PhpUnavailable
 from qb.providers.openai_compat import OpenAICompatProvider
-from qb.worker import Worker
+from qb.worker import RESTART_EXIT_CODE, StopRequest, Worker
 
 
 def reply(status=200, headers=None, body=None):
@@ -284,3 +284,22 @@ def test_invalid_json_from_the_model_is_a_provider_error_so_another_model_can_tr
 
     with pytest.raises(InvalidRequest):
         OpenAICompatProvider("k", transport=lambda *a: (400, {}, other.encode())).complete("m", "s", "u")
+
+
+def test_a_stop_request_during_the_idle_wait_ends_the_loop_and_exits_clean():
+    stop = StopRequest()
+    worker = Worker(FakePhp(), {}, sleep=lambda seconds: stop._stop(None, None))
+
+    worker.run_forever(should_stop=stop.event.is_set)
+
+    assert stop.event.is_set()
+    assert stop.exit_code == 0
+
+
+def test_a_restart_request_exits_non_zero_so_the_unit_starts_it_again():
+    stop = StopRequest()
+
+    stop._restart(None, None)
+
+    assert stop.event.is_set()
+    assert stop.exit_code == RESTART_EXIT_CODE != 0

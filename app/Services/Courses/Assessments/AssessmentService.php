@@ -1305,6 +1305,8 @@ class AssessmentService
 
         $this->syncLearningItemStatus($assessment, 'Archived');
 
+        // Archived work stops counting toward the grade.
+        (new GradeItemSyncService())->assessmentStatusChanged($assessmentId);
 
         return [
             'success' => true,
@@ -1365,6 +1367,9 @@ class AssessmentService
         );
 
         $this->syncLearningItemStatus($assessment, 'Draft');
+
+        // No longer published: it stops counting toward the grade.
+        (new GradeItemSyncService())->assessmentStatusChanged($assessmentId);
 
         return [
             'success' => true,

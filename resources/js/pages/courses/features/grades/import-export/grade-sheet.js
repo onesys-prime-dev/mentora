@@ -175,6 +175,7 @@ async function runApply(refresh)
                 student_id: row.studentId,
                 grade_item_id: change.gradeItemId,
                 value: change.newValue,
+                excused: change.newExcused === true,
             })));
 
     const button = document.querySelector("[data-grade-sheet-apply]");
@@ -250,6 +251,16 @@ function renderPreview(result)
     setStatus(result.validCount === 0 ? "Nothing to import." : `${result.validCount} score(s) will be saved.`);
 }
 
+/** How a score reads in the preview: a number, "Excused", or the empty mark. */
+export function scoreText(value, excused)
+{
+    if (excused) {
+        return "Excused";
+    }
+
+    return value === null || value === undefined ? "—" : String(Math.round(value * 100) / 100);
+}
+
 function renderRow(row)
 {
     const flagged = row.rowError !== null;
@@ -286,7 +297,7 @@ function renderRow(row)
         const line = document.createElement("span");
         line.className = `text-xs ${change.valid ? "text-gray-600" : "font-semibold text-red-600"}`;
         line.textContent = change.valid
-            ? `${change.itemName}: ${format(change.oldValue)} → ${format(change.newValue)}`
+            ? `${change.itemName}: ${scoreText(change.oldValue, change.oldExcused)} → ${scoreText(change.newValue, change.newExcused)}`
             : `${change.itemName}: ${change.error} Skipped.`;
         card.append(line);
     });
