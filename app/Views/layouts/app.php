@@ -22,7 +22,8 @@ $bodyHeight  = $fullHeight ? 'min-h-screen lg:h-screen lg:overflow-hidden' : 'mi
 $shellHeight = $fullHeight ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen';
 // A page can pass its own gutter. The default keeps px-40 from xl up (as before) and
 // narrows below it, so pages work on a laptop, a tablet and a phone.
-$mainGutter  = $mainGutter ?? 'px-4 sm:px-8 lg:px-16 xl:px-40';
+$hasMenu     = active_role() === 'institutional_admin';
+$mainGutter  = $mainGutter ?? ($hasMenu ? 'px-4 sm:px-8 lg:px-10' : 'px-4 sm:px-8 lg:px-16 xl:px-40');
 $mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'pb-10 pt-4';
 
 // The page is rendered first, so the header can tell whether the page already names itself:
@@ -69,11 +70,19 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
             <?= $this->include('layouts/partials/flash-toasts') ?>
         <?php endif; ?>
 
-        <main class="flex-1 <?= $mainGutter ?> <?= $mainSpacing ?>">
+        <div class="flex flex-1 flex-col <?= $hasMenu ? 'lg:flex-row' : '' ?>">
 
-            <?= $pageContent ?>
+            <?php if ($hasMenu): ?>
+                <?= $this->include('layouts/partials/institution-menu') ?>
+            <?php endif; ?>
 
-        </main>
+            <main class="min-w-0 flex-1 <?= $mainGutter ?> <?= $mainSpacing ?>">
+
+                <?= $pageContent ?>
+
+            </main>
+
+        </div>
 
     </div>
 
