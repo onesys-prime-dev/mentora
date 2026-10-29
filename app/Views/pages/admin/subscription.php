@@ -47,6 +47,8 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Subscription', 'icon' => 'points', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]"><?= esc($subInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($subInstitution['code']) ?>)</span></p>
 
@@ -189,5 +191,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
     </div>
 
 <?php endif; ?>
+
+</div>
 
 <?= $this->endSection() ?>

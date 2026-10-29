@@ -961,6 +961,7 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
 
     // System status: health, platform counts, subscription watch and usage against plans (read-only).
     $routes->get('monitoring', 'Admin\MonitoringController::index', ['filter' => 'permission:monitoring.view']);
+    $routes->get('monitoring/live', 'Admin\MonitoringController::live', ['filter' => 'permission:monitoring.view']);
 
     // Backups: history and alert with backup.view; asking for one needs backup.manage and the password.
     $routes->get('backups', 'Admin\BackupController::index', ['filter' => 'permission:backup.view']);

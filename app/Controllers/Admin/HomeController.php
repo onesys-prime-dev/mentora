@@ -24,8 +24,9 @@ class HomeController extends BaseController
             'page'          => 'admin',
             'user'          => auth()->user(),
             'homeAttention' => $home->needsAttention($now),
+            'homeHealth'    => $home->health(),
             'homeSnapshot'  => $home->snapshot($now),
-            'homeActivity'  => $home->recentActivity(),
+            'homeActivity'  => $home->recentActivity(25),
         ]);
     }
 }

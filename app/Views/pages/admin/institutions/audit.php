@@ -13,6 +13,8 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Audit', 'icon' => 'tasks', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]"><?= esc($auditInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($auditInstitution['code']) ?>)</span></p>
 
@@ -49,6 +51,8 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#
             <?php endforeach; ?>
         </tbody>
     </table>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>
