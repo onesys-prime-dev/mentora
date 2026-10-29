@@ -637,6 +637,11 @@ html[data-theme="dark"] .admin-flat [data-page-panel] thead th {
         display: none;
     }
 
+    /* Boxes that clip their own overflow (a table) would shrink to fit instead of making this scroll. */
+    main[data-pinned-panel] > div > [data-page-panel] > [data-panel-scroll] > * {
+        flex-shrink: 0;
+    }
+
     main[data-pinned-panel] > div > [data-page-panel]::-webkit-scrollbar {
         display: none;
     }
