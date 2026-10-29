@@ -652,11 +652,6 @@ html[data-theme="dark"] .admin-flat [data-page-panel] thead th {
         overflow-y: hidden;
     }
 
-    /* The card reaches closer to the bottom of the screen, and the bar sits right under the scrolling content. */
-    main[data-pinned-panel]:has(> div > [data-page-panel] > [data-panel-form]) {
-        padding-bottom: 0.5rem;
-    }
-
     main[data-pinned-panel] > div > [data-page-panel] > [data-panel-form] {
         gap: 0.5rem;
         display: flex;
