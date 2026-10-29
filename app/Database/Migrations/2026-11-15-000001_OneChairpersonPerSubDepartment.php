@@ -2,7 +2,9 @@
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * One chairperson per sub-department (audit decision 16.0).
@@ -16,7 +18,7 @@ class OneChairpersonPerSubDepartment extends Migration
 {
     public function up(): void
     {
-        $table = $this->db->prefixTable('chairperson_assignments');
+        $table = $this->connection()->prefixTable('chairperson_assignments');
 
         $this->db->query("ALTER TABLE {$table} ADD COLUMN active_marker TINYINT NULL AFTER status");
 
@@ -35,7 +37,7 @@ class OneChairpersonPerSubDepartment extends Migration
 
     public function down(): void
     {
-        $table = $this->db->prefixTable('chairperson_assignments');
+        $table = $this->connection()->prefixTable('chairperson_assignments');
 
         $this->db->query("ALTER TABLE {$table} DROP INDEX chairperson_assignments_one_active");
         $this->db->query("ALTER TABLE {$table} DROP COLUMN active_marker");
@@ -70,5 +72,11 @@ class OneChairpersonPerSubDepartment extends Migration
         sort($revoke);
 
         return $revoke;
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }

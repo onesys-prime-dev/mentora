@@ -4,6 +4,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * One account, one institution (audit decision D1); a system administrator belongs to none.
@@ -33,7 +34,7 @@ class OneInstitutionPerAccount extends Migration
             }
 
             // Their place in that institution goes with the membership, so they can't keep working in its courses.
-            self::endRolesIn($this->db, (int) $row['user_id'], (int) $row['institution_id']);
+            self::endRolesIn($this->connection(), (int) $row['user_id'], (int) $row['institution_id']);
 
             log_message('warning', 'One institution per account: user {user} was removed from institution {institution}, and their roles there ended.', [
                 'user' => $row['user_id'], 'institution' => $row['institution_id'],
@@ -44,12 +45,12 @@ class OneInstitutionPerAccount extends Migration
             $this->db->table('institution_users')->whereIn('id', $drop)->delete();
         }
 
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('institution_users') . ' ADD UNIQUE KEY institution_users_user_id_unique (user_id)');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('institution_users') . ' ADD UNIQUE KEY institution_users_user_id_unique (user_id)');
     }
 
     public function down(): void
     {
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('institution_users') . ' DROP INDEX institution_users_user_id_unique');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('institution_users') . ' DROP INDEX institution_users_user_id_unique');
     }
 
     /**
@@ -118,5 +119,11 @@ class OneInstitutionPerAccount extends Migration
         sort($drop);
 
         return $drop;
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }

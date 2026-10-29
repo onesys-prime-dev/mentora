@@ -148,6 +148,22 @@ final class BackupOffsiteTest extends DatabaseTestCase
         }
     }
 
+    /** A command that reports its failure on stderr is read as well as one that uses stdout. */
+    public function testWhatAFailingCommandWritesToStderrIsReported(): void
+    {
+        $script = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'offsite-stderr-' . bin2hex(random_bytes(3)) . '.php';
+        file_put_contents($script, '<?php fwrite(STDERR, "remote refused the upload"); exit(2);');
+
+        try {
+            (new ShellOffsiteCopier(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script)))->copy('dump.sql.gz', 'uploads');
+            $this->fail('a failing command throws');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('remote refused the upload', $e->getMessage());
+        } finally {
+            @unlink($script);
+        }
+    }
+
     public function testTheShellCopierMasksThePassword(): void
     {
         $password = (string) config('Database')->default['password'];

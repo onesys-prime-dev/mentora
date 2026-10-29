@@ -22,9 +22,10 @@ class ShellOffsiteCopier implements OffsiteCopier
 
     public function copy(string $dumpPath, string $uploadsPath): void
     {
+        // Errors go to the same pipe as the output (the shell's 2>&1), so a failure's message is read either way.
         $process = proc_open(
-            $this->command . ' ' . escapeshellarg($dumpPath) . ' ' . escapeshellarg($uploadsPath),
-            [1 => ['pipe', 'w'], 2 => ['redirect', 1]],
+            $this->command . ' ' . escapeshellarg($dumpPath) . ' ' . escapeshellarg($uploadsPath) . ' 2>&1',
+            [1 => ['pipe', 'w']],
             $pipes,
         );
 

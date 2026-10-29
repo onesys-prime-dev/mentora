@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * A student number is unique within the institution that issued it (QA MISS-DB-01); two institutions
@@ -18,7 +20,7 @@ class StudentNumberIsUniqueInAnInstitution extends Migration
 {
     public function up(): void
     {
-        $profiles = $this->db->prefixTable('user_profiles');
+        $profiles = $this->connection()->prefixTable('user_profiles');
 
         $this->db->query("ALTER TABLE {$profiles} ADD COLUMN student_number_institution_id INT(20) UNSIGNED NULL AFTER student_number");
 
@@ -48,15 +50,21 @@ class StudentNumberIsUniqueInAnInstitution extends Migration
         }
 
         $this->db->query("ALTER TABLE {$profiles} ADD UNIQUE KEY uq_profiles_student_number (student_number_institution_id, student_number)");
-        $this->db->query("ALTER TABLE {$profiles} ADD CONSTRAINT fk_profiles_student_number_institution FOREIGN KEY (student_number_institution_id) REFERENCES " . $this->db->prefixTable('institutions') . '(id) ON DELETE SET NULL ON UPDATE CASCADE');
+        $this->db->query("ALTER TABLE {$profiles} ADD CONSTRAINT fk_profiles_student_number_institution FOREIGN KEY (student_number_institution_id) REFERENCES " . $this->connection()->prefixTable('institutions') . '(id) ON DELETE SET NULL ON UPDATE CASCADE');
     }
 
     public function down(): void
     {
-        $profiles = $this->db->prefixTable('user_profiles');
+        $profiles = $this->connection()->prefixTable('user_profiles');
 
         $this->db->query("ALTER TABLE {$profiles} DROP FOREIGN KEY fk_profiles_student_number_institution");
         $this->db->query("ALTER TABLE {$profiles} DROP INDEX uq_profiles_student_number");
         $this->db->query("ALTER TABLE {$profiles} DROP COLUMN student_number_institution_id");
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }

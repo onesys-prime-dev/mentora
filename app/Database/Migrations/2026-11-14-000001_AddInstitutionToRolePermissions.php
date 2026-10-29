@@ -2,7 +2,9 @@
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * Each institution's own permission settings (audit decision U1b), beside the platform's.
@@ -15,7 +17,7 @@ class AddInstitutionToRolePermissions extends Migration
 {
     public function up(): void
     {
-        $table = $this->db->prefixTable('role_permissions');
+        $table = $this->connection()->prefixTable('role_permissions');
 
         $this->db->query("ALTER TABLE {$table} ADD COLUMN institution_id INT UNSIGNED NOT NULL DEFAULT 0 AFTER id");
         $this->db->query("ALTER TABLE {$table} DROP INDEX role_permission, ADD UNIQUE KEY role_permission (institution_id, role, permission)");
@@ -23,10 +25,16 @@ class AddInstitutionToRolePermissions extends Migration
 
     public function down(): void
     {
-        $table = $this->db->prefixTable('role_permissions');
+        $table = $this->connection()->prefixTable('role_permissions');
 
         $this->db->query("DELETE FROM {$table} WHERE institution_id <> 0");
         $this->db->query("ALTER TABLE {$table} DROP INDEX role_permission, ADD UNIQUE KEY role_permission (role, permission)");
         $this->db->query("ALTER TABLE {$table} DROP COLUMN institution_id");
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }

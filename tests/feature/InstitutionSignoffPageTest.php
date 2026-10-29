@@ -78,7 +78,8 @@ final class InstitutionSignoffPageTest extends RouteTestCase
         $this->assertStringContainsString('IT501', $html);
         $this->assertStringNotContainsString('LW501', $html);
         $this->assertStringContainsString(site_url('institution/signoff/' . $this->offering), $html);
-        $this->assertStringNotContainsString('dean/', $html);
+        // No link to the dean's pages (the view's file path, pages/dean/..., can appear in debug comments).
+        $this->assertStringNotContainsString(site_url('dean/'), $html);
         $this->assertStringNotContainsString("your department's sections", $html, 'worded for an administrator');
         $this->assertStringNotContainsString('only you can', $html, 'another administrator may reopen');
         $this->assertStringContainsString('only an administrator can', $html);

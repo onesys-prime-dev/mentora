@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * Deleting an account keeps the record of what that person did (QA PLN-02).
@@ -57,14 +59,20 @@ class KeepHistoryWhenAUserIsDeleted extends Migration
 
     private function replaceKey(string $table, string $column, string $references, string $definition, string $onDelete, string $onUpdate): void
     {
-        $prefixed = $this->db->prefixTable($table);
+        $prefixed = $this->connection()->prefixTable($table);
         $key      = $prefixed . '_' . $column . '_foreign';
 
         $this->db->query("ALTER TABLE {$prefixed} DROP FOREIGN KEY {$key}");
         $this->db->query("ALTER TABLE {$prefixed} MODIFY {$column} {$definition}");
         $this->db->query(
             "ALTER TABLE {$prefixed} ADD CONSTRAINT {$key} FOREIGN KEY ({$column}) REFERENCES "
-            . $this->db->prefixTable($references) . " (id) ON DELETE {$onDelete} ON UPDATE {$onUpdate}"
+            . $this->connection()->prefixTable($references) . " (id) ON DELETE {$onDelete} ON UPDATE {$onUpdate}"
         );
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }

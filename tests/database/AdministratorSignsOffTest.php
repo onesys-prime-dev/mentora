@@ -89,7 +89,8 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
 
     private function notified(User $user, string $type): array
     {
-        return db_connect()->table('notifications')->where(['user_id' => $user->id, 'type' => $type])->get()->getResultArray();
+        // Oldest first, so end() is the newest: without an order MySQL 8 may return them in index order.
+        return db_connect()->table('notifications')->where(['user_id' => $user->id, 'type' => $type])->orderBy('id')->get()->getResultArray();
     }
 
     public function testAnAdministratorSignsOffWhereThereIsNoDean(): void

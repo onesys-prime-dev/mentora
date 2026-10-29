@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * One institution per account (D1) put a unique key on `institution_users.user_id`, which makes the older
@@ -15,11 +17,17 @@ class DropRedundantInstitutionUserKey extends Migration
 {
     public function up(): void
     {
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('institution_users') . ' DROP INDEX institution_user_unique');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('institution_users') . ' DROP INDEX institution_user_unique');
     }
 
     public function down(): void
     {
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('institution_users') . ' ADD UNIQUE KEY institution_user_unique (institution_id, user_id)');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('institution_users') . ' ADD UNIQUE KEY institution_user_unique (institution_id, user_id)');
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }

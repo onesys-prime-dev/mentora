@@ -73,7 +73,8 @@ final class InstitutionApprovalsPageTest extends RouteTestCase
 
         $this->assertStringContainsString('Ann Lee', $html);
         $this->assertStringContainsString(site_url("institution/approvals/{$this->request}/approve"), $html);
-        $this->assertStringNotContainsString('dean/approvals', $html);
+        // No link to the dean's page (the view's file path, pages/dean/..., can appear in debug comments).
+        $this->assertStringNotContainsString(site_url('dean/approvals'), $html);
         $this->assertStringNotContainsString('in your department', $html, 'worded for an administrator');
     }
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * The row rules hold in the database too (QA MISS-DB-01), not only in the screens that write the rows:
@@ -31,11 +33,11 @@ class DatabaseRefusesImpossibleValues extends Migration
     public function up(): void
     {
         foreach (self::CHECKS as $name => $rule) {
-            $table = $this->db->prefixTable($rule['table']);
+            $table = $this->connection()->prefixTable($rule['table']);
 
             $this->db->query("UPDATE {$table} SET {$rule['repair']} WHERE NOT ({$rule['check']})");
 
-            if (($fixed = $this->db->affectedRows()) > 0) {
+            if (($fixed = $this->connection()->affectedRows()) > 0) {
                 log_message('warning', 'Database rules: {count} row(s) of {table} broke "{check}" and were brought inside it.', [
                     'count' => $fixed, 'table' => $rule['table'], 'check' => $rule['check'],
                 ]);
@@ -47,7 +49,7 @@ class DatabaseRefusesImpossibleValues extends Migration
         $rows = $this->db->table('assessment_settings')
             ->select('s.id, s.assessment_id')
             ->from('assessment_settings s', true)
-            ->join('(SELECT assessment_id FROM ' . $this->db->prefixTable('assessment_settings') . ' GROUP BY assessment_id HAVING COUNT(*) > 1) d', 'd.assessment_id = s.assessment_id')
+            ->join('(SELECT assessment_id FROM ' . $this->connection()->prefixTable('assessment_settings') . ' GROUP BY assessment_id HAVING COUNT(*) > 1) d', 'd.assessment_id = s.assessment_id')
             ->get()->getResultArray();
 
         $delete = self::duplicatesToDelete(array_map(static fn (array $r): array => [
@@ -58,15 +60,15 @@ class DatabaseRefusesImpossibleValues extends Migration
             $this->db->table('assessment_settings')->whereIn('id', $delete)->delete();
         }
 
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('assessment_settings') . ' ADD UNIQUE KEY uq_settings_assessment (assessment_id)');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('assessment_settings') . ' ADD UNIQUE KEY uq_settings_assessment (assessment_id)');
     }
 
     public function down(): void
     {
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('assessment_settings') . ' DROP INDEX uq_settings_assessment');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('assessment_settings') . ' DROP INDEX uq_settings_assessment');
 
         foreach (self::CHECKS as $name => $rule) {
-            $this->db->query('ALTER TABLE ' . $this->db->prefixTable($rule['table']) . " DROP CONSTRAINT {$name}");
+            $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable($rule['table']) . " DROP CONSTRAINT {$name}");
         }
     }
 
@@ -98,5 +100,11 @@ class DatabaseRefusesImpossibleValues extends Migration
         sort($delete);
 
         return $delete;
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }

@@ -2,7 +2,9 @@
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use Config\Database;
 
 /**
  * One saved answer per question of an attempt (audit decision 15.2).
@@ -19,7 +21,7 @@ class OneResponsePerQuestion extends Migration
         $rows = $this->db->table('assessment_question_responses')
             ->select('r.id, r.submission_id, r.question_id, r.updated_at')
             ->from('assessment_question_responses r', true)
-            ->join('(SELECT submission_id, question_id FROM ' . $this->db->prefixTable('assessment_question_responses') . ' GROUP BY submission_id, question_id HAVING COUNT(*) > 1) d', 'd.submission_id = r.submission_id AND d.question_id = r.question_id')
+            ->join('(SELECT submission_id, question_id FROM ' . $this->connection()->prefixTable('assessment_question_responses') . ' GROUP BY submission_id, question_id HAVING COUNT(*) > 1) d', 'd.submission_id = r.submission_id AND d.question_id = r.question_id')
             ->get()->getResultArray();
 
         $delete = self::duplicatesToDelete(array_map(static fn (array $r): array => [
@@ -30,12 +32,12 @@ class OneResponsePerQuestion extends Migration
             $this->db->table('assessment_question_responses')->whereIn('id', $delete)->delete();
         }
 
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('assessment_question_responses') . ' ADD UNIQUE KEY uq_response_question (submission_id, question_id)');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('assessment_question_responses') . ' ADD UNIQUE KEY uq_response_question (submission_id, question_id)');
     }
 
     public function down(): void
     {
-        $this->db->query('ALTER TABLE ' . $this->db->prefixTable('assessment_question_responses') . ' DROP INDEX uq_response_question');
+        $this->db->query('ALTER TABLE ' . $this->connection()->prefixTable('assessment_question_responses') . ' DROP INDEX uq_response_question');
     }
 
     /**
@@ -66,5 +68,11 @@ class OneResponsePerQuestion extends Migration
         sort($delete);
 
         return $delete;
+    }
+
+    /** The migration's own connection, typed so its prefix and row counts can be read. */
+    private function connection(): BaseConnection
+    {
+        return Database::connect($this->DBGroup);
     }
 }
