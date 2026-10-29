@@ -224,12 +224,12 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
             ],
         ], ['saveData' => false]) ?>
 
-        <?php // Only the count and the table scroll; the heading, the tabs, the filters and the pages stay put (lg and up). ?>
-        <div class="flex flex-col gap-6" data-panel-scroll>
-
         <p class="text-sm text-[#646464]" aria-live="polite" data-people-total>
             <?= esc(number_format($peopleTotal)) ?> <?= $peopleTotal === 1 ? 'person' : 'people' ?><?= $filtered ? ' match' : '' ?>
         </p>
+
+        <?php // Only the table scrolls; the heading, the tabs, the filters, the count and the pages stay put (lg and up). ?>
+        <div class="flex flex-col gap-6" data-panel-scroll>
 
         <?php
         $bulk = $peopleCanEdit
