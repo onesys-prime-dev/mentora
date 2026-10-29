@@ -68,10 +68,10 @@ final class UserExport
         $stream = fopen('php://temp', 'r+');
         $rows   = 0;
 
-        fputcsv($stream, self::header());
+        fputcsv($stream, self::header(), ',', '"', '');
 
         foreach ($users as $user) {
-            fputcsv($stream, self::row($user));
+            fputcsv($stream, self::row($user), ',', '"', '');
             $rows++;
         }
 

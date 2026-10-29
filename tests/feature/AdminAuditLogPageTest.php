@@ -321,7 +321,7 @@ final class AdminAuditLogPageTest extends RouteTestCase
         fwrite($stream, $body);
         rewind($stream);
 
-        while (($row = fgetcsv($stream)) !== false) {
+        while (($row = fgetcsv($stream, 0, ',', '"', '')) !== false) {
             $rows[] = $row;
         }
 

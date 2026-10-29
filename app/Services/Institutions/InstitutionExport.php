@@ -316,7 +316,7 @@ class InstitutionExport
             throw new RuntimeException('A temporary export file could not be written.');
         }
 
-        fputcsv($stream, $spec['header']);
+        fputcsv($stream, $spec['header'], ',', '"', '');
         $rows  = 0;
         $after = 0;
 
@@ -328,7 +328,7 @@ class InstitutionExport
             foreach ($page as $row) {
                 $after = (int) $row['_k'];
                 unset($row['_k']);
-                fputcsv($stream, array_map(UserExport::safeCell(...), array_values($row)));
+                fputcsv($stream, array_map(UserExport::safeCell(...), array_values($row)), ',', '"', '');
                 $rows++;
             }
         } while (count($page) === self::PAGE_ROWS);

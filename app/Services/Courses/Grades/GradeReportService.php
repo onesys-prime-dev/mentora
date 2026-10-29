@@ -495,7 +495,7 @@ class GradeReportService
             fwrite($handle, "\xEF\xBB\xBF");
 
             foreach ($lines as $line) {
-                fputcsv($handle, array_map(fn ($cell) => $this->safeCell($cell), $line));
+                fputcsv($handle, array_map(fn ($cell) => $this->safeCell($cell), $line), ',', '"', '');
             }
 
             fclose($handle);
