@@ -224,6 +224,9 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
             ],
         ], ['saveData' => false]) ?>
 
+        <?php // Only the count and the table scroll; the heading, the tabs, the filters and the pages stay put (lg and up). ?>
+        <div class="flex flex-col gap-6" data-panel-scroll>
+
         <p class="text-sm text-[#646464]" aria-live="polite" data-people-total>
             <?= esc(number_format($peopleTotal)) ?> <?= $peopleTotal === 1 ? 'person' : 'people' ?><?= $filtered ? ' match' : '' ?>
         </p>
@@ -257,9 +260,13 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
             'emptyText'  => $filtered ? 'Try a different name, role or status.' : 'Invite the first person to get started.',
         ], ['saveData' => false]) ?>
 
+        </div>
+
         <?= view('components/pagination', ['page' => $f->page, 'pages' => $peoplePages, 'total' => $peopleTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
 
     <?php else: ?>
+
+        <div class="flex flex-col gap-6" data-panel-scroll>
 
         <p class="text-sm text-[#646464]" aria-live="polite">Invitations that were sent and not used yet. The account is made when the person chooses a password.</p>
 
@@ -276,6 +283,8 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
             'emptyTitle' => 'No open invitations',
             'emptyText'  => 'People you invite appear here until they choose a password.',
         ], ['saveData' => false]) ?>
+
+        </div>
 
     <?php endif; ?>
 
