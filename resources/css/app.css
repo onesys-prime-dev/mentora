@@ -593,13 +593,23 @@ html[data-theme="dark"] .admin-flat [data-page-panel] thead th {
         min-height: 0;
     }
 
-    /* A little less room below, so the panel is taller. */
+    /* A little less room above and below, so the panel is taller. */
     main[data-pinned-panel]:has(> div > [data-page-panel]) {
         padding-bottom: 1.25rem;
+        padding-top: 0.5rem;
     }
 
     main[data-pinned-panel] > div:has(> [data-page-panel]) {
         padding-bottom: 0;
+        padding-top: 0;
+    }
+
+    main[data-pinned-panel] > div > [data-back-link] {
+        margin-bottom: 0;
+    }
+
+    main[data-pinned-panel] > div > [data-back-link] > a {
+        min-height: 2rem;
     }
 
     main[data-pinned-panel] > div > [data-page-panel] {
