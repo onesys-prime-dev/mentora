@@ -56,7 +56,7 @@ test("TC-IAA-02 A record that is not the institution's answers as if it did not 
     }
 });
 
-test("TC-IAA-03 Every tile of the Apps menu opens its screen", async ({ page }) => {
+test("TC-IAA-03 Every link of the sidebar opens its screen", async ({ page }) => {
     await signInAsInstitutionAdmin(page);
 
     const tiles = [
@@ -74,8 +74,7 @@ test("TC-IAA-03 Every tile of the Apps menu opens its screen", async ({ page }) 
 
     for (const [name, url] of tiles) {
         await page.goto("/institution/dashboard");
-        await page.getByRole("button", { name: "Apps" }).click();
-        await page.getByRole("navigation", { name: "Apps" }).getByRole("link", { name, exact: true }).click();
+        await page.getByRole("navigation", { name: "Institution" }).getByRole("link", { name, exact: true }).click();
         await expect(page, name).toHaveURL(url);
     }
 });
