@@ -103,7 +103,8 @@ class AnnouncementService
         $isInstructor = $this->isInstructorHere($user, $offeringId);
 
         $page = max(1, (int) ($filters['page'] ?? 1));
-        $queryFilters = $this->normalizeFilters($filters);
+        // The course's instructors also see posts dated for a later day (QA AMB-COM-01).
+        $queryFilters = $this->normalizeFilters($filters) + ['scheduled' => $isInstructor];
 
         $pages = 1;
         $focusId = (int) ($filters['focus'] ?? 0);
@@ -136,6 +137,7 @@ class AnnouncementService
         $pinned = $this->announcementModel->retrieveForOffering($offeringId, [
             'pinned_only' => true,
             'limit' => self::PINNED_SIDEBAR_LIMIT,
+            'scheduled' => $isInstructor,
         ]);
 
         return [
@@ -167,7 +169,7 @@ class AnnouncementService
         $isInstructor = $this->isInstructorHere($user, $offeringId);
 
         $page = max(1, (int) ($filters['page'] ?? 2));
-        $queryFilters = $this->normalizeFilters($filters);
+        $queryFilters = $this->normalizeFilters($filters) + ['scheduled' => $isInstructor];
 
         $rows = $this->announcementModel->retrieveForOffering($offeringId, $queryFilters + [
             'limit' => self::PAGE_SIZE + 1,

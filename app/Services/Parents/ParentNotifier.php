@@ -316,6 +316,8 @@ class ParentNotifier
             ->join('course_offerings o', "o.id = a.offering_id AND o.status = 'active'", 'inner', false)
             ->join('courses c', 'c.id = o.course_id')
             ->where('a.created_at >=', $since)
+            // A post dated for a later day is news on that day (QA AMB-COM-01).
+            ->where('a.created_at <=', $now->format('Y-m-d H:i:s'))
             ->get()->getResultArray();
 
         $created = 0;

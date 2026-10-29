@@ -58,7 +58,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
     }
 
     /** A course announcement as the composer stores it. */
-    private function post(string $subject, string $text, bool $pinned = false, string $when = '2026-11-05 08:00:00', ?int $offering = null): int
+    private function post(string $subject, string $text, bool $pinned = false, string $when = '2026-10-05 08:00:00', ?int $offering = null): int
     {
         db_connect()->table('announcements')->insert([
             'offering_id' => $offering ?? $this->offering, 'author_id' => $this->teacher->id, 'subject' => $subject,
@@ -84,12 +84,12 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('Room change', $html);
         $this->assertStringContainsString('We move to room 4.', $html);
         $this->assertStringContainsString('Tina Tan', $html);
-        $this->assertStringContainsString('Nov 5, 2026', $html);
+        $this->assertStringContainsString('Oct 5, 2026', $html);
     }
 
     public function testPinnedPostsComeFirst(): void
     {
-        $this->post('Newer', 'b', false, '2026-11-09 08:00:00');
+        $this->post('Newer', 'b', false, '2026-10-09 08:00:00');
         $this->post('Pinned and older', 'a', true, '2026-09-01 08:00:00');
 
         $html = $this->tabs->announcements($this->offering)['html'];
@@ -104,8 +104,8 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
         $file = CourseFactory::file($this->teacher, 'secret handout');
         db_connect()->table('files')->where('id', $file['id'])->update(['original_filename' => 'private-handout.pdf']);
         db_connect()->table('announcement_attachments')->insert(['announcement_id' => $id, 'file_id' => $file['id'], 'order_index' => 0]);
-        db_connect()->table('announcement_replies')->insert(['announcement_id' => $id, 'author_id' => $this->child->id, 'message' => 'Secret reply from Ann', 'created_at' => '2026-11-05 09:00:00']);
-        db_connect()->table('announcement_reactions')->insert(['announcement_id' => $id, 'user_id' => $this->child->id, 'emoji' => 'heart', 'created_at' => '2026-11-05 09:00:00']);
+        db_connect()->table('announcement_replies')->insert(['announcement_id' => $id, 'author_id' => $this->child->id, 'message' => 'Secret reply from Ann', 'created_at' => '2026-10-05 09:00:00']);
+        db_connect()->table('announcement_reactions')->insert(['announcement_id' => $id, 'user_id' => $this->child->id, 'emoji' => 'heart', 'created_at' => '2026-10-05 09:00:00']);
 
         $html = $this->tabs->announcements($this->offering)['html'];
 
@@ -151,7 +151,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
     public function testAnotherCoursesPostsAreNotIncluded(): void
     {
         $other = CourseFactory::offering('B');
-        $this->post('Not for this course', 'x', false, '2026-11-05 08:00:00', $other);
+        $this->post('Not for this course', 'x', false, '2026-10-05 08:00:00', $other);
 
         $this->assertStringNotContainsString('Not for this course', $this->tabs->announcements($this->offering)['html']);
     }
