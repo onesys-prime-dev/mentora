@@ -185,6 +185,42 @@ final class TermCloseServiceTest extends DatabaseTestCase
         $this->service->reopen($this->institution, $this->term, $this->actor);
     }
 
+    /** One active term at a time: reopening waits until no other term is active (QA AMB-INST-02). */
+    public function testATermCannotBeReopenedWhileAnotherIsActive(): void
+    {
+        $this->service->close($this->institution, $this->term, $this->actor);
+
+        $db = db_connect();
+        $db->table('academic_terms')->insert(['institution_id' => $this->institution, 'name' => 'Second Semester', 'academic_year' => '2026-2027', 'start_date' => '2027-01-10', 'end_date' => '2027-05-20', 'status' => 'active']);
+        $second = (int) $db->insertID();
+
+        $term = $db->table('academic_terms')->where('id', $this->term)->get()->getRowArray();
+        $this->assertStringContainsString('Second Semester', (string) $this->service->reopenBlock($term));
+
+        try {
+            $this->service->reopen($this->institution, $this->term, $this->actor);
+            $this->fail('Reopening must be refused while another term is active.');
+        } catch (StructureException $e) {
+            $this->assertStringContainsString('Second Semester', $e->getMessage());
+        }
+
+        $this->assertSame('completed', $this->statusOf('academic_terms', $this->term));
+
+        $db->table('academic_terms')->where('id', $second)->update(['status' => 'upcoming']);
+        $this->service->reopen($this->institution, $this->term, $this->actor);
+        $this->assertSame('active', $this->statusOf('academic_terms', $this->term));
+    }
+
+    public function testAnotherInstitutionsActiveTermDoesNotBlockReopening(): void
+    {
+        $this->service->close($this->institution, $this->term, $this->actor);
+        db_connect()->table('academic_terms')->where('institution_id', $this->other)->update(['status' => 'active']);
+
+        $this->service->reopen($this->institution, $this->term, $this->actor);
+
+        $this->assertSame('active', $this->statusOf('academic_terms', $this->term));
+    }
+
     public function testATermCompletedWithoutBeingClosedHereCannotBeReopened(): void
     {
         db_connect()->table('academic_terms')->where('id', $this->term)->update(['status' => 'completed']);
