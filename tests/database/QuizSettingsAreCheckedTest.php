@@ -84,6 +84,19 @@ final class QuizSettingsAreCheckedTest extends DatabaseTestCase
         $this->assertNull($this->quiz()['duration']);
     }
 
+    /** A passing mark outside 0–100 gets a message, not the database's refusal (QA MISS-DB-01). */
+    public function testAPassingMarkOutsideAHundredIsRefused(): void
+    {
+        $result = $this->update(['passing_percentage' => 101]);
+
+        $this->assertFalse($result['success']);
+        $this->assertStringContainsString('passing mark', $result['message']);
+        $this->assertFalse($this->update(['passing_percentage' => -1])['success']);
+        $this->assertFalse($this->update(['passing_percentage' => 'half'])['success']);
+        $this->assertTrue($this->update(['passing_percentage' => 60])['success']);
+        $this->assertTrue($this->update(['passing_percentage' => null])['success']);
+    }
+
     public function testAValidWindowIsSaved(): void
     {
         $this->assertTrue($this->update(['due_date' => '2026-11-07 23:59:00'])['success']);

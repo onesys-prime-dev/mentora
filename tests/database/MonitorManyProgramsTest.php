@@ -57,7 +57,7 @@ final class MonitorManyProgramsTest extends DatabaseTestCase
     private function term(int $institution, string $name = 'First', string $start = '2026-08-01'): int
     {
         db_connect()->table('academic_terms')->insert([
-            'institution_id' => $institution, 'name' => $name, 'academic_year' => '2026-2027', 'start_date' => $start, 'end_date' => '2026-12-20',
+            'institution_id' => $institution, 'name' => $name, 'academic_year' => '2026-2027', 'start_date' => $start, 'end_date' => date('Y-m-d', strtotime($start . ' +141 days')),
         ]);
 
         return (int) db_connect()->insertID();

@@ -277,6 +277,12 @@ class AssessmentService
             return 'The attempt limit must be a whole number, at least 1.';
         }
 
+        // The database refuses one outside 0–100 too (QA MISS-DB-01); this is the message.
+        if (array_key_exists('passing_percentage', $data) && $data['passing_percentage'] !== null && $data['passing_percentage'] !== ''
+            && (! is_numeric($data['passing_percentage']) || (float) $data['passing_percentage'] < 0 || (float) $data['passing_percentage'] > 100)) {
+            return 'The passing mark must be a percentage from 0 to 100.';
+        }
+
         return null;
     }
 

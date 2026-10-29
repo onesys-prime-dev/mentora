@@ -82,5 +82,9 @@ class InstitutionUsersSeeder extends Seeder
         $this->db
             ->table('institution_users')
             ->insertBatch($rows);
+
+        // A student number belongs to the institution that issued it (QA MISS-DB-01): the students'
+        // numbers were written before they were linked here.
+        $this->db->query('UPDATE ' . $this->db->prefixTable('user_profiles') . ' p JOIN ' . $this->db->prefixTable('institution_users') . ' iu ON iu.user_id = p.user_id SET p.student_number_institution_id = iu.institution_id WHERE p.student_number IS NOT NULL');
     }
 }

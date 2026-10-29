@@ -307,6 +307,12 @@ class SisImporter
             return;
         }
 
+        if (array_key_exists('student_number', $changes) && $this->numberTaken($m['student_number'], $userId)) {
+            $this->fail($dataset, $item, "Student number {$m['student_number']} is already used by another student of this institution.");
+
+            return;
+        }
+
         if (isset($changes['email'])) {
             if ($owner !== null && (int) $owner['user_id'] !== $userId) {
                 $this->fail($dataset, $item, "The email {$m['email']} belongs to another account.");
@@ -319,8 +325,12 @@ class SisImporter
         }
 
         if ($changes !== []) {
+            if (array_key_exists('student_number', $changes)) {
+                $changes['student_number_institution_id'] = $this->issuer($m['student_number']);
+            }
+
             $profiles = new UserProfileModel();
-            $saved    = $profile === [] ? $profiles->insert(['user_id' => $userId, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number']]) : $profiles->update($userId, $changes);
+            $saved    = $profile === [] ? $profiles->insert(['user_id' => $userId, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number'], 'student_number_institution_id' => $this->issuer($m['student_number'])]) : $profiles->update($userId, $changes);
 
             if ($saved === false) {
                 throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
@@ -335,6 +345,12 @@ class SisImporter
      */
     private function createPerson(string $dataset, string $item, array $m, string $role): void
     {
+        if ($this->numberTaken($m['student_number'], null)) {
+            $this->fail($dataset, $item, "Student number {$m['student_number']} is already used by another student of this institution.");
+
+            return;
+        }
+
         if ($role === 'student' && ($blocked = (new PlanLimits())->seatBlock($this->institutionId)) !== null) {
             $this->fail($dataset, $item, $blocked);
 
@@ -359,7 +375,7 @@ class SisImporter
 
         $profiles = new UserProfileModel();
 
-        if ($profiles->insert(['user_id' => $user->id, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number']]) === false) {
+        if ($profiles->insert(['user_id' => $user->id, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number'], 'student_number_institution_id' => $this->issuer($m['student_number'])]) === false) {
             throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
         }
 
@@ -1069,6 +1085,28 @@ class SisImporter
     {
         $this->counts[$dataset]['failed']++;
         $this->issues[] = ['dataset' => $dataset, 'item' => $item, 'reason' => $reason];
+    }
+
+    /** A student number is unique within the institution that issued it (QA MISS-DB-01); the database refuses a duplicate too. */
+    private function numberTaken(?string $number, ?int $userId): bool
+    {
+        if ($number === null) {
+            return false;
+        }
+
+        $query = db_connect()->table('user_profiles')->where('student_number_institution_id', $this->institutionId)->where('student_number', $number);
+
+        if ($userId !== null) {
+            $query->where('user_id !=', $userId);
+        }
+
+        return $query->countAllResults() > 0;
+    }
+
+    /** The institution recorded beside a student number: this one, or none when there is no number. */
+    private function issuer(?string $number): ?int
+    {
+        return $number === null ? null : $this->institutionId;
     }
 
     private function stamp(): string

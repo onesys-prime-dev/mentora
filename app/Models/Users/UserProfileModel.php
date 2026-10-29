@@ -20,6 +20,7 @@ class UserProfileModel extends Model
         'last_name',
         'suffix',
         'student_number',
+        'student_number_institution_id',
         'program_id',
         'active_role',
     ];
