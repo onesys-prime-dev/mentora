@@ -90,6 +90,9 @@ foreach ($auditRows as $row) {
         <?= esc(number_format($auditTotal)) ?> <?= $auditTotal === 1 ? 'entry' : 'entries' ?><?= $filtered ? ' match' : '' ?>
     </p>
 
+    <?php // Only the rows scroll, under their heading row; the heading, the filters, the count and the pages stay put (lg and up). ?>
+    <div class="flex flex-col gap-6" data-panel-scroll="inner">
+
     <?= view('components/data-table', [
         'caption'    => 'Audit log',
         'columns'    => [
@@ -101,6 +104,7 @@ foreach ($auditRows as $row) {
             ['key' => 'details', 'label' => 'Changes'],
         ],
         'rows'       => $rows,
+        'fill'       => true,
         'sort'       => $f->sort,
         'dir'        => $f->dir,
         'sortUrl'    => $sortUrl,
@@ -108,6 +112,8 @@ foreach ($auditRows as $row) {
         'emptyTitle' => $filtered ? 'No entries match these filters' : 'Nothing recorded yet',
         'emptyText'  => $filtered ? 'Try a wider date range or a different search.' : 'What people do in your institution is listed here, newest first.',
     ], ['saveData' => false]) ?>
+
+    </div>
 
     <?= view('components/pagination', ['page' => $f->page, 'pages' => $auditPages, 'total' => $auditTotal, 'baseUrl' => site_url($base), 'query' => $f->toQuery(['page' => null])], ['saveData' => false]) ?>
 
