@@ -117,6 +117,8 @@ $accountLinks = [
             <?= icon('night', 'h-4 w-4 text-current') ?>
         </button>
 
+        <?php // The institutional administrator has a sidebar instead of the Apps menu. ?>
+        <?php if ($userRole !== 'institutional_admin'): ?>
         <div class="relative">
             <button
                 id="app-menu-button"
@@ -152,6 +154,7 @@ $accountLinks = [
 
             </div>
         </div>
+        <?php endif; ?>
 
         <div class="relative">
             <button

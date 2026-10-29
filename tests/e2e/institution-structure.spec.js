@@ -61,12 +61,11 @@ async function openStructure(page) {
     await expect(page.getByRole("heading", { name: "Structure", level: 1 })).toBeVisible();
 }
 
-test("TC-STR-01 The administrator lands on their home and reaches the structure from the Apps menu", async ({ page }) => {
+test("TC-STR-01 The administrator lands on their home and reaches the structure from the sidebar", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await expect(page).toHaveURL(/\/institution\/dashboard$/);
 
-    await page.getByRole("button", { name: "Apps" }).click();
-    await page.getByRole("link", { name: "Academics" }).click();
+    await page.getByRole("navigation", { name: "Institution" }).getByRole("link", { name: "Academics", exact: true }).click();
 
     await expect(page).toHaveURL(/\/institution\/structure$/);
     await expect(page.locator("[data-department]").first()).toBeVisible();

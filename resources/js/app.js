@@ -5,6 +5,7 @@ import "./shared/csrf";
 
 import "./shared/profile-menu";
 import "./shared/app-menu";
+import "./shared/institution-menu";
 import "./shared/notifications-menu";
 import "./shared/role-switch";
 import "./shared/select-link";
