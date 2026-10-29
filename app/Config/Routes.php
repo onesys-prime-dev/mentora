@@ -801,6 +801,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
         // Reports across the institution (reports.view): the page, a course, and CSV.
         $routes->group('reports', ['filter' => 'permission:reports.view'], function ($routes) {
             $routes->get('/', 'Institution\ReportsController::index');
+            $routes->get('courses', 'Institution\ReportsController::courses');
+            $routes->get('at-risk', 'Institution\ReportsController::atRisk');
             $routes->get('export/(:segment)', 'Institution\ReportsController::export/$1');
             $routes->get('offerings/(:num)', 'Institution\ReportsController::offering/$1');
         });
