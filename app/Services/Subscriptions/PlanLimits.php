@@ -87,14 +87,15 @@ class PlanLimits
             ->where('files.status !=', 'archived')
             ->get()->getRowArray()['total'];
 
+        // A finished batch counts the questions it made, a failed or cancelled one included (it can fail part-way,
+        // and what it made can still be accepted); one still running holds what it asked for (QA AMB-ASM-10).
         $ai = (int) $db->table('ai_generation_batches')
-            ->select("COALESCE(SUM(CASE WHEN ai_generation_batches.status = 'completed' THEN ai_generation_batches.generated_count ELSE ai_generation_batches.requested_count END), 0) AS total", false)
+            ->select("COALESCE(SUM(CASE WHEN ai_generation_batches.status IN ('completed', 'failed') THEN ai_generation_batches.generated_count ELSE ai_generation_batches.requested_count END), 0) AS total", false)
             ->join('courses', 'courses.id = ai_generation_batches.course_id')
             ->join('programs', 'programs.id = courses.program_id')
             ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
             ->join('departments', 'departments.id = sub_departments.department_id')
             ->where('departments.institution_id', $institutionId)
-            ->where('ai_generation_batches.status !=', 'failed')
             ->where('ai_generation_batches.created_at >=', $this->aiWindowStart($institutionId, $now ?? new DateTimeImmutable()) . ' 00:00:00')
             ->get()->getRowArray()['total'];
 
