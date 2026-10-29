@@ -25,20 +25,26 @@ class DiscussionThreadModel extends Model
         'last_activity_at',
     ];
 
+    /**
+     * One role per author, preferring instructor, as announcements do: joining the author's groups listed
+     * a thread once per role (QA finding F-02).
+     */
+    private const AUTHOR_ROLE = "(SELECT g.`group` FROM auth_groups_users g WHERE g.user_id = discussion_threads.author_id"
+        . " ORDER BY g.`group` = 'instructor' DESC, g.`group` LIMIT 1) AS author_role";
+
     /** Columns every thread read needs: author, unread flag, and the module/unit a linked thread sits under. */
     private function withContext(int $userId)
     {
         return $this->select([
             'discussion_threads.*',
             "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS author_name",
-            'auth_groups_users.group AS author_role',
+            self::AUTHOR_ROLE,
             'course_modules.id AS module_id',
             'course_modules.title AS module_title',
             'learning_units.title AS unit_title',
             '(discussion_thread_reads.last_read_at IS NULL OR discussion_thread_reads.last_read_at < discussion_threads.last_activity_at) AS is_unread',
         ], false)
             ->join('user_profiles', 'user_profiles.user_id = discussion_threads.author_id', 'left')
-            ->join('auth_groups_users', 'auth_groups_users.user_id = discussion_threads.author_id', 'left')
             ->join('learning_items', 'learning_items.id = discussion_threads.learning_item_id', 'left')
             ->join('learning_units', 'learning_units.id = learning_items.learning_unit_id', 'left')
             ->join('course_modules', 'course_modules.id = learning_units.module_id', 'left')

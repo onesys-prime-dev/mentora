@@ -37,6 +37,9 @@ class DiscussionService
     private const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
     private const PAGE_SIZE = 10;
     private const SORTS = ['activity', 'newest', 'replies'];
+
+    /** The reactions a post offers (partials/hover-menu.php); there is no picker here, so nothing else is taken (QA F-05). */
+    public const REACTIONS = ['👍', '❤️', '😂', '😮'];
     private const FILTERS = ['all', 'pinned', 'mine', 'unanswered', 'modules', 'unread'];
 
     protected DiscussionThreadModel $threadModel;
@@ -561,7 +564,7 @@ class DiscussionService
 
         }
 
-        if (trim($emoji) === '' || mb_strlen($emoji) > 32) {
+        if (! in_array($emoji, self::REACTIONS, true)) {
             return $this->deny('Pick a reaction.');
         }
 
