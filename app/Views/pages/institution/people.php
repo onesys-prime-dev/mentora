@@ -162,14 +162,17 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'People',
         'icon'        => 'user',
         'description' => 'Everyone in your institution: invite, change roles, and switch accounts on and off.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
         'actions'     => '<a class="' . $second . '" href="' . esc(site_url($base . '/export') . ($query === [] ? '' : '?' . http_build_query($query))) . '">Export CSV</a>'
             . ($peopleCanEdit ? ' <a class="' . $second . '" href="' . esc(site_url($base . '/upload')) . '">Upload CSV</a>' : '')
             . ($peopleCanEdit ? ' <button type="button" class="' . $primary . '" data-dialog-open="person-invite" data-dialog-title="Invite a person" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Send invitation">Invite a person</button>' : ''),
@@ -195,6 +198,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
     <?php if ($peopleView === 'people'): ?>
 
         <?= view('components/toolbar', [
+            'surface'  => 'tinted', // on the page's white panel a white card would not stand out
             'action'   => site_url($base),
             'filtered' => $filtered,
             'fields'   => [
@@ -258,6 +262,8 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         ], ['saveData' => false]) ?>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

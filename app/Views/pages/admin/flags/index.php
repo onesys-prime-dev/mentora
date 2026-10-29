@@ -13,6 +13,8 @@ $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-v
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Feature flags', 'icon' => 'pin'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-[#646464]">
     A flag decides whether a feature is on. Here you set it for everyone. <strong>Off is a kill switch</strong>: the feature is off for every
@@ -74,6 +76,8 @@ $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-v
             </details>
         </section>
     <?php endforeach; ?>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

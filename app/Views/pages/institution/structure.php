@@ -29,14 +29,17 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Structure',
         'icon'        => 'hat',
         'description' => 'Departments, their sub-departments and the programs under them. Courses and offerings hang below.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
         'actions'     => $structureCanEdit
             ? '<button type="button" class="' . $primary . '" data-dialog-open="structure-department" data-dialog-title="Add a department" data-dialog-action="' . esc(site_url($base . '/departments')) . '" data-dialog-label="Add department">Add a department</button>'
             : '',
@@ -68,7 +71,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
     <?php if ($structureTree === []): ?>
 
-        <div class="rounded-2xl bg-white/70" data-structure-empty>
+        <div class="rounded-2xl border border-gray-200 bg-gray-50" data-structure-empty>
             <?= view('components/empty-state', [
                 'icon'  => 'hat',
                 'title' => 'No departments yet',
@@ -81,7 +84,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     <?php foreach ($structureTree as $department): ?>
         <?php $deptActive = (int) $department['is_active'] === 1; ?>
 
-        <section class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" data-department="<?= esc((string) $department['id']) ?>" aria-labelledby="dept-<?= esc((string) $department['id']) ?>">
+        <section class="flex flex-col gap-4 rounded-2xl border border-brand/25 bg-white p-6 shadow-md" data-department="<?= esc((string) $department['id']) ?>" aria-labelledby="dept-<?= esc((string) $department['id']) ?>">
 
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="flex min-w-0 flex-col gap-1">
@@ -135,10 +138,10 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
             <?php foreach ($department['subDepartments'] as $sub): ?>
                 <?php $subActive = (int) $sub['is_active'] === 1; ?>
 
-                <details class="group rounded-xl border border-gray-200" data-sub-department="<?= esc((string) $sub['id']) ?>" <?= $subActive ? 'open' : '' ?>>
-                    <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm marker:content-none hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+                <details class="group overflow-hidden rounded-xl border border-brand/20 bg-white shadow-sm" data-sub-department="<?= esc((string) $sub['id']) ?>" <?= $subActive ? 'open' : '' ?>>
+                    <summary class="flex cursor-pointer bg-brand/10 flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm marker:content-none hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
                         <span class="flex flex-wrap items-center gap-3 font-semibold text-[#1A1C1E]">
-                            <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-[#3D3D3D]"><?= esc($sub['code']) ?></span>
+                            <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs font-semibold text-brand-dark"><?= esc($sub['code']) ?></span>
                             <?= esc($sub['name']) ?>
                             <?= $badge($subActive) ?>
                             <span class="text-xs font-normal text-[#646464]"><?= esc((string) count($sub['programs'])) ?> <?= count($sub['programs']) === 1 ? 'program' : 'programs' ?></span>
@@ -223,7 +226,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                 <?php foreach ($sub['programs'] as $program): ?>
                                     <li class="flex flex-wrap items-center justify-between gap-3 py-2" data-program="<?= esc((string) $program['id']) ?>">
                                         <span class="flex flex-wrap items-center gap-3">
-                                            <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-[#3D3D3D]"><?= esc($program['code']) ?></span>
+                                            <span class="rounded bg-[#E6F4EC] px-2 py-0.5 font-mono text-xs font-semibold text-[#1E7A44]"><?= esc($program['code']) ?></span>
                                             <span class="font-medium text-[#1A1C1E]"><?= esc($program['name']) ?></span>
                                             <?= view('components/status-badge', ['label' => ucfirst((string) $program['status']), 'tone' => $programTone[$program['status']] ?? 'neutral'], ['saveData' => false]) ?>
                                             <span class="text-xs text-[#646464]"><?= esc((string) $program['course_count']) ?> <?= (int) $program['course_count'] === 1 ? 'course' : 'courses' ?></span>
@@ -273,6 +276,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
         </section>
     <?php endforeach; ?>
+
+</div>
 
 </div>
 

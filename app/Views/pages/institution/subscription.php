@@ -44,25 +44,28 @@ foreach ($planHistory as $i => $h) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Subscription',
         'icon'        => 'info',
         'description' => 'Your plan, how long it runs, and how much of it you are using.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
     ], ['saveData' => false]) ?>
 
     <?php if ($planInfo === null): ?>
 
-        <div class="rounded-2xl bg-white/70">
+        <div class="rounded-2xl border border-gray-200 bg-gray-50">
             <?= view('components/empty-state', ['icon' => 'info', 'title' => 'No subscription yet', 'text' => 'Your Mentora contact sets up your plan. It will appear here.'], ['saveData' => false]) ?>
         </div>
 
     <?php else: ?>
 
-        <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="plan-heading" data-subscription>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="plan-heading" data-subscription>
             <div class="flex flex-wrap items-center gap-3">
                 <h2 id="plan-heading" class="text-lg font-bold text-brand"><?= esc($planInfo['name']) ?></h2>
                 <?= view('components/status-badge', ['label' => $names[$planStatus->state] ?? $planStatus->state, 'tone' => $tones[$planStatus->state] ?? 'neutral'], ['saveData' => false]) ?>
@@ -79,7 +82,7 @@ foreach ($planHistory as $i => $h) {
             <?php endif; ?>
         </section>
 
-        <section class="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="usage-heading" data-usage>
+        <section class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="usage-heading" data-usage>
             <h2 id="usage-heading" class="text-sm font-bold text-brand">Use against your plan</h2>
 
             <?= view('components/usage-bar', ['label' => 'Student seats', 'used' => $planUsage['seats']['used'], 'limit' => $planUsage['seats']['limit']], ['saveData' => false]) ?>
@@ -112,6 +115,8 @@ foreach ($planHistory as $i => $h) {
         </section>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

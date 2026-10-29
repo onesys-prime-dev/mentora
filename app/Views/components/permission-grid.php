@@ -14,14 +14,22 @@
  * @var array<string, list<string>>          $defaultMatrix what each role has without these changes ("Edited" marks a difference)
  * @var string                               $gridAction    where a cell posts
  * @var bool                                 $gridReadOnly  every cell shown without controls (a read-only institution)
+ * @var bool                                 $gridScrollable the system administrator's page: a scrolling area with sticky headers,
+ *                                                          and the markers its search, section and "Edited only" filters read
  */
-$th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[#646464]';
+$scroll = ! empty($gridScrollable);
+$sticky = $scroll ? 'sticky top-0 z-10 bg-gray-50 ' : '';
+$th     = $sticky . 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[#646464]';
 ?>
+<?php if ($scroll): ?>
+<div class="mt-4 overflow-auto rounded-lg bg-white shadow-sm lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Roles and permissions" data-table>
+<?php else: ?>
 <div class="mt-6 overflow-x-auto rounded-lg bg-white shadow">
+<?php endif; ?>
     <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
+        <thead class="<?= $scroll ? '' : 'bg-gray-50' ?>">
             <tr>
-                <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]">Permission</th>
+                <th class="<?= $sticky ?>px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]">Permission</th>
                 <?php foreach ($roleTitles as $role => $roleTitle): ?>
                     <th class="<?= $th ?>">
                         <?= esc($roleTitle) ?>
@@ -32,11 +40,17 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
         </thead>
 
         <?php foreach ($sections as $sectionTitle => $permissions): ?>
-            <tbody class="divide-y divide-gray-100">
-                <tr class="bg-gray-50/60"><th class="px-3 py-1.5 text-left text-xs font-semibold text-brand" colspan="<?= count($roleTitles) + 1 ?>"><?= esc($sectionTitle) ?></th></tr>
+            <tbody class="divide-y divide-gray-100" data-roles-section-body="<?= esc($sectionTitle) ?>">
+                <tr class="<?= $scroll ? 'bg-gray-50' : 'bg-gray-50/60' ?>" data-roles-section-head><th class="px-3 py-1.5 text-left text-xs font-semibold text-brand" colspan="<?= count($roleTitles) + 1 ?>"><?= esc($sectionTitle) ?></th></tr>
 
                 <?php foreach ($permissions as $permission => $description): ?>
-                    <tr>
+                    <?php
+                    $rowEdited = false;
+                    foreach ($roleTitles as $role => $unused) {
+                        $rowEdited = $rowEdited || in_array($permission, $currentMatrix[$role] ?? [], true) !== in_array($permission, $defaultMatrix[$role] ?? [], true);
+                    }
+                    ?>
+                    <tr data-roles-row data-search="<?= esc(strtolower($permission . ' ' . $description)) ?>" data-edited="<?= $rowEdited ? '1' : '0' ?>">
                         <td class="px-3 py-2">
                             <span class="font-mono text-xs"><?= esc($permission) ?></span>
                             <span class="block text-xs text-[#646464]"><?= esc($description) ?></span>
@@ -75,4 +89,5 @@ $th = 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-
             </tbody>
         <?php endforeach; ?>
     </table>
+    <?php if ($scroll): ?><p class="hidden px-3 py-10 text-center text-sm text-[#646464]" data-roles-empty>No permissions match.</p><?php endif; ?>
 </div>

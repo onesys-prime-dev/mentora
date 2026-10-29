@@ -90,14 +90,21 @@ test("TC-SA-03 The home page says what needs attention and its menu reaches the 
 
     const menu = page.locator("[data-admin-menu]");
 
-    for (const [name, path] of [
-        ["Institutions", /\/admin\/institutions$/],
-        ["Users", /\/admin\/users$/],
-        ["System status", /\/admin\/monitoring$/],
-        ["Audit log", /\/admin\/audit-log$/],
-        ["General", /\/admin\/settings\/general$/],
+    for (const [group, name, path] of [
+        ["Customers", "Institutions", /\/admin\/institutions$/],
+        ["Customers", "Users", /\/admin\/users$/],
+        ["Operations", "System status", /\/admin\/monitoring$/],
+        ["Operations", "Audit log", /\/admin\/audit-log$/],
+        ["Settings", "General", /\/admin\/settings\/general$/],
     ]) {
-        await menu.getByRole("link", { name, exact: true }).click();
+        // Only the group holding the current page is open; open the one the link is in.
+        const link = menu.getByRole("link", { name, exact: true });
+
+        if (!(await link.isVisible())) {
+            await menu.locator("summary", { hasText: group }).click();
+        }
+
+        await link.click();
         await expect(page).toHaveURL(path);
     }
 });
