@@ -72,11 +72,19 @@ if (! function_exists('global_apps')) {
                 ['key' => 'monitor-department', 'label' => 'Monitor Department', 'icon' => 'score', 'url' => site_url('dean/monitor-department')],
             ];
 
-            // Only what their institution lets them open (courses.view, department.monitor).
+            // Only what their institution lets them open (QA AMB-AUTH-08): each tile's page refuses without its
+            // permission. Follow-ups stays: what was received can be answered without followups.manage.
             if (($user = auth()->user()) !== null) {
                 $permissions = new \App\Services\Auth\RolePermissions();
+                $gates       = [
+                    'courses'            => 'courses.view',
+                    'approvals'          => 'grades.approve',
+                    'signoff'            => 'grades.signoff',
+                    'announcements'      => 'department.announce',
+                    'monitor-department' => 'department.monitor',
+                ];
                 // Asked of the dean role only: what another role of theirs has does not open the dean's pages.
-                $hidden      = array_keys(array_filter(['courses' => 'courses.view', 'monitor-department' => 'department.monitor'], static fn (string $p): bool => ! $permissions->allows($user, $p, 'dean')));
+                $hidden      = array_keys(array_filter($gates, static fn (string $p): bool => ! $permissions->allows($user, $p, 'dean')));
                 $dean        = array_values(array_filter($dean, static fn (array $app): bool => ! in_array($app['key'], $hidden, true)));
             }
 

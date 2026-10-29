@@ -73,6 +73,40 @@ final class PermissionsTakeEffectTest extends RouteTestCase
         yield 'instructor courses'  => ['instructor', 'courses.view', 'GET', 'instructor/courses'];
         yield 'chairperson courses' => ['chairperson', 'courses.view', 'GET', 'chairperson/courses'];
         yield 'dean courses'        => ['dean', 'courses.view', 'GET', 'dean/courses'];
+        yield 'dean approvals'      => ['dean', 'grades.approve', 'GET', 'dean/approvals'];
+        yield 'dean sign-off'       => ['dean', 'grades.signoff', 'GET', 'dean/signoff'];
+        yield 'dean announcements'  => ['dean', 'department.announce', 'GET', 'dean/announcements'];
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function provideDeanTiles(): iterable
+    {
+        yield 'Approvals'     => ['approvals', 'grades.approve'];
+        yield 'Sign-off'      => ['signoff', 'grades.signoff'];
+        yield 'Announcements' => ['announcements', 'department.announce'];
+        yield 'Courses'       => ['courses', 'courses.view'];
+        yield 'Monitor'       => ['monitor-department', 'department.monitor'];
+    }
+
+    /** A dean's menu shows only the pages they can open (QA AMB-AUTH-08); the rest of it stays. */
+    #[\PHPUnit\Framework\Attributes\DataProvider('provideDeanTiles')]
+    public function testADeansTileGoesWithThePermissionBehindIt(string $tile, string $permission): void
+    {
+        helper('navigation');
+        $dean = PeopleFactory::person('dean', institutionId: $this->institution);
+        $keys = static fn (): array => array_column(global_apps('dean'), 'key');
+
+        $this->loggedInAs($dean);
+        $this->assertContains($tile, $keys());
+
+        $this->clear('dean', $permission);
+        auth()->logout();
+        $this->withSession([]);
+        $this->loggedInAs(model(\CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id));
+
+        $this->assertNotContains($tile, $keys());
+        $this->assertContains('follow-ups', $keys(), 'received follow-ups can still be answered, so the page stays');
+        $this->assertContains('dashboard', $keys());
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('provideGuardedRoutes')]

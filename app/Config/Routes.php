@@ -325,16 +325,16 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('courses', 'Dean\DeanCoursesController::index', ['filter' => 'permission:courses.view@dean']);
     // Grade-override requests of the department that wait for the dean: approve (the grade is
     // changed) or reject (with a reason). The only writes in this group besides the dean's own pages.
-    $routes->get('approvals', 'Dean\ApprovalsController::index');
-    $routes->post('approvals/(:num)/approve', 'Dean\ApprovalsController::approve/$1');
-    $routes->post('approvals/(:num)/reject', 'Dean\ApprovalsController::reject/$1');
+    $routes->get('approvals', 'Dean\ApprovalsController::index', ['filter' => 'permission:grades.approve@dean']);
+    $routes->post('approvals/(:num)/approve', 'Dean\ApprovalsController::approve/$1', ['filter' => 'permission:grades.approve@dean']);
+    $routes->post('approvals/(:num)/reject', 'Dean\ApprovalsController::reject/$1', ['filter' => 'permission:grades.approve@dean']);
 
     // Term-end sign-off of finalized grades, per section or for a program's ready sections. Signing off
     // asks for the password again (reauth); the dean also reopens a sign-off, with a reason.
-    $routes->get('signoff', 'Dean\SignoffController::index');
-    $routes->post('signoff/program/(:num)/(:num)', 'Dean\SignoffController::signOffProgram/$1/$2', ['filter' => 'reauth']);
-    $routes->post('signoff/(:num)', 'Dean\SignoffController::signOff/$1', ['filter' => 'reauth']);
-    $routes->post('signoff/(:num)/reopen', 'Dean\SignoffController::reopen/$1');
+    $routes->get('signoff', 'Dean\SignoffController::index', ['filter' => 'permission:grades.signoff@dean']);
+    $routes->post('signoff/program/(:num)/(:num)', 'Dean\SignoffController::signOffProgram/$1/$2', ['filter' => ['permission:grades.signoff@dean', 'reauth']]);
+    $routes->post('signoff/(:num)', 'Dean\SignoffController::signOff/$1', ['filter' => ['permission:grades.signoff@dean', 'reauth']]);
+    $routes->post('signoff/(:num)/reopen', 'Dean\SignoffController::reopen/$1', ['filter' => 'permission:grades.signoff@dean']);
 
 
     // Follow-up requests: the list, a new request, the reply thread and closing.
