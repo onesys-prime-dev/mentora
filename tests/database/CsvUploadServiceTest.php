@@ -258,6 +258,49 @@ final class CsvUploadServiceTest extends DatabaseTestCase
         $this->service->kept($this->institution, $preview['token']);
     }
 
+    private function age(int $institution, string $token, int $seconds): string
+    {
+        $folder = $this->base . DIRECTORY_SEPARATOR . $institution . DIRECTORY_SEPARATOR . $token;
+        touch($folder, time() - $seconds);
+        clearstatcache();
+
+        return $folder;
+    }
+
+    /** A preview nobody applies or starts over from is removed within its hour, whatever else happens (QA AMB-INST-06). */
+    public function testAnAbandonedPreviewIsRemovedOnceItsHourIsUpWithoutAnotherPreview(): void
+    {
+        $old   = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $other = $this->service->preview($this->other, ['students' => SisFixture::STUDENTS], $this->actor);
+        $fresh = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+
+        $gone = $this->age($this->institution, $old['token'], CsvUploadService::KEEP_SECONDS + 5);
+        $alsoGone = $this->age($this->other, $other['token'], CsvUploadService::KEEP_SECONDS + 5);
+
+        $this->assertSame(2, $this->service->forgetExpired());
+
+        $this->assertDirectoryDoesNotExist($gone);
+        $this->assertDirectoryDoesNotExist($alsoGone);
+        $this->assertIsArray($this->service->kept($this->institution, $fresh['token']), 'a preview within its hour stays');
+        $this->assertDirectoryExists($this->base . DIRECTORY_SEPARATOR . $this->institution . DIRECTORY_SEPARATOR . $fresh['token']);
+    }
+
+    public function testTheEveryMinuteJobSweepsThem(): void
+    {
+        $preview = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $folder  = $this->age($this->institution, $preview['token'], CsvUploadService::KEEP_SECONDS + 5);
+
+        putenv('upload.csvPath=' . $this->base);
+
+        try {
+            command('exports:run');
+        } finally {
+            putenv('upload.csvPath');
+        }
+
+        $this->assertDirectoryDoesNotExist($folder);
+    }
+
     public function testStartingOverRemovesTheKeptFiles(): void
     {
         $preview = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
