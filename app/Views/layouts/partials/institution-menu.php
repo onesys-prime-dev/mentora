@@ -41,7 +41,7 @@ $isCurrent = static function (array $app) use ($menuPath, $page): bool {
 $ring = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 ?>
 <nav
-    class="group/nav border-b border-b-black/10 bg-white/90 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:shrink-0 lg:self-start lg:overflow-y-auto lg:border-b-0 lg:border-r lg:border-r-black/10 lg:data-[collapsed=true]:w-[4.5rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    class="group/nav border-b border-b-black/10 bg-white/90 lg:min-h-0 lg:w-64 lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:border-r-black/10 lg:data-[collapsed=true]:w-[4.5rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     aria-label="Institution"
     data-institution-menu>
 
