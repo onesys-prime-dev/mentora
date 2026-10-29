@@ -10,6 +10,7 @@
  * @var string                                      $reportSort
  * @var string                                      $reportDir
  * @var array<string, string>                       $reportExports
+ * @var string                                      $reportTab      overview, courses or at-risk
  */
 $base = 'institution/reports';
 $f    = $reportFilters;
@@ -21,7 +22,7 @@ $filtered = $f->isFiltered() || $reportDepartment !== null || $reportProgram !==
 
 $query = array_filter(array_merge($f->toQuery(), ['department' => $reportDepartment, 'program' => $reportProgram]), static fn ($v): bool => $v !== null && $v !== '');
 
-$sortUrl = static fn (string $column, string $next): string => site_url($base) . '?' . http_build_query(array_merge($query, ['sort' => $column, 'dir' => $next]));
+$sortUrl = static fn (string $column, string $next): string => site_url($base . '/courses') . '?' . http_build_query(array_merge($query, ['sort' => $column, 'dir' => $next]));
 
 $termOptions = ['' => 'Any term'];
 
@@ -78,6 +79,16 @@ foreach (array_slice($d['atRisk'], 0, 25) as $i => $s) {
     ];
 }
 
+$tabs = [
+    ['key' => 'overview', 'label' => 'Overview', 'path' => ''],
+    ['key' => 'courses', 'label' => 'Courses', 'path' => '/courses'],
+    ['key' => 'at-risk', 'label' => 'Students at risk', 'path' => '/at-risk', 'count' => count($d['atRisk']) ?: null],
+];
+
+$here = site_url($base . ($reportTab === 'overview' ? '' : '/' . $reportTab));
+
+$tabQuery = $query === [] ? '' : '?' . http_build_query($query);
+
 $maxBucket = max(1, ...array_values($d['distribution']));
 $gradedAny = array_sum($d['distribution']) > 0;
 ?>
@@ -97,16 +108,31 @@ $gradedAny = array_sum($d['distribution']) > 0;
         'title'       => 'Reports',
         'icon'        => 'score',
         'description' => 'How your courses are doing: enrolment, grades, grading and who needs attention.',
-        'actions'     => implode(' ', array_map(
-            static fn (string $kind, string $label): string => '<a class="' . $second . '" href="' . esc(site_url($base . '/export/' . $kind) . ($query === [] ? '' : '?' . http_build_query($query))) . '" data-export="' . esc($kind) . '">' . esc($label) . ' (CSV)</a>',
-            array_keys($reportExports),
-            array_values($reportExports),
-        )),
+        // One menu for the four CSVs; each is the same scope as the page (the filters travel in the link).
+        'actions'     => '<details class="relative" data-menu><summary class="' . $second . ' flex cursor-pointer list-none items-center gap-2">Export CSV <span aria-hidden="true">&#9662;</span></summary>'
+            . '<div class="absolute right-0 z-20 mt-2 flex w-64 flex-col rounded-2xl border border-gray-200 bg-white p-1.5 shadow-lg">'
+            . implode('', array_map(
+                static fn (string $kind, string $label): string => '<a class="block rounded-lg px-3 py-2 text-sm text-[#1A1C1E] transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc(site_url($base . '/export/' . $kind) . $tabQuery) . '" data-export="' . esc($kind) . '">' . esc($label) . ' (CSV)</a>',
+                array_keys($reportExports),
+                array_values($reportExports),
+            ))
+            . '</div></details>',
     ], ['saveData' => false]) ?>
+
+    <?= view('components/tabs', ['ariaLabel' => 'Reports', 'tabs' => array_map(
+        static fn (array $t): array => [
+            'label'  => $t['label'],
+            'href'   => site_url($base . $t['path']) . $tabQuery,
+            'active' => $t['key'] === $reportTab,
+            'count'  => $t['count'] ?? null,
+        ],
+        $tabs,
+    )], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
         'surface'  => 'tinted', // on the page's white panel a white card would not stand out
-        'action'   => site_url($base),
+        'inline'   => true,
+        'action'   => $here,
         'filtered' => $filtered,
         'fields'   => [
             ['type' => 'select', 'name' => 'term', 'label' => 'Term', 'options' => $termOptions, 'value' => $f->termId !== null ? (string) $f->termId : ''],
@@ -129,6 +155,11 @@ $gradedAny = array_sum($d['distribution']) > 0;
 
     <?php else: ?>
 
+        <?php if ($reportTab === 'overview'): ?>
+
+            <?php // The numbers and the grade picture scroll together when the screen is short (lg and up). ?>
+            <div class="flex flex-col gap-6" data-panel-scroll>
+
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-5" data-report-totals>
             <?= view('components/metric-card', ['label' => 'Courses', 'value' => (string) $d['snapshot']['courses'], 'icon' => 'hat', 'tone' => 'neutral'], ['saveData' => false]) ?>
             <?= view('components/metric-card', ['label' => 'Instructors', 'value' => (string) $d['snapshot']['instructors'], 'icon' => 'user', 'tone' => 'neutral'], ['saveData' => false]) ?>
@@ -136,6 +167,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
             <?= view('components/metric-card', ['label' => 'Need attention', 'value' => (string) count($d['atRisk']), 'icon' => 'attention', 'tone' => $d['atRisk'] === [] ? 'success' : 'warning', 'detail' => 'No recent activity, or behind'], ['saveData' => false]) ?>
             <?= view('components/metric-card', ['label' => 'Graded', 'value' => $d['grading']['percent'] === null ? '—' : $d['grading']['percent'] . '%', 'icon' => 'grades', 'tone' => 'neutral', 'detail' => $d['grading']['turnaround'] === null ? 'Published grades only' : 'Typically ' . $d['grading']['turnaround'] . ' h to grade'], ['saveData' => false]) ?>
         </div>
+
 
         <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="distribution" data-report-distribution>
             <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -162,7 +194,27 @@ $gradedAny = array_sum($d['distribution']) > 0;
             <?php endif; ?>
         </section>
 
-        <section class="flex flex-col gap-3" aria-labelledby="courses-heading">
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <a class="flex flex-col gap-1 rounded-2xl border border-gray-200 bg-white p-5 transition hover:border-brand/40 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url($base . '/courses') . $tabQuery) ?>" data-report-link="courses">
+                        <span class="text-sm font-bold text-brand">Courses compared</span>
+                        <span class="text-sm text-[#646464]">Enrolment, completion, average grade and grading time for every course.</span>
+                        <span class="mt-2 text-sm font-semibold text-brand">See all courses &rarr;</span>
+                    </a>
+                    <a class="flex flex-col gap-1 rounded-2xl border border-gray-200 bg-white p-5 transition hover:border-brand/40 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url($base . '/at-risk') . $tabQuery) ?>" data-report-link="at-risk">
+                        <span class="text-sm font-bold text-brand">Students who need attention</span>
+                        <span class="text-sm text-[#646464]">Students who have gone quiet or are falling behind.</span>
+                        <span class="mt-2 text-sm font-semibold text-brand">See the students &rarr;</span>
+                    </a>
+                </div>
+
+            </div>
+
+        <?php elseif ($reportTab === 'courses'): ?>
+
+            <?php // Only the rows scroll, under their heading row (lg and up). ?>
+            <div class="flex flex-col gap-3" data-panel-scroll="inner">
+
             <h2 id="courses-heading" class="text-sm font-bold text-brand">Courses compared</h2>
 
             <?= view('components/data-table', [
@@ -177,13 +229,20 @@ $gradedAny = array_sum($d['distribution']) > 0;
                     ['key' => 'avg_grading_turnaround_hours', 'label' => 'Grading time', 'sortable' => true],
                 ],
                 'rows'    => $courseRows,
+                'fill'    => true,
                 'sort'    => $reportSort,
                 'dir'     => $reportDir,
                 'sortUrl' => $sortUrl,
             ], ['saveData' => false]) ?>
-        </section>
 
-        <section class="flex flex-col gap-3" aria-labelledby="risk-heading" data-report-at-risk>
+
+            </div>
+
+        <?php else: ?>
+
+            <?php // Only the rows scroll, under their heading row (lg and up). ?>
+            <div class="flex flex-col gap-3" data-panel-scroll="inner" data-report-at-risk>
+
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 id="risk-heading" class="text-sm font-bold text-brand">Students who need attention</h2>
                 <?php if (count($d['atRisk']) > 25): ?>
@@ -201,11 +260,16 @@ $gradedAny = array_sum($d['distribution']) > 0;
                     ['key' => 'last', 'label' => 'Last activity'],
                 ],
                 'rows'       => $riskRows,
+                'fill'       => true,
                 'emptyIcon'  => 'check',
                 'emptyTitle' => 'Nobody needs attention',
                 'emptyText'  => 'Every student in these courses has been active and is keeping up.',
             ], ['saveData' => false]) ?>
-        </section>
+
+
+            </div>
+
+        <?php endif; ?>
 
     <?php endif; ?>
 

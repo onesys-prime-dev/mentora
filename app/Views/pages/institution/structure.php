@@ -69,6 +69,9 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         <?= esc((string) $structureCounts['programs']) ?> <?= $structureCounts['programs'] === 1 ? 'program' : 'programs' ?>
     </p>
 
+    <?php // Only the departments scroll; the heading, the tabs and the counts stay put (lg and up). ?>
+    <div class="flex flex-col gap-6" data-panel-scroll>
+
     <?php if ($structureTree === []): ?>
 
         <div class="rounded-2xl border border-gray-200 bg-gray-50" data-structure-empty>
@@ -268,6 +271,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
         </section>
     <?php endforeach; ?>
+
+    </div>
 
 </div>
 
