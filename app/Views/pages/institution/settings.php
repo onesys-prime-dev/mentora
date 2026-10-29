@@ -25,6 +25,7 @@ $subgrid  = 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-x
 $section  = 'flex min-w-0 flex-col gap-4';
 $heading  = 'border-b border-gray-200 pb-2 text-xs font-bold uppercase tracking-wider text-brand';
 $formCls  = 'flex flex-col gap-6';
+// Below lg the whole panel scrolls, so the bar sticks to its bottom; from lg up the form content scrolls and the bar just sits under it.
 $bar      = 'sticky bottom-0 z-10 -mx-5 -mb-5 flex flex-wrap items-center justify-between gap-3 rounded-b-3xl border-t border-gray-200 bg-white px-5 py-3 sm:-mx-8 sm:-mb-8 sm:px-8';
 
 $field = static fn (array $spec): string => view('components/form-field', $spec + ($settingsCanEdit ? [] : ['attrs' => 'disabled']), ['saveData' => false]);
@@ -69,10 +70,10 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
     <?php if ($settingsTab === 'profile'): ?>
 
-        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form class="<?= $formCls ?>">
+        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>">
             <?= csrf_field() ?>
 
-            <div class="<?= $sections ?>">
+            <div class="<?= $sections ?>" data-panel-scroll>
                 <section class="<?= $section ?>" aria-labelledby="identity-heading">
                     <h2 id="identity-heading" class="<?= $heading ?>">Identity</h2>
 
@@ -111,10 +112,10 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $n = $settingsAnnouncement; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form class="<?= $formCls ?>" data-announcement-form>
+        <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-announcement-form>
             <?= csrf_field() ?>
 
-            <div class="<?= $sections ?>">
+            <div class="<?= $sections ?>" data-panel-scroll>
                 <section class="<?= $section ?>" aria-labelledby="announcement-heading">
                     <h2 id="announcement-heading" class="<?= $heading ?>">Message</h2>
 
@@ -164,10 +165,10 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $pp = $settingsParents; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form class="<?= $formCls ?>" data-parent-portal-form>
+        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-parent-portal-form>
             <?= csrf_field() ?>
 
-            <div class="<?= $sections ?>">
+            <div class="<?= $sections ?>" data-panel-scroll>
                 <fieldset class="<?= $section ?>" <?= $disabled ?>>
                     <legend class="<?= $heading ?> w-full">Parent portal</legend>
                     <p class="text-sm text-[#3D3D3D]">Lets linked parents see their child's courses and grades, read-only. Switching it off hides it from every parent at once; nothing is deleted.</p>
@@ -214,8 +215,10 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         $canReset  = $settingsCanEdit && $hasOwn;
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form class="<?= $formCls ?>" data-security-form>
+        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-security-form>
             <?= csrf_field() ?>
+
+            <div class="flex flex-col gap-6" data-panel-scroll>
 
             <p class="max-w-3xl text-sm text-[#3D3D3D]">Your institution can be <strong>stricter</strong> than the platform, never looser. Leave a box empty to follow the platform. Changing these asks for your password.</p>
 
@@ -260,6 +263,8 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <p class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
             </fieldset>
 
+            </div>
+
             <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
 
             <?php if ($settingsCanEdit): ?>
@@ -297,10 +302,10 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         }
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form class="<?= $formCls ?>" data-academic-form>
+        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-academic-form>
             <?= csrf_field() ?>
 
-            <div class="<?= $sections ?>">
+            <div class="<?= $sections ?>" data-panel-scroll>
                 <section class="<?= $section ?>" aria-labelledby="new-offerings">
                     <div class="border-b border-gray-200 pb-2">
                         <h2 id="new-offerings" class="text-xs font-bold uppercase tracking-wider text-brand">New offerings start with</h2>
@@ -368,7 +373,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
     <?php else: ?>
 
-        <div class="<?= $sections ?>">
+        <div class="<?= $sections ?>" data-panel-scroll>
 
             <section class="<?= $section ?>" aria-labelledby="logo-heading">
                 <h2 id="logo-heading" class="<?= $heading ?>">Logo</h2>
