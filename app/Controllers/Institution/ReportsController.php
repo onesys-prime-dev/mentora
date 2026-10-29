@@ -12,9 +12,10 @@ use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * The institution's reports: the page, a course opened from it, and the CSV
- * of each report. The routes decide who may (reports.view); scope and the
- * numbers are InstitutionReports (and so Monitor Program).
+ * The institution's reports: the overview and its two sub pages (courses, students
+ * at risk), a course opened from them, and the CSV of each report. The routes
+ * decide who may (reports.view); scope and the numbers are InstitutionReports
+ * (and so Monitor Program).
  */
 class ReportsController extends BaseController
 {
@@ -25,7 +26,25 @@ class ReportsController extends BaseController
         $this->reports = new InstitutionReports();
     }
 
+    /** The overview: the numbers and the grade picture. */
     public function index(): string
+    {
+        return $this->show('overview');
+    }
+
+    /** Every course side by side. */
+    public function courses(): string
+    {
+        return $this->show('courses');
+    }
+
+    /** The students who have gone quiet or are falling behind. */
+    public function atRisk(): string
+    {
+        return $this->show('at-risk');
+    }
+
+    private function show(string $tab): string
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
         [$filters, $department, $program] = $this->filters();
@@ -46,7 +65,7 @@ class ReportsController extends BaseController
             'reportSort'     => $sort,
             'reportDir'      => $dir === 'desc' ? 'desc' : 'asc',
             'reportExports'  => InstitutionReports::EXPORTS,
-            'mainGutter'     => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
+            'reportTab'      => $tab,
         ]);
     }
 
@@ -64,7 +83,6 @@ class ReportsController extends BaseController
             'user'          => auth()->user(),
             'offeringReport' => $detail,
             'reportFilters' => $filters,
-            'mainGutter'    => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
         ]);
     }
 
