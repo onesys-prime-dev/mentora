@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Courses\Grades\GradingEngineService;
 use App\Services\Institutions\EnrolmentService;
 use App\Services\Institutions\OfferingService;
 use App\Services\Institutions\StructureException;
@@ -10,6 +11,7 @@ use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\GradeFactory;
 use Tests\Support\PeopleFactory;
 use Tests\Support\SisFixture;
 
@@ -168,6 +170,35 @@ final class EnrolmentServiceTest extends DatabaseTestCase
         $this->assertSame('enrolled', $this->placeOf($ben));
         $this->assertSame(1, db_connect()->table('enrollments')->where(['offering_id' => $this->offering, 'student_user_id' => $ben->id])->countAllResults(), 'the same row, not a second one');
         $this->assertSame(1, $this->audit('enrolment.status_changed'));
+    }
+
+    /** Brought back through Add, the gradebook drops the Withdrawn tag as a status change does (QA AMB-INST-04). */
+    public function testBringingSomeoneBackThroughAddRefreshesTheGradebookLikeAStatusChange(): void
+    {
+        $scheme = GradeFactory::scheme($this->offering);
+        $quiz   = GradeFactory::item($scheme, GradeFactory::category($scheme, 'Quizzes', 100), 'Quiz 1', 20);
+        $remark = fn (User $s) => db_connect()->table('gradebook_records')->where(['course_offering_id' => $this->offering, 'student_id' => $s->id])->get()->getRowArray()['remarks'];
+
+        $ann = $this->student('Ann', '2026-001');
+        $ben = $this->student('Ben', '2026-002');
+
+        foreach ([$ann, $ben] as $student) {
+            CourseFactory::enroll($this->offering, $student);
+            GradeFactory::score($this->offering, $student, $quiz, 18);
+        }
+
+        (new GradingEngineService())->recalculateOffering($this->offering);
+
+        foreach ([$ann, $ben] as $student) {
+            $this->service->setStatus($this->institution, $this->enrollmentId($student), 'withdrawn', false, $this->actor);
+            $this->assertSame('Withdrawn', $remark($student));
+        }
+
+        $this->service->add($this->institution, $this->offering, '2026-001', false, $this->actor);
+        $this->service->setStatus($this->institution, $this->enrollmentId($ben), 'enrolled', false, $this->actor);
+
+        $this->assertSame('Passed', $remark($ben));
+        $this->assertSame($remark($ben), $remark($ann), 'both ways give the same result');
     }
 
     public function testGoingOverCapacityIsRefusedUnlessTheAdministratorSaysSo(): void

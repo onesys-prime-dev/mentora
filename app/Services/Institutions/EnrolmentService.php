@@ -233,6 +233,13 @@ class EnrolmentService
             throw new StructureException('The students could not be enrolled. Nothing was changed.');
         }
 
+        // Brought back, they lose the gradebook's Withdrawn tag, as with a status change (QA AMB-INST-04).
+        $engine = new \App\Services\Courses\Grades\GradingEngineService();
+
+        foreach ($back as $change) {
+            $engine->syncEnrolment($offeringId, $change['student']);
+        }
+
         return [
             'added'      => count($new),
             'reinstated' => count($back),
