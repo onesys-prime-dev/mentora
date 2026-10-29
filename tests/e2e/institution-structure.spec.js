@@ -733,13 +733,17 @@ test("TC-SEC-01 An announcement reaches the whole institution, and stricter secu
     await expect(page.getByText("The announcement was removed.")).toBeVisible();
 });
 
-test("TC-RPT-01 Reports show the institution's courses, narrow by department, open a course and export CSV", async ({ page }) => {
+test("TC-RPT-01 Reports open on an overview, compare courses on their own page, narrow by department, open a course and export CSV", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await page.goto("/institution/reports");
     await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
 
     await expect(page.locator("[data-report-totals]")).toBeVisible();
     await expect(page.locator("[data-report-distribution]")).toBeVisible();
+
+    // The tables are sub pages of the report, one tab each.
+    await page.getByRole("navigation", { name: "Reports" }).getByRole("link", { name: "Courses", exact: true }).click();
+    await expect(page).toHaveURL(/\/institution\/reports\/courses$/);
 
     const rows = page.getByRole("table", { name: "Courses compared" }).getByRole("row");
     const all = await rows.count();
@@ -763,6 +767,7 @@ test("TC-RPT-01 Reports show the institution's courses, narrow by department, op
 
     // The CSV is a download, named for the report.
     const download = page.waitForEvent("download");
+    await page.getByText("Export CSV").click();
     await page.getByRole("link", { name: "Course comparison (CSV)" }).click();
     expect((await download).suggestedFilename()).toMatch(/^report-courses-\d{4}-\d{2}-\d{2}\.csv$/);
 });

@@ -133,9 +133,10 @@ final class InstitutionReportsTest extends RouteTestCase
         $this->withSession();
     }
 
-    private function page(string $query = ''): string
+    /** The overview ('') or one of its sub pages ('/courses', '/at-risk'). */
+    private function page(string $query = '', string $path = ''): string
     {
-        return $this->step('GET', 'institution/reports' . $query)->response()->getBody();
+        return $this->step('GET', 'institution/reports' . $path . $query)->response()->getBody();
     }
 
     /** @return iterable<string, array{string}> */
@@ -152,20 +153,58 @@ final class InstitutionReportsTest extends RouteTestCase
         $this->signIn(PeopleFactory::person($role, 'Some', 'One', "{$role}@rpt.example", $role === 'admin' ? null : $this->institution));
 
         $this->assertSame(302, $this->step('GET', 'institution/reports')->response()->getStatusCode());
+        $this->assertSame(302, $this->step('GET', 'institution/reports/courses')->response()->getStatusCode());
+        $this->assertSame(302, $this->step('GET', 'institution/reports/at-risk')->response()->getStatusCode());
         $this->assertSame(302, $this->step('GET', 'institution/reports/export/courses')->response()->getStatusCode());
         $this->assertSame(302, $this->step('GET', "institution/reports/offerings/{$this->itOffering}")->response()->getStatusCode());
     }
 
-    public function testThePageShowsTheInstitutionsCoursesAndNumbers(): void
+    public function testTheOverviewShowsTheNumbersAndLeadsToTheSubPages(): void
     {
         $body = $this->page();
 
-        $this->assertStringContainsString('IT101', $body);
-        $this->assertStringContainsString('CS101', $body);
         $this->assertStringContainsString('data-report-totals', $body);
         $this->assertStringContainsString('data-report-distribution', $body);
-        $this->assertStringContainsString('data-report-at-risk', $body);
+        $this->assertStringContainsString('data-report-link="courses"', $body);
+        $this->assertStringContainsString('data-report-link="at-risk"', $body);
         $this->assertMatchesRegularExpression('/data-export="courses"/', $body);
+
+        // The tables live on their own pages now.
+        $this->assertStringNotContainsString('IT101', $body);
+        $this->assertStringNotContainsString('data-report-at-risk', $body);
+    }
+
+    public function testTheCoursesPageComparesTheInstitutionsCourses(): void
+    {
+        $body = $this->page('', '/courses');
+
+        $this->assertStringContainsString('IT101', $body);
+        $this->assertStringContainsString('CS101', $body);
+        $this->assertStringNotContainsString('data-report-totals', $body);
+        $this->assertStringNotContainsString('data-report-at-risk', $body);
+    }
+
+    public function testTheStudentsAtRiskPageListsThem(): void
+    {
+        $body = $this->page('', '/at-risk');
+
+        $this->assertStringContainsString('data-report-at-risk', $body);
+        $this->assertStringContainsString('CS101', $body, 'nobody there has done anything');
+        $this->assertStringNotContainsString('data-report-totals', $body);
+    }
+
+    public function testEachPageHasTheTabsAndTheFiltersTravelInThem(): void
+    {
+        $department = $this->it['department'];
+
+        foreach (['', '/courses', '/at-risk'] as $path) {
+            $body = html_entity_decode($this->page("?department={$department}", $path));
+
+            $this->assertStringContainsString('data-tabs', $body, $path);
+            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports\?department=' . $department . '"#', $body, $path);
+            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports/courses\?department=' . $department . '"#', $body, $path);
+            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports/at-risk\?department=' . $department . '"#', $body, $path);
+        }
     }
 
     public function testAnotherInstitutionsCoursesAreNeverShown(): void
@@ -173,16 +212,16 @@ final class InstitutionReportsTest extends RouteTestCase
         $theirs = $this->unit($this->other, 'ZZ');
         $this->offering($theirs['program'], $this->term($this->other), 'ZZ999');
 
-        $this->assertStringNotContainsString('ZZ999', $this->page());
+        $this->assertStringNotContainsString('ZZ999', $this->page('', '/courses'));
     }
 
     public function testADepartmentAndAProgramNarrowTheReport(): void
     {
-        $it = $this->page("?department={$this->it['department']}");
+        $it = $this->page("?department={$this->it['department']}", '/courses');
         $this->assertStringContainsString('IT101', $it);
         $this->assertStringNotContainsString('CS101', $it);
 
-        $cs = $this->page("?program={$this->cs['program']}");
+        $cs = $this->page("?program={$this->cs['program']}", '/courses');
         $this->assertStringContainsString('CS101', $cs);
         $this->assertStringNotContainsString('IT101', $cs);
     }
@@ -192,7 +231,7 @@ final class InstitutionReportsTest extends RouteTestCase
         $second = $this->term($this->institution, 'Second Term');
         $this->offering($this->it['program'], $second, 'IT202');
 
-        $body = $this->page("?term={$second}");
+        $body = $this->page("?term={$second}", '/courses');
 
         $this->assertStringContainsString('IT202', $body);
         $this->assertStringNotContainsString('IT101', $body);
@@ -214,7 +253,7 @@ final class InstitutionReportsTest extends RouteTestCase
 
     public function testTheComparisonIsSortableAndSaysWhichWay(): void
     {
-        $body = $this->page('?sort=enrolled&dir=desc');
+        $body = $this->page('?sort=enrolled&dir=desc', '/courses');
 
         $this->assertStringContainsString('aria-sort="descending"', $body);
         $this->assertLessThan(strpos($body, 'CS101'), strpos($body, 'IT101'), 'two students come before one');

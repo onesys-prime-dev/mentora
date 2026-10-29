@@ -59,7 +59,7 @@ if ($c['latest'] !== null) {
 <?php // The way back stays on the background, above the panel, not in the box. ?>
 <?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
 
-<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Integrations">
 
     <?= view('components/page-head', [
         'title'       => 'Integrations',

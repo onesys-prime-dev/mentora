@@ -175,6 +175,7 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
 
     <?= view('components/toolbar', [
         'surface'  => 'tinted', // on the page's white panel a white card would not stand out
+        'inline'   => true,
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [

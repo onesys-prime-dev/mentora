@@ -85,7 +85,7 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
                 <?= $this->include('layouts/partials/institution-menu') ?>
             <?php endif; ?>
 
-            <main class="min-w-0 flex-1 <?= $mainGutter ?> <?= $mainSpacing ?> <?= $hasMenu ? 'lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : '' ?>">
+            <main <?= $hasMenu ? 'data-pinned-panel' : '' ?> class="min-w-0 flex-1 <?= $mainGutter ?> <?= $mainSpacing ?> <?= $hasMenu ? 'lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : '' ?>">
 
                 <?= $pageContent ?>
 
