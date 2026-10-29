@@ -526,7 +526,7 @@ test("TC-UPL-02 A file with the wrong columns is refused and nothing is kept", a
     await expect(page.getByRole("heading", { name: "Upload from CSV", level: 1 })).toBeVisible();
 });
 
-test("TC-TRM-03 Closing a term says what changes first, asks for the password, and can be undone", async ({ page }) => {
+test("TC-TRM-03 Closing a term says what changes first, asks for the password, and is not reopened while another term is active", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await page.goto("/institution/terms");
 
@@ -557,9 +557,11 @@ test("TC-TRM-03 Closing a term says what changes first, asks for the password, a
     await expect(page.getByText(/The term was closed:/)).toBeVisible();
     await expect(page.getByRole("row", { name: /E2E Closing Term/ })).toContainText("Completed");
 
-    await page.getByRole("row", { name: /E2E Closing Term/ }).getByRole("button", { name: "Reopen" }).click();
-    await expect(page.getByText(/The term is open again/)).toBeVisible();
-    await expect(page.getByRole("row", { name: /E2E Closing Term/ })).toContainText("Active");
+    // The demo semester is active, so this one is not reopened (one active term at a time, QA AMB-INST-02);
+    // reopening itself is covered in InstitutionTermCloseTest, where no other term is active.
+    const closedRow = page.getByRole("row", { name: /E2E Closing Term/ });
+    await expect(closedRow.getByRole("button", { name: "Reopen" })).toHaveCount(0);
+    await expect(closedRow.locator("[data-active-term-note]")).toContainText("is the active term; close it to reopen this one.");
 });
 
 test("TC-CPY-01 Offerings are copied into a new term from a preview that says what comes across", async ({ page }) => {

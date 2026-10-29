@@ -142,6 +142,19 @@ final class InstitutionTermCloseTest extends RouteTestCase
         $this->assertStringContainsString('The term is open again', $this->step('GET', 'institution/terms')->response()->getBody());
     }
 
+    /** While another term is active the page offers no Reopen, and names that term (QA AMB-INST-02). */
+    public function testAClosedTermShowsWhyItCannotBeReopenedWhileAnotherIsActive(): void
+    {
+        $this->step('POST', "institution/terms/{$this->term}/close");
+        db_connect()->table('academic_terms')->insert(['institution_id' => $this->institution, 'name' => 'Second Semester', 'academic_year' => '2026-2027', 'start_date' => '2027-01-10', 'end_date' => '2027-05-20', 'status' => 'active']);
+
+        $page = html_entity_decode((string) $this->step('GET', 'institution/terms')->response()->getBody());
+
+        $this->assertStringContainsString('data-active-term-note', $page);
+        $this->assertStringContainsString('Second Semester is the active term; close it to reopen this one.', $page);
+        $this->assertStringNotContainsString("institution/terms/{$this->term}/reopen", $page);
+    }
+
     public function testTheConfirmPageOfAClosedTermSaysSoAndOffersNoButton(): void
     {
         $this->step('POST', "institution/terms/{$this->term}/close");

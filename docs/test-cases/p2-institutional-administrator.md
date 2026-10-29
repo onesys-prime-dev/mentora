@@ -34,7 +34,7 @@ same institution (`DemoUsersSeeder`).
 | TC-CRS-03 | A sub-department has one chairperson: replacing needs confirmation and tells the old one (rewritten 2026-10-28, see Wave 1) | Structure |
 | TC-TRM-01 | An overlapping term goes through with a warning | Terms |
 | TC-TRM-02 | A term that ends before it starts is refused beside the date | Terms |
-| TC-TRM-03 | Closing a term says what changes, asks for the password, and can be undone | Terms |
+| TC-TRM-03 | Closing a term says what changes, asks for the password, and can be undone (not while another term is active) | Terms |
 | TC-OFF-01 | An offering is added and listed with no instructor yet | Offerings |
 | TC-OFF-02 | The same section twice is refused beside the field | Offerings |
 | TC-OFF-03 | An offering with no students can be archived and brought back | Offerings |
@@ -420,6 +420,7 @@ From the QA plan's Wave 2: P1 scenarios of the critical and high-risk modules. *
   - The preview counts what will change. Closing asks for the password, sets the sections and the enrolled places to completed, leaves dropped places and archived sections alone, and stores what it changed.
   - Reopening restores only the rows still completed; the one changed afterwards is left as it is.
   - A term something was copied from cannot be reopened.
+  - While another term is active, the closed term offers no Reopen: its row names the active term (TC-TRM-08). The browser case closes a fresh term while the demo semester is active, so it checks this note; reopening itself is checked where no other term is active (`InstitutionTermCloseTest`).
   - A failed audit undoes the whole close.
   - A closed term cannot be closed again, an open one cannot be reopened. Closing with unsigned grades is covered in Wave 3 (PS-TRM-05, not built).
 - **Already automated:** `tests/database/TermCloseServiceTest.php` (all)
