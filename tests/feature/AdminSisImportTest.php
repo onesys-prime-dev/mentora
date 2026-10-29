@@ -73,6 +73,7 @@ final class AdminSisImportTest extends RouteTestCase
 
     public function testAPreviewShowsTheCountsAndTheRowsThatWouldBeRefused(): void
     {
+        $this->confirmedPassword();
         $this->step('POST', $this->url('/preview'));
         $page = $this->page();
 
@@ -98,6 +99,7 @@ final class AdminSisImportTest extends RouteTestCase
 
     public function testARealImportAfterAPreviewWritesAndShowsTheResult(): void
     {
+        $this->confirmedPassword();
         $this->step('POST', $this->url('/preview'));
         $this->confirmedPassword();
 
@@ -112,6 +114,7 @@ final class AdminSisImportTest extends RouteTestCase
 
     public function testAFailedImportIsShownAsAnError(): void
     {
+        $this->confirmedPassword();
         SisFixture::drop($this->institution, 'students', "external_id,first_name\nS1,Ann\n");
 
         $this->step('POST', $this->url('/preview'));
@@ -139,6 +142,7 @@ final class AdminSisImportTest extends RouteTestCase
 
     public function testAnUnknownInstitutionIsNotFound(): void
     {
+        $this->confirmedPassword();
         $this->expectException(\CodeIgniter\Exceptions\PageNotFoundException::class);
 
         $this->call('POST', 'admin/institutions/999999/integrations/preview');
@@ -146,6 +150,7 @@ final class AdminSisImportTest extends RouteTestCase
 
     public function testASupplierPersonCannotBeEditedHereAndThePageSaysWhy(): void
     {
+        $this->confirmedPassword();
         $this->step('POST', $this->url('/preview'));
         $this->confirmedPassword();
         $this->step('POST', $this->url('/run'));

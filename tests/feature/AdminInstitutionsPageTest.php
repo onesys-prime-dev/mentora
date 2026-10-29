@@ -394,6 +394,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testSuspendingMakesAnActiveInstitutionPast(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('ACME', 'active', 'Acme University');
 
         $this->submit("admin/institutions/{$id}/suspend");
@@ -405,6 +406,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testSuspendingSomethingNotActiveShowsWhy(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('PEN', 'pending');
 
         $this->submit("admin/institutions/{$id}/suspend");
@@ -422,6 +424,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testDeletingWithTheRightNameHidesTheInstitution(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('OLD', 'past', 'Old College');
 
         $this->submit("admin/institutions/{$id}/delete", ['confirm_name' => 'Old College']);
@@ -433,6 +436,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testDeletingWithTheWrongNameChangesNothingAndSaysWhy(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('OLD', 'past', 'Old College');
 
         $this->submit("admin/institutions/{$id}/delete", ['confirm_name' => 'old college']);
@@ -453,6 +457,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testAnActiveInstitutionCannotBeDeletedEvenWithTheRightName(): void
     {
+        $this->confirmedPassword();
         $id = $this->seeded('LIVE', 'active', 'Live College');
 
         $this->submit("admin/institutions/{$id}/delete", ['confirm_name' => 'Live College']);
@@ -513,6 +518,7 @@ final class AdminInstitutionsPageTest extends RouteTestCase
 
     public function testAddFindSuspendDeleteAndRestoreAnInstitution(): void
     {
+        $this->confirmedPassword();
         $this->submit('admin/institutions', ['name' => 'Journey University', 'code' => 'JOURNEY']);
         $id = (int) db_connect()->table('institutions')->where('code', 'JOURNEY')->get()->getRowArray()['id'];
 

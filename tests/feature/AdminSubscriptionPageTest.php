@@ -486,6 +486,8 @@ final class AdminSubscriptionPageTest extends RouteTestCase
 
     public function testAnInstitutionWithARunningSubscriptionCannotBeDeletedFromTheList(): void
     {
+        $_SESSION['reauth'] = ['user' => $this->admin->id, 'at' => time()];
+        $this->withSession();
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'past']);
         $this->submit($this->uri(), $this->term(['period_start' => '2026-01-01', 'period_end' => date('Y-m-d', strtotime('+60 days'))]));
 

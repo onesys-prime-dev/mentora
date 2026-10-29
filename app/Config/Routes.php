@@ -911,8 +911,8 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     $routes->post('institutions', 'Admin\InstitutionsController::create', ['filter' => 'permission:institutions.manage']);
     $routes->get('institutions/(:num)/edit', 'Admin\InstitutionsController::edit/$1', ['filter' => 'permission:institutions.manage']);
     $routes->post('institutions/(:num)', 'Admin\InstitutionsController::update/$1', ['filter' => 'permission:institutions.manage']);
-    $routes->post('institutions/(:num)/suspend', 'Admin\InstitutionsController::suspend/$1', ['filter' => 'permission:institutions.manage']);
-    $routes->post('institutions/(:num)/delete', 'Admin\InstitutionsController::delete/$1', ['filter' => 'permission:institutions.manage']);
+    $routes->post('institutions/(:num)/suspend', 'Admin\InstitutionsController::suspend/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
+    $routes->post('institutions/(:num)/delete', 'Admin\InstitutionsController::delete/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
     $routes->post('institutions/(:num)/restore', 'Admin\InstitutionsController::restore/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
     $routes->post('institutions/(:num)/purge', 'Admin\InstitutionsController::purge/$1', ['filter' => ['permission:institutions.manage', 'reauth']]);
 
@@ -947,9 +947,9 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     // (which can replace credentials) also needs the password; testing only reads.
     $routes->get('institutions/(:num)/integrations', 'Admin\IntegrationsController::show/$1', ['filter' => 'permission:integrations.view']);
     $routes->post('institutions/(:num)/integrations', 'Admin\IntegrationsController::save/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
-    $routes->post('institutions/(:num)/integrations/test', 'Admin\IntegrationsController::test/$1', ['filter' => 'permission:integrations.manage']);
+    $routes->post('institutions/(:num)/integrations/test', 'Admin\IntegrationsController::test/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
     // A preview changes nothing; a real import writes people, courses and enrolments, so it needs the password.
-    $routes->post('institutions/(:num)/integrations/preview', 'Admin\IntegrationsController::preview/$1', ['filter' => 'permission:integrations.manage']);
+    $routes->post('institutions/(:num)/integrations/preview', 'Admin\IntegrationsController::preview/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
     $routes->post('institutions/(:num)/integrations/run', 'Admin\IntegrationsController::run/$1', ['filter' => ['permission:integrations.manage', 'reauth']]);
     // Final grades out: a preview sends nothing; sending hands data to another system, so it needs the password.
     $routes->post('institutions/(:num)/integrations/grades/preview', 'Admin\IntegrationsController::gradesPreview/$1', ['filter' => 'permission:integrations.manage']);
@@ -963,13 +963,13 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     $routes->post('users/export', 'Admin\UsersController::exportSelected', ['filter' => 'permission:users.view']);
     $routes->get('users/new', 'Admin\UsersController::new', ['filter' => 'permission:users.manage']);
     $routes->post('users', 'Admin\UsersController::invite', ['filter' => 'permission:users.manage']);
-    $routes->post('users/bulk', 'Admin\UsersController::bulk', ['filter' => 'permission:users.manage']);
+    $routes->post('users/bulk', 'Admin\UsersController::bulk', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->get('users/(:num)', 'Admin\UsersController::show/$1', ['filter' => 'permission:users.view']);
     $routes->post('users/(:num)', 'Admin\UsersController::update/$1', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/(:num)/impersonate', 'Admin\ImpersonationController::start/$1', ['filter' => ['permission:impersonation.start', 'reauth']]);
-    $routes->post('users/(:num)/deactivate', 'Admin\UsersController::deactivate/$1', ['filter' => 'permission:users.manage']);
-    $routes->post('users/(:num)/reactivate', 'Admin\UsersController::reactivate/$1', ['filter' => 'permission:users.manage']);
-    $routes->post('users/(:num)/sign-out', 'Admin\UsersController::signOut/$1', ['filter' => 'permission:users.manage']);
+    $routes->post('users/(:num)/deactivate', 'Admin\UsersController::deactivate/$1', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/(:num)/reactivate', 'Admin\UsersController::reactivate/$1', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/(:num)/sign-out', 'Admin\UsersController::signOut/$1', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/(:num)/reset-password', 'Admin\UsersController::resetPassword/$1', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/(:num)/roles', 'Admin\UsersController::roles/$1', ['filter' => ['permission:users.manage', 'reauth']]);
 

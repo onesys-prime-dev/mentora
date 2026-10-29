@@ -200,6 +200,7 @@ final class AdminIntegrationsTest extends RouteTestCase
 
     public function testTestingTheConnectionShowsTheOutcomeAndTheRun(): void
     {
+        $this->confirmedPassword();
         $inbound = SisConnectors::folders($this->institution)['inbound'];
         mkdir($inbound, 0770, true);
         file_put_contents($inbound . DIRECTORY_SEPARATOR . 'students.csv', "external_id,email,first_name,last_name\nS1,a@example.com,Ann,Lee\n");
@@ -214,6 +215,7 @@ final class AdminIntegrationsTest extends RouteTestCase
 
     public function testAFailedTestIsShownAsAnError(): void
     {
+        $this->confirmedPassword();
         $this->step('POST', $this->url('/test'));
         $page = $this->step('GET', $this->url())->response()->getBody();
 
