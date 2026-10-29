@@ -58,14 +58,17 @@ foreach ($parentRows as $p) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Parents',
         'icon'        => 'user',
         'description' => 'Which students each parent account is responsible for.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
     ], ['saveData' => false]) ?>
 
     <?php if (! $parentCanEdit): ?>
@@ -86,6 +89,7 @@ foreach ($parentRows as $p) {
     ]], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
@@ -111,6 +115,8 @@ foreach ($parentRows as $p) {
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $parentPage, 'pages' => $parentPages, 'total' => $parentTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

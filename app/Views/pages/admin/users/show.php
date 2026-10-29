@@ -23,6 +23,8 @@ $name        = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] 
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', [
     'title'     => $name !== '' ? $name : (string) $person['username'],
     'icon'      => 'user',
@@ -145,6 +147,8 @@ $name        = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] 
             </ul>
         <?php endif; ?>
     </section>
+
+</div>
 
 </div>
 

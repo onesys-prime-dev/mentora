@@ -72,6 +72,30 @@ final class AdminMonitoringPageTest extends RouteTestCase
         $this->assertMatchesRegularExpression('/data-check="database" data-status="up"/', $body);
     }
 
+    public function testTheLiveFeedGivesTheNumbersTheGraphsDrawWithoutTheAiCheck(): void
+    {
+        $response = $this->step('GET', 'admin/monitoring/live');
+        $data     = json_decode($response->response()->getBody(), true);
+
+        $this->assertSame(200, $response->response()->getStatusCode());
+        $this->assertIsInt($data['databaseMs']);
+        $this->assertIsInt($data['sessions']);
+        $this->assertArrayHasKey('failed24h', $data);
+        $this->assertSame('up', $data['checks']['database']['status']);
+        $this->assertArrayNotHasKey('ai', $data['checks']);
+    }
+
+    #[DataProvider('provideOtherRoles')]
+    public function testNobodyElseGetsTheLiveFeed(string $role): void
+    {
+        auth()->logout();
+        $this->withSession([]);
+        $this->loggedInAs(CourseFactory::user($role));
+        $this->withSession();
+
+        $this->assertSame(302, $this->step('GET', 'admin/monitoring/live')->response()->getStatusCode());
+    }
+
     public function testAJobThatNeverRanIsFlaggedAndOneThatRanIsUp(): void
     {
         $this->assertMatchesRegularExpression('/data-check="jobs" data-status="degraded"/', $this->step('GET', 'admin/monitoring')->response()->getBody());

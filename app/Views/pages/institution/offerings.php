@@ -135,14 +135,17 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/dashboard'), 'backLabel' => 'Back to home'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Offerings',
         'icon'        => 'modules',
         'description' => 'A course taught in a term, in a section, and who teaches it.',
-        'backUrl'     => site_url('institution/dashboard'),
-        'backLabel'   => 'Back to home',
         'actions'     => $canAdd
             ? '<button type="button" class="' . $primary . '" data-dialog-open="offering-add" data-dialog-title="Add an offering" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add offering">Add an offering</button>'
             : '',
@@ -171,6 +174,7 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
     <?php endif; ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
@@ -207,6 +211,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $offeringPage, 'pages' => $offeringPages, 'total' => $offeringTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

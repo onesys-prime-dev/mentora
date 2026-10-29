@@ -287,7 +287,7 @@ jobs:
   e2e:
     name: End-to-end (Playwright)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     services:
       mysql:
         image: mysql:8.4

@@ -73,14 +73,17 @@ $capacity = (int) $o['capacity'];
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/offerings'), 'backLabel' => 'Back to offerings'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => $label . ' roster',
         'icon'        => 'user',
         'description' => $o['course_title'] . ' · ' . $o['term_name'] . ' ' . $o['academic_year'],
-        'backUrl'     => site_url('institution/offerings'),
-        'backLabel'   => 'Back to offerings',
         'actions'     => $canEdit
             ? '<button type="button" class="' . $primary . '" data-dialog-open="roster-add" data-dialog-title="Add students to ' . esc($label) . '" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Enrol students">Add students</button>'
             : '',
@@ -112,6 +115,7 @@ $capacity = (int) $o['capacity'];
     </section>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
@@ -142,6 +146,8 @@ $capacity = (int) $o['capacity'];
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $rosterPage, 'pages' => $rosterPages, 'total' => $rosterTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 

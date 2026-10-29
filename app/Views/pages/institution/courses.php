@@ -92,14 +92,17 @@ foreach ($courseRows as $course) {
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => site_url('institution/structure'), 'backLabel' => 'Back to structure'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Courses',
         'icon'        => 'hat',
         'description' => 'Every course your institution offers, filed under its program.',
-        'backUrl'     => site_url('institution/structure'),
-        'backLabel'   => 'Back to structure',
         'actions'     => $courseCanEdit && $courseActivePrograms !== []
             ? '<button type="button" class="' . $primary . '" data-dialog-open="course-add" data-dialog-title="Add a course" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add course">Add a course</button>'
             : '',
@@ -134,6 +137,7 @@ foreach ($courseRows as $course) {
     ?>
 
     <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
         'action'   => site_url($base),
         'filtered' => $filtered,
         'fields'   => [
@@ -167,6 +171,8 @@ foreach ($courseRows as $course) {
     ], ['saveData' => false]) ?>
 
     <?= view('components/pagination', ['page' => $coursePage, 'pages' => $coursePages, 'total' => $courseTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
+
+</div>
 
 </div>
 
