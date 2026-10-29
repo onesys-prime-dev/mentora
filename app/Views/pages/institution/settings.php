@@ -26,7 +26,7 @@ $section  = 'flex min-w-0 flex-col gap-4';
 $heading  = 'border-b border-gray-200 pb-2 text-xs font-bold uppercase tracking-wider text-brand';
 $formCls  = 'flex flex-col gap-6';
 // Below lg the whole panel scrolls, so the bar sticks to its bottom; from lg up the form content scrolls and the bar just sits under it.
-$bar      = 'sticky bottom-0 z-10 -mx-5 -mb-5 flex flex-wrap items-center justify-between gap-3 rounded-b-3xl border-t border-gray-200 bg-white px-5 py-3 sm:-mx-8 sm:-mb-8 sm:px-8';
+$bar      = 'sticky bottom-0 z-10 -mx-5 -mb-5 flex flex-wrap items-center justify-between gap-3 rounded-b-3xl border-t border-gray-200 bg-white px-5 py-2.5 sm:-mx-8 sm:-mb-8 sm:px-8';
 
 $field = static fn (array $spec): string => view('components/form-field', $spec + ($settingsCanEdit ? [] : ['attrs' => 'disabled']), ['saveData' => false]);
 ?>
