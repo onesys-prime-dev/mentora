@@ -73,7 +73,7 @@ $ring = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bran
                 <a
                     href="<?= esc($app['url'], 'attr') ?>"
                     title="<?= esc($app['label'], 'attr') ?>"
-                    data-menu-item="<?= esc($app['key'], 'attr') ?>"
+                    data-app-tile="<?= esc($app['key'], 'attr') ?>"
                     <?= $current ? 'aria-current="page"' : '' ?>
                     class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition group-data-[collapsed=true]/nav:justify-center group-data-[collapsed=true]/nav:px-0 <?= $ring ?> <?= $current ? 'bg-brand/10 text-brand' : 'text-gray-700 hover:bg-brand-tint hover:text-brand' ?>">
                     <?= icon($app['icon'], 'h-5 w-5 shrink-0 text-current') ?>
