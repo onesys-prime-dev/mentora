@@ -31,11 +31,11 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-5">
+<div class="py-3">
 
     <?= $this->include('components/back') ?>
 
-    <div class="flex flex-col gap-6 rounded-3xl bg-white p-6">
+    <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8">
 
         <div class="flex flex-wrap items-center justify-between gap-3">
 

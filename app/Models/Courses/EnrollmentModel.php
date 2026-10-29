@@ -46,13 +46,15 @@ class EnrollmentModel extends Model
 
     /**
      * The courses a student is taking now, or with $past the ones whose term was
-     * closed (their place is completed): looked at, not changed.
+     * closed (their place is completed): looked at, not changed. With $history
+     * every enrolment comes back whatever its status (dropped and withdrawn
+     * too), each row also carrying `enrollment_status` and `offering_status`.
      */
-    public function retrieveStudentCourseOfferings(int $userId, bool $past = false): array
+    public function retrieveStudentCourseOfferings(int $userId, bool $past = false, bool $history = false): array
     {
         $builder = $this->builder();
 
-        return $builder
+        $builder
             ->select([
                 'course_offerings.id AS offering_id',
                 'course_offerings.section_code',
@@ -136,9 +138,16 @@ class EnrollmentModel extends Model
                 AND auth_identities.type = 'email_password'",
                 'left'
             )
-            ->where('enrollments.student_user_id', $userId)
-            ->whereIn('enrollments.status', $past ? ['enrolled', 'completed'] : ['enrolled'])
-            ->where('course_offerings.status', $past ? 'completed' : 'active')
+            ->where('enrollments.student_user_id', $userId);
+
+        if ($history) {
+            $builder->select('enrollments.status AS enrollment_status, course_offerings.status AS offering_status');
+        } else {
+            $builder->whereIn('enrollments.status', $past ? ['enrolled', 'completed'] : ['enrolled'])
+                ->where('course_offerings.status', $past ? 'completed' : 'active');
+        }
+
+        return $builder
             ->orderBy('courses.course_code', 'ASC')
             ->get()
             ->getResultArray();

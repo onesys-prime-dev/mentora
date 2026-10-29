@@ -13,6 +13,7 @@ use App\Services\Courses\MonitorProgramFilters;
 use App\Services\Courses\MonitorProgramPage;
 use App\Services\Courses\MonitorProgramService;
 use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Monitor Department: how the dean's department is doing, compared per
@@ -39,6 +40,7 @@ class MonitorDepartmentController extends BaseController
 
         $auditPage      = max(1, (int) ($this->request->getGet('audit_page') ?? 1));
         $audit          = ['rows' => [], 'total' => 0];
+        $instructors    = [];
         $loadError      = false;
         $terms          = [];
         $subDepartments = [];
@@ -55,6 +57,7 @@ class MonitorDepartmentController extends BaseController
             $subDepartments = $lists->subDepartments($user);
             $programs       = $lists->programs($user);
             $overview       = $service->overview($user, $filters);
+            $instructors    = $service->instructorActivity($user, $filters);
             $audit          = $service->auditLog($user, $filters, $auditPage, self::AUDIT_PER_PAGE);
         } catch (\Throwable $e) {
             log_message('error', 'Monitor Department page failed to load: ' . $e->getMessage());
@@ -77,11 +80,52 @@ class MonitorDepartmentController extends BaseController
             'groups'         => $overview['groups'],
             'gradeDistribution' => $overview['gradeDistribution'],
             'atRisk'         => $overview['atRisk'],
+            'instructorActivity' => $instructors,
             'audit'          => $audit,
             'auditPage'      => $auditPage,
             'auditPages'     => max(1, (int) ceil($audit['total'] / self::AUDIT_PER_PAGE)),
             'previousPage'   => 'dashboard',
         ]);
+    }
+
+    /**
+     * The page's numbers as JSON, one section per call: totals, groups (the comparison rows),
+     * grade-distribution, instructor-activity, at-risk. The same filters and the same service as
+     * the page, so the two can never disagree; the dean's department is the only scope.
+     */
+    public function data(string $section): ResponseInterface
+    {
+        $user    = auth()->user();
+        $service = new MonitorDepartmentService();
+
+        if ((new DeanAccessService())->departmentFor($user) === null) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'No department is assigned to you.']);
+        }
+
+        if (! in_array($section, ['totals', 'groups', 'grade-distribution', 'instructor-activity', 'at-risk'], true)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $filters = MonitorDepartmentFilters::fromInput($this->request->getGet());
+
+        try {
+            if ($section === 'instructor-activity') {
+                return $this->response->setJSON($service->instructorActivity($user, $filters));
+            }
+
+            $overview = $service->overview($user, $filters);
+        } catch (\Throwable $e) {
+            log_message('error', 'Monitor Department data failed to load: ' . $e->getMessage());
+
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Could not load this data right now.']);
+        }
+
+        return $this->response->setJSON(match ($section) {
+            'totals'             => $overview['totals'],
+            'groups'             => $overview['groups'],
+            'grade-distribution' => $overview['gradeDistribution'],
+            default              => $overview['atRisk'],
+        });
     }
 
     /**

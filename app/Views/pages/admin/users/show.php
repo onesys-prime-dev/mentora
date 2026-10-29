@@ -24,6 +24,8 @@ $memberOf    = array_column($person['institutions'], 'id');
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', [
     'title'     => $name !== '' ? $name : (string) $person['username'],
     'icon'      => 'user',
@@ -168,6 +170,8 @@ $memberOf    = array_column($person['institutions'], 'id');
             <p class="mt-1 text-xs text-[#646464]">Changing institutions needs your password.</p>
         <?php endif; ?>
     </section>
+
+</div>
 
 </div>
 

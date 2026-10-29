@@ -5,6 +5,7 @@
  * Markup contract:
  *   <div data-dialog id="x" hidden role="dialog" aria-modal="true" aria-labelledby="x-title"> ... </div>
  *   <button data-dialog-open="x">   opens it
+ *   data-dialog-autoopen              on the dialog: opens it when the page loads
  *   <button data-dialog-close>      closes the dialog it sits in
  *   <form data-dialog-form>         submitted without leaving the page (below)
  *   <input data-confirm-match="Ann Lee"> inside a dialog: its
@@ -509,6 +510,11 @@ export function bindDialogs(root = document) {
 
             dialogs.get(id)?.open(trigger);
         });
+    }
+
+    // A dialog the server prepared for what the address asked for opens on load.
+    for (const el of root.querySelectorAll("[data-dialog-autoopen]")) {
+        dialogs.get(el.id)?.open(null);
     }
 
     for (const input of root.querySelectorAll("[data-confirm-match]")) {

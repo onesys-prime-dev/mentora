@@ -51,6 +51,8 @@ foreach ($planRows as $row) {
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <?= view('components/page-head', ['title' => 'Plans', 'icon' => 'points', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/plans/new') . '">Add a plan</a>'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-[#646464]">
     A plan is what an institution subscribes to: the features it gets and the limits that apply. A retired plan can no longer be chosen
@@ -80,6 +82,8 @@ foreach ($planRows as $row) {
         'emptyTitle' => 'No plans yet',
         'emptyText'  => 'A plan is what an institution subscribes to. Add one to start onboarding customers.',
     ], ['saveData' => false]) ?>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

@@ -46,6 +46,22 @@
 }
 
 /*
+ * The pointer hand on everything that can be clicked (Tailwind's reset leaves
+ * buttons with the arrow), and the not-allowed one on what is switched off.
+ * :where() keeps it weaker than any cursor-* utility a component sets itself.
+ */
+@layer base {
+    :where(button, [role="button"], [role="tab"], [role="menuitem"], summary, select, a[href], label[for], input:is([type="checkbox"], [type="radio"], [type="submit"], [type="button"], [type="reset"], [type="file"], [type="range"], [type="color"]), [data-dialog-open], [data-dialog-close]):not(:disabled, [aria-disabled="true"]) {
+        cursor: pointer;
+    }
+
+    :where(button, select, input, textarea):disabled,
+    :where([aria-disabled="true"]) {
+        cursor: not-allowed;
+    }
+}
+
+/*
  * Course Workspace keyboard focus: every button, link and role="link" card
  * gets a visible brand-blue ring without each one needing its own classes.
  * Elements that already define a focus-visible style keep theirs (inline
@@ -59,6 +75,7 @@
 }
 
 @import "./components/reading.css";
+@import "./components/composer.css";
 
 @layer components {
     /*
@@ -488,4 +505,71 @@ html[data-theme="dark"] .border-\[\#A9A9A9\] { border-color: var(--dk-line-stron
     html[data-theme="dark"] .animate-pulse [class~="bg-gray-100"] {
         background-image: linear-gradient(90deg, transparent 0%, transparent 30%, rgb(255 255 255 / 0.16) 50%, transparent 70%, transparent 100%);
     }
+}
+
+/*
+ * The system administrator's shell: a calm flat page instead of the wallpaper,
+ * so the filter bar and the table sit on something. Their cards get an edge
+ * as well as a shadow, and a list keeps a sensible height when it is short.
+ */
+body.admin-flat {
+    background-color: #eceff4;
+    background-image: none;
+}
+
+html[data-theme="dark"] body.admin-flat {
+    background-image: none !important;
+    background-color: var(--dk-page);
+}
+
+.admin-flat [data-toolbar].shadow-sm,
+.admin-flat [data-table].shadow-sm {
+    border: 1px solid #d5dae3;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+}
+
+html[data-theme="dark"] .admin-flat [data-toolbar].shadow-sm,
+html[data-theme="dark"] .admin-flat [data-table].shadow-sm {
+    border-color: var(--dk-line);
+}
+
+.admin-flat [data-table] {
+    min-height: 18rem;
+}
+
+/* Cards inside the page panel are outlined, since white on white has no edge. */
+.admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
+    border: 1px solid #c9d6ee;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
+    border-color: var(--dk-line);
+}
+
+/* Blue touches on the page panel: a brand stripe and a soft wash at the top, blue table headings, blue-edged cards. */
+.admin-flat [data-page-panel] {
+    background-image: linear-gradient(#0b3a8f, #0b3a8f), linear-gradient(#eef3fc, #fff 11rem);
+    background-size: 100% 4px, 100% 100%;
+    background-repeat: no-repeat;
+}
+
+.admin-flat [data-page-panel] thead th {
+    background-color: #eef3fc;
+    color: #0b3a8f;
+}
+
+.admin-flat [data-page-panel] [data-toolbar].shadow-sm,
+.admin-flat [data-page-panel] [data-table].shadow-sm {
+    border-color: #c9d6ee;
+}
+
+html[data-theme="dark"] .admin-flat [data-page-panel] {
+    background-image: linear-gradient(#5b8def, #5b8def);
+    background-size: 100% 4px;
+}
+
+html[data-theme="dark"] .admin-flat [data-page-panel] thead th {
+    background-color: rgb(91 141 239 / .12);
+    color: inherit;
 }

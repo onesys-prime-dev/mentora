@@ -60,6 +60,7 @@ class OfferingsController extends BaseController
             'offeringChoices'    => $this->offerings->filterChoices($institutionId),
             'offeringOptions'    => $this->offerings->options($institutionId),
             'offeringInstructors' => $this->offerings->instructorCandidates($institutionId),
+            'offeringSisInstructors' => (new \App\Services\Sis\SisOwnership())->managedAssignments('instructor', $institutionId),
             'offeringCanEdit'    => (new InstitutionAccess())->canWrite((int) auth()->id()),
         ]);
     }

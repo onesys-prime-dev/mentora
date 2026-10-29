@@ -20,6 +20,8 @@ $legend  = 'text-lg font-bold text-brand';
 
 <?= $this->section('content') ?>
 
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+
 <div class="mx-auto max-w-2xl">
     <?= view('components/page-head', [
         'title'       => 'General settings',
@@ -74,6 +76,8 @@ $legend  = 'text-lg font-bold text-brand';
             <button type="submit" class="<?= $primary ?>">Save</button>
         </div>
     </form>
+</div>
+
 </div>
 
 <?= $this->endSection() ?>

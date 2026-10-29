@@ -13,7 +13,7 @@ $items = $data['items'] ?? [];
 
 $kindStyle = [
     'grading' => ['icon' => 'tasks',     'tint' => 'bg-[#FFF1D6]', 'color' => 'text-[#946200]', 'badge' => 'bg-[#FFF1D6] text-[#946200]'],
-    'at_risk' => ['icon' => 'user',      'tint' => 'bg-[#FBE8E2]', 'color' => 'text-[#C3471F]', 'badge' => 'bg-[#FBE8E2] text-[#C3471F]'],
+    'at_risk' => ['icon' => 'user',      'tint' => 'bg-[#FBE8E2]', 'color' => 'text-[#A63A18]', 'badge' => 'bg-[#FBE8E2] text-[#A63A18]'],
     'inactive' => ['icon' => 'time-mono', 'tint' => 'bg-[#F1F3F8]', 'color' => 'text-[#4A5468]', 'badge' => 'bg-[#F1F3F8] text-[#4A5468]'],
 ];
 
@@ -27,16 +27,16 @@ $href = static function (array $item) use ($userRole): string {
 ?>
 
 <!-- needs attention (chairperson) -->
-<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full">
+<div class="flex flex-col bg-white rounded-3xl shadow-md ring-1 ring-black/5 overflow-clip h-full">
 
-    <div class="flex items-center justify-between px-6 py-4 border-b border-[#F1F3F8]">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#F1F3F8] bg-[#FFFBF2]">
         <div class="flex items-center gap-2.5">
-            <?= icon('attention', 'w-[18px] h-[18px] text-[#C3471F]') ?>
+            <?= icon('attention', 'w-[18px] h-[18px] text-[#A63A18]') ?>
             <span class="text-base font-bold text-[#0A0F1E]">Needs Attention</span>
         </div>
 
         <?php if ($items !== []): ?>
-            <span class="text-xs font-bold text-[#C3471F] bg-[#FBE8E2] rounded-full px-2.5 py-1">
+            <span class="text-xs font-bold text-[#A63A18] bg-[#FBE8E2] rounded-full px-2.5 py-1">
                 <?= count($items) ?> <?= count($items) === 1 ? 'item' : 'items' ?>
             </span>
         <?php endif; ?>
@@ -63,7 +63,8 @@ $href = static function (array $item) use ($userRole): string {
                     href="<?= $href($item) ?>">
 
                     <span class="w-10 h-10 shrink-0 rounded-xl <?= $style['tint'] ?> <?= $style['color'] ?> flex items-center justify-center">
-                        <?= icon($style['icon'], 'w-5 h-5') ?>
+                        <?php // The icon is given the row's colour itself: one registered in white would vanish on the tint. ?>
+                        <?= icon($style['icon'], 'w-5 h-5 ' . $style['color']) ?>
                     </span>
 
                     <span class="flex flex-col min-w-0 flex-1 gap-0.5">

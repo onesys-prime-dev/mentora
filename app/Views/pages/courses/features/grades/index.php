@@ -29,6 +29,8 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 
         <?= $this->include('pages/courses/features/grades/partials/grade-categories') ?>
 
+        <?= $this->include('pages/courses/features/grades/partials/manual-items') ?>
+
         <?= $this->include('pages/courses/features/grades/partials/assessment-breakdown') ?>
 
     <?php endif; ?>

@@ -6,7 +6,8 @@
  * instructor dashboards) still uses, so this partial lives under its own
  * chairperson/ subfolder rather than forking the shared profile-card.php.
  *
- * Same data shape as the shared profile-card: DashboardService::getProfileCardData().
+ * Same data shape as the shared profile-card: DashboardService::getProfileCardData(), plus an optional
+ * `role_label` for the pill (the dean's dashboard reuses this card and says DEAN).
  */
 $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
 
@@ -16,7 +17,7 @@ $secondaryLine = isset($data['program_name'])
 ?>
 
 <!-- profile card (chairperson) -->
-<div class="shrink-0 flex flex-col items-center gap-1 bg-white rounded-3xl p-6 text-center shadow-sm">
+<div class="shrink-0 flex flex-col items-center gap-1 bg-white rounded-3xl p-6 text-center shadow-md ring-1 ring-black/5 border-t-4 border-t-brand">
 
     <img
         class="w-18 h-18 rounded-full object-cover mb-2"
@@ -34,7 +35,7 @@ $secondaryLine = isset($data['program_name'])
     <?php endif; ?>
 
     <span class="mt-2 text-[11px] font-bold tracking-wide text-[#0040A6] bg-[#E8EEFC] rounded-full px-3 py-1">
-        CHAIRPERSON
+        <?= esc($data['role_label'] ?? 'CHAIRPERSON') ?>
     </span>
 
 </div>

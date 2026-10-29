@@ -89,6 +89,15 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
             <?= $categoryOptions($item['category_id'] !== null ? (int) $item['category_id'] : null) ?>
         </select>
 
+        <span class="flex shrink-0 flex-col">
+            <button type="button" data-move-grade-item="up" title="Move up" aria-label="Move up" class="rounded p-0.5 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>
+            </button>
+            <button type="button" data-move-grade-item="down" title="Move down" aria-label="Move down" class="rounded p-0.5 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+        </span>
+
         <button type="button" data-remove-grade-item title="<?= $item['is_manual'] ? 'Remove item' : 'Don\'t count this in the grade' ?>"
             class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -123,6 +132,15 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
                     <?= $periodOptions($category['period_id'] !== null ? (int) $category['period_id'] : null) ?>
                 </select>
             <?php endif; ?>
+
+            <span class="flex shrink-0 items-center">
+                <button type="button" data-move-grade-category="up" title="Move up" aria-label="Move category up" class="rounded p-1 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>
+                </button>
+                <button type="button" data-move-grade-category="down" title="Move down" aria-label="Move category down" class="rounded p-1 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+            </span>
 
             <button type="button" data-delete-grade-category title="Remove category"
                 class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500" aria-label="Remove category">
@@ -353,6 +371,30 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
         </div>
 
+    <?php endif; ?>
+
+    <?php $removedCategories = $removed['categories'] ?? []; $removedItems = $removed['items'] ?? []; ?>
+    <?php if ($removedCategories !== [] || $removedItems !== []): ?>
+        <details class="rounded-2xl border border-gray-200 p-5" data-removed-grading>
+            <summary class="cursor-pointer text-sm font-bold text-[#646464]">
+                Removed (<?= count($removedCategories) + count($removedItems) ?>)
+                <span class="font-normal text-[#767676]">: their scores are kept, and restoring brings them back</span>
+            </summary>
+            <ul class="mt-4 flex flex-col divide-y divide-gray-100">
+                <?php foreach ($removedCategories as $category): ?>
+                    <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                        <span><span class="mr-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">Category</span><?= esc($category['name']) ?></span>
+                        <button type="button" data-restore-grade-category="<?= (int) $category['id'] ?>" class="font-semibold text-brand hover:underline">Restore</button>
+                    </li>
+                <?php endforeach; ?>
+                <?php foreach ($removedItems as $item): ?>
+                    <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                        <span><span class="mr-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">Item</span><?= esc($item['name']) ?></span>
+                        <button type="button" data-restore-grade-item="<?= (int) $item['id'] ?>" class="font-semibold text-brand hover:underline">Restore</button>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </details>
     <?php endif; ?>
 
     <?php if ($uncategorized !== []): ?>

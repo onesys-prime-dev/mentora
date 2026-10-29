@@ -19,6 +19,9 @@ final class SisCsvParser
 
     public const ENROLLMENT_STATUSES = ['enrolled', 'dropped', 'withdrawn', 'completed'];
 
+    /** What a staff assignment can be, and the column that says what they lead or teach. */
+    public const STAFF_TARGET_COLUMN = ['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_external_id'];
+
     /**
      * required columns, optional columns, and which columns make a row unique.
      *
@@ -29,6 +32,10 @@ final class SisCsvParser
         'instructors' => ['required' => ['external_id', 'email', 'first_name', 'last_name'], 'optional' => [], 'unique' => ['external_id']],
         'courses'     => ['required' => ['external_id', 'course_code', 'course_title'], 'optional' => ['units', 'program_code'], 'unique' => ['external_id']],
         'enrollments' => ['required' => ['course_external_id', 'student_external_id'], 'optional' => ['section', 'status'], 'unique' => ['course_external_id', 'student_external_id', 'section']],
+
+        // Who leads a department, who chairs a sub-department, who teaches which section. Which of the three
+        // target columns a row needs depends on its role (see problem()).
+        'staff_assignments' => ['required' => ['role', 'person_external_id'], 'optional' => ['department_code', 'sub_department_code', 'course_external_id', 'section'], 'unique' => ['role', 'person_external_id', 'department_code', 'sub_department_code', 'course_external_id', 'section']],
     ];
 
     /** @return list<string> */
@@ -169,6 +176,20 @@ final class SisCsvParser
 
         if (($values['status'] ?? '') !== '' && ! in_array(strtolower($values['status']), self::ENROLLMENT_STATUSES, true)) {
             return 'status must be one of: ' . implode(', ', self::ENROLLMENT_STATUSES) . '.';
+        }
+
+        if (array_key_exists('role', $values)) {
+            $role = strtolower($values['role']);
+
+            if (! isset(self::STAFF_TARGET_COLUMN[$role])) {
+                return 'role must be one of: ' . implode(', ', array_keys(self::STAFF_TARGET_COLUMN)) . '.';
+            }
+
+            $needs = self::STAFF_TARGET_COLUMN[$role];
+
+            if (($values[$needs] ?? '') === '') {
+                return "{$needs} is required for " . ($role === 'instructor' ? 'an' : 'a') . " {$role}.";
+            }
         }
 
         return null;

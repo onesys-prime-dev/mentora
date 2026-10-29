@@ -196,7 +196,7 @@ final class GradebookSyncServiceTest extends DatabaseTestCase
         $this->assertSame(1, $this->finalGradeRows());
     }
 
-    public function testASchemeWaitingOnARecalculationIsNotRefreshedPerStudent(): void
+    public function testASchemeWaitingOnARecalculationIsStillRefreshedPerStudent(): void
     {
         [$assessmentId, $itemId] = $this->gradedItem();
         db_connect()->table('grading_schemes')->where('id', $this->schemeId)->update(['status' => 'Published', 'needs_recalculation' => 1]);
@@ -204,8 +204,8 @@ final class GradebookSyncServiceTest extends DatabaseTestCase
 
         $this->sync->syncItemScore($assessmentId, $this->student->id);
 
-        $this->assertNotNull($this->scoreRow($itemId), 'the score is still copied');
-        $this->assertSame(0, $this->finalGradeRows());
+        $this->assertNotNull($this->scoreRow($itemId), 'the score is copied');
+        $this->assertSame(1, $this->finalGradeRows(), 'and the final grade follows, so it never freezes');
     }
 
     public function testAnUnpublishedSchemeIsNotRefreshed(): void

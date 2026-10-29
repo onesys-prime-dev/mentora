@@ -8,11 +8,11 @@ $loadError = $loadError ?? false;
 
 <?= $this->section('content') ?>
 
-<div class="flex justify-between items-center">
-    <?= $this->include('components/back') ?>
-</div>
+<div class="py-3">
 
-<div class="flex flex-col gap-6 py-3">
+<?= $this->include('components/back') ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
@@ -83,6 +83,8 @@ $loadError = $loadError ?? false;
         </section>
 
     <?php endif; ?>
+
+</div>
 
 </div>
 

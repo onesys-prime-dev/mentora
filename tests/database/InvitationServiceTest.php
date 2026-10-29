@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\Admin\PlatformSettings;
 use App\Services\Institutions\InvitationService;
 use App\Services\Institutions\InvitationStatus;
+use App\Services\Institutions\StructureException;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
@@ -12,6 +13,7 @@ use CodeIgniter\Test\TestLogger;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
 use Tests\Support\FakeEmail;
+use Tests\Support\PeopleFactory;
 
 /**
  * Invitations to administer an institution: issuing and emailing a link,
@@ -435,6 +437,208 @@ final class InvitationServiceTest extends DatabaseTestCase
         $this->service->resend($institution, $first['invitation_id'], $this->admin, $later);
 
         $this->assertSame('maria.santos@example.com', $this->service->open($this->lastToken(), $later)['email']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | A parent invited with the students to link
+    |--------------------------------------------------------------------------
+    */
+
+    private function student(int $institution, string $first, ?string $number = null): User
+    {
+        $student = PeopleFactory::person('student', $first, 'Lee', strtolower($first) . '@family.test', $institution);
+
+        if ($number !== null) {
+            db_connect()->table('user_profiles')->where('user_id', $student->id)->update(['student_number' => $number]);
+        }
+
+        return $student;
+    }
+
+    /** @return list<int> */
+    private function storedStudents(int $invitationId): array
+    {
+        return json_decode((string) $this->row($invitationId)['student_ids'], true) ?? [];
+    }
+
+    /** Invites a parent and returns the invitation id. */
+    private function inviteParent(int $institution, string $students, string $email = 'pam@family.test'): int
+    {
+        return $this->service->invite($institution, $this->person($email, 'Pam', 'Parent') + ['students' => $students], $this->admin, $this->now, 'parent')['invitation_id'];
+    }
+
+    private function links(int $parentId): int
+    {
+        return db_connect()->table('parent_student_links')->where('parent_user_id', $parentId)->countAllResults();
+    }
+
+    public function testAParentInvitationKeepsTheNamedStudentsAndStillSendsTheEmail(): void
+    {
+        $institution = $this->institution();
+        $ann         = $this->student($institution, 'Ann', '2026-001');
+        $ben         = $this->student($institution, 'Ben');
+
+        $id = $this->inviteParent($institution, "2026-001\nben@family.test");
+
+        $this->assertEqualsCanonicalizing([(int) $ann->id, (int) $ben->id], $this->storedStudents($id));
+        $this->assertCount(1, $this->mailer->sent);
+        $this->assertSame(0, db_connect()->table('parent_student_links')->countAllResults(), 'nobody is linked before the parent has an account');
+    }
+
+    public function testOneUnmatchedNameStopsTheInvitationAndNothingIsSent(): void
+    {
+        $institution = $this->institution();
+        $this->student($institution, 'Ann', '2026-001');
+
+        try {
+            $this->inviteParent($institution, "2026-001\n2026-999\nghost@family.test");
+            $this->fail('Expected the invitation to be refused.');
+        } catch (StructureException $e) {
+            $this->assertArrayHasKey('students', $e->errors());
+            $this->assertStringContainsString('2026-999', $e->errors()['students']);
+            $this->assertStringContainsString('ghost@family.test', $e->errors()['students']);
+            $this->assertStringContainsString('Nothing was sent', $e->errors()['students']);
+        }
+
+        $this->assertSame(0, db_connect()->table('institution_invitations')->where('role', 'parent')->countAllResults());
+        $this->assertSame([], $this->mailer->sent);
+    }
+
+    public function testAStudentOfAnotherInstitutionOrANonStudentIsAnUnmatchedName(): void
+    {
+        $institution = $this->institution();
+        $other       = $this->institution('OTHER');
+        $this->student($other, 'Zed', '2026-777');
+        PeopleFactory::person('instructor', 'Tom', 'Teacher', 'tom@family.test', $institution);
+
+        foreach (['2026-777', 'tom@family.test'] as $name) {
+            try {
+                $this->inviteParent($institution, $name);
+                $this->fail("{$name} should have been refused.");
+            } catch (StructureException $e) {
+                $this->assertArrayHasKey('students', $e->errors(), $name);
+            }
+        }
+
+        $this->assertSame([], $this->mailer->sent);
+    }
+
+    public function testStudentsCanOnlyBeNamedForAParent(): void
+    {
+        $institution = $this->institution();
+        $this->student($institution, 'Ann', '2026-001');
+
+        $this->expectException(StructureException::class);
+        $this->expectExceptionMessage('only be named for a parent');
+
+        $this->service->invite($institution, $this->person('ivy@family.test', 'Ivy', 'Teacher') + ['students' => '2026-001'], $this->admin, $this->now, 'instructor');
+    }
+
+    public function testAParentInvitationWithoutStudentsIsAsBefore(): void
+    {
+        $institution = $this->institution();
+
+        $id = $this->inviteParent($institution, '');
+
+        $this->assertNull($this->row($id)['student_ids']);
+        $this->assertCount(1, $this->mailer->sent);
+    }
+
+    public function testAcceptingMakesTheAccountAndLinksTheStudentsWithTheAdministratorAsActor(): void
+    {
+        $institution = $this->institution();
+        $ann         = $this->student($institution, 'Ann', '2026-001');
+        $ben         = $this->student($institution, 'Ben');
+        $id          = $this->inviteParent($institution, "2026-001\nben@family.test");
+
+        $parent = $this->service->accept($this->lastToken(), self::STRONG, $this->now);
+
+        $this->assertTrue($parent->inGroup('parent'));
+        $this->assertSame(2, $this->links((int) $parent->id));
+
+        $links = db_connect()->table('parent_student_links')->where('parent_user_id', $parent->id)->get()->getResultArray();
+
+        $this->assertEqualsCanonicalizing([(int) $ann->id, (int) $ben->id], array_map('intval', array_column($links, 'student_user_id')));
+        $this->assertSame([(int) $this->admin->id], array_values(array_unique(array_map('intval', array_column($links, 'created_by_user_id')))));
+
+        $entries = db_connect()->table('audit_logs')->where('action', 'parent.linked')->get()->getResultArray();
+
+        $this->assertCount(2, $entries);
+        $this->assertSame((int) $this->admin->id, (int) $entries[0]['actor_user_id']);
+        $this->assertSame('invitation', json_decode((string) $entries[0]['new_values'], true)['via']);
+        $this->assertSame($id, json_decode((string) $entries[0]['new_values'], true)['invitation_id']);
+
+        $accepted = db_connect()->table('audit_logs')->where('action', 'invitation.accepted')->get()->getRowArray();
+
+        $this->assertSame(2, json_decode((string) $accepted['new_values'], true)['linked_students']);
+    }
+
+    public function testAStudentWhoLeftBeforeAcceptanceIsSkippedAndTheAccountIsStillMade(): void
+    {
+        $institution = $this->institution();
+        $ann         = $this->student($institution, 'Ann', '2026-001');
+        $ben         = $this->student($institution, 'Ben');
+        $this->inviteParent($institution, "2026-001\nben@family.test");
+
+        db_connect()->table('users')->where('id', $ben->id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
+
+        $parent = $this->service->accept($this->lastToken(), self::STRONG, $this->now);
+
+        $this->assertSame(1, $this->links((int) $parent->id));
+        $this->assertSame((int) $ann->id, (int) db_connect()->table('parent_student_links')->where('parent_user_id', $parent->id)->get()->getRowArray()['student_user_id']);
+        $this->assertSame(1, json_decode((string) db_connect()->table('audit_logs')->where('action', 'invitation.accepted')->get()->getRowArray()['new_values'], true)['linked_students']);
+    }
+
+    public function testAcceptingTwiceLinksOnce(): void
+    {
+        $institution = $this->institution();
+        $this->student($institution, 'Ann', '2026-001');
+        $this->inviteParent($institution, '2026-001');
+        $token = $this->lastToken();
+
+        $parent = $this->service->accept($token, self::STRONG, $this->now);
+
+        try {
+            $this->service->accept($token, self::OTHER, $this->now);
+            $this->fail('The second use of the link should be refused.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame(InvitationService::LINK_USED, $e->getMessage());
+        }
+
+        $this->assertSame(1, $this->links((int) $parent->id));
+    }
+
+    public function testAResendKeepsTheStudentsAndAFreshInvitationReplacesThem(): void
+    {
+        $institution = $this->institution();
+        $ann         = $this->student($institution, 'Ann', '2026-001');
+        $ben         = $this->student($institution, 'Ben');
+        $first       = $this->inviteParent($institution, '2026-001');
+
+        $resent = $this->service->resend($institution, $first, $this->admin, $this->now)['invitation_id'];
+
+        $this->assertSame([(int) $ann->id], $this->storedStudents($resent));
+
+        $fresh = $this->inviteParent($institution, 'ben@family.test');
+
+        $this->assertSame([(int) $ben->id], $this->storedStudents($fresh));
+
+        $parent = $this->service->accept($this->lastToken(), self::STRONG, $this->now);
+
+        $this->assertSame([(int) $ben->id], array_map('intval', array_column(db_connect()->table('parent_student_links')->where('parent_user_id', $parent->id)->get()->getResultArray(), 'student_user_id')), 'only the list sent with the current invitation');
+    }
+
+    public function testAnAcceptedParentWithoutStudentsHasNoLinks(): void
+    {
+        $institution = $this->institution();
+        $this->student($institution, 'Ann', '2026-001');
+        $this->inviteParent($institution, '');
+
+        $parent = $this->service->accept($this->lastToken(), self::STRONG, $this->now);
+
+        $this->assertSame(0, $this->links((int) $parent->id));
+        $this->assertSame(0, json_decode((string) db_connect()->table('audit_logs')->where('action', 'invitation.accepted')->get()->getRowArray()['new_values'], true)['linked_students']);
     }
 
     public function testAnAcceptedInvitationCannotBeResent(): void

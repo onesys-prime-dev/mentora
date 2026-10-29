@@ -35,14 +35,17 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-6 py-3">
+<div class="py-3">
+
+<?php // The way back stays on the background, above the panel, not in the box. ?>
+<?= view('components/back-link', ['backUrl' => $back, 'backLabel' => 'Back to reports'], ['saveData' => false]) ?>
+
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => $o['course_code'] . ' ' . $o['section_code'],
         'icon'        => 'hat',
         'description' => $o['course_title'] . ' · ' . $o['program_name'] . ' · ' . $o['term_name'] . ' ' . $o['academic_year'],
-        'backUrl'     => $back,
-        'backLabel'   => 'Back to reports',
     ], ['saveData' => false]) ?>
 
     <p>
@@ -62,7 +65,7 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
     </div>
 
     <?php if ($g !== null && $g['graded_count'] > 0): ?>
-        <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="dist" data-report-distribution>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="dist" data-report-distribution>
             <h2 id="dist" class="text-sm font-bold text-brand">Grade distribution</h2>
             <ul class="mt-4 flex flex-col gap-2">
                 <?php foreach ($g['distribution'] as $bucket => $count): ?>
@@ -78,7 +81,7 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
         </section>
     <?php endif; ?>
 
-    <section class="rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="activity-heading">
+    <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="activity-heading">
         <h2 id="activity-heading" class="text-sm font-bold text-brand">Instructor activity</h2>
         <p class="mt-2 text-sm text-[#3D3D3D]" data-report-activity>
             <?= esc((string) $a['content_updates']) ?> content update<?= $a['content_updates'] === 1 ? '' : 's' ?> and
@@ -103,6 +106,8 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
             'emptyText'  => 'Every student has been active and is keeping up.',
         ], ['saveData' => false]) ?>
     </section>
+
+</div>
 
 </div>
 

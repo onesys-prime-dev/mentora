@@ -20,6 +20,7 @@ class AnnouncementModel extends Model
         'subject',
         'message',
         'is_pinned',
+        'created_at',
     ];
 
     /**

@@ -7,6 +7,7 @@
 $classAverage = $classSummary['average_percentage'] ?? null;
 $passingCount = (int) ($classSummary['passing_count'] ?? 0);
 $totalStudents = (int) ($classSummary['total_students'] ?? 0);
+$gradedStudents = (int) ($classSummary['graded_students'] ?? 0);
 $needsReview = (int) ($classSummary['needs_review'] ?? 0);
 ?>
 
@@ -16,17 +17,21 @@ $needsReview = (int) ($classSummary['needs_review'] ?? 0);
         'label' => 'Class Average',
         'icon' => 'points',
         'size' => 'prominent',
-        'value' => $classAverage !== null ? number_format((float) $classAverage, 1) . '%' : '—',
-        'detail' => $classAverage !== null ? 'Across graded work so far' : 'Nothing graded yet',
+        'value' => grade_percent($classAverage),
+        'detail' => $classAverage !== null ? 'Of ' . $gradedStudents . ($gradedStudents === 1 ? ' student' : ' students') . ' with a grade' : 'Nothing graded yet',
     ], ['saveData' => false]) ?>
 
     <?= view('components/metric-card', [
         'label' => 'Passing',
         'icon' => 'check',
         'size' => 'prominent',
-        'tone' => $totalStudents > 0 && $passingCount === $totalStudents ? 'success' : 'neutral',
-        'value' => $passingCount . '/' . $totalStudents . ' Students',
-        'detail' => $totalStudents > 0 && $passingCount === $totalStudents ? 'Everyone is passing' : 'At or above the passing mark',
+        'tone' => $gradedStudents > 0 && $passingCount === $gradedStudents ? 'success' : 'neutral',
+        'value' => $passingCount . '/' . $gradedStudents . ' Graded',
+        'detail' => match (true) {
+            $gradedStudents > 0 && $passingCount === $gradedStudents => 'Everyone with a grade is passing',
+            $totalStudents > $gradedStudents => 'At or above the passing mark; ' . ($totalStudents - $gradedStudents) . ' not graded yet',
+            default => 'At or above the passing mark',
+        },
     ], ['saveData' => false]) ?>
 
     <?= view('components/metric-card', [

@@ -19,6 +19,7 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
     private const ACADEMIC = [
         'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'program.monitor',
         'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce',
+        'children.view',
         // The institutional administrator's own administration.
         'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage', 'people.view', 'people.manage',
         'reports.view', 'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run',
