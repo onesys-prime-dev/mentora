@@ -418,10 +418,12 @@ html[data-theme="dark"] .hover\:bg-brand-dark:hover { background-color: #2a68e0;
 html[data-theme="dark"] .bg-brand-dark { background-color: #1a56c9; }
 
 /* Status tones: the same meaning, dark ground, light words */
-html[data-theme="dark"] .bg-\[\#E8F5EC\] { background-color: #16301f; }
+html[data-theme="dark"] .bg-\[\#E8F5EC\],
+html[data-theme="dark"] .bg-\[\#E6F4EC\] { background-color: #16301f; }
 html[data-theme="dark"] .text-\[\#2B7549\],
 html[data-theme="dark"] .text-\[\#2E7D4F\],
-html[data-theme="dark"] .text-\[\#1F5A38\] { color: #7dd3a0; }
+html[data-theme="dark"] .text-\[\#1F5A38\],
+html[data-theme="dark"] .text-\[\#1E7A44\] { color: #7dd3a0; }
 html[data-theme="dark"] .bg-\[\#FFF1D6\],
 html[data-theme="dark"] .bg-\[\#FFF8E6\],
 html[data-theme="dark"] .bg-\[\#FFF8E8\] { background-color: #3a2d12; }

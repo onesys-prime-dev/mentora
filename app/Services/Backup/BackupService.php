@@ -26,6 +26,9 @@ class BackupService
     /** A scheduled backup is taken when none succeeded within this many hours. */
     public const SCHEDULE_EVERY_HOURS = 23;
 
+    /** A backup still running after this many hours is taken to have died with its server (MISS-OPS-03). */
+    public const STUCK_AFTER_HOURS = 2;
+
     public function __construct(private readonly ?BackupRunner $runner = null)
     {
     }
@@ -56,8 +59,11 @@ class BackupService
      */
     public function request(User $actor, ?DateTimeImmutable $now = null): int
     {
-        $stamp = ($now ?? new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $now ??= new DateTimeImmutable();
+        $stamp = $now->format('Y-m-d H:i:s');
         $db    = db_connect();
+
+        $this->failStuck($now);
 
         if ($db->table('backups')->whereIn('status', ['requested', 'running'])->countAllResults() > 0) {
             throw new InvalidArgumentException('A backup is already waiting or running. Wait for it to finish.');
@@ -99,6 +105,8 @@ class BackupService
         $now = $given ?? new DateTimeImmutable();
         $db   = db_connect();
         $ran  = [];
+
+        $this->failStuck($now);
 
         foreach ($db->table('backups')->where('status', 'requested')->orderBy('id')->get()->getResultArray() as $row) {
             $ran[] = $this->take((int) $row['id'], $given);
@@ -169,16 +177,47 @@ class BackupService
                 'status' => 'failed', 'message' => $message, 'finished_at' => $finished,
             ]);
 
-            // Told now, not at the next nightly run, and once per run of failures: the scheduler retries every
-            // few minutes while nothing succeeds, so the key is the streak's (as the nightly trigger's is).
-            $notices = new \App\Services\Notifications\NotificationService();
-
-            foreach ((new \App\Services\Notifications\NotificationRecipients())->administrators() as $admin) {
-                $notices->send($admin, 'backup.failed', 'Backups need attention', 'The latest backup failed: ' . $message, true, self::failureStreakKey(), null, 'admin/backups');
-            }
+            $this->tellFailed($message);
         }
 
         return $id;
+    }
+
+    /**
+     * Fails every backup running for STUCK_AFTER_HOURS or more: its server died under it, so it will never
+     * finish, and left running it would block every later backup.
+     */
+    private function failStuck(DateTimeImmutable $now): void
+    {
+        $db     = db_connect();
+        $cutoff = $now->modify('-' . self::STUCK_AFTER_HOURS . ' hours')->format('Y-m-d H:i:s');
+        $stuck  = array_column($db->table('backups')->select('id')->where('status', 'running')->where('COALESCE(started_at, created_at) <=', $cutoff)->get()->getResultArray(), 'id');
+
+        if ($stuck === []) {
+            return;
+        }
+
+        $message = 'It stopped while running: no result after ' . self::STUCK_AFTER_HOURS . ' hours.';
+
+        $db->table('backups')->whereIn('id', $stuck)->update([
+            'status' => 'failed', 'message' => $message, 'finished_at' => $now->format('Y-m-d H:i:s'),
+        ]);
+
+        log_message('error', 'Backup failed: ' . $message);
+        $this->tellFailed($message);
+    }
+
+    /**
+     * Told now, not at the next nightly run, and once per run of failures: the scheduler retries every
+     * few minutes while nothing succeeds, so the key is the streak's (as the nightly trigger's is).
+     */
+    private function tellFailed(string $message): void
+    {
+        $notices = new \App\Services\Notifications\NotificationService();
+
+        foreach ((new \App\Services\Notifications\NotificationRecipients())->administrators() as $admin) {
+            $notices->send($admin, 'backup.failed', 'Backups need attention', 'The latest backup failed: ' . $message, true, self::failureStreakKey(), null, 'admin/backups');
+        }
     }
 
     /** One key per run of failures: what has failed since the last good backup is one problem, told once. */
