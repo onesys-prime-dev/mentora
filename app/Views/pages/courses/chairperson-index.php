@@ -43,7 +43,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
 
     <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem_auto]">
         <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 sm:col-span-2 lg:col-span-1">Search
-            <input class="<?= $input ?>" type="search" name="q" value="<?= esc($filters->q ?? '') ?>" placeholder="Course code, title or section">
+            <input class="<?= $input ?>" type="search" name="q" data-auto-search spellcheck="false" autocomplete="off" value="<?= esc($filters->q ?? '') ?>" placeholder="Course code, title or section">
         </label>
         <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Term
             <select class="<?= $input ?>" name="term">

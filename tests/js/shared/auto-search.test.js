@@ -30,6 +30,19 @@ describe("auto-search", () => {
         expect(document.querySelector("form").requestSubmit).toHaveBeenCalledTimes(1);
     });
 
+    it("searches again at once when the x empties the box", () => {
+        const input = document.querySelector("[data-auto-search]");
+        input.value = "";
+        input.dispatchEvent(new Event("search", { bubbles: true }));
+        expect(document.querySelector("form").requestSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    it("remembers the box that was typed in, so the reloaded page can focus it again", () => {
+        type("[data-auto-search]", "abc");
+        vi.advanceTimersByTime(400);
+        expect(JSON.parse(sessionStorage.getItem("autoSearchFocus"))).toEqual({ path: location.pathname, name: "q" });
+    });
+
     it("leaves other inputs alone", () => {
         type("[name=other]", "x");
         vi.advanceTimersByTime(1000);
