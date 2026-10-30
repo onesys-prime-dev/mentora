@@ -7,6 +7,8 @@
 | after the search box (the count, the table, the paging) is replaced, so the
 | header, the menu, the filters and the box itself - with its caret - stay put.
 |
+|   - the counter line above the table ("14 people") is left alone, so it keeps
+|     showing the whole list while someone searches
 |   - a newer search cancels an older one still on its way, so a slow answer
 |     never lands on top of a fresher one
 |   - the old results stay visible, a little dimmed, until the new ones arrive
@@ -23,8 +25,10 @@
 const PAUSE = 400;
 const KEY = "autoSearchFocus";
 
-// Things that are not results: dialogs and scripts stay as they are.
-const KEEP = "[data-dialog], dialog, template, script, style";
+// Things that are not results stay as they are: dialogs and scripts, and the counter line
+// ("14 people", a <p aria-live>). The counter keeps showing the whole list while someone
+// searches; it does not jump to "0 people match" with every letter.
+const KEEP = "[data-dialog], dialog, template, script, style, p[aria-live]";
 
 let inFlight = null;
 

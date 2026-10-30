@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const page = (count) => `<main>
     <form method="get" action="/list"><input type="search" name="q" data-auto-search><input name="other"><button type="submit">Apply</button></form>
-    <p data-count>${count}</p>
+    <p data-count aria-live="polite">${count} people</p>
     <div data-results>${count} rows</div>
     <div data-dialog id="keep-me">dialog</div>
 </main>`;
@@ -52,7 +52,7 @@ describe("auto-search", () => {
         type("[data-auto-search]", "qu");
         await vi.advanceTimersByTimeAsync(400);
 
-        expect(document.querySelector("[data-count]").textContent).toBe("2");
+        expect(document.querySelector("[data-count]").textContent).toBe("10 people"); // the counter is left alone
         expect(document.querySelector("[data-results]").textContent).toBe("2 rows");
         expect(document.querySelector("[data-auto-search]")).toBe(box);
         expect(document.querySelector("#keep-me")).toBe(dialog);
