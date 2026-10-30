@@ -94,7 +94,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                         <button type="button" data-select="dept-<?= esc((string) $department['id']) ?>" data-search-text="<?= esc(strtolower($department['code'] . ' ' . $department['name']), 'attr') ?>"
                             class="group/dept flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:text-brand">
                             <span class="rounded bg-brand-tint px-1.5 py-0.5 font-mono text-[11px] text-brand-dark"><?= esc($department['code']) ?></span>
-                            <span class="min-w-0 flex-1 truncate <?= $deptActive ? '' : 'text-[#646464]' ?>"><?= esc($department['name']) ?></span>
+                            <span class="min-w-0 flex-1 break-words leading-snug <?= $deptActive ? '' : 'text-[#646464]' ?>"><?= esc($department['name']) ?></span>
                             <span class="text-xs font-normal text-[#646464]"><?= esc((string) count($department['subDepartments'])) ?></span>
                             <?php if ($department['subDepartments'] !== []): ?>
                                 <svg class="h-4 w-4 shrink-0 text-[#646464] transition-transform group-data-[open=true]/dept:rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
@@ -109,7 +109,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                         <button type="button" data-select="sub-<?= esc((string) $sub['id']) ?>" data-search-text="<?= esc(strtolower($sub['code'] . ' ' . $sub['name'] . ' ' . implode(' ', array_map(static fn (array $p): string => $p['code'] . ' ' . $p['name'], $sub['programs']))), 'attr') ?>"
                                             class="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:font-semibold data-[active=true]:text-brand">
                                             <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-[#646464]"><?= esc($sub['code']) ?></span>
-                                            <span class="min-w-0 flex-1 truncate <?= $subActive ? '' : 'text-[#646464]' ?>"><?= esc($sub['name']) ?></span>
+                                            <span class="min-w-0 flex-1 break-words leading-snug <?= $subActive ? '' : 'text-[#646464]' ?>"><?= esc($sub['name']) ?></span>
                                             <span class="text-xs text-[#646464]"><?= esc((string) count($sub['programs'])) ?></span>
                                         </button>
                                     </li>
