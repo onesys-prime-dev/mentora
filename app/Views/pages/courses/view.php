@@ -19,7 +19,7 @@ $features = $courseFeatures ?? [
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col lg:-mt-4 lg:h-[calc(100%+1rem)] lg:min-h-0">
+<div class="flex flex-col lg:h-full lg:min-h-0">
 
 <div class="flex justify-between items-center">
     <?= $this->include('components/back') ?>

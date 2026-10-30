@@ -32,7 +32,7 @@ $shellHeight = $locked ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen';
 $mainGutter  = $mainGutter ?? 'px-4 sm:px-8 lg:px-16 xl:px-40';
 // Beside the menu the page has less room, so the default gutter narrows.
 $mainGutter  = $hasMenu && $mainGutter === 'px-4 sm:px-8 lg:px-16 xl:px-40' ? 'px-4 sm:px-8 lg:px-10' : $mainGutter;
-$mainSpacing = $fullHeight ? 'py-10 lg:min-h-0 lg:py-6' : 'pb-10 pt-4';
+$mainSpacing = $fullHeight ? 'pb-10 pt-4 lg:min-h-0 lg:pb-6 lg:pt-2' : 'pb-10 pt-2';
 
 // The page is rendered first, so the header can tell whether the page already names itself:
 // a page with its own <h1> does not need the same words repeated beside the logo.
