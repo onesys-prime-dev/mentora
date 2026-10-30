@@ -500,6 +500,7 @@ export function bindDialogs(root = document) {
     }
 
     for (const trigger of root.querySelectorAll("[data-dialog-open]")) {
+        trigger.dataset.dialogBound = "1";
         trigger.addEventListener("click", () => {
             const id = trigger.dataset.dialogOpen;
             const el = id ? document.getElementById(id) : null;
@@ -541,6 +542,25 @@ export function bindDialogs(root = document) {
     }
 
     return dialogs;
+}
+
+// Rows swapped in by a live search (shared/auto-search.js) bring buttons that open the page's dialogs.
+if (typeof document !== "undefined") {
+    document.addEventListener("content:swapped", (event) => {
+        for (const trigger of event.detail.root.querySelectorAll("[data-dialog-open]:not([data-dialog-bound])")) {
+            trigger.dataset.dialogBound = "1";
+            trigger.addEventListener("click", () => {
+                const id = trigger.dataset.dialogOpen;
+                const el = id ? document.getElementById(id) : null;
+
+                if (el) {
+                    fillDialog(el, trigger);
+                }
+
+                registry.get(id)?.open(trigger);
+            });
+        }
+    });
 }
 
 // A page with a form that answers in place (no dialog around it) needs the binding too.
