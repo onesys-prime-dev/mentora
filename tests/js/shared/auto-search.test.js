@@ -60,6 +60,29 @@ describe("auto-search", () => {
         expect(location.search).toBe("?q=qu");
     });
 
+    it("shows the fresh counter once the box is empty again, without moving anything", async () => {
+        fetch.mockResolvedValue(answer(page("14"), "http://localhost:3000/list"));
+        const order = () => [...document.querySelector("main").children].map((el) => el.tagName + (el.id ? `#${el.id}` : ""));
+        const before = order();
+
+        const input = document.querySelector("[data-auto-search]");
+        input.value = "";
+        input.dispatchEvent(new Event("search", { bubbles: true }));
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(document.querySelector("[data-count]").textContent).toBe("14 people");
+        expect(order()).toEqual(before);
+    });
+
+    it("loads the page the ordinary way when the answer is shaped differently", async () => {
+        fetch.mockResolvedValue(answer("<main><form><input type='search' name='q' data-auto-search></form></main>"));
+
+        type("[data-auto-search]", "qu");
+        await vi.advanceTimersByTimeAsync(400);
+
+        expect(document.querySelector("form").requestSubmit).toHaveBeenCalledTimes(1);
+    });
+
     it("falls back to sending the form when the request fails", async () => {
         fetch.mockRejectedValue(new Error("offline"));
 

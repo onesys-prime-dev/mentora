@@ -25,10 +25,13 @@
 const PAUSE = 400;
 const KEY = "autoSearchFocus";
 
-// Things that are not results stay as they are: dialogs and scripts, and the counter line
-// ("14 people", a <p aria-live>). The counter keeps showing the whole list while someone
-// searches; it does not jump to "0 people match" with every letter.
-const KEEP = "[data-dialog], dialog, template, script, style, p[aria-live]";
+// Things that are not results stay as they are: dialogs and scripts.
+const KEEP = "[data-dialog], dialog, template, script, style";
+
+// The counter line ("14 people", a <p aria-live>) keeps showing the whole list while someone
+// is searching: it does not jump to "0 people match" with every letter. When the box is empty
+// again the list is whole, so the counter is replaced with the fresh one.
+const COUNTER = "p[aria-live]";
 
 let inFlight = null;
 
@@ -131,13 +134,24 @@ async function search(input) {
             return fallback(input);
         }
 
-        const news = swappableAfter(freshAnchor);
-        const before = [...anchor.parentElement.children].find(
-            (el) => el !== anchor && (anchor.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) && !olds.includes(el),
-        ) ?? null;
+        // Each old element is replaced by the one at the same place in the answer, so nothing
+        // moves. A page whose answer is shaped differently is simply loaded the ordinary way.
+        const oldAll = [...anchor.parentElement.children].slice([...anchor.parentElement.children].indexOf(anchor) + 1);
+        const newAll = [...freshAnchor.parentElement.children].slice([...freshAnchor.parentElement.children].indexOf(freshAnchor) + 1);
 
-        olds.forEach((el) => el.remove());
-        news.forEach((el) => anchor.parentElement.insertBefore(document.importNode(el, true), before));
+        if (oldAll.length !== newAll.length || oldAll.some((el, i) => el.tagName !== newAll[i].tagName)) {
+            return fallback(input);
+        }
+
+        const searching = input.value.trim() !== "";
+
+        oldAll.forEach((el, i) => {
+            if (el.matches(KEEP) || (searching && el.matches(COUNTER))) {
+                return;
+            }
+
+            el.replaceWith(document.importNode(newAll[i], true));
+        });
 
         history.replaceState(null, "", url);
         document.dispatchEvent(new CustomEvent("content:swapped", { detail: { root: anchor.parentElement } }));
