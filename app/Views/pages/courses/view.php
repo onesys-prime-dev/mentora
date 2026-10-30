@@ -133,7 +133,7 @@ $features = $courseFeatures ?? [
         $skeletonShape = array_key_exists($activeFeature ?? '', $features) ? $activeFeature : 'overview';
         ?>
         <div
-            class="w-full rounded-3xl bg-white shadow-xl ring-1 ring-brand/15 lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+            class="w-full rounded-3xl bg-white shadow-xl ring-1 ring-brand/15 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scroll-smooth lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden"
             id="course-content"
             role="tabpanel"
             aria-busy="true"

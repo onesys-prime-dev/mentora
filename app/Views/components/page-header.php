@@ -22,7 +22,9 @@ $actions = $actions ?? '';
         <div class="flex items-center gap-4">
 
             <?php if ($icon !== null): ?>
-                <?= icon($icon, 'h-6 w-6 shrink-0 text-brand') ?>
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 ring-1 ring-brand/15">
+                    <?= icon($icon, 'h-6 w-6 text-brand') ?>
+                </span>
             <?php endif; ?>
 
             <h2 class="text-2xl font-bold text-brand"><?= esc($title) ?></h2>
