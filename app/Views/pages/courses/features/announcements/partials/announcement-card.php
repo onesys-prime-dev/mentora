@@ -212,14 +212,14 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
 
         <div class="hidden items-center gap-3" data-reply-form>
             <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-8 w-8 shrink-0 rounded-full" alt="">
-            <div class="flex flex-1 items-end gap-2 rounded-2xl border border-gray-200 px-4 py-2 focus-within:border-brand/50">
+            <div class="flex flex-1 items-center gap-2 rounded-2xl border border-gray-200 px-4 py-2 focus-within:border-brand/50">
                 <textarea
                     rows="1"
                     data-reply-input
                     placeholder="Reply in thread"
-                    class="flex-1 resize-none text-sm outline-none placeholder:text-[#767676]"></textarea>
-                <div class="flex items-center gap-1 pb-0.5">
-                    <button type="button" data-reply-send title="Send" class="rounded-lg p-1.5 text-brand transition hover:bg-brand/10 disabled:opacity-40" disabled aria-label="Send">
+                    class="block min-h-5 flex-1 resize-none p-0 text-sm leading-5 outline-none placeholder:text-[#767676]"></textarea>
+                <div class="flex items-center gap-1">
+                    <button type="button" data-reply-send title="Send" class="-my-1 flex h-7 w-7 items-center justify-center rounded-lg text-brand transition hover:bg-brand/10 disabled:opacity-40" disabled aria-label="Send">
                         <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a1 1 0 00-1.39 1.17L4.5 12 2 18.23a1 1 0 001.4 1.17z"/></svg>
                     </button>
                 </div>
