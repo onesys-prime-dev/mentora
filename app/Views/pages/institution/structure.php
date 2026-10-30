@@ -78,38 +78,35 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
     <?php else: ?>
 
-    <?php // Pick what to look at from a dropdown; the details below get the whole width and scroll on their own (lg and up). ?>
-    <div class="relative max-w-xl" data-structure-picker>
+    <?php // From lg up the tree and the details each scroll on their own; the heading and the counts stay put. ?>
+    <div class="grid gap-6 lg:grid-cols-[19rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]" data-panel-scroll="inner" data-structure-split>
 
-        <button type="button" aria-haspopup="true" aria-expanded="false" data-picker-toggle
-            class="flex w-full items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-2.5 text-left text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
-            <span class="min-w-0 flex-1 truncate" data-picker-label>Choose a department</span>
-            <svg class="h-4 w-4 shrink-0 transition-transform data-[open=true]:rotate-180" data-picker-chevron xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-        </button>
-
-        <div class="absolute left-0 right-0 top-full z-30 mt-2 flex flex-col gap-3 rounded-2xl border border-brand/20 bg-white p-3 shadow-xl" data-picker-panel hidden aria-label="Departments and programs">
+        <aside class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-gray-100 lg:pr-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Departments and programs">
 
             <label class="sr-only" for="structure-search">Search departments and programs</label>
             <input id="structure-search" type="search" placeholder="Search departments and programs" autocomplete="off"
                 class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/50" data-structure-search>
 
-            <ul class="flex max-h-80 flex-col gap-1 overflow-y-auto" data-structure-tree>
+            <ul class="flex flex-col gap-1" data-structure-tree>
                 <?php foreach ($structureTree as $department): ?>
                     <?php $deptActive = (int) $department['is_active'] === 1; ?>
                     <li data-tree-dept="<?= esc((string) $department['id']) ?>">
-                        <button type="button" data-select="dept-<?= esc((string) $department['id']) ?>" data-pick-text="<?= esc($department['code'] . ' · ' . $department['name'], 'attr') ?>" data-search-text="<?= esc(strtolower($department['code'] . ' ' . $department['name']), 'attr') ?>"
-                            class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:text-brand">
+                        <button type="button" data-select="dept-<?= esc((string) $department['id']) ?>" data-search-text="<?= esc(strtolower($department['code'] . ' ' . $department['name']), 'attr') ?>"
+                            class="group/dept flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:text-brand">
                             <span class="rounded bg-brand-tint px-1.5 py-0.5 font-mono text-[11px] text-brand-dark"><?= esc($department['code']) ?></span>
                             <span class="min-w-0 flex-1 truncate <?= $deptActive ? '' : 'text-[#646464]' ?>"><?= esc($department['name']) ?></span>
                             <span class="text-xs font-normal text-[#646464]"><?= esc((string) count($department['subDepartments'])) ?></span>
+                            <?php if ($department['subDepartments'] !== []): ?>
+                                <svg class="h-4 w-4 shrink-0 text-[#646464] transition-transform group-data-[open=true]/dept:rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                            <?php endif; ?>
                         </button>
 
                         <?php if ($department['subDepartments'] !== []): ?>
-                            <ul class="ml-5 mt-1 flex flex-col gap-1 border-l border-gray-100 pl-2">
+                            <ul class="ml-5 mt-1 flex flex-col gap-1 border-l border-gray-100 pl-2" data-tree-children hidden>
                                 <?php foreach ($department['subDepartments'] as $sub): ?>
                                     <?php $subActive = (int) $sub['is_active'] === 1; ?>
                                     <li>
-                                        <button type="button" data-select="sub-<?= esc((string) $sub['id']) ?>" data-pick-text="<?= esc($sub['code'] . ' · ' . $sub['name'] . ' (' . $department['code'] . ')', 'attr') ?>" data-search-text="<?= esc(strtolower($sub['code'] . ' ' . $sub['name'] . ' ' . implode(' ', array_map(static fn (array $p): string => $p['code'] . ' ' . $p['name'], $sub['programs']))), 'attr') ?>"
+                                        <button type="button" data-select="sub-<?= esc((string) $sub['id']) ?>" data-search-text="<?= esc(strtolower($sub['code'] . ' ' . $sub['name'] . ' ' . implode(' ', array_map(static fn (array $p): string => $p['code'] . ' ' . $p['name'], $sub['programs']))), 'attr') ?>"
                                             class="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:font-semibold data-[active=true]:text-brand">
                                             <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-[#646464]"><?= esc($sub['code']) ?></span>
                                             <span class="min-w-0 flex-1 truncate <?= $subActive ? '' : 'text-[#646464]' ?>"><?= esc($sub['name']) ?></span>
@@ -124,12 +121,9 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
             </ul>
 
             <p class="hidden px-3 py-4 text-sm text-[#646464]" data-structure-search-empty>Nothing matches that search.</p>
-        </div>
-    </div>
+        </aside>
 
-    <div class="flex flex-col gap-6" data-panel-scroll="inner" data-structure-split>
-
-        <div class="flex min-w-0 flex-col lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-structure-detail tabindex="-1">
+        <div class="flex min-w-0 flex-col lg:min-h-0 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-structure-detail tabindex="-1">
 
         <?php foreach ($structureTree as $department): ?>
             <?php $deptActive = (int) $department['is_active'] === 1; ?>
@@ -460,18 +454,20 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         if (history.replaceState) history.replaceState(null, '', '#' + id);
     }
 
-    var picker = document.querySelector('[data-structure-picker]');
-    var toggle = picker.querySelector('[data-picker-toggle]');
-    var panel = picker.querySelector('[data-picker-panel]');
-    var chevron = picker.querySelector('[data-picker-chevron]');
-    var label = picker.querySelector('[data-picker-label]');
-    var search = picker.querySelector('[data-structure-search]');
+    // A department's row opens and closes the sub-departments under it.
+    function setExpanded(item, open) {
+        var list = item.querySelector(':scope > [data-tree-children]');
+        var head = item.querySelector(':scope > [data-select]');
+        if (!list) return;
+        list.hidden = !open;
+        head.dataset.open = String(open);
+        head.setAttribute('aria-expanded', String(open));
+    }
 
-    function setOpen(open) {
-        panel.hidden = !open;
-        toggle.setAttribute('aria-expanded', String(open));
-        chevron.dataset.open = String(open);
-        if (open && search) search.focus();
+    function expandOnlyActive() {
+        document.querySelectorAll('[data-tree-dept]').forEach(function (item) {
+            setExpanded(item, item.querySelector('[data-active="true"]') !== null);
+        });
     }
 
     function select(id, keep) {
@@ -480,28 +476,28 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
         departments.forEach(function (d) { d.hidden = !d.contains(view); });
         views.forEach(function (v) { v.hidden = v !== view; });
-        buttons.forEach(function (b) {
-            var on = b.dataset.select === id;
-            b.dataset.active = String(on);
-            if (on) label.textContent = b.dataset.pickText;
-        });
-        setOpen(false);
+        buttons.forEach(function (b) { b.dataset.active = String(b.dataset.select === id); });
+        expandOnlyActive();
 
         if (!keep) { detail.scrollTop = 0; remember(id); }
         return true;
     }
 
-    toggle.addEventListener('click', function () { setOpen(panel.hidden); });
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && !panel.hidden) { setOpen(false); toggle.focus(); }
-    });
-
     document.addEventListener('click', function (event) {
-        if (!panel.hidden && !picker.contains(event.target)) setOpen(false);
-
         var target = event.target.closest('[data-select]');
-        if (target && select(target.dataset.select)) return;
+
+        if (target) {
+            var row = target.closest('[data-tree-dept]');
+            var isDeptRow = row !== null && target.parentElement === row;
+            var list = isDeptRow ? row.querySelector(':scope > [data-tree-children]') : null;
+            var wasOpen = list !== null && !list.hidden && target.dataset.active === 'true';
+
+            if (select(target.dataset.select)) {
+                // Clicking the department that is already showing folds it; any other click opens it.
+                if (isDeptRow && wasOpen) setExpanded(row, false);
+                return;
+            }
+        }
 
         // A row's ⋯ menu closes when something inside it is chosen or the page is clicked elsewhere.
         document.querySelectorAll('[data-row-menu][open]').forEach(function (menu) {
@@ -517,12 +513,15 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
     if (!select(start, true) && !select(saved, true) && first) select(first.dataset.view, true);
 
+    var search = document.querySelector('[data-structure-search]');
     var none = document.querySelector('[data-structure-search-empty]');
 
     if (search) {
         search.addEventListener('input', function () {
             var q = search.value.trim().toLowerCase();
             var shown = 0;
+
+            if (q === '') expandOnlyActive();
 
             document.querySelectorAll('[data-tree-dept]').forEach(function (dept) {
                 var own = dept.querySelector(':scope > [data-select]');
@@ -538,6 +537,9 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
                 dept.hidden = !any;
                 if (any) shown++;
+
+                // While searching, a department with a match shows what matched.
+                if (q !== '') setExpanded(dept, any);
             });
 
             if (none) none.classList.toggle('hidden', shown > 0);

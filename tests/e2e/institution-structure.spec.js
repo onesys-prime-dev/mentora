@@ -63,7 +63,6 @@ async function openStructure(page) {
 
 // The tree on the left chooses which department the page shows.
 async function openDepartment(page, name) {
-    await page.locator("[data-picker-toggle]").click();
     await page.locator("[data-structure-tree] > li > [data-select^='dept-']").filter({ hasText: name }).click();
 }
 
@@ -139,7 +138,6 @@ test("TC-STR-05 A department with active sub-departments says why it cannot be s
     await openStructure(page);
 
     // The first demo department has sub-departments under it.
-    await page.locator("[data-picker-toggle]").click();
     await page.locator("[data-tree-dept]:has(ul) > [data-select]").first().click();
     const card = page.locator("[data-department]:not([hidden])");
     await card.getByRole("button", { name: "Deactivate" }).first().click();
