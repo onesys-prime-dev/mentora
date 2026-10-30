@@ -204,7 +204,8 @@ test("TC-CRS-02 A duplicate code shows its reason in the dialog, and search find
     await page.getByLabel("Search").fill("Browser Testing");
     await page.getByRole("button", { name: "Apply" }).click();
 
-    await expect(page.getByText("1 course match")).toBeVisible();
+    // The counter keeps the whole catalog while searching, so the rows are what shows the match.
+    await expect(page.locator("tbody tr")).toHaveCount(1);
     await expect(page.getByRole("row", { name: /E2E 101/ })).toBeVisible();
 });
 

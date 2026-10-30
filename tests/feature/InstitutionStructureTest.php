@@ -122,7 +122,7 @@ final class InstitutionStructureTest extends RouteTestCase
         $this->assertStringContainsString('data-department="' . $this->department . '"', $body);
         $this->assertStringContainsString('data-sub-department="' . $this->subDepartment . '"', $body);
         $this->assertStringContainsString('data-program="' . $this->program . '"', $body);
-        $this->assertMatchesRegularExpression('/1 department,\s+1 sub-department,\s+1 program/', $body);
+        $this->assertMatchesRegularExpression('/<strong[^>]*>1<\/strong>\s+department.*?<strong[^>]*>1<\/strong>\s+sub-department.*?<strong[^>]*>1<\/strong>\s+program/s', $body);
         $this->assertStringContainsString('Add a department', $body);
         $this->assertStringContainsString('id="structure-department"', $body);
         $this->assertStringContainsString('id="structure-confirm"', $body);
