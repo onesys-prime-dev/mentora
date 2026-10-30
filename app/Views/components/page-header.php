@@ -31,6 +31,8 @@ $actions = $actions ?? '';
 
         </div>
 
+        <span class="mt-1 h-1 w-14 rounded-full bg-linear-to-r from-brand to-blue-400" aria-hidden="true"></span>
+
         <?php if ($description !== ''): ?>
             <p class="text-sm text-[#646464]"><?= esc($description) ?></p>
         <?php endif; ?>
