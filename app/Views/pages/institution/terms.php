@@ -79,6 +79,25 @@ foreach ($termRows as $term) {
         'actions' => $actions,
     ];
 }
+
+// The running term gets a card of its own above the list: where it is in its dates, and its actions.
+$current = null;
+
+foreach ($termRows as $term) {
+    if ($term['status'] === 'active') {
+        $current = $term;
+        break;
+    }
+}
+
+if ($current !== null) {
+    $startAt   = strtotime((string) $current['start_date']);
+    $endAt     = strtotime((string) $current['end_date']);
+    $span      = max(1, $endAt - $startAt);
+    $progress  = (int) round(min(1, max(0, (time() - $startAt) / $span)) * 100);
+    $weeks     = max(1, (int) ceil($span / 604800));
+    $weekNow   = min($weeks, max(1, (int) floor((time() - $startAt) / 604800) + 1));
+}
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -102,13 +121,6 @@ foreach ($termRows as $term) {
             : '',
     ], ['saveData' => false]) ?>
 
-    <?= view('components/tabs', ['ariaLabel' => 'Academics', 'tabs' => [
-        ['label' => 'Structure', 'href' => site_url('institution/structure')],
-        ['label' => 'Courses', 'href' => site_url('institution/courses')],
-        ['label' => 'Terms', 'href' => site_url($base), 'active' => true],
-        ['label' => 'Offerings', 'href' => site_url('institution/offerings')],
-    ]], ['saveData' => false]) ?>
-
     <?php if (! $termCanEdit): ?>
         <?= view('components/lock-note', ['kind' => 'read_only'], ['saveData' => false]) ?>
     <?php endif; ?>
@@ -120,7 +132,45 @@ foreach ($termRows as $term) {
         <?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?>
     <?php endif; ?>
 
+    <?php if ($current !== null): ?>
+        <section class="flex flex-wrap items-center justify-between gap-x-8 gap-y-4 rounded-2xl border border-brand/15 bg-linear-to-br from-brand/10 to-brand/[0.03] px-6 py-5" aria-label="Current term" data-current-term="<?= esc((string) $current['id']) ?>">
+            <div class="flex min-w-0 flex-col gap-1">
+                <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">Current term</span>
+                <h2 class="flex flex-wrap items-center gap-3 text-lg font-bold text-brand">
+                    <?= esc($current['name']) ?> · A.Y. <?= esc((string) $current['academic_year']) ?>
+                    <?= view('components/status-badge', ['label' => 'Active', 'tone' => 'success'], ['saveData' => false]) ?>
+                </h2>
+                <p class="text-sm text-[#646464]">
+                    <?= esc((string) $current['offering_count']) ?> <?= (int) $current['offering_count'] === 1 ? 'offering' : 'offerings' ?> ·
+                    <?= esc((string) $current['enrolment_count']) ?> enrolled
+                </p>
+            </div>
+
+            <div class="flex min-w-56 max-w-md flex-1 flex-col gap-1.5">
+                <span class="text-sm text-[#646464]">Week <?= esc((string) $weekNow) ?> of <?= esc((string) $weeks) ?></span>
+                <div class="h-2 overflow-hidden rounded-full bg-brand/15" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= esc((string) $progress) ?>" aria-label="Progress through the term">
+                    <div class="h-full rounded-full bg-brand" style="width: <?= esc((string) $progress) ?>%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-[#646464]"><span><?= esc($date((string) $current['start_date'])) ?></span><span><?= esc($date((string) $current['end_date'])) ?></span></div>
+            </div>
+
+            <?php if ($termCanEdit): ?>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" class="<?= $link ?>" data-dialog-open="term-form"
+                        data-dialog-title="Edit <?= esc($current['name']) ?>" data-dialog-label="Save"
+                        data-dialog-action="<?= esc(site_url($base . '/' . $current['id'])) ?>"
+                        data-dialog-values="<?= $json(['name' => $current['name'], 'academic_year' => $current['academic_year'], 'start_date' => $current['start_date'], 'end_date' => $current['end_date']]) ?>">Edit dates</button>
+                    <a class="rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url($base . '/' . $current['id'] . '/close')) ?>">Close term</a>
+                </div>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
+
+    <?php // Only the table scrolls; the heading, the filters and the count stay put (lg and up). ?>
+    <div class="flex flex-col gap-6" data-panel-scroll="inner">
+
     <?= view('components/data-table', [
+        'fill'       => true, // the table scrolls under its own heading row
         'caption'    => 'Academic terms',
         'columns'    => [
             ['key' => 'name', 'label' => 'Term'],
@@ -135,6 +185,8 @@ foreach ($termRows as $term) {
         'emptyTitle' => 'No terms yet',
         'emptyText'  => $termCanEdit ? 'Add your first term, then start it when it begins.' : 'Terms will be listed here.',
     ], ['saveData' => false]) ?>
+
+    </div>
 
 </div>
 

@@ -65,7 +65,7 @@ test("TC-STR-01 The administrator lands on their home and reaches the structure 
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await expect(page).toHaveURL(/\/institution\/dashboard$/);
 
-    await page.getByRole("navigation", { name: "Institution" }).getByRole("link", { name: "Academics", exact: true }).click();
+    await page.getByRole("navigation", { name: "Institution" }).getByRole("link", { name: "Structure", exact: true }).click();
 
     await expect(page).toHaveURL(/\/institution\/structure$/);
     await expect(page.locator("[data-department]").first()).toBeVisible();
