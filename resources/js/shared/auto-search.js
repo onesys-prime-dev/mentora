@@ -38,7 +38,7 @@ let inFlight = null;
 function remember(input) {
     try {
         sessionStorage.setItem(KEY, JSON.stringify({ path: location.pathname, name: input.name }));
-    } catch (error) {
+    } catch {
         // Private windows can refuse storage; the search still works, only the focus is lost.
     }
 }
@@ -227,6 +227,6 @@ try {
             input.setSelectionRange(input.value.length, input.value.length);
         }
     }
-} catch (error) {
+} catch {
     // Nothing remembered, nothing to restore.
 }
