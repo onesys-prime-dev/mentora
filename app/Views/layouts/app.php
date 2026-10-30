@@ -2,7 +2,10 @@
 /**
  * Pages opt into a viewport-locked shell by passing 'fullHeight' => true.
  * There the page itself never scrolls — the shell is pinned to the viewport
- * and any overflow is handled inside the individual cards.
+ * and any overflow is handled inside the individual cards. The main area
+ * itself scrolls if the cards still don't fit.
+ *
+ * The header is sticky, so it stays on top on every page, locked or not.
  *
  * The lock only engages from `lg` up. Below that there isn't the vertical
  * room to fit a dashboard's worth of cards on one screen, so the page falls
@@ -59,7 +62,7 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
 
     <div class="flex flex-col <?= $shellHeight ?>">
 
-        <div class="relative z-30 shrink-0">
+        <div class="sticky top-0 z-30 shrink-0">
 
         <?= $this->include('layouts/partials/header') ?>
 
@@ -79,13 +82,13 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
             <?= $this->include('layouts/partials/flash-toasts') ?>
         <?php endif; ?>
 
-        <div class="flex flex-1 flex-col <?= $hasMenu ? 'lg:min-h-0 lg:flex-row' : '' ?>">
+        <div class="flex flex-1 flex-col <?= $locked ? 'lg:min-h-0' : '' ?> <?= $hasMenu ? 'lg:flex-row' : '' ?>">
 
             <?php if ($hasMenu): ?>
                 <?= $this->include('layouts/partials/institution-menu') ?>
             <?php endif; ?>
 
-            <main <?= $hasMenu ? 'data-pinned-panel' : '' ?> class="min-w-0 flex-1 <?= $mainGutter ?> <?= $mainSpacing ?> <?= $hasMenu ? 'lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : '' ?>">
+            <main <?= $hasMenu ? 'data-pinned-panel' : '' ?> class="min-w-0 flex-1 <?= $mainGutter ?> <?= $mainSpacing ?> <?= $locked ? 'lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : '' ?>">
 
                 <?= $pageContent ?>
 

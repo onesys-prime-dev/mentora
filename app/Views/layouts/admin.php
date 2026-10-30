@@ -36,7 +36,7 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
     <?php // From lg up the header and the menu stay put and only the page scrolls; below it the whole page scrolls as usual. ?>
     <div class="flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:overflow-hidden">
 
-        <div class="relative z-30 shrink-0">
+        <div class="sticky top-0 z-30 shrink-0">
 
             <?= $this->include('layouts/partials/header') ?>
 
