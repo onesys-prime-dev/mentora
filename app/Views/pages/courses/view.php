@@ -23,7 +23,7 @@ $features = $courseFeatures ?? [
     <?= $this->include('components/back') ?>
 </div>
 
-<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-5 lg:h-full lg:min-h-0">
 
     <?php if (! empty($readOnlyView)): ?>
         <div class="px-4 sm:px-10" data-view-only>
@@ -43,7 +43,7 @@ $features = $courseFeatures ?? [
         </div>
     <?php endif; ?>
 
-    <div class="flex flex-col">
+    <div class="flex flex-col lg:min-h-0 lg:flex-1">
 
         <?php
         // The banner and the tabs stay pinned under the header. Once the page has scrolled, the
@@ -52,7 +52,7 @@ $features = $courseFeatures ?? [
         $bannerImage = $course['banner_image'] ?? base_url('assets/images/placeholder/course-tech-1.png');
         ?>
         <div
-            class="group/course sticky top-(--app-header-h,4.5rem) z-20 -mt-2 flex flex-col pt-2 transition-[background-color,box-shadow] duration-200 data-[collapsed=true]:rounded-b-3xl data-[collapsed=true]:bg-sky-100/95 data-[collapsed=true]:shadow-md data-[collapsed=true]:backdrop-blur-lg"
+            class="group/course sticky top-(--app-header-h,4.5rem) z-20 -mt-2 flex flex-col pt-2 transition-[background-color,box-shadow] duration-200 max-lg:data-[collapsed=true]:rounded-b-3xl max-lg:data-[collapsed=true]:bg-sky-100/95 max-lg:data-[collapsed=true]:shadow-md max-lg:data-[collapsed=true]:backdrop-blur-lg lg:shrink-0"
             data-course-sticky
             data-collapsed="false"
         >
@@ -131,7 +131,7 @@ $features = $courseFeatures ?? [
         $skeletonShape = array_key_exists($activeFeature ?? '', $features) ? $activeFeature : 'overview';
         ?>
         <div
-            class="w-full rounded-3xl bg-white shadow-xl ring-1 ring-brand/15"
+            class="w-full rounded-3xl bg-white shadow-xl ring-1 ring-brand/15 lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
             id="course-content"
             role="tabpanel"
             aria-busy="true"
@@ -157,15 +157,17 @@ $features = $courseFeatures ?? [
 (function () {
     var bar = document.querySelector('[data-course-sticky]');
     if (!bar) return;
+    var content = document.getElementById('course-content');
     var collapsed = false;
     var update = function () {
-        var y = window.scrollY;
+        var y = Math.max(window.scrollY, content ? content.scrollTop : 0);
         var next = collapsed ? y > 20 : y > 120;
         if (next === collapsed) return;
         collapsed = next;
         bar.dataset.collapsed = collapsed ? 'true' : 'false';
     };
     window.addEventListener('scroll', update, { passive: true });
+    if (content) content.addEventListener('scroll', update, { passive: true });
     update();
 })();
 </script>

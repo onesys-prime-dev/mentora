@@ -113,6 +113,7 @@ class ParentCourseController extends BaseController
             'user'           => $parent,
             'course'         => $course,
             'activeFeature'  => $feature,
+            'fullHeight'     => true,
             'courseRole'     => 'parent',
             'courseFeatures' => array_combine(self::FEATURES, ['Overview', 'Announcements', 'Assessments', 'Grades']),
             'courseUrlPrefix' => 'parent/children/' . $studentId,

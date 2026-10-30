@@ -157,6 +157,9 @@ class CourseController extends BaseController
 
                 'activeFeature' => $activeFeature,
 
+                // The banner and tabs stay put and only the content card scrolls.
+                'fullHeight' => true,
+
                 // The institutional administrator looks at courses; the page says so and addresses the read-only routes.
                 'readOnlyView' => \App\Services\Courses\CourseViewer::isReadOnlyViewer($user),
                 'readOnlyAs' => \App\Services\Courses\CourseViewer::isDeanViewer($user)
