@@ -540,38 +540,46 @@ html[data-theme="dark"] .admin-flat [data-table].shadow-sm {
 }
 
 /* Cards inside the page panel are outlined, since white on white has no edge. */
-.admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
+.admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm),
+main[data-pinned-panel] [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
     border: 1px solid #c9d6ee;
     box-shadow: none;
 }
 
-html[data-theme="dark"] .admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
+html[data-theme="dark"] .admin-flat [data-page-panel] .bg-white:is(.shadow, .shadow-sm),
+html[data-theme="dark"] main[data-pinned-panel] [data-page-panel] .bg-white:is(.shadow, .shadow-sm) {
     border-color: var(--dk-line);
 }
 
 /* Blue touches on the page panel: a brand stripe and a soft wash at the top, blue table headings, blue-edged cards. */
-.admin-flat [data-page-panel] {
+.admin-flat [data-page-panel],
+main[data-pinned-panel] [data-page-panel] {
     background-image: linear-gradient(#0b3a8f, #0b3a8f), linear-gradient(#eef3fc, #fff 11rem);
     background-size: 100% 4px, 100% 100%;
     background-repeat: no-repeat;
 }
 
-.admin-flat [data-page-panel] thead th {
+.admin-flat [data-page-panel] thead th,
+main[data-pinned-panel] [data-page-panel] thead th {
     background-color: #eef3fc;
     color: #0b3a8f;
 }
 
 .admin-flat [data-page-panel] [data-toolbar].shadow-sm,
-.admin-flat [data-page-panel] [data-table].shadow-sm {
+.admin-flat [data-page-panel] [data-table].shadow-sm,
+main[data-pinned-panel] [data-page-panel] [data-toolbar].shadow-sm,
+main[data-pinned-panel] [data-page-panel] [data-table].shadow-sm {
     border-color: #c9d6ee;
 }
 
-html[data-theme="dark"] .admin-flat [data-page-panel] {
+html[data-theme="dark"] .admin-flat [data-page-panel],
+html[data-theme="dark"] main[data-pinned-panel] [data-page-panel] {
     background-image: linear-gradient(#5b8def, #5b8def);
     background-size: 100% 4px;
 }
 
-html[data-theme="dark"] .admin-flat [data-page-panel] thead th {
+html[data-theme="dark"] .admin-flat [data-page-panel] thead th,
+html[data-theme="dark"] main[data-pinned-panel] [data-page-panel] thead th {
     background-color: rgb(91 141 239 / .12);
     color: inherit;
 }
