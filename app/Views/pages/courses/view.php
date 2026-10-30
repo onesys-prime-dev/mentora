@@ -19,7 +19,7 @@ $features = $courseFeatures ?? [
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col lg:h-full lg:min-h-0">
+<div class="flex flex-col lg:-mt-4 lg:h-[calc(100%+1rem)] lg:min-h-0">
 
 <div class="flex justify-between items-center">
     <?= $this->include('components/back') ?>
@@ -112,7 +112,7 @@ $features = $courseFeatures ?? [
                         type="button"
                         role="tab"
                         aria-selected="<?= $isActiveTab ? 'true' : 'false' ?>"
-                        class="course-feature shrink-0 whitespace-nowrap px-4 py-1.5 cursor-pointer rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:px-6 <?= $isActiveTab ? 'bg-white !text-brand font-semibold' : 'text-white bg-blue-900 hover:bg-blue-800' ?>"
+                        class="course-feature shrink-0 whitespace-nowrap px-4 py-1.5 cursor-pointer rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:px-6 <?= $isActiveTab ? 'bg-white bg-linear-to-b from-sky-100 to-white !text-brand font-semibold' : 'text-white bg-blue-900 hover:bg-blue-800' ?>"
                         data-course-feature="<?= esc($feature) ?>"
                     >
                         <?= esc($label) ?>

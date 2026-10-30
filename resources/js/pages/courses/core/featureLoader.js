@@ -129,6 +129,9 @@ export function highlightFeatureTab(feature)
             const isActive = button.dataset.courseFeature === feature;
 
             button.classList.toggle("bg-white", isActive);
+            button.classList.toggle("bg-linear-to-b", isActive);
+            button.classList.toggle("from-sky-100", isActive);
+            button.classList.toggle("to-white", isActive);
             button.classList.toggle("font-semibold", isActive);
             button.classList.toggle("!text-brand", isActive);
 
