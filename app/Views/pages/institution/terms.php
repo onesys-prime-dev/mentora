@@ -2,7 +2,10 @@
 /**
  * The institution's academic terms.
  *
- * @var list<array<string, mixed>> $termRows
+ * @var list<array<string, mixed>> $termRows     the terms that match the filters
+ * @var list<array<string, mixed>> $termAll      every term (the running one is drawn from these)
+ * @var list<string>               $termYears    the academic years there are terms in
+ * @var array<string, string>      $termFilters  q, year and status
  * @var bool                       $termCanEdit
  */
 $base    = 'institution/terms';
@@ -10,6 +13,14 @@ $primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white tra
 $link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 
 $tones  = ['upcoming' => 'info', 'active' => 'success', 'completed' => 'neutral', 'archived' => 'neutral'];
+$filtered = $termFilters['q'] !== '' || $termFilters['year'] !== '' || $termFilters['status'] !== '';
+
+$yearOptions = ['' => 'Any year'];
+
+foreach ($termYears as $year) {
+    $yearOptions[$year] = $year;
+}
+
 $labels = ['upcoming' => 'Upcoming', 'active' => 'Active', 'completed' => 'Completed', 'archived' => 'Archived'];
 $json   = static fn (array $values): string => esc(json_encode($values, JSON_UNESCAPED_UNICODE));
 $date   = static fn (string $d): string => date('j M Y', strtotime($d));
@@ -83,7 +94,7 @@ foreach ($termRows as $term) {
 // The running term gets a card of its own above the list: where it is in its dates, and its actions.
 $current = null;
 
-foreach ($termRows as $term) {
+foreach ($termAll as $term) {
     if ($term['status'] === 'active') {
         $current = $term;
         break;
@@ -166,6 +177,22 @@ if ($current !== null) {
         </section>
     <?php endif; ?>
 
+    <?= view('components/toolbar', [
+        'surface'  => 'tinted', // on the page's white panel a white card would not stand out
+        'inline'   => true,
+        'action'   => site_url($base),
+        'filtered' => $filtered,
+        'fields'   => [
+            ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => 'Term name or academic year', 'value' => $termFilters['q'], 'span' => 'lg:col-span-2'],
+            ['type' => 'select', 'name' => 'year', 'label' => 'Academic year', 'options' => $yearOptions, 'value' => $termFilters['year']],
+            ['type' => 'select', 'name' => 'status', 'label' => 'Status', 'options' => ['' => 'Any status'] + $labels, 'value' => $termFilters['status']],
+        ],
+    ], ['saveData' => false]) ?>
+
+    <p class="text-sm text-[#646464]" aria-live="polite" data-term-total>
+        <?= esc((string) count($termRows)) ?> <?= count($termRows) === 1 ? 'term' : 'terms' ?><?= $filtered ? ' match' : '' ?>
+    </p>
+
     <?php // Only the table scrolls; the heading, the filters and the count stay put (lg and up). ?>
     <div class="flex flex-col gap-6" data-panel-scroll="inner">
 
@@ -182,8 +209,8 @@ if ($current !== null) {
         ],
         'rows'       => $rows,
         'emptyIcon'  => 'calendar',
-        'emptyTitle' => 'No terms yet',
-        'emptyText'  => $termCanEdit ? 'Add your first term, then start it when it begins.' : 'Terms will be listed here.',
+        'emptyTitle' => $filtered ? 'No terms match these filters' : 'No terms yet',
+        'emptyText'  => $filtered ? 'Try a different search, academic year or status.' : ($termCanEdit ? 'Add your first term, then start it when it begins.' : 'Terms will be listed here.'),
     ], ['saveData' => false]) ?>
 
     </div>
