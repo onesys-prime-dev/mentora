@@ -129,8 +129,9 @@ export function highlightFeatureTab(feature)
             const isActive = button.dataset.courseFeature === feature;
 
             button.classList.toggle("bg-white", isActive);
-            button.classList.toggle("border-t", isActive);
-            button.classList.toggle("border-black/15", isActive);
+            button.classList.toggle("border-t-[3px]", isActive);
+            button.classList.toggle("border-brand", isActive);
+            button.classList.toggle("font-semibold", isActive);
             button.classList.toggle("!text-black", isActive);
 
             // An inactive tab is the blue one with white text. The server writes the

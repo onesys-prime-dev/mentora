@@ -62,7 +62,7 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
 
     <div class="flex flex-col <?= $shellHeight ?>">
 
-        <div class="sticky top-0 z-30 shrink-0">
+        <div class="sticky top-0 z-30 shrink-0" data-app-header>
 
         <?= $this->include('layouts/partials/header') ?>
 
@@ -101,6 +101,18 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
     <?php if ($reauthDialog ?? false): ?>
         <?= $this->include('layouts/partials/reauth-dialog') ?>
     <?php endif; ?>
+
+    <script>
+    // Pages that pin something under the header read its height from --app-header-h
+    // (it changes when an announcement or banner appears above the page).
+    (function () {
+        var bar = document.querySelector('[data-app-header]');
+        if (!bar) return;
+        var set = function () { document.documentElement.style.setProperty('--app-header-h', bar.offsetHeight + 'px'); };
+        set();
+        if (window.ResizeObserver) new ResizeObserver(set).observe(bar);
+    })();
+    </script>
 
     <?= $this->renderSection('scripts') ?>
 
