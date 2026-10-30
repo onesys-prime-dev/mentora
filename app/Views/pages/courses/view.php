@@ -19,11 +19,13 @@ $features = $courseFeatures ?? [
 
 <?= $this->section('content') ?>
 
+<div class="flex flex-col lg:h-full lg:min-h-0">
+
 <div class="flex justify-between items-center">
     <?= $this->include('components/back') ?>
 </div>
 
-<div class="flex flex-col gap-5 lg:h-full lg:min-h-0">
+<div class="flex flex-col gap-5 lg:min-h-0 lg:flex-1">
 
     <?php if (! empty($readOnlyView)): ?>
         <div class="px-4 sm:px-10" data-view-only>
@@ -52,7 +54,7 @@ $features = $courseFeatures ?? [
         $bannerImage = $course['banner_image'] ?? base_url('assets/images/placeholder/course-tech-1.png');
         ?>
         <div
-            class="group/course sticky top-(--app-header-h,4.5rem) z-20 -mt-2 flex flex-col pt-2 transition-[background-color,box-shadow] duration-200 max-lg:data-[collapsed=true]:rounded-b-3xl max-lg:data-[collapsed=true]:bg-sky-100/95 max-lg:data-[collapsed=true]:shadow-md max-lg:data-[collapsed=true]:backdrop-blur-lg lg:shrink-0"
+            class="group/course sticky top-(--app-header-h,4.5rem) z-20 -mt-2 flex flex-col pt-2 lg:static lg:mt-0 lg:pt-0 transition-[background-color,box-shadow] duration-200 max-lg:data-[collapsed=true]:rounded-b-3xl max-lg:data-[collapsed=true]:bg-sky-100/95 max-lg:data-[collapsed=true]:shadow-md max-lg:data-[collapsed=true]:backdrop-blur-lg lg:shrink-0"
             data-course-sticky
             data-collapsed="false"
         >
@@ -141,6 +143,8 @@ $features = $courseFeatures ?? [
         </div>
 
     </div>
+
+</div>
 
 </div>
 
