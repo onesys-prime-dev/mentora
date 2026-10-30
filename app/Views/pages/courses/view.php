@@ -52,7 +52,7 @@ $features = $courseFeatures ?? [
         $bannerImage = $course['banner_image'] ?? base_url('assets/images/placeholder/course-tech-1.png');
         ?>
         <div
-            class="group/course sticky top-(--app-header-h,4.5rem) z-20 -mt-2 flex flex-col pt-2 transition-[background-color,box-shadow] duration-200 data-[collapsed=true]:rounded-b-3xl data-[collapsed=true]:bg-white/85 data-[collapsed=true]:shadow-md data-[collapsed=true]:backdrop-blur-lg"
+            class="group/course sticky top-(--app-header-h,4.5rem) z-20 -mt-2 flex flex-col pt-2 transition-[background-color,box-shadow] duration-200 data-[collapsed=true]:rounded-b-3xl data-[collapsed=true]:bg-sky-100/95 data-[collapsed=true]:shadow-md data-[collapsed=true]:backdrop-blur-lg"
             data-course-sticky
             data-collapsed="false"
         >
@@ -110,7 +110,7 @@ $features = $courseFeatures ?? [
                         type="button"
                         role="tab"
                         aria-selected="<?= $isActiveTab ? 'true' : 'false' ?>"
-                        class="course-feature shrink-0 whitespace-nowrap px-4 py-1.5 cursor-pointer rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:px-6 <?= $isActiveTab ? 'bg-white border-t-[3px] border-brand !text-black font-semibold' : 'text-white bg-blue-900 hover:bg-blue-800' ?>"
+                        class="course-feature shrink-0 whitespace-nowrap px-4 py-1.5 cursor-pointer rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:px-6 <?= $isActiveTab ? 'bg-white !text-brand font-semibold' : 'text-white bg-blue-900 hover:bg-blue-800' ?>"
                         data-course-feature="<?= esc($feature) ?>"
                     >
                         <?= esc($label) ?>

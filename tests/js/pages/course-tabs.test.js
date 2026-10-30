@@ -4,7 +4,7 @@ import { highlightFeatureTab } from "../../../resources/js/pages/courses/core/fe
 
 // The two ways a tab arrives: the opened one as the server writes it (white, no blue/white-text
 // classes), the others as the server writes them.
-const ACTIVE = "course-feature bg-white border-t-[3px] border-brand !text-black font-semibold";
+const ACTIVE = "course-feature bg-white !text-brand font-semibold";
 const INACTIVE = "course-feature text-white bg-blue-900 hover:bg-blue-800";
 
 beforeEach(() => {
@@ -26,8 +26,8 @@ describe("the tab colours", () => {
         expect(left.classList.contains("text-white")).toBe(true);
         expect(left.classList.contains("hover:bg-blue-800")).toBe(true);
         expect(left.classList.contains("bg-white")).toBe(false);
-        expect(left.classList.contains("!text-black")).toBe(false);
-        expect(left.classList.contains("border-t-[3px]")).toBe(false);
+        expect(left.classList.contains("!text-brand")).toBe(false);
+        expect(left.classList.contains("font-semibold")).toBe(false);
         expect(left.getAttribute("aria-selected")).toBe("false");
     });
 
@@ -37,7 +37,7 @@ describe("the tab colours", () => {
         const chosen = tab("overview");
 
         expect(chosen.classList.contains("bg-white")).toBe(true);
-        expect(chosen.classList.contains("!text-black")).toBe(true);
+        expect(chosen.classList.contains("!text-brand")).toBe(true);
         expect(chosen.classList.contains("bg-blue-900")).toBe(false);
         expect(chosen.classList.contains("text-white")).toBe(false);
         expect(chosen.classList.contains("hover:bg-blue-800")).toBe(false);
