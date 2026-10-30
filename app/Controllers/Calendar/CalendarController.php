@@ -44,6 +44,9 @@ class CalendarController extends BaseController
             'courses'        => $data['courses'],
             'assessmentTypes' => $this->assessmentTypeModel->where('status', 'Active')->orderBy('name')->findAll(),
             'previousPage'   => 'dashboard',
+
+            // The card keeps its size and the grid scrolls inside it.
+            'fullHeight'     => true,
         ]);
     }
 

@@ -64,6 +64,7 @@ class ParentCalendarController extends BaseController
             'calendarCoursesApiBase' => '',
             'calendarHeading'        => $name . '\'s calendar',
             'calendarBackUrl'        => site_url('parent/children/' . $studentId),
+            'fullHeight'             => true,
         ]);
     }
 
