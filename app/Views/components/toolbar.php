@@ -68,7 +68,7 @@ $input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm fo
             <?php elseif (($field['type'] ?? '') === 'date'): ?>
                 <input class="<?= $input ?>" type="date" name="<?= esc($field['name']) ?>" value="<?= esc((string) ($field['value'] ?? '')) ?>">
             <?php else: ?>
-                <input class="<?= $input ?>" type="search" name="<?= esc($field['name']) ?>" value="<?= esc((string) ($field['value'] ?? '')) ?>" placeholder="<?= esc($field['placeholder'] ?? '') ?>">
+                <input class="<?= $input ?>" type="search" spellcheck="false" autocomplete="off" name="<?= esc($field['name']) ?>" value="<?= esc((string) ($field['value'] ?? '')) ?>" placeholder="<?= esc($field['placeholder'] ?? '') ?>">
             <?php endif; ?>
         </label>
     <?php endforeach; ?>
