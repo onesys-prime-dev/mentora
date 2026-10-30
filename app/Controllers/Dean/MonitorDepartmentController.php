@@ -184,6 +184,7 @@ class MonitorDepartmentController extends BaseController
         return view('pages/courses/monitor-program', $page + [
             'title'        => 'Monitor Program',
             'page'         => 'monitor-department',
+            'fullHeight' => true,
             'user'         => $user,
             'loadError'    => $loadError,
             'filters'      => $filters,

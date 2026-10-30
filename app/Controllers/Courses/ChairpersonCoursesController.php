@@ -54,6 +54,7 @@ class ChairpersonCoursesController extends BaseController
         return view('pages/courses/chairperson-index', [
             'title'       => 'Courses',
             'page'        => 'courses',
+            'fullHeight' => true,
             'user'        => $user,
             'courses'     => $courses,
             'loadError'   => $loadError,

@@ -54,6 +54,7 @@ class CourseController extends BaseController
         return view('pages/courses/index', [
             'title'   => 'Courses',
             'page'    => 'courses',
+            'fullHeight' => true,
             'user'    => $user,
             'courses' => $courses,
             'pastCourses' => $past,
