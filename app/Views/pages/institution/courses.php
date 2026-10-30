@@ -108,13 +108,6 @@ foreach ($courseRows as $course) {
             : '',
     ], ['saveData' => false]) ?>
 
-    <?= view('components/tabs', ['ariaLabel' => 'Academics', 'tabs' => [
-        ['label' => 'Structure', 'href' => site_url('institution/structure')],
-        ['label' => 'Courses', 'href' => site_url($base), 'active' => true],
-        ['label' => 'Terms', 'href' => site_url('institution/terms')],
-        ['label' => 'Offerings', 'href' => site_url('institution/offerings')],
-    ]], ['saveData' => false]) ?>
-
     <?php if (! $courseCanEdit): ?>
         <?= view('components/lock-note', ['kind' => 'read_only'], ['saveData' => false]) ?>
     <?php elseif ($courseActivePrograms === []): ?>
@@ -152,7 +145,11 @@ foreach ($courseRows as $course) {
         <?= esc(number_format($courseTotal)) ?> <?= $courseTotal === 1 ? 'course' : 'courses' ?><?= $filtered ? ' match' : '' ?>
     </p>
 
+    <?php // Only the table scrolls; the heading, the filters and the count stay put (lg and up). ?>
+    <div class="flex flex-col gap-6" data-panel-scroll="inner">
+
     <?= view('components/data-table', [
+        'fill'       => true, // the table scrolls under its own heading row
         'caption'    => 'Courses',
         'columns'    => [
             ['key' => 'code', 'label' => 'Code', 'sortable' => true],
@@ -170,6 +167,8 @@ foreach ($courseRows as $course) {
         'emptyTitle' => $filtered ? 'No courses match these filters' : 'No courses yet',
         'emptyText'  => $filtered ? 'Try a different search, program or status.' : ($courseCanEdit ? 'Add the first course to start your catalog.' : 'Courses will be listed here.'),
     ], ['saveData' => false]) ?>
+
+    </div>
 
     <?= view('components/pagination', ['page' => $coursePage, 'pages' => $coursePages, 'total' => $courseTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
 

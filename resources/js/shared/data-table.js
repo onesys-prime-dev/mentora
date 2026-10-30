@@ -101,8 +101,16 @@ export function bindDataTable(root) {
     return { selection, render };
 }
 
-if (typeof document !== "undefined") {
-    for (const el of document.querySelectorAll("[data-table]")) {
+function bindNewTables(root) {
+    for (const el of root.querySelectorAll("[data-table]:not([data-table-bound])")) {
+        el.dataset.tableBound = "1";
         bindDataTable(el);
     }
+}
+
+if (typeof document !== "undefined") {
+    bindNewTables(document);
+
+    // A search that swapped in a new table (shared/auto-search.js) needs it wired up too.
+    document.addEventListener("content:swapped", (event) => bindNewTables(event.detail.root));
 }

@@ -129,7 +129,7 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 
         <div class="flex flex-wrap items-end gap-3">
             <label class="<?= $label ?> min-w-[14rem] flex-1">Search
-                <input class="<?= $ctl ?>" type="search" name="q" value="<?= esc($filters->q ?? '') ?>" placeholder="Actor, action, target, institution">
+                <input class="<?= $ctl ?>" type="search" name="q" data-auto-search spellcheck="false" autocomplete="off" value="<?= esc($filters->q ?? '') ?>" placeholder="Actor, action, target, institution">
             </label>
             <label class="<?= $label ?> w-full sm:w-56">Action
                 <select class="<?= $ctl ?>" name="action" data-auto-submit>

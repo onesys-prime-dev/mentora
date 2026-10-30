@@ -34,12 +34,41 @@ class TermsController extends BaseController
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
 
+        $all = $this->terms->list($institutionId);
+
+        $filters = [
+            'q'      => trim((string) $this->request->getGet('q')),
+            'year'   => trim((string) $this->request->getGet('year')),
+            'status' => (string) $this->request->getGet('status'),
+        ];
+
+        // The list is short and comes whole, so it is narrowed here. The running term's card
+        // above the table is drawn from $all, so it stays when a search hides its row.
+        $rows = array_values(array_filter($all, static function (array $term) use ($filters): bool {
+            if ($filters['status'] !== '' && $term['status'] !== $filters['status']) {
+                return false;
+            }
+
+            if ($filters['year'] !== '' && (string) $term['academic_year'] !== $filters['year']) {
+                return false;
+            }
+
+            return $filters['q'] === ''
+                || stripos($term['name'] . ' ' . $term['academic_year'], $filters['q']) !== false;
+        }));
+
+        $years = array_values(array_unique(array_map(static fn (array $term): string => (string) $term['academic_year'], $all)));
+        rsort($years);
+
         return view('pages/institution/terms', [
             'title'       => 'Terms',
             'page'        => 'terms',
             'pageTitle'   => 'Terms',
             'user'        => auth()->user(),
-            'termRows'    => $this->terms->list($institutionId),
+            'termRows'    => $rows,
+            'termAll'     => $all,
+            'termYears'   => $years,
+            'termFilters' => $filters,
             'termCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
         ]);
     }

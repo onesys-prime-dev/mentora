@@ -46,12 +46,12 @@ foreach ($statuses as $status) {
 
 <?= $this->section('content') ?>
 
-<div class="py-3">
+<div class="flex flex-col lg:h-full lg:min-h-0">
 
 <?php // The way back stays on the background, above the panel, not in the box. ?>
 <?= view('components/back-link', ['backUrl' => site_url('dean/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
 
-<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scroll-smooth lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Courses',

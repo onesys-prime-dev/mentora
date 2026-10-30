@@ -36,7 +36,7 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
     <?php // From lg up the header and the menu stay put and only the page scrolls; below it the whole page scrolls as usual. ?>
     <div class="flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:overflow-hidden">
 
-        <div class="relative z-30 shrink-0">
+        <div class="sticky top-0 z-30 shrink-0">
 
             <?= $this->include('layouts/partials/header') ?>
 
@@ -54,7 +54,7 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
 
             <?= $this->include('layouts/partials/admin-menu') ?>
 
-            <main class="min-w-0 flex-1 <?= $mainGutter ?> py-8 focus:outline-none lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0">
+            <main class="min-w-0 flex-1 <?= $mainGutter ?> pb-8 pt-3 focus:outline-none lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0">
 
                 <?= $this->renderSection('content') ?>
 

@@ -61,11 +61,16 @@ async function openStructure(page) {
     await expect(page.getByRole("heading", { name: "Structure", level: 1 })).toBeVisible();
 }
 
+// The tree on the left chooses which department the page shows.
+async function openDepartment(page, name) {
+    await page.locator("[data-structure-tree] > li > [data-select^='dept-']").filter({ hasText: name }).click();
+}
+
 test("TC-STR-01 The administrator lands on their home and reaches the structure from the sidebar", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await expect(page).toHaveURL(/\/institution\/dashboard$/);
 
-    await page.getByRole("navigation", { name: "Institution" }).getByRole("link", { name: "Academics", exact: true }).click();
+    await page.getByRole("navigation", { name: "Institution" }).getByRole("link", { name: "Structure", exact: true }).click();
 
     await expect(page).toHaveURL(/\/institution\/structure$/);
     await expect(page.locator("[data-department]").first()).toBeVisible();
@@ -84,6 +89,7 @@ test("TC-STR-02 Adding a department in a dialog shows it on the page with a mess
     await dialog.getByRole("button", { name: "Add department" }).click();
 
     await expect(page.getByText("The department was added.")).toBeVisible();
+    await openDepartment(page, "College of E2E Arts");
     await expect(page.locator("[data-department]").filter({ hasText: "College of E2E Arts" })).toBeVisible();
     await expect(page.locator("[data-department]").filter({ hasText: "E2E-ARTS" })).toBeVisible();
 });
@@ -112,6 +118,7 @@ test("TC-STR-03 A refused form shows its reason beside the field and keeps what 
 test("TC-STR-04 Editing opens the same dialog with the department's values", async ({ page }) => {
     await openStructure(page);
 
+    await openDepartment(page, "College of E2E Arts");
     const card = page.locator("[data-department]").filter({ hasText: "College of E2E Arts" });
     await card.getByRole("button", { name: "Edit" }).first().click();
 
@@ -123,6 +130,7 @@ test("TC-STR-04 Editing opens the same dialog with the department's values", asy
     await dialog.getByRole("button", { name: "Save" }).click();
 
     await expect(page.getByText("The department was saved.")).toBeVisible();
+    await openDepartment(page, "College of E2E Arts and Letters");
     await expect(page.locator("[data-department]").filter({ hasText: "College of E2E Arts and Letters" })).toBeVisible();
 });
 
@@ -130,7 +138,8 @@ test("TC-STR-05 A department with active sub-departments says why it cannot be s
     await openStructure(page);
 
     // The first demo department has sub-departments under it.
-    const card = page.locator("[data-department]").filter({ has: page.locator("[data-sub-department]") }).first();
+    await page.locator("[data-tree-dept]:has(ul) > [data-select]").first().click();
+    const card = page.locator("[data-department]:not([hidden])");
     await card.getByRole("button", { name: "Deactivate" }).first().click();
 
     const confirm = page.getByRole("dialog", { name: /^Deactivate / });
@@ -143,12 +152,14 @@ test("TC-STR-05 A department with active sub-departments says why it cannot be s
 test("TC-STR-06 An empty new department can be switched off and on again", async ({ page }) => {
     await openStructure(page);
 
+    await openDepartment(page, "College of E2E Arts and Letters");
     const card = page.locator("[data-department]").filter({ hasText: "College of E2E Arts and Letters" });
     await card.getByRole("button", { name: "Deactivate" }).click();
     await page.getByRole("dialog", { name: /^Deactivate / }).getByRole("button", { name: "Deactivate" }).click();
 
     await expect(page.getByText("The department was deactivated.")).toBeVisible();
-    await expect(card.getByText("Inactive")).toBeVisible();
+    await openDepartment(page, "College of E2E Arts and Letters");
+    await expect(card.getByText("Inactive").first()).toBeVisible();
 
     await card.getByRole("button", { name: "Reactivate" }).click();
 
@@ -193,7 +204,8 @@ test("TC-CRS-02 A duplicate code shows its reason in the dialog, and search find
     await page.getByLabel("Search").fill("Browser Testing");
     await page.getByRole("button", { name: "Apply" }).click();
 
-    await expect(page.getByText("1 course match")).toBeVisible();
+    // The counter keeps the whole catalog while searching, so the rows are what shows the match.
+    await expect(page.locator("tbody tr")).toHaveCount(1);
     await expect(page.getByRole("row", { name: /E2E 101/ })).toBeVisible();
 });
 
@@ -202,7 +214,9 @@ test("TC-CRS-03 A chairperson is assigned to a sub-department and removed again"
     await page.goto("/institution/structure");
 
     // The first sub-department that has a program (the demo data has a chairperson who is not yet assigned there).
-    const sub = page.locator("[data-sub-department]").first();
+    await page.locator("[data-tree-dept]:has(ul) > [data-select]").first().click();
+    await page.locator("[data-tree-dept]:has(ul) ul [data-select]").first().click();
+    const sub = page.locator("[data-sub-department]:not([hidden])");
     await sub.getByRole("button", { name: "Assign chairperson" }).click();
 
     const dialog = page.getByRole("dialog", { name: /^Assign a chairperson to / });
