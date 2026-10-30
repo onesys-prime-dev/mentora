@@ -84,8 +84,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         <aside class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-gray-100 lg:pr-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Departments and programs">
 
             <label class="sr-only" for="structure-search">Search departments and programs</label>
-            <input id="structure-search" type="search" placeholder="Search departments and programs" autocomplete="off" spellcheck="false"
-                class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/50" data-structure-search>
+            <input id="structure-search" type="search" placeholder="Search structure" autocomplete="off" spellcheck="false"
+                class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm placeholder:text-[#767676] focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20" data-structure-search>
 
             <ul class="flex flex-col gap-1" data-structure-tree>
                 <?php foreach ($structureTree as $department): ?>
