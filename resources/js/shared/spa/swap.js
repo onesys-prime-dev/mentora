@@ -29,6 +29,26 @@ const DIM_DELAY_MS = 150;
 let latestSwap = 0;
 
 /**
+ * The nearest ancestor that scrolls on its own, or null when the window does.
+ * Read from the computed style, so it follows the layout (a card that scrolls
+ * from lg up lets the window scroll below it).
+ */
+function scrollParent(element)
+{
+    for (let node = element; node && node !== document.body; node = node.parentElement) {
+
+        const overflowY = getComputedStyle(node).overflowY;
+
+        if (overflowY === "auto" || overflowY === "scroll") {
+            return node;
+        }
+
+    }
+
+    return null;
+}
+
+/**
  * @param {HTMLElement} container          element whose content is replaced
  * @param {() => Promise<string>} loadHtml resolves to the new HTML
  * @param {{ mode?: "navigate"|"refresh", skeleton?: string|null, forceSkeleton?: boolean }} options
@@ -56,7 +76,11 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
 
     const skeletonShown = container.dataset.spaSkeleton !== undefined;
 
-    const scrollY = window.scrollY;
+    // The page scrolls the window, except where a card scrolls on its own (the course page
+    // from lg up): then that card is what has to keep its place or go back to the top.
+    const scroller = scrollParent(container);
+
+    const scrollY = scroller ? scroller.scrollTop : window.scrollY;
 
     let barOn = false;
 
@@ -138,7 +162,23 @@ export async function swapContent(container, loadHtml, { mode = "navigate", skel
 
         if (mode === "refresh") {
 
-            window.scrollTo({ top: scrollY, behavior: "instant" });
+            if (scroller) {
+                scroller.scrollTop = scrollY;
+            }
+
+            else {
+                window.scrollTo({ top: scrollY, behavior: "instant" });
+            }
+
+        }
+
+        else if (scroller) {
+
+            const top = container.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 24;
+
+            if (scroller.scrollTop > top) {
+                scroller.scrollTop = Math.max(0, top);
+            }
 
         }
 

@@ -39,7 +39,7 @@ $accountLinks = [
         justify-between
         border-b
         border-b-black/10
-        bg-white/75
+        bg-white
         px-6
         py-3
         shadow
