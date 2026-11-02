@@ -214,8 +214,15 @@ test("TC-CRS-03 A chairperson is assigned to a sub-department and removed again"
     await page.goto("/institution/structure");
 
     // The first sub-department that has a program (the demo data has a chairperson who is not yet assigned there).
-    await page.locator("[data-tree-dept]:has(ul) > [data-select]").first().click();
-    await page.locator("[data-tree-dept]:has(ul) ul [data-select]").first().click();
+    // The first department is open when the page loads; a click on an open department folds it.
+    const department = page.locator("[data-tree-dept]:has(ul)").first();
+    const firstSub = department.locator("ul [data-select]").first();
+
+    if (!(await firstSub.isVisible())) {
+        await department.locator("> [data-select]").click();
+    }
+
+    await firstSub.click();
     const sub = page.locator("[data-sub-department]:not([hidden])");
     await sub.getByRole("button", { name: "Assign chairperson" }).click();
 
