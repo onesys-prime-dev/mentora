@@ -653,6 +653,19 @@ html[data-theme="dark"] main[data-pinned-panel] [data-page-panel] thead th {
     }
 
     /*
+     * A table that scrolls under its own heading row never gets squeezed to nothing: on a short
+     * screen the region keeps room for a few rows and the panel scrolls instead, so no row ends
+     * up hidden behind the pinned heading.
+     */
+    main[data-pinned-panel] > div > [data-page-panel] > [data-panel-scroll="inner"] {
+        min-height: 16rem;
+    }
+
+    main[data-pinned-panel] > div > [data-page-panel]:has(> [data-panel-scroll="inner"]) {
+        overflow-y: auto;
+    }
+
+    /*
      * A form whose Save has to stay inside it (so its errors and fields still find each other): the form
      * fills the panel, its [data-panel-scroll] region scrolls, and the bar after it stays put below.
      */
