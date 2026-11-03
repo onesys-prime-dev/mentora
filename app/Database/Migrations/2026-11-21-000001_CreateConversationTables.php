@@ -54,6 +54,7 @@ class CreateConversationTables extends Migration
             'left_at' => ['type' => 'DATETIME', 'null' => true],
             'first_visible_message_id' => ['type' => 'INT', 'unsigned' => true, 'default' => 0],
             'last_read_message_id' => ['type' => 'INT', 'unsigned' => true, 'null' => true],
+            'last_notified_message_id' => ['type' => 'INT', 'unsigned' => true, 'null' => true],
             'is_starred' => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0],
             'is_muted' => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0],
         ]);

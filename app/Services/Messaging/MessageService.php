@@ -40,6 +40,8 @@ class MessageService
 
     /**
      * @return array{ok: bool, reason?: 'not_found'|'invalid_body'|'not_allowed'|'unavailable', message?: array<string, mixed>}
+     *
+     * @throws RateLimitedException when the sender has sent too many messages in the last minute
      */
     public function send(User $user, int $conversationId, string $body, string $clientUuid): array
     {
@@ -76,6 +78,9 @@ class MessageService
         if (! $this->cipher->isUsable()) {
             return ['ok' => false, 'reason' => 'unavailable'];
         }
+
+        // Only a send that is about to create a row counts; the retry above has already returned.
+        (new MessageRateLimiter())->check('message', $userId);
 
         $now = date('Y-m-d H:i:s');
 

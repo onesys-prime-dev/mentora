@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Messaging;
 
 use App\Services\Messaging\MessageService;
+use App\Services\Messaging\RateLimitedException;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
@@ -31,7 +32,12 @@ class MessageController extends MessagingController
     public function send(int $conversationId): ResponseInterface
     {
         $input  = $this->input();
-        $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''));
+
+        try {
+            $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''));
+        } catch (RateLimitedException $e) {
+            return $this->rateLimited($e);
+        }
 
         if ($result['ok']) {
             return $this->response->setStatusCode(201)->setJSON(['message' => $result['message']]);

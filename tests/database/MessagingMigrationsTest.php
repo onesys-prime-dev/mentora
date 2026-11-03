@@ -119,6 +119,23 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         }
     }
 
+    public function testTheSafetyColumnsAndIndexExist(): void
+    {
+        db_connect()->resetDataCache();
+
+        $this->assertTrue(db_connect()->fieldExists('last_notified_message_id', 'conversation_participants'));
+
+        $indexed = false;
+
+        foreach (db_connect()->getIndexData('messages') as $index) {
+            if ($index->fields === ['sender_id', 'created_at']) {
+                $indexed = true;
+            }
+        }
+
+        $this->assertTrue($indexed, 'messages has an index on (sender_id, created_at) for the send limit');
+    }
+
     public function testOneCourseChatPerOffering(): void
     {
         $institution = $this->institution('MSG1');

@@ -87,6 +87,8 @@ class GroupService
      * The new group as a `conversations` row, or null when the creator may not start groups, the title or the
      * member list is not acceptable, or any member is someone they may not add. Nothing is created on a null.
      *
+     * @throws RateLimitedException when the creator has started too many new threads this hour
+     *
      * @param list<int|string> $memberIds
      *
      * @return array<string, mixed>|null
@@ -116,6 +118,8 @@ class GroupService
                 return null;
             }
         }
+
+        (new MessageRateLimiter())->check('thread', (int) $creator->id);
 
         $db  = db_connect();
         $now = date('Y-m-d H:i:s');

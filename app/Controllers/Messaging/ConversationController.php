@@ -6,6 +6,7 @@ namespace App\Controllers\Messaging;
 
 use App\Services\Messaging\ConversationPresenter;
 use App\Services\Messaging\ConversationService;
+use App\Services\Messaging\RateLimitedException;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
@@ -36,9 +37,14 @@ class ConversationController extends MessagingController
 
         $service      = new ConversationService();
         $user         = auth()->user();
-        $conversation = is_numeric($recipient)
-            ? $service->startDirect($user, (int) $recipient, is_numeric($subject) ? (int) $subject : null)
-            : null;
+
+        try {
+            $conversation = is_numeric($recipient)
+                ? $service->startDirect($user, (int) $recipient, is_numeric($subject) ? (int) $subject : null)
+                : null;
+        } catch (RateLimitedException $e) {
+            return $this->rateLimited($e);
+        }
 
         if ($conversation === null) {
             return $this->notFound();

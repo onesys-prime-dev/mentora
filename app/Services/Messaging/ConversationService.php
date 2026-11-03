@@ -32,6 +32,8 @@ class ConversationService
      * conversation whichever side starts it). Null when the policy refuses or
      * the recipient is not someone the sender can reach.
      *
+     * @throws RateLimitedException when the sender has started too many new threads this hour
+     *
      * @return array<string, mixed>|null a `conversations` row
      */
     public function startDirect(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
@@ -76,6 +78,11 @@ class ConversationService
         $db  = db_connect();
         $key = DirectKey::for($inst, (int) $sender->id, $recipientId, $subjectStudentId);
         $now = date('Y-m-d H:i:s');
+
+        // Starting a thread that exists returns it and creates nothing, so it is not counted.
+        if ($db->table('conversations')->where('direct_key', $key)->countAllResults() === 0) {
+            (new MessageRateLimiter())->check('thread', (int) $sender->id);
+        }
 
         // INSERT IGNORE then read by key: two people starting at once end up with the one row either way.
         $db->transStart();

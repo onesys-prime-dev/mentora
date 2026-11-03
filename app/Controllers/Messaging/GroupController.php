@@ -7,6 +7,7 @@ namespace App\Controllers\Messaging;
 use App\Services\Messaging\ConversationPresenter;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\GroupService;
+use App\Services\Messaging\RateLimitedException;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
@@ -34,8 +35,13 @@ class GroupController extends MessagingController
             return $this->notFound();
         }
 
-        $user  = auth()->user();
-        $group = (new GroupService())->create($user, $title, $ids);
+        $user = auth()->user();
+
+        try {
+            $group = (new GroupService())->create($user, $title, $ids);
+        } catch (RateLimitedException $e) {
+            return $this->rateLimited($e);
+        }
 
         if ($group === null) {
             return $this->notFound();

@@ -31,6 +31,8 @@ class CreateMessageTables extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey(['conversation_id', 'sender_id', 'client_uuid']);
         $this->forge->addKey(['conversation_id', 'id']);
+        // The send rate limit counts one sender's messages in the last minute.
+        $this->forge->addKey(['sender_id', 'created_at']);
         $this->forge->addForeignKey('conversation_id', 'conversations', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('sender_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('removed_by', 'users', 'id', 'SET NULL', 'CASCADE');
