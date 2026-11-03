@@ -53,7 +53,7 @@ final class ReportServiceTest extends DatabaseTestCase
         return (int) $this->messages()->send($user, $conversation ?? $this->chat, $text, 'u-' . bin2hex(random_bytes(6)))['message']['id'];
     }
 
-    private function count(): int
+    private function reportCount(): int
     {
         return db_connect()->table('message_reports')->countAllResults();
     }
@@ -105,7 +105,7 @@ final class ReportServiceTest extends DatabaseTestCase
         $this->assertFalse($this->reports()->report($this->child, $this->chat, $theirs, 'rude', null), 'unknown reason');
         $this->assertFalse($this->reports()->report($this->child, $this->chat, $theirs, 'spam', str_repeat('x', ReportService::NOTE_MAX + 1)), 'long note');
 
-        $this->assertSame(0, $this->count());
+        $this->assertSame(0, $this->reportCount());
         $this->assertSame(0, db_connect()->table('audit_logs')->countAllResults());
     }
 
@@ -115,7 +115,7 @@ final class ReportServiceTest extends DatabaseTestCase
 
         $this->assertTrue($this->reports()->report($this->child, $this->chat, $id, 'spam', null));
         $this->assertFalse($this->reports()->report($this->child, $this->chat, $id, 'other', 'again'));
-        $this->assertSame(1, $this->count());
+        $this->assertSame(1, $this->reportCount());
     }
 
     public function testAMessageFromBeforeTheReporterJoinedCannotBeReported(): void

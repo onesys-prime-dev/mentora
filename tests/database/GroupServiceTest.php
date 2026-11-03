@@ -75,7 +75,7 @@ final class GroupServiceTest extends DatabaseTestCase
         CourseFactory::assignInstructor($offeringB, $this->teacherB);
     }
 
-    private function groups(): GroupService
+    private function groupService(): GroupService
     {
         return new GroupService();
     }
@@ -97,7 +97,7 @@ final class GroupServiceTest extends DatabaseTestCase
 
     public function testAChairpersonStartsAGroupOfTheirOwnInstructors(): void
     {
-        $group = $this->groups()->create($this->chairA, '  Exam planning  ', [$this->teacherA1->id, $this->teacherA2->id]);
+        $group = $this->groupService()->create($this->chairA, '  Exam planning  ', [$this->teacherA1->id, $this->teacherA2->id]);
 
         $this->assertSame('group', $group['type']);
         $this->assertSame('Exam planning', $group['title']);
@@ -116,7 +116,7 @@ final class GroupServiceTest extends DatabaseTestCase
 
     public function testADeanStartsAGroupOfInstructorsAndChairpersonsOfTheDepartment(): void
     {
-        $group = $this->groups()->create($this->dean, 'Department heads', [$this->teacherA1->id, $this->teacherB->id, $this->chairA->id, $this->chairB->id]);
+        $group = $this->groupService()->create($this->dean, 'Department heads', [$this->teacherA1->id, $this->teacherB->id, $this->chairA->id, $this->chairB->id]);
 
         $this->assertNotNull($group);
         $this->assertSame(5, db_connect()->table('conversation_participants')->where('conversation_id', $group['id'])->countAllResults());
@@ -133,12 +133,12 @@ final class GroupServiceTest extends DatabaseTestCase
 
         // A chairperson: another sub-department's instructor, a chairperson, the dean, and every kind of non-instructor.
         foreach ([$this->teacherB, $this->chairB, $this->dean, $student, $parent, $admin, $outsider, $inactive] as $bad) {
-            $this->assertNull($this->groups()->create($this->chairA, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
+            $this->assertNull($this->groupService()->create($this->chairA, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
         }
 
         // A dean: students, parents, admins, deans and outsiders stay out.
         foreach ([$student, $parent, $admin, $outsider, $inactive] as $bad) {
-            $this->assertNull($this->groups()->create($this->dean, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
+            $this->assertNull($this->groupService()->create($this->dean, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
         }
 
         $this->assertSame($before, $this->counts(), 'nothing was created');
@@ -146,7 +146,7 @@ final class GroupServiceTest extends DatabaseTestCase
 
     public function testDuplicatesAndTheCreatorsOwnIdAreCollapsed(): void
     {
-        $group = $this->groups()->create($this->chairA, 'Group', [$this->teacherA1->id, (string) $this->teacherA1->id, $this->chairA->id]);
+        $group = $this->groupService()->create($this->chairA, 'Group', [$this->teacherA1->id, (string) $this->teacherA1->id, $this->chairA->id]);
 
         $this->assertSame(2, db_connect()->table('conversation_participants')->where('conversation_id', $group['id'])->countAllResults());
     }
@@ -156,13 +156,13 @@ final class GroupServiceTest extends DatabaseTestCase
         $one    = [$this->teacherA1->id];
         $before = $this->counts();
 
-        $this->assertNull($this->groups()->create($this->chairA, '', $one));
-        $this->assertNull($this->groups()->create($this->chairA, "  \t ", $one));
-        $this->assertNull($this->groups()->create($this->chairA, str_repeat('x', GroupService::MAX_TITLE + 1), $one));
-        $this->assertNotNull($this->groups()->create($this->chairA, str_repeat('é', GroupService::MAX_TITLE), $one));
-        $this->assertNull($this->groups()->create($this->chairA, 'Group', []));
-        $this->assertNull($this->groups()->create($this->chairA, 'Group', [$this->chairA->id]), 'only themselves');
-        $this->assertNull($this->groups()->create($this->chairA, 'Group', range(1000, 1000 + GroupService::MAX_MEMBERS)));
+        $this->assertNull($this->groupService()->create($this->chairA, '', $one));
+        $this->assertNull($this->groupService()->create($this->chairA, "  \t ", $one));
+        $this->assertNull($this->groupService()->create($this->chairA, str_repeat('x', GroupService::MAX_TITLE + 1), $one));
+        $this->assertNotNull($this->groupService()->create($this->chairA, str_repeat('é', GroupService::MAX_TITLE), $one));
+        $this->assertNull($this->groupService()->create($this->chairA, 'Group', []));
+        $this->assertNull($this->groupService()->create($this->chairA, 'Group', [$this->chairA->id]), 'only themselves');
+        $this->assertNull($this->groupService()->create($this->chairA, 'Group', range(1000, 1000 + GroupService::MAX_MEMBERS)));
         $this->assertSame([$before[0] + 1, $before[1] + 2], $this->counts());
     }
 
@@ -173,30 +173,30 @@ final class GroupServiceTest extends DatabaseTestCase
         $admin   = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
 
         foreach ([$this->teacherA1, $student, $parent, $admin] as $user) {
-            $this->assertNull($this->groups()->create($user, 'Group', [$this->teacherA2->id]), (string) $user->first_name);
-            $this->assertSame([], $this->groups()->candidates($user, 'Alpha'), (string) $user->first_name);
+            $this->assertNull($this->groupService()->create($user, 'Group', [$this->teacherA2->id]), (string) $user->first_name);
+            $this->assertSame([], $this->groupService()->candidates($user, 'Alpha'), (string) $user->first_name);
         }
     }
 
     public function testCandidatesFollowTheScopeAndTheMinimumQuery(): void
     {
-        $chair = $this->groups()->candidates($this->chairA, 'Alpha');
+        $chair = $this->groupService()->candidates($this->chairA, 'Alpha');
         $this->assertEqualsCanonicalizing([(int) $this->teacherA1->id, (int) $this->teacherA2->id], array_column($chair, 'id'));
         $this->assertSame(['instructor', 'instructor'], array_column($chair, 'role'));
 
-        $this->assertSame([], $this->groups()->candidates($this->chairA, 'Bravo'), 'another sub-department');
-        $this->assertSame([], $this->groups()->candidates($this->chairA, 'A'), 'too short');
-        $this->assertSame([], $this->groups()->candidates($this->chairA, 'Cara'), 'never the creator');
+        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Bravo'), 'another sub-department');
+        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'A'), 'too short');
+        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Cara'), 'never the creator');
 
-        $dean = $this->groups()->candidates($this->dean, 'Bravo');
+        $dean = $this->groupService()->candidates($this->dean, 'Bravo');
         $this->assertSame([(int) $this->teacherB->id], array_column($dean, 'id'));
-        $this->assertSame([(int) $this->chairB->id], array_column($this->groups()->candidates($this->dean, 'Bram'), 'id'));
+        $this->assertSame([(int) $this->chairB->id], array_column($this->groupService()->candidates($this->dean, 'Bram'), 'id'));
         $this->assertSame(['id', 'name', 'role'], array_keys($chair[0]));
     }
 
     public function testMembersPostAndOnlyTheCreatorModerates(): void
     {
-        $group = (int) $this->groups()->create($this->chairA, 'Group', [$this->teacherA1->id, $this->teacherA2->id])['id'];
+        $group = (int) $this->groupService()->create($this->chairA, 'Group', [$this->teacherA1->id, $this->teacherA2->id])['id'];
 
         $this->assertTrue($this->messages()->send($this->teacherA1, $group, 'Hello team', 'uuid-a1-1')['ok']);
         $id = (int) $this->messages()->send($this->teacherA2, $group, 'Off topic', 'uuid-a2-1')['message']['id'];

@@ -97,13 +97,15 @@ final class MessagesRateLimitTest extends RouteTestCase
         $this->signIn($this->student);
         $uuid  = $this->uuid();
         $first = $this->api('POST', "conversations/{$this->conversation}/messages", ['body' => 'hello', 'client_uuid' => $uuid])->response();
+        [$firstStatus, $firstId] = [$first->getStatusCode(), json_decode($first->getBody(), true)['message']['id'] ?? null];
         $this->fillMessages((int) $this->student->id, MessageRateLimiter::MESSAGES_PER_MINUTE);
 
+        // The test client reuses one response object, so each answer is read before the next request.
         $retry = $this->api('POST', "conversations/{$this->conversation}/messages", ['body' => 'hello', 'client_uuid' => $uuid])->response();
 
-        $this->assertSame(201, $first->getStatusCode());
+        $this->assertSame(201, $firstStatus);
         $this->assertSame(201, $retry->getStatusCode());
-        $this->assertSame(json_decode($first->getBody(), true)['message']['id'], json_decode($retry->getBody(), true)['message']['id']);
+        $this->assertSame($firstId, json_decode($retry->getBody(), true)['message']['id']);
     }
 
     public function testTheEleventhNewThreadIsTooManyButAnExistingOneIsStillOpened(): void
@@ -113,11 +115,14 @@ final class MessagesRateLimitTest extends RouteTestCase
         $this->fillThreads((int) $this->student->id, MessageRateLimiter::THREADS_PER_HOUR);
         $this->signIn($this->student);
 
-        $new      = $this->api('POST', 'conversations', ['recipient_id' => (int) $other->id])->response();
+        // The test client reuses one response object, so each answer is read before the next request.
+        $new = $this->api('POST', 'conversations', ['recipient_id' => (int) $other->id])->response();
+        [$newStatus, $newError] = [$new->getStatusCode(), json_decode($new->getBody(), true)['error'] ?? null];
+
         $existing = $this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id])->response();
 
-        $this->assertSame(429, $new->getStatusCode());
-        $this->assertSame('rate_limited', json_decode($new->getBody(), true)['error']);
+        $this->assertSame(429, $newStatus);
+        $this->assertSame('rate_limited', $newError);
         $this->assertSame(200, $existing->getStatusCode());
         $this->assertSame($this->conversation, (int) json_decode($existing->getBody(), true)['conversation']['id']);
     }

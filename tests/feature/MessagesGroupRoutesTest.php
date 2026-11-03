@@ -55,7 +55,7 @@ final class MessagesGroupRoutesTest extends RouteTestCase
         return $this->step($verb, 'messages/api/' . $uri, $data);
     }
 
-    private function groups(): int
+    private function groupCount(): int
     {
         return db_connect()->table('conversations')->where('type', 'group')->countAllResults();
     }
@@ -71,7 +71,7 @@ final class MessagesGroupRoutesTest extends RouteTestCase
         $this->assertSame('group', $body['type']);
         $this->assertSame('Exam planning', $body['name']);
         $this->assertTrue($body['can_moderate']);
-        $this->assertSame(1, $this->groups());
+        $this->assertSame(1, $this->groupCount());
 
         $this->signIn($this->instructor);
         $list = json_decode($this->api('GET', 'conversations?filter=group')->response()->getBody(), true)['conversations'];
@@ -91,7 +91,7 @@ final class MessagesGroupRoutesTest extends RouteTestCase
         $this->assertSame(404, $refused->getStatusCode());
         $this->assertSame($unknown->getStatusCode(), $refused->getStatusCode());
         $this->assertSame($unknown->getBody(), $refused->getBody());
-        $this->assertSame(0, $this->groups());
+        $this->assertSame(0, $this->groupCount());
     }
 
     public function testMalformedInputIsTheSameNotFound(): void
@@ -102,7 +102,7 @@ final class MessagesGroupRoutesTest extends RouteTestCase
             $this->assertSame(404, $this->api('POST', 'groups', $input)->response()->getStatusCode());
         }
 
-        $this->assertSame(0, $this->groups());
+        $this->assertSame(0, $this->groupCount());
     }
 
     public function testNobodyWhoMayNotStartGroupsReachesEitherRoute(): void
@@ -112,14 +112,15 @@ final class MessagesGroupRoutesTest extends RouteTestCase
         foreach ([$this->child, $this->instructor, $this->parent, $admin] as $user) {
             $this->signIn($user);
 
-            $create = $this->api('POST', 'groups', ['title' => 'Group', 'member_ids' => [(int) $this->instructor->id]])->response();
-            $find   = $this->api('GET', 'group-candidates?q=Tructor')->response();
+            // The test client reuses one response object, so read each answer before the next request.
+            $created    = $this->api('POST', 'groups', ['title' => 'Group', 'member_ids' => [(int) $this->instructor->id]])->response()->getStatusCode();
+            $candidates = json_decode($this->api('GET', 'group-candidates?q=Tructor')->response()->getBody(), true)['candidates'] ?? [];
 
-            $this->assertSame(404, $create->getStatusCode(), (string) $user->first_name);
-            $this->assertSame([], json_decode($find->getBody(), true)['candidates'] ?? [], (string) $user->first_name);
+            $this->assertSame(404, $created, 'user ' . $user->id);
+            $this->assertSame([], $candidates, 'user ' . $user->id);
         }
 
-        $this->assertSame(0, $this->groups());
+        $this->assertSame(0, $this->groupCount());
     }
 
     public function testCandidatesAreScopedAndCarryNoContactDetails(): void
@@ -140,7 +141,7 @@ final class MessagesGroupRoutesTest extends RouteTestCase
         $response = $this->api('POST', 'groups', ['title' => 'Group', 'member_ids' => [(int) $this->instructor->id]])->response();
 
         $this->assertNotContains($response->getStatusCode(), [200, 201]);
-        $this->assertSame(0, $this->groups());
+        $this->assertSame(0, $this->groupCount());
     }
 
     public function testThePageOffersTheNewGroupButtonOnlyToChairpersonsAndDeans(): void

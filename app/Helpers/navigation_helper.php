@@ -63,7 +63,14 @@ if (! function_exists('messages_tile')) {
 
         $user = auth()->user();
 
-        if ($role === 'admin' || $user === null || ! feature_enabled('messages')
+        // An unknown flag throws in feature_enabled(); a menu must not take the page down, so it counts as off.
+        try {
+            $on = feature_enabled('messages');
+        } catch (\InvalidArgumentException) {
+            $on = false;
+        }
+
+        if ($role === 'admin' || $user === null || ! $on
             || ! (new \App\Services\Auth\RolePermissions())->allows($user, 'messages.use', $role)) {
             return null;
         }

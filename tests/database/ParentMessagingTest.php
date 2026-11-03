@@ -158,7 +158,9 @@ final class ParentMessagingTest extends DatabaseTestCase
         $this->assertSame(['instructor', 'instructor'], array_column($found, 'role'));
         $this->assertEqualsCanonicalizing(['Kid Child', 'Sib Ling'], array_column($found, 'subject_name'));
 
-        $this->assertSame(['chairperson'], array_column((new RecipientSearch())->search($this->parent, 'Chair'), 'role'));
+        $chairs = (new RecipientSearch())->search($this->parent, 'Chair');
+        $this->assertSame(['chairperson', 'chairperson'], array_column($chairs, 'role'), 'once for each child they share');
+        $this->assertEqualsCanonicalizing(['Kid Child', 'Sib Ling'], array_column($chairs, 'subject_name'));
         $this->assertSame([], (new RecipientSearch())->search($this->parent, 'Child'), 'a student is never offered');
         $this->assertSame([], (new RecipientSearch())->search($this->parent, 'Admin'));
     }

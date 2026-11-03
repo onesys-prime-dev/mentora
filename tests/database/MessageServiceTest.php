@@ -226,8 +226,15 @@ final class MessageServiceTest extends DatabaseTestCase
     {
         $ids = [];
 
+        // 31 messages: more than the send limit allows in a minute, so they are written as if sent earlier.
+        $cipher = $this->cipher();
+
         for ($i = 1; $i <= 31; $i++) {
-            $ids[] = $this->send($this->student, "m{$i}")['message']['id'];
+            db_connect()->table('messages')->insert([
+                'conversation_id' => $this->conversation, 'sender_id' => $this->student->id, 'body_enc' => $cipher->encrypt("m{$i}", $this->conversation, (int) $this->student->id),
+                'client_uuid' => $this->uuid(), 'created_at' => date('Y-m-d H:i:s', time() - 300),
+            ]);
+            $ids[] = (int) db_connect()->insertID();
         }
 
         $latest = $this->service()->page($this->student, $this->conversation);

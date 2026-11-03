@@ -60,7 +60,7 @@ class MessageNotifier
         $rows = db_connect()->query(
             'SELECT DISTINCT p.conversation_id FROM conversation_participants p
              JOIN messages m ON m.conversation_id = p.conversation_id
-              AND m.id > GREATEST(COALESCE(p.last_notified_message_id, 0), COALESCE(p.last_read_message_id, 0), p.first_visible_message_id - 1)
+              AND m.id > GREATEST(COALESCE(p.last_notified_message_id, 0), COALESCE(p.last_read_message_id, 0), CAST(p.first_visible_message_id AS SIGNED) - 1)
               AND m.sender_id <> p.user_id AND m.removed_at IS NULL
              WHERE p.left_at IS NULL AND p.is_muted = 0 AND p.conversation_id > ?
              ORDER BY p.conversation_id LIMIT ' . max(1, $limit),

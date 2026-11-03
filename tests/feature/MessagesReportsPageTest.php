@@ -145,13 +145,21 @@ final class MessagesReportsPageTest extends RouteTestCase
         $id  = $this->report('hello');
         $far = PeopleFactory::person('institutional_admin', 'Far', 'Admin', null, DeanFactory::department('RG2')['institution']);
 
-        foreach ([$this->child, $this->instructor, $this->parent, $this->chair, $far, CourseFactory::user('admin')] as $user) {
+        foreach ([$this->child, $this->instructor, $this->parent, $this->chair, CourseFactory::user('admin')] as $user) {
             $this->signIn($user);
 
-            $this->assertSame(404, $this->open('GET', 'messages/reports')[0], (string) $user->first_name);
-            $this->assertSame(404, $this->open('GET', "messages/reports/{$id}")[0], (string) $user->first_name);
-            $this->assertSame(404, $this->open('POST', "messages/reports/{$id}/review", ['decision' => 'dismiss'])[0], (string) $user->first_name);
+            $this->assertSame(404, $this->open('GET', 'messages/reports')[0], 'user ' . $user->id);
+            $this->assertSame(404, $this->open('GET', "messages/reports/{$id}")[0], 'user ' . $user->id);
+            $this->assertSame(404, $this->open('POST', "messages/reports/{$id}/review", ['decision' => 'dismiss'])[0], 'user ' . $user->id);
         }
+
+        // Another institution's administrator has a page of their own (empty); this report is not theirs.
+        $this->signIn($far);
+        [$status, $body] = $this->open('GET', 'messages/reports');
+        $this->assertSame(200, $status);
+        $this->assertStringNotContainsString('Kid Child', $body);
+        $this->assertSame(404, $this->open('GET', "messages/reports/{$id}")[0]);
+        $this->assertSame(404, $this->open('POST', "messages/reports/{$id}/review", ['decision' => 'dismiss'])[0]);
 
         $this->assertSame('open', db_connect()->table('message_reports')->get()->getRowArray()['status']);
     }
@@ -162,7 +170,8 @@ final class MessagesReportsPageTest extends RouteTestCase
         $this->signIn($this->admin);
         $this->withoutCsrfToken();
 
-        $this->assertNotSame(302, $this->open('POST', "messages/reports/{$id}/review", ['decision' => 'dismiss'])[0]);
+        // A refused form post is answered with a redirect, so the status says nothing: what matters is that it changed nothing.
+        $this->open('POST', "messages/reports/{$id}/review", ['decision' => 'dismiss']);
         $this->assertSame('open', db_connect()->table('message_reports')->get()->getRowArray()['status']);
 
         db_connect()->table('feature_flag_overrides')->where('flag_key', 'messages')->delete();

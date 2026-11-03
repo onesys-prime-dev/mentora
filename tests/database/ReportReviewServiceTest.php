@@ -151,7 +151,7 @@ final class ReportReviewServiceTest extends DatabaseTestCase
         $this->assertSame('actioned', $view['status']);
 
         $actions = array_column(db_connect()->table('audit_logs')->select('action')->orderBy('id')->get()->getResultArray(), 'action');
-        $this->assertSame(['messages.report_reviewed', 'messages.message_removed'], $actions);
+        $this->assertSame(['messages.report_created', 'messages.report_reviewed', 'messages.message_removed'], $actions);
         $this->assertStringNotContainsString(self::SECRET, json_encode(db_connect()->table('audit_logs')->get()->getResultArray()));
     }
 

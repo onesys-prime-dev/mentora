@@ -131,13 +131,19 @@ final class MessagesReportRoutesTest extends RouteTestCase
         $report = (int) db_connect()->table('message_reports')->get()->getRowArray()['id'];
         $far    = PeopleFactory::person('institutional_admin', 'Far', 'Admin', null, PeopleFactory::institution('RRFAR'));
 
-        foreach ([$this->child, $this->instructor, $this->parent, $this->chair, $far] as $user) {
+        foreach ([$this->child, $this->instructor, $this->parent, $this->chair] as $user) {
             $this->signIn($user);
 
-            $this->assertSame(404, $this->api('GET', 'reports')->response()->getStatusCode(), (string) $user->first_name);
-            $this->assertSame(404, $this->api('GET', "reports/{$report}")->response()->getStatusCode(), (string) $user->first_name);
-            $this->assertSame(404, $this->api('POST', "reports/{$report}/review", ['status' => 'dismissed'])->response()->getStatusCode(), (string) $user->first_name);
+            $this->assertSame(404, $this->api('GET', 'reports')->response()->getStatusCode(), 'user ' . $user->id);
+            $this->assertSame(404, $this->api('GET', "reports/{$report}")->response()->getStatusCode(), 'user ' . $user->id);
+            $this->assertSame(404, $this->api('POST', "reports/{$report}/review", ['status' => 'dismissed'])->response()->getStatusCode(), 'user ' . $user->id);
         }
+
+        // Another institution's administrator is an administrator: their own list is empty, and this report is not theirs.
+        $this->signIn($far);
+        $this->assertSame([], json_decode($this->api('GET', 'reports')->response()->getBody(), true)['reports']);
+        $this->assertSame(404, $this->api('GET', "reports/{$report}")->response()->getStatusCode());
+        $this->assertSame(404, $this->api('POST', "reports/{$report}/review", ['status' => 'dismissed'])->response()->getStatusCode());
 
         $this->assertSame('open', db_connect()->table('message_reports')->get()->getRowArray()['status']);
     }
@@ -146,9 +152,14 @@ final class MessagesReportRoutesTest extends RouteTestCase
     {
         $now = date('Y-m-d H:i:s');
 
+        // Twenty reports already filed today, each of a different message (a message is reported once).
         for ($i = 0; $i < MessageRateLimiter::REPORTS_PER_DAY; $i++) {
+            db_connect()->table('messages')->insert([
+                'conversation_id' => $this->chat, 'sender_id' => $this->instructor->id, 'body_enc' => 'x', 'client_uuid' => bin2hex(random_bytes(12)), 'created_at' => $now,
+            ]);
+
             db_connect()->table('message_reports')->insert([
-                'institution_id' => $this->institution, 'message_id' => $this->message, 'reporter_id' => $this->child->id, 'reason' => 'spam',
+                'institution_id' => $this->institution, 'message_id' => db_connect()->insertID(), 'reporter_id' => $this->child->id, 'reason' => 'spam',
                 'snapshot_enc' => 'x', 'status' => 'open', 'created_at' => $now,
             ]);
         }

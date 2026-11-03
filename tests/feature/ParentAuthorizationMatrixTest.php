@@ -35,6 +35,7 @@ final class ParentAuthorizationMatrixTest extends RouteTestCase
         'parent/children/(:num)/api/courses/(:num)/assessments'        => '/parent/children/{c}/api/courses/{o}/assessments',
         'parent/children/(:num)/api/courses/(:num)/grades'             => '/parent/children/{c}/api/courses/{o}/grades',
         'parent/children/(:num)/api/courses/(:num)/grades/report/mine' => '/parent/children/{c}/api/courses/{o}/grades/report/mine',
+        'parent/children/(:num)/api/courses/(:num)/instructor'         => '/parent/children/{c}/api/courses/{o}/instructor',
         'parent/children/(:num)/courses/(:num)/(:segment)'             => '/parent/children/{c}/courses/{o}/{s}',
         'parent/children/(:num)/courses/(:num)/(:segment)/(:segment)'  => '/parent/children/{c}/courses/{o}/{s}/overview',
     ];
@@ -55,6 +56,7 @@ final class ParentAuthorizationMatrixTest extends RouteTestCase
         'parent/children/(:num)/api/courses/(:num)/assessments',
         'parent/children/(:num)/api/courses/(:num)/grades',
         'parent/children/(:num)/api/courses/(:num)/grades/report/mine',
+        'parent/children/(:num)/api/courses/(:num)/instructor',
         'parent/children/(:num)/courses/(:num)/(:segment)',
         'parent/children/(:num)/courses/(:num)/(:segment)/(:segment)',
     ];
@@ -225,6 +227,14 @@ final class ParentAuthorizationMatrixTest extends RouteTestCase
                 // Nothing is final yet, so the report is refused with a message (ParentGradeReportTest covers the PDF).
                 $this->assertSame(404, $status, $pattern);
                 $this->assertStringContainsString('final', (string) (json_decode($body, true)['message'] ?? ''), $pattern);
+
+                continue;
+            }
+
+            if (str_ends_with($pattern, '/instructor')) {
+                // A Messages route: it does not exist while Messages is off, which is how the app ships.
+                // With it on, it is covered by ParentInstructorFeedTest.
+                $this->assertSame(404, $status, $pattern);
 
                 continue;
             }
