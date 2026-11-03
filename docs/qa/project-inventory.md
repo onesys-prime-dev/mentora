@@ -594,6 +594,7 @@ Suspend → delete (typed name, no running subscription) → retention (default 
 | `parents:notify [--dry-run]` | `*/15 * * * *` | parent sweep |
 | `sis:sync` | `0 3 * * *` | inbound import |
 | `sis:grades` | `30 3 * * *` | outbound grade export |
+| `messages:sync-course-chats [--dry-run]` | `45 3 * * *` | creates missing course chats, repairs who is in them, sets `Monitoring.messagesSyncAt` |
 | `admin:create`, `mail:test` | manual | create a system admin (password ≥ 12); send one test mail |
 
 **None of these are installed by the repo.** `docs/server-setup.md` says no crontab exists for either site user on the current servers, and the deploy workflow has no step that installs or checks one (V4). Consequence if not installed: subscriptions never lapse, backups never run, parent emails never go (only the instant final-grade message), SIS never syncs, purge never happens, and **no notification fires** because every trigger hangs off `subscriptions:sync`. Only that one job is monitored (and `parentsNotifyAt` is not recorded, V5).
