@@ -15,6 +15,7 @@ import { startAdminSignIn, emailedCode } from "./support/admin.js";
 import { runSql } from "./support/database.js";
 import { submitLoginForm } from "./support/sign-in.js";
 import {
+    disableMessages,
     enableMessages,
     goToMessages,
     openMessagesAs,
@@ -31,6 +32,11 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeAll(() => {
     enableMessages();
+});
+
+// The other specs share this database and expect Messages off and no chats, notifications or settings left.
+test.afterAll(() => {
+    disableMessages();
 });
 
 /** Opens Introduction to Computing (IT101) for the parent and goes to the "From the instructor" tab. */
@@ -148,7 +154,11 @@ test("TC-MSG-05 A student added to a course joins its chat; dropped, they lose i
         "JOIN course_offerings o ON o.id = e.offering_id JOIN courses c ON c.id = o.course_id " +
         "SET e.status = 'dropped' WHERE c.course_code = 'IT101' AND o.section_code = 'A'";
 
-    runSql(enrol);
+    // "1 row" = the enrolment is new, "0 rows" = Pedro already was enrolled; anything else means the demo data has
+    // him in some other state, which this case will not touch.
+    const outcome = runSql(enrol);
+    const created = outcome.includes("(1 row");
+    test.skip(!created && !outcome.includes("(0 row"), "Pedro has another enrolment status in IT101-A in the demo data");
     syncChats();
 
     const student = await openMessagesAs(browser, people.pedro);
@@ -168,6 +178,17 @@ test("TC-MSG-05 A student added to a course joins its chat; dropped, they lose i
         await expect(student.page.getByText("This conversation is no longer available.")).toBeVisible();
     } finally {
         await student.context.close();
+
+        // Put the demo data back as it was: removed if the case made it, enrolled again if he already was.
+        runSql(
+            created
+                ? "DELETE e FROM enrollments e JOIN auth_identities ai ON ai.user_id = e.student_user_id AND ai.secret = 'student2@mentora.test' " +
+                      "JOIN course_offerings o ON o.id = e.offering_id JOIN courses c ON c.id = o.course_id WHERE c.course_code = 'IT101' AND o.section_code = 'A'"
+                : "UPDATE enrollments e JOIN auth_identities ai ON ai.user_id = e.student_user_id AND ai.secret = 'student2@mentora.test' " +
+                      "JOIN course_offerings o ON o.id = e.offering_id JOIN courses c ON c.id = o.course_id " +
+                      "SET e.status = 'enrolled' WHERE c.course_code = 'IT101' AND o.section_code = 'A'",
+        );
+        syncChats();
     }
 });
 

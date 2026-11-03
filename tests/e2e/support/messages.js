@@ -30,6 +30,24 @@ export function enableMessages() {
     syncChats();
 }
 
+/**
+ * Leaves the database as the other specs expect it: Messages off again (it adds a tab to the parent's course
+ * page and renames the Inbox tile), and nothing left over from these cases (notifications, chats, blocks,
+ * reports, settings). The cases share one database, so this is what keeps them from changing later specs.
+ */
+export function disableMessages() {
+    for (const statement of [
+        "DELETE FROM notifications WHERE type = 'message'",
+        "DELETE FROM message_reports",
+        "DELETE FROM conversations",
+        "DELETE FROM user_blocks",
+        "DELETE FROM message_preferences",
+        "DELETE FROM feature_flag_overrides WHERE flag_key = 'messages'",
+    ]) {
+        runSql(statement);
+    }
+}
+
 /** What the server's scheduler does every night: create the missing chats and repair who is in them. */
 export function syncChats() {
     spark("messages:sync-course-chats");
