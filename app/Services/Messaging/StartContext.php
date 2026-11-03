@@ -14,6 +14,10 @@ namespace App\Services\Messaging;
  *   covers the recipient.
  * linkedChild: the parent's linked child is taught by that instructor or
  *   chaired by that chairperson.
+ * isSelf: sender and recipient are the same person; always refused.
+ *
+ * The resolver must pass the account's active role, and must never build a
+ * context for an `admin` sender or recipient except to have it refused.
  */
 final class StartContext
 {
@@ -27,6 +31,7 @@ final class StartContext
         public readonly bool $linkedChild = false,
         public readonly bool $studentDmEnabled = true,
         public readonly bool $blockedByRecipient = false,
+        public readonly bool $isSelf = false,
     ) {
     }
 }

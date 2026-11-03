@@ -116,7 +116,9 @@
 # encryption.key =
 
 # Messages bodies are encrypted with their own key (32+ bytes, hex2bin: or
-# base64: form). previousKeys: comma-separated older keys, kept after a rotation.
+# base64: form). It must be random (for example
+# php -r "echo bin2hex(random_bytes(32));"), at least 32 bytes, and different
+# from encryption.key. previousKeys: comma-separated older keys, kept after a rotation.
 # messages.encryptionKey =
 # messages.previousKeys =
 

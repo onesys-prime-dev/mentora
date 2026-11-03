@@ -8,6 +8,7 @@ use CodeIgniter\Encryption\EncrypterInterface;
 use Config\Encryption as EncryptionConfig;
 use Config\Messages as MessagesConfig;
 use Config\Services;
+use JsonException;
 use RuntimeException;
 use Throwable;
 
@@ -76,6 +77,8 @@ class MessageCipher
 
     /**
      * @throws RuntimeException when there is no usable key
+     * @throws JsonException     when the body is not valid UTF-8, so the slice-2
+     *                           body validation must reject invalid UTF-8 first
      */
     public function encrypt(string $body, int $conversationId, int $senderId): string
     {

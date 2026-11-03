@@ -68,7 +68,7 @@ if (! function_exists('global_apps')) {
      * Global apps, same set for every role. `url` is null while a page isn't
      * built yet — those render as inert tiles (see components/app-tile.php).
      *
-     * @return list<array{key: string, label: string, icon: string, url: ?string}>
+     * @return list<array{key: string, label: string, icon: string, url: ?string, badge?: int}>
      */
     function global_apps(string $role): array
     {

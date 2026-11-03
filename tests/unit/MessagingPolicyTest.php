@@ -162,11 +162,36 @@ final class MessagingPolicyTest extends CIUnitTestCase
         }
     }
 
-    public function testAChairpersonCannotStartWithAParentButMayReply(): void
+    /**
+     * canPost is role-blind: whether a chairperson may reply to a parent who
+     * wrote first is decided by the slice-2 resolver, not by this policy.
+     */
+    public function testAChairpersonCannotStartWithAParent(): void
+    {
+        $this->assertFalse((new MessagingPolicy())->canStart('chairperson', 'parent', self::startContext(self::FACTS)));
+    }
+
+    public function testNobodyCanStartAThreadWithThemselves(): void
     {
         $policy = new MessagingPolicy();
 
-        $this->assertFalse($policy->canStart('chairperson', 'parent', self::startContext(self::FACTS)));
+        foreach (self::ROLES as $sender) {
+            foreach (self::ROLES as $recipient) {
+                $this->assertFalse(
+                    $policy->canStart($sender, $recipient, self::startContext(self::FACTS, true, ['isSelf' => true])),
+                    "{$sender} -> {$recipient}",
+                );
+            }
+        }
+    }
+
+    public function testABlockedDirectPostIsRefusedUnlessTheBlockerIsExempt(): void
+    {
+        $policy = new MessagingPolicy();
+
+        $this->assertFalse($policy->canPost(new PostContext('direct', true, true, blocked: true)));
+        $this->assertTrue($policy->canPost(new PostContext('direct', true, true, blocked: true, blockerIsExempt: true)));
+        $this->assertTrue($policy->canPost(new PostContext('direct', true, true, blockerIsExempt: true)));
         $this->assertTrue($policy->canPost(new PostContext('direct', true, true)));
     }
 
@@ -218,6 +243,29 @@ final class MessagingPolicyTest extends CIUnitTestCase
         foreach (self::ROLES as $role) {
             $this->assertFalse($policy->canModerate($role, 'direct', true), $role);
         }
+    }
+
+    public function testModerationGapsAreRefused(): void
+    {
+        $policy = new MessagingPolicy();
+
+        $this->assertFalse($policy->canModerate('chairperson', 'course', true));
+        $this->assertFalse($policy->canModerate('dean', 'course', true));
+        $this->assertFalse($policy->canModerate('instructor', 'group', true));
+        $this->assertFalse($policy->canModerate('admin', 'course', true));
+        $this->assertFalse($policy->canModerate('admin', 'group', true));
+    }
+
+    public function testNobodyModeratesAcrossInstitutions(): void
+    {
+        $policy = new MessagingPolicy();
+
+        foreach (self::ROLES as $role) {
+            foreach (['course', 'group', 'direct'] as $type) {
+                $this->assertFalse($policy->canModerate($role, $type, true, false), "{$role} {$type}");
+            }
+        }
+        $this->assertTrue($policy->canModerate('institutional_admin', 'course', false, true));
     }
 
     public function testParentFeedShowsOnlyInstructorPostsOfALinkedEnrolledChild(): void

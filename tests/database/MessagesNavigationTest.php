@@ -64,6 +64,15 @@ final class MessagesNavigationTest extends DatabaseTestCase
         $this->assertNull($this->tileFor('admin'));
     }
 
+    public function testTheTileIsHiddenWhileTheFlagIsOffEvenWithMessagesUse(): void
+    {
+        $this->assertNotNull($this->tileFor('student'));
+
+        (new FeatureFlagOverrideModel())->where('flag_key', 'messages')->set(['enabled' => 0])->update();
+
+        $this->assertNull($this->tileFor('student'));
+    }
+
     public function testTheTileIsHiddenWhenTheRoleLosesMessagesUse(): void
     {
         $this->assertNotNull($this->tileFor('student'));
