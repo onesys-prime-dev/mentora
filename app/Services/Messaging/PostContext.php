@@ -9,7 +9,8 @@ namespace App\Services\Messaging;
  * existing conversation. studentDmBlocked means a student-to-student direct
  * thread while the institution's switch is off. blockerIsExempt is true when
  * the person who blocked is an instructor or institutional admin, whose
- * blocks never bind.
+ * blocks never bind. subjectLinkLost means a parent thread about a child
+ * whose parent link has ended: the thread stays readable but nobody posts.
  */
 final class PostContext
 {
@@ -24,6 +25,7 @@ final class PostContext
         public readonly bool $blocked = false,
         public readonly bool $studentDmBlocked = false,
         public readonly bool $blockerIsExempt = false,
+        public readonly bool $subjectLinkLost = false,
     ) {
     }
 }

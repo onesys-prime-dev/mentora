@@ -209,6 +209,7 @@ final class MessagingPolicyTest extends CIUnitTestCase
         yield 'blocked direct thread'          => [new PostContext('direct', true, true, blocked: true), false];
         yield 'student switch off, direct'     => [new PostContext('direct', true, true, studentDmBlocked: true), false];
         yield 'group chat'                     => [new PostContext('group', true, true), true];
+        yield 'parent link ended'              => [new PostContext('direct', true, true, subjectLinkLost: true), false];
     }
 
     #[DataProvider('providePostRules')]

@@ -70,7 +70,7 @@ class ConversationPresenter
             $row['preview']  = $this->preview((int) $row['id'], (int) $viewer->id);
             $row['can_post'] = $this->policy->canPost($this->resolver->forPost($viewer, [
                 'id' => $row['id'], 'type' => $row['type'], 'institution_id' => $institution,
-                'offering_id' => $row['offering_id'], 'is_locked' => $row['is_locked'],
+                'offering_id' => $row['offering_id'], 'is_locked' => $row['is_locked'], 'subject_student_id' => $row['subject_student_id'],
             ]));
 
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);

@@ -104,7 +104,7 @@ final class MessagingPolicy
      */
     public function canPost(PostContext $c): bool
     {
-        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed) {
+        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost) {
             return false;
         }
 

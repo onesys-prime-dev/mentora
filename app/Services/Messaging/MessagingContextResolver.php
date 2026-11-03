@@ -130,7 +130,31 @@ class MessagingContextResolver
             blocked: $blocked,
             studentDmBlocked: false,
             blockerIsExempt: $exempt,
+            subjectLinkLost: $type === 'direct' && $this->linkLost($conversation),
         );
+    }
+
+    /**
+     * A parent thread is about one child. Once no participant is linked to that child any more, nobody
+     * should be posting into it: the other side would be writing about a child to someone who may not see them.
+     *
+     * @param array<string, mixed> $conversation a `conversations` row
+     */
+    private function linkLost(array $conversation): bool
+    {
+        if (($conversation['subject_student_id'] ?? null) === null) {
+            return false;
+        }
+
+        $db = db_connect();
+        $participants = array_map('intval', array_column(
+            $db->table('conversation_participants')->select('user_id')->where('conversation_id', (int) $conversation['id'])->get()->getResultArray(),
+            'user_id',
+        ));
+
+        return $participants === [] || $db->table('parent_student_links')
+            ->where('institution_id', (int) $conversation['institution_id'])->where('student_user_id', (int) $conversation['subject_student_id'])
+            ->whereIn('parent_user_id', $participants)->countAllResults() === 0;
     }
 
     public function isCourseInstructor(int $userId, int $offeringId): bool
