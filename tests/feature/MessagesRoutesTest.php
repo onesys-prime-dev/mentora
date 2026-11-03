@@ -69,6 +69,8 @@ final class MessagesRoutesTest extends RouteTestCase
             ['POST', "conversations/{$c}/messages", ['body' => 'hi', 'client_uuid' => 'abcdefgh1']],
             ['POST', "conversations/{$c}/read", ['message_id' => 1]],
             ['POST', "conversations/{$c}/messages/1/hide", []],
+            ['POST', "conversations/{$c}/lock", []],
+            ['POST', "conversations/{$c}/unlock", []],
             ['GET', 'unread-count', []],
         ];
     }
@@ -143,6 +145,24 @@ final class MessagesRoutesTest extends RouteTestCase
 
         $this->assertNotContains($response->getStatusCode(), [200, 201]);
         $this->assertSame(0, db_connect()->table('messages')->countAllResults());
+    }
+
+    public function testTheInstructorLocksACourseChatAndAStudentCannot(): void
+    {
+        $offering = (int) db_connect()->table('enrollments')->get()->getRow('offering_id');
+        $chat     = (new \App\Services\Messaging\CourseChatSync())->syncOffering($offering)['conversation_id'];
+
+        $this->signIn($this->student);
+        $this->assertSame(404, $this->api('POST', "conversations/{$chat}/lock")->response()->getStatusCode());
+
+        $this->signIn($this->instructor);
+        $response = $this->api('POST', "conversations/{$chat}/lock")->response();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(['conversation' => ['id' => $chat, 'is_locked' => true]], json_decode($response->getBody(), true));
+
+        $unlocked = $this->api('POST', "conversations/{$chat}/unlock")->response();
+        $this->assertFalse(json_decode($unlocked->getBody(), true)['conversation']['is_locked']);
     }
 
     public function testStartSendPageReadAndHideEndToEnd(): void

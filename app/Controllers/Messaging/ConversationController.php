@@ -54,6 +54,23 @@ class ConversationController extends MessagingController
         return $this->response->setJSON(['conversation' => $conversation]);
     }
 
+    public function lock(int $conversationId): ResponseInterface
+    {
+        return $this->setLocked($conversationId, true);
+    }
+
+    public function unlock(int $conversationId): ResponseInterface
+    {
+        return $this->setLocked($conversationId, false);
+    }
+
+    private function setLocked(int $conversationId, bool $locked): ResponseInterface
+    {
+        $result = (new ConversationService())->setLocked(auth()->user(), $conversationId, $locked);
+
+        return $result === null ? $this->notFound() : $this->response->setJSON(['conversation' => $result]);
+    }
+
     public function unread(): ResponseInterface
     {
         return $this->response->setJSON(['unread' => (new ConversationService())->unreadCount(auth()->user())]);

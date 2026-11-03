@@ -133,6 +133,12 @@ class MessagingContextResolver
         );
     }
 
+    public function isCourseInstructor(int $userId, int $offeringId): bool
+    {
+        return db_connect()->table('instructor_assignments')
+            ->where('offering_id', $offeringId)->where('instructor_user_id', $userId)->countAllResults() > 0;
+    }
+
     public function isActiveParticipant(int $userId, int $conversationId): bool
     {
         return db_connect()->table('conversation_participants')

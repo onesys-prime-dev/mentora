@@ -68,6 +68,8 @@ final class MessagesIdorTest extends RouteTestCase
             'send'  => ['POST', "conversations/{$conversationId}/messages", ['body' => 'probe', 'client_uuid' => $this->uuid()]],
             'read'  => ['POST', "conversations/{$conversationId}/read", ['message_id' => $messageId]],
             'hide'  => ['POST', "conversations/{$conversationId}/messages/{$messageId}/hide", []],
+            'lock'   => ['POST', "conversations/{$conversationId}/lock", []],
+            'unlock' => ['POST', "conversations/{$conversationId}/unlock", []],
         ] as $name => [$verb, $uri, $data]) {
             $response    = $this->api($verb, $uri, $data)->response();
             $out[$name] = [$response->getStatusCode(), $response->getBody()];

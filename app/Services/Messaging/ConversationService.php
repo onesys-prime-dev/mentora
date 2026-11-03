@@ -112,6 +112,56 @@ class ConversationService
     }
 
     /**
+     * Whether the user may lock or remove messages in this conversation. A course
+     * chat is moderated by its instructor (and the institution's admin); a staff
+     * group's moderation arrives with groups, so nothing else is moderated yet.
+     *
+     * @param array<string, mixed> $conversation a `conversations` row
+     */
+    public function canModerate(User $user, array $conversation): bool
+    {
+        $role       = $this->resolver->activeRole($user);
+        $offeringId = $conversation['offering_id'] === null ? null : (int) $conversation['offering_id'];
+        $teaches    = $offeringId !== null && $this->resolver->isCourseInstructor((int) $user->id, $offeringId);
+
+        return $this->policy->canModerate(
+            $role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role),
+            (string) $conversation['type'],
+            $teaches,
+            $this->resolver->institutionOf($user) === (int) $conversation['institution_id'],
+        );
+    }
+
+    /**
+     * Locks a course chat to announcements-only, or opens it again. Null when the
+     * chat is not the user's or they may not moderate it (the same "not found").
+     *
+     * @return array{id: int, is_locked: bool}|null
+     */
+    public function setLocked(User $user, int $conversationId, bool $locked): ?array
+    {
+        $conversation = $this->find($user, $conversationId);
+
+        if ($conversation === null || $conversation['type'] !== 'course' || ! $this->canModerate($user, $conversation)) {
+            return null;
+        }
+
+        if ((bool) $conversation['is_locked'] !== $locked) {
+            db_connect()->table('conversations')->where('id', $conversationId)->update(['is_locked' => $locked ? 1 : 0, 'updated_at' => date('Y-m-d H:i:s')]);
+
+            service('auditLogger')->log($locked ? 'messages.course_chat_locked' : 'messages.course_chat_unlocked', $user, [
+                'target_type'    => 'conversation',
+                'target_id'      => $conversationId,
+                'institution_id' => (int) $conversation['institution_id'],
+                'old'            => ['is_locked' => (bool) $conversation['is_locked']],
+                'new'            => ['is_locked' => $locked],
+            ]);
+        }
+
+        return ['id' => $conversationId, 'is_locked' => $locked];
+    }
+
+    /**
      * The user's conversations, course chats first, then newest. No message text.
      *
      * @param 'all'|'course'|'direct'|'group' $filter

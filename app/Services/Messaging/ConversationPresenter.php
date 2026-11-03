@@ -39,6 +39,8 @@ class ConversationPresenter
         $institution = $this->resolver->institutionOf($viewer);
         $people      = self::names(array_values(array_filter(array_map('intval', [...array_column($rows, 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
         $courses     = $this->courses(array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
+        $role        = $this->resolver->activeRole($viewer);
+        $teaching    = $this->teaching((int) $viewer->id, array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
         $out         = [];
 
         foreach ($rows as $row) {
@@ -67,7 +69,32 @@ class ConversationPresenter
                 'offering_id' => $row['offering_id'], 'is_locked' => $row['is_locked'],
             ]));
 
+            $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
+            $row['can_moderate'] =$this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches);
+
             $out[] = $row;
+        }
+
+        return $out;
+    }
+
+    /**
+     * The offerings, of these, that the user teaches (one query for the whole list).
+     *
+     * @param list<int> $offeringIds
+     *
+     * @return array<int, true>
+     */
+    private function teaching(int $userId, array $offeringIds): array
+    {
+        if ($offeringIds === []) {
+            return [];
+        }
+
+        $out = [];
+
+        foreach (db_connect()->table('instructor_assignments')->select('offering_id')->where('instructor_user_id', $userId)->whereIn('offering_id', $offeringIds)->get()->getResultArray() as $row) {
+            $out[(int) $row['offering_id']] = true;
         }
 
         return $out;

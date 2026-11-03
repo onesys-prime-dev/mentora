@@ -441,6 +441,8 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
 $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission:messages.use']], function ($routes) {
     $routes->get('conversations', 'Messaging\ConversationController::index');
     $routes->post('conversations', 'Messaging\ConversationController::start');
+    $routes->post('conversations/(:num)/lock', 'Messaging\ConversationController::lock/$1');
+    $routes->post('conversations/(:num)/unlock', 'Messaging\ConversationController::unlock/$1');
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');
     $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
