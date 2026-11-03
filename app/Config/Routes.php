@@ -457,6 +457,11 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
     $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/remove', 'Messaging\MessageController::remove/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/report', 'Messaging\ReportController::create/$1/$2');
+    // The institutional administrator's reports; anyone else gets the shared 404.
+    $routes->get('reports', 'Messaging\ReportController::index');
+    $routes->get('reports/(:num)', 'Messaging\ReportController::show/$1');
+    $routes->post('reports/(:num)/review', 'Messaging\ReportController::review/$1');
 });
 
 // The Messages page itself: the same turn-aways as the JSON routes, and no `readonly` filter because

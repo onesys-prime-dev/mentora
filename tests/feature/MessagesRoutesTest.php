@@ -77,6 +77,10 @@ final class MessagesRoutesTest extends RouteTestCase
             ['GET', 'blocks', []],
             ['POST', 'blocks', ['user_id' => 1]],
             ['POST', 'blocks/1/remove', []],
+            ['POST', "conversations/{$c}/messages/1/report", ['reason' => 'spam']],
+            ['GET', 'reports', []],
+            ['GET', 'reports/1', []],
+            ['POST', 'reports/1/review', ['status' => 'dismissed']],
             ['GET', 'unread-count', []],
         ];
     }
