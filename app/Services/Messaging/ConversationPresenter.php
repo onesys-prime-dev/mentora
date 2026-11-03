@@ -74,7 +74,8 @@ class ConversationPresenter
             ]));
 
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
-            $row['can_moderate'] =$this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches);
+            $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
+            $row['can_moderate'] = $this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches || $created);
 
             $out[] = $row;
         }

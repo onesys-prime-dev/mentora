@@ -114,7 +114,7 @@ class ConversationService
     /**
      * Whether the user may lock or remove messages in this conversation. A course
      * chat is moderated by its instructor (and the institution's admin); a staff
-     * group's moderation arrives with groups, so nothing else is moderated yet.
+     * group by the chairperson or dean who created it. Direct threads by nobody.
      *
      * @param array<string, mixed> $conversation a `conversations` row
      */
@@ -123,11 +123,12 @@ class ConversationService
         $role       = $this->resolver->activeRole($user);
         $offeringId = $conversation['offering_id'] === null ? null : (int) $conversation['offering_id'];
         $teaches    = $offeringId !== null && $this->resolver->isCourseInstructor((int) $user->id, $offeringId);
+        $created    = $conversation['type'] === 'group' && (int) ($conversation['created_by'] ?? 0) === (int) $user->id;
 
         return $this->policy->canModerate(
             $role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role),
             (string) $conversation['type'],
-            $teaches,
+            $teaches || $created,
             $this->resolver->institutionOf($user) === (int) $conversation['institution_id'],
         );
     }
@@ -176,7 +177,7 @@ class ConversationService
             return [];
         }
 
-        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.is_locked, c.last_message_at,
+        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.created_by, c.is_locked, c.last_message_at,
                     p.is_muted, p.is_starred,
                     (SELECT o.user_id FROM conversation_participants o WHERE o.conversation_id = c.id AND o.user_id <> p.user_id LIMIT 1) AS other_user_id,
                     (' . $this->unreadSql() . ') AS unread
