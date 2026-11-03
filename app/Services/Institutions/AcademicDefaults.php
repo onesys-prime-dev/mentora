@@ -36,7 +36,7 @@ class AcademicDefaults
     public const PLATFORM_OVERDUE_DAYS = 7;
 
     /** Units an instructor teaches in a term from which the dean's teaching-load page marks a high load. */
-    public const PLATFORM_HIGH_LOAD_UNITS = 21;
+    public const PLATFORM_HIGH_LOAD_UNITS = 30;
 
     public const MAX_CATEGORIES = 12;
 

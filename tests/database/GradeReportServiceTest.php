@@ -320,4 +320,57 @@ final class GradeReportServiceTest extends DatabaseTestCase
         $this->assertDoesNotMatchRegularExpression('#[/\\\\ ]#', $stem);
         $this->assertStringStartsWith('gradebook-IT-101-x-A-', $stem);
     }
+
+    public function testTheWorkbookHasASheetPerSectionWithTheSameHeaderAndRowsAsItsClassSheet(): void
+    {
+        $report = $this->service->classReport($this->offering);
+        $other  = $report;
+        $other['offering']['section'] = 'B';
+
+        $single = $this->service->classSheet($report, 'xlsx');
+        $file   = $this->service->classWorkbook([$report, $other]);
+
+        $book     = \PhpOffice\PhpSpreadsheet\IOFactory::load($file['file_path']);
+        $expected = \PhpOffice\PhpSpreadsheet\IOFactory::load($single['file_path'])->getSheetByName('Gradebook')->toArray();
+        @unlink($file['file_path']);
+        @unlink($single['file_path']);
+
+        $code = $report['offering']['course_code'];
+
+        $this->assertSame([$code . '-' . $report['offering']['section'], $code . '-B'], $book->getSheetNames());
+        $this->assertSame($expected, $book->getSheet(0)->toArray(), 'the same header and rows as the class sheet');
+        $this->assertSame($expected[0], $book->getSheet(1)->toArray()[0]);
+        $this->assertSame('gradebooks-' . url_title($report['offering']['term'], '-', true) . '-' . date('Ymd') . '.xlsx', $file['filename']);
+    }
+
+    public function testWorkbookSheetTitlesAreUniqueShortAndAllowed(): void
+    {
+        $report = $this->service->classReport($this->offering);
+
+        $named = static function (string $code, string $section) use ($report): array {
+            $report['offering']['course_code'] = $code;
+            $report['offering']['section']     = $section;
+
+            return $report;
+        };
+
+        $file = $this->service->classWorkbook([
+            $named('IT101', 'A'),
+            $named('IT101', 'A'),
+            $named('IT1/01:[x]*?', 'B'),
+            $named(str_repeat('LONGCODE', 5), 'A'),
+            $named(str_repeat('LONGCODE', 5), 'A'),
+        ]);
+
+        $titles = \PhpOffice\PhpSpreadsheet\IOFactory::load($file['file_path'])->getSheetNames();
+        @unlink($file['file_path']);
+
+        $this->assertSame('IT101-A', $titles[0]);
+        $this->assertCount(5, array_unique($titles), 'every title is different');
+
+        foreach ($titles as $title) {
+            $this->assertLessThanOrEqual(31, mb_strlen($title), $title);
+            $this->assertDoesNotMatchRegularExpression('#[\\\\/?*:\[\]]#', $title);
+        }
+    }
 }

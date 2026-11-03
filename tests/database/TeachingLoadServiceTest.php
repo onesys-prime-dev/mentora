@@ -18,7 +18,7 @@ use Tests\Support\PeopleFactory;
  *   Tess teaches IT101 (3 units, students s1 s2; 2 pieces of work waiting, 2 graded after 24 h and 48 h),
  *   IT102 (3 units, students s2 s3) in Sub A and LW100 (3 units, student s4) in Sub B: 3 sections, 9 units,
  *   4 students (s2 is in two of hers), turnaround 36 h. She also teaches a section of another department.
- *   Leo teaches CS200 (21 units, no students): a high load at the platform's 21. Mia co-teaches IT101.
+ *   Leo teaches CS200 (30 units, no students): a high load at the platform's 30. Mia co-teaches IT101.
  *   Zed teaches only in the other department, and Tess has a section in an earlier term.
  *
  * @internal
@@ -74,7 +74,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $it102       = DeanFactory::offering($programA, $this->term, 'IT102');
         $lw100       = DeanFactory::offering($programB, $this->term, 'LW100');
         $cs200       = DeanFactory::offering($programA, $this->term, 'CS200');
-        db_connect()->table('courses')->where('course_code', 'CS200')->update(['units' => 21]);
+        db_connect()->table('courses')->where('course_code', 'CS200')->update(['units' => 30]);
 
         CourseFactory::assignInstructor($this->it101, $this->tess);
         CourseFactory::assignInstructor($this->it101, $this->mia);
@@ -151,7 +151,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $this->assertSame(0, $leo['students']);
         $this->assertSame(0, $leo['ungraded']);
         $this->assertNull($leo['turnaround']);
-        $this->assertSame(21.0, $leo['units']);
+        $this->assertSame(30.0, $leo['units']);
     }
 
     public function testAHighLoadIsMarkedAtTheInstitutionsNumberOfUnits(): void
@@ -159,7 +159,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $result = $this->service->load($this->dean, $this->filters());
 
         $this->assertSame(AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, $result['highLoadUnits']);
-        $this->assertTrue($this->byName($result)['Leo Law']['high_load'], '21 units reaches the platform number');
+        $this->assertTrue($this->byName($result)['Leo Law']['high_load'], '30 units reaches the platform number');
 
         (new AcademicDefaults())->save($this->institution, ['high_load_units' => '9'], PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution));
 

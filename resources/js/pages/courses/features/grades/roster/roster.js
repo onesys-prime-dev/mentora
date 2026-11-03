@@ -11,7 +11,7 @@
 
 import { showLoadError } from "../../../../../shared/spa/error-state.js";
 import { renderGradebookSkeleton } from "../skeleton.js";
-import { fetchGradebookRoster, updateManualScore, overrideGrade, updateOverrideRequest, withdrawOverrideRequest } from "../api.js";
+import { fetchGradebookRoster, gradesBase, updateManualScore, overrideGrade, updateOverrideRequest, withdrawOverrideRequest } from "../api.js";
 import { bindModal } from "../../assessments/modals/index.js";
 import { overrideDialogState } from "./override-dialog.js";
 import { bindIncompleteDialog } from "./incomplete-dialog.js";
@@ -24,19 +24,36 @@ let overrideModal = null;
 // What the open dialog is for: set when it opens, read when it is submitted or a request is withdrawn.
 let dialogState = overrideDialogState("direct", "", {});
 
+// Each pending manual-score save, by `studentId:itemId`: { timeout, run }.
 const timers = new Map();
 
-export async function loadGradebookRoster(back)
+// What the grid was last loaded with, so a reload keeps the same place and query.
+let loaded = { container: "#course-content", query: "" };
+
+// Fires every pending debounced score save now, and resolves once they have all settled.
+export async function flushPendingScores()
+{
+    const pending = [...timers.values()];
+
+    timers.clear();
+
+    pending.forEach(({ timeout }) => clearTimeout(timeout));
+
+    await Promise.all(pending.map(({ run }) => run()));
+}
+
+export async function loadGradebookRoster(back, { container = "#course-content", query = "" } = {})
 {
     backToGrades = back;
+    loaded = { container, query };
 
-    const container = document.querySelector("#course-content");
+    container = typeof container === "string" ? document.querySelector(container) : container;
 
     container.innerHTML = renderGradebookSkeleton();
 
     try {
 
-        const result = await fetchGradebookRoster();
+        const result = await fetchGradebookRoster(query);
 
         container.innerHTML = result.html;
 
@@ -46,7 +63,7 @@ export async function loadGradebookRoster(back)
 
         console.error(error);
 
-        showLoadError(container, "the gradebook", () => loadGradebookRoster(back));
+        showLoadError(container, "the gradebook", () => loadGradebookRoster(back, { container, query }));
 
     }
 }
@@ -84,11 +101,17 @@ function bind(container)
 
         input.addEventListener("input", () => {
 
-            clearTimeout(timers.get(key));
+            clearTimeout(timers.get(key)?.timeout);
 
             setStatus("saving");
 
-            timers.set(key, setTimeout(async () => {
+            // The section this cell belongs to, taken now: on the Grades page the calls may point at another
+            // section by the time the save runs (a card clicked while it waited), and it must not follow them.
+            const at = gradesBase();
+
+            const run = async () => {
+
+                timers.delete(key);
 
                 const typed = input.value.trim();
                 const excused = /^ex(cused)?$/i.test(typed);
@@ -102,7 +125,7 @@ function bind(container)
 
                 try {
 
-                    const result = await updateManualScore(input.dataset.itemId, row.dataset.studentId, value, excused);
+                    const result = await updateManualScore(input.dataset.itemId, row.dataset.studentId, value, excused, at);
 
                     if (result.success === false) {
                         setStatus("error");
@@ -124,7 +147,9 @@ function bind(container)
 
                 }
 
-            }, 600));
+            };
+
+            timers.set(key, { timeout: setTimeout(run, 600), run });
 
         });
 
@@ -141,7 +166,7 @@ function bind(container)
 
     bindOverrideForm();
 
-    bindIncompleteDialog(container, () => loadGradebookRoster(backToGrades));
+    bindIncompleteDialog(container, () => loadGradebookRoster(backToGrades, loaded));
 
     bindReportTriggers(container);
 
@@ -238,7 +263,7 @@ async function withdrawRequest()
         overrideModal?.close();
 
         // The grid is the server's word on where every request stands.
-        await loadGradebookRoster(backToGrades);
+        await loadGradebookRoster(backToGrades, loaded);
 
     } catch (withdrawError) {
 
@@ -288,7 +313,7 @@ function bindOverrideForm()
             // Where the institution has deans nothing changed in the grade: it is a request now.
             // Show where it stands, as the server has it, rather than faking a new grade.
             if (dialogState.mode === "request") {
-                await loadGradebookRoster(backToGrades);
+                await loadGradebookRoster(backToGrades, loaded);
                 return;
             }
 

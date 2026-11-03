@@ -18,17 +18,22 @@ $openRequests  = $openRequests ?? [];
 $isRequestMode = $overrideMode === 'request';
 
 // Someone who only looks (the dean, the institution's administrator, an instructor without grading.manage) reads
-// the grade and the standing; neither is a button.
-$viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'grading');
+// the grade and the standing; neither is a button. `readonly` can only add to that, never lift it.
+$viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'grading') || ! empty($readonly);
+
+// The embedded Grades page asks for the grid to be only read: the manual scores are text, not inputs.
+$scoresReadOnly = ! empty($readonly);
 ?>
 
 <div class="p-10 flex flex-col gap-6" data-gradebook-roster data-override-mode="<?= esc($overrideMode, 'attr') ?>" data-override-route="<?= esc($overrideRoute, 'attr') ?>">
 
     <div class="flex items-center gap-3 border-b border-gray-200 pb-4">
 
-        <button type="button" data-gradebook-roster-back class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100" title="Back to Grades" aria-label="Back to Grades">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-        </button>
+        <?php if (empty($embedded)): ?>
+            <button type="button" data-gradebook-roster-back class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100" title="Back to Grades" aria-label="Back to Grades">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+        <?php endif; ?>
 
         <?= icon('grades', 'h-6 w-6') ?>
 
@@ -158,6 +163,11 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
                         <?php foreach ($items as $item): ?>
                             <td class="px-4 py-2">
                                 <?php $isExcused = !empty($student['excused'][$item['id']]); ?>
+                                <?php if ($scoresReadOnly): ?>
+                                    <span class="inline-block w-20 px-2 py-1 text-sm <?= $isExcused ? 'font-semibold text-[#646464]' : '' ?>">
+                                        <?= $isExcused ? 'EX' : ($student['scores'][$item['id']] ?? '—') ?>
+                                    </span>
+                                <?php else: ?>
                                 <input
                                     type="text" inputmode="decimal" autocomplete="off"
                                     value="<?= $isExcused ? 'EX' : ($student['scores'][$item['id']] ?? '') ?>"
@@ -165,6 +175,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
                                     title="0 to <?= $points($item['max_points']) ?>, or EX to excuse this student from the item"
                                     data-manual-score-input data-item-id="<?= (int) $item['id'] ?>" data-max-points="<?= $points($item['max_points']) ?>"
                                     class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none transition focus:border-brand <?= $isExcused ? 'bg-gray-50 font-semibold text-[#646464]' : '' ?>">
+                                <?php endif; ?>
                             </td>
                         <?php endforeach; ?>
 

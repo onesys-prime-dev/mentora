@@ -126,7 +126,8 @@ if (! function_exists('global_apps')) {
             ['key' => 'courses',       'label' => 'Courses',       'icon' => 'hat',          'url' => site_url($role . '/courses')],
             ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],
             ['key' => 'schedule',      'label' => 'Schedule',      'icon' => 'clock',        'url' => site_url($role . '/schedule')],
-            ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
+            // The instructor's page is built; the student's and the chairperson's come in later phases.
+            ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => $role === 'instructor' ? site_url('instructor/grades') : null],
             ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => in_array($role, ['student', 'instructor', 'chairperson'], true) ? site_url($role . '/announcements') : null],
             ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
         ];
@@ -140,6 +141,11 @@ if (! function_exists('global_apps')) {
 
             $apps[] = ['key' => 'override-requests', 'label' => 'Override requests', 'icon' => 'tasks', 'url' => site_url('chairperson/override-requests')];
             $apps[] = ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('chairperson/follow-ups')];
+        }
+
+        // The instructor's Grades page needs courses.view (as instructor): without it there is no page, so no tile.
+        if ($role === 'instructor' && ($user = auth()->user()) !== null && ! (new \App\Services\Auth\RolePermissions())->allows($user, 'courses.view', 'instructor')) {
+            $apps = array_values(array_filter($apps, static fn (array $app): bool => $app['key'] !== 'grades'));
         }
 
         // What the dean or a chairperson asked of an instructor.

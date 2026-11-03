@@ -6,10 +6,22 @@ function defaultHeaders()
     };
 }
 
+// Where the gradebook calls go. The course page's own config, unless a page that shows
+// another section's grid points it at that section.
+let baseOverride = null;
+
+export function setGradesApiBase(url)
+{
+    baseOverride = url || null;
+}
+
 function base()
 {
-    return `${window.coursesConfig.apiBaseUrl}/grades`;
+    return `${baseOverride ?? window.coursesConfig.apiBaseUrl}/grades`;
 }
+
+/** Where the gradebook calls go right now; a save that runs later can keep the address it started with. */
+export const gradesBase = () => base();
 
 async function request(url, method = "GET", body = undefined)
 {
@@ -106,10 +118,10 @@ export const deleteGradingPeriod = (periodId) => request(`${base()}/scheme/perio
 |--------------------------------------------------------------------------
 */
 
-export const fetchGradebookRoster = () => request(`${base()}/roster`);
+export const fetchGradebookRoster = (query = "") => request(`${base()}/roster${query ? `?${query}` : ""}`);
 
-export const updateManualScore = (itemId, studentId, score, excused = false) =>
-    request(`${base()}/roster/items/${itemId}/students/${studentId}`, "PATCH", { score, excused });
+export const updateManualScore = (itemId, studentId, score, excused = false, at = base()) =>
+    request(`${at}/roster/items/${itemId}/students/${studentId}`, "PATCH", { score, excused });
 
 export const restoreGradeCategory = (categoryId) => request(`${base()}/scheme/categories/${categoryId}/restore`, "POST");
 

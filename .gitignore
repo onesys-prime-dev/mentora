@@ -162,3 +162,6 @@ python-question-builder-service/*.log
 python-question-builder-service/gen_result.json
 .pytest_cache/
 python-question-builder-service/eval/report*.json
+
+# Superpowers brainstorming mockups (local only)
+.superpowers/

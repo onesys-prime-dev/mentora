@@ -132,6 +132,13 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
     $routes->get('courses', 'Courses\CourseController::index', ['filter' => 'permission:courses.view']);
+
+    // Grades across every section they teach: the gradebook, what is waiting to be graded, who is at risk.
+    $routes->get('grades', 'Grades\GradesController::index', ['filter' => 'permission:courses.view']);
+    // Across every section of a term: finalize the ready ones, download every class gradebook in one file.
+    $routes->post('grades/finalize-ready', 'Grades\GradesBulkController::finalizeReady', ['filter' => 'permission:courses.view']);
+    $routes->get('grades/download', 'Grades\GradesBulkController::download', ['filter' => 'permission:courses.view']);
+
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:instructor']]);

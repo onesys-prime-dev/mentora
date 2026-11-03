@@ -73,6 +73,11 @@ import {
 } from "../../../../shared/spa/swap.js";
 
 import {
+    currentReturn,
+    leaveTo,
+} from "../../../../shared/grades-return.js";
+
+import {
     renderAssessmentsSkeleton,
     renderAssessmentDetailSkeleton,
     renderGradeWorkSkeleton,
@@ -1134,12 +1139,16 @@ export async function loadGradeWork(
 
     try {
 
+        // Opened from the Grades page queue: remember where to lead back to.
+        const returnTo = currentReturn();
+
         if (pushState) {
 
             const query =
                 `?assessment=${assessmentId}&grade=1`
                 + (studentId ? `&student=${studentId}` : "")
-                + (studentId && attemptId ? `&attempt=${attemptId}` : "");
+                + (studentId && attemptId ? `&attempt=${attemptId}` : "")
+                + (returnTo ? `&return=${encodeURIComponent(returnTo)}` : "");
 
             history.pushState(
                 { assessmentId, grade: true, studentId, attemptId },
@@ -1149,11 +1158,29 @@ export async function loadGradeWork(
 
         }
 
-        document
-            .querySelector("[data-back-to-assessments]")
+        const backButton =
+            document.querySelector("[data-back-to-assessments]");
+
+        if (backButton && returnTo) {
+
+            backButton.textContent = "← Back to To grade";
+
+            backButton.classList.add("text-sm", "font-medium", "hover:text-brand");
+
+        }
+
+        backButton
             ?.addEventListener(
                 "click",
                 () => {
+
+                    if (returnTo) {
+
+                        leaveTo(returnTo);
+
+                        return;
+
+                    }
 
                     history.pushState(
                         {},

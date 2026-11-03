@@ -6,6 +6,7 @@ use CodeIgniter\Config\Services;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
+use Tests\Support\DeanFactory;
 use Tests\Support\GradeFactory;
 use Tests\Support\RouteTestCase;
 
@@ -331,6 +332,40 @@ final class GradeRoutesTest extends RouteTestCase
         $this->assertSame('Active', db_connect()->table('grade_items')->where('id', $this->theirItem)->get()->getRowArray()['status']);
         $this->assertSame(0, db_connect()->table('grade_adjustments')->countAllResults());
         $this->assertSame(0, db_connect()->table('gradebook_item_scores')->where('student_id', $this->outsider->id)->countAllResults());
+    }
+
+    public function testTheEmbeddedRosterHasNoBackButton(): void
+    {
+        $this->as($this->teacher);
+
+        $base = "instructor/api/courses/{$this->mine}/grades/roster";
+
+        $this->assertStringContainsString('data-gradebook-roster-back', $this->send('GET', $base)['json']['html']);
+        $this->assertStringNotContainsString('data-gradebook-roster-back', $this->send('GET', "{$base}?embedded=1")['json']['html']);
+    }
+
+    public function testReadonlyMakesTheRosterViewOnlyButNeverEditable(): void
+    {
+        $this->as($this->teacher);
+
+        $base = "instructor/api/courses/{$this->mine}/grades/roster";
+
+        $this->assertStringContainsString('data-manual-score-input', $this->send('GET', $base)['json']['html']);
+        $this->assertStringContainsString('data-open-override', $this->send('GET', $base)['json']['html']);
+        $this->assertStringNotContainsString('data-manual-score-input', $this->send('GET', "{$base}?readonly=1")['json']['html']);
+
+        // Someone who may only look stays view-only; readonly=0 does not grant the controls.
+        $home = DeanFactory::department('RO');
+        $sub = DeanFactory::subDepartment($home['department'], 'A');
+        $deansSection = DeanFactory::offering(DeanFactory::program($sub, 'A'), DeanFactory::term($home['institution']), 'IT101');
+        CourseFactory::enroll($deansSection, CourseFactory::user('student'));
+        $this->as(DeanFactory::dean($home['institution'], $home['department']));
+
+        $viewed = $this->send('GET', "dean/api/courses/{$deansSection}/grades/roster?readonly=0");
+
+        $this->assertSame(200, $viewed['status']);
+        $this->assertStringContainsString('data-grade-readout', $viewed['json']['html']);
+        $this->assertStringNotContainsString('data-open-override', $viewed['json']['html']);
     }
 
     public function testMyOwnIdsStillWork(): void

@@ -511,15 +511,33 @@ class GradingSchemeService
     {
         $scheme = $this->schemeModel->find($schemeId);
 
-        if (empty($scheme['uses_periods'])) {
+        return self::publishProblemFrom(
+            ! empty($scheme['uses_periods']),
+            fn (): array => $this->categoryModel->listForScheme($schemeId),
+            fn (): array => $this->periodModel->listForScheme($schemeId),
+            fn (int $periodId): array => $this->categoryModel->listForPeriod($periodId),
+        );
+    }
 
-            $categories = $this->categoryModel->listForScheme($schemeId);
+    /**
+     * The same check from rows the caller reads however it likes (the Grades page reads every section's rows
+     * in one go). Each list holds Active rows in display order; each is asked for only when it is needed.
+     *
+     * @param callable(): list<array<string, mixed>>    $categories the scheme's categories (without periods)
+     * @param callable(): list<array<string, mixed>>    $periods    the scheme's periods
+     * @param callable(int): list<array<string, mixed>> $ofPeriod   a period's categories
+     */
+    public static function publishProblemFrom(bool $usesPeriods, callable $categories, callable $periods, callable $ofPeriod): ?string
+    {
+        if (! $usesPeriods) {
 
-            if ($categories === []) {
+            $rows = $categories();
+
+            if ($rows === []) {
                 return 'Add at least one category before publishing.';
             }
 
-            $total = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $categories)), 2);
+            $total = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $rows)), 2);
 
             if (abs($total - 100) > 0.001) {
                 return "Category weights add up to {$total}% — they must total 100%.";
@@ -529,27 +547,27 @@ class GradingSchemeService
 
         }
 
-        $periods = $this->periodModel->listForScheme($schemeId);
+        $periodRows = $periods();
 
-        if ($periods === []) {
+        if ($periodRows === []) {
             return 'Add at least one grading period before publishing.';
         }
 
-        $periodTotal = round(array_sum(array_map(static fn ($p) => (float) $p['weight_percentage'], $periods)), 2);
+        $periodTotal = round(array_sum(array_map(static fn ($p) => (float) $p['weight_percentage'], $periodRows)), 2);
 
         if (abs($periodTotal - 100) > 0.001) {
             return "Period weights add up to {$periodTotal}% — they must total 100%.";
         }
 
-        foreach ($periods as $period) {
+        foreach ($periodRows as $period) {
 
-            $categories = $this->categoryModel->listForPeriod((int) $period['id']);
+            $rows = $ofPeriod((int) $period['id']);
 
-            if ($categories === []) {
+            if ($rows === []) {
                 return "Add at least one category to \"{$period['name']}\" before publishing.";
             }
 
-            $total = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $categories)), 2);
+            $total = round(array_sum(array_map(static fn ($c) => (float) $c['weight_percentage'], $rows)), 2);
 
             if (abs($total - 100) > 0.001) {
                 return "\"{$period['name']}\"'s category weights add up to {$total}% — they must total 100%.";

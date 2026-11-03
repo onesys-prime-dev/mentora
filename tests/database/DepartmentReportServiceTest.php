@@ -131,7 +131,7 @@ final class DepartmentReportServiceTest extends DatabaseTestCase
     {
         $rows = $this->rows($this->service->csv('teaching-load', $this->report('teaching-load'))['csv']);
 
-        $this->assertSame(['Instructor', 'Sections', 'Students', 'Units', 'Waiting to be graded', 'Grading turnaround (hours)', 'High load (21+ units)'], $rows[0]);
+        $this->assertSame(['Instructor', 'Sections', 'Students', 'Units', 'Waiting to be graded', 'Grading turnaround (hours)', 'High load (30+ units)'], $rows[0]);
 
         $names = array_column(array_slice($rows, 1), 0);
 
@@ -145,12 +145,12 @@ final class DepartmentReportServiceTest extends DatabaseTestCase
 
     public function testAHighLoadIsFlaggedAtTheInstitutionsNumber(): void
     {
-        db_connect()->table('courses')->where('course_code', 'IT101')->update(['units' => 24]);
+        db_connect()->table('courses')->where('course_code', 'IT101')->update(['units' => 33]);
 
         $rows = $this->rows($this->service->csv('teaching-load', $this->report('teaching-load'))['csv']);
         $tess = array_values(array_filter($rows, static fn (array $r): bool => $r[0] === 'Tess Tan'))[0];
 
-        $this->assertSame(['24', '0', '', 'Yes'], [$tess[3], $tess[4], $tess[5], $tess[6]]);
+        $this->assertSame(['33', '0', '', 'Yes'], [$tess[3], $tess[4], $tess[5], $tess[6]]);
     }
 
     public function testTheSignOffCsvSaysWhereEachSectionStands(): void

@@ -2,7 +2,6 @@
 
 namespace App\Services\Courses\Grades;
 
-use App\Services\Courses\Assessments\AssessmentResultService;
 use App\Services\Notifications\NotificationService;
 use App\Services\Parents\ParentNotifier;
 use CodeIgniter\Shield\Entities\User;
@@ -364,19 +363,9 @@ class GradeFinalizationService
         }
     }
 
-    /** Handed-in work of the section's counted assessments that nobody has finished grading. */
+    /** Pending work that can still change the grade, as on the Assessments tab. */
     private function ungradedWork(int $offeringId): int
     {
-        $waiting = array_values(array_diff(AssessmentResultService::FINISHED_STATUSES, ['Graded', 'Returned']));
-
-        return db_connect()->table('assessment_submissions s')
-            ->join('assessments a', 'a.id = s.assessment_id')
-            ->join('course_modules cm', 'cm.id = a.module_id')
-            ->join('enrollments e', 'e.offering_id = cm.offering_id AND e.student_user_id = s.student_id')
-            ->where('cm.offering_id', $offeringId)
-            ->whereIn('a.status', GradeItemSyncService::COUNTED_STATUSES)
-            ->whereIn('e.status', ['enrolled', 'completed'])
-            ->whereIn('s.status', $waiting)
-            ->countAllResults();
+        return (new PendingGrading())->forOfferings([$offeringId])['byOffering'][$offeringId];
     }
 }

@@ -8,6 +8,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
@@ -200,6 +201,54 @@ class GradeReportService
             return $this->writeCsv($report, $this->dataLines($report));
         }
 
+        return $this->writeXlsx($report, $this->reportLines($report));
+    }
+
+    /**
+     * Several sections' class gradebooks in one Excel file: one sheet per report, titled "{code}-{section}",
+     * each with the same header and rows as that section's own class sheet. The file is named after the
+     * term of the first report.
+     *
+     * @param list<array<string, mixed>> $reports from classReport()
+     *
+     * @return array{file_path: string, filename: string}
+     */
+    public function classWorkbook(array $reports): array
+    {
+        if ($reports === []) {
+            throw new \InvalidArgumentException('A workbook needs at least one report.');
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getProperties()->setCreator('Mentora')->setTitle('Class gradebooks');
+        $spreadsheet->removeSheetByIndex(0);
+
+        $titles = [];
+
+        foreach ($reports as $report) {
+            $sheet = $spreadsheet->createSheet();
+            $sheet->setTitle($this->sheetTitle($report, $titles));
+            $this->fillGradebookSheet($sheet, $report, $this->reportLines($report));
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        helper('url');
+
+        $term = url_title((string) ($reports[0]['offering']['term'] ?? ''), '-', true);
+
+        return $this->store('gradebooks-' . ($term !== '' ? $term : 'term') . '-' . date('Ymd') . '.xlsx', static function (string $path) use ($spreadsheet): void {
+            (new Xlsx($spreadsheet))->save($path);
+        });
+    }
+
+    /**
+     * The class gradebook as a reader's table: a header, then one line per student.
+     *
+     * @return list<list<mixed>>
+     */
+    private function reportLines(array $report): array
+    {
         $header = ['Student number', 'Student'];
 
         foreach ($report['items'] as $item) {
@@ -232,7 +281,30 @@ class GradeReportService
 
         }
 
-        return $this->writeXlsx($report, $lines);
+        return $lines;
+    }
+
+    /**
+     * A sheet title for a report, "{code}-{section}": without the characters Excel refuses, at most 31
+     * characters, and different from every title already used (a number is added when it is not).
+     *
+     * @param array<string, true> $used titles so far, by lower case; this one is added
+     */
+    private function sheetTitle(array $report, array &$used): string
+    {
+        $base = trim(str_replace(['\\', '/', '?', '*', ':', '[', ']'], '-', $report['offering']['course_code'] . '-' . $report['offering']['section']), "' ");
+        $base = $base !== '' ? $base : 'Section';
+
+        for ($n = 1; ; $n++) {
+            $suffix = $n === 1 ? '' : ' (' . $n . ')';
+            $title  = mb_substr($base, 0, 31 - mb_strlen($suffix)) . $suffix;
+
+            if (! isset($used[mb_strtolower($title)])) {
+                $used[mb_strtolower($title)] = true;
+
+                return $title;
+            }
+        }
     }
 
     /**
@@ -512,6 +584,56 @@ class GradeReportService
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Gradebook');
 
+        $this->fillGradebookSheet($sheet, $report, $lines);
+
+        $summary = $spreadsheet->createSheet();
+        $summary->setTitle('Summary');
+
+        $facts = [
+            ['Course', $report['offering']['course_code'] . ' ' . $report['offering']['course_title']],
+            ['Section', $report['offering']['section']],
+            ['Term', $report['offering']['term']],
+            ['Grading', $report['scheme']['name'] . ($report['is_published'] ? '' : ' (draft)')],
+            ['Grades', $report['finalization'] ? 'Final, ' . $report['finalization']['finalized_at'] : 'Running (not final)'],
+            ['Students', $report['summary']['students']],
+            ['Graded', $report['summary']['graded']],
+            ['Class average %', $report['summary']['mean']],
+            ['Median %', $report['summary']['median']],
+            ['Highest %', $report['summary']['high']],
+            ['Lowest %', $report['summary']['low']],
+            ['Passing mark %', $report['summary']['passing_mark']],
+            ['Generated', $report['generated_at']],
+        ];
+
+        foreach ($report['curves'] as $curve) {
+            $facts[] = ['Curve', $curve['target'] . ': ' . $curve['label']];
+        }
+
+        foreach ($facts as $r => [$label, $value]) {
+            $summary->setCellValue([1, $r + 1], $label);
+            $summary->setCellValue([2, $r + 1], $value);
+        }
+
+        $summary->getStyle([1, 1, 1, count($facts)])->getFont()->setBold(true);
+        $summary->getColumnDimensionByColumn(1)->setAutoSize(true);
+        $summary->getColumnDimensionByColumn(2)->setAutoSize(true);
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        return $this->save($report, 'xlsx', static function (string $path) use ($spreadsheet): void {
+            (new Xlsx($spreadsheet))->save($path);
+        });
+    }
+
+    /**
+     * Writes the class gradebook into a sheet: the lines, the bold header, the frozen names, the coloured
+     * standings, the percentage format and the column widths. The single-section file and the workbook
+     * of every section both use it, so their sheets are the same.
+     *
+     * @param list<list<mixed>> $lines from reportLines()
+     */
+    private function fillGradebookSheet(Worksheet $sheet, array $report, array $lines): void
+    {
         foreach ($lines as $r => $line) {
             foreach ($line as $c => $cell) {
 
@@ -558,47 +680,22 @@ class GradeReportService
 
         // The notes are prose: a fixed width, wrapped, instead of one very long line.
         $sheet->getColumnDimensionByColumn($last)->setAutoSize(false)->setWidth(48);
-
-        $summary = $spreadsheet->createSheet();
-        $summary->setTitle('Summary');
-
-        $facts = [
-            ['Course', $report['offering']['course_code'] . ' ' . $report['offering']['course_title']],
-            ['Section', $report['offering']['section']],
-            ['Term', $report['offering']['term']],
-            ['Grading', $report['scheme']['name'] . ($report['is_published'] ? '' : ' (draft)')],
-            ['Grades', $report['finalization'] ? 'Final, ' . $report['finalization']['finalized_at'] : 'Running (not final)'],
-            ['Students', $report['summary']['students']],
-            ['Graded', $report['summary']['graded']],
-            ['Class average %', $report['summary']['mean']],
-            ['Median %', $report['summary']['median']],
-            ['Highest %', $report['summary']['high']],
-            ['Lowest %', $report['summary']['low']],
-            ['Passing mark %', $report['summary']['passing_mark']],
-            ['Generated', $report['generated_at']],
-        ];
-
-        foreach ($report['curves'] as $curve) {
-            $facts[] = ['Curve', $curve['target'] . ': ' . $curve['label']];
-        }
-
-        foreach ($facts as $r => [$label, $value]) {
-            $summary->setCellValue([1, $r + 1], $label);
-            $summary->setCellValue([2, $r + 1], $value);
-        }
-
-        $summary->getStyle([1, 1, 1, count($facts)])->getFont()->setBold(true);
-        $summary->getColumnDimensionByColumn(1)->setAutoSize(true);
-        $summary->getColumnDimensionByColumn(2)->setAutoSize(true);
-
-        $spreadsheet->setActiveSheetIndex(0);
-
-        return $this->save($report, 'xlsx', static function (string $path) use ($spreadsheet): void {
-            (new Xlsx($spreadsheet))->save($path);
-        });
     }
 
     private function save(array $report, string $extension, callable $write): array
+    {
+        // The report and the data are different files; the name says which.
+        $filename = $this->fileStem($report, $extension === 'csv' ? 'gradebook-data' : 'gradebook') . '.' . $extension;
+
+        return ['success' => true] + $this->store($filename, $write);
+    }
+
+    /**
+     * Writes a file into the exports folder under a name no other export takes.
+     *
+     * @return array{file_path: string, filename: string}
+     */
+    private function store(string $filename, callable $write): array
     {
         $directory = (new StorageService())->root() . 'exports';
 
@@ -606,13 +703,10 @@ class GradeReportService
             mkdir($directory, 0777, true);
         }
 
-        // The report and the data are different files; the name says which.
-        $filename = $this->fileStem($report, $extension === 'csv' ? 'gradebook-data' : 'gradebook') . '.' . $extension;
-
         $path = $directory . '/' . date('His') . '-' . bin2hex(random_bytes(3)) . '-' . $filename;
 
         $write($path);
 
-        return ['success' => true, 'file_path' => $path, 'filename' => $filename];
+        return ['file_path' => $path, 'filename' => $filename];
     }
 }

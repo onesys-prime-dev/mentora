@@ -42,7 +42,7 @@ final class TeachingLoadPageTest extends RouteTestCase
 
         $it = DeanFactory::offering(DeanFactory::program($this->subA, 'A'), $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
         $lw = DeanFactory::offering(DeanFactory::program($subB, 'B'), $this->term, 'LW200', 'A', 'active', 'Law Heavy');
-        db_connect()->table('courses')->where('course_code', 'LW200')->update(['units' => 24]);
+        db_connect()->table('courses')->where('course_code', 'LW200')->update(['units' => 33]);
 
         CourseFactory::assignInstructor($it, $this->tess);
         CourseFactory::assignInstructor($lw, $this->leo);
@@ -66,8 +66,8 @@ final class TeachingLoadPageTest extends RouteTestCase
         $this->assertStringContainsString('Tess Tan', $body);
         $this->assertStringContainsString('Leo Law', $body);
         $this->assertStringContainsString('High load', $body);
-        $this->assertStringContainsString('A high load is 21 units or more', $body);
-        $this->assertSame(1, substr_count($body, 'High load</span>') , 'only Leo (24 units) is marked');
+        $this->assertStringContainsString('A high load is 30 units or more', $body);
+        $this->assertSame(1, substr_count($body, 'High load</span>') , 'only Leo (33 units) is marked');
         $this->assertStringContainsString('Waiting to be graded', $body);
         $this->assertStringContainsString('dean/teaching-load/' . $this->leo->id, $body);
     }

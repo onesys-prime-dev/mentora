@@ -186,6 +186,19 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('waiting to be graded', implode(' ', $readiness['blockers']));
     }
 
+    public function testAReplacedAssignmentAttemptNoLongerBlocksFinalizing(): void
+    {
+        $assessment = CourseFactory::assessment($this->offering, $this->instructor, CourseFactory::module($this->offering), null, 'Assignment');
+        db_connect()->table('assessments')->where('id', $assessment)->update(['status' => 'Published']);
+        AssessmentFactory::attempt($assessment, $this->strong, 'Submitted');
+        AssessmentFactory::attempt($assessment, $this->strong, 'Graded', 9);
+
+        $readiness = $this->service->readiness($this->offering);
+
+        $this->assertSame(0, $readiness['counts']['ungraded_work']);
+        $this->assertStringNotContainsString('waiting to be graded', implode(' ', $readiness['blockers']));
+    }
+
     public function testAnOpenOverrideRequestBlocksFinalizing(): void
     {
         db_connect()->table('grade_override_requests')->insert([
