@@ -109,14 +109,14 @@ final class ParentMessagingTest extends DatabaseTestCase
         $this->assertNull($service->startDirect($this->instructor, (int) $stranger->id));
     }
 
+    /** The institutional administrator is the exception: they may write to anyone (spec 3.1), see AdminMessagingTest. */
     public function testOthersCannotStartWithAParent(): void
     {
         $dean  = DeanFactory::dean($this->institution, $this->department);
-        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         $other = PeopleFactory::person('student', 'Cla', 'Ssmate', null, $this->institution);
         CourseFactory::enroll($this->offering, $other);
 
-        foreach ([$dean, $admin, $this->child, $other] as $sender) {
+        foreach ([$dean, $this->child, $other] as $sender) {
             $this->assertNull($this->conversations()->startDirect($sender, (int) $this->parent->id), $sender->first_name ?? '');
         }
     }

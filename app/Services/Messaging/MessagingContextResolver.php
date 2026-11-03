@@ -196,6 +196,18 @@ class MessagingContextResolver
             ->whereIn('parent_user_id', $participants)->countAllResults() === 0;
     }
 
+    /**
+     * A thread between a parent and an instructor or chairperson is about one of the parent's children. Any
+     * other pair that includes a parent (an institutional administrator writing to them, say) is about nobody
+     * in particular.
+     */
+    public function aboutAChild(string $roleA, string $roleB): bool
+    {
+        $staff = ['instructor', 'chairperson'];
+
+        return ($roleA === 'parent' && in_array($roleB, $staff, true)) || ($roleB === 'parent' && in_array($roleA, $staff, true));
+    }
+
     public function isCourseInstructor(int $userId, int $offeringId): bool
     {
         return db_connect()->table('instructor_assignments')

@@ -106,7 +106,7 @@ class RecipientSearch
      */
     private function subjects(User $sender, string $senderRole, User $recipient, string $recipientRole): array
     {
-        if ($senderRole !== 'parent' && $recipientRole !== 'parent') {
+        if (! $this->resolver->aboutAChild($senderRole, $recipientRole)) {
             return [null];
         }
 

@@ -49,7 +49,7 @@ class ConversationService
         // Only a parent thread is about a child, and it is about exactly one: the one named, or else the only
         // child the parent and the teacher have in common. With several in common the child must be named,
         // so a pair never ends up with a thread per way of asking.
-        if ($senderRole !== 'parent' && $recipientRole !== 'parent') {
+        if (! $this->resolver->aboutAChild($senderRole, $recipientRole)) {
             $subjectStudentId = null;
         } elseif ($subjectStudentId === null) {
             [$parent, $staff, $staffRole] = $senderRole === 'parent' ? [$sender, $recipient, $recipientRole] : [$recipient, $sender, $senderRole];
