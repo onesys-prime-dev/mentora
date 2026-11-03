@@ -64,6 +64,22 @@ final class MessagesNavigationTest extends DatabaseTestCase
         $this->assertNull($this->tileFor('admin'));
     }
 
+    public function testTheTileCarriesTheUnreadBadgeTheScriptKeepsFresh(): void
+    {
+        $messages = ['key' => 'messages', 'label' => 'Messages', 'icon' => 'inbox', 'url' => site_url('messages')];
+
+        $some = view('components/app-tile', ['app' => $messages + ['badge' => 3]], ['saveData' => false]);
+        $this->assertMatchesRegularExpression('#<span data-messages-badge data-url="[^"]*messages/api/unread-count"[^>]*>3</span>#', $some);
+        $this->assertDoesNotMatchRegularExpression('#data-messages-badge[^>]*\shidden#', $some);
+        $this->assertStringContainsString('unread', $some);
+
+        $none = view('components/app-tile', ['app' => $messages + ['badge' => 0]], ['saveData' => false]);
+        $this->assertMatchesRegularExpression('#data-messages-badge[^>]*\shidden#', $none);
+
+        $other = view('components/app-tile', ['app' => ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'inbox', 'url' => site_url('calendar')]], ['saveData' => false]);
+        $this->assertStringNotContainsString('data-messages-badge', $other);
+    }
+
     public function testTheTileIsHiddenWhileTheFlagIsOffEvenWithMessagesUse(): void
     {
         $this->assertNotNull($this->tileFor('student'));
