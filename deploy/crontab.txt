@@ -5,3 +5,4 @@
 0 3 * * *    cd '{site}' && {php} spark sis:sync >> writable/logs/cron-sis.log 2>&1
 30 3 * * *   cd '{site}' && {php} spark sis:grades >> writable/logs/cron-sis.log 2>&1
 * * * * *    cd '{site}' && {php} spark exports:run >> writable/logs/cron-exports.log 2>&1
+45 3 * * *   cd '{site}' && {php} spark messages:sync-course-chats >> writable/logs/cron-messages.log 2>&1

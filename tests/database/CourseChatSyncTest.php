@@ -230,6 +230,27 @@ final class CourseChatSyncTest extends DatabaseTestCase
         $this->assertNotContains((int) $foreign->id, $this->members($id));
     }
 
+    public function testAFailedSyncDoesNotLeaveItsTransactionOpen(): void
+    {
+        $failing = new class () extends CourseChatSync {
+            public function plan(int $offeringId): array
+            {
+                throw new RuntimeException('boom');
+            }
+        };
+        $db    = db_connect();
+        $depth = $db->transDepth;
+
+        try {
+            $failing->syncOffering($this->offering);
+            $this->fail('the failure must reach the caller');
+        } catch (RuntimeException $e) {
+            $this->assertSame('boom', $e->getMessage());
+        }
+
+        $this->assertSame($depth, $db->transDepth);
+    }
+
     public function testDuplicateKeyFromARacingSyncIsAbsorbed(): void
     {
         $now = date('Y-m-d H:i:s');

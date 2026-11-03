@@ -6,6 +6,8 @@ namespace App\Services\Messaging;
 
 use App\Services\Subscriptions\PlanLimits;
 use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
 
 /**
  * Makes an offering's course chat match who is in the course (spec 3.2, 6.4).
@@ -47,37 +49,49 @@ class CourseChatSync
 
         $db->transStart();
 
-        // INSERT IGNORE then read by offering: two syncs at once end up with the one chat either way.
-        $db->table('conversations')->ignore(true)->insert([
-            'institution_id' => $institution, 'type' => 'course', 'offering_id' => $offeringId,
-            'is_locked' => 0, 'created_at' => $now, 'updated_at' => $now,
-        ]);
-        $created = $db->affectedRows() > 0;
-        $chatId  = (int) $db->table('conversations')->select('id')->where('offering_id', $offeringId)->get()->getRow('id');
+        // A failure here is thrown to the caller (a hook swallows it). The transaction must not stay open behind it:
+        // a caller inside its own transaction (the SIS import) would never commit, and later writes would be lost.
+        try {
+            // INSERT IGNORE then read by offering: two syncs at once end up with the one chat either way.
+            $db->table('conversations')->ignore(true)->insert([
+                'institution_id' => $institution, 'type' => 'course', 'offering_id' => $offeringId,
+                'is_locked' => 0, 'created_at' => $now, 'updated_at' => $now,
+            ]);
+            $created = $db->affectedRows() > 0;
+            $chatId  = (int) $db->table('conversations')->select('id')->where('offering_id', $offeringId)->get()->getRow('id');
 
-        $plan = $this->plan($offeringId);
+            $plan = $this->plan($offeringId);
 
-        if ($plan['leave'] !== []) {
-            $db->table('conversation_participants')->where('conversation_id', $chatId)->whereIn('user_id', $plan['leave'])
-                ->where('left_at', null)->update(['left_at' => $now]);
-        }
-
-        if ($plan['join'] !== []) {
-            $last = (int) $db->table('messages')->selectMax('id', 'last')->where('conversation_id', $chatId)->get()->getRow('last');
-            $from = $last === 0 ? 0 : $last + 1;
-
-            foreach ($plan['join'] as $userId) {
-                // A row left behind by an earlier departure is reused: one row per person, as the unique key wants.
-                $db->query(
-                    'INSERT INTO conversation_participants (conversation_id, user_id, joined_at, first_visible_message_id)
-                     VALUES (?, ?, ?, ?)
-                     ON DUPLICATE KEY UPDATE left_at = NULL, joined_at = VALUES(joined_at), first_visible_message_id = VALUES(first_visible_message_id)',
-                    [$chatId, $userId, $now, $from],
-                );
+            if ($plan['leave'] !== []) {
+                $db->table('conversation_participants')->where('conversation_id', $chatId)->whereIn('user_id', $plan['leave'])
+                    ->where('left_at', null)->update(['left_at' => $now]);
             }
+
+            if ($plan['join'] !== []) {
+                $last = (int) $db->table('messages')->selectMax('id', 'last')->where('conversation_id', $chatId)->get()->getRow('last');
+                $from = $last === 0 ? 0 : $last + 1;
+
+                foreach ($plan['join'] as $userId) {
+                    // A row left behind by an earlier departure is reused: one row per person, as the unique key wants.
+                    $db->query(
+                        'INSERT INTO conversation_participants (conversation_id, user_id, joined_at, first_visible_message_id)
+                         VALUES (?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE left_at = NULL, joined_at = VALUES(joined_at), first_visible_message_id = VALUES(first_visible_message_id)',
+                        [$chatId, $userId, $now, $from],
+                    );
+                }
+            }
+        } catch (Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
         }
 
         $db->transComplete();
+
+        if (! $db->transStatus()) {
+            throw new RuntimeException('The course chat of offering ' . $offeringId . ' could not be synced.');
+        }
 
         return ['conversation_id' => $chatId, 'created' => $created, 'joined' => count($plan['join']), 'left' => count($plan['leave'])];
     }

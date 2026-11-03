@@ -213,7 +213,7 @@ class SystemHealth
     }
 
     /**
-     * All seven scheduled jobs (6.2): degraded while any has missed its window, down once one has been silent
+     * All the scheduled jobs (6.2): degraded while any has missed its window, down once one has been silent
      * for three times its allowed gap.
      *
      * @return array{status: string, detail: string}
@@ -224,7 +224,7 @@ class SystemHealth
         $stale = ScheduledJobs::stale($now);
 
         if ($stale === []) {
-            return ['status' => self::UP, 'detail' => 'All seven scheduled jobs reported on time.'];
+            return ['status' => self::UP, 'detail' => 'All scheduled jobs reported on time.'];
         }
 
         $dead = array_filter($stale, static fn (string $command): bool => ($last = ScheduledJobs::lastRun($command)) !== null && $now - $last >= 3 * ScheduledJobs::JOBS[$command]['gap']);
