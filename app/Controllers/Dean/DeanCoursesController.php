@@ -47,6 +47,7 @@ class DeanCoursesController extends BaseController
         return view('pages/dean/courses', [
             'title'          => 'Courses',
             'page'           => 'courses',
+            'fullHeight' => true,
             'user'           => $user,
             'courses'        => $result['rows'],
             'loadError'      => $loadError,

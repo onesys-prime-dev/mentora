@@ -51,7 +51,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
 <?= $this->section('content') ?>
 
-<div class="py-3">
+<div class="flex flex-col lg:h-full lg:min-h-0">
 
 <?php if ($monitorBackUrl !== null): ?>
     <?= view('components/back-link', ['backUrl' => $monitorBackUrl, 'backLabel' => $monitorBackLabel], ['saveData' => false]) ?>
@@ -59,7 +59,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
     <?= $this->include('components/back') ?>
 <?php endif; ?>
 
-<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scroll-smooth lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden" data-page-panel>
 
     <div class="flex flex-col gap-1">
         <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">

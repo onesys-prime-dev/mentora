@@ -103,7 +103,8 @@ foreach ($offeringRows as $o) {
             'term'        => $o['term_name'] . ' ' . $o['academic_year'],
             'meets'       => ['html' => $meets === null ? '<span class="text-[#646464]">—</span>' : '<span class="text-xs text-[#3D3D3D]" data-meets>' . esc($meets) . '</span>'],
             'instructors' => ['html' => $chips],
-            'capacity'    => ['html' => '<a class="' . $link . '" href="' . esc(site_url('institution/enrolments/offering/' . $o['id'])) . '" aria-label="Roster of ' . esc($o['course_code'] . ' ' . $o['section_code']) . '">' . esc((string) $o['enrolled_count']) . ' / ' . esc((string) $o['capacity']) . '</a>'],
+            'capacity'    => ['html' => '<a class="' . $link . '" href="' . esc(site_url('institution/enrolments/offering/' . $o['id'])) . '" aria-label="Roster of ' . esc($o['course_code'] . ' ' . $o['section_code']) . '">' . esc((string) $o['enrolled_count']) . ' / ' . esc((string) $o['capacity']) . '</a>'
+                . '<div class="mt-1.5 h-1.5 w-28 overflow-hidden rounded-full bg-gray-200" aria-hidden="true"><div class="h-full rounded-full ' . ((int) $o['capacity'] > 0 && (int) $o['enrolled_count'] >= (int) $o['capacity'] ? 'bg-[#946200]' : 'bg-brand') . '" style="width: ' . ((int) $o['capacity'] > 0 ? min(100, (int) round((int) $o['enrolled_count'] / (int) $o['capacity'] * 100)) : 0) . '%"></div></div>'],
             'status'      => ['html' => view('components/status-badge', ['label' => ucfirst((string) $o['status']), 'tone' => $tones[$o['status']] ?? 'neutral'], ['saveData' => false])],
         ],
         'actions' => $actions,
@@ -151,13 +152,6 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
             : '',
     ], ['saveData' => false]) ?>
 
-    <?= view('components/tabs', ['ariaLabel' => 'Academics', 'tabs' => [
-        ['label' => 'Structure', 'href' => site_url('institution/structure')],
-        ['label' => 'Courses', 'href' => site_url('institution/courses')],
-        ['label' => 'Terms', 'href' => site_url('institution/terms')],
-        ['label' => 'Offerings', 'href' => site_url($base), 'active' => true],
-    ]], ['saveData' => false]) ?>
-
     <?php if (! $offeringCanEdit): ?>
         <?= view('components/lock-note', ['kind' => 'read_only'], ['saveData' => false]) ?>
     <?php elseif ($offeringOptions['courses'] === []): ?>
@@ -191,7 +185,11 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
         <?= esc(number_format($offeringTotal)) ?> <?= $offeringTotal === 1 ? 'offering' : 'offerings' ?><?= $filtered ? ' match' : '' ?>
     </p>
 
+    <?php // Only the table scrolls; the heading, the filters and the count stay put (lg and up). ?>
+    <div class="flex flex-col gap-6" data-panel-scroll="inner">
+
     <?= view('components/data-table', [
+        'fill'       => true, // the table scrolls under its own heading row
         'caption'    => 'Offerings',
         'columns'    => [
             ['key' => 'course', 'label' => 'Course', 'sortable' => true],
@@ -210,6 +208,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
         'emptyTitle' => $filtered ? 'No offerings match these filters' : 'No offerings yet',
         'emptyText'  => $filtered ? 'Try a different search, term, program or instructor.' : ($canAdd ? 'Add the first offering to open a course in a term.' : 'Offerings will be listed here.'),
     ], ['saveData' => false]) ?>
+
+    </div>
 
     <?= view('components/pagination', ['page' => $offeringPage, 'pages' => $offeringPages, 'total' => $offeringTotal, 'baseUrl' => site_url($base), 'query' => $query], ['saveData' => false]) ?>
 

@@ -50,7 +50,7 @@ class CoursesController extends BaseController
 
         return view('pages/institution/courses', [
             'title'         => 'Courses',
-            'page'          => 'academics',
+            'page'          => 'courses',
             'pageTitle'     => 'Courses',
             'user'          => auth()->user(),
             'courseRows'    => $result['rows'],

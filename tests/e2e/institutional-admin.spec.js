@@ -60,7 +60,8 @@ test("TC-IAA-03 Every link of the sidebar opens its screen", async ({ page }) =>
     await signInAsInstitutionAdmin(page);
 
     const tiles = [
-        ["Academics", /\/institution\/structure$/],
+        ["Structure", /\/institution\/structure$/],
+        ["Courses", /\/institution\/courses$/],
         ["Terms", /\/institution\/terms$/],
         ["Offerings", /\/institution\/offerings$/],
         ["People", /\/institution\/people$/],

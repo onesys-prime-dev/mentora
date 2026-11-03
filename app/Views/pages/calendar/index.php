@@ -42,7 +42,7 @@ $legend = array_values(array_filter([
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col pt-3 lg:h-full lg:min-h-0">
+<div class="flex flex-col lg:h-full lg:min-h-0">
 
     <?php if ($calendarHeading !== null): ?>
         <?= view('components/page-head', ['title' => $calendarHeading, 'icon' => 'calendar', 'backUrl' => $calendarBackUrl, 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
