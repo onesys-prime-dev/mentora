@@ -413,7 +413,9 @@ test("TC-MSG-12 Quiet hours hold a notification, and the unread count still show
         await expect(teacher.page.locator("#notifications-panel")).not.toContainText("Michael Villanueva sent you a message.");
 
         // Control: with no quiet hours, a reply notifies the student.
-        await teacher.page.locator("[data-role=prefs-open]").click({ force: true });
+        await teacher.page.keyboard.press("Escape");
+        await expect(teacher.page.locator("#notifications-panel")).toBeHidden();
+        await teacher.page.locator("[data-role=prefs-open]").click();
         await teacher.page.locator("[data-role=prefs-start]").fill("");
         await teacher.page.locator("[data-role=prefs-end]").fill("");
         await teacher.page.locator("[data-role=prefs-save]").click();
