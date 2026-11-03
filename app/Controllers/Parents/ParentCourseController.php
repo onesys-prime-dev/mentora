@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers\Parents;
 
 use App\Controllers\BaseController;
+use App\Filters\MessagesFilter;
 use App\Services\Audit\AuditLogger;
 use App\Services\Courses\Grades\GradeReportService;
+use App\Services\Messaging\ParentFeedService;
 use App\Services\Parents\ParentAccessService;
 use App\Services\Parents\ParentCourseTabs;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -52,6 +54,21 @@ class ParentCourseController extends BaseController
         return $this->response->setJSON((new ParentCourseTabs())->assessments($child, $offeringId, (int) $course['course_id']));
     }
 
+    /**
+     * The "From the instructor" tab's fragment: what the instructors posted in the child's course chat, read-only.
+     * Behind the `messages` filter, so it does not exist while Messages is off.
+     */
+    public function instructor(int $studentId, int $offeringId): ResponseInterface
+    {
+        $feed = (new ParentFeedService())->feed(auth()->user(), $studentId, $offeringId);
+
+        if ($feed === null) {
+            return $this->response->setStatusCode(404)->setJSON(MessagesFilter::NOT_FOUND);
+        }
+
+        return $this->response->setJSON((new ParentCourseTabs())->instructor($feed, $studentId));
+    }
+
     /** The Grades tab's fragment: the standing and the categories, never an item. */
     public function grades(int $studentId, int $offeringId): ResponseInterface
     {
@@ -94,7 +111,16 @@ class ParentCourseController extends BaseController
     public function page(int $studentId, int $offeringId, string $slug, string $feature): string
     {
         // Modules, Resources and Discussions are not for a parent: there is nothing to open.
-        if (! in_array($feature, self::FEATURES, true)) {
+        helper('feature');
+
+        $features = array_combine(self::FEATURES, ['Overview', 'Announcements', 'Assessments', 'Grades']);
+
+        // The instructor's feed is a Messages page: it is a tab only while Messages is on.
+        if (feature_enabled('messages')) {
+            $features['instructor'] = 'From the instructor';
+        }
+
+        if (! array_key_exists($feature, $features)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
@@ -115,7 +141,7 @@ class ParentCourseController extends BaseController
             'activeFeature'  => $feature,
             'fullHeight'     => true,
             'courseRole'     => 'parent',
-            'courseFeatures' => array_combine(self::FEATURES, ['Overview', 'Announcements', 'Assessments', 'Grades']),
+            'courseFeatures' => $features,
             'courseUrlPrefix' => 'parent/children/' . $studentId,
             'courseBackUrl'  => site_url('parent/children/' . $studentId),
             'parentNote'     => 'View only. You are looking at ' . $course['course_code'] . ' ' . $course['section_code'] . ' as ' . $name . '\'s parent. Nothing here can be changed.',

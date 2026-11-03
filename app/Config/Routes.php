@@ -428,6 +428,8 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('children/(:num)/api/courses/(:num)/announcements', 'Parents\ParentCourseController::announcements/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
     $routes->get('children/(:num)/api/courses/(:num)/assessments', 'Parents\ParentCourseController::assessments/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
     $routes->get('children/(:num)/api/courses/(:num)/grades', 'Parents\ParentCourseController::grades/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    // Read-only, and only while Messages is on: the instructors' posts in the child's course chat.
+    $routes->get('children/(:num)/api/courses/(:num)/instructor', 'Parents\ParentCourseController::instructor/$1/$2', ['filter' => ['parentportal', 'parentchild', 'messages']]);
     // The grade report (PDF), once the grades are final; each download is audited.
     $routes->get('children/(:num)/api/courses/(:num)/grades/report/mine', 'Parents\ParentCourseController::report/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
     $routes->get('children/(:num)/courses/(:num)/(:segment)', 'Parents\ParentCourseController::redirect/$1/$2/$3', ['filter' => ['parentportal', 'parentchild']]);
