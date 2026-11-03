@@ -466,6 +466,11 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
 
 // The Messages page itself: the same turn-aways as the JSON routes, and no `readonly` filter because
 // reading a conversation is allowed in a read-only institution.
+// The institutional administrator's reports page (anyone else: 404). The decision is a form post, so it also
+// passes the read-only filter.
+$routes->get('messages/reports', 'Messaging\ReportsPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
+$routes->get('messages/reports/(:num)', 'Messaging\ReportsPageController::show/$1', ['filter' => ['messages', 'permission:messages.use']]);
+$routes->post('messages/reports/(:num)/review', 'Messaging\ReportsPageController::review/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
 $routes->get('messages', 'Messaging\MessagesPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
 $routes->get('messages/(:num)', 'Messaging\MessagesPageController::index/$1', ['filter' => ['messages', 'permission:messages.use']]);
 

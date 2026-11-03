@@ -25,6 +25,9 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             <div class="flex items-center justify-between px-3 pb-1.5 pt-3">
                 <h1 class="font-display text-[15px] font-bold text-brand">Messages</h1>
                 <span class="flex items-center gap-1.5">
+                    <?php if ($canReview ?? false): ?>
+                        <a href="<?= esc(site_url('messages/reports')) ?>" class="rounded-full border border-gray-300 px-3 py-1 text-[11px] font-semibold text-[#646464] hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Reports</a>
+                    <?php endif; ?>
                     <button type="button" data-role="new-group" data-dialog-open="messages-group" hidden class="rounded-full border border-brand px-3 py-1 text-[11px] font-semibold text-brand hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New group</button>
                     <button type="button" data-role="new" data-dialog-open="messages-new" class="rounded-full bg-brand px-3 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New</button>
                 </span>

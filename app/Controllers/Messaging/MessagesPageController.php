@@ -22,6 +22,7 @@ class MessagesPageController extends BaseController
             'user'   => auth()->user(),
             'openId' => $conversationId !== null && ctype_digit($conversationId) ? $conversationId : '',
             // Only the button: GroupService is what decides who may start a group.
+            'canReview' => (new ActiveRoleService())->resolve(auth()->user()) === 'institutional_admin',
             'canStartGroups' => in_array((new ActiveRoleService())->resolve(auth()->user()), ['chairperson', 'dean'], true),
         ]);
     }
