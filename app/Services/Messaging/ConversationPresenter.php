@@ -47,11 +47,14 @@ class ConversationPresenter
             $other   = $row['other_user_id'] === null ? null : (int) $row['other_user_id'];
             $subject = $row['subject_student_id'] === null ? null : (int) $row['subject_student_id'];
 
+            $closed = false;
+
             if ($row['type'] === 'course') {
-                $course = $courses[(int) $row['offering_id']] ?? ['code' => '', 'title' => ''];
+                $course = $courses[(int) $row['offering_id']] ?? ['code' => '', 'title' => '', 'closed' => false];
                 // By character, not byte: a title ending in a letter whose UTF-8 form ends in the bytes of "·" must survive.
                 $name   = (string) preg_replace('/^[\s·]+|[\s·]+$/u', '', $course['code'] . ' · ' . $course['title']);
                 $short  = $course['code'];
+                $closed = $course['closed'];
             } elseif ($row['type'] === 'group') {
                 $name  = (string) ($row['title'] ?? 'Group');
                 $short = $name;
@@ -61,6 +64,7 @@ class ConversationPresenter
             }
 
             $row['name']     = $name;
+            $row['closed']   = $closed;
             $row['initials'] = $this->initials($short);
             $row['subtitle'] = $subject === null ? null : ($people[$subject] ?? null);
             $row['preview']  = $this->preview((int) $row['id'], (int) $viewer->id);
@@ -125,7 +129,7 @@ class ConversationPresenter
     /**
      * @param list<int> $offeringIds
      *
-     * @return array<int, array{code: string, title: string}>
+     * @return array<int, array{code: string, title: string, closed: bool}>
      */
     private function courses(array $offeringIds): array
     {
@@ -135,8 +139,8 @@ class ConversationPresenter
 
         $out = [];
 
-        foreach (db_connect()->table('course_offerings co')->select('co.id, c.course_code, c.course_title')->join('courses c', 'c.id = co.course_id')->whereIn('co.id', $offeringIds)->get()->getResultArray() as $row) {
-            $out[(int) $row['id']] = ['code' => (string) $row['course_code'], 'title' => (string) $row['course_title']];
+        foreach (db_connect()->table('course_offerings co')->select('co.id, co.status, c.course_code, c.course_title')->join('courses c', 'c.id = co.course_id')->whereIn('co.id', $offeringIds)->get()->getResultArray() as $row) {
+            $out[(int) $row['id']] = ['code' => (string) $row['course_code'], 'title' => (string) $row['course_title'], 'closed' => $row['status'] !== 'active'];
         }
 
         return $out;

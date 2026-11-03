@@ -43,6 +43,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const sendEl = $("[data-role=send]");
     const composerEl = $("[data-role=composer]");
     const cannotPostEl = $("[data-role=cannot-post]");
+    const lockEl = $("[data-role=lock]");
+    const lockNoteEl = $("[data-role=lock-note]");
     const olderEl = $("[data-role=older]");
     const pickerNote = $("[data-role=picker-state]");
 
@@ -67,6 +69,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         cursor: 0,
         token: null,
         loadingOlder: false,
+        confirmRemove: null,
     };
 
     // ---- small helpers -------------------------------------------------
@@ -146,10 +149,27 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         avatar.className = `grid h-[30px] w-[30px] flex-none place-items-center text-[11px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
 
         const canPost = c === null || c.can_post !== false;
+        const locked = Number(c?.is_locked) === 1;
 
         composerEl.hidden = !canPost;
         cannotPostEl.hidden = canPost;
-        cannotPostEl.textContent = Number(c?.is_locked) === 1 ? "Only the instructor can post here" : "You can't post in this conversation";
+        cannotPostEl.textContent = locked ? "Only the instructor can post here" : c?.closed ? "This course has ended, so this chat is read-only." : "You can't post in this conversation";
+
+        // The lock belongs to whoever moderates a course chat; a moderator who can still post is told what students see.
+        if (lockEl) {
+            lockEl.hidden = !(c?.can_moderate && c.type === "course");
+            lockEl.textContent = locked ? "Unlock chat" : "Lock chat";
+            lockEl.setAttribute("aria-pressed", locked ? "true" : "false");
+        }
+
+        showLockNote(locked && canPost && c?.can_moderate ? "Locked: students can read only" : "");
+    }
+
+    function showLockNote(text) {
+        if (lockNoteEl) {
+            lockNoteEl.textContent = text;
+            lockNoteEl.hidden = text === "";
+        }
     }
 
     function messageRow(item) {
@@ -183,6 +203,19 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             hide.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
             hide.textContent = "Delete for me";
             note.append(hide);
+
+            // A moderator of this chat can blank the message for everyone; it takes a second click to be sure.
+            if (current()?.can_moderate) {
+                const confirming = state.confirmRemove === item.id;
+                const remove = document.createElement("button");
+
+                remove.type = "button";
+                remove.dataset.action = "remove";
+                remove.dataset.messageId = String(item.id);
+                remove.className = `${confirming ? "font-semibold text-red-700" : "opacity-0 group-hover/msg:opacity-100"} hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50`;
+                remove.textContent = confirming ? "Click again to remove" : "Remove message";
+                note.append(remove);
+            }
         }
 
         if (note.childNodes.length > 0) {
@@ -292,6 +325,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.token = token;
         state.cursor = 0;
         state.loadingOlder = false;
+        state.confirmRemove = null;
         state.items = [];
         state.hasMore = false;
         state.sending = null;
@@ -484,6 +518,27 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             if (item) {
                 submit(item.raw, item);
             }
+        } else if (button.dataset.action === "remove") {
+            const id = Number(button.dataset.messageId);
+
+            if (state.confirmRemove !== id) {
+                state.confirmRemove = id;
+                renderMessages();
+
+                return;
+            }
+
+            state.confirmRemove = null;
+
+            const { status } = await api.remove(state.openId, id);
+            const item = state.items.find((i) => i.id === id);
+
+            if (status === 200 && item) {
+                item.removed = true;
+                item.body = null;
+            }
+
+            renderMessages();
         } else if (button.dataset.action === "hide") {
             const id = Number(button.dataset.messageId);
             const { status } = await api.hide(state.openId, id);
@@ -492,6 +547,25 @@ export function mountMessages(root, { api, now = () => new Date() }) {
                 state.items = state.items.filter((i) => i.id !== id);
                 renderMessages();
             }
+        }
+    });
+
+    lockEl?.addEventListener("click", async () => {
+        const c = current();
+
+        if (!c || state.openId === null) {
+            return;
+        }
+
+        const locking = Number(c.is_locked) !== 1;
+        const { status, data } = await (locking ? api.lock(state.openId) : api.unlock(state.openId));
+
+        if (status === 200 && data?.conversation && c.id === state.openId) {
+            c.is_locked = data.conversation.is_locked ? 1 : 0;
+            applyConversation(c);
+            renderList();
+        } else {
+            showLockNote("Couldn't change that. Try again.");
         }
     });
 

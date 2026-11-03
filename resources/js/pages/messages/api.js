@@ -41,6 +41,9 @@ export function createApi(base, fetchImpl = (...args) => fetch(...args)) {
         send: (id, body, clientUuid) => request("POST", `conversations/${id}/messages`, { body, client_uuid: clientUuid }),
         markRead: (id, messageId) => request("POST", `conversations/${id}/read`, { message_id: messageId }),
         hide: (id, messageId) => request("POST", `conversations/${id}/messages/${messageId}/hide`, {}),
+        remove: (id, messageId) => request("POST", `conversations/${id}/messages/${messageId}/remove`, {}),
+        lock: (id) => request("POST", `conversations/${id}/lock`, {}),
+        unlock: (id) => request("POST", `conversations/${id}/unlock`, {}),
         unread: () => request("GET", "unread-count"),
         recipients: (q) => request("GET", `recipients${query({ q })}`),
     };

@@ -141,5 +141,12 @@ final class CourseChatLockTest extends DatabaseTestCase
 
         $this->assertTrue($teacherRow['can_moderate']);
         $this->assertFalse($studentRow['can_moderate']);
+        $this->assertFalse($studentRow['closed']);
+
+        db_connect()->table('course_offerings')->where('id', $this->offering)->update(['status' => 'completed']);
+        $closedRow = (new ConversationPresenter())->present($this->student, $service->listFor($this->student))[0];
+
+        $this->assertTrue($closedRow['closed']);
+        $this->assertFalse($closedRow['can_post']);
     }
 }
