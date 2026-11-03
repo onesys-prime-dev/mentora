@@ -27,6 +27,41 @@ if (! function_exists('role_home')) {
     }
 }
 
+if (! function_exists('messages_unread_count')) {
+
+    /**
+     * Messages waiting for the signed-in person: the badge on the Messages tile.
+     * A stub until slice 2 counts them.
+     */
+    function messages_unread_count(): int
+    {
+        return 0;
+    }
+}
+
+if (! function_exists('messages_tile')) {
+
+    /**
+     * The Messages tile for a role, or null while the `messages` flag is off, for the system
+     * administrator, and when the signed-in person's role lacks `messages.use`.
+     *
+     * @return array{key: string, label: string, icon: string, url: string, badge: int}|null
+     */
+    function messages_tile(string $role): ?array
+    {
+        helper('feature');
+
+        $user = auth()->user();
+
+        if ($role === 'admin' || $user === null || ! feature_enabled('messages')
+            || ! (new \App\Services\Auth\RolePermissions())->allows($user, 'messages.use', $role)) {
+            return null;
+        }
+
+        return ['key' => 'messages', 'label' => 'Messages', 'icon' => 'inbox', 'url' => site_url('messages'), 'badge' => messages_unread_count()];
+    }
+}
+
 if (! function_exists('global_apps')) {
 
     /**
@@ -56,6 +91,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'integrations', 'label' => 'Integrations', 'icon' => 'link',   'url' => site_url('institution/integrations')],
                 ['key' => 'audit',       'label' => 'Audit log',   'icon' => 'lock',     'url' => site_url('institution/audit')],
                 ['key' => 'institution', 'label' => 'Data export', 'icon' => 'folder',   'url' => site_url('institution/export')],
+                ...array_filter([messages_tile($role)]),
             ];
         }
 
@@ -89,7 +125,7 @@ if (! function_exists('global_apps')) {
                 $dean        = array_values(array_filter($dean, static fn (array $app): bool => ! in_array($app['key'], $hidden, true)));
             }
 
-            return $dean;
+            return [...$dean, ...array_filter([messages_tile($role)])];
         }
 
         // A parent's tools: their children's dashboard and calendar, the shared notifications list,
@@ -100,6 +136,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'calendar', 'url' => site_url('parent/calendar')],
                 ['key' => 'notifications', 'label' => 'Notifications', 'icon' => 'bell', 'url' => site_url('notifications')],
                 ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('parent/profile')],
+                ...array_filter([messages_tile($role)]),
             ];
         }
 
@@ -128,7 +165,6 @@ if (! function_exists('global_apps')) {
             ['key' => 'schedule',      'label' => 'Schedule',      'icon' => 'clock',        'url' => site_url($role . '/schedule')],
             ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
             ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => in_array($role, ['student', 'instructor', 'chairperson'], true) ? site_url($role . '/announcements') : null],
-            ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
         ];
 
         // Two of the chairperson's own pages. No other role is shown these tiles.
@@ -145,6 +181,10 @@ if (! function_exists('global_apps')) {
         // What the dean or a chairperson asked of an instructor.
         if ($role === 'instructor') {
             $apps[] = ['key' => 'follow-ups', 'label' => 'Requests', 'icon' => 'inbox', 'url' => site_url('instructor/follow-ups')];
+        }
+
+        if (($messages = messages_tile($role)) !== null) {
+            $apps[] = $messages;
         }
 
         return $apps;
