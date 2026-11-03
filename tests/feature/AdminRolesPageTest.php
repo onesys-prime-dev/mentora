@@ -261,10 +261,14 @@ final class AdminRolesPageTest extends RouteTestCase
     {
         $this->confirmedPassword();
 
+        // A student holds courses.view and messages.use; drop the second so the first is the last one left.
+        $this->flip('student', 'messages.use', '0');
+        $this->assertSame(1, $this->overrideCount());
+
         $this->flip('student', 'courses.view', '0');
 
         $this->assertStringContainsString('at least one permission', $this->body());
-        $this->assertSame(0, $this->overrideCount());
+        $this->assertSame(1, $this->overrideCount());
     }
 
     public function testBadInputIsRefusedPolitely(): void

@@ -104,6 +104,9 @@ final class InstitutionRolesTest extends DatabaseTestCase
 
     public function testARoleKeepsAtLeastOnePermission(): void
     {
+        // A student holds courses.view and messages.use; drop the second so the first is the last one left.
+        (new InstitutionRoles())->set($this->institution, 'student', 'messages.use', false, $this->admin);
+
         $this->expectExceptionMessage('A role must keep at least one permission.');
 
         (new InstitutionRoles())->set($this->institution, 'student', 'courses.view', false, $this->admin);

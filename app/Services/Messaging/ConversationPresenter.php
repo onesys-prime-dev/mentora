@@ -45,6 +45,9 @@ class ConversationPresenter
         $out         = [];
 
         foreach ($rows as $row) {
+            // The driver hands integers back as strings; the page compares ids strictly.
+            $row['id'] = (int) $row['id'];
+
             $other   = $row['other_user_id'] === null ? null : (int) $row['other_user_id'];
             $subject = $row['subject_student_id'] === null ? null : (int) $row['subject_student_id'];
 
