@@ -448,6 +448,8 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');
     $routes->get('group-candidates', 'Messaging\GroupController::candidates');
+    $routes->get('preferences', 'Messaging\PreferenceController::show');
+    $routes->post('preferences', 'Messaging\PreferenceController::save');
     $routes->get('blocks', 'Messaging\BlockController::index');
     $routes->post('blocks', 'Messaging\BlockController::create');
     $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');

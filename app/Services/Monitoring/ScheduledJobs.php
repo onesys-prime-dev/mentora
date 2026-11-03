@@ -28,6 +28,7 @@ final class ScheduledJobs
         'sis:sync'                   => ['setting' => 'Monitoring.sisSyncAt', 'gap' => 26 * 3600, 'sisOnly' => true],
         'sis:grades'                 => ['setting' => 'Monitoring.sisGradesAt', 'gap' => 26 * 3600, 'sisOnly' => true],
         'messages:sync-course-chats' => ['setting' => 'Monitoring.messagesSyncAt', 'gap' => 26 * 3600, 'sisOnly' => false],
+        'messages:notify'            => ['setting' => 'Monitoring.messagesNotifyAt', 'gap' => 45 * 60, 'sisOnly' => false],
     ];
 
     public static function heartbeat(string $command, ?int $now = null): void

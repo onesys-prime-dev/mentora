@@ -43,6 +43,7 @@ run does not count). `ScheduledJobs` holds the list:
 | `sis:sync` | `Monitoring.sisSyncAt` | 26 h (only while some institution has SIS enabled) |
 | `sis:grades` | `Monitoring.sisGradesAt` | 26 h (likewise) |
 | `messages:sync-course-chats` | `Monitoring.messagesSyncAt` | 26 h |
+| `messages:notify` | `Monitoring.messagesNotifyAt` | 45 min |
 
 The check names the late ones ("Not reporting: backup:run, parents:notify."), and
 the admin home shows the same warning. On a new server every job reads "never

@@ -100,7 +100,28 @@ class MessageService
 
         $db->transComplete();
 
+        if ($inserted) {
+            $this->notify($conversationId);
+        }
+
         return ['ok' => true, 'message' => $this->present($row, $userId)];
+    }
+
+    /**
+     * Tells the other members now, in a chat small enough to do it inside a send; the scheduled sweep tells the
+     * rest. A failure to notify never fails the send and logs the conversation id only.
+     */
+    private function notify(int $conversationId): void
+    {
+        try {
+            $notifier = new MessageNotifier();
+
+            if ($notifier->isSmall($conversationId)) {
+                $notifier->notifyConversation($conversationId);
+            }
+        } catch (\Throwable) {
+            log_message('error', 'Message notification failed for conversation ' . $conversationId . '.');
+        }
     }
 
     /**

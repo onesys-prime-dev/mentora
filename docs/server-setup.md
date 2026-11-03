@@ -147,7 +147,7 @@ Never run the demo seeders on a real server.
 
 ### The jobs (installed by the deploy)
 
-The deploy installs the eight scheduled jobs itself (audit D5): it writes the
+The deploy installs the nine scheduled jobs itself (audit D5): it writes the
 block between `# BEGIN mentora jobs` and `# END mentora jobs` in the site
 user's crontab from `deploy/crontab.txt`, with the site's folder and
 `PHP_BIN`, leaving every other line alone, and fails if afterwards `crontab -l`
@@ -163,10 +163,11 @@ is missing one. The block it writes looks like this:
 30 3 * * *   cd '<site folder>' && php8.5 spark sis:grades >> writable/logs/cron-sis.log 2>&1
 * * * * *    cd '<site folder>' && php8.5 spark exports:run >> writable/logs/cron-exports.log 2>&1
 45 3 * * *   cd '<site folder>' && php8.5 spark messages:sync-course-chats >> writable/logs/cron-messages.log 2>&1
+*/15 * * * * cd '<site folder>' && php8.5 spark messages:notify >> writable/logs/cron-messages.log 2>&1
 # END mentora jobs
 ```
 
-All eight run on every server (6.4); the SIS jobs do nothing where no
+All nine run on every server (6.4); the SIS jobs do nothing where no
 institution has SIS enabled. To change a schedule, edit `deploy/crontab.txt`
 and deploy: a hand edit inside the block is overwritten by the next deploy.
 To install it by hand (as the site user, from the site folder):

@@ -221,7 +221,7 @@ class MessagingContextResolver
             ->countAllResults() > 0;
     }
 
-    private function accountActive(int $userId): bool
+    public function accountActive(int $userId): bool
     {
         $row = db_connect()->table('users')->select('active')->where('id', $userId)->where('deleted_at IS NULL', null, false)->get()->getRowArray();
 

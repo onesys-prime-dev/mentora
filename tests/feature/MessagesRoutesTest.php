@@ -81,6 +81,8 @@ final class MessagesRoutesTest extends RouteTestCase
             ['GET', 'reports', []],
             ['GET', 'reports/1', []],
             ['POST', 'reports/1/review', ['status' => 'dismissed']],
+            ['GET', 'preferences', []],
+            ['POST', 'preferences', ['email_alerts' => true]],
             ['GET', 'unread-count', []],
         ];
     }

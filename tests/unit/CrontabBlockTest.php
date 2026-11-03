@@ -17,14 +17,14 @@ final class CrontabBlockTest extends CIUnitTestCase
         return CrontabBlock::render(CrontabBlock::template(), '/home/site/htdocs/app', 'php8.5');
     }
 
-    public function testTheBlockHasTheEightJobsWithThisSiteAndPhp(): void
+    public function testTheBlockHasTheNineJobsWithThisSiteAndPhp(): void
     {
         $block = $this->block();
 
         $this->assertStringStartsWith(CrontabBlock::BEGIN . "\n", $block);
         $this->assertStringEndsWith(CrontabBlock::END . "\n", $block);
 
-        foreach (['backup:run', 'subscriptions:sync', 'institutions:purge-expired', 'parents:notify', 'sis:sync', 'sis:grades', 'exports:run', 'messages:sync-course-chats'] as $command) {
+        foreach (['backup:run', 'subscriptions:sync', 'institutions:purge-expired', 'parents:notify', 'sis:sync', 'sis:grades', 'exports:run', 'messages:sync-course-chats', 'messages:notify'] as $command) {
             $this->assertStringContainsString("cd '/home/site/htdocs/app' && php8.5 spark {$command}", $block);
         }
 
