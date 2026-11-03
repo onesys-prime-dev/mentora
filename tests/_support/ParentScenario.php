@@ -21,6 +21,8 @@ trait ParentScenario
 
     protected int $institution;
 
+    protected int $department;
+
     protected int $subDepartment;
 
     protected int $program;
@@ -41,6 +43,7 @@ trait ParentScenario
     {
         $d                   = DeanFactory::department($tag);
         $this->institution   = $d['institution'];
+        $this->department    = $d['department'];
         $this->subDepartment = DeanFactory::subDepartment($d['department'], $tag . 'S');
         $this->program       = DeanFactory::program($this->subDepartment, $tag . 'P');
         $this->term          = DeanFactory::term($this->institution);
