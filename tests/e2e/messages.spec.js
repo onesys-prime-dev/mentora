@@ -420,6 +420,7 @@ test("TC-MSG-12 Quiet hours hold a notification, and the unread count still show
         await teacher.page.locator("[data-role=prefs-end]").fill("");
         await teacher.page.locator("[data-role=prefs-save]").click();
         await expect(teacher.page.locator("[data-role=prefs-note]")).toHaveText("Saved.");
+        await teacher.page.locator("#messages-prefs [data-dialog-close]").first().click();
         await rowFor(teacher.page, people.michael.name).click();
         await sendMessage(teacher.page, "Yes, until Friday.");
 
