@@ -82,6 +82,29 @@ export function formatTime(iso, now) {
     return days < 7 ? WEEKDAYS[at.getDay()] : `${at.getDate()} ${MONTHS[at.getMonth()]}`;
 }
 
+/** The label of the separator above a day's messages: Today, Yesterday, "30 Oct", or "30 Dec 2025" in another year. */
+export function dayLabel(iso, now) {
+    const at = parseTime(iso);
+
+    if (at === null) {
+        return "";
+    }
+
+    const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+
+    if (days <= 0) {
+        return "Today";
+    }
+
+    if (days === 1) {
+        return "Yesterday";
+    }
+
+    const label = `${at.getDate()} ${MONTHS[at.getMonth()]}`;
+
+    return at.getFullYear() === now.getFullYear() ? label : `${label} ${at.getFullYear()}`;
+}
+
 export function messageNode(message, { mine }) {
     const node = el("div", `max-w-[70%] break-words rounded-2xl border px-3 py-1.5 text-sm ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
 

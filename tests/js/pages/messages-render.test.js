@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { conversationRow, escapeHtml, formatTime, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
+import { conversationRow, dayLabel, escapeHtml, formatTime, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
 
 const fragment = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
 
@@ -181,6 +181,27 @@ describe("a conversation row", () => {
 
         expect(node.querySelector("b")).toBeNull();
         expect(node.querySelector("img")).toBeNull();
+
+    });
+
+});
+
+describe("dayLabel", () => {
+
+    const now = new Date(2026, 10, 3, 15, 0, 0);
+
+    it("names today and yesterday, and dates anything older", () => {
+
+        expect(dayLabel("2026-11-03 00:01:00", now)).toBe("Today");
+        expect(dayLabel("2026-11-02 23:00:00", now)).toBe("Yesterday");
+        expect(dayLabel("2026-10-30 10:00:00", now)).toBe("30 Oct");
+        expect(dayLabel("2025-12-30 10:00:00", now)).toBe("30 Dec 2025");
+
+    });
+
+    it("is the same for two times on one day, so one separator covers them", () => {
+
+        expect(dayLabel("2026-10-30 08:00:00", now)).toBe(dayLabel("2026-10-30 21:30:00", now));
 
     });
 
