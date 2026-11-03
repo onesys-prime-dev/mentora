@@ -69,6 +69,7 @@ final class MessagesRoutesTest extends RouteTestCase
             ['POST', "conversations/{$c}/messages", ['body' => 'hi', 'client_uuid' => 'abcdefgh1']],
             ['POST', "conversations/{$c}/read", ['message_id' => 1]],
             ['POST', "conversations/{$c}/messages/1/hide", []],
+            ['POST', "conversations/{$c}/messages/1/remove", []],
             ['POST', "conversations/{$c}/lock", []],
             ['POST', "conversations/{$c}/unlock", []],
             ['GET', 'unread-count', []],

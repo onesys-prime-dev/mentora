@@ -61,6 +61,13 @@ class MessageController extends MessagingController
             : $this->notFound();
     }
 
+    public function remove(int $conversationId, int $messageId): ResponseInterface
+    {
+        return (new MessageService())->remove(auth()->user(), $conversationId, $messageId)
+            ? $this->response->setJSON(['ok' => true])
+            : $this->notFound();
+    }
+
     private function intOrNull(mixed $value): ?int
     {
         return is_numeric($value) ? (int) $value : null;

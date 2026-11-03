@@ -165,6 +165,36 @@ class MessageService
         return true;
     }
 
+    /**
+     * A moderator blanks a message for everyone (spec 3.3 rule 8). The ciphertext
+     * stays as evidence but is no longer served. False when the conversation is
+     * not the user's, the message is not in it, or the user may not moderate it;
+     * removing twice changes nothing.
+     */
+    public function remove(User $user, int $conversationId, int $messageId): bool
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+
+        if ($conversation === null || ! $this->inConversation($conversationId, $messageId) || ! $this->conversations->canModerate($user, $conversation)) {
+            return false;
+        }
+
+        $db = db_connect();
+        $db->table('messages')->where(['id' => $messageId, 'removed_at' => null])->update(['removed_at' => date('Y-m-d H:i:s'), 'removed_by' => (int) $user->id]);
+
+        if ($db->affectedRows() > 0) {
+            // Ids and the action only, never the text.
+            service('auditLogger')->log('messages.message_removed', $user, [
+                'target_type'    => 'message',
+                'target_id'      => $messageId,
+                'institution_id' => (int) $conversation['institution_id'],
+                'new'            => ['conversation_id' => $conversationId],
+            ]);
+        }
+
+        return true;
+    }
+
     private function inConversation(int $conversationId, int $messageId): bool
     {
         return $messageId > 0 && db_connect()->table('messages')->where(['id' => $messageId, 'conversation_id' => $conversationId])->countAllResults() > 0;

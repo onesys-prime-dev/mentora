@@ -449,6 +449,7 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
     $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
     $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/remove', 'Messaging\MessageController::remove/$1/$2');
 });
 
 // The Messages page itself: the same turn-aways as the JSON routes, and no `readonly` filter because
