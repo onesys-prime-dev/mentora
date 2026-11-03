@@ -87,8 +87,10 @@ $tabs    = ['open' => 'Open', 'dismissed' => 'Dismissed', 'actioned' => 'Actione
                 <button type="submit" name="decision" value="action" class="rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Mark as actioned</button>
                 <?php if ($report['can_remove']): ?>
                     <button type="submit" name="decision" value="remove" class="rounded-full bg-red-700 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700/50">Remove the message and mark as actioned</button>
-                <?php else: ?>
+                <?php elseif ($report['conversation_type'] === 'direct'): ?>
                     <p class="text-xs text-[#646464]">Direct messages are never removed. Dismiss the report or mark it as actioned.</p>
+                <?php elseif ($report['removed']): ?>
+                    <p class="text-xs text-[#646464]">This message was already removed.</p>
                 <?php endif; ?>
             </form>
         <?php endif; ?>

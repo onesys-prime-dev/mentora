@@ -232,6 +232,11 @@ class MessageService
             'UPDATE conversation_participants SET last_read_message_id = GREATEST(COALESCE(last_read_message_id, 0), ?) WHERE conversation_id = ? AND user_id = ?',
             [$messageId, $conversationId, $userId],
         );
+
+        // Having read the thread, its message notification has done its job. Left unread it would stop the next
+        // message from notifying (one notification per thread while one is unread, MessageNotifier).
+        db_connect()->table('notifications')->where('user_id', $userId)->like('dedupe_key', "msg:{$conversationId}:", 'after')->where('read_at', null)
+            ->update(['read_at' => date('Y-m-d H:i:s')]);
     }
 
     /** @return array<string, mixed>|null */

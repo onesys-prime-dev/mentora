@@ -91,6 +91,10 @@ Messages ships **off**. Do this once per environment, in order.
   it (they show "Message unavailable").
 - Rotate the key (below) and confirm old conversations still open.
 
+Because the institution's administrator reviews every report, a report about the administrator's own
+messages would be reviewed by the same person. Mentora does not route those anywhere else yet; if that matters
+to your institution, have a second administrator account review reports about the first.
+
 ## Settings an institution's administrator controls
 
 - **Students messaging each other** (Institution settings, Messages): on by default. Off:

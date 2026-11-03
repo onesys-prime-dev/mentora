@@ -116,7 +116,16 @@ class ReportReviewService
             $db->table('messages')->where(['id' => (int) $report['message_id'], 'removed_at' => null])->update(['removed_at' => $now, 'removed_by' => (int) $admin->id]);
         }
 
-        $db->table('message_reports')->where('id', $reportId)->update(['status' => $status, 'reviewed_by' => (int) $admin->id, 'reviewed_at' => $now]);
+        // Only an open report can be decided: of two simultaneous decisions the second changes nothing.
+        $db->table('message_reports')->where(['id' => $reportId, 'status' => 'open'])->update(['status' => $status, 'reviewed_by' => (int) $admin->id, 'reviewed_at' => $now]);
+        $decided = $db->affectedRows() > 0;
+
+        if (! $decided) {
+            $db->transRollback();
+
+            return false;
+        }
+
         $db->transComplete();
 
         if (! $db->transStatus()) {

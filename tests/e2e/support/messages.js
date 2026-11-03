@@ -42,10 +42,23 @@ export function disableMessages() {
         "DELETE FROM conversations",
         "DELETE FROM user_blocks",
         "DELETE FROM message_preferences",
+        // The institution's "students messaging each other" switch, if a case left it off.
+        "DELETE FROM settings WHERE `key` LIKE '%studentDmEnabled%'",
         "DELETE FROM feature_flag_overrides WHERE flag_key = 'messages'",
     ]) {
         runSql(statement);
     }
+}
+
+/** Switches students messaging each other on or off as the institution's administrator does, and waits for the server. */
+export async function setStudentMessages(page, on) {
+    await page.goto("/institution/settings/messages");
+    await page.locator(`input[name=enabled][value='${on ? 1 : 0}']`).check();
+
+    const saved = page.waitForResponse((response) => response.url().includes("/institution/settings/messages") && response.request().method() === "POST");
+
+    await page.getByRole("button", { name: "Save" }).click();
+    expect((await saved).ok()).toBe(true);
 }
 
 /** What the server's scheduler does every night: create the missing chats and repair who is in them. */
@@ -74,6 +87,15 @@ export async function goToMessages(page, path = "/messages") {
 /** A row of the conversation list, by a word in its name. */
 export function rowFor(page, text) {
     return page.locator("[data-role=rows] button", { hasText: text });
+}
+
+/**
+ * A row of the list by its conversation id. Course rows carry no section ("IT101 · Introduction to Computing"),
+ * and the instructor teaches both IT101-A and IT101-B, so by name their IT101 rows are two: the student, who is only
+ * in A, reads the id from their one row and the instructor opens that same chat by id.
+ */
+export function rowById(page, id) {
+    return page.locator(`[data-role=rows] button[data-id="${id}"]`);
 }
 
 /** The messages shown in the open thread. */

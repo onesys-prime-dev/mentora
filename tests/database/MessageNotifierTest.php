@@ -117,6 +117,22 @@ final class MessageNotifierTest extends DatabaseTestCase
         $this->assertCount(2, $this->notices($this->instructor));
     }
 
+    public function testReadingTheThreadClearsItsNoticeSoTheNextMessageNotifiesAgain(): void
+    {
+        $first = $this->plant($this->thread, $this->parent, 'hello');
+        $this->notifier()->notifyConversation($this->thread);
+        $this->assertNull($this->notices($this->instructor)[0]['read_at']);
+
+        // They open Messages directly, not through the notification, and read the thread.
+        $this->assertTrue((new MessageService($this->parentCipher()))->markRead($this->instructor, $this->thread, $first));
+        $this->assertNotNull($this->notices($this->instructor)[0]['read_at']);
+
+        $this->plant($this->thread, $this->parent, 'a new one');
+
+        $this->assertSame(1, $this->notifier()->notifyConversation($this->thread));
+        $this->assertCount(2, $this->notices($this->instructor));
+    }
+
     public function testARetryTellsNobodyAgain(): void
     {
         $this->plant($this->thread, $this->parent, 'hello');

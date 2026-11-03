@@ -20,9 +20,11 @@ import {
     goToMessages,
     openMessagesAs,
     people,
+    rowById,
     rowFor,
     searchFindsNobody,
     sendMessage,
+    setStudentMessages,
     startThreadWith,
     syncChats,
     thread,
@@ -58,12 +60,14 @@ test("TC-MSG-01 A student sees the pinned course chat, posts in it, and the inst
         // Course chats are pinned at the top of the list.
         await expect(student.page.locator("[data-role=rows] button").first()).toContainText(/IT101|IT201/);
 
+        const id = await chat.getAttribute("data-id");
+
         await chat.click();
         await expect(student.page.locator("[data-role=head-sub]")).toHaveText("Course chat");
         await sendMessage(student.page, "Is the first quiz open yet?");
 
         await instructor.page.reload();
-        await rowFor(instructor.page, "IT101").click();
+        await rowById(instructor.page, id).click();
         await expect(thread(instructor.page).getByText("Is the first quiz open yet?")).toBeVisible();
     } finally {
         await student.context.close();
@@ -76,7 +80,10 @@ test("TC-MSG-02 The instructor locks a course chat; the student can read it but 
     const student = await openMessagesAs(browser, people.michael);
 
     try {
-        await rowFor(instructor.page, "IT101").click();
+        // The same chat for both: by id, because the instructor has two IT101 rows (sections A and B).
+        const id = await rowFor(student.page, "IT101").getAttribute("data-id");
+
+        await rowById(instructor.page, id).click();
         await instructor.page.locator("[data-role=lock]").click();
         await expect(instructor.page.locator("[data-role=lock]")).toHaveText("Unlock chat");
         // The instructor can still post.
@@ -104,10 +111,7 @@ test("TC-MSG-03 A student starts a DM with a classmate; switching student messag
         await startThreadWith(student.page, "Juan", people.juan.name, "Student");
         await sendMessage(student.page, "Want to study for the quiz together?");
 
-        await admin.page.goto("/institution/settings/messages");
-        await admin.page.locator("input[name=enabled][value='0']").check();
-        await admin.page.getByRole("button", { name: "Save" }).click();
-        await expect(admin.page.locator("input[name=enabled][value='0']")).toBeChecked();
+        await setStudentMessages(admin.page, false);
 
         try {
             await goToMessages(student.page);
@@ -119,9 +123,7 @@ test("TC-MSG-03 A student starts a DM with a classmate; switching student messag
             await expect(student.page.locator("[data-role=cannot-post]")).toBeVisible();
             await expect(student.page.locator("[data-role=composer]")).toBeHidden();
         } finally {
-            await admin.page.locator("input[name=enabled][value='1']").check();
-            await admin.page.getByRole("button", { name: "Save" }).click();
-            await expect(admin.page.locator("input[name=enabled][value='1']")).toBeChecked();
+            await setStudentMessages(admin.page, true);
         }
     } finally {
         await student.context.close();
@@ -255,7 +257,9 @@ test("TC-MSG-08 A parent sees the read-only feed of the instructor's posts and n
     const page = await parent.newPage();
 
     try {
-        await rowFor(instructor.page, "IT101").click();
+        const id = await rowFor(student.page, "IT101").getAttribute("data-id");
+
+        await rowById(instructor.page, id).click();
         await sendMessage(instructor.page, "Reminder: bring your laptops on Monday.");
         await student.page.reload();
         await rowFor(student.page, "IT101").click();
@@ -362,8 +366,8 @@ test("TC-MSG-11 A student blocks a classmate and reports a message; the administ
         // Juan can still read but can no longer post.
         await juan.page.reload();
         await rowFor(juan.page, people.michael.name).click();
-        await juan.page.locator("[data-role=body]").fill("Hello? Why no reply?");
-        await juan.page.locator("[data-role=send]").click();
+        await expect(thread(juan.page).getByText("This is the message to report.")).toBeVisible();
+        await expect(juan.page.locator("[data-role=composer]")).toBeHidden();
         await expect(juan.page.locator("[data-role=cannot-post]")).toBeVisible();
 
         // The administrator reads the snapshot and decides.
@@ -385,6 +389,9 @@ test("TC-MSG-12 Quiet hours hold a notification, and the unread count still show
     const student = await openMessagesAs(browser, people.michael);
 
     try {
+        // Earlier cases left message notifications behind; start this one without any.
+        runSql("DELETE FROM notifications WHERE type = 'message'");
+
         // The whole day, but a minute.
         await teacher.page.locator("[data-role=prefs-open]").click();
         await teacher.page.locator("[data-role=prefs-start]").fill("00:00");
@@ -403,7 +410,7 @@ test("TC-MSG-12 Quiet hours hold a notification, and the unread count still show
         // ...but no notification was made while the hours last.
         await teacher.page.locator("#notifications-button").click();
         await expect(teacher.page.locator("#notifications-panel")).toBeVisible();
-        await expect(teacher.page.locator("#notifications-panel")).not.toContainText("sent you a message");
+        await expect(teacher.page.locator("#notifications-panel")).not.toContainText("Michael Villanueva sent you a message.");
 
         // Control: with no quiet hours, a reply notifies the student.
         await teacher.page.locator("[data-role=prefs-open]").click({ force: true });
@@ -416,7 +423,7 @@ test("TC-MSG-12 Quiet hours hold a notification, and the unread count still show
 
         await student.page.reload();
         await student.page.locator("#notifications-button").click();
-        await expect(student.page.locator("#notifications-panel")).toContainText("sent you a message");
+        await expect(student.page.locator("#notifications-panel")).toContainText("Maria Santos sent you a message.");
     } finally {
         await teacher.context.close();
         await student.context.close();
