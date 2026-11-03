@@ -117,4 +117,68 @@ final class GlobalGradesQueryBudgetTest extends RouteTestCase
         // Six visits (each tab, warmed and measured). A loose bound for a test machine: about 2 s a visit.
         $this->assertLessThan(12.0, microtime(true) - $started, 'six visits on 750 students');
     }
+
+    /** A course of the student's term with a published scheme, a running grade, an instructor and a band. */
+    private function addStudentCourse(User $student, ?int &$term): void
+    {
+        $db       = db_connect();
+        $offering = CourseFactory::offering('A');
+
+        if ($term === null) {
+            $term = (int) $db->table('course_offerings')->where('id', $offering)->get()->getRow()->term_id;
+        } else {
+            $db->table('course_offerings')->where('id', $offering)->update(['term_id' => $term]);
+        }
+
+        CourseFactory::enroll($offering, $student);
+        CourseFactory::assignInstructor($offering, $this->instructor);
+
+        $scheme = GradeFactory::scheme($offering);
+        $db->table('grading_schemes')->where('id', $scheme)->update(['status' => 'Published']);
+        $band = (int) $db->table('grade_scale_items')->where('grade_scale_id', $db->table('grading_schemes')->where('id', $scheme)->get()->getRow()->grade_scale_id)->get()->getRow()->id;
+
+        $db->table('gradebook_records')->insert([
+            'course_offering_id' => $offering, 'student_id' => $student->id, 'grading_scheme_id' => $scheme,
+            'calculated_percentage' => 91, 'calculated_grade_scale_item_id' => $band, 'remarks' => 'Passed',
+            'last_calculated_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    public function testTheStudentPageCostsTheSameForThreeOrFifteenCourses(): void
+    {
+        $student = PeopleFactory::person('student', 'Ada', 'Lovelace', null, PeopleFactory::institution('QBS'));
+        $term    = null;
+
+        $cost = function () use ($student): int {
+            $this->loggedInAs($student);
+            $this->get('student/grades')->assertStatus(200);
+
+            $queries  = 0;
+            $listener = static function () use (&$queries): void {
+                $queries++;
+            };
+
+            Events::on('DBQuery', $listener);
+            $result = $this->get('student/grades');
+            Events::removeListener('DBQuery', $listener);
+
+            $result->assertStatus(200);
+            $this->assertStringContainsString('data-grades-row', $result->getBody());
+
+            return $queries;
+        };
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->addStudentCourse($student, $term);
+        }
+
+        $three = $cost();
+
+        for ($i = 0; $i < 12; $i++) {
+            $this->addStudentCourse($student, $term);
+        }
+
+        $this->assertSame($three, $cost(), 'fifteen courses must cost the same queries as three');
+        $this->assertGreaterThan(0, $three);
+    }
 }

@@ -107,6 +107,18 @@ nothing (audit decision 3.2): the page skips its one write (the "seen" snapshot,
 
 ## 5. Student (Q2–Q6)
 
+### 5.0 Layout decisions from the phase 2 mockups (2026-11-03)
+
+- **The bar:** the left side carries a term summary line, the right side the term picker:
+  "**1st Sem 2026–2027** · 7 courses · 21 units · ends Dec 20" (past terms: "ended Dec 20"; units
+  exclude withdrawn courses; the date is the term's `end_date`; no date → that part is left out). The
+  picker's label is "Change term". No filter pills, no search.
+- **The expanded course** is a small table, not a breakdown wall: one column per grading period ("Prelim
+  30%"), one row of period percentages ("not yet" when nothing is graded in it), then a "Show
+  categories ▾" toggle that reveals each period's categories with weight and percentage, then one
+  line: the standing chip, "Passing is {p}%", the curve note when one applies, and **Open course
+  grades →**. A scheme without periods shows its categories as the table's columns and has no toggle.
+
 ### 5.1 Terms and summary (Q3, Q4)
 
 - A **term picker** listing every term the student has an enrolment in (`enrolled`, `completed`,
@@ -141,10 +153,10 @@ A course with no scale shows the percentage alone. INC rows show "INC · finish 
 ### 5.3 Expanded row (Q5)
 
 The row expands in place (a button with `aria-expanded`; the breakdown is fetched once from
-`student/api/grades/courses/{offering}`): one grade per grading period, each category's weight and
-percentage (grouped under periods when the scheme has them), the standing (On track / At risk / INC with
-reason and finish-by date), and "adjusted by your instructor" when a curve applies. Then **Open course
-grades →** (the course's Grades tab). Items are not listed here; the course tab has them.
+`student/api/grades/courses/{offering}`) into the small table of §5.0: period percentages, categories
+behind "Show categories", the standing (On track / At risk / INC with reason and finish-by date),
+"Passing is {p}%", "adjusted by your instructor" when a curve applies, and **Open course grades →**
+(the course's Grades tab). Items are not listed here; the course tab has them.
 
 ### 5.4 Real time (Q6)
 
@@ -261,7 +273,7 @@ was 21), with the three tests that named 21 updated.
 
 - No default scale: no GWA card, percentages still shown.
 - Every download is audited (`grades.report_exported` pattern).
-- Empty states in the app's voice: "No courses this term", "Nothing waiting to grade".
+- Empty states in the app's voice: "No courses this term" ("No courses yet" when the student has no term at all), "Nothing waiting to grade".
 - A section the person can no longer reach: 404.
 
 ## 13. Builder notes (calls made after the review; the code settles them)

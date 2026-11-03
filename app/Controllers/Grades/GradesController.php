@@ -6,17 +6,25 @@ namespace App\Controllers\Grades;
 
 use App\Controllers\BaseController;
 use App\Services\Auth\RolePermissions;
+use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Grades\PendingGrading;
 use App\Services\Grades\GradesAtRisk;
+use App\Services\Grades\GradesSeen;
 use App\Services\Grades\InstructorGradesOverview;
+use App\Services\Grades\StudentGradesOverview;
+use App\Services\Institutions\AcademicDefaults;
 use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\Shield\Entities\User;
 
 /**
- * The Grades app: grades across every section a person teaches, on one page, so term end is not a
- * course-by-course walk. One controller under each role's own area, the way Announcements is; in this phase
- * only the instructor has it (spec §2, §7).
+ * The Grades app: grades across every section a person teaches or course they take, on one page, so term end
+ * is not a course-by-course walk. One controller under each role's own area, the way Announcements is; the
+ * instructor and the student have it so far (spec §2, §5, §7).
  *
- * Three tabs, all in the query string so a view can be bookmarked: the Gradebook (a card per section and that
+ * The student's page is one term at a time: a row per course with its grade, the summary with the GWA, and a
+ * "Changed" badge on a course whose grade moved since they last looked (spec §5).
+ *
+ * The instructor's has three tabs, all in the query string so a view can be bookmarked: the Gradebook (a card per section and that
  * section's grid, which the page script fetches), To grade (work waiting across every section, oldest first)
  * and At risk. Every number is read from stored rows; nothing is created or recalculated by looking, so a
  * section that never had its Grades tab opened reads as "not published yet" (spec §13).
@@ -30,6 +38,10 @@ class GradesController extends BaseController
         $user = auth()->user();
         $area = $this->area();
         $base = site_url($area . '/grades');
+
+        if ($area === 'student') {
+            return $this->student($user, $base);
+        }
 
         $tab = (string) $this->request->getGet('tab');
         $tab = in_array($tab, self::TABS, true) ? $tab : 'gradebook';
@@ -113,7 +125,87 @@ class GradesController extends BaseController
     {
         $area = $this->request->getUri()->getSegment(1);
 
-        return in_array($area, ['instructor'], true) ? $area : 'instructor';
+        return in_array($area, ['instructor', 'student'], true) ? $area : 'instructor';
+    }
+
+    /**
+     * The student's page for one term: its courses, the summary and the bar's line, all from stored rows.
+     *
+     * The page's one write is the "seen" snapshot of every row it showed (published or not), made after the page
+     * is built so each badge compares with the previous look; GradesSeen skips it while someone views as them.
+     */
+    private function student(User $user, string $base): string
+    {
+        $overview   = new StudentGradesOverview();
+        $seen       = new GradesSeen();
+        $loadError  = false;
+        $terms      = [];
+        $term       = null;
+        $rows       = [];
+        $summary    = null;
+        $bar        = null;
+        $hasScale   = false;
+        $changed    = [];
+        $signatures = [];
+
+        try {
+            $terms  = $overview->terms($user);
+            $termId = $overview->defaultTermId($terms, $this->number('term') ?: null);
+            $term   = $termId === null ? null : array_column($terms, null, 'id')[$termId];
+
+            if ($term !== null) {
+                $rows = $overview->courses($user, $term);
+
+                // The GWA is on the institution's default scale; with none, there is no GWA.
+                $institution = (int) db_connect()->table('academic_terms')->select('institution_id')->where('id', $term['id'])->get()->getRow()->institution_id;
+                $scaleId     = (new AcademicDefaults())->forInstitution($institution)['scaleId'];
+                $hasScale    = $scaleId !== null;
+                $summary     = $overview->summary($rows, $scaleId);
+                $bar         = $overview->barLine($term, $rows, date('Y-m-d'));
+
+                // Every row is remembered as shown, so a grade published since the last look is a change too;
+                // an unpublished row shows only its chip (a withdrawn one keeps its Withdrawn tag).
+                foreach ($rows as $row) {
+                    $shown = $row['published'] || $row['withdrawn'] ? $row : ['tag' => 'Not published yet'] + $row;
+
+                    $signatures[$row['offering_id']] = GradesSeen::signature($shown);
+                }
+
+                $changed = $seen->changed((int) $user->id, (int) $user->id, $signatures);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Grades failed to load: ' . $e->getMessage());
+            $loadError = true;
+        }
+
+        $relative = new AssessmentOverviewService();
+
+        foreach ($rows as $i => $row) {
+            $rows[$i]['changed'] = $changed[$row['offering_id']] ?? false;
+            $rows[$i]['updated'] = $relative->relativeTime($row['updated_at']);
+        }
+
+        $html = view('pages/grades/index', [
+            'title'        => 'Grades',
+            'page'         => 'grades',
+            'user'         => $user,
+            'area'         => 'student',
+            'base'         => $base,
+            'terms'        => $terms,
+            'termId'       => $term['id'] ?? null,
+            'rows'         => $rows,
+            'summary'      => $summary,
+            'bar'          => $bar,
+            'hasScale'     => $hasScale,
+            'loadError'    => $loadError,
+            'previousPage' => 'dashboard',
+        ]);
+
+        if (! $loadError) {
+            $seen->remember((int) $user->id, (int) $user->id, $signatures);
+        }
+
+        return $html;
     }
 
     /**

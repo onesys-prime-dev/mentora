@@ -75,6 +75,12 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     });
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
+    // Their grades in every course of a term; ?term= picks another.
+    $routes->get('grades', 'Grades\GradesController::index', ['filter' => 'permission:courses.view']);
+
+    // A course's small grade breakdown, loaded when its row on the Grades page is expanded.
+    $routes->get('api/grades/courses/(:num)', 'Grades\StudentCourseGradesController::show/$1', ['filter' => ['permission:courses.view', 'coursemember:student']]);
+
     $routes->group('api/courses', ['filter' => ['permission:courses.view', 'coursemember:student', 'assessmentscope', 'closedoffering']], function ($routes) {
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');

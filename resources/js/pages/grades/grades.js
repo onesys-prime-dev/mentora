@@ -12,6 +12,7 @@ import { setGradesApiBase } from "../courses/features/grades/api.js";
 import { bindFinalizeDialog } from "../courses/features/grades/finalize/finalize-dialog.js";
 import { bindFinalizeReady } from "./finalize-ready.js";
 import { bindDownloadLinks, loadInto, switchSection } from "./section-switch.js";
+import { bindStudentRows } from "./student-rows.js";
 
 // Finalize ready sections: its confirm dialog, posted in place, the result shown in it.
 bindFinalizeReady();
@@ -47,4 +48,11 @@ if (grid) {
 
     });
 
+}
+
+// The student page: each course row opens in place.
+const studentRows = document.querySelector("[data-grades-rows]");
+
+if (studentRows) {
+    bindStudentRows(studentRows);
 }

@@ -1,9 +1,15 @@
 <?php
 /**
- * The Grades page: grades across every section the person teaches. The Announcements shell (the way back on the
- * background, one white panel, the page head, a brand-tint bar of tabs and pickers), a summary strip, then the
- * tab: the Gradebook (section cards and the chosen section's grid), To grade, or At risk. Every choice is in the
- * query string, so a view can be bookmarked and Back works.
+ * The Grades page: grades across every section the person teaches, or every course the student takes. The
+ * Announcements shell (the way back on the background, one white panel, the page head, a brand-tint bar of tabs
+ * and pickers), a summary strip, then the list. Every choice is in the query string, so a view can be bookmarked
+ * and Back works.
+ *
+ * The instructor's bar has tabs, and the list is the tab: the Gradebook (section cards and the chosen section's
+ * grid), To grade, or At risk. The student's bar has no tabs: the term's line on the left, "Change term" on the
+ * right; the list is the term's courses (partials/student).
+ *
+ * The student's page also gets rows, summary, bar (StudentGradesOverview::barLine) and hasScale.
  *
  * @var string                     $area
  * @var string                     $base     this page's address, without a query
@@ -45,7 +51,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
     <?= view('components/page-head', [
         'title'       => 'Grades',
         'icon'        => 'grades',
-        'description' => 'Every section you teach.',
+        'description' => $area === 'student' ? 'Your grades in every course, as they stand now.' : 'Every section you teach.',
     ], ['saveData' => false]) ?>
 
     <?php if ($loadError): ?>
@@ -54,8 +60,43 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your grades</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc($link(['tab' => $tab === 'gradebook' ? null : $tab])) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($area === 'student' ? $link() : $link(['tab' => $tab === 'gradebook' ? null : $tab])) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
+
+    <?php elseif ($area === 'student'): ?>
+
+        <?php if ($bar !== null): ?>
+            <?php
+            $plural = static fn (float|int $n, string $word): string => grade_number($n) . ' ' . $word . ((float) $n === 1.0 ? '' : 's');
+            $line   = array_filter([$plural($bar['courses'], 'course'), $plural($bar['units'], 'unit'), $bar['ends']]);
+            ?>
+
+            <?php // The term's line on the left, "Change term" on the right; no tabs, no filters. ?>
+            <div class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-3 sm:flex-row sm:items-center sm:justify-between">
+
+                <p class="px-1 text-sm text-brand-dark" data-term-line>
+                    <strong class="font-bold"><?= esc($bar['name']) ?></strong> · <?= esc(implode(' · ', $line)) ?>
+                </p>
+
+                <?php // The picker reads "Change term"; the term shown is marked in the list. ?>
+                <label class="sr-only" for="grades-term">Change term</label>
+                <select id="grades-term" data-select-link data-term-select class="<?= $select ?> sm:w-56">
+                    <option value="" selected disabled hidden>Change term</option>
+                    <?php foreach ($terms as $term): ?>
+                        <option value="<?= esc($base . '?term=' . $term['id']) ?>"><?= esc($term['name'] . ' (' . $term['academic_year'] . ')' . ($term['id'] === $termId ? ' · shown' : '')) ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+            </div>
+        <?php endif; ?>
+
+        <?php $data = compact('rows', 'summary', 'hasScale') + ['hasTerms' => $terms !== []]; ?>
+
+        <?php if ($rows !== []): ?>
+            <?= view('pages/grades/partials/student/summary', $data, ['saveData' => false]) ?>
+        <?php endif; ?>
+
+        <?= view('pages/grades/partials/student/rows', $data, ['saveData' => false]) ?>
 
     <?php else: ?>
 

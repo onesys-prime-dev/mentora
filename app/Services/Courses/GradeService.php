@@ -190,9 +190,7 @@ class GradeService
 
         $percentage = $isPublished ? GradebookRecordModel::effectivePercentage($record) : null;
 
-        $bandId = !empty($record['is_override'])
-            ? $record['overridden_grade_scale_item_id']
-            : ($record['calculated_grade_scale_item_id'] ?? null);
+        $bandId = GradebookRecordModel::effectiveBandId($record);
 
         $band = $isPublished && $bandId
             ? (new GradeScaleItemModel())->find((int) $bandId)

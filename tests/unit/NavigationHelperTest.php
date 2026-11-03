@@ -53,7 +53,6 @@ final class NavigationHelperTest extends CIUnitTestCase
     {
         $apps = array_column(global_apps('student'), 'url', 'key');
 
-        $this->assertNull($apps['grades']);
         $this->assertNull($apps['inbox']);
         $this->assertNotNull($apps['courses']);
     }
@@ -62,10 +61,14 @@ final class NavigationHelperTest extends CIUnitTestCase
     {
         $this->assertStringEndsWith('instructor/grades', (string) array_column(global_apps('instructor'), 'url', 'key')['grades']);
 
-        // The student's and the chairperson's pages come in later phases.
-        foreach (['student', 'chairperson'] as $role) {
-            $this->assertNull(array_column(global_apps($role), 'url', 'key')['grades'], $role);
-        }
+        // The chairperson's page comes in a later phase.
+        $this->assertNull(array_column(global_apps('chairperson'), 'url', 'key')['grades']);
+    }
+
+    public function testTheTileOpensTheGradesPageForStudents(): void
+    {
+        $this->assertSame(site_url('student/grades'), array_column(global_apps('student'), 'url', 'key')['grades']);
+        $this->assertNull(array_column(global_apps('chairperson'), 'url', 'key')['grades'], 'the chairperson page is not built yet');
     }
 
     public function testAParentOnlyGetsTilesThatLeadSomewhere(): void
