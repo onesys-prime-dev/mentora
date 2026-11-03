@@ -34,6 +34,9 @@ const env = {
     // The app files every email it "sends" in writable/e2e-mail (app/Config/Email.php),
     // where the cases read the administrator's sign-in code and invitation links.
     E2E_MAIL_SINK: `${root}tests/e2e/support/mail-sink.php`,
+    // The key Messages encrypts with (Config\Messages reads messages_encryptionKey). A fixed value is fine
+    // here: the database is thrown away on every run. Real servers set messages.encryptionKey in .env.
+    messages_encryptionKey: `hex2bin:${"61".repeat(32)}`,
 };
 
 const say = (message) => console.log(`[e2e] ${message}`);
