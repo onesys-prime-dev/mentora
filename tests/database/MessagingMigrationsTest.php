@@ -27,6 +27,13 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         '2026-11-21-000003_CreateMessageSafetyTables' => ['CreateMessageSafetyTables', 'user_blocks'],
     ];
 
+    /** First table of a migration => all its tables, parents first. */
+    private const MIGRATION_TABLES = [
+        'conversations' => ['conversations', 'conversation_participants'],
+        'messages'      => ['messages', 'message_hidden'],
+        'user_blocks'   => ['user_blocks', 'message_reports', 'message_preferences'],
+    ];
+
     private const TABLES = ['conversations', 'conversation_participants', 'messages', 'message_hidden', 'user_blocks', 'message_reports', 'message_preferences'];
 
     /** @var list<int> */
@@ -188,6 +195,20 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         }
     }
 
+    public function testCompositeKeyModelsRefuseLookupsByOneHalfOfTheKey(): void
+    {
+        foreach ([new App\Models\Messaging\MessageHiddenModel(), new App\Models\Messaging\UserBlockModel()] as $model) {
+            foreach (['find', 'update', 'delete'] as $method) {
+                try {
+                    $method === 'update' ? $model->update(1, []) : $model->{$method}(1);
+                    $this->fail($model::class . "::{$method}(1) should throw");
+                } catch (LogicException $e) {
+                    $this->assertStringContainsString('composite', $e->getMessage());
+                }
+            }
+        }
+    }
+
     public function testTheMigrationsCanBeUndoneAndRedone(): void
     {
         $migrations = [];
@@ -207,14 +228,24 @@ final class MessagingMigrationsTest extends DatabaseTestCase
                 $this->assertFalse(db_connect()->tableExists($table), "down removes {$table}");
             }
         } finally {
-            // Whatever happened, leave the database with all three applied: other tests need the tables.
+            // Whatever happened, leave the database with all seven tables: other tests need them.
+            // A migration with any table missing is cleared (children first) and run up again.
             db_connect()->resetDataCache();
 
             foreach ($migrations as $firstTable => $migration) {
-                if (! db_connect()->tableExists($firstTable)) {
-                    $migration->up();
-                    db_connect()->resetDataCache();
+                $tables = self::MIGRATION_TABLES[$firstTable];
+
+                if (array_filter($tables, static fn (string $t): bool => ! db_connect()->tableExists($t)) === []) {
+                    continue;
                 }
+
+                foreach (array_reverse($tables) as $table) {
+                    db_connect()->query('DROP TABLE IF EXISTS ' . db_connect()->escapeIdentifiers($table));
+                }
+
+                db_connect()->resetDataCache();
+                $migration->up();
+                db_connect()->resetDataCache();
             }
         }
 
