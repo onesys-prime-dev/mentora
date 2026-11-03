@@ -31,11 +31,21 @@ if (! function_exists('messages_unread_count')) {
 
     /**
      * Messages waiting for the signed-in person: the badge on the Messages tile.
-     * A stub until slice 2 counts them.
+     * Zero when nobody is signed in, and never an error: a page must still draw if Messages cannot count.
      */
     function messages_unread_count(): int
     {
-        return 0;
+        $user = auth()->user();
+
+        if ($user === null) {
+            return 0;
+        }
+
+        try {
+            return (new \App\Services\Messaging\ConversationService())->unreadCount($user);
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 }
 
