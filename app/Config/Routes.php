@@ -434,6 +434,20 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('children/(:num)/courses/(:num)/(:segment)/(:segment)', 'Parents\ParentCourseController::page/$1/$2/$3/$4', ['filter' => ['parentportal', 'parentchild']]);
 });
 
+// Messages (docs/superpowers/specs/2026-11-02-messages-design.md): JSON for every role but the system
+// administrator. `messages` answers 404 while the flag is off, to the administrator and to an
+// impersonation session; the controllers answer 404 for any conversation or message that is not the
+// person's, so a foreign id looks like one that does not exist.
+$routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission:messages.use']], function ($routes) {
+    $routes->get('conversations', 'Messaging\ConversationController::index');
+    $routes->post('conversations', 'Messaging\ConversationController::start');
+    $routes->get('unread-count', 'Messaging\ConversationController::unread');
+    $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
+    $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
+    $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
+    $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');
+});
+
 // A chairperson has full instructor rights on every course in their
 // program (R7 of the chairperson plan) — this block mirrors instructor's
 // course routes exactly, same controllers, scoped by ChairpersonAccessService
