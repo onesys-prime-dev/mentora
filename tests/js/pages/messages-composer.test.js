@@ -96,7 +96,7 @@ describe("the composer", () => {
         await composer.submit("x");
 
         expect(send).toHaveBeenCalledTimes(1);
-        expect(onFailed).toHaveBeenCalledWith("invalid_body");
+        expect(onFailed).toHaveBeenCalledWith("invalid_body", { error: "invalid_body" });
         expect(composer.state).toBe("failed");
 
     });

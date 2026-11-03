@@ -22,6 +22,7 @@
 import { createApi } from "./api.js";
 import { canSend, createComposer } from "./composer.js";
 import { createGroupPicker, MAX_MEMBERS } from "./group.js";
+import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
 import { conversationRow, dayLabel, messageNode } from "./render.js";
@@ -44,6 +45,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const sendEl = $("[data-role=send]");
     const composerEl = $("[data-role=composer]");
     const cannotPostEl = $("[data-role=cannot-post]");
+    const blockEl = $("[data-role=block]");
+    const safetyNoteEl = $("[data-role=safety-note]");
     const lockEl = $("[data-role=lock]");
     const lockNoteEl = $("[data-role=lock-note]");
     const olderEl = $("[data-role=older]");
@@ -71,6 +74,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         token: null,
         loadingOlder: false,
         confirmRemove: null,
+        confirmBlock: null,
+        reportFor: null,
+        reporting: false,
     };
 
     // ---- small helpers -------------------------------------------------
@@ -164,6 +170,24 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         showLockNote(locked && canPost && c?.can_moderate ? "Locked: students can read only" : "");
+
+        // A block is for direct threads, with someone a block can shut out; it takes a second click to be sure.
+        if (blockEl) {
+            const offered = c?.type === "direct" && (c.can_block || c.blocked_by_me);
+
+            blockEl.hidden = !offered;
+
+            if (offered) {
+                blockEl.textContent = c.blocked_by_me ? `Unblock ${c.name}` : state.confirmBlock === c.id ? `Click again to block ${c.name}` : `Block ${c.name}`;
+            }
+        }
+    }
+
+    function showSafetyNote(text) {
+        if (safetyNoteEl) {
+            safetyNoteEl.textContent = text;
+            safetyNoteEl.hidden = text === "";
+        }
     }
 
     function showLockNote(text) {
@@ -188,7 +212,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         } else if (item.failed) {
             const retry = document.createElement("button");
 
-            note.append(document.createTextNode("Not sent — "));
+            note.append(document.createTextNode(`${item.failNote ?? "Not sent"} — `));
             retry.type = "button";
             retry.dataset.action = "retry";
             retry.dataset.key = String(item.id);
@@ -204,6 +228,17 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             hide.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
             hide.textContent = "Delete for me";
             note.append(hide);
+
+            if (!item.mine) {
+                const report = document.createElement("button");
+
+                report.type = "button";
+                report.dataset.action = "report";
+                report.dataset.messageId = String(item.id);
+                report.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
+                report.textContent = "Report";
+                note.append(report);
+            }
 
             // A moderator of this chat can blank the message for everyone; it takes a second click to be sure.
             if (current()?.can_moderate) {
@@ -327,13 +362,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.cursor = 0;
         state.loadingOlder = false;
         state.confirmRemove = null;
+        state.confirmBlock = null;
+        showSafetyNote("");
         state.items = [];
         state.hasMore = false;
         state.sending = null;
         state.composer = createComposer({
             send: (text, uuid) => api.send(id, text, uuid),
             onSent: (message) => sent(id, message),
-            onFailed: (reason) => failed(id, reason),
+            onFailed: (reason, data) => failed(id, reason, data),
         });
 
         root.dataset.view = "thread";
@@ -433,7 +470,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         listPoller.nudge();
     }
 
-    function failed(id, reason) {
+    function failed(id, reason, data = null) {
         const item = state.sending;
 
         state.sending = null;
@@ -450,6 +487,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         } else {
             item.pending = false;
             item.failed = true;
+            item.failNote = reason === "rate_limited" ? data?.message ?? null : null;
         }
 
         renderMessages();
@@ -519,6 +557,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             if (item) {
                 submit(item.raw, item);
             }
+        } else if (button.dataset.action === "report") {
+            openReport(Number(button.dataset.messageId));
         } else if (button.dataset.action === "remove") {
             const id = Number(button.dataset.messageId);
 
@@ -618,6 +658,130 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const picker = createPicker({ search: (q) => api.recipients(q), onPick: startWith, onChange: renderPicker });
 
     $("[data-role=picker-input]").addEventListener("input", (event) => picker.input(event.target.value));
+
+    // ---- block, report, settings ---------------------------------------
+
+    blockEl?.addEventListener("click", async () => {
+        const c = current();
+
+        if (!c || state.openId === null || c.type !== "direct") {
+            return;
+        }
+
+        if (c.blocked_by_me) {
+            const result = await api.unblock(c.other_user_id);
+
+            if (result.status === 200) {
+                c.blocked_by_me = false;
+                c.can_block = true;
+                showSafetyNote("");
+            } else {
+                showSafetyNote(describeFailure(result, "Couldn't unblock them. Try again."));
+            }
+        } else if (state.confirmBlock !== c.id) {
+            state.confirmBlock = c.id;
+        } else {
+            state.confirmBlock = null;
+
+            const result = await api.block(c.other_user_id);
+
+            if (result.status === 200) {
+                c.blocked_by_me = true;
+                c.can_block = false;
+                showSafetyNote(`You blocked ${c.name}. They can't start or reply to messages with you.`);
+            } else {
+                showSafetyNote(describeFailure(result, "That person can't be blocked."));
+            }
+        }
+
+        applyConversation(c);
+    });
+
+    const reportReason = $("[data-role=report-reason]");
+    const reportNote = $("[data-role=report-note]");
+    const reportState = $("[data-role=report-state]");
+    const reportSend = $("[data-role=report-send]");
+
+    if (reportReason) {
+        reportReason.replaceChildren(...[["", "Choose a reason"], ...Object.entries(REASONS)].map(([value, label]) => {
+            const option = document.createElement("option");
+
+            option.value = value;
+            option.textContent = label;
+
+            return option;
+        }));
+    }
+
+    const syncReport = () => { reportSend.disabled = state.reporting || reportReason.value === ""; };
+
+    function openReport(messageId) {
+        state.reportFor = messageId;
+        reportReason.value = "";
+        reportNote.value = "";
+        reportState.textContent = "";
+        syncReport();
+        $("[data-role=report-open]")?.click();
+    }
+
+    reportReason?.addEventListener("change", syncReport);
+
+    reportSend?.addEventListener("click", async () => {
+        if (state.reporting || state.reportFor === null || reportReason.value === "") {
+            return;
+        }
+
+        state.reporting = true;
+        reportState.textContent = "";
+        syncReport();
+
+        const result = await api.report(state.openId, state.reportFor, reportReason.value, reportNote.value.trim() || null);
+
+        state.reporting = false;
+        syncReport();
+
+        if (result.status === 200) {
+            state.reportFor = null;
+            $("#messages-report [data-dialog-close]")?.click();
+            showSafetyNote("Thanks, we'll look into it.");
+        } else {
+            reportState.textContent = describeFailure(result, "Couldn't send the report. Try again.");
+        }
+    });
+
+    const prefsEmail = $("[data-role=prefs-email]");
+    const prefsQuiet = $("[data-role=prefs-quiet]");
+    const prefsStart = $("[data-role=prefs-start]");
+    const prefsEnd = $("[data-role=prefs-end]");
+    const prefsNote = $("[data-role=prefs-note]");
+
+    $("[data-role=prefs-open]")?.addEventListener("click", async () => {
+        prefsNote.textContent = "";
+
+        const { status, data } = await api.preferences();
+
+        if (status !== 200 || !data) {
+            prefsNote.textContent = "Couldn't load your settings.";
+
+            return;
+        }
+
+        prefsEmail.checked = data.preferences.email_alerts;
+        prefsStart.value = data.preferences.quiet_start ?? "";
+        prefsEnd.value = data.preferences.quiet_end ?? "";
+        prefsQuiet.hidden = !data.quiet_hours_allowed;
+    });
+
+    $("[data-role=prefs-save]")?.addEventListener("click", async () => {
+        const hours = !prefsQuiet.hidden;
+        const result = await api.savePreferences({
+            email_alerts: prefsEmail.checked,
+            quiet_start: hours ? prefsStart.value || null : null,
+            quiet_end: hours ? prefsEnd.value || null : null,
+        });
+
+        prefsNote.textContent = result.status === 200 ? "Saved." : result.status === 422 ? "Check the times." : describeFailure(result, "Couldn't save your settings. Try again.");
+    });
 
     // ---- starting a staff group ----------------------------------------
     // Only a chairperson or dean is offered the button; the server decides who may be added and who may start.

@@ -55,7 +55,7 @@ export function createComposer({ send, onSent, onFailed }) {
             }
 
             composer.state = "failed";
-            onFailed(data?.error ?? "network");
+            onFailed(data?.error ?? "network", data);
         },
     };
 
