@@ -21,6 +21,7 @@
 
 import { createApi } from "./api.js";
 import { canSend, createComposer } from "./composer.js";
+import { createGroupPicker, MAX_MEMBERS } from "./group.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
 import { conversationRow, dayLabel, messageNode } from "./render.js";
@@ -617,6 +618,101 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const picker = createPicker({ search: (q) => api.recipients(q), onPick: startWith, onChange: renderPicker });
 
     $("[data-role=picker-input]").addEventListener("input", (event) => picker.input(event.target.value));
+
+    // ---- starting a staff group ----------------------------------------
+    // Only a chairperson or dean is offered the button; the server decides who may be added and who may start.
+
+    const groupBtn = $("[data-role=new-group]");
+    const groupTitle = $("[data-role=group-title]");
+    const groupSearch = $("[data-role=group-search]");
+    const groupResults = $("[data-role=group-results]");
+    const groupChips = $("[data-role=group-chips]");
+    const groupNote = $("[data-role=group-note]");
+    const groupCreate = $("[data-role=group-create]");
+    let creatingGroup = false;
+    let groupFailure = "";
+
+    if (groupBtn) {
+        groupBtn.hidden = root.dataset.canGroup !== "1";
+    }
+
+    function syncGroup() {
+        const count = groupPicker.ids().length;
+
+        groupCreate.disabled = creatingGroup || groupTitle.value.trim() === "" || count < 1 || count > MAX_MEMBERS;
+    }
+
+    function renderGroup() {
+        groupResults.replaceChildren(...groupPicker.results.map((entry) => {
+            const item = document.createElement("li");
+            const button = document.createElement("button");
+
+            button.type = "button";
+            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            button.textContent = entry.name;
+            button.title = ROLE_WORDS[entry.role] ?? entry.role;
+            button.setAttribute("aria-pressed", String(groupPicker.isChosen(entry.id)));
+            button.addEventListener("click", () => groupPicker.toggle(entry));
+            item.append(button);
+
+            return item;
+        }));
+
+        groupChips.replaceChildren(...groupPicker.chosen().map((entry) => {
+            const item = document.createElement("li");
+            const name = document.createElement("span");
+            const remove = document.createElement("button");
+
+            item.className = "inline-flex items-center rounded-full bg-brand-tint px-2.5 py-0.5 text-xs text-brand-dark";
+            name.textContent = entry.name;
+            remove.type = "button";
+            remove.className = "ml-1 rounded-full px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            remove.setAttribute("aria-label", `Remove ${entry.name}`);
+            remove.textContent = "×";
+            remove.addEventListener("click", () => groupPicker.toggle(entry));
+            item.append(name, document.createTextNode(" "), remove);
+
+            return item;
+        }));
+
+        groupNote.textContent = groupFailure || ({ loading: "Searching…", empty: "No one found.", error: "The search failed. Try again." }[groupPicker.state] ?? "");
+        syncGroup();
+    }
+
+    const groupPicker = createGroupPicker({ search: (q) => api.groupCandidates(q), onChange: renderGroup });
+
+    groupSearch?.addEventListener("input", (event) => groupPicker.input(event.target.value));
+    groupTitle?.addEventListener("input", () => { groupFailure = ""; renderGroup(); });
+
+    groupCreate?.addEventListener("click", async () => {
+        if (creatingGroup) {
+            return;
+        }
+
+        creatingGroup = true;
+        groupFailure = "";
+        syncGroup();
+
+        const { status, data } = await api.createGroup(groupTitle.value.trim(), groupPicker.ids());
+
+        creatingGroup = false;
+
+        if (status === 201 && data?.conversation) {
+            const conversation = data.conversation;
+
+            state.conversations = [conversation, ...state.conversations.filter((c) => c.id !== conversation.id)];
+            groupTitle.value = "";
+            groupSearch.value = "";
+            groupPicker.reset();
+            $("#messages-group [data-dialog-close]")?.click();
+            open(conversation.id);
+
+            return;
+        }
+
+        groupFailure = "Couldn't create the group";
+        renderGroup();
+    });
 
     // ---- the list controls ---------------------------------------------
 
