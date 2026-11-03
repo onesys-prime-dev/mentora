@@ -89,7 +89,7 @@ class MessagingContextResolver
             sameDepartment: $sameInstitution && array_intersect($this->departmentIds($sender, $senderRole), $this->departmentIds($recipient, $recipientRole)) !== [],
             inScope: $sameInstitution && $this->inScope($sender, $senderRole, $recipient, $recipientRole),
             linkedChild: $linked,
-            studentDmEnabled: true,
+            studentDmEnabled: ! $sameInstitution || $this->studentSwitch()->enabled($senderInstitution),
             blockedByRecipient: $this->blocked($recipientId, $senderId),
             isSelf: $senderId === $recipientId,
         );
@@ -128,10 +128,49 @@ class MessagingContextResolver
             isCourseInstructor: $offeringId !== null && db_connect()->table('instructor_assignments')
                 ->where('offering_id', $offeringId)->where('instructor_user_id', $userId)->countAllResults() > 0,
             blocked: $blocked,
-            studentDmBlocked: false,
+            studentDmBlocked: $type === 'direct' && $this->studentDmBlocked($conversation),
             blockerIsExempt: $exempt,
             subjectLinkLost: $type === 'direct' && $this->linkLost($conversation),
         );
+    }
+
+    private ?StudentMessaging $studentSwitch = null;
+
+    private function studentSwitch(): StudentMessaging
+    {
+        return $this->studentSwitch ??= new StudentMessaging();
+    }
+
+    /**
+     * A student-to-student thread while the institution has that switched off: still readable, nobody posts.
+     * The switch is read first, so the usual case (on) costs one settings read and no participant lookups.
+     *
+     * @param array<string, mixed> $conversation a `conversations` row
+     */
+    private function studentDmBlocked(array $conversation): bool
+    {
+        if ($this->studentSwitch()->enabled((int) $conversation['institution_id'])) {
+            return false;
+        }
+
+        $ids = array_map('intval', array_column(
+            db_connect()->table('conversation_participants')->select('user_id')->where('conversation_id', (int) $conversation['id'])->get()->getResultArray(),
+            'user_id',
+        ));
+
+        if (count($ids) !== 2) {
+            return false;
+        }
+
+        foreach ($ids as $id) {
+            $person = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($id);
+
+            if ($person === null || $this->activeRole($person) !== 'student') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

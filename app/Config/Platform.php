@@ -87,4 +87,7 @@ class Platform extends BaseConfig
 
     /** Whether an institution's administrator has left the parent portal on (only ever switched off per institution). */
     public bool $parentPortalEnabled = true;
+
+    /** Whether students of an institution may start messages with each other (only ever switched off per institution). */
+    public bool $studentDmEnabled = true;
 }

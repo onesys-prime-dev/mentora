@@ -849,6 +849,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('announcement/remove', 'Institution\InstitutionSettingsController::removeAnnouncement');
             $routes->get('parents', 'Institution\InstitutionSettingsController::parents');
             $routes->post('parents', 'Institution\InstitutionSettingsController::saveParents');
+            $routes->get('messages', 'Institution\InstitutionSettingsController::messages');
+            $routes->post('messages', 'Institution\InstitutionSettingsController::saveMessages');
             // Security settings need the password (IA1): a loosened rule is refused, but a tightened one locks people out.
             $routes->get('security', 'Institution\InstitutionSettingsController::security');
             $routes->post('security', 'Institution\InstitutionSettingsController::saveSecurity', ['filter' => 'reauth']);
