@@ -13,7 +13,8 @@ nothing else).
 | File storage | writable folders can be written | | a writable folder is not writable |
 | Disk space | under 90% used | 90% or more | 97% or more |
 | Question-builder (AI) worker | the worker reported in the last 90 s | never reported, or silent for more than 90 s (generation waits in the queue) | |
-| Scheduled jobs | all seven reported within their allowed gap | one or more late, or never reported | one silent for three times its gap |
+| Scheduled jobs | every job reported within its allowed gap | one or more late, or never reported | one silent for three times its gap |
+| Messages encryption | the key is set (or Messages is off) | a previous key in `.env` is malformed, so what it encrypted cannot be read | Messages is on and `messages.encryptionKey` is missing or too short, so nothing can be sent |
 
 The question-builder check reads the worker's heartbeat (the newest
 `ai_worker_heartbeats.last_seen_at`; the worker reports every 15 s while idle).

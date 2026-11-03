@@ -79,6 +79,12 @@ deliberate act on the server by someone who has read this.
    administrator.
 6. **Start the site again.**
 
+**Messages need their key.** A database dump holds message text only as ciphertext. After a
+restore, messages open only if the site's `.env` has the `messages.encryptionKey` that encrypted them
+(and, after a rotation, the older key in `messages.previousKeys`). Keep the key apart from the backups:
+a backup stored next to its key protects nothing. Restored without the key, the site works and every
+message shows "Message unavailable". `messages.md` has the check to do on a scratch copy.
+
 Uploaded files (`writable/uploads`) are not in the database dump. The off-server
 copy holds them: restore them from there (`server-setup.md`).
 

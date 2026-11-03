@@ -63,6 +63,18 @@ The sweep is `php spark parents:notify` (add `--dry-run` to count without tellin
 scheduled every 15 minutes** (see `docs/server-setup.md`, section 6); until it is, only final grades are
 sent (those go at once). Running it more often is harmless.
 
+## Messages
+
+A new message tells the people in the conversation (not the sender, and not anyone who muted it) with
+one notification per conversation: "{name} sent you a message in {chat}", linking to it. While someone
+still has that notification unread, a newer message does not make another. It **never contains what was
+written**. It is emailed when the person's email switch for Messages is on, at most once an hour per
+conversation, using the same words. Instructors, chairpersons and deans can set quiet hours; nothing is
+notified or emailed during them, and the notification is made once they end. A send tells the other
+members at once only in conversations of 30 or fewer people; `php spark messages:notify` (every 15
+minutes) tells the rest and releases what quiet hours held. A failed email never loses the in-app
+notification. See `messages.md`.
+
 ## Not here yet
 
 - Backup, service-down, sync-failed and repeated-failed-login notifications:

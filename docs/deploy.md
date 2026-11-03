@@ -158,6 +158,16 @@ The secrets file is **root-owned, mode 600, in both environments**: systemd read
 | `questionBuilder.useJobs` | true | true | none needed |
 | `questionBuilder.serviceUrl` | `http://127.0.0.1:8008`, nothing listens | same | unused while `useJobs` is true; can be removed |
 
+## The Messages key
+
+Messages encrypts what people write with its own key, `messages.encryptionKey` in the site's `.env`
+(never in git, never in a GitHub secret the build can print). A deploy does not touch `.env`, so the
+key survives it. It must be set, at least 32 random bytes and different from `encryption.key`, **before**
+the `messages` feature flag is switched on; the flag refuses to switch on without it, and the health
+page ("Messages encryption") reports it. Keep a copy of the key somewhere other than the server and its
+backups. How to make it, rotate it and check Messages before turning it on is in `messages.md`. The
+deploy also installs the two Messages jobs with the others (step 6a).
+
 ## When a deploy fails
 
 | Failing step | Meaning | What to do |
