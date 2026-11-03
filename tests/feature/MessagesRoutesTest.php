@@ -74,6 +74,9 @@ final class MessagesRoutesTest extends RouteTestCase
             ['POST', "conversations/{$c}/unlock", []],
             ['GET', 'group-candidates?q=Ab', []],
             ['POST', 'groups', ['title' => 'Group', 'member_ids' => [1]]],
+            ['GET', 'blocks', []],
+            ['POST', 'blocks', ['user_id' => 1]],
+            ['POST', 'blocks/1/remove', []],
             ['GET', 'unread-count', []],
         ];
     }

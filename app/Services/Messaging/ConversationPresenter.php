@@ -41,6 +41,7 @@ class ConversationPresenter
         $courses     = $this->courses(array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
         $role        = $this->resolver->activeRole($viewer);
         $teaching    = $this->teaching((int) $viewer->id, array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
+        $blocked     = $this->blockedIds((int) $viewer->id);
         $out         = [];
 
         foreach ($rows as $row) {
@@ -73,6 +74,8 @@ class ConversationPresenter
                 'offering_id' => $row['offering_id'], 'is_locked' => $row['is_locked'], 'subject_student_id' => $row['subject_student_id'],
             ]));
 
+            $row['blocked_by_me'] = $row['type'] === 'direct' && $other !== null && isset($blocked[$other]);
+            $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && $this->canBlock($other);
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
             $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
             $row['can_moderate'] = $this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches || $created);
@@ -81,6 +84,26 @@ class ConversationPresenter
         }
 
         return $out;
+    }
+
+    /** @return array<int, true> the people this viewer has blocked */
+    private function blockedIds(int $userId): array
+    {
+        $out = [];
+
+        foreach (db_connect()->table('user_blocks')->select('blocked_id')->where('blocker_id', $userId)->get()->getResultArray() as $row) {
+            $out[(int) $row['blocked_id']] = true;
+        }
+
+        return $out;
+    }
+
+    /** Whether the other person in a direct thread is someone a block can shut out (not an instructor or administrator). */
+    private function canBlock(int $otherUserId): bool
+    {
+        $other = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($otherUserId);
+
+        return $other !== null && BlockService::blockableRole($this->resolver->activeRole($other));
     }
 
     /**
