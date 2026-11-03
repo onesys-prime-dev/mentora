@@ -16,7 +16,7 @@ use InvalidArgumentException;
  * `syncOffering` after any change, and `messages:sync-course-chats` calls it
  * for every offering to repair what a call missed. It never touches messages.
  */
-final class CourseChatSync
+class CourseChatSync
 {
     /**
      * What `syncOffering` would do, writing nothing.

@@ -199,6 +199,8 @@ class OfferingService
 
         $this->audit('structure.offering_created', $actor, $institutionId, $id, null, $values + ['course_id' => $courseId, 'term_id' => $termId]);
 
+        \App\Services\Messaging\CourseChatHooks::offeringChanged($id);
+
         return $id;
     }
 
@@ -286,6 +288,8 @@ class OfferingService
         db_connect()->table('course_offerings')->where('id', $id)->update(['status' => $status, 'updated_at' => date('Y-m-d H:i:s')]);
 
         $this->audit($archived ? 'structure.offering_archived' : 'structure.offering_reactivated', $actor, $institutionId, $id, ['status' => $row['status']], ['status' => $status]);
+
+        \App\Services\Messaging\CourseChatHooks::offeringChanged($id);
     }
 
     /*
@@ -365,6 +369,8 @@ class OfferingService
 
         $this->audit('structure.offering_instructor_assigned', $actor, $institutionId, $offeringId, null, ['instructor_user_id' => $userId]);
 
+        \App\Services\Messaging\CourseChatHooks::offeringChanged($offeringId);
+
         return $id;
     }
 
@@ -401,6 +407,8 @@ class OfferingService
         $db->table('instructor_assignments')->where('id', $assignmentId)->delete();
 
         $this->audit('structure.offering_instructor_unassigned', $actor, $institutionId, (int) $row['offering_id'], ['instructor_user_id' => (int) $row['instructor_user_id']], null);
+
+        \App\Services\Messaging\CourseChatHooks::offeringChanged((int) $row['offering_id']);
     }
 
     /*
