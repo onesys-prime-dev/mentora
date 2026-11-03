@@ -151,6 +151,7 @@ final class MessagesIdorTest extends RouteTestCase
         $this->assertStringContainsString('application/json', $type);
         $this->assertSame($payload, json_decode($page, true)['messages'][0]['body']);
         $this->assertStringNotContainsString($stored, $page . $list);
-        $this->assertStringNotContainsString('onerror', $list);
+        // From the Messages screen on, a list row carries a preview of the last message, as plain data for a participant.
+        $this->assertSame($payload, json_decode($list, true)['conversations'][0]['preview']);
     }
 }

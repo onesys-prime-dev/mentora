@@ -27,6 +27,9 @@ class MessageService
 
     private MessageCipher $cipher;
 
+    /** @var array<int, array{name: string, role: string}> */
+    private array $senders = [];
+
     public function __construct(?MessageCipher $cipher = null, ?ConversationService $conversations = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null)
     {
         $this->cipher        = $cipher ?? new MessageCipher();
@@ -201,9 +204,32 @@ class MessageService
             }
         }
 
+        $sender = $this->sender((int) $row['sender_id']);
+
         return [
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
+            'sender_name' => $sender['name'], 'sender_role' => $sender['role'],
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
         ];
+    }
+
+    /**
+     * The sender's name and active role, for the label above their message.
+     * Looked up once per sender per request.
+     *
+     * @return array{name: string, role: string}
+     */
+    private function sender(int $senderId): array
+    {
+        if (! isset($this->senders[$senderId])) {
+            $user = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($senderId);
+
+            $this->senders[$senderId] = [
+                'name' => ConversationPresenter::names([$senderId])[$senderId] ?? 'Former member',
+                'role' => $user === null ? '' : $this->resolver->activeRole($user),
+            ];
+        }
+
+        return $this->senders[$senderId];
     }
 }

@@ -442,11 +442,17 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->get('conversations', 'Messaging\ConversationController::index');
     $routes->post('conversations', 'Messaging\ConversationController::start');
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
+    $routes->get('recipients', 'Messaging\RecipientController::index');
     $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
     $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
     $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
     $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');
 });
+
+// The Messages page itself: the same turn-aways as the JSON routes, and no `readonly` filter because
+// reading a conversation is allowed in a read-only institution.
+$routes->get('messages', 'Messaging\MessagesPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
+$routes->get('messages/(:num)', 'Messaging\MessagesPageController::index/$1', ['filter' => ['messages', 'permission:messages.use']]);
 
 // A chairperson has full instructor rights on every course in their
 // program (R7 of the chairperson plan) — this block mirrors instructor's

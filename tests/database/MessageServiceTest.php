@@ -92,6 +92,16 @@ final class MessageServiceTest extends DatabaseTestCase
         $this->assertSame((int) $row['id'], (int) db_connect()->table('conversations')->get()->getRow('last_message_id'));
     }
 
+    public function testAMessageNamesItsSenderAndTheirRole(): void
+    {
+        $this->send($this->student, 'hi');
+
+        $message = $this->service()->page($this->instructor, $this->conversation)['messages'][0];
+
+        $this->assertSame('Stu Dent', $message['sender_name']);
+        $this->assertSame('student', $message['sender_role']);
+    }
+
     public function testARetriedSendWithTheSameUuidIsOneMessage(): void
     {
         $uuid  = $this->uuid();
