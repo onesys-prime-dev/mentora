@@ -458,6 +458,119 @@ describe("sending", () => {
 
 });
 
+describe("review fixes", () => {
+
+    const type = (text) => {
+        const body = q("[data-role=body]");
+
+        body.value = text;
+        body.dispatchEvent(new Event("input"));
+    };
+    const submit = () => q("[data-role=composer]").dispatchEvent(new Event("submit", { cancelable: true }));
+
+    it("does not skip a message from someone else that has a lower id than one I just sent", async () => {
+
+        const api = makeApi({ send: vi.fn().mockResolvedValue(ok({ message: msg(15, { mine: true, body: "hello" }) }, 201)) });
+
+        await mount(api);
+        await openFirst();
+        type("hello");
+        submit();
+        await flush();
+
+        api.page.mockResolvedValueOnce(ok({ messages: [msg(12), msg(13)], has_more: false }));
+        await vi.advanceTimersByTimeAsync(5000);
+
+        expect(api.page).toHaveBeenLastCalledWith(1, { after: 11 });
+        expect(texts().map((t) => t.slice(-3))).toEqual(["m10", "m11", "m12", "m13", "llo"]);
+        expect(api.markRead).toHaveBeenLastCalledWith(1, 13);
+
+        await vi.advanceTimersByTimeAsync(5000);
+
+        expect(api.page).toHaveBeenLastCalledWith(1, { after: 13 });
+
+    });
+
+    it("keeps polling when loading older messages fails", async () => {
+
+        const page = vi.fn()
+            .mockResolvedValueOnce(ok({ messages: [msg(20), msg(21)], has_more: true }))
+            .mockResolvedValueOnce(ok(null, 0))
+            .mockResolvedValue(ok({ messages: [], has_more: false }));
+
+        await mount(makeApi({ page }));
+        await openFirst();
+        q("[data-role=older]").click();
+        await flush();
+        await vi.advanceTimersByTimeAsync(5000);
+
+        expect(page).toHaveBeenLastCalledWith(1, { after: 21 });
+
+    });
+
+    it("loads one older page however many times the control is clicked", async () => {
+
+        let release;
+        const page = vi.fn()
+            .mockResolvedValueOnce(ok({ messages: [msg(20), msg(21)], has_more: true }))
+            .mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }))
+            .mockResolvedValue(ok({ messages: [], has_more: false }));
+
+        await mount(makeApi({ page }));
+        await openFirst();
+        q("[data-role=older]").click();
+        q("[data-role=older]").click();
+        release(ok({ messages: [msg(18), msg(19)], has_more: false }));
+        await flush();
+
+        expect(page.mock.calls.filter((c) => c[1].before !== undefined)).toHaveLength(1);
+        expect(texts().map((t) => t.slice(-3))).toEqual(["m18", "m19", "m20", "m21"]);
+
+    });
+
+    it("retries an older failed message with its own id even after another was sent", async () => {
+
+        const send = vi.fn()
+            .mockResolvedValueOnce(ok(null, 0))
+            .mockResolvedValueOnce(ok({ message: msg(30, { mine: true, body: "B" }) }, 201))
+            .mockResolvedValueOnce(ok({ message: msg(31, { mine: true, body: "A" }) }, 201));
+
+        await mount(makeApi({ send }));
+        await openFirst();
+        type("A");
+        submit();
+        await flush();
+        type("B");
+        submit();
+        await flush();
+        q("[data-action=retry]").click();
+        await flush();
+
+        expect(send.mock.calls[2][2]).toBe(send.mock.calls[0][2]);
+        expect(send.mock.calls[1][2]).not.toBe(send.mock.calls[0][2]);
+
+    });
+
+    it("polls the open thread at once when the tab comes back", async () => {
+
+        const api = makeApi();
+
+        await mount(api);
+        await openFirst();
+        Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+        await vi.advanceTimersByTimeAsync(5000);
+        api.page.mockClear();
+
+        Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+        document.dispatchEvent(new Event("visibilitychange"));
+        await flush();
+
+        expect(api.page).toHaveBeenCalledWith(1, { after: 11 });
+
+    });
+
+});
+
 describe("deleting for me", () => {
 
     it("hides the message on the server and removes it from the screen", async () => {

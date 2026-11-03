@@ -23,30 +23,34 @@ export function createComposer({ send, onSent, onFailed }) {
     const composer = {
         state: "idle",
 
-        async submit(text) {
+        // `given` is the id a message already carries (a Retry of an older one); otherwise the draft's own.
+        async submit(text, given = null) {
             if (!canSend(text, composer.state === "sending")) {
                 return;
             }
 
-            if (uuid === null || draft !== text) {
+            if (given === null && (uuid === null || draft !== text)) {
                 uuid = crypto.randomUUID();
                 draft = text;
             }
 
             composer.state = "sending";
 
-            const { status, data } = await send(text, uuid);
+            const { status, data } = await send(text, given ?? uuid);
 
             if (status === 200 || status === 201) {
-                uuid = null;
-                draft = null;
+                if (given === null) {
+                    uuid = null;
+                    draft = null;
+                }
+
                 composer.state = "idle";
                 onSent(data.message);
 
                 return;
             }
 
-            if (status === 422) {
+            if (status === 422 && given === null) {
                 uuid = null;
             }
 

@@ -62,6 +62,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         sending: null,
         poller: null,
         localSeq: 0,
+        // The poll cursor: the newest message the poll or the first page has delivered. A message I send
+        // does not move it, or a lower-numbered one from someone else would be skipped.
+        cursor: 0,
+        token: null,
+        loadingOlder: false,
     };
 
     // ---- small helpers -------------------------------------------------
@@ -78,7 +83,13 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     }
 
     const serverItems = () => state.items.filter((item) => typeof item.id === "number");
-    const lastServerId = () => serverItems().at(-1)?.id ?? 0;
+
+    // Delivered messages by id, then the ones still being sent.
+    const sortItems = () => {
+        const sent = state.items.filter((item) => typeof item.id === "number").sort((a, b) => a.id - b.id);
+
+        state.items = [...sent, ...state.items.filter((item) => typeof item.id !== "number")];
+    };
     const current = () => state.conversations.find((c) => c.id === state.openId) ?? null;
 
     // ---- the list ------------------------------------------------------
@@ -230,7 +241,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     }
 
     function readUpTo() {
-        const id = lastServerId();
+        const id = state.cursor;
 
         if (id > 0 && state.openId !== null) {
             api.markRead(state.openId, id).then(() => listPoller.nudge());
@@ -242,7 +253,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return "gone";
         }
 
-        const { status, data } = await api.page(id, { after: lastServerId() });
+        const { status, data } = await api.page(id, { after: state.cursor });
 
         if (!threadGuard.isCurrent(token)) {
             return "gone";
@@ -263,6 +274,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         if (fresh.length > 0) {
             state.items.push(...fresh);
+            state.cursor = Math.max(state.cursor, ...fresh.map((m) => m.id));
+            sortItems();
             renderMessages();
             readUpTo();
         }
@@ -276,6 +289,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const token = threadGuard.next();
 
         state.openId = id;
+        state.token = token;
+        state.cursor = 0;
+        state.loadingOlder = false;
         state.items = [];
         state.hasMore = false;
         state.sending = null;
@@ -315,6 +331,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         state.items = data.messages;
+        state.cursor = Math.max(0, ...data.messages.map((m) => m.id));
         state.hasMore = data.has_more;
         renderMessages({ stick: true });
         readUpTo();
@@ -336,25 +353,29 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     async function loadOlder() {
         const first = serverItems()[0];
 
-        if (!first || state.openId === null) {
+        if (!first || state.openId === null || state.loadingOlder) {
             return;
         }
 
-        const token = threadGuard.next();
+        const token = state.token;
         const id = state.openId;
+
+        state.loadingOlder = true;
+
         const { status, data } = await api.page(id, { before: first.id });
 
-        if (status !== 200 || !data || state.openId !== id) {
+        state.loadingOlder = false;
+
+        // The person may have left this thread (or reopened it) while the page was on its way.
+        if (!threadGuard.isCurrent(token) || status !== 200 || !data) {
             return;
         }
 
-        // The poller belongs to the token it was started with, so it keeps going with a fresh one.
-        state.poller?.stop();
-        state.items = [...data.messages, ...state.items];
+        const known = new Set(serverItems().map((item) => item.id));
+
+        state.items = [...data.messages.filter((m) => !known.has(m.id)), ...state.items];
         state.hasMore = data.has_more;
         renderMessages({ keepPosition: true });
-        state.poller = createPoller({ task: () => pollThread(id, token), visible, fast: 5000 });
-        state.poller.start();
     }
 
     // ---- sending -------------------------------------------------------
@@ -372,6 +393,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.items = state.items.filter((i) => i !== item && i.id !== message.id);
         state.items.push(message);
+        sortItems();
         renderMessages({ stick: true });
         listPoller.nudge();
     }
@@ -403,7 +425,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return;
         }
 
-        const draft = item ?? { id: `local-${++state.localSeq}`, mine: true, body: text.trim(), raw: text, removed: false, created_at: stamp(now()) };
+        // The id stays with the message, so Retry of an older one can never post it twice.
+        const draft = item ?? { id: `local-${++state.localSeq}`, uuid: crypto.randomUUID(), mine: true, body: text.trim(), raw: text, removed: false, created_at: stamp(now()) };
 
         draft.pending = true;
         draft.failed = false;
@@ -414,7 +437,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         renderMessages({ stick: true });
-        state.composer.submit(text);
+        state.composer.submit(text, draft.uuid);
     }
 
     const syncSend = () => { sendEl.disabled = !canSend(bodyEl.value, state.composer?.state === "sending"); };
@@ -565,7 +588,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
     // ---- go ------------------------------------------------------------
 
-    const unwatch = watchVisibility(listPoller);
+    // When the tab comes back, both the list and the open thread catch up at once.
+    const unwatch = watchVisibility({ nudge: () => { listPoller.nudge(); state.poller?.nudge(); } });
 
     const ready = loadList().then(() => {
         listPoller.start();

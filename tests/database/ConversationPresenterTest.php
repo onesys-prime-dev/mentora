@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Services\Messaging\ConversationPresenter;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\MessageService;
+use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\DeanFactory;
 use Tests\Support\MessagingScenario;
 use Tests\Support\PeopleFactory;
 
@@ -114,6 +116,21 @@ final class ConversationPresenterTest extends DatabaseTestCase
 
         $this->assertSame('Ins Tructor', $rows[0]['name']);
         $this->assertSame('Stu Dent', $rows[0]['subtitle']);
+    }
+
+    public function testACourseTitleEndingInAThaiVowelSurvivesAndTheListStillEncodes(): void
+    {
+        $title    = 'วิทยาศาสตร์ื';
+        $offering = DeanFactory::offering($this->program, $this->term, 'TH1', 'A', 'active', $title);
+        CourseFactory::enroll($offering, $this->student);
+        $db = db_connect();
+        $db->table('conversations')->insert(['institution_id' => $this->institution, 'type' => 'course', 'offering_id' => $offering, 'created_at' => date('Y-m-d H:i:s')]);
+        $db->table('conversation_participants')->insert(['conversation_id' => $db->insertID(), 'user_id' => $this->student->id, 'joined_at' => date('Y-m-d H:i:s')]);
+
+        $rows = (new ConversationPresenter())->present($this->student, (new ConversationService())->listFor($this->student));
+
+        $this->assertNotFalse(json_encode($rows));
+        $this->assertSame('TH1 · ' . $title, $rows[0]['name']);
     }
 
     public function testNoCiphertextLeavesThePresenter(): void

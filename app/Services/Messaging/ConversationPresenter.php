@@ -47,7 +47,8 @@ class ConversationPresenter
 
             if ($row['type'] === 'course') {
                 $course = $courses[(int) $row['offering_id']] ?? ['code' => '', 'title' => ''];
-                $name   = trim($course['code'] . ' · ' . $course['title'], ' ·');
+                // By character, not byte: a title ending in a letter whose UTF-8 form ends in the bytes of "·" must survive.
+                $name   = (string) preg_replace('/^[\s·]+|[\s·]+$/u', '', $course['code'] . ' · ' . $course['title']);
                 $short  = $course['code'];
             } elseif ($row['type'] === 'group') {
                 $name  = (string) ($row['title'] ?? 'Group');

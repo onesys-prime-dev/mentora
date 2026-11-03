@@ -101,6 +101,21 @@ describe("the composer", () => {
 
     });
 
+    it("sends with the uuid it is given, so a retry keeps the id of its own message", async () => {
+
+        const send = vi.fn().mockResolvedValue({ status: 201, data: { message: { id: 1 } } });
+        const composer = createComposer({ send, onSent: () => {}, onFailed: () => {} });
+
+        await composer.submit("A", "uuid-of-a");
+        await composer.submit("B");
+        await composer.submit("A", "uuid-of-a");
+
+        expect(send.mock.calls[0][1]).toBe("uuid-of-a");
+        expect(send.mock.calls[1][1]).not.toBe("uuid-of-a");
+        expect(send.mock.calls[2][1]).toBe("uuid-of-a");
+
+    });
+
     it("does not send an empty or too-long draft", async () => {
 
         const send = vi.fn();
