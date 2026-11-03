@@ -146,6 +146,49 @@ final class ConversationServiceTest extends DatabaseTestCase
         $this->assertNull($this->service->startDirect($parent, (int) $instructor->id, (int) $this->person('student')->id));
     }
 
+    /** @return array{User, User, list<int>} a parent, an instructor, and the children (all taught by that instructor) */
+    private function familyWithChildren(int $count): array
+    {
+        $parent     = $this->person('parent');
+        $instructor = $this->person('instructor');
+        $offering   = DeanFactory::offering($this->program, $this->term, 'KF' . random_int(100, 999));
+        CourseFactory::assignInstructor($offering, $instructor);
+        $children = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $child = $this->person('student');
+            CourseFactory::enroll($offering, $child);
+            db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
+            $children[] = (int) $child->id;
+        }
+
+        return [$parent, $instructor, $children];
+    }
+
+    public function testAParentThreadIsOneThreadWhicheverSideStartsItAndNamesTheChild(): void
+    {
+        [$parent, $instructor, $children] = $this->familyWithChildren(1);
+
+        $fromInstructor = $this->service->startDirect($instructor, (int) $parent->id);
+        $fromParent     = $this->service->startDirect($parent, (int) $instructor->id);
+        $named          = $this->service->startDirect($parent, (int) $instructor->id, $children[0]);
+
+        $this->assertNotNull($fromInstructor);
+        $this->assertSame($children[0], (int) $fromInstructor['subject_student_id']);
+        $this->assertSame($fromInstructor['id'], $fromParent['id']);
+        $this->assertSame($fromInstructor['id'], $named['id']);
+        $this->assertSame(1, db_connect()->table('conversations')->countAllResults());
+    }
+
+    public function testAParentThreadWithSeveralSharedChildrenNeedsTheChildNamed(): void
+    {
+        [$parent, $instructor, $children] = $this->familyWithChildren(2);
+
+        $this->assertNull($this->service->startDirect($instructor, (int) $parent->id));
+        $this->assertNull($this->service->startDirect($parent, (int) $instructor->id));
+        $this->assertNotNull($this->service->startDirect($parent, (int) $instructor->id, $children[1]));
+    }
+
     public function testFindReturnsOnlyForAnActiveParticipantOfTheirOwnInstitution(): void
     {
         [$student, $instructor] = $this->pair();

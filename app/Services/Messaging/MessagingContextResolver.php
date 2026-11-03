@@ -36,8 +36,8 @@ class MessagingContextResolver
             return (new ActiveRoleService())->resolve($user);
         }
 
-        $groups = $user->getGroups();
-        $saved  = db_connect()->table('user_profiles')->select('active_role')->where('user_id', $user->id)->get()->getRowArray()['active_role'] ?? null;
+        $groups = (new ActiveRoleService())->usableGroups($user);
+        $saved = db_connect()->table('user_profiles')->select('active_role')->where('user_id', $user->id)->get()->getRowArray()['active_role'] ?? null;
 
         if (is_string($saved) && in_array($saved, $groups, true)) {
             return $saved;
@@ -253,34 +253,47 @@ class MessagingContextResolver
             return false;
         }
 
+        return $this->sharedLinkedChildIds($parent, $staff, $staffRole, $subjectStudentId) !== [];
+    }
+
+    /**
+     * The parent's linked children that this instructor teaches (same active
+     * offering) or whose sub-department this chairperson chairs; narrowed to
+     * $subjectStudentId when given. A thread between them is about one of these.
+     *
+     * @return list<int>
+     */
+    public function sharedLinkedChildIds(User $parent, User $staff, string $staffRole, ?int $subjectStudentId = null): array
+    {
         if (! in_array($staffRole, ['instructor', 'chairperson'], true)) {
-            return false;
+            return [];
         }
 
-        $childIds = array_column((new ParentAccessService())->children($parent), 'student_id');
+        $childIds = array_map('intval', array_column((new ParentAccessService())->children($parent), 'student_id'));
 
         if ($subjectStudentId !== null) {
             $childIds = in_array($subjectStudentId, $childIds, true) ? [$subjectStudentId] : [];
         }
 
         $staffSubs = $this->subDepartmentIds($staff, $staffRole);
+        $shared    = [];
 
         foreach ($childIds as $childId) {
-            $child = model(\CodeIgniter\Shield\Models\UserModel::class)->findById((int) $childId);
+            $child = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($childId);
 
             if ($child === null) {
                 continue;
             }
 
             $match = $staffRole === 'instructor'
-                ? array_intersect($this->activeOfferingIds((int) $childId), $this->activeOfferingIds((int) $staff->id)) !== []
+                ? array_intersect($this->activeOfferingIds($childId), $this->activeOfferingIds((int) $staff->id)) !== []
                 : array_intersect($this->subDepartmentIds($child, 'student'), $staffSubs) !== [];
 
             if ($match) {
-                return true;
+                $shared[] = $childId;
             }
         }
 
-        return false;
+        return $shared;
     }
 }

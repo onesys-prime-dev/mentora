@@ -178,6 +178,15 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         $this->assertTrue($this->resolver->forStart($a, $b, null)->recipientActive);
     }
 
+    public function testADeanWithoutAnAssignmentWhoAlsoTeachesActsAsAnInstructor(): void
+    {
+        $dean = $this->person('dean');
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $dean->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
+        $dean = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
+
+        $this->assertSame('instructor', $this->resolver->activeRole($dean));
+    }
+
     public function testTheSystemAdminAndAPersonWithoutAnInstitutionGetNoContext(): void
     {
         $admin   = CourseFactory::user('admin');
