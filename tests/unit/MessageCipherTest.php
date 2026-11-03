@@ -88,6 +88,20 @@ final class MessageCipherTest extends CIUnitTestCase
         $this->assertSame(0, $this->cipher(self::KEY_B, '')->droppedPreviousKeys());
     }
 
+    public function testUsesCurrentKeyOnlyForValuesTheCurrentKeyOpens(): void
+    {
+        $old     = $this->cipher(self::KEY_A)->encrypt('hello', 5, 9);
+        $rotated = $this->cipher(self::KEY_B, self::KEY_A);
+        $fresh   = $rotated->encrypt('hello', 5, 9);
+
+        $this->assertTrue($rotated->usesCurrentKey($fresh));
+        $this->assertSame('hello', $rotated->decrypt($old, 5, 9), 'the previous key still opens it');
+        $this->assertFalse($rotated->usesCurrentKey($old), 'but it is not on the current key');
+        $this->assertFalse($rotated->usesCurrentKey('not base64 at all !!'));
+        $this->assertFalse($rotated->usesCurrentKey(base64_encode('short')));
+        $this->assertFalse($this->cipher('')->usesCurrentKey($fresh), 'no usable key');
+    }
+
     public function testNoKeyFailsClosed(): void
     {
         $cipher = $this->cipher('');

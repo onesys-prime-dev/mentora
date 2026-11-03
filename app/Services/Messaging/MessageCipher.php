@@ -121,6 +121,35 @@ class MessageCipher
         return $envelope['b'];
     }
 
+    /**
+     * Whether this stored value opens with the current key alone, so it does not need re-encrypting. False for a
+     * value that only a previous key opens, and for anything unreadable.
+     */
+    public function usesCurrentKey(string $stored): bool
+    {
+        if (! $this->isUsable()) {
+            return false;
+        }
+
+        $raw = base64_decode($stored, true);
+
+        if ($raw === false || $raw === '') {
+            return false;
+        }
+
+        try {
+            $config               = new EncryptionConfig();
+            $config->key          = $this->key;
+            $config->previousKeys = [];
+
+            Services::encrypter($config, false)->decrypt($raw);
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
     private function encrypter(): EncrypterInterface
     {
         if ($this->encrypter === null) {
