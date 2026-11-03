@@ -26,6 +26,8 @@ class MessageCipher
     /** @var list<string> */
     private array $previousKeys;
 
+    private int $droppedPreviousKeys = 0;
+
     private ?EncrypterInterface $encrypter = null;
 
     public function __construct(?MessagesConfig $config = null)
@@ -41,11 +43,30 @@ class MessageCipher
 
         $this->previousKeys = [];
         foreach ($previous as $candidate) {
-            $resolved = self::resolveKey((string) $candidate);
+            $candidate = (string) $candidate;
+            if (trim($candidate) === '') {
+                continue;
+            }
+
+            $resolved = self::resolveKey($candidate);
             if (strlen($resolved) >= self::MIN_KEY_BYTES) {
                 $this->previousKeys[] = $resolved;
+            } else {
+                $this->droppedPreviousKeys++;
             }
         }
+
+        if ($this->droppedPreviousKeys > 0) {
+            log_message('warning', 'Messages: {count} previous encryption key(s) were malformed or too short and were ignored; messages encrypted with them cannot be read.', ['count' => $this->droppedPreviousKeys]);
+        }
+    }
+
+    /**
+     * How many non-empty previous keys were ignored as malformed or too short.
+     */
+    public function droppedPreviousKeys(): int
+    {
+        return $this->droppedPreviousKeys;
     }
 
     public function isUsable(): bool

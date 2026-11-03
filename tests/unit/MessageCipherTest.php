@@ -75,6 +75,19 @@ final class MessageCipherTest extends CIUnitTestCase
         $this->assertNull($this->cipher(self::KEY_A)->decrypt($fresh, 5, 9));
     }
 
+    public function testShortOrMalformedPreviousKeysAreDroppedAndCounted(): void
+    {
+        $short = 'hex2bin:' . bin2hex(str_repeat('a', 16));
+        $cipher = $this->cipher(self::KEY_B, $short . ', hex2bin:zz,' . self::KEY_A . ',');
+
+        $this->assertSame(2, $cipher->droppedPreviousKeys());
+
+        $old = $this->cipher(self::KEY_A)->encrypt('hello', 5, 9);
+        $this->assertSame('hello', $cipher->decrypt($old, 5, 9));
+
+        $this->assertSame(0, $this->cipher(self::KEY_B, '')->droppedPreviousKeys());
+    }
+
     public function testNoKeyFailsClosed(): void
     {
         $cipher = $this->cipher('');
