@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Messaging;
 
 use App\Controllers\BaseController;
+use App\Services\Auth\ActiveRoleService;
 
 /**
  * The Messages page: an empty shell that resources/js/pages/messages fills from
@@ -20,6 +21,8 @@ class MessagesPageController extends BaseController
             'page'   => 'messages',
             'user'   => auth()->user(),
             'openId' => $conversationId !== null && ctype_digit($conversationId) ? $conversationId : '',
+            // Only the button: GroupService is what decides who may start a group.
+            'canStartGroups' => in_array((new ActiveRoleService())->resolve(auth()->user()), ['chairperson', 'dean'], true),
         ]);
     }
 }

@@ -16,7 +16,8 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
 <div id="messages-app" class="group mx-auto w-full max-w-6xl" data-view="list"
      data-api="<?= esc(site_url('messages/api')) ?>"
      data-user-id="<?= esc((string) auth()->id()) ?>"
-     data-open="<?= esc($openId) ?>">
+     data-open="<?= esc($openId) ?>"
+     data-can-group="<?= ($canStartGroups ?? false) ? '1' : '0' ?>">
 
     <div class="grid h-[calc(100vh-11rem)] min-h-[440px] gap-3 md:grid-cols-[260px_1fr]">
 

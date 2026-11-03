@@ -447,6 +447,8 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations/(:num)/unlock', 'Messaging\ConversationController::unlock/$1');
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');
+    $routes->get('group-candidates', 'Messaging\GroupController::candidates');
+    $routes->post('groups', 'Messaging\GroupController::create');
     $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
     $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
     $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
