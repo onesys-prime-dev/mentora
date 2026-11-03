@@ -168,4 +168,9 @@ final class FeatureFlagResolverTest extends CIUnitTestCase
 
         $this->assertSame('override_on', FeatureFlagResolver::resolve(null, self::row(true, self::TODAY), false, false, $late)['reason']);
     }
+
+    public function testMessagesFlagShipsOff(): void
+    {
+        $this->assertFalse((new \Config\FeatureFlags())->flags['messages']['default']);
+    }
 }

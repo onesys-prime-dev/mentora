@@ -19,7 +19,7 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
     private const ACADEMIC = [
         'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor',
         'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce',
-        'children.view',
+        'children.view', 'messages.use',
         // The institutional administrator's own administration.
         'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage', 'people.view', 'people.manage',
         'reports.view', 'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles',
@@ -111,6 +111,17 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
         $this->assertContains('monitoring.view', $admin);
     }
 
+    public function testEveryRoleExceptTheSystemAdminHoldsMessagesUse(): void
+    {
+        foreach (['institutional_admin', 'dean', 'chairperson', 'instructor', 'student', 'parent'] as $role) {
+            $this->assertContains('messages.use', AuthGroups::DEFAULT_MATRIX[$role], $role);
+            $this->assertContains('messages.use', AuthGroups::APPLICABLE[$role], $role);
+        }
+
+        $this->assertNotContains('messages.use', AuthGroups::DEFAULT_MATRIX['admin']);
+        $this->assertNotContains('messages.use', AuthGroups::APPLICABLE['admin']);
+    }
+
     public function testTheSystemAdministratorHasNoDirectAccessToAcademicWork(): void
     {
         $this->assertSame([], array_intersect(self::ACADEMIC, AuthGroups::DEFAULT_MATRIX['admin']));
@@ -143,7 +154,7 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
 
     public function testStudentsOnlyViewCourses(): void
     {
-        $this->assertSame(['courses.view'], AuthGroups::DEFAULT_MATRIX['student']);
+        $this->assertSame(['courses.view', 'messages.use'], AuthGroups::DEFAULT_MATRIX['student']);
     }
 
     public function testTheOldShieldSampleRolesAreGone(): void
