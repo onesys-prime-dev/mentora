@@ -88,6 +88,11 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                 <p data-role="safety-note" role="status" hidden class="border-b border-gray-100 bg-brand-tint px-3.5 py-1.5 text-center text-[13px] text-[#646464]"></p>
                 <p data-role="lock-note" role="status" hidden class="border-b border-gray-100 bg-brand-tint px-3.5 py-1.5 text-center text-[13px] text-[#646464]"></p>
 
+                <div data-role="pinbar" hidden class="flex items-center gap-2 border-b border-gray-100 bg-white px-3.5 py-1.5 text-[13px] text-[#646464]">
+                    <button type="button" data-role="pinbar-text" class="min-w-0 flex-1 truncate text-left hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></button>
+                    <button type="button" data-role="pinbar-next" class="flex-none rounded-full border border-gray-300 px-2 py-0.5 text-[12px] font-semibold hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" aria-label="Next pinned message"></button>
+                </div>
+
                 <div class="relative min-h-0 flex-1 overflow-y-auto bg-[#fafbfd] px-3.5 py-3" data-role="scroller">
                     <button type="button" data-role="older" hidden class="mx-auto mb-2 block rounded-full border border-gray-300 bg-white px-3 py-1 text-[13px] text-[#646464] hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Load older messages</button>
                     <div data-role="messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Messages" class="flex flex-col gap-2"></div>
@@ -99,6 +104,12 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     </div>
                     <p data-state="gone" hidden class="py-10 text-center text-[15px] text-[#646464]">This conversation is no longer available.</p>
                 </div>
+
+                <div data-role="reply-strip" hidden class="flex items-center gap-2 border-t border-gray-100 bg-brand-tint px-3 py-1.5 text-[13px] text-[#646464]">
+                    <span class="min-w-0 flex-1 truncate" data-role="reply-text"></span>
+                    <button type="button" data-role="reply-cancel" aria-label="Cancel reply" class="flex-none rounded-full px-2 text-[15px] hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">&times;</button>
+                </div>
+                <p data-role="toast" role="status" aria-live="polite" hidden class="border-t border-gray-100 bg-brand-tint px-3.5 py-1 text-center text-[13px] text-[#646464]"></p>
 
                 <form data-role="composer" class="flex items-end gap-2 border-t border-gray-100 px-3 py-2">
                     <label for="messages-body" class="sr-only">Write a message</label>
@@ -169,6 +180,29 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<p data-role="group-note" role="status" class="text-xs text-[#646464]"></p>'
             . '<button type="button" data-role="group-create" disabled class="self-end rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Create group</button>'
             . '</div>',
+    ], ['saveData' => false]) ?>
+
+    <button type="button" data-role="forward-open" data-dialog-open="messages-forward" hidden aria-hidden="true" tabindex="-1"></button>
+
+    <?= view('components/dialog', [
+        'id'    => 'messages-forward',
+        'title' => 'Forward message',
+        'size'  => 'sm',
+        'body'  => '<div class="flex flex-col gap-3">'
+            . '<p class="text-xs text-[#646464]">Choose up to 5 chats.</p>'
+            . '<ul data-role="forward-list" class="flex max-h-64 flex-col gap-1 overflow-y-auto"></ul>'
+            . '<p data-role="forward-state" role="status" class="text-xs text-[#C33939]"></p>'
+            . '<button type="button" data-role="forward-send" disabled class="self-end rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Forward</button>'
+            . '</div>',
+    ], ['saveData' => false]) ?>
+
+    <button type="button" data-role="who-open" data-dialog-open="messages-who" hidden aria-hidden="true" tabindex="-1"></button>
+
+    <?= view('components/dialog', [
+        'id'    => 'messages-who',
+        'title' => 'Who reacted',
+        'size'  => 'sm',
+        'body'  => '<ul data-role="who-list" class="flex max-h-64 flex-col gap-1 overflow-y-auto text-sm text-gray-900"></ul>',
     ], ['saveData' => false]) ?>
 
 </div>

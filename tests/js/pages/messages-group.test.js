@@ -60,6 +60,7 @@ function makeApi(over = {}) {
         page: vi.fn().mockResolvedValue(ok({ messages: [], has_more: false })),
         send: vi.fn(),
         markRead: vi.fn().mockResolvedValue(ok({ ok: true })),
+        changes: vi.fn().mockResolvedValue(ok({ messages: [], server_time: "2026-01-01 00:00:00", more: false })),
         hide: vi.fn().mockResolvedValue(ok({ ok: true })),
         unread: vi.fn().mockResolvedValue(ok({ unread: 0 })),
         recipients: vi.fn().mockResolvedValue(ok({ recipients: [] })),

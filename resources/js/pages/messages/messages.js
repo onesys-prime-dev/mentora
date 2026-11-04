@@ -26,7 +26,8 @@ import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
 import { bindMenuTriggers } from "./gestures.js";
-import { chatMenuItems } from "./menu-items.js";
+import { chatMenuItems, messageMenuItems } from "./menu-items.js";
+import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createMenu } from "./menu.js";
 import { conversationRow, dayLabel, messageNode } from "./render.js";
 
@@ -57,6 +58,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const listNoteEl = $("[data-role=list-note]");
     const archivedBackEl = $("[data-role=archived-back]");
     const pickerNote = $("[data-role=picker-state]");
+    const pinbarEl = $("[data-role=pinbar]");
+    const replyStripEl = $("[data-role=reply-strip]");
+    const toastEl = $("[data-role=toast]");
 
     const listGuard = createGuard();
     const threadGuard = createGuard();
@@ -86,6 +90,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         confirmBlock: null,
         reportFor: null,
         reporting: false,
+        replyTo: null,
+        since: "",
+        pinned: [],
+        pinIndex: 0,
     };
 
     // ---- small helpers -------------------------------------------------
@@ -238,7 +246,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const row = document.createElement("div");
 
         row.className = `group/msg flex flex-col ${item.mine ? "items-end" : "items-start"}`;
-        row.append(messageNode(item, { mine: item.mine }));
+        row.append(messageNode(item, { mine: item.mine, onToggle: (m, emoji) => react(m, emoji), onShowWho: (m, emoji) => showWho(m, emoji) }));
 
         const note = document.createElement("div");
 
@@ -265,6 +273,16 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             hide.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
             hide.textContent = "Delete for me";
             note.append(hide);
+
+            const more = document.createElement("button");
+
+            more.type = "button";
+            more.dataset.action = "more";
+            more.dataset.messageId = String(item.id);
+            more.setAttribute("aria-label", "Message actions");
+            more.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100 [@media(hover:none)]:opacity-100";
+            more.textContent = "\u22EF";
+            note.append(more);
 
             if (!item.mine) {
                 const report = document.createElement("button");
@@ -386,7 +404,30 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             readUpTo();
         }
 
+        await pollChanges(id, token);
+
         return "ok";
+    }
+
+    // Messages reacted to, pinned or erased since the last tick, merged by id.
+    async function pollChanges(id, token) {
+        if (state.since === "") {
+            return;
+        }
+
+        const { status, data } = await api.changes(id, state.since);
+
+        if (!threadGuard.isCurrent(token) || status !== 200 || !data) {
+            return;
+        }
+
+        state.since = data.server_time ?? state.since;
+
+        if (data.messages.length > 0) {
+            state.items = mergeById(state.items, data.messages);
+            renderMessages();
+            refreshThread();
+        }
     }
 
     async function open(id) {
@@ -400,12 +441,16 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.loadingOlder = false;
         state.confirmRemove = null;
         state.confirmBlock = null;
+        state.pinned = [];
+        state.pinIndex = 0;
+        setReply(null);
+        renderPinbar();
         showSafetyNote("");
         state.items = [];
         state.hasMore = false;
         state.sending = null;
         state.composer = createComposer({
-            send: (text, uuid) => api.send(id, text, uuid),
+            send: (text, uuid) => api.send(id, text, uuid, state.sending?.replyTo ?? undefined),
             onSent: (message) => sent(id, message),
             onFailed: (reason, data) => failed(id, reason, data),
         });
@@ -420,6 +465,14 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         applyConversation(current());
         threadState("thread-loading");
         renderList();
+
+        // The changes clock starts before the first page so nothing changed in between is missed.
+        state.since = "";
+        api.changes(id, "").then((clock) => {
+            if (threadGuard.isCurrent(token) && clock.status === 200 && clock.data?.server_time && state.since === "") {
+                state.since = clock.data.server_time;
+            }
+        });
 
         const { status, data } = await api.page(id, {});
 
@@ -442,6 +495,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.items = data.messages;
         state.cursor = Math.max(0, ...data.messages.map((m) => m.id));
         state.hasMore = data.has_more;
+        state.pinned = data.pinned ?? [];
+        renderPinbar();
         renderMessages({ stick: true });
         readUpTo();
 
@@ -536,7 +591,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         // The id stays with the message, so Retry of an older one can never post it twice.
-        const draft = item ?? { id: `local-${++state.localSeq}`, uuid: crypto.randomUUID(), mine: true, body: text.trim(), raw: text, removed: false, created_at: stamp(now()) };
+        const draft = item ?? { id: `local-${++state.localSeq}`, uuid: crypto.randomUUID(), mine: true, body: text.trim(), raw: text, removed: false, created_at: stamp(now()), replyTo: state.replyTo?.id ?? null };
+
+        if (item === null) {
+            setReply(null);
+        }
 
         draft.pending = true;
         draft.failed = false;
@@ -582,13 +641,25 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     });
 
     messagesEl.addEventListener("click", async (event) => {
+        const quote = event.target.closest("[data-reply-to]");
+
+        if (quote) {
+            scrollToMessage(Number(quote.dataset.replyTo));
+
+            return;
+        }
+
         const button = event.target.closest("[data-action]");
 
         if (!button) {
             return;
         }
 
-        if (button.dataset.action === "retry") {
+        if (button.dataset.action === "more") {
+            const rect = button.getBoundingClientRect();
+
+            openMessageMenu(messagesEl.querySelector(`[data-id="${button.dataset.messageId}"]`), { x: rect.left, y: rect.bottom, trigger: button });
+        } else if (button.dataset.action === "retry") {
             const item = state.items.find((i) => String(i.id) === button.dataset.key);
 
             if (item) {
@@ -618,13 +689,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
             renderMessages();
         } else if (button.dataset.action === "hide") {
-            const id = Number(button.dataset.messageId);
-            const { status } = await api.hide(state.openId, id);
-
-            if (status === 200) {
-                state.items = state.items.filter((i) => i.id !== id);
-                renderMessages();
-            }
+            await hideMessage(Number(button.dataset.messageId));
         }
     });
 
@@ -913,6 +978,325 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         groupFailure = "Couldn't create the group";
         renderGroup();
+    });
+
+    // ---- the message menu ----------------------------------------------
+
+    let toastTimer = null;
+
+    function toast(text) {
+        clearTimeout(toastTimer);
+
+        if (!toastEl) {
+            return;
+        }
+
+        toastEl.textContent = text;
+        toastEl.hidden = text === "";
+
+        if (text !== "") {
+            toastTimer = setTimeout(() => toast(""), 4000);
+        }
+    }
+
+    const messageById = (id) => state.items.find((i) => i.id === id) ?? null;
+
+    function renderPinbar() {
+        if (!pinbarEl) {
+            return;
+        }
+
+        const total = state.pinned.length;
+
+        pinbarEl.hidden = total === 0;
+
+        if (total === 0) {
+            return;
+        }
+
+        state.pinIndex = Math.min(state.pinIndex, total - 1);
+
+        const pin = state.pinned[state.pinIndex];
+        const next = $("[data-role=pinbar-next]");
+
+        $("[data-role=pinbar-text]").textContent = `\u{1F4CC} Pinned · ${pin.sender_name ? `${pin.sender_name}: ` : ""}${pin.text}`;
+        next.textContent = `${state.pinIndex + 1} of ${total} ▾`;
+        next.hidden = total < 2;
+    }
+
+    // Re-read the latest page and merge it, so flags and the pinned bar are what the server says now.
+    async function refreshThread() {
+        const id = state.openId;
+        const token = state.token;
+
+        if (id === null) {
+            return;
+        }
+
+        const { status, data } = await api.page(id, {});
+
+        if (!threadGuard.isCurrent(token) || status !== 200 || !data) {
+            return;
+        }
+
+        state.items = mergeById(state.items, data.messages);
+        state.pinned = data.pinned ?? [];
+        state.cursor = Math.max(state.cursor, ...data.messages.map((m) => m.id));
+        renderPinbar();
+        renderMessages();
+    }
+
+    function scrollToMessage(id) {
+        const node = messagesEl.querySelector(`[data-id="${id}"]`);
+
+        if (!node) {
+            return;
+        }
+
+        node.scrollIntoView?.({ block: "center" });
+        node.classList.add("ring-2", "ring-brand");
+        setTimeout(() => node.classList.remove("ring-2", "ring-brand"), 1500);
+    }
+
+    // Says why an action was refused; a stale menu also refreshes the flags. Returns true when it was a refusal.
+    function refused(result) {
+        if (result.status === 200) {
+            return false;
+        }
+
+        const error = result.data?.error;
+
+        if (result.status === 429) {
+            toast("Slow down a little.");
+        } else if (error === "too_late") {
+            toast("It's too late to delete that for everyone.");
+        } else if (error === "limit") {
+            toast(result.data?.max ? `You can pin up to ${result.data.max} messages.` : "You've reached the limit for that.");
+        } else if (result.status === 403) {
+            toast("That's turned off in this chat.");
+        } else {
+            toast("That didn't work. Try again.");
+        }
+
+        if (result.status === 403 || result.status === 404) {
+            loadList();
+            refreshThread();
+        }
+
+        return true;
+    }
+
+    function setReply(message) {
+        state.replyTo = message;
+
+        if (replyStripEl) {
+            replyStripEl.hidden = message === null;
+            $("[data-role=reply-text]").textContent = message === null ? "" : `Replying to ${message.mine ? "yourself" : message.sender_name ?? "message"}: ${(message.body ?? "").slice(0, 80)}`;
+        }
+
+        if (message !== null) {
+            bodyEl.focus();
+        }
+    }
+
+    async function react(m, emoji) {
+        if (m.reacting || state.openId === null) {
+            return;
+        }
+
+        const before = m.reactions ?? [];
+        const picked = before.find((r) => r.mine)?.emoji === emoji ? null : emoji;
+
+        m.reacting = true;
+        m.reactions = toggleReaction(before, emoji);
+        renderMessages();
+
+        const result = await api.react(state.openId, m.id, picked);
+
+        m.reacting = false;
+
+        if (result.status === 200 && Array.isArray(result.data?.reactions)) {
+            m.reactions = result.data.reactions;
+        } else {
+            m.reactions = before;
+            refused(result);
+        }
+
+        renderMessages();
+    }
+
+    async function showWho(m, emoji) {
+        const { status, data } = await api.reactors(state.openId, m.id);
+
+        if (status !== 200 || !data) {
+            toast("Couldn't load who reacted.");
+
+            return;
+        }
+
+        const entries = Object.entries(data.reactors ?? {}).filter(([e]) => !emoji || e === emoji);
+
+        $("[data-role=who-list]").replaceChildren(...entries.flatMap(([e, names]) => names.map((name) => {
+            const item = document.createElement("li");
+
+            item.textContent = `${e} ${name}`;
+
+            return item;
+        })));
+        $("[data-role=who-open]")?.click();
+    }
+
+    async function copyText(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            const area = document.createElement("textarea");
+
+            area.value = text;
+            area.style.position = "fixed";
+            area.style.opacity = "0";
+            document.body.append(area);
+            area.select();
+            document.execCommand?.("copy");
+            area.remove();
+        }
+
+        toast("Copied");
+    }
+
+    async function hideMessage(id) {
+        const { status } = await api.hide(state.openId, id);
+
+        if (status === 200) {
+            state.items = state.items.filter((i) => i.id !== id);
+            renderMessages();
+        }
+    }
+
+    function openForward(m) {
+        const list = $("[data-role=forward-list]");
+        const send = $("[data-role=forward-send]");
+        const note = $("[data-role=forward-state]");
+        const targets = state.conversations.filter((c) => c.id !== state.openId && !c.archived && !c.closed && c.can_post !== false);
+        const chosen = new Set();
+
+        const sync = () => {
+            send.disabled = chosen.size === 0;
+            list.querySelectorAll("input").forEach((box) => { box.disabled = !box.checked && chosen.size >= 5; });
+        };
+
+        note.textContent = targets.length === 0 ? "You have no other chats to forward to." : "";
+        list.replaceChildren(...targets.map((c) => {
+            const item = document.createElement("li");
+            const label = document.createElement("label");
+            const box = document.createElement("input");
+
+            label.className = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-brand-tint";
+            box.type = "checkbox";
+            box.className = "h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40";
+            box.addEventListener("change", () => {
+                if (box.checked) {
+                    chosen.add(c.id);
+                } else {
+                    chosen.delete(c.id);
+                }
+
+                sync();
+            });
+            label.append(box, document.createTextNode(c.name));
+            item.append(label);
+
+            return item;
+        }));
+        sync();
+
+        send.onclick = async () => {
+            send.disabled = true;
+
+            const result = await api.forward(state.openId, m.id, [...chosen]);
+
+            if (result.status !== 200) {
+                note.textContent = result.data?.error === "switched_off" ? "Forwarding is turned off in this chat." : "Couldn't forward that. Try again.";
+                sync();
+
+                return;
+            }
+
+            const failed = (result.data?.results ?? []).filter((r) => !r.ok);
+
+            if (failed.length > 0) {
+                const names = failed.map((r) => state.conversations.find((c) => c.id === r.conversation_id)?.name ?? "a chat");
+
+                note.textContent = `Couldn't forward to: ${names.join(", ")}`;
+                sync();
+
+                return;
+            }
+
+            $("#messages-forward [data-dialog-close]")?.click();
+            toast("Forwarded");
+            listPoller.nudge();
+        };
+
+        $("[data-role=forward-open]")?.click();
+    }
+
+    function openMessageMenu(node, at) {
+        const m = node ? messageById(Number(node.dataset.id)) : null;
+        const c = current();
+
+        if (!m || !c) {
+            return;
+        }
+
+        const handlers = {
+            react: (emoji) => react(m, emoji),
+            reply: () => setReply(m),
+            copy: () => copyText(m.body ?? ""),
+            forward: () => openForward(m),
+            pin: async () => { if (!refused(await api.pinMessage(state.openId, m.id, true))) { await refreshThread(); } },
+            unpin: async () => { if (!refused(await api.pinMessage(state.openId, m.id, false))) { await refreshThread(); } },
+            bump: async () => { if (!refused(await api.bump(state.openId, m.id))) { await refreshThread(); readUpTo(); } },
+            "delete-me": () => hideMessage(m.id),
+            "delete-everyone": async () => {
+                if (!window.confirm("Delete this message for everyone? This can't be undone.")) {
+                    return;
+                }
+
+                if (!refused(await api.deleteEveryone(state.openId, m.id))) {
+                    await refreshThread();
+                }
+            },
+            report: () => openReport(m.id),
+            remove: async () => {
+                if (!window.confirm("Remove this message for everyone in this chat?")) {
+                    return;
+                }
+
+                if (!refused(await api.remove(state.openId, m.id))) {
+                    m.removed = true;
+                    m.body = null;
+                    renderMessages();
+                }
+            },
+        };
+
+        menu.open(messageMenuItems(m, c, handlers), at);
+    }
+
+    bindMenuTriggers(messagesEl, { selector: "[data-id]", onOpen: openMessageMenu });
+
+    $("[data-role=reply-cancel]")?.addEventListener("click", () => setReply(null));
+    $("[data-role=pinbar-next]")?.addEventListener("click", () => {
+        state.pinIndex = stepIndex(state.pinIndex, state.pinned.length, 1);
+        renderPinbar();
+    });
+    $("[data-role=pinbar-text]")?.addEventListener("click", () => {
+        const pin = state.pinned[state.pinIndex];
+
+        if (pin) {
+            scrollToMessage(pin.id);
+        }
     });
 
     // ---- the list controls ---------------------------------------------
