@@ -19,7 +19,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
      data-open="<?= esc($openId) ?>"
      data-can-group="<?= ($canStartGroups ?? false) ? '1' : '0' ?>">
 
-    <div class="grid -mb-8 lg:-mb-4 h-[calc(100vh-5.3rem)] min-h-[440px] gap-3 md:grid-cols-[380px_1fr]">
+    <div class="mt-5 grid h-[calc(100dvh-9.5rem)] min-h-[440px] gap-3 md:grid-cols-[380px_1fr]">
 
         <section data-pane="list" aria-label="Conversations" class="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm group-data-[view=thread]:max-md:hidden">
             <div class="flex items-center justify-between px-4 pb-3 pt-4">
