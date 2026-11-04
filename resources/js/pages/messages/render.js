@@ -154,7 +154,7 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
 
     if (chips) {
         // The pill hangs off the bubble's bottom edge, so the bubble leaves room for it.
-        node.classList.add("relative", "mb-5", "pb-4");
+        node.classList.add("relative", "mb-5");
         node.append(chips);
     }
 
