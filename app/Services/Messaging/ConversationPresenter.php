@@ -22,11 +22,14 @@ class ConversationPresenter
 
     private MessagingPolicy $policy;
 
+    private ChatControls $controls;
+
     public function __construct(?MessageCipher $cipher = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null)
     {
         $this->cipher   = $cipher ?? new MessageCipher();
         $this->resolver = $resolver ?? new MessagingContextResolver();
         $this->policy   = $policy ?? new MessagingPolicy();
+        $this->controls = new ChatControls($this->resolver, $this->policy);
     }
 
     /**
@@ -89,6 +92,9 @@ class ConversationPresenter
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
             $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
             $row['can_moderate'] = $this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches || $created);
+
+            $row['controls']            = ChatControls::forConversation($row);
+            $row['can_manage_controls'] = $this->controls->canManage($viewer, $row);
 
             $out[] = $row;
         }
