@@ -14,7 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class MessageActionController extends MessagingController
 {
-    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'too_late' => 403, 'invalid' => 422, 'limit' => 409, 'unavailable' => 503];
+    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'parent_thread' => 403,'too_late' => 403, 'invalid' => 422, 'limit' => 409, 'unavailable' => 503];
 
     public function react(int $conversationId, int $messageId): ResponseInterface
     {
@@ -69,6 +69,31 @@ class MessageActionController extends MessagingController
         }
 
         $reason = $result['reason'] ?? 'not_found';
+
+        return isset(self::FAILURES[$reason])
+            ? $this->response->setStatusCode(self::FAILURES[$reason])->setJSON(['error' => $reason])
+            : $this->notFound();
+    }
+
+    public function forward(int $conversationId, int $messageId): ResponseInterface
+    {
+        $targets = $this->input()['targets'] ?? null;
+
+        if (! is_array($targets) || ! array_is_list($targets) || array_filter($targets, static fn ($t): bool => ! is_int($t)) !== []) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => 'invalid']);
+        }
+
+        $result = (new MessageActions())->forward(auth()->user(), $conversationId, $messageId, $targets);
+
+        if ($result['ok']) {
+            return $this->response->setJSON(['results' => $result['results'] ?? []]);
+        }
+
+        $reason = $result['reason'] ?? 'not_found';
+
+        if ($reason === 'too_many') {
+            return $this->response->setStatusCode(422)->setJSON(['error' => $reason]);
+        }
 
         return isset(self::FAILURES[$reason])
             ? $this->response->setStatusCode(self::FAILURES[$reason])->setJSON(['error' => $reason])

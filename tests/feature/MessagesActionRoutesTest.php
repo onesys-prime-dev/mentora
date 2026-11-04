@@ -158,6 +158,28 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $this->assertSame(403, $this->api('POST', $uri($this->message))->response()->getStatusCode());
     }
 
+    public function testForwardMapsOutcomesToStatuses(): void
+    {
+        $uri = fn (int $id): string => "conversations/{$this->conversation}/messages/{$id}/forward";
+
+        $this->signIn($this->instructor);
+        $this->assertSame(422, $this->api('POST', $uri($this->message), ['targets' => 'x'])->response()->getStatusCode());
+        $this->assertSame(422, $this->api('POST', $uri($this->message), ['targets' => ['a']])->response()->getStatusCode());
+        $this->assertSame(404, $this->api('POST', $uri(999999), ['targets' => [1]])->response()->getStatusCode());
+        $this->assertSame(422, $this->api('POST', $uri($this->message), ['targets' => [1, 2, 3, 4, 5, 6]])->response()->getStatusCode());
+
+        // The seeded body is not valid ciphertext, so the copy is unavailable.
+        $this->assertSame(503, $this->api('POST', $uri($this->message), ['targets' => [$this->conversation]])->response()->getStatusCode());
+
+        db_connect()->table('conversations')->where('id', $this->conversation)->update(['allow_forwarding' => 0]);
+        $this->assertSame(403, $this->api('POST', $uri($this->message), ['targets' => [$this->conversation]])->response()->getStatusCode());
+
+        db_connect()->table('conversations')->where('id', $this->conversation)->update(['allow_forwarding' => 1, 'subject_student_id' => $this->student->id]);
+        $denied = $this->api('POST', $uri($this->message), ['targets' => [$this->conversation]])->response();
+        $this->assertSame(403, $denied->getStatusCode());
+        $this->assertSame(['error' => 'parent_thread'], json_decode($denied->getBody(), true));
+    }
+
     public function testTheSystemAdministratorReachesNeitherRoute(): void
     {
         $this->signIn(CourseFactory::user('admin'));

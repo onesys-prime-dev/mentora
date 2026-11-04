@@ -328,6 +328,94 @@ class MessageActions
         return ['ok' => true, 'message' => $result['message']];
     }
 
+    /** Most chats one forward can reach. */
+    public const FORWARD_LIMIT = 5;
+
+    /**
+     * Whether a message of this chat can be forwarded: not deleted or removed, the chat's switch on, not a parent thread.
+     * Visibility to the viewer is checked by the caller (the payload only lists visible rows).
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canForward(array $row, bool $switchOn, bool $parentThread): bool
+    {
+        return $switchOn
+            && ! $parentThread
+            && ($row['deleted_everyone_at'] ?? null) === null
+            && ($row['removed_at'] ?? null) === null;
+    }
+
+    /**
+     * Sends a copy of a message to up to five of the person's other chats, each as a new message from them marked
+     * forwarded and carrying no original sender. Each target goes through MessageService::post's rules; one refusal
+     * is reported in `results` and does not stop the rest. Forwarding into a chat with its own switch off is fine.
+     *
+     * @param list<int> $targetIds
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'switched_off'|'parent_thread'|'too_many'|'unavailable', results?: list<array{conversation_id: int, ok: bool, reason?: string}>}
+     */
+    public function forward(User $user, int $conversationId, int $messageId, array $targetIds): array
+    {
+        $source  = $this->conversations->find($user, $conversationId);
+        $message = $source === null ? null : $this->message($conversationId, $messageId);
+        $userId  = (int) $user->id;
+
+        if ($source === null || $message === null || ($message['deleted_everyone_at'] ?? null) !== null || ! $this->messages->visibleTo($userId, $conversationId, $messageId)) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        if (! ChatControls::allows($source, 'forwarding')) {
+            return ['ok' => false, 'reason' => 'switched_off'];
+        }
+
+        if ($source['subject_student_id'] !== null) {
+            return ['ok' => false, 'reason' => 'parent_thread'];
+        }
+
+        $targetIds = array_values(array_unique(array_map('intval', $targetIds)));
+
+        if (count($targetIds) > self::FORWARD_LIMIT) {
+            return ['ok' => false, 'reason' => 'too_many'];
+        }
+
+        $body = $this->cipher->isUsable() ? $this->cipher->decrypt((string) $message['body_enc'], $conversationId, (int) $message['sender_id']) : null;
+
+        if ($body === null || $body === '') {
+            return ['ok' => false, 'reason' => 'unavailable'];
+        }
+
+        $results = [];
+
+        foreach ($targetIds as $targetId) {
+            $target = $targetId > 0 ? $this->conversations->find($user, $targetId) : null;
+
+            if ($target === null) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'not_found'];
+
+                continue;
+            }
+
+            if (! $this->policy->canPost($this->resolver->forPost($user, $target))) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'not_allowed'];
+
+                continue;
+            }
+
+            try {
+                (new MessageRateLimiter())->check('message', $userId);
+            } catch (RateLimitedException) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'rate_limited'];
+
+                continue;
+            }
+
+            $this->messages->post($user, $target, $body, bin2hex(random_bytes(16)), ['forwarded' => 1]);
+            $results[] = ['conversation_id' => $targetId, 'ok' => true];
+        }
+
+        return ['ok' => true, 'results' => $results];
+    }
+
     /**
      * A live message of this conversation, or null.
      *

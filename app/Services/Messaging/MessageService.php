@@ -310,6 +310,7 @@ class MessageService
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
             'can_bump'            => MessageActions::canBump($row, $userId, $this->switchOn((int) $row['conversation_id'], 'bump')),
+            'can_forward'         => MessageActions::canForward($row, $this->switchOn((int) $row['conversation_id'], 'forwarding'), $this->isParentThread((int) $row['conversation_id'])),
             'deleted_everyone'    => $erased,
             'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone')),
         ];
@@ -332,6 +333,21 @@ class MessageService
         return $this->switches[$key];
     }
 
+    /** @var array<int, bool> */
+    private array $parentThreads = [];
+
+    /** Whether the chat is a parent-instructor thread about a student; looked up once per chat per request. */
+    private function isParentThread(int $conversationId): bool
+    {
+        if (! isset($this->parentThreads[$conversationId])) {
+            $chat = db_connect()->table('conversations')->select('subject_student_id')->where('id', $conversationId)->get()->getRowArray();
+
+            $this->parentThreads[$conversationId] = $chat !== null && $chat['subject_student_id'] !== null;
+        }
+
+        return $this->parentThreads[$conversationId];
+    }
+
     /** Whether the sender may reply to this message: in this chat, not before their first visible one, not hidden by them. */
     private function replyable(int $userId, int $conversationId, int $messageId): bool
     {
@@ -351,7 +367,7 @@ class MessageService
         return max((int) ($mine['first_visible_message_id'] ?? 0), (int) ($mine['cleared_before_message_id'] ?? 0) + 1);
     }
 
-    private function visibleTo(int $userId, int $conversationId, int $messageId): bool
+    public function visibleTo(int $userId, int $conversationId, int $messageId): bool
     {
         return $messageId >= $this->visibleFloor($userId, $conversationId)
             && db_connect()->table('message_hidden')->where(['message_id' => $messageId, 'user_id' => $userId])->countAllResults() === 0;
