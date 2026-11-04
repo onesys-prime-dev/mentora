@@ -240,6 +240,8 @@ class EnrolmentService
             $engine->syncEnrolment($offeringId, $change['student']);
         }
 
+        \App\Services\Messaging\CourseChatHooks::offeringChanged($offeringId);
+
         return [
             'added'      => count($new),
             'reinstated' => count($back),
@@ -295,6 +297,8 @@ class EnrolmentService
         (new \App\Services\Courses\Grades\GradingEngineService())->syncEnrolment((int) $row['offering_id'], (int) $row['student_user_id']);
 
         $this->audit('enrolment.status_changed', $actor, $institutionId, $enrollmentId, ['status' => $row['status']], ['status' => $status, 'offering_id' => (int) $row['offering_id'], 'student_user_id' => (int) $row['student_user_id']]);
+
+        \App\Services\Messaging\CourseChatHooks::offeringChanged((int) $row['offering_id']);
     }
 
     /*

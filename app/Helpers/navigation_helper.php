@@ -27,13 +27,66 @@ if (! function_exists('role_home')) {
     }
 }
 
+if (! function_exists('messages_unread_count')) {
+
+    /**
+     * Messages waiting for the signed-in person: the badge on the Messages tile.
+     * Zero when nobody is signed in, and never an error: a page must still draw if Messages cannot count.
+     */
+    function messages_unread_count(): int
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            return 0;
+        }
+
+        try {
+            return (new \App\Services\Messaging\ConversationService())->unreadCount($user);
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+}
+
+if (! function_exists('messages_tile')) {
+
+    /**
+     * The Messages tile for a role, or null while the `messages` flag is off, for the system
+     * administrator, and when the signed-in person's role lacks `messages.use`.
+     *
+     * @return array{key: string, label: string, icon: string, url: string, badge: int}|null
+     */
+    function messages_tile(string $role): ?array
+    {
+        helper('feature');
+
+        $user = auth()->user();
+
+        // An unknown flag throws in feature_enabled(); a menu must not take the page down, so it counts as off.
+        try {
+            $on = feature_enabled('messages');
+        } catch (\InvalidArgumentException) {
+            $on = false;
+        }
+
+        if ($role === 'admin' || $user === null || ! $on
+            || ! (new \App\Services\Auth\RolePermissions())->allows($user, 'messages.use', $role)) {
+            return null;
+        }
+
+        return ['key' => 'messages', 'label' => 'Messages', 'icon' => 'inbox', 'url' => site_url('messages'), 'badge' => messages_unread_count()];
+    }
+}
+
 if (! function_exists('global_apps')) {
 
     /**
      * Global apps, same set for every role. `url` is null while a page isn't
      * built yet — those render as inert tiles (see components/app-tile.php).
      *
-     * The Grades tile may carry a `badge` count and its `badge_label` (grades_badge_on()).
+     * The Grades tile may carry a `badge` count and its `badge_label` (grades_badge_on());
+     * the Messages tile carries its unread count as `badge` (messages_tile()).
      *
      * @return list<array{key: string, label: string, icon: string, url: ?string, badge?: int, badge_label?: string}>
      */
@@ -58,6 +111,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'integrations', 'label' => 'Integrations', 'icon' => 'link',   'url' => site_url('institution/integrations')],
                 ['key' => 'audit',       'label' => 'Audit log',   'icon' => 'lock',     'url' => site_url('institution/audit')],
                 ['key' => 'institution', 'label' => 'Data export', 'icon' => 'folder',   'url' => site_url('institution/export')],
+                ...array_filter([messages_tile($role)]),
             ];
         }
 
@@ -93,7 +147,7 @@ if (! function_exists('global_apps')) {
                 $dean        = array_values(array_filter($dean, static fn (array $app): bool => ! in_array($app['key'], $hidden, true)));
             }
 
-            return grades_badge_on($dean, $role);
+            return grades_badge_on([...$dean, ...array_filter([messages_tile($role)])], $role);
         }
 
         // A parent's tools: their children's dashboard, calendar and grades, the shared notifications
@@ -105,6 +159,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('parent/grades')],
                 ['key' => 'notifications', 'label' => 'Notifications', 'icon' => 'bell', 'url' => site_url('notifications')],
                 ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('parent/profile')],
+                ...array_filter([messages_tile($role)]),
             ], $role);
         }
 
@@ -139,7 +194,6 @@ if (! function_exists('global_apps')) {
                 default      => null,
             }],
             ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => in_array($role, ['student', 'instructor', 'chairperson'], true) ? site_url($role . '/announcements') : null],
-            ['key' => 'inbox',         'label' => 'Inbox',         'icon' => 'inbox',        'url' => null],
         ];
 
         // Two of the chairperson's own pages. No other role is shown these tiles.
@@ -162,6 +216,10 @@ if (! function_exists('global_apps')) {
         // What the dean or a chairperson asked of an instructor.
         if ($role === 'instructor') {
             $apps[] = ['key' => 'follow-ups', 'label' => 'Requests', 'icon' => 'inbox', 'url' => site_url('instructor/follow-ups')];
+        }
+
+        if (($messages = messages_tile($role)) !== null) {
+            $apps[] = $messages;
         }
 
         return grades_badge_on($apps, $role);

@@ -54,6 +54,7 @@ class PlatformSettings
         'institutionAnnouncement' => ['type' => 'string', 'label' => 'Institution announcement', 'institution' => true, 'maxLength' => 300],
         'institutionAnnouncementUntil' => ['type' => 'string', 'label' => 'Institution announcement ends', 'institution' => true, 'maxLength' => 10],
         'parentPortalEnabled'  => ['type' => 'bool', 'label' => 'Parent portal on', 'institution' => true],
+        'studentDmEnabled'     => ['type' => 'bool', 'label' => 'Students can message each other', 'institution' => true],
         'passwordResetValidityHours' => ['type' => 'int', 'label' => 'Hours a password reset link works', 'institution' => false, 'min' => 1, 'max' => 168],
     ];
 

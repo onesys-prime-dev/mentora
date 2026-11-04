@@ -142,13 +142,14 @@ final class PermissionMatrixTest extends DatabaseTestCase
     public function testARoleCannotBeEmptiedByStoredRows(): void
     {
         $this->override('student', 'courses.view', false);
+        $this->override('student', 'messages.use', false);
 
-        $this->assertSame(['courses.view'], $this->matrix->effective()['student']);
+        $this->assertSame(['courses.view', 'messages.use'], $this->matrix->effective()['student']);
     }
 
     public function testAParentCanOnlyViewTheirChildren(): void
     {
-        $this->assertSame(['children.view'], AuthGroups::DEFAULT_MATRIX['parent']);
+        $this->assertSame(['children.view', 'messages.use'], AuthGroups::DEFAULT_MATRIX['parent']);
         $this->assertArrayHasKey('children.view', $this->matrix->permissions());
     }
 

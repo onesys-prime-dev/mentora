@@ -14,6 +14,7 @@ use App\Services\Institutions\InstitutionProfileService;
 use App\Services\Institutions\InstitutionSecurity;
 use App\Services\Institutions\InstitutionScope;
 use App\Services\Institutions\StructureException;
+use App\Services\Messaging\StudentMessaging;
 use App\Services\Parents\ParentPortal;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -38,6 +39,8 @@ class InstitutionSettingsController extends BaseController
     private const SECURITY = 'institution/settings/security';
 
     private const PARENTS = 'institution/settings/parents';
+
+    private const MESSAGES = 'institution/settings/messages';
 
     private InstitutionProfileService $profiles;
 
@@ -119,6 +122,26 @@ class InstitutionSettingsController extends BaseController
             : ($choice === '1' ? 'Mentora has the parent portal switched off for your institution, so it stays off.' : 'The parent portal is switched off.'), self::PARENTS);
     }
 
+    public function messages(): string
+    {
+        return $this->show('messages');
+    }
+
+    public function saveMessages(): ResponseInterface|RedirectResponse
+    {
+        $choice = $this->input()['enabled'] ?? null;
+
+        return $this->run(function (int $inst) use ($choice): void {
+            if (! in_array($choice, ['0', '1'], true)) {
+                throw StructureException::field('enabled', 'Choose on or off.');
+            }
+
+            (new StudentMessaging())->set($inst, $choice === '1');
+        }, $choice === '1'
+            ? 'Students can message each other.'
+            : 'Students can no longer start messages with each other. Existing conversations stay readable.', self::MESSAGES);
+    }
+
     public function security(): string
     {
         return $this->show('security');
@@ -180,6 +203,7 @@ class InstitutionSettingsController extends BaseController
             'settingsAnnouncement' => $tab === 'announcement' ? (new InstitutionAnnouncement())->get($institutionId) : null,
             'settingsSecurity' => $tab === 'security' ? (new InstitutionSecurity())->forInstitution($institutionId) : null,
             'settingsParents' => $tab === 'parents' ? ['own' => ! (new ParentPortal())->institutionSwitchedOff($institutionId), 'platform' => (new ParentPortal())->platformOn($institutionId)] : null,
+            'settingsMessages' => $tab === 'messages' ? ['studentsOn' => (new StudentMessaging())->enabled($institutionId)] : null,
             'settingsAcademic' => $tab === 'academic' ? (new AcademicDefaults())->forInstitution($institutionId) : null,
             'settingsCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'settingsDefaults' => ['primary' => BrandColours::DEFAULT_PRIMARY, 'accent' => BrandColours::DEFAULT_ACCENT],

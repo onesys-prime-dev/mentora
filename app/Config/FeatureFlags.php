@@ -37,5 +37,9 @@ class FeatureFlags extends BaseConfig
             'description' => 'The parent portal: linked parents see their child\'s courses and grades, read-only.',
             'default'     => true,
         ],
+        'messages' => [
+            'description' => 'Messages: course chats, direct messages and staff groups.',
+            'default'     => false,
+        ],
     ];
 }

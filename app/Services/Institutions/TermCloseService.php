@@ -131,6 +131,9 @@ class TermCloseService
             throw new RuntimeException('The term could not be closed. Nothing was changed.');
         }
 
+        // Membership does not change (completed students stay); this creates any missing chat.
+        \App\Services\Messaging\CourseChatHooks::offeringsChanged($offeringIds);
+
         return ['offerings' => count($offeringIds), 'enrolments' => count($placeIds)];
     }
 
@@ -231,6 +234,8 @@ class TermCloseService
         if (! $db->transStatus()) {
             throw new RuntimeException('The term could not be reopened. Nothing was changed.');
         }
+
+        \App\Services\Messaging\CourseChatHooks::offeringsChanged($offerings);
 
         return ['offerings' => $backOfferings, 'enrolments' => $backPlaces];
     }

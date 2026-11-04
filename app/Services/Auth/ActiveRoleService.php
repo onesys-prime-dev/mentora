@@ -100,7 +100,7 @@ class ActiveRoleService
      *
      * @return list<string>
      */
-    protected function usableGroups(User $user): array
+    public function usableGroups(User $user): array
     {
         $groups = array_values(array_filter($user->getGroups() ?? [], 'is_string'));
 

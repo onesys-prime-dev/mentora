@@ -9,6 +9,7 @@ import { renderDiscussionsSkeleton } from "../../../resources/js/pages/courses/f
 import { renderAssessmentsSkeleton } from "../../../resources/js/pages/courses/features/assessments/skeleton.js";
 import { renderGradesSkeleton } from "../../../resources/js/pages/courses/features/grades/skeleton.js";
 import { renderModulesSkeleton } from "../../../resources/js/pages/courses/features/modules/skeleton.js";
+import { renderInstructorSkeleton } from "../../../resources/js/pages/courses/features/instructor/skeleton.js";
 
 /*
  * The server draws a tab's loading shape into the first HTML and the script
@@ -29,6 +30,7 @@ const SCRIPTS = {
     assessments: renderAssessmentsSkeleton,
     grades: renderGradesSkeleton,
     modules: renderModulesSkeleton,
+    instructor: renderInstructorSkeleton,
 };
 
 const norm = (classes) => classes.split(/\s+/).filter(Boolean).sort().join(" ");

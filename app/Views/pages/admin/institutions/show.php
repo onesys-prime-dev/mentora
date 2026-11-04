@@ -32,7 +32,7 @@ $btn       = 'rounded-full border px-3 py-1 text-xs font-semibold transition foc
 
 <?= $this->section('content') ?>
 
-<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
 <?= view('components/page-head', ['title' => $profInstitution['name'], 'icon' => 'hat', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions', 'actions' => '<span class="rounded-full px-2 py-0.5 text-xs font-semibold ' . $statusClass . '" data-institution-status="' . esc($profInstitution['status']) . '">' . esc($statusLabel) . '</span>' . ($isDeleted ? '<span class="rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Deleted</span>' : '')], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]"><span class="font-mono text-xs"><?= esc($profInstitution['code']) ?></span></p>

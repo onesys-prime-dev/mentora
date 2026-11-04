@@ -104,6 +104,7 @@ class AuthGroups extends ShieldAuthGroups
         'children.view'         => 'View the courses and grades of the students linked to the account',
         'followups.manage'      => 'Manage department follow-ups',
         'department.announce'   => 'Publish department announcements',
+        'messages.use'          => 'Use Messages',
 
         // The institution's own administration (institutional administrator)
         'structure.manage'      => 'Manage departments, sub-departments, programs and courses',
@@ -146,13 +147,13 @@ class AuthGroups extends ShieldAuthGroups
             'courses.view', 'grades.approve', 'grades.signoff',
             'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage',
             'people.view', 'people.manage', 'reports.view',
-            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles',
+            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles', 'messages.use',
         ],
-        'dean'              => ['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce'],
-        'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor', 'followups.manage'],
-        'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage'],
-        'student'             => ['courses.view'],
-        'parent'              => ['children.view'],
+        'dean'              => ['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce', 'messages.use'],
+        'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor', 'followups.manage', 'messages.use'],
+        'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'messages.use'],
+        'student'             => ['courses.view', 'messages.use'],
+        'parent'              => ['children.view', 'messages.use'],
     ];
 
     /**
@@ -167,13 +168,13 @@ class AuthGroups extends ShieldAuthGroups
             'courses.view', 'grades.approve', 'grades.signoff',
             'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage',
             'people.view', 'people.manage', 'reports.view',
-            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles',
+            'institution.settings', 'institution.audit', 'institution.impersonate', 'sis.run', 'institution.roles', 'messages.use',
         ],
-        'dean'        => ['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce'],
-        'chairperson' => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor', 'followups.manage'],
-        'instructor'  => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage'],
-        'student'     => ['courses.view'],
-        'parent'      => ['children.view'],
+        'dean'        => ['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce', 'messages.use'],
+        'chairperson' => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor', 'followups.manage', 'messages.use'],
+        'instructor'  => ['courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'messages.use'],
+        'student'     => ['courses.view', 'messages.use'],
+        'parent'      => ['children.view', 'messages.use'],
     ];
 
     /** @var array<string, list<string>> */

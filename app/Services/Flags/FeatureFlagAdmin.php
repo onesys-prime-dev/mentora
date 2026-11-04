@@ -7,6 +7,7 @@ namespace App\Services\Flags;
 use App\Models\Academic\InstitutionModel;
 use App\Models\Flags\FeatureFlagOverrideModel;
 use App\Services\Audit\RecordsAuditedChanges;
+use App\Services\Messaging\MessageCipher;
 use CodeIgniter\Shield\Entities\User;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -78,6 +79,11 @@ class FeatureFlagAdmin
 
         if (! in_array($state, [self::DEFAULT, self::ON, self::OFF], true)) {
             throw new InvalidArgumentException('Choose default, on or off.');
+        }
+
+        // Fail closed (spec 5.1): Messages cannot be switched on while it has no usable key to encrypt with.
+        if ($key === 'messages' && $state === self::ON && ! (new MessageCipher())->isUsable()) {
+            throw new InvalidArgumentException('Messages cannot be turned on: its encryption key is missing or too short. Set messages.encryptionKey in the server settings first.');
         }
 
         [$note, $endsOn] = $state === self::DEFAULT ? [null, null] : $this->details($note, $endsOn, $state);

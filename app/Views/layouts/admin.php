@@ -54,9 +54,13 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
 
             <?= $this->include('layouts/partials/admin-menu') ?>
 
-            <main class="min-w-0 flex-1 <?= $mainGutter ?> pb-8 pt-3 focus:outline-none lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0">
+            <main data-pinned-panel class="min-w-0 flex-1 <?= $mainGutter ?> pb-8 pt-3 focus:outline-none lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0">
 
-                <?= $this->renderSection('content') ?>
+                <div>
+
+                    <?= $this->renderSection('content') ?>
+
+                </div>
 
             </main>
 

@@ -25,12 +25,12 @@ Each role is offered only the permissions that have an effect for it (`AuthGroup
 
 | Role | Offered |
 |---|---|
-| student | `courses.view` |
-| parent | `children.view` |
-| instructor | `courses.view`, `courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage` |
-| chairperson | the instructor's five, `program.monitor`, `followups.manage` |
-| dean | `courses.view`, `department.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `department.announce` |
-| institutional_admin | the institution-administration permissions, `courses.view`, `grades.approve`, `grades.signoff`, `institution.roles` |
+| student | `courses.view`, `messages.use` |
+| parent | `children.view`, `messages.use` |
+| instructor | `courses.view`, `courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage`, `messages.use` |
+| chairperson | the instructor's five, `program.monitor`, `followups.manage`, `messages.use` |
+| dean | `courses.view`, `department.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `department.announce`, `messages.use` |
+| institutional_admin | the institution-administration permissions, `courses.view`, `grades.approve`, `grades.signoff`, `institution.roles`, `messages.use` |
 
 `monitoring.manage` was removed (nothing used it).
 
@@ -44,4 +44,5 @@ Each role is offered only the permissions that have an effect for it (`AuthGroup
 - **`department.announce`**: the dean's department announcements.
 - **`grades.approve`**: deciding final-grade override requests: the dean's for their department, otherwise the institution's administrators' (`/institution/approvals`). Who decides is `GradeAuthority`; see `institutional-admin-area.md`, "Who decides grade overrides and sign-off". A change for the dean or the institutional administrator moves the waiting requests at once.
 - **`grades.signoff`**: signing off finalized grades: the dean's, otherwise the institution's administrators' (`/institution/signoff`). Both Roles pages warn where nobody holds it, or `grades.approve`, in a department.
+- **`messages.use`**: the Messages area (course chats, direct messages, staff groups). Held by every institution role, never by the system administrator; the area is also behind the `messages` feature flag, which ships off. Two things are decided by role rather than by this permission: only an institutional administrator reviews message reports (`/messages/reports`) and changes the institution's "students messaging each other" switch, and only a chairperson or dean can start a staff group. See `messages.md`.
 - **`audit.view`**, **`audit.manage`**: the platform audit log, and its settings.

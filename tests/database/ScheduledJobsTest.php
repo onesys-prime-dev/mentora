@@ -45,7 +45,7 @@ final class ScheduledJobsTest extends DatabaseTestCase
 
     public function testThereAreSevenJobs(): void
     {
-        $this->assertSame(['backup:run', 'parents:notify', 'exports:run', 'subscriptions:sync', 'institutions:purge-expired', 'sis:sync', 'sis:grades'], array_keys(ScheduledJobs::JOBS));
+        $this->assertSame(['backup:run', 'parents:notify', 'exports:run', 'subscriptions:sync', 'institutions:purge-expired', 'sis:sync', 'sis:grades', 'messages:sync-course-chats', 'messages:notify'], array_keys(ScheduledJobs::JOBS));
     }
 
     public function testAJobWithinItsGapIsNotStale(): void

@@ -453,11 +453,53 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('children/(:num)/api/courses/(:num)/grades', 'Parents\ParentCourseController::grades/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
     // A course's small breakdown on the parent's Grades page, loaded when its row is expanded.
     $routes->get('children/(:num)/api/grades/courses/(:num)', 'Grades\ParentCourseGradesController::show/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
+    // Read-only, and only while Messages is on: the instructors' posts in the child's course chat.
+    $routes->get('children/(:num)/api/courses/(:num)/instructor', 'Parents\ParentCourseController::instructor/$1/$2', ['filter' => ['parentportal', 'parentchild', 'messages']]);
     // The grade report (PDF), once the grades are final; each download is audited.
     $routes->get('children/(:num)/api/courses/(:num)/grades/report/mine', 'Parents\ParentCourseController::report/$1/$2', ['filter' => ['parentportal', 'parentchild']]);
     $routes->get('children/(:num)/courses/(:num)/(:segment)', 'Parents\ParentCourseController::redirect/$1/$2/$3', ['filter' => ['parentportal', 'parentchild']]);
     $routes->get('children/(:num)/courses/(:num)/(:segment)/(:segment)', 'Parents\ParentCourseController::page/$1/$2/$3/$4', ['filter' => ['parentportal', 'parentchild']]);
 });
+
+// Messages (docs/superpowers/specs/2026-11-02-messages-design.md): JSON for every role but the system
+// administrator. `messages` answers 404 while the flag is off, to the administrator and to an
+// impersonation session; the controllers answer 404 for any conversation or message that is not the
+// person's, so a foreign id looks like one that does not exist.
+$routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission:messages.use']], function ($routes) {
+    $routes->get('conversations', 'Messaging\ConversationController::index');
+    $routes->post('conversations', 'Messaging\ConversationController::start');
+    $routes->post('conversations/(:num)/lock', 'Messaging\ConversationController::lock/$1');
+    $routes->post('conversations/(:num)/unlock', 'Messaging\ConversationController::unlock/$1');
+    $routes->get('unread-count', 'Messaging\ConversationController::unread');
+    $routes->get('recipients', 'Messaging\RecipientController::index');
+    $routes->get('group-candidates', 'Messaging\GroupController::candidates');
+    $routes->get('preferences', 'Messaging\PreferenceController::show');
+    $routes->post('preferences', 'Messaging\PreferenceController::save');
+    $routes->get('blocks', 'Messaging\BlockController::index');
+    $routes->post('blocks', 'Messaging\BlockController::create');
+    $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');
+    $routes->post('groups', 'Messaging\GroupController::create');
+    $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
+    $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
+    $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
+    $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/remove', 'Messaging\MessageController::remove/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/report', 'Messaging\ReportController::create/$1/$2');
+    // The institutional administrator's reports; anyone else gets the shared 404.
+    $routes->get('reports', 'Messaging\ReportController::index');
+    $routes->get('reports/(:num)', 'Messaging\ReportController::show/$1');
+    $routes->post('reports/(:num)/review', 'Messaging\ReportController::review/$1');
+});
+
+// The Messages page itself: the same turn-aways as the JSON routes, and no `readonly` filter because
+// reading a conversation is allowed in a read-only institution.
+// The institutional administrator's reports page (anyone else: 404). The decision is a form post, so it also
+// passes the read-only filter.
+$routes->get('messages/reports', 'Messaging\ReportsPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
+$routes->get('messages/reports/(:num)', 'Messaging\ReportsPageController::show/$1', ['filter' => ['messages', 'permission:messages.use']]);
+$routes->post('messages/reports/(:num)/review', 'Messaging\ReportsPageController::review/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
+$routes->get('messages', 'Messaging\MessagesPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
+$routes->get('messages/(:num)', 'Messaging\MessagesPageController::index/$1', ['filter' => ['messages', 'permission:messages.use']]);
 
 // A chairperson has full instructor rights on every course in their
 // program (R7 of the chairperson plan) — this block mirrors instructor's
@@ -854,6 +896,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('announcement/remove', 'Institution\InstitutionSettingsController::removeAnnouncement');
             $routes->get('parents', 'Institution\InstitutionSettingsController::parents');
             $routes->post('parents', 'Institution\InstitutionSettingsController::saveParents');
+            $routes->get('messages', 'Institution\InstitutionSettingsController::messages');
+            $routes->post('messages', 'Institution\InstitutionSettingsController::saveMessages');
             // Security settings need the password (IA1): a loosened rule is refused, but a tightened one locks people out.
             $routes->get('security', 'Institution\InstitutionSettingsController::security');
             $routes->post('security', 'Institution\InstitutionSettingsController::saveSecurity', ['filter' => 'reauth']);

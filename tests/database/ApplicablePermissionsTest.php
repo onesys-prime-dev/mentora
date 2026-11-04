@@ -35,11 +35,20 @@ final class ApplicablePermissionsTest extends DatabaseTestCase
 
     public function testARoleIsOfferedOnlyWhatDoesSomethingForIt(): void
     {
-        $this->assertSame(['courses.view'], PermissionMatrix::applicable('student'));
-        $this->assertSame(['children.view'], PermissionMatrix::applicable('parent'));
+        $this->assertSame(['courses.view', 'messages.use'], PermissionMatrix::applicable('student'));
+        $this->assertSame(['children.view', 'messages.use'], PermissionMatrix::applicable('parent'));
         $this->assertContains('discussions.manage', PermissionMatrix::applicable('instructor'));
         $this->assertNotContains('grades.approve', PermissionMatrix::applicable('instructor'));
         $this->assertContains('followups.manage', PermissionMatrix::applicable('chairperson'));
+    }
+
+    public function testMessagesUseIsOfferedToEveryInstitutionRole(): void
+    {
+        foreach (['institutional_admin', 'dean', 'chairperson', 'instructor', 'student', 'parent'] as $role) {
+            $this->assertContains('messages.use', PermissionMatrix::applicable($role), $role);
+        }
+
+        $this->assertNotContains('messages.use', PermissionMatrix::applicable('admin'));
     }
 
     public function testGrantingAPermissionThatDoesNothingIsRefused(): void
