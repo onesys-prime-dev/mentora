@@ -122,6 +122,64 @@ final class ChatControlsTest extends DatabaseTestCase
         $this->assertTrue(ChatControls::allows($this->chatRow($chat), 'replies'));
     }
 
+    public function testParticipantChairAndDeanAreRefusedOutOfScopeAndAllowedInScope(): void
+    {
+        [$chat] = $this->courseChat();
+        $other  = DeanFactory::department('CY', $this->institution);
+        $people = [
+            'out' => [DeanFactory::chair(DeanFactory::subDepartment($other['department'], 'CY')), DeanFactory::dean($this->institution, $other['department'])],
+            'in'  => [DeanFactory::chair($this->subDepartment), DeanFactory::dean($this->institution, $this->department)],
+        ];
+
+        foreach ($people as $group) {
+            foreach ($group as $user) {
+                $this->join($chat, $user);
+            }
+        }
+
+        foreach ($people['out'] as $user) {
+            $this->assertNull($this->controls->set($user, $chat, 'replies', false));
+            $this->assertNull($this->controls->set($user, 999999, 'replies', false));
+        }
+
+        $this->assertTrue(ChatControls::allows($this->chatRow($chat), 'replies'));
+
+        foreach ($people['in'] as $user) {
+            $this->assertTrue($this->controls->set($user, $chat, 'replies', false)['ok']);
+            $this->assertTrue($this->controls->set($user, $chat, 'replies', true)['ok']);
+        }
+    }
+
+    public function testAnInstitutionalAdminParticipantMayChangeASwitch(): void
+    {
+        [$chat] = $this->courseChat();
+        $admin  = PeopleFactory::person('institutional_admin', 'Ad', 'Min', null, $this->institution, true);
+        $this->join($chat, $admin);
+
+        $this->assertTrue($this->controls->set($admin, $chat, 'bump', false)['ok']);
+        $this->assertFalse(ChatControls::allows($this->chatRow($chat), 'bump'));
+    }
+
+    public function testOnlyTheCreatorChairpersonMayLockAStaffGroup(): void
+    {
+        $creator = DeanFactory::chair($this->subDepartment);
+        $second  = DeanFactory::chair(DeanFactory::subDepartment($this->department, 'CZ'), 'Other');
+        $now     = date('Y-m-d H:i:s');
+        db_connect()->table('conversations')->insert([
+            'institution_id' => $this->institution, 'type' => 'group', 'created_by' => $creator->id, 'is_locked' => 0,
+            'title' => 'Staff', 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $group = (int) db_connect()->insertID();
+        $this->join($group, $creator);
+        $this->join($group, $second);
+
+        $this->assertNull($this->controls->set($second, $group, 'lock', true));
+        $this->assertSame(0, (int) $this->chatRow($group)['is_locked']);
+        $this->assertTrue($this->controls->set($creator, $group, 'lock', true)['ok']);
+        $this->assertSame(1, (int) $this->chatRow($group)['is_locked']);
+        $this->assertSame(1, $this->auditCount('messages.chat_control_changed'));
+    }
+
     public function testAStudentAndAnOutsiderGetNull(): void
     {
         [$chat, $student] = $this->courseChat();

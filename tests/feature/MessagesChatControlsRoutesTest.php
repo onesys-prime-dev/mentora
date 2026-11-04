@@ -114,6 +114,32 @@ final class MessagesChatControlsRoutesTest extends RouteTestCase
         $this->assertSame($missing, [$scope->getStatusCode(), $scope->getBody()]);
     }
 
+    public function testParticipantChairAndDeanOutOfScopeGetTheSharedNotFoundAndInScopeSucceed(): void
+    {
+        $other = DeanFactory::department('RY', $this->institution);
+        $out   = [DeanFactory::chair(DeanFactory::subDepartment($other['department'], 'RY')), DeanFactory::dean($this->institution, $other['department'])];
+        $in    = [DeanFactory::chair((int) db_connect()->table('programs')->where('id', $this->program)->get()->getRow()->sub_department_id)];
+
+        foreach ([...$out, ...$in] as $user) {
+            $this->join($this->courseChat, $user);
+        }
+
+        $this->signIn($this->instructor);
+        $missing = $this->flip(999999, ['switch' => 'lock', 'on' => true])->response();
+        $missing = [$missing->getStatusCode(), $missing->getBody()];
+
+        foreach ($out as $user) {
+            $this->signIn($user);
+            $response = $this->flip($this->courseChat, ['switch' => 'lock', 'on' => true])->response();
+            $this->assertSame($missing, [$response->getStatusCode(), $response->getBody()]);
+        }
+
+        $this->assertSame(0, (int) db_connect()->table('conversations')->where('id', $this->courseChat)->get()->getRow()->is_locked);
+
+        $this->signIn($in[0]);
+        $this->assertSame(200, $this->flip($this->courseChat, ['switch' => 'lock', 'on' => true])->response()->getStatusCode());
+    }
+
     public function testAReadOnlyInstitutionIsRefused(): void
     {
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
