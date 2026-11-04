@@ -256,7 +256,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         const note = document.createElement("div");
 
-        note.className = "mt-0.5 flex gap-2 text-[12px] text-[#646464]";
+        note.className = "flex gap-2 text-[12px] text-[#646464]";
 
         if (item.pending) {
             note.textContent = "Sending…";
