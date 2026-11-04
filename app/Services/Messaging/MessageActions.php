@@ -57,7 +57,7 @@ class MessageActions
         $conversation = $this->conversations->find($user, $conversationId);
         $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
 
-        if ($conversation === null || $message === null) {
+        if ($conversation === null || $message === null || ! $this->messages->visibleTo((int) $user->id, $conversationId, $messageId)) {
             return ['ok' => false, 'reason' => 'not_found'];
         }
 
@@ -126,7 +126,7 @@ class MessageActions
      */
     public function reactors(User $user, int $conversationId, int $messageId): ?array
     {
-        if ($this->conversations->find($user, $conversationId) === null || $this->message($conversationId, $messageId) === null) {
+        if ($this->conversations->find($user, $conversationId) === null || $this->message($conversationId, $messageId) === null || ! $this->messages->visibleTo((int) $user->id, $conversationId, $messageId)) {
             return null;
         }
 

@@ -226,7 +226,7 @@ class MessageService
         }
 
         $db     = db_connect();
-        $clock  = $db->query("SELECT DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS now, DATE_FORMAT(NOW() - INTERVAL 2 SECOND, '%Y-%m-%d %H:%i:%s') AS lagged")->getRowArray();
+        $clock  = ['now' => date('Y-m-d H:i:s'), 'lagged' => date('Y-m-d H:i:s', time() - 2)];
         $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $since);
         $since  = $parsed !== false && $parsed->format('Y-m-d H:i:s') === $since ? $since : (string) $clock['now'];
         $userId = (int) $user->id;
@@ -286,7 +286,7 @@ class MessageService
         }
 
         $db = db_connect();
-        $db->table('messages')->where(['id' => $messageId, 'removed_at' => null])->update(['removed_at' => date('Y-m-d H:i:s'), 'removed_by' => (int) $user->id]);
+        $db->table('messages')->where(['id' => $messageId, 'removed_at' => null])->update(['removed_at' => date('Y-m-d H:i:s'), 'removed_by' => (int) $user->id, 'changed_at' => date('Y-m-d H:i:s')]);
 
         if ($db->affectedRows() > 0) {
             // Ids and the action only, never the text.
