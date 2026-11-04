@@ -53,6 +53,37 @@ class NotificationController extends BaseController
         ]);
     }
 
+    /**
+     * For the toast beside the bell. Without `after`: the newest id (the baseline) and the unread count. With it:
+     * up to 3 unread notifications newer than that id. Titles and bodies are the same words the panel shows.
+     */
+    public function latest(): ResponseInterface
+    {
+        $service = new NotificationService();
+        $userId  = (int) auth()->id();
+        $after   = $this->request->getGet('after');
+        $rows    = $service->page($userId, null, 10)['rows'];
+        $lastId  = $rows === [] ? 0 : (int) $rows[0]['id'];
+
+        $items = [];
+
+        if (is_string($after) && preg_match('/^\d{1,10}$/', $after) === 1) {
+            foreach (array_reverse($rows) as $row) {
+                if ((int) $row['id'] > (int) $after && $row['read_at'] === null && count($items) < 3) {
+                    $items[] = [
+                        'id'     => (int) $row['id'],
+                        'title'  => (string) $row['title'],
+                        'body'   => (string) $row['body'],
+                        'link'   => $row['link'] === null ? null : site_url((string) $row['link']),
+                        'urgent' => (int) $row['urgent'] === 1,
+                    ];
+                }
+            }
+        }
+
+        return $this->response->setJSON(['last_id' => $lastId, 'unread' => $service->unreadCount($userId), 'items' => $items]);
+    }
+
     public function read(): RedirectResponse
     {
         $id = $this->request->getPost('id');

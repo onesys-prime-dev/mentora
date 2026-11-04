@@ -8,6 +8,7 @@ import "./shared/app-menu";
 import "./shared/institution-menu";
 import "./shared/details-menu";
 import "./shared/notifications-menu";
+import "./shared/notification-toast";
 import "./shared/role-switch";
 import "./shared/select-link";
 import "./shared/auto-search";
