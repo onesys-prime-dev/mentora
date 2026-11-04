@@ -7,8 +7,10 @@ namespace App\Controllers\Institution;
 use App\Controllers\BaseController;
 use App\Controllers\Institution\Concerns\AnswersDialogForms;
 use App\Services\Institutions\ChairAssignmentService;
+use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
+use App\Services\Institutions\StructureException;
 use App\Services\Institutions\StructureService;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -63,6 +65,9 @@ class StructureController extends BaseController
             'structureCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'structureChairs'  => (new ChairAssignmentService())->bySubDepartment($institutionId),
             'structureCandidates' => (new ChairAssignmentService())->candidates($institutionId),
+            'structureDeans'   => (new DeanAssignmentService())->byDepartment($institutionId),
+            'structureDeanCandidates' => (new DeanAssignmentService())->candidates($institutionId),
+            'structureSisDeans' => (new \App\Services\Sis\SisOwnership())->managedAssignments('dean', $institutionId),
             'structureSisChairs' => (new \App\Services\Sis\SisOwnership())->managedAssignments('chairperson', $institutionId),
         ]);
     }
@@ -75,7 +80,22 @@ class StructureController extends BaseController
 
     public function createDepartment(): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->createDepartment($inst, $this->input(), auth()->user()), 'The department was added.', self::BACK);
+        return $this->run(function (int $inst) {
+            $input = $this->input();
+            $id    = $this->structure->createDepartment($inst, $input, auth()->user());
+            $dean  = (int) ($input['dean_user_id'] ?? 0);
+
+            // A dean is chosen with the department. The department is already saved if the choice is refused.
+            if ($dean > 0) {
+                try {
+                    (new DeanAssignmentService())->assign($inst, $id, $dean, auth()->user());
+                } catch (StructureException $e) {
+                    throw new StructureException('The department was added, but its dean was not assigned: ' . $e->getMessage() . ' Assign one from the department.');
+                }
+            }
+
+            return $id;
+        }, 'The department was added.', self::BACK);
     }
 
     public function updateDepartment(int $id): ResponseInterface|RedirectResponse
@@ -169,5 +189,25 @@ class StructureController extends BaseController
     public function revokeChairperson(int $assignmentId): ResponseInterface|RedirectResponse
     {
         return $this->run(fn (int $inst) => (new ChairAssignmentService())->revoke($inst, $assignmentId, auth()->user()), 'The chairperson was removed from the sub-department.', self::BACK);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Deans (per department)
+    |--------------------------------------------------------------------------
+    */
+
+    public function assignDean(int $departmentId): ResponseInterface|RedirectResponse
+    {
+        return $this->run(
+            fn (int $inst) => (new DeanAssignmentService())->assign($inst, $departmentId, (int) ($this->input()['user_id'] ?? 0), auth()->user()),
+            'The dean was assigned.',
+            self::BACK,
+        );
+    }
+
+    public function revokeDean(int $assignmentId): ResponseInterface|RedirectResponse
+    {
+        return $this->run(fn (int $inst) => (new DeanAssignmentService())->end($inst, $assignmentId, auth()->user()), 'The dean was removed from the department.', self::BACK);
     }
 }
