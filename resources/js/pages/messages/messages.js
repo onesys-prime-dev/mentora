@@ -293,8 +293,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
-    const ICON_BUTTON = "grid h-6 w-6 place-items-center rounded-full text-gray-500 opacity-0 hover:bg-gray-200/70 hover:text-gray-800 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100 [@media(hover:none)]:opacity-100";
-    const svg = (d) => `<svg aria-hidden="true" viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+    const ICON_BUTTON = "grid h-8 w-8 flex-none place-items-center rounded-full text-gray-500 opacity-0 hover:bg-gray-200/70 hover:text-gray-800 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100 [@media(hover:none)]:opacity-100";
+    const svg = (d) => `<svg aria-hidden="true" viewBox="0 0 20 20" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
     const ICONS = {
         trash: svg('<path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10M9 9v4M11 9v4"/>'),
         more: svg('<circle cx="4.5" cy="10" r="1" fill="currentColor"/><circle cx="10" cy="10" r="1" fill="currentColor"/><circle cx="15.5" cy="10" r="1" fill="currentColor"/>'),
@@ -306,12 +306,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const row = document.createElement("div");
 
         row.className = `group/msg flex flex-col ${item.mine ? "items-end" : "items-start"}`;
-        row.append(messageNode(item, { mine: item.mine, onToggle: (m, emoji) => react(m, emoji), onShowWho: (m, emoji) => showWho(m, emoji) }));
+        const bubble = messageNode(item, { mine: item.mine, onToggle: (m, emoji) => react(m, emoji), onShowWho: (m, emoji) => showWho(m, emoji) });
 
         const note = document.createElement("div");
 
-        // Under the bubble, on the side away from the edge the bubble hugs: left for my messages, right for theirs.
-        note.className = `flex items-center gap-1 text-[#646464] ${item.mine ? "self-start" : "self-end"}`;
+        note.className = "flex flex-none items-center gap-1 text-[12px] text-[#646464]";
 
         if (item.pending) {
             note.textContent = "Sending…";
@@ -383,8 +382,21 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         }
 
-        if (note.childNodes.length > 0) {
-            row.append(note);
+        const icons = note.querySelector("[data-action=hide]") !== null;
+
+        if (icons) {
+            // The icons sit right beside the bubble: to its left on my messages, to its right on theirs.
+            const line = document.createElement("div");
+
+            line.className = `flex items-center gap-1 ${item.mine ? "justify-end" : "justify-start"}`;
+            line.append(...(item.mine ? [note, bubble] : [bubble, note]));
+            row.append(line);
+        } else {
+            row.append(bubble);
+
+            if (note.childNodes.length > 0) {
+                row.append(note);
+            }
         }
 
         return row;
