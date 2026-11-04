@@ -472,6 +472,8 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations/(:num)/messages/(:num)/delete-everyone', 'Messaging\MessageActionController::deleteEveryone/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/bump', 'Messaging\MessageActionController::bump/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/forward', 'Messaging\MessageActionController::forward/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/pin', 'Messaging\MessageActionController::pin/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/unpin', 'Messaging\MessageActionController::unpin/$1/$2');
     $routes->get('conversations/(:num)/messages/(:num)/reactors', 'Messaging\MessageActionController::reactors/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/report', 'Messaging\ReportController::create/$1/$2');
     // The institutional administrator's reports; anyone else gets the shared 404.

@@ -164,15 +164,18 @@ class MessageService
      * before that message; `$afterId` what came after it (for polling).
      * Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, has_more: bool}|null
+     * @return array{messages: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>}|null
      */
     public function page(User $user, int $conversationId, ?int $beforeId = null, ?int $afterId = null, int $limit = self::PAGE): ?array
     {
-        if ($this->conversations->find($user, $conversationId) === null) {
+        $conversation = $this->conversations->find($user, $conversationId);
+
+        if ($conversation === null) {
             return null;
         }
 
         $userId = (int) $user->id;
+        $canPin = $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation));
         $limit  = max(1, min(self::PAGE_MAX, $limit));
         $first  = $this->visibleFloor($userId, $conversationId);
 
@@ -198,7 +201,11 @@ class MessageService
             $rows = array_reverse($rows);
         }
 
-        return ['messages' => array_map(fn (array $row): array => $this->present($row, $userId), $rows), 'has_more' => $more];
+        return [
+            'messages' => array_map(fn (array $row): array => $this->present($row, $userId, $canPin), $rows),
+            'has_more' => $more,
+            'pinned'   => $this->pinnedPreviews($userId, $conversationId, $first),
+        ];
     }
 
     /** Moves the user's read mark forward to this message; never back. */
@@ -284,7 +291,7 @@ class MessageService
      *
      * @return array<string, mixed>
      */
-    private function present(array $row, int $userId): array
+    private function present(array $row, int $userId, bool $canPin = false): array
     {
         $removed = $row['removed_at'] !== null;
         $erased  = ($row['deleted_everyone_at'] ?? null) !== null;
@@ -311,6 +318,8 @@ class MessageService
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
             'can_bump'            => MessageActions::canBump($row, $userId, $this->switchOn((int) $row['conversation_id'], 'bump')),
             'can_forward'         => MessageActions::canForward($row, $this->switchOn((int) $row['conversation_id'], 'forwarding'), $this->isParentThread((int) $row['conversation_id'])),
+            'pinned'              => ($row['pinned_at'] ?? null) !== null,
+            'can_pin'             => $canPin && ! $removed && ! $erased,
             'deleted_everyone'    => $erased,
             'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone')),
         ];
@@ -373,6 +382,34 @@ class MessageService
             && db_connect()->table('message_hidden')->where(['message_id' => $messageId, 'user_id' => $userId])->countAllResults() === 0;
     }
 
+    /** The first 80 characters of a text, with an ellipsis when cut. */
+    public static function preview(string $plain): string
+    {
+        return mb_strlen($plain) > 80 ? mb_substr($plain, 0, 80) . '…' : $plain;
+    }
+
+    /**
+     * The pinned messages the viewer can see, newest pin first: sender and the first 80 characters, decrypted here.
+     *
+     * @return list<array{id: int, sender_name: string, text: string}>
+     */
+    private function pinnedPreviews(int $userId, int $conversationId, int $floor): array
+    {
+        $rows = db_connect()->table('messages m')->select('m.*')
+            ->where(['m.conversation_id' => $conversationId, 'm.removed_at' => null, 'm.deleted_everyone_at' => null])
+            ->where('m.pinned_at IS NOT NULL', null, false)->where('m.id >=', $floor)
+            ->where('NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = ' . $userId . ')', null, false)
+            ->orderBy('m.pinned_at', 'DESC')->orderBy('m.id', 'DESC')->get()->getResultArray();
+        $out = [];
+
+        foreach ($rows as $row) {
+            $plain = $this->cipher->decrypt((string) $row['body_enc'], $conversationId, (int) $row['sender_id']) ?? 'Message unavailable';
+            $out[] = ['id' => (int) $row['id'], 'sender_name' => $this->sender((int) $row['sender_id'])['name'], 'text' => self::preview($plain)];
+        }
+
+        return $out;
+    }
+
     /**
      * The quoted original of a reply: who wrote it and its first 80 characters, decrypted here on the server.
      *
@@ -394,7 +431,7 @@ class MessageService
 
         if ($orig['removed_at'] === null && ($orig['deleted_everyone_at'] ?? null) === null && $this->visibleTo($viewerId, (int) $orig['conversation_id'], (int) $orig['id'])) {
             $plain = $this->cipher->decrypt((string) $orig['body_enc'], (int) $orig['conversation_id'], (int) $orig['sender_id']) ?? 'Message unavailable';
-            $text  = mb_strlen($plain) > 80 ? mb_substr($plain, 0, 80) . '…' : $plain;
+            $text  = self::preview($plain);
         }
 
         return ['id' => (int) $orig['id'], 'sender_name' => $this->sender((int) $orig['sender_id'])['name'], 'text' => $text];

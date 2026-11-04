@@ -158,6 +158,34 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $this->assertSame(403, $this->api('POST', $uri($this->message))->response()->getStatusCode());
     }
 
+    public function testPinMapsOutcomesToStatuses(): void
+    {
+        $uri = fn (int $id, string $verb = 'pin'): string => "conversations/{$this->conversation}/messages/{$id}/{$verb}";
+
+        $this->signIn($this->student);
+        $this->assertSame(404, $this->api('POST', $uri(999999))->response()->getStatusCode());
+        $this->assertSame(200, $this->api('POST', $uri($this->message))->response()->getStatusCode());
+        $this->assertSame(200, $this->api('POST', $uri($this->message, 'unpin'))->response()->getStatusCode());
+
+        $ids = [$this->message];
+
+        for ($i = 0; $i < 3; $i++) {
+            db_connect()->table('messages')->insert([
+                'conversation_id' => $this->conversation, 'sender_id' => $this->instructor->id, 'body_enc' => 'x',
+                'client_uuid' => $this->uuid(), 'created_at' => date('Y-m-d H:i:s'),
+            ]);
+            $ids[] = (int) db_connect()->insertID();
+        }
+
+        foreach (array_slice($ids, 0, 3) as $id) {
+            $this->assertSame(200, $this->api('POST', $uri($id))->response()->getStatusCode());
+        }
+
+        $limited = $this->api('POST', $uri($ids[3]))->response();
+        $this->assertSame(409, $limited->getStatusCode());
+        $this->assertSame(['error' => 'limit', 'max' => 3], json_decode($limited->getBody(), true));
+    }
+
     public function testForwardMapsOutcomesToStatuses(): void
     {
         $uri = fn (int $id): string => "conversations/{$this->conversation}/messages/{$id}/forward";

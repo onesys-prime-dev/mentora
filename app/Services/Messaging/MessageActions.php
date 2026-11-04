@@ -422,6 +422,67 @@ class MessageActions
         return ['ok' => true, 'results' => $results];
     }
 
+    /** Most pinned messages one chat can hold. */
+    public const PIN_LIMIT = 3;
+
+    /**
+     * Whether a message can carry a pin: not deleted for everyone and not removed. Who may pin is the policy's call.
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canPin(array $row): bool
+    {
+        return ($row['deleted_everyone_at'] ?? null) === null && ($row['removed_at'] ?? null) === null;
+    }
+
+    /**
+     * Pins or unpins a message for everyone in the chat. Course chats: moderators only. At most PIN_LIMIT pinned per chat.
+     * Pinning a pinned message (or unpinning an unpinned one) is ok and changes nothing.
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'limit'}
+     */
+    public function pinMessage(User $user, int $conversationId, int $messageId, bool $pinned): array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+        $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
+        $userId       = (int) $user->id;
+
+        if ($conversation === null || $message === null || ! self::canPin($message) || ! $this->messages->visibleTo($userId, $conversationId, $messageId)) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        if (! $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation))) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if (($message['pinned_at'] !== null) === $pinned) {
+            return ['ok' => true];
+        }
+
+        $db = db_connect();
+
+        if ($pinned && $db->table('messages')->where('conversation_id', $conversationId)->where('pinned_at IS NOT NULL', null, false)->countAllResults() >= self::PIN_LIMIT) {
+            return ['ok' => false, 'reason' => 'limit'];
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $db->table('messages')->where('id', $messageId)->update([
+            'pinned_at'  => $pinned ? $now : null,
+            'pinned_by'  => $pinned ? $userId : null,
+            'changed_at' => $now,
+        ]);
+
+        // Ids and the action only, never the text.
+        service('auditLogger')->log($pinned ? 'messages.message_pinned' : 'messages.message_unpinned', $user, [
+            'target_type'    => 'message',
+            'target_id'      => $messageId,
+            'institution_id' => (int) $conversation['institution_id'],
+            'new'            => ['conversation_id' => $conversationId],
+        ]);
+
+        return ['ok' => true];
+    }
+
     /**
      * A live message of this conversation, or null.
      *

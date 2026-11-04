@@ -100,6 +100,35 @@ class MessageActionController extends MessagingController
             : $this->notFound();
     }
 
+    public function pin(int $conversationId, int $messageId): ResponseInterface
+    {
+        return $this->setPinned($conversationId, $messageId, true);
+    }
+
+    public function unpin(int $conversationId, int $messageId): ResponseInterface
+    {
+        return $this->setPinned($conversationId, $messageId, false);
+    }
+
+    private function setPinned(int $conversationId, int $messageId, bool $pinned): ResponseInterface
+    {
+        $result = (new MessageActions())->pinMessage(auth()->user(), $conversationId, $messageId, $pinned);
+
+        if ($result['ok']) {
+            return $this->response->setJSON(['ok' => true]);
+        }
+
+        $reason = $result['reason'] ?? 'not_found';
+
+        if ($reason === 'limit') {
+            return $this->response->setStatusCode(409)->setJSON(['error' => 'limit', 'max' => MessageActions::PIN_LIMIT]);
+        }
+
+        return isset(self::FAILURES[$reason])
+            ? $this->response->setStatusCode(self::FAILURES[$reason])->setJSON(['error' => $reason])
+            : $this->notFound();
+    }
+
     public function reactors(int $conversationId, int $messageId): ResponseInterface
     {
         $reactors = (new MessageActions())->reactors(auth()->user(), $conversationId, $messageId);
