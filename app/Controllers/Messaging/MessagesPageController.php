@@ -19,6 +19,8 @@ class MessagesPageController extends BaseController
         return view('pages/messages/index', [
             'title'  => 'Messages',
             'page'   => 'messages',
+            // The page itself stays put; only the list and the thread scroll.
+            'fullHeight' => true,
             'user'   => auth()->user(),
             'openId' => $conversationId !== null && ctype_digit($conversationId) ? $conversationId : '',
             // Only the button: GroupService is what decides who may start a group.

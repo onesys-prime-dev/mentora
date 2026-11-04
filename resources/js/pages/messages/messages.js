@@ -153,7 +153,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         $("[data-role=head-name]").textContent = c?.name ?? "Conversation";
         $("[data-role=head-sub]").textContent = !c ? "" : c.subtitle ? `About ${c.subtitle}` : c.type === "course" ? "Course chat" : c.type === "group" ? "Group" : "Direct message";
         avatar.textContent = c?.initials ?? "";
-        avatar.className = `grid h-[30px] w-[30px] flex-none place-items-center text-[11px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
+        avatar.className = `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
 
         const canPost = c === null || c.can_post !== false;
         const locked = Number(c?.is_locked) === 1;
@@ -205,7 +205,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         const note = document.createElement("div");
 
-        note.className = "mt-0.5 flex gap-2 text-[10px] text-[#646464]";
+        note.className = "mt-0.5 flex gap-2 text-[12px] text-[#646464]";
 
         if (item.pending) {
             note.textContent = "Sending…";
@@ -273,7 +273,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             if (label !== day) {
                 const separator = document.createElement("div");
 
-                separator.className = "py-1 text-center text-[10px] text-[#646464]";
+                separator.className = "py-1 text-center text-[12px] text-[#646464]";
                 separator.textContent = label;
                 nodes.push(separator);
                 day = label;

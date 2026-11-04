@@ -106,14 +106,14 @@ export function dayLabel(iso, now) {
 }
 
 export function messageNode(message, { mine }) {
-    const node = el("div", `max-w-[70%] break-words rounded-2xl border px-3 py-1.5 text-sm ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
+    const node = el("div", `max-w-[70%] break-words rounded-2xl border px-3 py-1.5 text-[15px] ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
 
     node.dataset.id = String(message.id);
     node.dataset.mine = mine ? "true" : "false";
 
     if (!mine && message.sender_name) {
         const role = ROLE_LABELS[message.sender_role];
-        const label = el("small", `mb-0.5 block text-[10px] font-semibold ${message.sender_role === "instructor" ? "text-brand" : "text-gray-500"}`, role ? `${message.sender_name} · ${role}` : message.sender_name);
+        const label = el("small", `mb-0.5 block text-[12px] font-semibold ${message.sender_role === "instructor" ? "text-brand" : "text-gray-500"}`, role ? `${message.sender_name} · ${role}` : message.sender_name);
 
         node.append(label);
     }
@@ -133,7 +133,7 @@ export function messageNode(message, { mine }) {
 }
 
 export function conversationRow(conversation, { selected }) {
-    const row = el("button", `flex w-full items-center gap-2 border-l-[3px] px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${selected ? "border-brand bg-brand-tint" : "border-transparent hover:bg-gray-50"}`);
+    const row = el("button", `flex w-full items-center gap-3 border-l-[3px] px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${selected ? "border-brand bg-brand-tint" : "border-transparent hover:bg-gray-50"}`);
 
     row.type = "button";
     row.dataset.id = String(conversation.id);
@@ -143,13 +143,13 @@ export function conversationRow(conversation, { selected }) {
     }
 
     const shape = conversation.type === "course" ? "rounded-lg bg-brand text-white" : conversation.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark";
-    const avatar = el("span", `grid h-[30px] w-[30px] flex-none place-items-center text-[11px] font-semibold ${shape}`, conversation.initials ?? "");
+    const avatar = el("span", `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${shape}`, conversation.initials ?? "");
 
     avatar.dataset.avatar = "";
     avatar.setAttribute("aria-hidden", "true");
 
     const text = el("span", "min-w-0 flex-1");
-    const name = el("span", "block truncate text-xs font-semibold text-gray-900");
+    const name = el("span", "block truncate text-[13px] font-semibold text-gray-900");
 
     if (conversation.type === "course") {
         name.insertAdjacentHTML("beforeend", PIN);
@@ -159,17 +159,17 @@ export function conversationRow(conversation, { selected }) {
     text.append(name);
 
     if (conversation.subtitle) {
-        text.append(el("span", "block truncate text-[10px] font-medium text-brand", conversation.subtitle));
+        text.append(el("span", "block truncate text-[12px] font-medium text-brand", conversation.subtitle));
     }
 
-    text.append(el("span", "block truncate text-[11px] text-gray-500", conversation.preview ?? ""));
+    text.append(el("span", "block truncate text-[13px] text-gray-500", conversation.preview ?? ""));
 
-    const meta = el("span", "flex-none text-right text-[10px] text-gray-500");
+    const meta = el("span", "flex-none text-right text-[12px] text-gray-500");
 
     meta.append(el("span", "block", formatTime(conversation.last_message_at, new Date())));
 
     if (conversation.unread > 0) {
-        const pill = el("span", "mt-0.5 inline-block min-w-[16px] rounded-full bg-brand px-1 text-center text-[10px] font-semibold text-white", String(conversation.unread));
+        const pill = el("span", "mt-0.5 inline-block min-w-[16px] rounded-full bg-brand px-1 text-center text-[12px] font-semibold text-white", String(conversation.unread));
 
         pill.dataset.unread = "";
         meta.append(pill, el("span", "sr-only", " unread"));
