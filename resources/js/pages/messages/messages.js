@@ -297,7 +297,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const svg = (d) => `<svg aria-hidden="true" viewBox="0 0 20 20" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
     const ICONS = {
         trash: svg('<path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10M9 9v4M11 9v4"/>'),
-        more: svg('<circle cx="4.5" cy="10" r="1" fill="currentColor"/><circle cx="10" cy="10" r="1" fill="currentColor"/><circle cx="15.5" cy="10" r="1" fill="currentColor"/>'),
+        more: svg('<circle cx="10" cy="4.5" r="1" fill="currentColor"/><circle cx="10" cy="10" r="1" fill="currentColor"/><circle cx="10" cy="15.5" r="1" fill="currentColor"/>'),
         flag: svg('<path d="M5 17V3M5 4h9l-2 3 2 3H5"/>'),
         remove: svg('<circle cx="10" cy="10" r="7"/><path d="M7 7l6 6M13 7l-6 6"/>'),
     };
