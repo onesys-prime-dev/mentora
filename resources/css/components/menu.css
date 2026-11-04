@@ -1,0 +1,70 @@
+/* Context menu for chats and messages (messages/menu.js). Plain CSS so it
+   does not depend on Tailwind scanning the script. */
+[data-role="menu"] {
+    z-index: 60;
+    min-width: 12rem;
+    max-width: 18rem;
+    padding: 0.25rem;
+    background: #fff;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgb(0 0 0 / 0.15);
+    font-size: 0.875rem;
+}
+[data-role="menu"] button {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    background: transparent;
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+[data-role="menu"] button:hover,
+[data-role="menu"] button:focus-visible {
+    background: #f2f7ff;
+    outline: none;
+}
+[data-role="menu"] button[data-danger="true"] {
+    color: #b91c1c;
+}
+[data-role="menu"] [role="separator"] {
+    height: 1px;
+    margin: 0.25rem 0;
+    background: #e5e7eb;
+}
+[data-role="menu"] [data-role="reactions"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem;
+    max-width: 16rem;
+    padding: 0.125rem;
+}
+[data-role="menu"] [data-role="reactions"] button {
+    width: auto;
+    padding: 0.25rem 0.4rem;
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+}
+[data-role="menu"] [aria-checked="true"] {
+    background: #dbe7ff;
+}
+html[data-theme="dark"] [data-role="menu"] {
+    background: #1d2330;
+    color: #e8ebf2;
+    border-color: #3a4659;
+}
+html[data-theme="dark"] [data-role="menu"] button:hover,
+html[data-theme="dark"] [data-role="menu"] button:focus-visible {
+    background: #202738;
+}
+html[data-theme="dark"] [data-role="menu"] button[data-danger="true"] {
+    color: #fca5a5;
+}
+html[data-theme="dark"] [data-role="menu"] [role="separator"] {
+    background: #3a4659;
+}
+html[data-theme="dark"] [data-role="menu"] [aria-checked="true"] {
+    background: #1b2740;
+}
