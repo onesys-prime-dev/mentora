@@ -135,7 +135,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.items = [...sent, ...state.items.filter((item) => typeof item.id !== "number")];
     };
-    const current = () => state.conversations.find((c) => c.id === state.openId) ?? null;
+    // The open chat can leave the list (archived or muted while another filter is on); its last row keeps its menu working.
+    const current = () => state.conversations.find((c) => c.id === state.openId) ?? (state.openRow?.id === state.openId ? state.openRow : null);
 
     // ---- the list ------------------------------------------------------
 
@@ -194,6 +195,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     // ---- the thread ----------------------------------------------------
 
     function applyConversation(c) {
+        if (c) {
+            state.openRow = c;
+        }
+
         const avatar = $("[data-role=head-avatar]");
 
         $("[data-role=head-name]").textContent = c?.name ?? "Conversation";
@@ -424,8 +429,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.since = data.server_time ?? state.since;
 
-        if (data.messages.length > 0) {
-            state.items = mergeById(state.items, data.messages);
+        // A change to a message older than the loaded page is left alone: merging it in would open a gap that
+        // "Load older" then skips over. It shows when that page is loaded.
+        const loaded = state.items.filter((i) => typeof i.id === "number").map((i) => i.id);
+        const newest = loaded.length > 0 ? Math.max(...loaded) : 0;
+        const known = new Set(loaded);
+        const relevant = data.messages.filter((m) => known.has(m.id) || m.id > newest);
+
+        if (relevant.length > 0) {
+            state.items = mergeById(state.items, relevant);
             renderMessages();
             refreshThread();
         }
@@ -581,6 +593,12 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             item.pending = false;
             item.failed = true;
             item.failNote = reason === "rate_limited" ? data?.message ?? null : null;
+
+            if (reason === "invalid_reply") {
+                // The message being answered is gone. Retry sends it as a plain message instead of failing again.
+                item.replyTo = null;
+                item.failNote = "The message you replied to is no longer there. Retry sends this without the reply.";
+            }
         }
 
         renderMessages();
@@ -866,6 +884,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         onControlsChanged: (c) => {
             if (c.id === state.openId) {
                 applyConversation(c);
+                refreshThread();
             }
 
             renderList();
@@ -1189,16 +1208,20 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
-    function openForward(m) {
+    async function openForward(m) {
         const list = $("[data-role=forward-list]");
         const send = $("[data-role=forward-send]");
         const note = $("[data-role=forward-state]");
-        const targets = state.conversations.filter((c) => c.id !== state.openId && !c.archived && !c.closed && c.can_post !== false);
+        // Every active chat, whatever filter the list is showing.
+        const all = await api.conversations({ filter: "all", unread: false, archived: false });
+        const source = all.status === 200 && Array.isArray(all.data?.conversations) ? all.data.conversations : state.conversations;
+        const targets = source.filter((c) => c.id !== state.openId && !c.archived && !c.closed && c.can_post !== false);
         const chosen = new Set();
+        const boxes = new Map();
 
         const sync = () => {
             send.disabled = chosen.size === 0;
-            list.querySelectorAll("input").forEach((box) => { box.disabled = !box.checked && chosen.size >= 5; });
+            list.querySelectorAll("input").forEach((box) => { box.disabled = box.dataset.sent === "true" || (!box.checked && chosen.size >= 5); });
         };
 
         note.textContent = targets.length === 0 ? "You have no other chats to forward to." : "";
@@ -1219,6 +1242,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
                 sync();
             });
+            boxes.set(c.id, box);
             label.append(box, document.createTextNode(c.name));
             item.append(label);
 
@@ -1241,10 +1265,25 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const failed = (result.data?.results ?? []).filter((r) => !r.ok);
 
             if (failed.length > 0) {
-                const names = failed.map((r) => state.conversations.find((c) => c.id === r.conversation_id)?.name ?? "a chat");
+                const names = failed.map((r) => targets.find((c) => c.id === r.conversation_id)?.name ?? "a chat");
+
+                // Chats that did get it stay done, so a retry does not send it to them twice.
+                (result.data?.results ?? []).filter((r) => r.ok).forEach((r) => {
+                    chosen.delete(r.conversation_id);
+
+                    const box = boxes.get(r.conversation_id);
+
+                    if (box) {
+                        box.checked = false;
+                        box.dataset.sent = "true";
+                        box.disabled = true;
+                        box.parentElement.append(document.createTextNode(" (sent)"));
+                    }
+                });
 
                 note.textContent = `Couldn't forward to: ${names.join(", ")}`;
                 sync();
+                send.disabled = chosen.size === 0;
 
                 return;
             }
