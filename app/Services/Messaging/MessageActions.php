@@ -23,6 +23,9 @@ class MessageActions
     /** How long an original must wait before it can be bumped again. */
     public const BUMP_COOLDOWN_MINUTES = 60;
 
+    /** Most live pinned messages one chat can hold (erased or removed ones do not count). */
+    public const PIN_LIMIT = 3;
+
     private ConversationService $conversations;
 
     private MessagingContextResolver $resolver;
@@ -422,9 +425,6 @@ class MessageActions
         return ['ok' => true, 'results' => $results];
     }
 
-    /** Most pinned messages one chat can hold. */
-    public const PIN_LIMIT = 3;
-
     /**
      * Whether a message can carry a pin: not deleted for everyone and not removed. Who may pin is the policy's call.
      *
@@ -461,7 +461,7 @@ class MessageActions
 
         $db = db_connect();
 
-        if ($pinned && $db->table('messages')->where('conversation_id', $conversationId)->where('pinned_at IS NOT NULL', null, false)->countAllResults() >= self::PIN_LIMIT) {
+        if ($pinned && $db->table('messages')->where('conversation_id', $conversationId)->where(['removed_at' => null, 'deleted_everyone_at' => null])->where('pinned_at IS NOT NULL', null, false)->countAllResults() >= self::PIN_LIMIT) {
             return ['ok' => false, 'reason' => 'limit'];
         }
 

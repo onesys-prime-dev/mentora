@@ -186,6 +186,24 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $this->assertSame(['error' => 'limit', 'max' => 3], json_decode($limited->getBody(), true));
     }
 
+    public function testAStudentPinningInACourseChatIsForbidden(): void
+    {
+        $offering = (int) db_connect()->table('course_offerings')->get()->getRowArray()['id'];
+        $course   = (int) (new \App\Services\Messaging\CourseChatSync())->syncOffering($offering)['conversation_id'];
+
+        db_connect()->table('messages')->insert([
+            'conversation_id' => $course, 'sender_id' => $this->instructor->id, 'body_enc' => 'x',
+            'client_uuid' => $this->uuid(), 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $id = (int) db_connect()->insertID();
+
+        $this->signIn($this->student);
+        $response = $this->api('POST', "conversations/{$course}/messages/{$id}/pin")->response();
+
+        $this->assertSame(403, $response->getStatusCode());
+        $this->assertSame(['error' => 'not_allowed'], json_decode($response->getBody(), true));
+    }
+
     public function testForwardMapsOutcomesToStatuses(): void
     {
         $uri = fn (int $id): string => "conversations/{$this->conversation}/messages/{$id}/forward";

@@ -121,6 +121,41 @@ final class MessageActionsPinTest extends DatabaseTestCase
         $this->assertSame(1, db_connect()->table('audit_logs')->where('action', 'messages.message_pinned')->where('target_id', $ids[0])->countAllResults());
     }
 
+    /** @return list<int> three pinned messages plus a fourth, unpinned one */
+    private function threePinnedAndOneSpare(): array
+    {
+        $ids = [];
+
+        for ($i = 0; $i < 4; $i++) {
+            $ids[] = $this->post($this->direct, $this->student, 'm' . $i);
+        }
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->assertTrue($this->actions()->pinMessage($this->student, $this->direct, $ids[$i], true)['ok']);
+        }
+
+        return $ids;
+    }
+
+    public function testAnErasedPinnedMessageNoLongerCountsTowardTheLimit(): void
+    {
+        $ids = $this->threePinnedAndOneSpare();
+        $this->assertSame('limit', $this->actions()->pinMessage($this->student, $this->direct, $ids[3], true)['reason']);
+
+        db_connect()->table('messages')->where('id', $ids[0])->update(['deleted_everyone_at' => date('Y-m-d H:i:s')]);
+
+        $this->assertTrue($this->actions()->pinMessage($this->student, $this->direct, $ids[3], true)['ok']);
+    }
+
+    public function testARemovedPinnedMessageNoLongerCountsTowardTheLimit(): void
+    {
+        $ids = $this->threePinnedAndOneSpare();
+
+        db_connect()->table('messages')->where('id', $ids[1])->update(['removed_at' => date('Y-m-d H:i:s'), 'removed_by' => $this->instructor->id]);
+
+        $this->assertTrue($this->actions()->pinMessage($this->student, $this->direct, $ids[3], true)['ok']);
+    }
+
     public function testUnpinClearsAndFreesASlot(): void
     {
         $id = $this->post($this->direct, $this->student, 'x');
