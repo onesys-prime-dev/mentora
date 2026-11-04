@@ -17,15 +17,21 @@ class MessageActions
 
     public const QUICK = ['👍', '❤️', '😂', '😮', '😢'];
 
+    /** How long after sending the author can still delete a message for everyone. */
+    public const DELETE_EVERYONE_MINUTES = 15;
+
     private ConversationService $conversations;
 
     private MessagingContextResolver $resolver;
 
     private MessagingPolicy $policy;
 
-    /** The message service and cipher are accepted for the actions that later tasks add (bump, forward, delete). */
+    private MessageCipher $cipher;
+
+    /** The message service is accepted for the actions that later tasks add (bump, forward). */
     public function __construct(?MessageService $messages = null, ?ConversationService $conversations = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null, ?MessageCipher $cipher = null)
     {
+        $this->cipher        = $cipher ?? new MessageCipher();
         $this->resolver      = $resolver ?? new MessagingContextResolver();
         $this->conversations = $conversations ?? new ConversationService($this->resolver);
         $this->policy        = $policy ?? new MessagingPolicy();
@@ -168,6 +174,83 @@ class MessageActions
         }
 
         return $out;
+    }
+
+    /**
+     * Whether the viewer may still delete this message for everyone: their own, not yet deleted, not removed,
+     * inside the window, and the chat's switch on. The one place the rule lives (payload flag and the action).
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canDeleteEveryone(array $row, int $viewerId, bool $switchOn): bool
+    {
+        return $switchOn
+            && (int) $row['sender_id'] === $viewerId
+            && ($row['deleted_everyone_at'] ?? null) === null
+            && ($row['removed_at'] ?? null) === null
+            && ! self::pastDeleteWindow((string) $row['created_at']);
+    }
+
+    private static function pastDeleteWindow(string $createdAt): bool
+    {
+        $at = strtotime($createdAt);
+
+        return $at === false || time() - $at > self::DELETE_EVERYONE_MINUTES * 60;
+    }
+
+    /**
+     * Erases the text of the caller's own message for everyone, within DELETE_EVERYONE_MINUTES of sending.
+     * The row stays (replies and reactions keep pointing at it); only the ciphertext is overwritten with an
+     * empty one. Report snapshots are separate copies and stay readable. Repeating it changes nothing.
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'switched_off'|'too_late'}
+     */
+    public function deleteForEveryone(User $user, int $conversationId, int $messageId): array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+        $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
+
+        if ($conversation === null || $message === null) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        $userId = (int) $user->id;
+
+        if ((int) $message['sender_id'] !== $userId) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if ($message['deleted_everyone_at'] !== null) {
+            return ['ok' => true];
+        }
+
+        if (! ChatControls::allows($conversation, 'delete_everyone')) {
+            return ['ok' => false, 'reason' => 'switched_off'];
+        }
+
+        if (self::pastDeleteWindow((string) $message['created_at'])) {
+            return ['ok' => false, 'reason' => 'too_late'];
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $db  = db_connect();
+        $db->table('messages')->where(['id' => $messageId, 'deleted_everyone_at' => null])->update([
+            'body_enc'            => $this->cipher->encrypt('', $conversationId, $userId),
+            'deleted_everyone_at' => $now,
+            'changed_at'          => $now,
+        ]);
+
+        if ($db->affectedRows() > 0) {
+            // Ids and the action only, never the text.
+            service('auditLogger')->log('messages.message_deleted_everyone', $user, [
+                'target_type'    => 'message',
+                'target_id'      => $messageId,
+                'institution_id' => (int) $conversation['institution_id'],
+                'new'            => ['conversation_id' => $conversationId],
+            ]);
+        }
+
+        return ['ok' => true];
     }
 
     /**

@@ -121,6 +121,27 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $this->assertSame(429, $this->react('🔥')->response()->getStatusCode());
     }
 
+    public function testDeleteForEveryoneMapsOutcomesToStatuses(): void
+    {
+        $uri = fn (int $id): string => "conversations/{$this->conversation}/messages/{$id}/delete-everyone";
+
+        $this->signIn($this->student);
+        $this->assertSame(403, $this->api('POST', $uri($this->message))->response()->getStatusCode());
+        $this->assertSame(404, $this->api('POST', $uri(999999))->response()->getStatusCode());
+
+        $this->signIn($this->instructor);
+        $this->assertSame(200, $this->api('POST', $uri($this->message))->response()->getStatusCode());
+        $this->assertSame(200, $this->api('POST', $uri($this->message))->response()->getStatusCode());
+
+        db_connect()->table('messages')->insert([
+            'conversation_id' => $this->conversation, 'sender_id' => $this->instructor->id, 'body_enc' => 'x',
+            'client_uuid' => $this->uuid(), 'created_at' => date('Y-m-d H:i:s', time() - 20 * 60),
+        ]);
+        $old = $this->api('POST', $uri((int) db_connect()->insertID()))->response();
+        $this->assertSame(403, $old->getStatusCode());
+        $this->assertSame(['error' => 'too_late'], json_decode($old->getBody(), true));
+    }
+
     public function testTheSystemAdministratorReachesNeitherRoute(): void
     {
         $this->signIn(CourseFactory::user('admin'));

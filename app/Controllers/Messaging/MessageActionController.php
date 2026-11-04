@@ -14,7 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class MessageActionController extends MessagingController
 {
-    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'invalid' => 422];
+    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'too_late' => 403, 'invalid' => 422];
 
     public function react(int $conversationId, int $messageId): ResponseInterface
     {
@@ -32,6 +32,21 @@ class MessageActionController extends MessagingController
 
         if ($result['ok']) {
             return $this->response->setJSON(['reactions' => $result['reactions'] ?? []]);
+        }
+
+        $reason = $result['reason'] ?? 'not_found';
+
+        return isset(self::FAILURES[$reason])
+            ? $this->response->setStatusCode(self::FAILURES[$reason])->setJSON(['error' => $reason])
+            : $this->notFound();
+    }
+
+    public function deleteEveryone(int $conversationId, int $messageId): ResponseInterface
+    {
+        $result = (new MessageActions())->deleteForEveryone(auth()->user(), $conversationId, $messageId);
+
+        if ($result['ok']) {
+            return $this->response->setJSON(['ok' => true]);
         }
 
         $reason = $result['reason'] ?? 'not_found';

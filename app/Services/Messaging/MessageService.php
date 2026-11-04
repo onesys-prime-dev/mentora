@@ -287,9 +287,10 @@ class MessageService
     private function present(array $row, int $userId): array
     {
         $removed = $row['removed_at'] !== null;
+        $erased  = ($row['deleted_everyone_at'] ?? null) !== null;
         $body    = null;
 
-        if (! $removed) {
+        if (! $removed && ! $erased) {
             $body = $this->cipher->decrypt((string) $row['body_enc'], (int) $row['conversation_id'], (int) $row['sender_id']);
 
             if ($body === null) {
@@ -308,7 +309,24 @@ class MessageService
             'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
+            'deleted_everyone'    => $erased,
+            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->deleteSwitchOn((int) $row['conversation_id'])),
         ];
+    }
+
+    /** @var array<int, bool> */
+    private array $deleteSwitch = [];
+
+    /** Whether the chat's "delete for everyone" switch is on; looked up once per chat per request. */
+    private function deleteSwitchOn(int $conversationId): bool
+    {
+        if (! isset($this->deleteSwitch[$conversationId])) {
+            $chat = db_connect()->table('conversations')->select('allow_delete_everyone')->where('id', $conversationId)->get()->getRowArray();
+
+            $this->deleteSwitch[$conversationId] = $chat !== null && ChatControls::allows($chat, 'delete_everyone');
+        }
+
+        return $this->deleteSwitch[$conversationId];
     }
 
     /** Whether the sender may reply to this message: in this chat, not before their first visible one, not hidden by them. */
