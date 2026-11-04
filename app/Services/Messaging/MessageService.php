@@ -209,10 +209,13 @@ class MessageService
 
     /**
      * Messages of a chat changed (reacted to, pinned, erased) after `$since`, for polling. The same visibility as
-     * page(). `server_time` is the database clock to send back as the next `since`; an unreadable `$since` counts as
-     * now, so nothing comes back. Null when the conversation is not the user's.
+     * page(). `server_time` is the next `since` to send: the database clock minus two seconds, so a change committed in
+     * the same second as that clock is delivered again rather than missed; the client merges changed messages by id
+     * (replace in place), which makes the repeat harmless. When more than PAGE_MAX changed, the oldest PAGE_MAX come
+     * back, `more` is true and `server_time` is the last returned change time, so the next call continues from there.
+     * An unreadable `$since` counts as now, so nothing comes back. Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, server_time: string}|null
+     * @return array{messages: list<array<string, mixed>>, server_time: string, more: bool}|null
      */
     public function changedSince(User $user, int $conversationId, string $since): ?array
     {
@@ -223,18 +226,25 @@ class MessageService
         }
 
         $db     = db_connect();
-        $now    = (string) $db->query("SELECT DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS t")->getRowArray()['t'];
+        $clock  = $db->query("SELECT DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS now, DATE_FORMAT(NOW() - INTERVAL 2 SECOND, '%Y-%m-%d %H:%i:%s') AS lagged")->getRowArray();
         $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $since);
-        $since  = $parsed !== false && $parsed->format('Y-m-d H:i:s') === $since ? $since : $now;
+        $since  = $parsed !== false && $parsed->format('Y-m-d H:i:s') === $since ? $since : (string) $clock['now'];
         $userId = (int) $user->id;
 
         $rows = $db->table('messages m')->select('m.*')
             ->where('m.conversation_id', $conversationId)->where('m.id >=', $this->visibleFloor($userId, $conversationId))
             ->where('m.changed_at >', $since)
             ->where('NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = ' . $userId . ')', null, false)
-            ->orderBy('m.id', 'ASC')->limit(self::PAGE_MAX)->get()->getResultArray();
+            ->orderBy('m.changed_at', 'ASC')->orderBy('m.id', 'ASC')->limit(self::PAGE_MAX + 1)->get()->getResultArray();
 
-        return ['messages' => $this->presentRows($rows, $user, $conversation), 'server_time' => $now];
+        $more = count($rows) > self::PAGE_MAX;
+        $rows = array_slice($rows, 0, self::PAGE_MAX);
+
+        return [
+            'messages'    => $this->presentRows($rows, $user, $conversation),
+            'server_time' => $more ? (string) $rows[array_key_last($rows)]['changed_at'] : (string) $clock['lagged'],
+            'more'        => $more,
+        ];
     }
 
     /** Moves the user's read mark forward to this message; never back. */

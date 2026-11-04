@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\MessageService;
+use App\Filters\AccountStateFilter;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Test\TestResponse;
@@ -306,7 +307,7 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $missing = $this->sweepActions(999999, 999999);
 
         foreach ($missing as $name => $answer) {
-            $this->assertSame(404, $answer[0], $name);
+            $this->assertSame([404, json_encode(\App\Filters\MessagesFilter::NOT_FOUND)], [$answer[0], trim($answer[1])], $name);
         }
 
         foreach (['someone else\'s chat' => [$theirs, $theirMessage], 'another institution\'s chat' => [$far, $farMessage]] as $label => [$conversationId, $messageId]) {
@@ -348,7 +349,10 @@ final class MessagesActionRoutesTest extends RouteTestCase
                 continue;
             }
 
-            $this->assertNotSame(200, $this->api($verb, $uri, $data)->response()->getStatusCode(), $name);
+            $response = $this->api($verb, $uri, $data)->response();
+
+            $this->assertSame(403, $response->getStatusCode(), $name);
+            $this->assertSame('csrf_expired', json_decode($response->getBody(), true)['error'] ?? null, $name);
         }
 
         $row = db_connect()->table('messages')->where('id', $this->message)->get()->getRowArray();
@@ -378,13 +382,19 @@ final class MessagesActionRoutesTest extends RouteTestCase
     public function testAnImpersonationSessionReachesNoActionEndpoint(): void
     {
         $admin = CourseFactory::user('admin');
-        $this->signIn($this->student);
-        $_SESSION['impersonator_id'] = (int) $admin->id;
-        $_SESSION['impersonation']   = ['target_id' => (int) $this->student->id, 'expires_at' => time() + 600, 'started_at' => time(), 'reason' => 'test'];
+        $this->signIn($admin);
+        $_SESSION[AccountStateFilter::SIGNED_IN_AT] = time() - 60;
         $this->withSession();
+        $_SESSION['reauth'] = ['user' => $admin->id, 'at' => time()];
+        $this->withSession();
+        Services::resetSingle('auth');
+        $this->step('POST', "admin/users/{$this->student->id}/impersonate", ['reason' => 'Support ticket 1234']);
+        Services::resetSingle('auth');
+
+        $this->assertSame((int) $this->student->id, (int) ($_SESSION['user']['id'] ?? 0), 'the view of the student must be on');
 
         foreach ($this->sweepActions($this->conversation, $this->message) as $name => $answer) {
-            $this->assertNotSame(200, $answer[0], $name);
+            $this->assertSame([404, json_encode(\App\Filters\MessagesFilter::NOT_FOUND)], [$answer[0], trim($answer[1])], $name);
         }
 
         $this->assertSame(0, db_connect()->table('message_reactions')->countAllResults());

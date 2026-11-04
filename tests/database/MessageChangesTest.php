@@ -226,6 +226,50 @@ final class MessageChangesTest extends DatabaseTestCase
             $this->actions()->react($this->student, $this->chat, $id, '🔥');
         }
 
-        $this->assertLessThanOrEqual($without + 1, $count());
+        $this->assertSame($without, $count(), 'the reaction summary query runs with or without reactions');
+    }
+
+    public function testAChangeInsideTheOverlapIsDeliveredAgainAndAnOlderOneIsNot(): void
+    {
+        $inside = $this->say($this->instructor, 'inside');
+        $older  = $this->say($this->instructor, 'older');
+
+        $first = $this->messages()->changedSince($this->student, $this->chat, self::LONG_AGO);
+        $this->assertSame([], $first['messages']);
+        $stamp = strtotime($first['server_time']);
+
+        db_connect()->table('messages')->where('id', $inside)->update(['changed_at' => date('Y-m-d H:i:s', $stamp + 1)]);
+        db_connect()->table('messages')->where('id', $older)->update(['changed_at' => date('Y-m-d H:i:s', $stamp - 1)]);
+
+        $next = $this->messages()->changedSince($this->student, $this->chat, $first['server_time']);
+
+        $this->assertSame([$inside], array_column($next['messages'], 'id'));
+        $this->assertLessThanOrEqual(time() - 1, strtotime($first['server_time']), 'server_time lags the clock so the last second is sent again');
+    }
+
+    public function testMoreThanTheCapComesBackInPagesWithoutLosingTheTail(): void
+    {
+        $base = strtotime('2020-01-01 00:00:00');
+        $ids  = [];
+
+        for ($i = 0; $i <= MessageService::PAGE_MAX; $i++) {
+            db_connect()->table('messages')->insert([
+                'conversation_id' => $this->chat, 'sender_id' => $this->instructor->id,
+                'body_enc' => $this->cipher->encrypt('m' . $i, $this->chat, (int) $this->instructor->id),
+                'client_uuid' => bin2hex(random_bytes(8)), 'created_at' => date('Y-m-d H:i:s'), 'changed_at' => date('Y-m-d H:i:s', $base + $i),
+            ]);
+            $ids[] = (int) db_connect()->insertID();
+        }
+
+        $first = $this->messages()->changedSince($this->student, $this->chat, self::LONG_AGO);
+
+        $this->assertCount(MessageService::PAGE_MAX, $first['messages']);
+        $this->assertTrue($first['more']);
+        $this->assertSame(date('Y-m-d H:i:s', $base + MessageService::PAGE_MAX - 1), $first['server_time']);
+
+        $second = $this->messages()->changedSince($this->student, $this->chat, $first['server_time']);
+
+        $this->assertSame([$ids[MessageService::PAGE_MAX]], array_column($second['messages'], 'id'));
+        $this->assertFalse($second['more']);
     }
 }
