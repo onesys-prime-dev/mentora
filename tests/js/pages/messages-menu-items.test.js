@@ -90,10 +90,32 @@ describe("messageMenuItems", () => {
         expect(ids(items)).toContain("unpin");
     });
 
-    it("adds Remove for moderators", () => {
+    it("shows Remove instead of Report on others' messages for moderators", () => {
         const items = messageMenuItems(msg({ mine: false }), { can_moderate: true }, {});
         expect(ids(items).at(-1)).toBe("remove");
         expect(items.at(-1).label).toBe("Remove");
+        expect(ids(items)).not.toContain("report");
+    });
+
+    it("shows Report and no Remove on others' messages for non-moderators", () => {
+        const items = messageMenuItems(msg({ mine: false }), { can_moderate: false }, {});
+        expect(ids(items)).toContain("report");
+        expect(ids(items)).not.toContain("remove");
+    });
+
+    it("shows neither Report nor Remove on own messages, even for moderators", () => {
+        const items = messageMenuItems(msg({ mine: true }), { can_moderate: true }, {});
+        expect(ids(items)).not.toContain("report");
+        expect(ids(items)).not.toContain("remove");
+    });
+
+    it("hides Block alone when can_block is false", () => {
+        expect(ids(chatMenuItems(chat({ can_block: false }), {}))).toEqual(["pin", "unread", "mute", "archive", "delete"]);
+    });
+
+    it("hides Pin/Unpin alone when can_pin_chat is false", () => {
+        expect(ids(chatMenuItems(chat({ can_pin_chat: false }), {}))).toEqual(["unread", "mute", "archive", "block", "delete"]);
+        expect(ids(chatMenuItems(chat({ can_pin_chat: false, pinned: true }), {}))).not.toContain("unpin");
     });
 
     it.each([
