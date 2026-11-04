@@ -77,6 +77,27 @@ class ChatStateService
         return $this->personal($user, $conversationId, ['marked_unread' => 1]);
     }
 
+    /**
+     * Clears the "marked unread" flag and reads everything up to the newest message.
+     *
+     * @return array{ok: bool, reason?: 'not_found'}
+     */
+    public function markRead(User $user, int $conversationId): array
+    {
+        $chat = $this->conversations->find($user, $conversationId);
+
+        if ($chat === null) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        db_connect()->table('conversation_participants')
+            ->set('marked_unread', 0)
+            ->set('last_read_message_id', 'GREATEST(COALESCE(last_read_message_id, 0), ' . (int) ($chat['last_message_id'] ?? 0) . ')', false)
+            ->where('conversation_id', $conversationId)->where('user_id', (int) $user->id)->update();
+
+        return ['ok' => true];
+    }
+
     /** @return array{ok: bool, reason?: 'not_allowed'|'not_found'} */
     public function deleteForMe(User $user, int $conversationId): array
     {

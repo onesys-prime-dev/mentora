@@ -453,6 +453,7 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations/(:num)/archive', 'Messaging\ChatStateController::archive/$1');
     $routes->post('conversations/(:num)/unarchive', 'Messaging\ChatStateController::unarchive/$1');
     $routes->post('conversations/(:num)/unread', 'Messaging\ChatStateController::unread/$1');
+    $routes->post('conversations/(:num)/read', 'Messaging\ChatStateController::read/$1');
     $routes->post('conversations/(:num)/delete', 'Messaging\ChatStateController::delete/$1');
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');

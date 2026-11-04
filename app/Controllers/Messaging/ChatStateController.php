@@ -48,6 +48,11 @@ class ChatStateController extends MessagingController
         return $this->respond((new ChatStateService())->markUnread(auth()->user(), $conversationId));
     }
 
+    public function read(int $conversationId): ResponseInterface
+    {
+        return $this->respond((new ChatStateService())->markRead(auth()->user(), $conversationId));
+    }
+
     public function delete(int $conversationId): ResponseInterface
     {
         return $this->respond((new ChatStateService())->deleteForMe(auth()->user(), $conversationId));

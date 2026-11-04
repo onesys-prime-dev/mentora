@@ -61,7 +61,7 @@ export function chatMenuItems(conversation, handlers = {}) {
         actions.push(c.pinned ? item(handlers, "unpin", "Unpin") : item(handlers, "pin", "Pin to top"));
     }
 
-    actions.push(item(handlers, "unread", "Mark as unread"));
+    actions.push(c.marked_unread || c.unread > 0 ? item(handlers, "read", "Mark as read") : item(handlers, "unread", "Mark as unread"));
     actions.push(c.muted ? item(handlers, "unmute", "Unmute") : item(handlers, "mute", "Mute notifications"));
     actions.push(c.archived ? item(handlers, "unarchive", "Unarchive") : item(handlers, "archive", "Archive chat"));
 

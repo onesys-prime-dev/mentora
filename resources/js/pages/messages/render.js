@@ -201,14 +201,17 @@ export function conversationRow(conversation, { selected }) {
 
     meta.append(el("span", "block", formatTime(conversation.last_message_at, new Date())));
 
-    if (conversation.unread > 0) {
-        const pill = el("span", "mt-0.5 inline-block min-w-[16px] rounded-full bg-brand px-1 text-center text-[12px] font-semibold text-white", String(conversation.unread));
+    // A chat only marked unread is a dot; the number is for messages that really have not been read.
+    const count = conversation.new_messages ?? conversation.unread;
+
+    if (count > 0) {
+        const pill = el("span", "mt-0.5 inline-block min-w-[16px] rounded-full bg-brand px-1 text-center text-[12px] font-semibold text-white", String(count));
 
         pill.dataset.unread = "";
         meta.append(pill, el("span", "sr-only", " unread"));
     }
 
-    if (conversation.marked_unread && !(conversation.unread > 0)) {
+    if (conversation.marked_unread && !(count > 0)) {
         const dot = el("span", "mt-0.5 inline-block h-2 w-2 rounded-full bg-brand");
 
         dot.dataset.markedUnread = "";

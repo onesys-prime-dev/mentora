@@ -1472,9 +1472,21 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             renderList();
         }
 
+        // Marking read clears the dot or count at once.
+        if (action === "read" && (c.marked_unread || c.unread > 0)) {
+            if (!c.muted) {
+                updateBadge(Math.max(0, (state.badge ?? 0) - Math.max(c.unread > 0 ? c.unread : 0, c.marked_unread ? 1 : 0)));
+            }
+
+            c.unread = 0;
+            c.new_messages = 0;
+            c.marked_unread = false;
+            renderList();
+        }
+
         const result = await api.chatAction(c.id, action);
 
-        if (result.status !== 200 && action === "unread") {
+        if (result.status !== 200 && (action === "unread" || action === "read")) {
             await loadList();
         }
 
@@ -1504,6 +1516,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             pin: act("pin"),
             unpin: act("unpin"),
             unread: act("unread"),
+            read: act("read"),
             mute: act("mute"),
             unmute: act("unmute"),
             archive: act("archive"),
