@@ -136,6 +136,24 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         $this->assertTrue($indexed, 'messages has an index on (sender_id, created_at) for the send limit');
     }
 
+    public function testTheChatActionColumnsExist(): void
+    {
+        db_connect()->resetDataCache();
+
+        foreach (['pinned_at', 'archived_at', 'marked_unread', 'cleared_before_message_id'] as $column) {
+            $this->assertTrue(db_connect()->fieldExists($column, 'conversation_participants'), "column {$column}");
+        }
+
+        $defaults = [];
+
+        foreach (db_connect()->getFieldData('conversation_participants') as $field) {
+            $defaults[$field->name] = $field->default;
+        }
+
+        $this->assertSame(0, (int) $defaults['marked_unread']);
+        $this->assertSame(0, (int) $defaults['cleared_before_message_id']);
+    }
+
     public function testOneCourseChatPerOffering(): void
     {
         $institution = $this->institution('MSG1');
