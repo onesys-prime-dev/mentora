@@ -464,6 +464,7 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');
     $routes->post('groups', 'Messaging\GroupController::create');
     $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
+    $routes->get('conversations/(:num)/changes', 'Messaging\MessageController::changes/$1');
     $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
     $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
     $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');

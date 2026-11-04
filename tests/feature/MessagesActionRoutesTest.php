@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Services\Messaging\ConversationService;
+use App\Services\Messaging\MessageService;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Test\TestResponse;
 use Tests\Support\CourseFactory;
+use Tests\Support\DeanFactory;
 use Tests\Support\MessagingScenario;
+use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
@@ -232,5 +236,166 @@ final class MessagesActionRoutesTest extends RouteTestCase
 
         $this->assertSame(404, $this->react('👍')->response()->getStatusCode());
         $this->assertSame(404, $this->api('GET', "conversations/{$this->conversation}/messages/{$this->message}/reactors")->response()->getStatusCode());
+    }
+
+    /**
+     * Every endpoint added for message actions, as name => [verb, uri, body]; controls and changes take a conversation only.
+     *
+     * @return array<string, array{string, string, array<string, mixed>}>
+     */
+    private function actionEndpoints(int $conversationId, int $messageId): array
+    {
+        $m = "conversations/{$conversationId}/messages/{$messageId}";
+
+        return [
+            'react'           => ['POST', "{$m}/react", ['emoji' => '👍']],
+            'reactors'        => ['GET', "{$m}/reactors", []],
+            'delete-everyone' => ['POST', "{$m}/delete-everyone", []],
+            'bump'            => ['POST', "{$m}/bump", []],
+            'forward'         => ['POST', "{$m}/forward", ['targets' => [$this->conversation]]],
+            'pin'             => ['POST', "{$m}/pin", []],
+            'unpin'           => ['POST', "{$m}/unpin", []],
+            'controls'        => ['POST', "conversations/{$conversationId}/controls", ['allow_reactions' => 0]],
+            'changes'         => ['GET', "conversations/{$conversationId}/changes?since=2000-01-01+00:00:00", []],
+        ];
+    }
+
+    /** @return array<string, array{int, string}> */
+    private function sweepActions(int $conversationId, int $messageId, bool $messageEndpointsOnly = false): array
+    {
+        $out = [];
+
+        foreach ($this->actionEndpoints($conversationId, $messageId) as $name => [$verb, $uri, $data]) {
+            if ($messageEndpointsOnly && in_array($name, ['controls', 'changes'], true)) {
+                continue;
+            }
+
+            $response   = $this->api($verb, $uri, $data)->response();
+            $out[$name] = [$response->getStatusCode(), $response->getBody()];
+        }
+
+        return $out;
+    }
+
+    public function testEveryActionEndpointAnswersForeignAndMissingIdsIdentically(): void
+    {
+        $db    = db_connect();
+        $other = PeopleFactory::person('student', 'Oth', 'Er', null, $this->institution);
+        $both  = PeopleFactory::person('instructor', 'Oth', 'Teach', null, $this->institution);
+        $offer = DeanFactory::offering($this->program, $this->term, 'RT2');
+        CourseFactory::enroll($offer, $other);
+        CourseFactory::assignInstructor($offer, $both);
+        $theirs       = (int) (new ConversationService())->startDirect($other, (int) $both->id)['id'];
+        $theirMessage = (int) (new MessageService())->send($other, $theirs, 'private', $this->uuid())['message']['id'];
+
+        $farInstitution = PeopleFactory::institution('FARY');
+        $farDept        = DeanFactory::department('FY', $farInstitution);
+        $farProgram     = DeanFactory::program(DeanFactory::subDepartment($farDept['department'], 'FY'), 'FY');
+        $farStudent     = PeopleFactory::person('student', 'Far', 'S', null, $farInstitution);
+        $farInstructor  = PeopleFactory::person('instructor', 'Far', 'I', null, $farInstitution);
+        $farOffering    = DeanFactory::offering($farProgram, DeanFactory::term($farInstitution), 'FY1');
+        CourseFactory::enroll($farOffering, $farStudent);
+        CourseFactory::assignInstructor($farOffering, $farInstructor);
+        $far        = (int) (new ConversationService())->startDirect($farStudent, (int) $farInstructor->id)['id'];
+        $farMessage = (int) (new MessageService())->send($farStudent, $far, 'far', $this->uuid())['message']['id'];
+
+        $reactionsBefore = $db->table('message_reactions')->countAllResults();
+        $messagesBefore  = $db->table('messages')->orderBy('id')->get()->getResultArray();
+
+        $this->signIn($this->student);
+        $missing = $this->sweepActions(999999, 999999);
+
+        foreach ($missing as $name => $answer) {
+            $this->assertSame(404, $answer[0], $name);
+        }
+
+        foreach (['someone else\'s chat' => [$theirs, $theirMessage], 'another institution\'s chat' => [$far, $farMessage]] as $label => [$conversationId, $messageId]) {
+            $this->assertSame($missing, $this->sweepActions($conversationId, $messageId), $label);
+        }
+
+        // A message of someone else's chat addressed through the person's own chat, and a missing id in it.
+        $inOwn = $this->sweepActions($this->conversation, $theirMessage, true);
+        $gone  = $this->sweepActions($this->conversation, 999999, true);
+
+        $this->assertSame($gone, $inOwn);
+
+        foreach ($inOwn as $name => $answer) {
+            $this->assertSame($missing[$name], $answer, $name);
+        }
+
+        $this->assertSame($reactionsBefore, $db->table('message_reactions')->countAllResults());
+        $this->assertSame($messagesBefore, $db->table('messages')->orderBy('id')->get()->getResultArray(), 'the probes changed nothing');
+    }
+
+    public function testEveryActionEndpointIsNotFoundWhileTheFlagIsOff(): void
+    {
+        db_connect()->table('feature_flag_overrides')->where('flag_key', 'messages')->delete();
+        \App\Services\Admin\PermissionMatrix::flush();
+        $this->signIn($this->student);
+
+        foreach ($this->sweepActions($this->conversation, $this->message) as $name => $answer) {
+            $this->assertSame(404, $answer[0], $name);
+        }
+    }
+
+    public function testEveryWriteIsRefusedWithoutACsrfToken(): void
+    {
+        $this->signIn($this->instructor);
+        $this->withoutCsrfToken();
+
+        foreach ($this->actionEndpoints($this->conversation, $this->message) as $name => [$verb, $uri, $data]) {
+            if ($verb === 'GET') {
+                continue;
+            }
+
+            $this->assertNotSame(200, $this->api($verb, $uri, $data)->response()->getStatusCode(), $name);
+        }
+
+        $row = db_connect()->table('messages')->where('id', $this->message)->get()->getRowArray();
+        $this->assertNull($row['pinned_at']);
+        $this->assertNull($row['deleted_everyone_at']);
+        $this->assertSame(0, db_connect()->table('message_reactions')->countAllResults());
+    }
+
+    public function testEveryWriteIsRefusedInAReadOnlyInstitution(): void
+    {
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+        $this->signIn($this->instructor);
+
+        foreach ($this->actionEndpoints($this->conversation, $this->message) as $name => [$verb, $uri, $data]) {
+            if ($verb === 'GET') {
+                continue;
+            }
+
+            $this->assertSame(403, $this->api($verb, $uri, $data)->response()->getStatusCode(), $name);
+        }
+
+        $row = db_connect()->table('messages')->where('id', $this->message)->get()->getRowArray();
+        $this->assertNull($row['pinned_at']);
+        $this->assertNull($row['deleted_everyone_at']);
+    }
+
+    public function testAnImpersonationSessionReachesNoActionEndpoint(): void
+    {
+        $admin = CourseFactory::user('admin');
+        $this->signIn($this->student);
+        $_SESSION['impersonator_id'] = (int) $admin->id;
+        $_SESSION['impersonation']   = ['target_id' => (int) $this->student->id, 'expires_at' => time() + 600, 'started_at' => time(), 'reason' => 'test'];
+        $this->withSession();
+
+        foreach ($this->sweepActions($this->conversation, $this->message) as $name => $answer) {
+            $this->assertNotSame(200, $answer[0], $name);
+        }
+
+        $this->assertSame(0, db_connect()->table('message_reactions')->countAllResults());
+    }
+
+    public function testTheSystemAdministratorReachesNoActionEndpoint(): void
+    {
+        $this->signIn(CourseFactory::user('admin'));
+
+        foreach ($this->sweepActions($this->conversation, $this->message) as $name => $answer) {
+            $this->assertSame(404, $answer[0], $name);
+        }
     }
 }

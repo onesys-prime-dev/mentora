@@ -29,6 +29,13 @@ class MessageController extends MessagingController
         return $page === null ? $this->notFound() : $this->response->setJSON($page);
     }
 
+    public function changes(int $conversationId): ResponseInterface
+    {
+        $changes = (new MessageService())->changedSince(auth()->user(), $conversationId, (string) $this->request->getGet('since'));
+
+        return $changes === null ? $this->notFound() : $this->response->setJSON($changes);
+    }
+
     public function send(int $conversationId): ResponseInterface
     {
         $input   = $this->input();

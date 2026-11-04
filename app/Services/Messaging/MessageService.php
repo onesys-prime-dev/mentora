@@ -61,7 +61,7 @@ class MessageService
         $existing = $this->byUuid($conversationId, $userId, $clientUuid);
 
         if ($existing !== null) {
-            return ['ok' => true, 'message' => $this->present($existing, $userId)];
+            return ['ok' => true, 'message' => $this->presentRows([$existing], $user, $conversation)[0]];
         }
 
         $clean = MessageBody::clean($body);
@@ -139,7 +139,7 @@ class MessageService
             $this->notify($conversationId);
         }
 
-        return ['ok' => true, 'message' => $this->present($row, $userId)];
+        return ['ok' => true, 'message' => $this->presentRows([$row], $user, $conversation)[0]];
     }
 
     /**
@@ -175,7 +175,6 @@ class MessageService
         }
 
         $userId = (int) $user->id;
-        $canPin = $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation));
         $limit  = max(1, min(self::PAGE_MAX, $limit));
         $first  = $this->visibleFloor($userId, $conversationId);
 
@@ -202,10 +201,40 @@ class MessageService
         }
 
         return [
-            'messages' => array_map(fn (array $row): array => $this->present($row, $userId, $canPin), $rows),
+            'messages' => $this->presentRows($rows, $user, $conversation),
             'has_more' => $more,
             'pinned'   => $this->pinnedPreviews($userId, $conversationId, $first),
         ];
+    }
+
+    /**
+     * Messages of a chat changed (reacted to, pinned, erased) after `$since`, for polling. The same visibility as
+     * page(). `server_time` is the database clock to send back as the next `since`; an unreadable `$since` counts as
+     * now, so nothing comes back. Null when the conversation is not the user's.
+     *
+     * @return array{messages: list<array<string, mixed>>, server_time: string}|null
+     */
+    public function changedSince(User $user, int $conversationId, string $since): ?array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+
+        if ($conversation === null) {
+            return null;
+        }
+
+        $db     = db_connect();
+        $now    = (string) $db->query("SELECT DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS t")->getRowArray()['t'];
+        $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $since);
+        $since  = $parsed !== false && $parsed->format('Y-m-d H:i:s') === $since ? $since : $now;
+        $userId = (int) $user->id;
+
+        $rows = $db->table('messages m')->select('m.*')
+            ->where('m.conversation_id', $conversationId)->where('m.id >=', $this->visibleFloor($userId, $conversationId))
+            ->where('m.changed_at >', $since)
+            ->where('NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = ' . $userId . ')', null, false)
+            ->orderBy('m.id', 'ASC')->limit(self::PAGE_MAX)->get()->getResultArray();
+
+        return ['messages' => $this->presentRows($rows, $user, $conversation), 'server_time' => $now];
     }
 
     /** Moves the user's read mark forward to this message; never back. */
@@ -287,12 +316,41 @@ class MessageService
     }
 
     /**
-     * @param array<string, mixed> $row a `messages` row
+     * Presents rows of one chat for the viewer: what they may do is worked out once for the chat, and the reactions
+     * of all the rows are loaded in one query.
+     *
+     * @param list<array<string, mixed>> $rows         `messages` rows
+     * @param array<string, mixed>       $conversation a `conversations` row
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function presentRows(array $rows, User $user, array $conversation): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+
+        $userId  = (int) $user->id;
+        $context = $this->resolver->forPost($user, $conversation);
+        $view    = [
+            'canPin'    => $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation)),
+            'canReact'  => $this->policy->canReact($context) && ChatControls::allows($conversation, 'reactions'),
+            'canReply'  => $this->policy->canPost($context) && ChatControls::allows($conversation, 'replies'),
+            'reactions' => MessageActions::summary(array_map(static fn (array $r): int => (int) $r['id'], $rows), $userId),
+        ];
+
+        return array_map(fn (array $row): array => $this->present($row, $userId, $view), $rows);
+    }
+
+    /**
+     * @param array<string, mixed>                                                                                                  $row  a `messages` row
+     * @param array{canPin?: bool, canReact?: bool, canReply?: bool, reactions?: array<int, list<array<string, mixed>>>} $view what the viewer may do and the reactions of the page
      *
      * @return array<string, mixed>
      */
-    private function present(array $row, int $userId, bool $canPin = false): array
+    private function present(array $row, int $userId, array $view = []): array
     {
+        $canPin = $view['canPin'] ?? false;
         $removed = $row['removed_at'] !== null;
         $erased  = ($row['deleted_everyone_at'] ?? null) !== null;
         $body    = null;
@@ -318,6 +376,9 @@ class MessageService
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
             'can_bump'            => MessageActions::canBump($row, $userId, $this->switchOn((int) $row['conversation_id'], 'bump')),
             'can_forward'         => MessageActions::canForward($row, $this->switchOn((int) $row['conversation_id'], 'forwarding'), $this->isParentThread((int) $row['conversation_id'])),
+            'reactions'           => $view['reactions'][(int) $row['id']] ?? [],
+            'can_react'           => ($view['canReact'] ?? false) && ! $removed && ! $erased,
+            'can_reply'           => ($view['canReply'] ?? false) && ! $removed && ! $erased,
             'pinned'              => ($row['pinned_at'] ?? null) !== null,
             'can_pin'             => $canPin && ! $removed && ! $erased,
             'deleted_everyone'    => $erased,

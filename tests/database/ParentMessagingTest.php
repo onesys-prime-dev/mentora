@@ -173,4 +173,24 @@ final class ParentMessagingTest extends DatabaseTestCase
         $this->assertNull($this->conversations()->startDirect($outsider, (int) $this->instructor->id));
         $this->assertSame([], (new RecipientSearch())->search($outsider, 'Tructor'));
     }
+
+    public function testTheParentFeedCarriesNoActionData(): void
+    {
+        $chat = (int) (new \App\Services\Messaging\CourseChatSync())->syncOffering($this->offering)['conversation_id'];
+        $sent = $this->messages()->send($this->instructor, $chat, 'for parents', 'u-' . bin2hex(random_bytes(6)));
+        $id   = (int) $sent['message']['id'];
+
+        db_connect()->table('message_reactions')->insert(['message_id' => $id, 'user_id' => $this->child->id, 'emoji' => '👍', 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('messages')->where('id', $id)->update(['pinned_at' => date('Y-m-d H:i:s'), 'forwarded' => 1, 'changed_at' => date('Y-m-d H:i:s')]);
+
+        $feed = (new \App\Services\Messaging\ParentFeedService($this->parentCipher()))->feed($this->parent, (int) $this->child->id, $this->offering);
+
+        $this->assertNotEmpty($feed['posts']);
+
+        foreach ($feed['posts'] as $post) {
+            foreach (['reactions', 'pinned', 'reply', 'forwarded', 'bumped', 'deleted_everyone'] as $key) {
+                $this->assertArrayNotHasKey($key, $post, $key);
+            }
+        }
+    }
 }
