@@ -114,6 +114,15 @@ class DeanAssignmentService
             (new \App\Services\Courses\Grades\GradeSignoffService())->announceNowNeeded($institutionId);
         }
 
+        // The dean who was replaced is told, as a replaced chairperson is.
+        if ($currentDepartment !== null && (int) $currentDepartment['dean_user_id'] !== $userId) {
+            (new \App\Services\Notifications\NotificationService())->send(
+                (int) $currentDepartment['dean_user_id'], 'dean', 'Dean assignment ended',
+                "You are no longer the dean of {$department['name']}: another dean was assigned.",
+                false, "dean-replaced:{$currentDepartment['id']}:" . date('YmdHis'), $institutionId, site_url('dashboard'),
+            );
+        }
+
         service('auditLogger')->log('structure.dean_assigned', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $id, 'institution_id' => $institutionId,
             'new' => ['department_id' => $departmentId, 'dean_user_id' => $userId],
@@ -177,6 +186,64 @@ class DeanAssignmentService
         $this->end((int) $row['institution_id'], (int) $row['id'], $actor, true);
 
         return true;
+    }
+
+    /**
+     * Active deans, by department.
+     *
+     * @return array<int, array{id: int, user_id: int, name: string, email: string}>
+     */
+    public function byDepartment(int $institutionId): array
+    {
+        $rows = db_connect()->table('dean_assignments da')
+            ->select('da.id, da.department_id, da.dean_user_id, up.first_name, up.last_name, ai.secret AS email')
+            ->join('departments d', 'd.id = da.department_id')
+            ->join('users u', 'u.id = da.dean_user_id')
+            ->join('user_profiles up', 'up.user_id = u.id', 'left')
+            ->join('auth_identities ai', "ai.user_id = u.id AND ai.type = 'email_password'", 'left', false)
+            ->where('d.institution_id', $institutionId)
+            ->where(['da.status' => 'active', 'da.active_marker' => 1])
+            ->get()->getResultArray();
+
+        $byDepartment = [];
+
+        foreach ($rows as $row) {
+            $byDepartment[(int) $row['department_id']] = [
+                'id'      => (int) $row['id'],
+                'user_id' => (int) $row['dean_user_id'],
+                'name'    => trim($row['first_name'] . ' ' . $row['last_name']) ?: (string) $row['email'],
+                'email'   => (string) $row['email'],
+            ];
+        }
+
+        return $byDepartment;
+    }
+
+    /**
+     * People of the institution who can be made dean: they hold the dean role, the account is in good
+     * standing and they are not a chairperson.
+     *
+     * @return list<array{id: int, name: string, email: string}>
+     */
+    public function candidates(int $institutionId): array
+    {
+        $rows = db_connect()->table('institution_users iu')
+            ->select('u.id, up.first_name, up.last_name, ai.secret AS email')
+            ->join('users u', 'u.id = iu.user_id AND u.deleted_at IS NULL AND u.active = 1', 'inner', false)
+            ->join('auth_groups_users g', "g.user_id = u.id AND g.`group` = 'dean'", 'inner', false)
+            ->join('user_profiles up', 'up.user_id = u.id', 'left')
+            ->join('auth_identities ai', "ai.user_id = u.id AND ai.type = 'email_password'", 'left', false)
+            ->where('iu.institution_id', $institutionId)
+            ->where("NOT EXISTS (SELECT 1 FROM auth_groups_users c WHERE c.user_id = u.id AND c.`group` = 'chairperson')", null, false)
+            ->orderBy('up.last_name')
+            ->orderBy('up.first_name')
+            ->get()->getResultArray();
+
+        return array_map(static fn (array $row): array => [
+            'id'    => (int) $row['id'],
+            'name'  => trim($row['first_name'] . ' ' . $row['last_name']) ?: (string) $row['email'],
+            'email' => (string) $row['email'],
+        ], $rows);
     }
 
     public function currentDeanOfDepartment(int $departmentId): ?array
