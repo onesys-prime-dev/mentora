@@ -278,4 +278,91 @@ final class MessagingPolicyTest extends CIUnitTestCase
         $this->assertFalse($policy->canSeeParentFeed(true, false, 'instructor'));
         $this->assertFalse($policy->canSeeParentFeed(true, true, 'student'));
     }
+
+    /**
+     * @return array<string, array{string, string, bool, bool, bool, bool, bool}>
+     */
+    public static function provideControlsMatrix(): array
+    {
+        // role, type, teachesCourse, inScope, createdGroup, sameInstitution, expected
+        return [
+            'instructor of the course'          => ['instructor', 'course', true, false, false, true, true],
+            'instructor of another course'      => ['instructor', 'course', false, true, false, true, false],
+            'instructor in a group'             => ['instructor', 'group', true, true, true, true, false],
+            'chairperson in scope on course'    => ['chairperson', 'course', false, true, false, true, true],
+            'chairperson out of scope'          => ['chairperson', 'course', false, false, false, true, false],
+            'dean in scope on course'           => ['dean', 'course', false, true, false, true, true],
+            'dean out of scope on course'       => ['dean', 'course', false, false, false, true, false],
+            'chairperson created the group'     => ['chairperson', 'group', false, true, true, true, true],
+            'chairperson did not create group'  => ['chairperson', 'group', false, true, false, true, false],
+            'dean created the group'            => ['dean', 'group', false, false, true, true, true],
+            'dean did not create group'         => ['dean', 'group', false, true, false, true, false],
+            'student course'                    => ['student', 'course', true, true, true, true, false],
+            'student group'                     => ['student', 'group', true, true, true, true, false],
+            'parent course'                     => ['parent', 'course', true, true, true, true, false],
+            'parent group'                      => ['parent', 'group', true, true, true, true, false],
+            'institutional admin course'        => ['institutional_admin', 'course', false, false, false, true, true],
+            'institutional admin group'         => ['institutional_admin', 'group', false, false, false, true, true],
+            'institutional admin direct'        => ['institutional_admin', 'direct', true, true, true, true, false],
+            'instructor direct'                 => ['instructor', 'direct', true, true, true, true, false],
+            'chairperson direct'                => ['chairperson', 'direct', true, true, true, true, false],
+            'dean direct'                       => ['dean', 'direct', true, true, true, true, false],
+            'other institution instructor'      => ['instructor', 'course', true, true, true, false, false],
+            'other institution chairperson'     => ['chairperson', 'group', true, true, true, false, false],
+            'other institution admin'           => ['institutional_admin', 'course', true, true, true, false, false],
+        ];
+    }
+
+    #[DataProvider('provideControlsMatrix')]
+    public function testWhoMayManageControls(string $role, string $type, bool $teaches, bool $inScope, bool $created, bool $same, bool $expected): void
+    {
+        $this->assertSame($expected, (new MessagingPolicy())->canManageControls($role, $type, $teaches, $inScope, $created, $same));
+    }
+
+    /**
+     * @return array<string, array{string, bool, bool}>
+     */
+    public static function providePinMatrix(): array
+    {
+        return [
+            'course moderator'     => ['course', true, true],
+            'course non-moderator' => ['course', false, false],
+            'direct non-moderator' => ['direct', false, true],
+            'direct moderator'     => ['direct', true, true],
+            'group non-moderator'  => ['group', false, true],
+            'group moderator'      => ['group', true, true],
+        ];
+    }
+
+    #[DataProvider('providePinMatrix')]
+    public function testWhoMayPinAMessage(string $type, bool $isModerator, bool $expected): void
+    {
+        $this->assertSame($expected, (new MessagingPolicy())->canPinMessage($type, $isModerator));
+    }
+
+    /**
+     * @return array<string, array{PostContext, bool}>
+     */
+    public static function provideReactionRules(): array
+    {
+        return [
+            'locked course chat, student'  => [new PostContext('course', true, true, locked: true), true],
+            'unlocked course chat'         => [new PostContext('course', true, true), true],
+            'locked course chat, posting'  => [new PostContext('course', true, true, locked: true), true],
+            'not a participant'            => [new PostContext('course', false, true), false],
+            'inactive account'             => [new PostContext('group', true, false), false],
+            'read-only institution'        => [new PostContext('group', true, true, institutionReadOnly: true), false],
+            'closed offering'              => [new PostContext('course', true, true, offeringClosed: true), false],
+            'lost parent link'             => [new PostContext('direct', true, true, subjectLinkLost: true), false],
+            'blocked direct thread'        => [new PostContext('direct', true, true, blocked: true), false],
+            'blocked by exempt blocker'    => [new PostContext('direct', true, true, blocked: true, blockerIsExempt: true), true],
+            'student dm switched off'      => [new PostContext('direct', true, true, studentDmBlocked: true), false],
+        ];
+    }
+
+    #[DataProvider('provideReactionRules')]
+    public function testReactionsAreAllowedInALockedCourseChatButNotWhenBlockedOrReadOnly(PostContext $context, bool $expected): void
+    {
+        $this->assertSame($expected, (new MessagingPolicy())->canReact($context));
+    }
 }

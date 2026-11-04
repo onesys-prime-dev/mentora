@@ -154,6 +154,53 @@ final class MessagingPolicy
         };
     }
 
+    /**
+     * Who may change a chat's controls (lock, rename, and so on). Direct
+     * threads have no controls.
+     */
+    public function canManageControls(
+        string $role,
+        string $type,
+        bool $teachesCourse,
+        bool $inScope,
+        bool $createdGroup,
+        bool $sameInstitution,
+    ): bool {
+        if (! $sameInstitution || ! in_array($type, ['course', 'group'], true)) {
+            return false;
+        }
+
+        if ($role === 'institutional_admin') {
+            return true;
+        }
+
+        return match ($type) {
+            'course' => ($role === 'instructor' && $teachesCourse)
+                || (in_array($role, ['chairperson', 'dean'], true) && $inScope),
+            'group'  => in_array($role, ['chairperson', 'dean'], true) && $createdGroup,
+        };
+    }
+
+    /** A course chat pins by moderators only; direct and group chats by anyone in them. */
+    public function canPinMessage(string $type, bool $isModerator): bool
+    {
+        return $type === 'course' ? $isModerator : true;
+    }
+
+    /** Like canPost, but a lock does not stop a reaction (it is not a post). */
+    public function canReact(PostContext $c): bool
+    {
+        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost) {
+            return false;
+        }
+
+        if ($c->type === 'direct' && (($c->blocked && ! $c->blockerIsExempt) || $c->studentDmBlocked)) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function canSeeParentFeed(bool $linked, bool $childEnrolled, string $senderRole): bool
     {
         return $linked && $childEnrolled && $senderRole === 'instructor';
