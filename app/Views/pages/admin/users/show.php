@@ -23,7 +23,7 @@ $name        = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] 
 
 <?= $this->section('content') ?>
 
-<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
 <?= view('components/page-head', [
     'title'     => $name !== '' ? $name : (string) $person['username'],

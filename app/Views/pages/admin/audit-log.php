@@ -109,7 +109,7 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 <?= $this->section('content') ?>
 
 <?php // From lg up the page fills the screen and only the table scrolls, on its own. ?>
-<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
 <?= view('components/page-head', ['title' => 'Audit log', 'icon' => 'tasks', 'actions' => '<button type="button" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-dialog-open="audit-settings">Display settings</button> <a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc($exportUrl) . '">Export CSV</a>'], ['saveData' => false]) ?>
 

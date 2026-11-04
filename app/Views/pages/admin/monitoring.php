@@ -41,7 +41,7 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-5 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel data-live-url="<?= esc($monLiveUrl, 'attr') ?>">
+<div class="flex flex-col gap-5 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content" data-live-url="<?= esc($monLiveUrl, 'attr') ?>">
 
     <?= view('components/page-head', ['title' => 'System status', 'icon' => 'score', 'actions' => '<span class="rounded-full px-3 py-1 text-sm font-semibold ' . $badge[$monOverall][1] . '" data-overall="' . esc($monOverall) . '">' . esc($badge[$monOverall][0]) . '</span>'], ['saveData' => false]) ?>
     <?php /* Without scripts the browser's own refresh does it; with them the graphs move and the person can pause them (WCAG 2.2.1). */ ?>

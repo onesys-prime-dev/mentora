@@ -66,7 +66,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
 <?= $this->section('content') ?>
 
 <?php // From lg up the panel fills the screen and only the activity list scrolls, on its own. ?>
-<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
     <?= view('components/page-head', [
         'title'       => 'Home',

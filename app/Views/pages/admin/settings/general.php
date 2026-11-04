@@ -20,7 +20,7 @@ $legend  = 'text-lg font-bold text-brand';
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8 sm:pt-4" data-page-panel>
+<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8 sm:pt-4" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
 <div class="mx-auto mb-5 w-full max-w-2xl shrink-0">
     <?= view('components/page-head', [
