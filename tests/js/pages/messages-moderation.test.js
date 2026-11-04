@@ -97,7 +97,7 @@ describe("a removed message", () => {
 
         expect(row.textContent).toContain("Message removed");
         expect(row.querySelector("small")).not.toBeNull();
-        expect(q("[data-id='12']").closest(".group\\/msg").querySelector("[data-action]")).toBeNull();
+        expect(q("[data-id='12']").parentElement.querySelector("[data-action]")).toBeNull();
     });
 });
 

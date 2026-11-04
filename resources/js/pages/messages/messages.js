@@ -305,7 +305,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     function messageRow(item) {
         const row = document.createElement("div");
 
-        row.className = `group/msg flex flex-col ${item.mine ? "items-end" : "items-start"}`;
+        row.className = `flex flex-col ${item.mine ? "items-end" : "items-start"}`;
         const bubble = messageNode(item, { mine: item.mine, onToggle: (m, emoji) => react(m, emoji), onShowWho: (m, emoji) => showWho(m, emoji) });
 
         const note = document.createElement("div");
@@ -382,12 +382,20 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         }
 
-        row.append(bubble);
+        if (note.querySelector("[data-action=hide]") !== null) {
+            // Like Messenger: the icons sit beside the bubble, on the side facing the middle of the chat, and
+            // show only while the pointer is over the message itself (the group is just as wide as the two).
+            const line = document.createElement("div");
 
-        if (note.childNodes.length > 0) {
-            // Under the bubble, nudged in from the edge: right for their messages, left for mine.
-            note.classList.add(item.mine ? "mr-3" : "ml-3");
-            row.append(note);
+            line.className = "group/msg flex w-fit max-w-full items-center gap-1";
+            line.append(...(item.mine ? [note, bubble] : [bubble, note]));
+            row.append(line);
+        } else {
+            row.append(bubble);
+
+            if (note.childNodes.length > 0) {
+                row.append(note);
+            }
         }
 
         return row;
