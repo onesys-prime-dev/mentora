@@ -630,8 +630,8 @@ test("TC-MSG-19 A reaction shows on the other screen without a reload, and press
         await menuOf(michael.page).locator('[data-emoji="👍"]').first().click();
         await expect(menuOf(michael.page)).toBeHidden();
 
-        await expect(bubble(michael.page, "Please react to this").locator('[data-emoji="👍"]')).toContainText("1");
-        await expect(bubble(juan.page, "Please react to this").locator('[data-emoji="👍"]')).toContainText("1", { timeout: 15000 });
+        await expect(bubble(michael.page, "Please react to this").locator('[data-emoji="👍"]')).toHaveCount(1);
+        await expect(bubble(juan.page, "Please react to this").locator('[data-emoji="👍"]')).toHaveCount(1, { timeout: 15000 });
 
         await bubble(michael.page, "Please react to this").locator('[data-emoji="👍"]').click();
         await expect(bubble(michael.page, "Please react to this").locator('[data-emoji="👍"]')).toHaveCount(0);

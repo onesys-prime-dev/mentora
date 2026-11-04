@@ -71,7 +71,7 @@ describe("messageMenuItems", () => {
             "reactions", "reply", "copy", "forward", "pin", "bump", "delete-me", "delete-everyone",
         ]);
         expect(labels(items).slice(1)).toEqual([
-            "Reply", "Copy", "Forward", "Pin message", "Bump (resend as a reminder)", "Delete for me", "Delete for everyone",
+            "Reply", "Copy", "Forward", "Pin message", "Bump", "Delete for me", "Delete for everyone",
         ]);
         expect(items.map((i) => Boolean(i.separator))).toEqual([false, true, false, false, false, false, true, false]);
         expect(items[0]).toMatchObject({ type: "reactions", emojis: QUICK, selected: null });

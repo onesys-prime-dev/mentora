@@ -121,7 +121,7 @@ export function messageMenuItems(message, conversation, handlers = {}) {
     }
 
     if (m.can_bump) {
-        actions.push(item(handlers, "bump", "Bump (resend as a reminder)"));
+        actions.push(item(handlers, "bump", "Bump"));
     }
 
     groups.push(actions);
