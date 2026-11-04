@@ -21,6 +21,7 @@ class NotificationController extends BaseController
 
         return view('pages/notifications/index', [
             'title'         => 'Notifications',
+            'fullHeight'    => ! $isAdmin,
             'page'          => $isAdmin ? 'admin' : 'notifications',
             'user'          => $user,
             'noteRows'      => (new NotificationService())->listFor((int) $user->id),

@@ -28,9 +28,9 @@ $when = static function (array $row): string {
 
 <?= $this->section('content') ?>
 
-<div class="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-[400px_1fr]" data-notifications-page data-read-url="<?= esc(site_url('notifications/read'), 'attr') ?>">
+<div class="mx-auto mt-5 grid h-[calc(100dvh-8.3rem)] min-h-[440px] w-full max-w-6xl gap-3 md:grid-cols-[380px_1fr]" data-notifications-page data-read-url="<?= esc(site_url('notifications/read'), 'attr') ?>">
 
-    <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm md:max-h-[calc(100dvh-9rem)]" aria-label="Notifications">
+    <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm" aria-label="Notifications">
         <div class="flex items-center justify-between gap-2 px-5 pb-2 pt-4">
             <h1 class="text-xl font-bold text-brand">Notifications</h1>
             <form method="post" action="<?= site_url('notifications/read') ?>" data-role="mark-all" <?= $unread > 0 ? '' : 'hidden' ?>>
@@ -78,7 +78,7 @@ $when = static function (array $row): string {
         <p class="hidden px-5 py-8 text-center text-sm text-gray-500" data-role="filter-empty">Nothing here.</p>
     </section>
 
-    <section class="rounded-2xl bg-white p-6 shadow-sm md:p-8" aria-label="Notification">
+    <section class="min-h-0 overflow-y-auto rounded-2xl bg-white p-6 shadow-sm md:p-8" aria-label="Notification">
         <?php foreach ($noteRows as $row): ?>
             <?php $urgent = (int) $row['urgent'] === 1; ?>
             <article id="notification-<?= (int) $row['id'] ?>" data-detail="<?= (int) $row['id'] ?>" class="flex flex-col gap-4" <?= (int) $row['id'] === $firstId ? '' : 'hidden' ?>>
