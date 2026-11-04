@@ -13,7 +13,7 @@ $btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-v
 
 <?= $this->section('content') ?>
 
-<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
 <?= view('components/page-head', ['title' => 'Feature flags', 'icon' => 'pin'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-[#646464]">

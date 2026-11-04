@@ -22,7 +22,7 @@ $reasons = [
 
 <?= $this->section('content') ?>
 
-<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
 <?= view('components/page-head', ['title' => 'Feature flags', 'icon' => 'pin', 'backUrl' => site_url('admin/institutions'), 'backLabel' => 'Institutions'], ['saveData' => false]) ?>
 <p class="mt-1 text-sm text-[#646464]"><?= esc($flagInstitution['name']) ?> <span class="font-mono text-xs">(<?= esc($flagInstitution['code']) ?>)</span></p>
