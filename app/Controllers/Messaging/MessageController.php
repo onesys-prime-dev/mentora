@@ -31,10 +31,15 @@ class MessageController extends MessagingController
 
     public function send(int $conversationId): ResponseInterface
     {
-        $input  = $this->input();
+        $input   = $this->input();
+        $replyTo = $input['reply_to'] ?? null;
+
+        if ($replyTo !== null && $replyTo !== '' && (! is_numeric($replyTo) || (string) (int) $replyTo !== (string) $replyTo)) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => 'invalid_reply']);
+        }
 
         try {
-            $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''), $this->intOrNull($input['reply_to'] ?? null));
+            $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''), $replyTo === null || $replyTo === '' ? null : (int) $replyTo);
         } catch (RateLimitedException $e) {
             return $this->rateLimited($e);
         }

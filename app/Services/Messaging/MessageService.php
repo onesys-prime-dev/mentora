@@ -174,9 +174,7 @@ class MessageService
 
         $userId = (int) $user->id;
         $limit  = max(1, min(self::PAGE_MAX, $limit));
-        $mine   = db_connect()->table('conversation_participants')->select('first_visible_message_id, cleared_before_message_id')
-            ->where(['conversation_id' => $conversationId, 'user_id' => $userId])->get()->getRowArray();
-        $first  = max((int) ($mine['first_visible_message_id'] ?? 0), (int) ($mine['cleared_before_message_id'] ?? 0) + 1);
+        $first  = $this->visibleFloor($userId, $conversationId);
 
         $builder = db_connect()->table('messages m')->select('m.*')
             ->where('m.conversation_id', $conversationId)->where('m.id >=', $first)
@@ -307,7 +305,7 @@ class MessageService
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
             'sender_name' => $sender['name'], 'sender_role' => $sender['role'],
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
-            'reply' => $this->quote($row['reply_to_message_id'] ?? null),
+            'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
         ];
@@ -320,15 +318,22 @@ class MessageService
             return false;
         }
 
-        $db   = db_connect();
-        $mine = $db->table('conversation_participants')->select('first_visible_message_id')
+        return $this->visibleTo($userId, $conversationId, $messageId);
+    }
+
+    /** The lowest message id the user can see in a chat: after joining and after any "delete for me". */
+    private function visibleFloor(int $userId, int $conversationId): int
+    {
+        $mine = db_connect()->table('conversation_participants')->select('first_visible_message_id, cleared_before_message_id')
             ->where(['conversation_id' => $conversationId, 'user_id' => $userId])->get()->getRowArray();
 
-        if ($messageId < (int) ($mine['first_visible_message_id'] ?? 0)) {
-            return false;
-        }
+        return max((int) ($mine['first_visible_message_id'] ?? 0), (int) ($mine['cleared_before_message_id'] ?? 0) + 1);
+    }
 
-        return $db->table('message_hidden')->where(['message_id' => $messageId, 'user_id' => $userId])->countAllResults() === 0;
+    private function visibleTo(int $userId, int $conversationId, int $messageId): bool
+    {
+        return $messageId >= $this->visibleFloor($userId, $conversationId)
+            && db_connect()->table('message_hidden')->where(['message_id' => $messageId, 'user_id' => $userId])->countAllResults() === 0;
     }
 
     /**
@@ -336,7 +341,7 @@ class MessageService
      *
      * @return array{id: int, sender_name: string, text: string}|null
      */
-    private function quote(mixed $originalId): ?array
+    private function quote(mixed $originalId, int $viewerId): ?array
     {
         if ($originalId === null) {
             return null;
@@ -350,7 +355,7 @@ class MessageService
 
         $text = 'Message removed';
 
-        if ($orig['removed_at'] === null && ($orig['deleted_everyone_at'] ?? null) === null) {
+        if ($orig['removed_at'] === null && ($orig['deleted_everyone_at'] ?? null) === null && $this->visibleTo($viewerId, (int) $orig['conversation_id'], (int) $orig['id'])) {
             $plain = $this->cipher->decrypt((string) $orig['body_enc'], (int) $orig['conversation_id'], (int) $orig['sender_id']) ?? 'Message unavailable';
             $text  = mb_strlen($plain) > 80 ? mb_substr($plain, 0, 80) . '…' : $plain;
         }

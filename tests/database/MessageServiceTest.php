@@ -386,4 +386,28 @@ final class MessageServiceTest extends DatabaseTestCase
         $this->assertSame('Message removed', $byId[$ra]['reply']['text']);
         $this->assertSame('Message removed', $byId[$rb]['reply']['text']);
     }
+
+    public function testAReplyAcrossAClearedChatIsInvalidButAfterItIsFine(): void
+    {
+        $old = $this->send($this->student, 'old')['message']['id'];
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $this->conversation, 'user_id' => $this->instructor->id])->update(['cleared_before_message_id' => $old]);
+        $new = $this->send($this->student, 'new')['message']['id'];
+
+        $this->assertSame('invalid_reply', $this->reply($this->instructor, 'x', $old)['reason']);
+        $this->assertTrue($this->reply($this->instructor, 'x', $new)['ok']);
+    }
+
+    public function testAQuoteOfAMessageTheViewerCannotSeeHasNoText(): void
+    {
+        $old   = $this->send($this->student, 'secret old')['message']['id'];
+        $reply = $this->reply($this->student, 'reply', $old)['message']['id'];
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $this->conversation, 'user_id' => $this->instructor->id])->update(['first_visible_message_id' => $reply]);
+
+        $seen = $this->service()->page($this->instructor, $this->conversation)['messages'][0];
+        $this->assertSame('Message removed', $seen['reply']['text']);
+
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $this->conversation, 'user_id' => $this->instructor->id])->update(['first_visible_message_id' => 0]);
+        $this->service()->hideForMe($this->instructor, $this->conversation, $old);
+        $this->assertSame('Message removed', $this->service()->page($this->instructor, $this->conversation)['messages'][0]['reply']['text']);
+    }
 }
