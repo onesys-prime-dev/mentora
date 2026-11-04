@@ -2,20 +2,20 @@
    does not depend on Tailwind scanning the script. */
 [data-role="menu"] {
     z-index: 60;
-    min-width: 12rem;
+    min-width: 7.5rem;
     max-width: 18rem;
-    padding: 0.25rem;
+    padding: 0.2rem;
     background: #fff;
     color: #1f2937;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
     box-shadow: 0 10px 25px rgb(0 0 0 / 0.15);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
 }
 [data-role="menu"] button {
     display: block;
     width: 100%;
-    padding: 0.4rem 0.6rem;
+    padding: 0.3rem 0.5rem;
     text-align: left;
     background: transparent;
     border-radius: 0.375rem;
