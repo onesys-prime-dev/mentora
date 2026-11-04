@@ -8,11 +8,17 @@
 |--------------------------------------------------------------------------
 */
 
-const FIELD = "input, textarea, [contenteditable]";
+const FIELD = "input, textarea, [contenteditable]:not([contenteditable=\"false\"])";
+const SLOP = 10;
 
 export function bindMenuTriggers(container, { selector, onOpen, longPressMs = 500 }) {
     let timer = null;
     let swallowClick = false;
+    let swallowTimer = null;
+    let recentOpen = false;
+    let recentTimer = null;
+    let startX = 0;
+    let startY = 0;
 
     const match = (target) => (target?.closest ? target.closest(selector) : null);
     const inField = (target) => Boolean(target?.closest?.(FIELD));
@@ -31,6 +37,9 @@ export function bindMenuTriggers(container, { selector, onOpen, longPressMs = 50
         }
 
         event.preventDefault();
+        if (recentOpen) {
+            return;
+        }
         onOpen(el, { x: event.clientX, y: event.clientY, trigger: el });
     };
 
@@ -38,6 +47,8 @@ export function bindMenuTriggers(container, { selector, onOpen, longPressMs = 50
         const el = match(event.target);
 
         clear();
+        clearTimeout(swallowTimer);
+        swallowClick = false;
         if (!el || inField(event.target)) {
             return;
         }
@@ -45,15 +56,35 @@ export function bindMenuTriggers(container, { selector, onOpen, longPressMs = 50
         const touch = event.touches?.[0];
         const x = touch?.clientX ?? 0;
         const y = touch?.clientY ?? 0;
+        startX = x;
+        startY = y;
 
         timer = setTimeout(() => {
             timer = null;
             swallowClick = true;
+            recentOpen = true;
+            clearTimeout(recentTimer);
+            recentTimer = setTimeout(() => { recentOpen = false; }, 700);
             onOpen(el, { x, y, trigger: el });
         }, longPressMs);
     };
 
-    const onTouchEnd = () => clear();
+    const onTouchMove = (event) => {
+        const touch = event.touches?.[0];
+
+        if (touch && Math.hypot(touch.clientX - startX, touch.clientY - startY) <= SLOP) {
+            return;
+        }
+        clear();
+    };
+
+    const onTouchEnd = () => {
+        clear();
+        if (swallowClick) {
+            clearTimeout(swallowTimer);
+            swallowTimer = setTimeout(() => { swallowClick = false; }, 400);
+        }
+    };
 
     const onClick = (event) => {
         if (swallowClick) {
@@ -78,7 +109,7 @@ export function bindMenuTriggers(container, { selector, onOpen, longPressMs = 50
 
     container.addEventListener("contextmenu", onContext);
     container.addEventListener("touchstart", onTouchStart, { passive: true });
-    container.addEventListener("touchmove", onTouchEnd, { passive: true });
+    container.addEventListener("touchmove", onTouchMove, { passive: true });
     container.addEventListener("touchend", onTouchEnd);
     container.addEventListener("touchcancel", onTouchEnd);
     container.addEventListener("click", onClick, true);
@@ -86,9 +117,11 @@ export function bindMenuTriggers(container, { selector, onOpen, longPressMs = 50
 
     return () => {
         clear();
+        clearTimeout(swallowTimer);
+        clearTimeout(recentTimer);
         container.removeEventListener("contextmenu", onContext);
         container.removeEventListener("touchstart", onTouchStart);
-        container.removeEventListener("touchmove", onTouchEnd);
+        container.removeEventListener("touchmove", onTouchMove);
         container.removeEventListener("touchend", onTouchEnd);
         container.removeEventListener("touchcancel", onTouchEnd);
         container.removeEventListener("click", onClick, true);

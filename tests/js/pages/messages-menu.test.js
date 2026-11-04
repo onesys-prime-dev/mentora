@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { createMenu } from "../../../resources/js/pages/messages/menu.js";
 import { bindMenuTriggers } from "../../../resources/js/pages/messages/gestures.js";
@@ -156,6 +156,8 @@ describe("menu", () => {
     });
 
     it("stays inside a small viewport", () => {
+        const prev = [window.innerWidth, window.innerHeight];
+        onTestFinished(() => { window.innerWidth = prev[0]; window.innerHeight = prev[1]; });
         window.innerWidth = 200;
         window.innerHeight = 150;
         const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
@@ -164,10 +166,158 @@ describe("menu", () => {
         menu.open(items, { x: 190, y: 140, trigger });
         const left = parseFloat(el().style.left);
         const top = parseFloat(el().style.top);
-        expect(left).toBeGreaterThanOrEqual(0);
-        expect(left + 120).toBeLessThanOrEqual(200);
-        expect(top).toBeGreaterThanOrEqual(0);
-        expect(top + 100).toBeLessThanOrEqual(150);
+        expect(left).toBeGreaterThanOrEqual(4);
+        expect(left).toBeLessThanOrEqual(200 - 120 - 4);
+        expect(top).toBeGreaterThanOrEqual(4);
+        expect(top).toBeLessThanOrEqual(150 - 100 - 4);
         spy.mockRestore();
+    });
+});
+
+describe("gestures edge cases", () => {
+    let box;
+    let row;
+    let area;
+    let onOpen;
+    let unbind;
+    const touch = (target, type, x = 0, y = 0) => {
+        const e = new Event(type, { bubbles: true });
+        e.touches = [{ clientX: x, clientY: y }];
+        target.dispatchEvent(e);
+    };
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        document.body.innerHTML = `<div id="box"><div class="row" tabindex="0">row</div><textarea class="row"></textarea></div>`;
+        box = document.getElementById("box");
+        row = box.querySelector("div.row");
+        area = box.querySelector("textarea");
+        onOpen = vi.fn();
+        unbind = bindMenuTriggers(box, { selector: ".row", onOpen });
+    });
+
+    afterEach(() => {
+        unbind();
+        vi.useRealTimers();
+    });
+
+    it("opens nothing for Shift+F10 or long-press inside a textarea", () => {
+        const e = key(area, "F10", { shiftKey: true });
+        expect(e.defaultPrevented).toBe(false);
+        touch(area, "touchstart");
+        vi.advanceTimersByTime(1000);
+        expect(onOpen).not.toHaveBeenCalled();
+    });
+
+    it("touchend and touchcancel cancel the timer", () => {
+        ["touchend", "touchcancel"].forEach((type) => {
+            touch(row, "touchstart");
+            vi.advanceTimersByTime(300);
+            row.dispatchEvent(new Event(type, { bubbles: true }));
+            vi.advanceTimersByTime(1000);
+        });
+        expect(onOpen).not.toHaveBeenCalled();
+    });
+
+    it("Shift+F10 opens at the element bounds and prevents default", () => {
+        vi.spyOn(row, "getBoundingClientRect").mockReturnValue({ left: 11, bottom: 22, top: 0, right: 0, width: 0, height: 0 });
+        const e = key(row, "F10", { shiftKey: true });
+        expect(e.defaultPrevented).toBe(true);
+        expect(onOpen).toHaveBeenCalledWith(row, { x: 11, y: 22, trigger: row });
+    });
+
+    it("clears the swallowed click after one click", () => {
+        touch(row, "touchstart");
+        vi.advanceTimersByTime(500);
+        const first = new MouseEvent("click", { bubbles: true, cancelable: true });
+        row.dispatchEvent(first);
+        const second = new MouseEvent("click", { bubbles: true, cancelable: true });
+        row.dispatchEvent(second);
+        expect(first.defaultPrevented).toBe(true);
+        expect(second.defaultPrevented).toBe(false);
+    });
+
+    it("stops swallowing after the touchend grace period", () => {
+        touch(row, "touchstart");
+        vi.advanceTimersByTime(500);
+        row.dispatchEvent(new Event("touchend", { bubbles: true }));
+        vi.advanceTimersByTime(401);
+        const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+        row.dispatchEvent(click);
+        expect(click.defaultPrevented).toBe(false);
+    });
+
+    it("ignores the contextmenu a long-press also fires", () => {
+        touch(row, "touchstart");
+        vi.advanceTimersByTime(500);
+        row.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+        expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it("tolerates small finger movement but cancels on large", () => {
+        touch(row, "touchstart", 0, 0);
+        touch(row, "touchmove", 5, 5);
+        vi.advanceTimersByTime(500);
+        expect(onOpen).toHaveBeenCalledTimes(1);
+
+        touch(row, "touchstart", 0, 0);
+        touch(row, "touchmove", 30, 0);
+        vi.advanceTimersByTime(500);
+        expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("menu edge cases", () => {
+    let menu;
+    let trigger;
+    const items = () => [
+        { id: "a", label: "A", onSelect: vi.fn() },
+        { id: "b", label: "B", onSelect: vi.fn() },
+        { id: "c", label: "C", onSelect: vi.fn() },
+    ];
+
+    beforeEach(() => {
+        document.body.innerHTML = `<button id="t">t</button>`;
+        trigger = document.getElementById("t");
+        menu = createMenu(document);
+        menu.open(items(), { x: 0, y: 0, trigger });
+    });
+
+    afterEach(() => menu.close());
+
+    it("Tab closes", () => {
+        key(document.activeElement, "Tab");
+        expect(menu.isOpen()).toBe(false);
+    });
+
+    it("wraps with ArrowDown and Home", () => {
+        key(document.activeElement, "End");
+        key(document.activeElement, "ArrowDown");
+        expect(document.activeElement.dataset.action).toBe("a");
+        key(document.activeElement, "ArrowUp");
+        expect(document.activeElement.dataset.action).toBe("c");
+        key(document.activeElement, "Home");
+        expect(document.activeElement.dataset.action).toBe("a");
+    });
+
+    it("closes on scroll and on resize", () => {
+        document.dispatchEvent(new Event("scroll"));
+        expect(menu.isOpen()).toBe(false);
+        menu.open(items(), { x: 0, y: 0, trigger });
+        window.dispatchEvent(new Event("resize"));
+        expect(menu.isOpen()).toBe(false);
+    });
+
+    it("emoji buttons are radios and the plus focuses the first new one", () => {
+        menu.open(
+            [{ id: "reactions", type: "reactions", emojis: QUICK, selected: QUICK[1], onPick: vi.fn() }],
+            { x: 0, y: 0, trigger },
+        );
+        const radios = [...document.querySelectorAll("[data-emoji]")];
+        expect(radios[0].getAttribute("role")).toBe("menuitemradio");
+        expect(radios[1].getAttribute("aria-checked")).toBe("true");
+        expect(radios[0].getAttribute("aria-checked")).toBe("false");
+        document.querySelector('[data-action="more-reactions"]').click();
+        expect(document.activeElement.dataset.emoji).toBe(PALETTE[5]);
     });
 });

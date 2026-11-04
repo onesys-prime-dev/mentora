@@ -67,9 +67,8 @@ export function createMenu(doc = document) {
 
         const emojiButton = (emoji) => {
             const b = button(emoji, { "data-emoji": emoji, "aria-label": emoji });
-            if (emoji === item.selected) {
-                b.setAttribute("aria-pressed", "true");
-            }
+            b.setAttribute("role", "menuitemradio");
+            b.setAttribute("aria-checked", emoji === item.selected ? "true" : "false");
             b.addEventListener("click", () => {
                 close();
                 item.onPick?.(emoji);
@@ -87,7 +86,8 @@ export function createMenu(doc = document) {
             }
             more.setAttribute("aria-expanded", "true");
             const shown = new Set(item.emojis ?? []);
-            PALETTE.filter((e) => !shown.has(e)).forEach((e) => row.appendChild(emojiButton(e)));
+            const added = PALETTE.filter((e) => !shown.has(e)).map((e) => row.appendChild(emojiButton(e)));
+            added[0]?.focus();
             row.dataset.expanded = "true";
         });
         row.appendChild(more);
