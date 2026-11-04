@@ -1461,6 +1461,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     async function chatAction(c, action) {
         showListNote("");
 
+        // A list answer already on its way was asked for before this click; it would put the old state back.
+        if (action === "unread" || action === "read") {
+            listGuard.next();
+        }
+
         // Marking unread shows at once (the dot and the badge); the server answer below confirms or puts it back.
         if (action === "unread" && !c.marked_unread && !(c.unread > 0)) {
             c.marked_unread = true;
