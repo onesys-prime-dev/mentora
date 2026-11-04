@@ -71,6 +71,8 @@ $accountLinks = [
     </div>
 
     <div class="flex gap-4 items-center">
+        <?php // One pill for the quick-access icons: Messages, notifications, dark mode, Apps. ?>
+        <div class="flex items-center gap-0.5 rounded-full bg-white p-1 shadow" data-header-pill>
         <?php // Messages is quick access: next to the bell and dark mode, not inside the Apps menu. Null while the flag is off or the role has no messages.use; the institutional administrator keeps the sidebar entry. ?>
         <?php $messagesTile = $userRole === 'institutional_admin' ? null : messages_tile($userRole); ?>
         <?php if ($messagesTile !== null): ?>
@@ -79,10 +81,11 @@ $accountLinks = [
             aria-label="Messages"
             title="Messages"
             <?= ($page ?? null) === 'messages' ? 'aria-current="page"' : '' ?>
-            class="relative h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-[current=page]:bg-brand aria-[current=page]:text-white">
-            <?= icon('inbox', 'h-4 w-4 text-current') ?>
+            class="relative h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-[current=page]:bg-brand aria-[current=page]:text-white">
+            <?= icon('chat', 'h-5 w-5 text-current') ?>
             <span data-messages-badge data-url="<?= esc(site_url('messages/api/unread-count')) ?>" <?= (int) $messagesTile['badge'] > 0 ? '' : 'hidden' ?> class="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= (int) $messagesTile['badge'] > 99 ? '99+' : (int) $messagesTile['badge'] ?></span>
         </a>
+        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
         <?php endif; ?>
         <div class="relative">
             <button
@@ -92,8 +95,8 @@ $accountLinks = [
                 aria-haspopup="true"
                 aria-expanded="false"
                 aria-controls="notifications-panel"
-                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
-                <?= icon('bell', 'h-4 w-4 text-current') ?>
+                class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white">
+                <?= icon('bell', 'h-5 w-5 text-current') ?>
             </button>
 
             <!-- Latest notifications, 7 at a time; more load as the list is scrolled -->
@@ -123,15 +126,17 @@ $accountLinks = [
 
             </div>
         </div>
+        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
         <button
             type="button"
             data-theme-toggle aria-pressed="false" aria-label="Dark mode is off. Switch to dark mode" title="Switch to dark mode"
-            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
-            <?= icon('night', 'h-4 w-4 text-current') ?>
+            class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
+            <?= icon('night', 'h-5 w-5 text-current') ?>
         </button>
 
         <?php // The institutional administrator has a sidebar instead of the Apps menu. ?>
         <?php if ($userRole !== 'institutional_admin'): ?>
+        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
         <div class="relative">
             <button
                 id="app-menu-button"
@@ -140,8 +145,8 @@ $accountLinks = [
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="app-menu-panel"
-                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
-                <?= icon('apps', 'h-4 w-4 text-current') ?>
+                class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white">
+                <?= icon('apps', 'h-5 w-5 text-current') ?>
             </button>
 
             <!-- Global apps — same list as the dashboard's Quick Access (global_apps()) -->
@@ -169,6 +174,7 @@ $accountLinks = [
             </div>
         </div>
         <?php endif; ?>
+        </div>
 
         <div class="relative">
             <button
