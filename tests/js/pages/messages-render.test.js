@@ -154,12 +154,11 @@ describe("a conversation row", () => {
 
     });
 
-    it("dims an archived chat and offers the chat actions control", () => {
+    it("dims an archived chat", () => {
 
         const node = conversationRow(row({ archived: true }), { selected: false });
 
         expect(node.className).toContain("opacity-70");
-        expect(node.querySelector("[aria-label='Chat actions']")).not.toBeNull();
 
     });
 

@@ -91,9 +91,9 @@ describe("message node extras", () => {
         const [a, b] = reactionChips({ ...base, reactions: [{ emoji: "👍", count: 1, mine: true }, { emoji: "❤️", count: 1, mine: false }] }, {}).querySelectorAll("button");
 
         expect(a.getAttribute("aria-pressed")).toBe("true");
-        expect(a.className).toContain("border-brand");
+        expect(a.className).toContain("bg-brand-tint");
         expect(b.getAttribute("aria-pressed")).toBe("false");
-        expect(b.className).not.toContain("border-brand");
+        expect(b.className).not.toContain("bg-brand-tint");
 
     });
 

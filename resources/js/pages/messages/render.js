@@ -153,6 +153,8 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     const chips = reactionChips(message, { onToggle, onShowWho });
 
     if (chips) {
+        // The pill hangs off the bubble's bottom edge, so the bubble leaves room for it.
+        node.classList.add("relative", "mb-4");
         node.append(chips);
     }
 
@@ -213,20 +215,11 @@ export function conversationRow(conversation, { selected }) {
         meta.append(dot, el("span", "sr-only", " marked unread"));
     }
 
-    // Not a nested <button>: a span with the button role, opened by click or Enter/Space (messages.js).
-    const more = el("span", "ml-1 flex-none cursor-pointer rounded-full px-1.5 text-[15px] leading-none text-gray-500 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 max-md:opacity-100", "⋯");
-
-    more.dataset.role = "row-menu";
-    more.setAttribute("role", "button");
-    more.setAttribute("tabindex", "0");
-    more.setAttribute("aria-label", "Chat actions");
-
-    row.className += " group/row";
     if (conversation.archived) {
         row.className += " opacity-70";
     }
 
-    row.append(avatar, text, meta, more);
+    row.append(avatar, text, meta);
 
     return row;
 }

@@ -434,7 +434,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const loaded = state.items.filter((i) => typeof i.id === "number").map((i) => i.id);
         const newest = loaded.length > 0 ? Math.max(...loaded) : 0;
         const known = new Set(loaded);
-        const relevant = data.messages.filter((m) => known.has(m.id) || m.id > newest);
+        // A message whose reaction is still on its way keeps what the person just picked.
+        const busy = new Set(state.items.filter((i) => i.reacting).map((i) => i.id));
+        const relevant = data.messages.filter((m) => !busy.has(m.id) && (known.has(m.id) || m.id > newest));
 
         if (relevant.length > 0) {
             state.items = mergeById(state.items, relevant);
@@ -1150,10 +1152,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         m.reacting = false;
 
+        // A poll may have swapped this message for a fresh copy while the request was in flight.
+        const live = messageById(m.id) ?? m;
+
+        live.reacting = false;
+
         if (result.status === 200 && Array.isArray(result.data?.reactions)) {
-            m.reactions = result.data.reactions;
+            live.reactions = result.data.reactions;
         } else {
-            m.reactions = before;
+            live.reactions = before;
             refused(result);
         }
 
@@ -1412,29 +1419,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
     bindMenuTriggers(rowsEl, { selector: "button[data-id]", onOpen: openChatMenu });
 
-    const openFromMore = (event) => {
-        const more = event.target.closest?.("[data-role=row-menu]");
-
-        if (!more) {
-            return false;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        const rect = more.getBoundingClientRect();
-
-        openChatMenu(more.closest("button[data-id]"), { x: rect.left, y: rect.bottom, trigger: more });
-
-        return true;
-    };
-
-    rowsEl.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-            openFromMore(event);
-        }
-    });
-
     const switchView = (archived) => {
         state.archived = archived;
         state.switching = true;
@@ -1450,10 +1434,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     archivedBackEl?.addEventListener("click", () => switchView(false));
 
     rowsEl.addEventListener("click", (event) => {
-        if (openFromMore(event)) {
-            return;
-        }
-
         const row = event.target.closest("button[data-id]");
 
         if (row) {
