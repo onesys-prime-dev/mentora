@@ -22,7 +22,7 @@ export function reactionChips(message, { onToggle, onShowWho } = {}) {
 
     const row = document.createElement("div");
 
-    row.className = `absolute -bottom-2.5 ${message.mine ? "right-4" : "right-1"} flex items-center gap-0.5 rounded-full border border-gray-200 bg-white px-1 py-px text-gray-700 shadow-sm`;
+    row.className = `absolute -bottom-2.5 right-1 flex items-center gap-0.5 rounded-full border border-gray-200 bg-white px-1 py-px text-gray-700 shadow-sm`;
     row.dataset.reactions = "";
 
     reactions.forEach((reaction) => {
