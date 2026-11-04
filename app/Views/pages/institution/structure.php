@@ -433,10 +433,11 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         return [$body, ''];
     };
 
-    $code = view('components/form-field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'maxlength' => 50, 'help' => 'Letters, numbers, dots, dashes or underscores. Shown in capitals.', 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
-    $name = view('components/form-field', ['name' => 'name', 'label' => 'Name', 'required' => true, 'maxlength' => 255, 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
+    // Built per dialog: each field needs its own id, or a label would point into another dialog.
+    $code = static fn (): string => view('components/form-field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'maxlength' => 50, 'help' => 'Letters, numbers, dots, dashes or underscores. Shown in capitals.', 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
+    $name = static fn (): string => view('components/form-field', ['name' => 'name', 'label' => 'Name', 'required' => true, 'maxlength' => 255, 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
 
-    [$deptBody, $deptFooter] = $form('structure-department', $code . $name
+    [$deptBody, $deptFooter] = $form('structure-department', $code() . $name()
         . view('components/form-field', ['name' => 'location', 'label' => 'Location', 'maxlength' => 255, 'help' => 'Optional. A building or campus.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'established_year', 'label' => 'Year established', 'type' => 'number', 'attrs' => 'min="1800" inputmode="numeric"', 'help' => 'Optional.'], ['saveData' => false]));
 
@@ -449,7 +450,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     $deanHelp = 'People who hold the dean role in your institution. Give someone the role on the People page.';
 
     // Adding a college also picks its dean, so grades and requests there have someone to decide them.
-    [$deptNewBody, $deptNewFooter] = $form('structure-department-new', $code . $name
+    [$deptNewBody, $deptNewFooter] = $form('structure-department-new', $code() . $name()
         . view('components/form-field', ['name' => 'location', 'label' => 'Location', 'maxlength' => 255, 'help' => 'Optional. A building or campus.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'established_year', 'label' => 'Year established', 'type' => 'number', 'attrs' => 'min="1800" inputmode="numeric"', 'help' => 'Optional.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'dean_user_id', 'label' => 'Dean', 'type' => 'select', 'options' => $deanOptions, 'help' => $deanHelp . ' You can also assign one later.'], ['saveData' => false]));
@@ -469,8 +470,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         'help' => 'People who hold the chairperson role in your institution. Give someone the role on the People page.',
     ], ['saveData' => false]) . '<input type="hidden" name="replace" value="">');
 
-    [$subBody, $subFooter]   = $form('structure-sub', $code . $name);
-    [$progBody, $progFooter] = $form('structure-program', $code . $name);
+    [$subBody, $subFooter]   = $form('structure-sub', $code() . $name());
+    [$progBody, $progFooter] = $form('structure-program', $code() . $name());
     ?>
 
     <?= view('components/dialog', ['id' => 'structure-department', 'title' => 'Department', 'body' => $deptBody, 'footer' => $deptFooter], ['saveData' => false]) ?>
