@@ -1,6 +1,6 @@
 # P2 test cases: Messages
 
-14 cases in the browser, and the PHP tests that stand behind the rules. Read
+26 cases in the browser, and the PHP tests that stand behind the rules. Read
 [README.md](README.md) first. All are `Draft` (see the README).
 
 `tests/e2e/messages.spec.js` holds the cases. They run in order on one database.
@@ -41,6 +41,9 @@ What these prove, in the order of the design (`docs/superpowers/specs/2026-11-02
    (TC-MSG-12).
 5. The screen works on a phone, and the system administrator has no Messages
    (TC-MSG-13, 14).
+6. A person can pin, mute, archive and delete a chat for themselves, and react to,
+   reply to, pin, forward, bump and delete messages; the people who manage a chat can
+   turn most of those off (TC-MSG-15 to 26).
 
 | ID | Case | Role |
 |---|---|---|
@@ -58,6 +61,18 @@ What these prove, in the order of the design (`docs/superpowers/specs/2026-11-02
 | [TC-MSG-12](#tc-msg-12-quiet-hours-hold-a-notification) | Quiet hours hold a notification | Instructor |
 | [TC-MSG-13](#tc-msg-13-on-a-phone-list-then-thread-then-back) | On a phone: list, then thread, then back | Student |
 | [TC-MSG-14](#tc-msg-14-the-system-administrator-has-no-messages) | The system administrator has no Messages | System administrator |
+| [TC-MSG-15](#tc-msg-15-pin-a-chat-to-the-top) | Pin a chat to the top | Student |
+| [TC-MSG-16](#tc-msg-16-mute-a-chat) | Mute a chat | Student |
+| [TC-MSG-17](#tc-msg-17-archive-a-chat) | Archive a chat | Student |
+| [TC-MSG-18](#tc-msg-18-delete-a-chat-for-me) | Delete a chat for me | Student |
+| [TC-MSG-19](#tc-msg-19-react-to-a-message) | React to a message | Student |
+| [TC-MSG-20](#tc-msg-20-reply-to-a-message) | Reply to a message | Student |
+| [TC-MSG-21](#tc-msg-21-pin-a-message) | Pin a message | Student, Instructor |
+| [TC-MSG-22](#tc-msg-22-forward-a-message) | Forward a message | Student, Parent |
+| [TC-MSG-23](#tc-msg-23-bump-a-message) | Bump a message | Student |
+| [TC-MSG-24](#tc-msg-24-delete-for-everyone) | Delete for everyone | Student |
+| [TC-MSG-25](#tc-msg-25-phone-and-keyboard) | Phone and keyboard | Student |
+| [TC-MSG-26](#tc-msg-26-settings-and-chat-controls) | Settings and Chat controls | Instructor, Student |
 
 Not in the browser (manual, before turning the flag on; the checklist is in
 `docs/messages.md`): a captured email for a test phrase, restoring a backup with
@@ -287,4 +302,209 @@ and without the key, and rotating the key with `messages:reencrypt`.
 - **Already automated:** `tests/feature/MessagesRoutesTest.php`, `tests/database/MessagesNavigationTest.php`
 - **Playwright:** `tests/e2e/messages.spec.js`
 - **Basis:** `app/Filters/MessagesFilter.php`
+- **Review:** Draft
+
+---
+
+## Chat and message actions (TC-MSG-15 to 26)
+
+These twelve cases use Michael Villanueva and Juan Dela Cruz and the direct thread
+they share from TC-MSG-03 and 11 (TC-MSG-15 first lifts the block TC-MSG-11 leaves).
+Each case writes texts of its own. The design is
+`docs/superpowers/specs/2026-11-04-messages-actions-design.md`.
+
+### TC-MSG-15 Pin a chat to the top
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Right-click the direct chat with Juan in the list and choose Pin to top.
+  2. Right-click it again and choose Unpin.
+- **Expected:**
+  - After the first step it is the first row, above the course chats; Pin to top is no longer offered.
+  - After the second the order is back as it was.
+- **Already automated:** `tests/database/ChatStateServiceTest.php`, `tests/feature/MessagesChatStateRoutesTest.php`, `tests/js/pages/messages-menu-items.test.js`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/ChatStateService.php`
+- **Review:** Draft
+
+### TC-MSG-16 Mute a chat
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Michael mutes the chat with Juan.
+  2. Juan sends a message.
+  3. Michael reloads and looks at the list, the Messages badge and his notifications.
+  4. Michael unmutes the chat.
+- **Expected:**
+  - The row still shows its unread count, but the badge does not change and there is no "sent you a message" notification.
+  - After unmuting, the badge counts the message.
+- **Already automated:** `tests/database/ConversationServiceTest.php`, `tests/database/MessageNotifierTest.php`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/ConversationService.php`
+- **Review:** Draft
+
+### TC-MSG-17 Archive a chat
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Michael archives the chat with Juan.
+  2. He opens "Archived chats (1)", then goes back.
+  3. Juan sends a message.
+- **Expected:**
+  - The row leaves the main list and shows under Archived chats.
+  - The message brings the chat back to the main list (it was not muted).
+- **Already automated:** `tests/database/ConversationServiceTest.php`, `tests/js/pages/messages-page.test.js`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/ChatStateService.php`
+- **Review:** Draft
+
+### TC-MSG-18 Delete a chat for me
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Michael opens the menu of the IT101 course chat.
+  2. He deletes his chat with Juan.
+  3. Juan sends a new message.
+- **Expected:**
+  - A course chat has no "Delete chat (for me)".
+  - The chat disappears for Michael only; Juan still has it.
+  - The new message brings it back for Michael showing only that message, not the earlier ones.
+- **Already automated:** `tests/database/ChatStateServiceTest.php`, `tests/database/MessageServiceTest.php`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/ChatStateService.php`
+- **Review:** Draft
+
+### TC-MSG-19 React to a message
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Juan writes a message. Michael right-clicks it and picks 👍.
+  2. Juan, who has not reloaded, looks at the message.
+  3. Michael presses the 👍 chip.
+- **Expected:**
+  - The chip "👍 1" shows for both, for Juan within the polling interval and without a reload.
+  - Pressing it again removes it for both.
+- **Already automated:** `tests/database/MessageActionsReactionsTest.php`, `tests/js/pages/messages-thread-state.test.js`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/MessageActions.php`
+- **Review:** Draft
+
+### TC-MSG-20 Reply to a message
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Michael right-clicks Juan's message and chooses Reply.
+  2. He sends an answer.
+  3. He clicks the quote in his answer.
+- **Expected:**
+  - A strip above the composer quotes the original, and goes away when he sends.
+  - His message carries the quote; clicking it scrolls to and highlights the original.
+- **Already automated:** `tests/database/MessageServiceTest.php`, `tests/js/pages/messages-reactions.test.js`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/MessageService.php`
+- **Review:** Draft
+
+### TC-MSG-21 Pin a message
+
+- **Role:** Student, Instructor. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`, `instructor1@mentora.test`
+- **Steps:**
+  1. In the direct thread Michael pins Juan's message, then unpins it.
+  2. In the IT101 chat a student opens the menu of a message; the instructor opens the same message's menu.
+- **Expected:**
+  - Both people see the pinned bar while it is pinned.
+  - In the course chat the student's menu has no "Pin message"; the instructor's does.
+- **Already automated:** `tests/database/MessageActionsPinTest.php`, `tests/database/MessagingPolicyTest.php`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/MessagingPolicy.php`
+- **Review:** Draft
+
+### TC-MSG-22 Forward a message
+
+- **Role:** Student, Parent. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`, `parent1@mentora.test`
+- **Steps:**
+  1. Michael forwards Juan's message to the IT101 chat.
+  2. He opens the IT101 chat.
+  3. The parent opens the menu of a message in their thread with the instructor.
+- **Expected:**
+  - The copy arrives marked "Forwarded".
+  - A parent's thread offers no Forward.
+- **Already automated:** `tests/database/MessageActionsForwardTest.php`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/MessageActions.php`
+- **Review:** Draft
+
+### TC-MSG-23 Bump a message
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Michael bumps his own message.
+  2. He bumps the same message again.
+  3. He opens the menu of one of Juan's messages.
+- **Expected:**
+  - A new message with the same text appears at the bottom, marked "Bump".
+  - The second bump within the hour is refused with a short note.
+  - Someone else's message has no Bump.
+- **Already automated:** `tests/database/MessageActionsBumpTest.php`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/MessageActions.php`
+- **Review:** Draft
+
+### TC-MSG-24 Delete for everyone
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, `student1@mentora.test`
+- **Steps:**
+  1. Michael deletes one of his messages for everyone (and confirms).
+  2. He opens the menu of one of Juan's messages.
+  3. Twenty minutes pass (the case moves the message's time back) and he opens the menu of an older message of his.
+- **Expected:**
+  - Michael sees "You deleted a message", Juan sees "Michael Villanueva deleted a message".
+  - The text is gone from the page and from what the server sends.
+  - Someone else's message has no "Delete for everyone", and neither has one older than 15 minutes.
+- **Already automated:** `tests/database/MessageActionsDeleteEveryoneTest.php`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/MessageActions.php`
+- **Review:** Draft
+
+### TC-MSG-25 Phone and keyboard
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student5@mentora.test`, a 390 by 844 screen and a desktop one
+- **Steps:**
+  1. On the phone, press and hold a message.
+  2. On the desktop, focus a message and press Shift+F10, then Escape, then Shift+F10, ArrowDown and Enter.
+  3. Right-click the composer.
+- **Expected:**
+  - The menu opens on a long press and on Shift+F10; Escape closes it and focus returns to the message.
+  - The composer keeps the browser's own menu.
+- **Already automated:** `tests/js/pages/messages-menu.test.js`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `resources/js/pages/messages/gestures.js`
+- **Review:** Draft
+
+### TC-MSG-26 Settings and Chat controls
+
+- **Role:** Instructor, Student. **Priority:** P2
+- **Data:** `instructor1@mentora.test`, `student5@mentora.test`, IT101-A
+- **Steps:**
+  1. The student opens Settings.
+  2. The instructor opens Settings, Chat controls, for the IT101 chat and turns off Forwarding, Reactions and Delete for everyone.
+  3. The student reloads and opens a message's menu, and tries to react with a request the screen no longer offers.
+- **Expected:**
+  - The student's Settings has no tab bar and no Chat controls.
+  - The student's menu has no Forward, no reaction row and no "Delete for everyone", but still "Delete for me".
+  - The server refuses the stale reaction with 403.
+  - The case turns the switches back on at the end.
+- **Already automated:** `tests/database/ChatControlsTest.php`, `tests/js/pages/messages-settings.test.js`
+- **Playwright:** `tests/e2e/messages.spec.js`
+- **Basis:** `app/Services/Messaging/ChatControls.php`
 - **Review:** Draft
