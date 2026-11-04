@@ -250,7 +250,7 @@ class ConversationService
 
         $row = db_connect()->query(
             'SELECT COALESCE(SUM(unread), 0) AS total FROM (
-                SELECT (' . $this->unreadSql() . ') AS unread
+                SELECT GREATEST((' . $this->unreadSql() . '), p.marked_unread) AS unread
                 FROM conversations c
                 JOIN conversation_participants p ON p.conversation_id = c.id AND p.left_at IS NULL
                 WHERE p.user_id = ? AND c.institution_id = ? AND p.is_muted = 0
