@@ -110,7 +110,7 @@ export function dayLabel(iso, now) {
 }
 
 export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
-    const node = el("div", `max-w-[70%] break-words rounded-2xl border px-3 py-1.5 text-[15px] ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
+    const node = el("div", `max-w-[70%] min-w-[4.5rem] break-words rounded-2xl border px-4 py-2.5 text-base leading-snug ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
 
     node.dataset.id = String(message.id);
     node.dataset.mine = mine ? "true" : "false";
@@ -154,7 +154,7 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
 
     if (chips) {
         // The pill hangs off the bubble's bottom edge, so the bubble leaves room for it.
-        node.classList.add("relative", "mb-4");
+        node.classList.add("relative", "mb-5", "pb-4");
         node.append(chips);
     }
 
