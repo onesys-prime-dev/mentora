@@ -1461,7 +1461,22 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     async function chatAction(c, action) {
         showListNote("");
 
+        // Marking unread shows at once (the dot and the badge); the server answer below confirms or puts it back.
+        if (action === "unread" && !c.marked_unread && !(c.unread > 0)) {
+            c.marked_unread = true;
+
+            if (!c.muted) {
+                updateBadge((state.badge ?? 0) + 1);
+            }
+
+            renderList();
+        }
+
         const result = await api.chatAction(c.id, action);
+
+        if (result.status !== 200 && action === "unread") {
+            await loadList();
+        }
 
         if (result.status === 409 && result.data?.error === "limit") {
             showListNote(`You can pin up to ${result.data.max ?? 5} chats.`);
