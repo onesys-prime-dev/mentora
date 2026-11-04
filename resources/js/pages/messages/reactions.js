@@ -22,7 +22,7 @@ export function reactionChips(message, { onToggle, onShowWho } = {}) {
 
     const row = document.createElement("div");
 
-    row.className = "absolute -bottom-2.5 right-2 flex items-center gap-0.5 rounded-full border border-gray-200 bg-white px-1 py-px text-gray-700 shadow-sm";
+    row.className = "absolute -bottom-3 right-2 flex items-center gap-0.5 rounded-full border border-gray-200 bg-white px-1 py-px text-gray-700 shadow-sm";
     row.dataset.reactions = "";
 
     reactions.forEach((reaction) => {
@@ -31,7 +31,7 @@ export function reactionChips(message, { onToggle, onShowWho } = {}) {
 
         chip.type = "button";
         chip.dataset.emoji = reaction.emoji;
-        chip.className = `rounded-full px-0.5 py-0 text-[11px] leading-4 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${reaction.mine ? "bg-brand-tint font-semibold text-brand-dark" : ""}`;
+        chip.className = `rounded-full px-0.5 py-0 text-[14px] leading-5 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${reaction.mine ? "bg-brand-tint font-semibold text-brand-dark" : ""}`;
         chip.setAttribute("aria-pressed", reaction.mine ? "true" : "false");
         chip.setAttribute("aria-label", `${count} ${count === 1 ? "reaction" : "reactions"}, ${reaction.emoji}.${reaction.mine ? " You reacted" : ""}`);
         chip.textContent = count > 1 ? `${reaction.emoji} ${count}` : reaction.emoji;
