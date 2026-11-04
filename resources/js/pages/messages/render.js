@@ -8,6 +8,8 @@
 |--------------------------------------------------------------------------
 */
 
+import { reactionChips } from "./reactions.js";
+
 const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -105,11 +107,12 @@ export function dayLabel(iso, now) {
     return at.getFullYear() === now.getFullYear() ? label : `${label} ${at.getFullYear()}`;
 }
 
-export function messageNode(message, { mine }) {
+export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     const node = el("div", `max-w-[70%] break-words rounded-2xl border px-3 py-1.5 text-[15px] ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
 
     node.dataset.id = String(message.id);
     node.dataset.mine = mine ? "true" : "false";
+    node.tabIndex = 0;
 
     if (!mine && message.sender_name) {
         const role = ROLE_LABELS[message.sender_role];
@@ -118,16 +121,38 @@ export function messageNode(message, { mine }) {
         node.append(label);
     }
 
-    if (message.removed) {
-        node.append(el("span", "italic text-gray-500", "Message removed"));
+    if (message.removed || message.deleted_everyone) {
+        node.append(el("span", "italic text-gray-500", message.removed ? "Message removed" : "This message was deleted"));
 
         return node;
+    }
+
+    if (message.forwarded) {
+        node.append(el("small", "mb-0.5 block text-[12px] italic text-gray-500", "Forwarded"));
+    }
+
+    if (message.bumped) {
+        node.append(el("small", "mb-0.5 block text-[12px] italic text-gray-500", "Bump"));
+    }
+
+    if (message.reply) {
+        const quote = el("blockquote", "mb-1 border-l-2 border-gray-400 pl-2 text-[13px] text-gray-500");
+
+        quote.dataset.replyTo = String(message.reply.id);
+        quote.append(el("strong", "block text-[12px] font-semibold", message.reply.sender_name ?? ""), el("span", "block truncate", message.reply.text ?? ""));
+        node.append(quote);
     }
 
     const body = el("div", "whitespace-normal");
 
     body.innerHTML = linkify(message.body ?? "");
     node.append(body);
+
+    const chips = reactionChips(message, { onToggle, onShowWho });
+
+    if (chips) {
+        node.append(chips);
+    }
 
     return node;
 }
