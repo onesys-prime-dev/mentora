@@ -15,7 +15,7 @@ chat apps people already use. This adds the everyday actions of a modern messeng
 **right-click** (or long-press on a phone, or a "⋯" button) on a chat in the list, and on a message in a thread.
 
 **On a chat in the list:** pin to top, mark as unread, mute, archive, block, delete (for me).
-**On a message:** react, reply, copy, forward, pin, bump, remove for me, unsend, report.
+**On a message:** react, reply, copy, forward, pin, bump, delete for me, delete for everyone, report.
 
 Owner's mockup: `.superpowers/brainstorm/1317-1793781110/content/message-menus-v2.html` (a throwaway picture of the
 menus, not code to reuse).
@@ -87,8 +87,8 @@ starts with a row of quick reactions.
 | **Forward** | Pick up to **5** chats the person already has and can post in; a copy is sent to each, authored by the forwarder, labelled "Forwarded", **without the original sender's name** **(my call)**. **Not** available from a parent thread about a child (`subject_student_id` set), and not for removed, unsent or hidden messages. Uses the normal send path, so blocks, locks, read-only and rate limits all apply per target. **A moderator can turn forwarding off for a chat** (see 3.3); while it is off nobody can forward messages *out of* that chat, but they can still forward *into* it. |
 | **Pin message** | Shows the message in a bar at the top of that chat for everyone in it ("📌 Pinned · … · 1 of 2"). Up to **3** per chat **(my call)**. Who may pin: direct chats and staff groups — any participant; course chats — only the instructor/moderators. Pinning and unpinning write an audit entry (ids only). |
 | **Bump** | Own messages only. Sends a fresh copy of the message at the bottom, marked "Bump" (a reminder), and notifies like any new message. Bumping a bump bumps the original. At most one bump per original message per hour **(my call)**. Requires `canPost`. |
-| **Remove for you** | The existing `hide` (delete for me). |
-| **Unsend for everyone** | Own messages only, within **15 minutes** of sending **(my call)**. The text is erased server-side (the stored body is replaced by an encrypted empty body) and the message becomes a tombstone "You unsent a message" / "{Name} unsent a message", distinct from a moderator's "Message removed". A message that has been **reported** keeps its report snapshot (original design 4, `snapshot_enc`). Writes an audit entry (ids only). |
+| **Delete for me** | The existing `hide` (delete for me). |
+| **Delete for everyone** (also called unsend) | Own messages only, within **15 minutes** of sending **(my call)**. The text is erased server-side (the stored body is replaced by an encrypted empty body) and the message becomes a tombstone "You deleted a message" / "{Name} deleted a message", distinct from a moderator's "Message removed". A message that has been **reported** keeps its report snapshot (original design 4, `snapshot_enc`). Writes an audit entry (ids only). |
 | **Report** | Existing, other people's messages only. |
 | **Remove (moderators)** | Existing `remove`; shown instead of Report where the person may moderate. |
 
@@ -123,8 +123,7 @@ not widen who can remove, pin or lock beyond what is listed here.
 | **Replies** | No Reply; the server refuses `reply_to`. |
 | **Forwarding** | No Forward *out of* this chat, for everyone including managers; forwarding *into* it still works. Header shows "Forwarding is off". It does not stop copy-paste and the interface must not claim it does. |
 | **Bump** | No Bump on own messages. |
-| **Unsend** | No Unsend for everyone on own messages. |
-| **Delete messages** | Members cannot "Remove for you" (hide a message from their own view). Managers keep **Remove** (the moderator removal with a tombstone and audit entry) whatever this says, because the person who can switch it off is the one who needs it. |
+| **Delete for everyone** | No "Delete for everyone" on own messages. **"Delete for me" is not a switch: every user always has it**, and managers always keep **Remove** (the moderator removal with a tombstone and audit entry), because the person who can switch this off is the one who needs it. |
 
 All switches default to **on** (lock defaults off), so nothing changes until a manager acts. A switch only changes
 what members can *do from now on*; it never alters existing messages. Every change is an audit entry (ids and the
@@ -159,7 +158,7 @@ TINYINT default 0, `cleared_before_message_id` INT UNSIGNED default 0. Existing 
 `pinned_by` NULL (FK to `users`, SET NULL), `changed_at` DATETIME NULL (set when a reaction, pin or unsend touches
 the row, so polling can find it).
 
-**`conversations`** add six TINYINT columns, default 1: `allow_reactions`, `allow_replies`, `allow_forwarding`, `allow_bump`, `allow_unsend`, `allow_delete_for_me`. (`is_locked` already exists for the lock.)
+**`conversations`** add five TINYINT columns, default 1: `allow_reactions`, `allow_replies`, `allow_forwarding`, `allow_bump`, `allow_delete_everyone`. (`is_locked` already exists for the lock.)
 
 **`message_reactions`**: `id`, `message_id` (FK, CASCADE), `user_id` (FK, CASCADE), `emoji` VARCHAR(16),
 `created_at`. Unique `(message_id, user_id)`. Index `(message_id)`. The allowed emoji set lives in one PHP constant
@@ -173,9 +172,9 @@ No plaintext columns are added; reply quotes and forward bodies are always deriv
 
 Exact verbs, paths and payload shapes are the builder's to choose within the repo's style. The set needed:
 
-- Chat state: pin / unpin, archive / unarchive, mute / unmute, mark unread, delete-for-me; and for managers, read / change the six chat controls (beside lock / unlock). `GET conversations`
+- Chat state: pin / unpin, archive / unarchive, mute / unmute, mark unread, delete-for-me; and for managers, read / change the five chat controls (beside lock / unlock). `GET conversations`
   gains `archived=1` (the Archived view) and returns per chat: `pinned`, `archived`, `muted`, `marked_unread`,
-  `can_pin_chat`, `can_delete`, `controls` (the six switches), `can_manage_controls`.
+  `can_pin_chat`, `can_delete`, `controls` (the five switches), `can_manage_controls`.
 - Messages: send accepts optional `reply_to`; forward (message id + up to 5 conversation ids); bump; unsend;
   pin / unpin message; react / remove reaction; and a way to fetch **messages changed since a time/cursor** for
   polling (reactions, pins, unsends by others).
@@ -229,7 +228,7 @@ Layers as in the original design (section 8). In addition:
 
 - **Policy (unit, data provider):** every action × role × context (participant or not, own or other's message,
   moderator or not, locked, closed, read-only, blocked, parent thread, course vs direct vs group).
-- **Services (database):** chat controls (who may change them: instructor of that course, chairperson/dean for course chats in their scope and staff groups they created, institutional admin; a chairperson/dean outside the scope, a student and a parent cannot; each switch refused server-side while off; forward out refused while off, forward in still allowed; a manager can still Remove with Delete messages off); pin limit (5 chats, 3 messages); archive returns on a new message unless muted; delete-for-me
+- **Services (database):** chat controls (who may change them: instructor of that course, chairperson/dean for course chats in their scope and staff groups they created, institutional admin; a chairperson/dean outside the scope, a student and a parent cannot; each switch refused server-side while off; forward out refused while off, forward in still allowed; with Delete for everyone off, members can still Delete for me and managers can still Remove); pin limit (5 chats, 3 messages); archive returns on a new message unless muted; delete-for-me
   hides history only for the caller and resurfaces with newer messages only; mute excludes from badge and from
   notifications; reply across chats refused; forward to a chat the person cannot post in refused, per target;
   forward from a parent thread refused; bump limit; **unsend: raw `body_enc` no longer decrypts to the old text,
@@ -253,9 +252,9 @@ Layers as in the original design (section 8). In addition:
 | TC-MSG-21 | Pin a message in a DM; the bar shows for both; a student cannot pin in a course chat, the instructor can |
 | TC-MSG-22 | Forward a message to another chat; "Forwarded" shows; no forward from a parent thread |
 | TC-MSG-23 | Bump your own message; it arrives as a reminder; a second bump within the hour is refused |
-| TC-MSG-24 | Unsend within 15 minutes: both sides see the tombstone and the text is gone; others' messages offer no Unsend |
+| TC-MSG-24 | Delete for everyone within 15 minutes: both sides see the tombstone and the text is gone; others' messages offer no Delete for everyone |
 | TC-MSG-25 | Phone width: long-press a message opens the sheet; keyboard opens the same menu |
-| TC-MSG-26 | Instructor opens Settings > Chat controls and turns off Forwarding, Reactions and Delete messages: the items disappear for students and the server refuses them; a chairperson and a dean can do the same in a course chat of their scope and in their staff group; a student sees Settings with only My alerts |
+| TC-MSG-26 | Instructor opens Settings > Chat controls and turns off Forwarding, Reactions and Delete for everyone: the items disappear for students and the server refuses them; a chairperson and a dean can do the same in a course chat of their scope and in their staff group; a student sees Settings with only My alerts |
 
 ---
 
@@ -267,12 +266,12 @@ Layers as in the original design (section 8). In addition:
 4. Mute also removes the chat from the Messages badge count.
 5. Forward: up to 5 existing chats, labelled "Forwarded", original sender's name not shown, never from parent threads.
 6. Message pins: max 3 per chat; in course chats only the instructor/moderators may pin.
-7. Unsend: own messages, 15-minute limit, text erased, distinct tombstone; reported messages keep their snapshot.
+7. Delete for everyone (unsend): own messages, 15-minute limit, text erased, distinct tombstone; reported messages keep their snapshot.
 8. Bump: own messages, one per original per hour, notifies like a new message.
 9. Reactions: one per person, quick row of 5 plus a ~24-emoji palette, allowed in locked chats, 60/minute, one notice per message.
 10. Personal list actions follow the existing read-only-institution rule (blocked when read-only).
 11. The migrations and endpoints are named by the builder; names above are proposals.
-12. Chat controls (six switches, per chat, in Settings > Chat controls): instructors (own course chats), chairpersons and deans (course chats in their scope and staff groups they created) per the owner; I added the institutional administrator for any chat in their institution.
+12. Chat controls (five switches, per chat, in Settings > Chat controls): instructors (own course chats), chairpersons and deans (course chats in their scope and staff groups they created) per the owner; I added the institutional administrator for any chat in their institution.
 
 ## 10. Still needs the owner's answer
 
