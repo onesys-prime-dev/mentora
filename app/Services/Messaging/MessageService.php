@@ -107,7 +107,7 @@ class MessageService
      *
      * @return array{ok: bool, message: array<string, mixed>}
      */
-    private function post(User $user, array $conversation, string $clean, string $clientUuid, array $extra = []): array
+    public function post(User $user, array $conversation, string $clean, string $clientUuid, array $extra = []): array
     {
         $conversationId = (int) $conversation['id'];
         $userId         = (int) $user->id;
@@ -309,24 +309,27 @@ class MessageService
             'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
+            'can_bump'            => MessageActions::canBump($row, $userId, $this->switchOn((int) $row['conversation_id'], 'bump')),
             'deleted_everyone'    => $erased,
-            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->deleteSwitchOn((int) $row['conversation_id'])),
+            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone')),
         ];
     }
 
-    /** @var array<int, bool> */
-    private array $deleteSwitch = [];
+    /** @var array<string, bool> */
+    private array $switches = [];
 
-    /** Whether the chat's "delete for everyone" switch is on; looked up once per chat per request. */
-    private function deleteSwitchOn(int $conversationId): bool
+    /** Whether one of the chat's switches is on; looked up once per chat per switch per request. */
+    private function switchOn(int $conversationId, string $switch): bool
     {
-        if (! isset($this->deleteSwitch[$conversationId])) {
-            $chat = db_connect()->table('conversations')->select('allow_delete_everyone')->where('id', $conversationId)->get()->getRowArray();
+        $key = $conversationId . '|' . $switch;
 
-            $this->deleteSwitch[$conversationId] = $chat !== null && ChatControls::allows($chat, 'delete_everyone');
+        if (! isset($this->switches[$key])) {
+            $chat = db_connect()->table('conversations')->select('allow_' . $switch)->where('id', $conversationId)->get()->getRowArray();
+
+            $this->switches[$key] = $chat !== null && ChatControls::allows($chat, $switch);
         }
 
-        return $this->deleteSwitch[$conversationId];
+        return $this->switches[$key];
     }
 
     /** Whether the sender may reply to this message: in this chat, not before their first visible one, not hidden by them. */

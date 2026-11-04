@@ -20,6 +20,9 @@ class MessageActions
     /** How long after sending the author can still delete a message for everyone. */
     public const DELETE_EVERYONE_MINUTES = 15;
 
+    /** How long an original must wait before it can be bumped again. */
+    public const BUMP_COOLDOWN_MINUTES = 60;
+
     private ConversationService $conversations;
 
     private MessagingContextResolver $resolver;
@@ -28,10 +31,12 @@ class MessageActions
 
     private MessageCipher $cipher;
 
-    /** The message service is accepted for the actions that later tasks add (bump, forward). */
+    private MessageService $messages;
+
     public function __construct(?MessageService $messages = null, ?ConversationService $conversations = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null, ?MessageCipher $cipher = null)
     {
         $this->cipher        = $cipher ?? new MessageCipher();
+        $this->messages      = $messages ?? new MessageService($this->cipher);
         $this->resolver      = $resolver ?? new MessagingContextResolver();
         $this->conversations = $conversations ?? new ConversationService($this->resolver);
         $this->policy        = $policy ?? new MessagingPolicy();
@@ -251,6 +256,76 @@ class MessageActions
         }
 
         return ['ok' => true];
+    }
+
+    /**
+     * Whether the viewer may bump this message: their own, not deleted for everyone, not removed, and the chat's switch on.
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canBump(array $row, int $viewerId, bool $switchOn): bool
+    {
+        return $switchOn
+            && (int) $row['sender_id'] === $viewerId
+            && ($row['deleted_everyone_at'] ?? null) === null
+            && ($row['removed_at'] ?? null) === null;
+    }
+
+    /**
+     * Posts the caller's own message again as a new one at the bottom. A bump of a bump bumps the original.
+     * Once per original per hour. Goes through MessageService::post, so blocks, locks and read-only apply.
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'switched_off'|'limit'|'unavailable', message?: array<string, mixed>}
+     *
+     * @throws RateLimitedException when the person has sent too many messages in the last minute
+     */
+    public function bump(User $user, int $conversationId, int $messageId): array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+        $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
+
+        if ($conversation === null || $message === null) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        $userId = (int) $user->id;
+
+        if ($message['bumped_from_message_id'] !== null) {
+            $original = $this->message($conversationId, (int) $message['bumped_from_message_id']);
+            $message  = $original ?? $message;
+        }
+
+        if ((int) $message['sender_id'] !== $userId || ($message['deleted_everyone_at'] ?? null) !== null) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if (! $this->policy->canPost($this->resolver->forPost($user, $conversation))) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if (! ChatControls::allows($conversation, 'bump')) {
+            return ['ok' => false, 'reason' => 'switched_off'];
+        }
+
+        $originalId = (int) $message['id'];
+        $since      = date('Y-m-d H:i:s', time() - self::BUMP_COOLDOWN_MINUTES * 60);
+        $recent     = db_connect()->table('messages')->where('bumped_from_message_id', $originalId)->where('created_at >', $since)->countAllResults();
+
+        if ($recent > 0) {
+            return ['ok' => false, 'reason' => 'limit'];
+        }
+
+        $body = $this->cipher->isUsable() ? $this->cipher->decrypt((string) $message['body_enc'], $conversationId, $userId) : null;
+
+        if ($body === null || $body === '') {
+            return ['ok' => false, 'reason' => 'unavailable'];
+        }
+
+        (new MessageRateLimiter())->check('message', $userId);
+
+        $result = $this->messages->post($user, $conversation, $body, bin2hex(random_bytes(16)), ['bumped_from_message_id' => $originalId]);
+
+        return ['ok' => true, 'message' => $result['message']];
     }
 
     /**

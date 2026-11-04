@@ -14,7 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class MessageActionController extends MessagingController
 {
-    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'too_late' => 403, 'invalid' => 422];
+    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'too_late' => 403, 'invalid' => 422, 'limit' => 409, 'unavailable' => 503];
 
     public function react(int $conversationId, int $messageId): ResponseInterface
     {
@@ -47,6 +47,25 @@ class MessageActionController extends MessagingController
 
         if ($result['ok']) {
             return $this->response->setJSON(['ok' => true]);
+        }
+
+        $reason = $result['reason'] ?? 'not_found';
+
+        return isset(self::FAILURES[$reason])
+            ? $this->response->setStatusCode(self::FAILURES[$reason])->setJSON(['error' => $reason])
+            : $this->notFound();
+    }
+
+    public function bump(int $conversationId, int $messageId): ResponseInterface
+    {
+        try {
+            $result = (new MessageActions())->bump(auth()->user(), $conversationId, $messageId);
+        } catch (RateLimitedException $e) {
+            return $this->rateLimited($e);
+        }
+
+        if ($result['ok']) {
+            return $this->response->setJSON(['message' => $result['message'] ?? null]);
         }
 
         $reason = $result['reason'] ?? 'not_found';

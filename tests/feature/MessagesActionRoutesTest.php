@@ -142,6 +142,22 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $this->assertSame(['error' => 'too_late'], json_decode($old->getBody(), true));
     }
 
+    public function testBumpMapsOutcomesToStatuses(): void
+    {
+        $uri = fn (int $id): string => "conversations/{$this->conversation}/messages/{$id}/bump";
+
+        // The seeded body is not valid ciphertext, so a bump of it is unavailable.
+        $this->signIn($this->student);
+        $this->assertSame(403, $this->api('POST', $uri($this->message))->response()->getStatusCode());
+        $this->assertSame(404, $this->api('POST', $uri(999999))->response()->getStatusCode());
+
+        $this->signIn($this->instructor);
+        $this->assertSame(503, $this->api('POST', $uri($this->message))->response()->getStatusCode());
+
+        db_connect()->table('conversations')->where('id', $this->conversation)->update(['allow_bump' => 0]);
+        $this->assertSame(403, $this->api('POST', $uri($this->message))->response()->getStatusCode());
+    }
+
     public function testTheSystemAdministratorReachesNeitherRoute(): void
     {
         $this->signIn(CourseFactory::user('admin'));
