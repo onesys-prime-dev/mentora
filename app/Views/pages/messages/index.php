@@ -53,11 +53,13 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <?php endfor; ?>
                 </div>
                 <p data-state="empty" hidden class="p-5 text-center text-[13px] text-[#646464]">No conversations yet. Start one with New message.</p>
+                <p data-state="empty-archived" hidden class="p-5 text-center text-[13px] text-[#646464]">No archived chats</p>
                 <p data-state="no-match" hidden class="p-5 text-center text-[13px] text-[#646464]">Nothing matches.</p>
                 <div data-state="error" hidden class="p-5 text-center text-[13px] text-[#646464]">
                     <p>Messages could not load.</p>
                     <button type="button" data-role="retry-list" class="mt-2 rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand hover:bg-brand/10">Try again</button>
                 </div>
+                <p data-role="list-note" role="status" aria-live="polite" hidden class="border-b border-gray-100 bg-brand-tint px-4 py-1.5 text-center text-[13px] text-[#646464]"></p>
                 <button type="button" data-role="archived-open" hidden class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-2.5 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span>Archived chats (<span data-role="archived-count">0</span>)</span><span aria-hidden="true">&rsaquo;</span></button>
                 <button type="button" data-role="archived-back" hidden class="flex w-full items-center gap-1 border-b border-gray-100 px-4 py-2.5 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span aria-hidden="true">&lsaquo;</span> Back to chats</button>
                 <div data-role="rows"></div>

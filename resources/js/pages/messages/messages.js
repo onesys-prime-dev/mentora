@@ -54,6 +54,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const lockNoteEl = $("[data-role=lock-note]");
     const olderEl = $("[data-role=older]");
     const archivedOpenEl = $("[data-role=archived-open]");
+    const listNoteEl = $("[data-role=list-note]");
     const archivedBackEl = $("[data-role=archived-back]");
     const pickerNote = $("[data-role=picker-state]");
 
@@ -64,6 +65,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         filter: "all",
         unreadOnly: false,
         archived: false,
+        switching: false,
         archivedCount: 0,
         search: "",
         conversations: [],
@@ -91,6 +93,23 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const only = (scope, name) => scope.querySelectorAll("[data-state]").forEach((el) => { el.hidden = el.dataset.state !== name; });
     const listState = (name) => only($("[data-role=list]"), name);
     const threadState = (name) => only($("[data-role=scroller]"), name);
+
+    let listNoteTimer = null;
+
+    function showListNote(text) {
+        clearTimeout(listNoteTimer);
+
+        if (!listNoteEl) {
+            return;
+        }
+
+        listNoteEl.textContent = text;
+        listNoteEl.hidden = text === "";
+
+        if (text !== "") {
+            listNoteTimer = setTimeout(() => showListNote(""), 5000);
+        }
+    }
 
     function updateBadge(count) {
         document.querySelectorAll("[data-messages-badge]").forEach((el) => {
@@ -128,7 +147,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         if (state.conversations.length === 0 && state.filter === "all" && !state.unreadOnly && !state.archived) {
             listState("empty");
         } else {
-            listState(shown.length === 0 ? "no-match" : null);
+            listState(shown.length === 0 ? (state.archived && needle === "" ? "empty-archived" : "no-match") : null);
         }
     }
 
@@ -141,7 +160,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         if (status !== 200 || !data) {
-            if (!state.listLoaded) {
+            if (!state.listLoaded || state.switching) {
+                state.switching = false;
                 listState("error");
             }
 
@@ -151,6 +171,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.listLoaded = true;
         state.conversations = data.conversations;
         state.archivedCount = data.archived_count ?? state.archivedCount;
+        state.switching = false;
         updateBadge(data.unread ?? 0);
         renderList();
 
@@ -901,14 +922,16 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const menu = createMenu(document);
 
     async function chatAction(c, action) {
+        showListNote("");
+
         const result = await api.chatAction(c.id, action);
 
         if (result.status === 409 && result.data?.error === "limit") {
-            showSafetyNote(`You can pin up to ${result.data.max ?? 5} chats.`);
+            showListNote(`You can pin up to ${result.data.max ?? 5} chats.`);
         } else if (result.status === 403) {
-            showSafetyNote("You can't do that in this chat.");
+            showListNote("You can't do that in this chat.");
         } else if (result.status !== 200) {
-            showSafetyNote("That didn't work. Try again.");
+            showListNote("That didn't work. Try again.");
         } else {
             if (action === "delete" && state.openId === c.id) {
                 closeThread();
@@ -937,8 +960,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             // The existing block flow: open the chat and ask for the second click there.
             block: async () => {
                 await open(c.id);
-                state.confirmBlock = c.id;
-                applyConversation(current() ?? c);
+
+                if (state.openId === c.id && current() !== null) {
+                    state.confirmBlock = c.id;
+                    applyConversation(current());
+                }
             },
         };
 
@@ -970,8 +996,19 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     });
 
-    archivedOpenEl?.addEventListener("click", () => { state.archived = true; closeThread(); listState("loading"); loadList(); });
-    archivedBackEl?.addEventListener("click", () => { state.archived = false; closeThread(); loadList(); });
+    const switchView = (archived) => {
+        state.archived = archived;
+        state.switching = true;
+        state.conversations = [];
+        rowsEl.replaceChildren();
+        showListNote("");
+        closeThread();
+        listState("loading");
+        loadList();
+    };
+
+    archivedOpenEl?.addEventListener("click", () => switchView(true));
+    archivedBackEl?.addEventListener("click", () => switchView(false));
 
     rowsEl.addEventListener("click", (event) => {
         if (openFromMore(event)) {

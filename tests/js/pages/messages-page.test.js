@@ -12,7 +12,7 @@ const SHELL = `
     <button data-chip="direct" aria-pressed="false"></button><button data-chip="group" aria-pressed="false"></button>
     <button data-role="unread-toggle" aria-pressed="false"></button>
     <div data-role="list">
-      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p>
+      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p><p data-state="empty-archived" hidden>No archived chats</p><p data-role="list-note" role="status" hidden></p>
       <div data-state="error" hidden><button data-role="retry-list"></button></div>
       <button data-role="archived-open" hidden><span data-role="archived-count"></span></button><button data-role="archived-back" hidden></button>
       <div data-role="rows"></div>
@@ -126,6 +126,55 @@ describe("the conversation list", () => {
 
         expect(q("[data-state=error]").hidden).toBe(true);
         expect(all("[data-role=rows] button")).toHaveLength(1);
+
+    });
+
+    it("shows the pin limit in the list note with no chat open", async () => {
+
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ can_pin_chat: true })], unread: 0, archived_count: 0 })),
+            chatAction: vi.fn().mockResolvedValue(ok({ error: "limit", max: 5 }, 409)),
+        });
+
+        await mount(api);
+        q("[data-role=rows] button").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+        document.querySelector("[data-action=pin]").click();
+        await flush();
+
+        expect(api.chatAction).toHaveBeenCalledWith(1, "pin");
+        expect(q("[data-role=list-note]").hidden).toBe(false);
+        expect(q("[data-role=list-note]").textContent).toBe("You can pin up to 5 chats.");
+
+    });
+
+    it("says No archived chats for an empty Archived view", async () => {
+
+        const api = makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [], unread: 0, archived_count: 1 })) });
+
+        await mount(api);
+        q("[data-role=archived-open]").click();
+        await flush();
+
+        expect(q("[data-state=empty-archived]").hidden).toBe(false);
+        expect(q("[data-state=no-match]").hidden).toBe(true);
+
+    });
+
+    it("does not arm the block confirm when the chat failed to open", async () => {
+
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ can_block: true })], unread: 0, archived_count: 0 })),
+            page: vi.fn().mockResolvedValue(ok(null, 404)),
+        });
+
+        await mount(api);
+        q("[data-role=rows] button").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+        document.querySelector("[data-action=block]").click();
+        await flush();
+        await flush();
+
+        expect(api.block).toBeUndefined();
+        expect(document.body.textContent).not.toContain("Click again to block");
 
     });
 
