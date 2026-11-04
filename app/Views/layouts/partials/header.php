@@ -71,6 +71,19 @@ $accountLinks = [
     </div>
 
     <div class="flex gap-4 items-center">
+        <?php // Messages is quick access: next to the bell and dark mode, not inside the Apps menu. Null while the flag is off or the role has no messages.use; the institutional administrator keeps the sidebar entry. ?>
+        <?php $messagesTile = $userRole === 'institutional_admin' ? null : messages_tile($userRole); ?>
+        <?php if ($messagesTile !== null): ?>
+        <a
+            href="<?= esc($messagesTile['url']) ?>"
+            aria-label="Messages"
+            title="Messages"
+            <?= ($page ?? null) === 'messages' ? 'aria-current="page"' : '' ?>
+            class="relative h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-[current=page]:bg-brand aria-[current=page]:text-white">
+            <?= icon('inbox', 'h-4 w-4 text-current') ?>
+            <span data-messages-badge data-url="<?= esc(site_url('messages/api/unread-count')) ?>" <?= (int) $messagesTile['badge'] > 0 ? '' : 'hidden' ?> class="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= (int) $messagesTile['badge'] > 99 ? '99+' : (int) $messagesTile['badge'] ?></span>
+        </a>
+        <?php endif; ?>
         <div class="relative">
             <button
                 id="notifications-button"
@@ -141,6 +154,7 @@ $accountLinks = [
                 <nav class="grid grid-cols-3 gap-x-3 gap-y-4" aria-label="Apps">
 
                     <?php foreach (global_apps($userRole) as $app): ?>
+                        <?php if ($app['key'] === 'messages') { continue; } ?>
 
                         <?= view('components/app-tile', [
                             'app' => $app,
