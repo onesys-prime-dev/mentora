@@ -252,7 +252,12 @@ final class MessagingMigrationsTest extends DatabaseTestCase
             $migrations[$firstTable] = $this->migration($file, $class);
         }
 
+        // The columns migration sits on top of the three: undone first, redone last.
+        $columns = $this->migration('2026-11-22-000001_AddChatActionColumns', 'AddChatActionColumns');
+
         try {
+            $columns->down();
+
             foreach (array_reverse($migrations) as $migration) {
                 $migration->down();
             }
@@ -282,10 +287,20 @@ final class MessagingMigrationsTest extends DatabaseTestCase
                 $migration->up();
                 db_connect()->resetDataCache();
             }
+
+            // Put the four columns back whether or not the participants table was rebuilt.
+            db_connect()->resetDataCache();
+
+            if (! db_connect()->fieldExists('pinned_at', 'conversation_participants')) {
+                $columns->up();
+                db_connect()->resetDataCache();
+            }
         }
 
         foreach (self::TABLES as $table) {
             $this->assertTrue(db_connect()->tableExists($table), "up restores {$table}");
         }
+
+        $this->assertTrue(db_connect()->fieldExists('pinned_at', 'conversation_participants'), 'up restores the chat action columns');
     }
 }
