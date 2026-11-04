@@ -75,7 +75,7 @@ $when = static function (array $row): string {
                 </li>
             <?php endforeach; ?>
         </ul>
-        <p class="hidden px-5 py-8 text-center text-sm text-gray-500" data-role="filter-empty">Nothing here.</p>
+        <p class="my-auto hidden px-5 py-8 text-center text-sm text-gray-500" data-role="filter-empty">Nothing here.</p>
     </section>
 
     <section class="min-h-0 overflow-y-auto rounded-2xl bg-white p-6 shadow-sm md:p-8" aria-label="Notification">

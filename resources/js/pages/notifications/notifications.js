@@ -74,6 +74,9 @@ export function initNotificationsPage(root = document.querySelector("[data-notif
             shown += show ? 1 : 0;
         });
 
+        // With nothing to list, the list steps aside so the message sits in the middle of the card.
+        root.querySelector("[data-role=list]")?.classList.toggle("hidden", shown === 0 && rows.length > 0);
+
         if (emptyEl) {
             emptyEl.classList.toggle("hidden", shown > 0 || rows.length === 0);
         }
