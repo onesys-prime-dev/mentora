@@ -73,14 +73,25 @@ class MessageActions
             $now = date('Y-m-d H:i:s');
 
             $db->transStart();
-            $db->table('message_reactions')->where(['message_id' => $messageId, 'user_id' => $userId])->delete();
 
-            if ($target !== null) {
-                $db->table('message_reactions')->insert(['message_id' => $messageId, 'user_id' => $userId, 'emoji' => $target, 'created_at' => $now]);
+            if ($target === null) {
+                $db->table('message_reactions')->where(['message_id' => $messageId, 'user_id' => $userId])->delete();
+            } else {
+                // One statement, so two quick requests end with the last emoji chosen rather than a duplicate-key error.
+                $db->query(
+                    'INSERT INTO message_reactions (message_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE emoji = VALUES(emoji), created_at = VALUES(created_at)',
+                    [$messageId, $userId, $target, $now],
+                );
             }
 
             $db->table('messages')->where('id', $messageId)->update(['changed_at' => $now]);
             $db->transComplete();
+
+            if (! $db->transStatus()) {
+                log_message('error', 'Reaction could not be saved for message ' . $messageId . '.');
+
+                return ['ok' => false, 'reason' => 'not_found'];
+            }
         }
 
         if ($target !== null && $previous === null) {
@@ -133,14 +144,25 @@ class MessageActions
             return [];
         }
 
-        $rows = db_connect()->table('message_reactions')->select('message_id, emoji, COUNT(*) AS n, MAX(user_id = ' . $userId . ') AS mine', false)
-            ->whereIn('message_id', $messageIds)->groupBy(['message_id', 'emoji'])->get()->getResultArray();
-        $out  = [];
+        // Counted in PHP: the connection collation treats different non-BMP emoji as equal, so SQL would merge groups.
+        $rows   = db_connect()->table('message_reactions')->select('message_id, emoji, user_id')->whereIn('message_id', $messageIds)->get()->getResultArray();
+        $counts = [];
+        $mine   = [];
 
-        foreach (self::PALETTE as $emoji) {
-            foreach ($rows as $row) {
-                if ($row['emoji'] === $emoji) {
-                    $out[(int) $row['message_id']][] = ['emoji' => $emoji, 'count' => (int) $row['n'], 'mine' => (int) $row['mine'] === 1];
+        foreach ($rows as $row) {
+            $key          = (int) $row['message_id'] . '|' . $row['emoji'];
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+            $mine[$key]   = ($mine[$key] ?? false) || (int) $row['user_id'] === $userId;
+        }
+
+        $out = [];
+
+        foreach ($messageIds as $messageId) {
+            foreach (self::PALETTE as $emoji) {
+                $key = $messageId . '|' . $emoji;
+
+                if (isset($counts[$key])) {
+                    $out[$messageId][] = ['emoji' => $emoji, 'count' => $counts[$key], 'mine' => $mine[$key]];
                 }
             }
         }

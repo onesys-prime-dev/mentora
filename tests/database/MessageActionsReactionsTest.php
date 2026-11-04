@@ -131,6 +131,24 @@ final class MessageActionsReactionsTest extends DatabaseTestCase
         $this->assertNull($this->emojiOf($this->student));
     }
 
+    public function testDifferentNonBmpEmojiFromTwoPeopleStaySeparate(): void
+    {
+        $this->actions()->react($this->instructor, $this->conversation, $this->message, '👍');
+        $result = $this->actions()->react($this->student, $this->conversation, $this->message, '🔥');
+
+        $this->assertSame([['emoji' => '👍', 'count' => 1, 'mine' => false], ['emoji' => '🔥', 'count' => 1, 'mine' => true]], $result['reactions']);
+    }
+
+    public function testPressingTheSameEmojiTwiceNeverDoubleCounts(): void
+    {
+        $this->actions()->react($this->student, $this->conversation, $this->message, '👍');
+        $this->actions()->react($this->student, $this->conversation, $this->message, '👍');
+        $this->assertSame(0, db_connect()->table('message_reactions')->countAllResults());
+
+        $this->actions()->react($this->student, $this->conversation, $this->message, '👍');
+        $this->assertSame(1, db_connect()->table('message_reactions')->countAllResults());
+    }
+
     public function testReactorsListsNamesPerEmoji(): void
     {
         $this->actions()->react($this->student, $this->conversation, $this->message, '👍');

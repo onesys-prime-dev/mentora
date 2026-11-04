@@ -129,8 +129,8 @@ class MessageNotifier
     }
 
     /**
-     * Tells a message's author that someone reacted: once while the earlier notice is unread, never for their own
-     * reaction or in a chat they muted. Who and where only, never the text.
+     * Tells a message's author that someone reacted: at most one reaction notice per message, whether or not it was
+     * read (the notification service dedupes on the key); never for their own reaction or in a chat they muted. Who and where only, never the text.
      */
     public function notifyReaction(int $messageId, int $reactorId): void
     {
@@ -150,10 +150,6 @@ class MessageNotifier
         }
 
         $key = "react:{$messageId}";
-
-        if ($db->table('notifications')->where(['user_id' => $authorId, 'dedupe_key' => $key, 'read_at' => null])->countAllResults() > 0) {
-            return;
-        }
 
         $name = ConversationPresenter::names([$reactorId])[$reactorId] ?? 'Someone';
 

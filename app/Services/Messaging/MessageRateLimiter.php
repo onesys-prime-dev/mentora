@@ -26,10 +26,10 @@ final class MessageRateLimiter
 
     /** @var array<string, array{int, int, string}> kind => limit, window in seconds, the sentence shown */
     private const LIMITS = [
-        'message' => [self::MESSAGES_PER_MINUTE, 60, "You're sending messages too fast. Wait a moment and try again."],
+        'message'  => [self::MESSAGES_PER_MINUTE, 60, "You're sending messages too fast. Wait a moment and try again."],
         'reaction' => [self::REACTIONS_PER_MINUTE, 60, "You're reacting too fast. Wait a moment and try again."],
-        'thread'  => [self::THREADS_PER_HOUR, 3600, "You've started a lot of conversations recently. Try again later."],
-        'report'  => [self::REPORTS_PER_DAY, 86400, "You've sent a lot of reports today. Try again tomorrow."],
+        'thread'   => [self::THREADS_PER_HOUR, 3600, "You've started a lot of conversations recently. Try again later."],
+        'report'   => [self::REPORTS_PER_DAY, 86400, "You've sent a lot of reports today. Try again tomorrow."],
     ];
 
     /**
@@ -45,10 +45,10 @@ final class MessageRateLimiter
         $db    = db_connect();
 
         $count = match ($kind) {
-            'message' => $db->table('messages')->where('sender_id', $userId)->where('created_at >', $since)->countAllResults(),
+            'message'  => $db->table('messages')->where('sender_id', $userId)->where('created_at >', $since)->countAllResults(),
             'reaction' => $db->table('message_reactions')->where('user_id', $userId)->where('created_at >', $since)->countAllResults(),
-            'thread'  => $db->table('conversations')->where('created_by', $userId)->whereIn('type', ['direct', 'group'])->where('created_at >', $since)->countAllResults(),
-            'report'  => $db->table('message_reports')->where('reporter_id', $userId)->where('created_at >', $since)->countAllResults(),
+            'thread'   => $db->table('conversations')->where('created_by', $userId)->whereIn('type', ['direct', 'group'])->where('created_at >', $since)->countAllResults(),
+            'report'   => $db->table('message_reports')->where('reporter_id', $userId)->where('created_at >', $since)->countAllResults(),
         };
 
         if ($count >= $limit) {
