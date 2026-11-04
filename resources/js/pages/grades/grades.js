@@ -12,6 +12,8 @@ import { setGradesApiBase } from "../courses/features/grades/api.js";
 import { bindFinalizeDialog } from "../courses/features/grades/finalize/finalize-dialog.js";
 import { bindFinalizeReady } from "./finalize-ready.js";
 import { bindDownloadLinks, loadInto, switchSection } from "./section-switch.js";
+import { bindNudge } from "./nudge.js";
+import { bindProgram } from "./program.js";
 import { bindStudentRows } from "./student-rows.js";
 
 // Finalize ready sections: its confirm dialog, posted in place, the result shown in it.
@@ -19,7 +21,11 @@ bindFinalizeReady();
 
 const grid = document.querySelector("[data-grades-grid]");
 
-if (grid) {
+// The chairperson's Program tab owns its read-only grid (program.js): it is never loaded editable here.
+if (grid?.dataset.readonly === "1") {
+    bindProgram(document.body);
+    bindNudge(document.body);
+} else if (grid) {
 
     setGradesApiBase(grid.dataset.apiBase);
 

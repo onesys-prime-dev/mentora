@@ -1,10 +1,10 @@
 # P2 test cases: the Grades page (every section an instructor teaches, every course a student takes)
 
-9 cases in the browser, and the PHP and JavaScript tests that stand behind the rest. Read
+12 cases in the browser, and the PHP and JavaScript tests that stand behind the rest. Read
 [README.md](README.md) first. All are `Draft` (see the README).
 
 `tests/e2e/global-grades.spec.js` holds TC-GGR-01 to 03, and `tests/e2e/global-grades-student.spec.js` TC-GGR-04 to 06 (the
-student's page, below) and `tests/e2e/global-grades-parent.spec.js` TC-GGR-07 to 09 (the parent's page, for a linked child). The instructor cases run as the main instructor
+student's page, below) and `tests/e2e/global-grades-parent.spec.js` TC-GGR-07 to 09 (the parent's page, for a linked child) and `tests/e2e/global-grades-chairperson.spec.js` TC-GGR-10 to 12 (the chairperson's Program tab, as `chairperson1@mentora.test`). The instructor cases run as the main instructor
 (`instructor1@mentora.test`) on the demo data: **IT101-A** (5 students, work waiting to be graded, and a
 manual Class Participation item) and **IT101-B** (nobody enrolled, so its grades are ready to be
 finalized). The cases leave the data as they found it: the score is put back, the students and the
@@ -25,6 +25,9 @@ it are tested without a browser (see "Already automated").
 | [TC-GGR-07](#tc-ggr-07-parent-opens-grades-from-the-apps-menu-sees-the-childs-courses-and-expands-one) | Parent opens Grades from the Apps menu, sees the child's courses and expands one | Parent |
 | [TC-GGR-08](#tc-ggr-08-parent-with-two-children-switches-child) | Parent with two children switches child | Parent |
 | [TC-GGR-09](#tc-ggr-09-with-the-parent-portal-off-the-parent-sees-the-portal-off-page) | With the parent portal off the parent sees the portal-off page | Parent, Institution administrator |
+| [TC-GGR-10](#tc-ggr-10-chairperson-opens-program-sees-the-tracker-and-table-and-opens-a-section-read-only) | Chairperson opens Program, sees the tracker and table, and opens a section read-only | Chairperson |
+| [TC-GGR-11](#tc-ggr-11-chairperson-edits-a-manual-score-as-chairperson-and-the-change-is-kept) | Chairperson edits a manual score as chairperson and the change is kept | Chairperson |
+| [TC-GGR-12](#tc-ggr-12-chairperson-nudges-an-instructor-and-the-follow-up-exists) | Chairperson nudges an instructor and the follow-up exists | Chairperson |
 
 ---
 
@@ -213,4 +216,62 @@ it are tested without a browser (see "Already automated").
   pages); `tests/feature/ParentGradesBreakdownTest.php` (the breakdown answers 403 JSON)
 - **Playwright:** `tests/e2e/global-grades-parent.spec.js`
 - **Basis:** `app/Controllers/Grades/GradesController.php`, `app/Controllers/Parents/ParentCalendarController.php`
+- **Review:** Draft
+
+### TC-GGR-10 Chairperson opens Program, sees the tracker and table, and opens a section read-only
+
+- **Role:** Chairperson. **Priority:** P2
+- **Data:** chairperson1, whose sub-department offers IT101-A (graded by hand, work waiting), IT101-B, IT102-A and IT201-A.
+- **Steps:**
+  1. Open `chairperson/grades`, tab Program.
+  2. Read the tracker and the table; click the IT101-A row.
+- **Expected:**
+  - The page says "Your sections and your program's."; the tracker reads "Finalized {f} of {n} · {r} ready · {b} blocked".
+  - The table has the columns Section, Instructor, Average, At risk, Waiting, Status.
+  - The row opens IT101-A's grid below, marked Read-only with no score fields, with "Edit as chairperson" and
+    "Open in course →"; there is no Finalize control anywhere.
+- **Already automated:** `tests/feature/ChairpersonGradesPageTest.php`; `tests/database/ChairpersonProgramOverviewTest.php`;
+  `tests/js/pages/grades-program.test.js`; `tests/database/GlobalGradesQueryBudgetTest.php`
+- **Playwright:** `tests/e2e/global-grades-chairperson.spec.js`
+- **Basis:** `app/Controllers/Grades/GradesController.php`, `app/Services/Grades/ChairpersonProgramOverview.php`,
+  `app/Views/pages/grades/partials/chairperson/program.php`
+- **Review:** Draft
+
+### TC-GGR-11 Chairperson edits a manual score as chairperson and the change is kept
+
+- **Role:** Chairperson. **Priority:** P2
+- **Data:** chairperson1, IT101-A. The case puts the score back at the end.
+- **Steps:**
+  1. On Program, open IT101-A and choose "Edit as chairperson".
+  2. Read the confirmation and choose Continue.
+  3. Change a Class Participation score and choose Done.
+  4. Reload, open IT101-A and edit again; read the score. Put the original score back and choose Done.
+- **Expected:**
+  - The confirmation says "You're editing IT101-A as chairperson. Every change is recorded in the audit log and the
+    instructor can see it." with Continue and Cancel.
+  - After Continue the grid is editable and Done shows; Done returns it to read-only.
+  - After the reload the changed score is shown; at the end the original is shown again.
+- **Already automated:** `tests/feature/ChairpersonGradesPageTest.php`; `tests/js/pages/grades-program.test.js`
+  (confirm, Done, switching rows returns to read-only and saves a pending score to its own section)
+- **Playwright:** `tests/e2e/global-grades-chairperson.spec.js`
+- **Basis:** `resources/js/pages/grades/program.js`, `app/Controllers/Grades/GradesBulkController.php`
+- **Review:** Draft
+
+### TC-GGR-12 Chairperson nudges an instructor and the follow-up exists
+
+- **Role:** Chairperson. **Priority:** P2
+- **Data:** chairperson1, IT101-A (work waiting to be graded). The case deletes the follow-up it creates.
+- **Steps:**
+  1. On Program, open IT101-A and choose Nudge.
+  2. Read the subject and choose Send.
+  3. Open `chairperson/follow-ups`, "Sent by you".
+- **Expected:**
+  - The dialog's subject reads "IT101-A: {n} submissions waiting to be graded, oldest {d} days" and the recipient is
+    the section's instructor.
+  - A toast confirms; the chairperson stays on the page.
+  - The follow-up is listed under "Sent by you".
+- **Already automated:** `tests/feature/ChairpersonNudgeTest.php` (a recipient who does not teach the section is refused);
+  `tests/js/pages/grades-nudge.test.js`
+- **Playwright:** `tests/e2e/global-grades-chairperson.spec.js`
+- **Basis:** `resources/js/pages/grades/nudge.js`, `app/Services/Courses/FollowUpService.php`
 - **Review:** Draft

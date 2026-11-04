@@ -207,13 +207,13 @@ class GradeReportService
     /**
      * Several sections' class gradebooks in one Excel file: one sheet per report, titled "{code}-{section}",
      * each with the same header and rows as that section's own class sheet. The file is named after the
-     * term of the first report.
+     * term of the first report, after $stem.
      *
      * @param list<array<string, mixed>> $reports from classReport()
      *
      * @return array{file_path: string, filename: string}
      */
-    public function classWorkbook(array $reports): array
+    public function classWorkbook(array $reports, string $stem = 'gradebooks'): array
     {
         if ($reports === []) {
             throw new \InvalidArgumentException('A workbook needs at least one report.');
@@ -237,7 +237,7 @@ class GradeReportService
 
         $term = url_title((string) ($reports[0]['offering']['term'] ?? ''), '-', true);
 
-        return $this->store('gradebooks-' . ($term !== '' ? $term : 'term') . '-' . date('Ymd') . '.xlsx', static function (string $path) use ($spreadsheet): void {
+        return $this->store($stem . '-' . ($term !== '' ? $term : 'term') . '-' . date('Ymd') . '.xlsx', static function (string $path) use ($spreadsheet): void {
             (new Xlsx($spreadsheet))->save($path);
         });
     }

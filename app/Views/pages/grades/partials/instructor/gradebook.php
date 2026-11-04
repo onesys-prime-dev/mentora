@@ -16,8 +16,12 @@
  * @var array<string, mixed>|null  $selected
  * @var array<string, int>         $summary
  * @var bool                       $canManage
+ * @var bool|null                  $finalizing whether finalizing is offered here (Finalize, Finalize ready sections,
+ *                                             Download all); the chairperson's My sections passes false
  * @var Closure                    $link
  */
+
+$finalizing ??= true;
 
 // How a state looks: its dot, and the word or badge that says the same thing without the colour.
 $look = static fn (array $s): array => match ($s['state']) {
@@ -54,7 +58,7 @@ $noScheme = static fn (string $href): string => '<div class="flex flex-col items
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 id="grades-your-sections" class="text-base font-bold text-[#1A1C1E]">Your sections</h2>
 
-            <?php if ($canManage): ?>
+            <?php if ($canManage && $finalizing): ?>
                 <div class="flex flex-wrap items-center gap-2">
                     <a href="<?= esc(site_url("{$area}/grades/download") . '?term=' . (int) $termId) ?>" class="<?= $secondary ?>" data-download-all>Download all</a>
                     <?php if ($summary['ready'] > 0): ?>
@@ -96,7 +100,7 @@ $noScheme = static fn (string $href): string => '<div class="flex flex-col items
 
     </section>
 
-    <?php if ($canManage && $summary['ready'] > 0): ?>
+    <?php if ($canManage && $finalizing && $summary['ready'] > 0): ?>
         <?php
         // Finalize ready sections: the confirm names what will be finalized; the page script posts it and
         // shows what was done and what was skipped in the same dialog.
@@ -160,7 +164,9 @@ $noScheme = static fn (string $href): string => '<div class="flex flex-col items
 
                         <?php // Kept for a finalized section too (hidden), so the page script can show it on a card switch. Hidden
                               // without a scheme as well: its dialog reads the checklist, which would create one. ?>
-                        <button type="button" class="<?= $secondary ?>" data-open-finalize <?= $selected['state'] === 'finalized' || $selected['offering_status'] !== 'active' || ! $selected['has_scheme'] ? 'hidden' : '' ?>>Finalize</button>
+                        <?php if ($finalizing): ?>
+                            <button type="button" class="<?= $secondary ?>" data-open-finalize <?= $selected['state'] === 'finalized' || $selected['offering_status'] !== 'active' || ! $selected['has_scheme'] ? 'hidden' : '' ?>>Finalize</button>
+                        <?php endif; ?>
                     <?php endif; ?>
 
                     <a href="<?= esc($inCourse) ?>" class="<?= $secondary ?>" data-open-in-course>Open in course →</a>
@@ -184,7 +190,7 @@ $noScheme = static fn (string $href): string => '<div class="flex flex-col items
 
         </section>
 
-        <?php if ($canManage): ?>
+        <?php if ($canManage && $finalizing): ?>
             <?= view('pages/courses/features/grades/partials/modals/grade-finalize', [], ['saveData' => false]) ?>
         <?php endif; ?>
 

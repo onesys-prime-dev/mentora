@@ -34,7 +34,7 @@ const card = (id, slug, extra = "") => `<a href="/instructor/grades?term=4&tab=g
 
 function page() {
     document.body.innerHTML = `
-        <nav data-grades-tabs><a data-grades-tab="gradebook" href="/instructor/grades?term=4&section=1">Gradebook</a><a data-grades-tab="to-grade" href="/instructor/grades?term=4&tab=to-grade">To grade</a></nav>
+        <nav data-grades-tabs><a data-grades-tab="gradebook" href="/instructor/grades?term=4&section=1">Gradebook</a><a data-grades-sub="gradebook" href="/chairperson/grades?term=4&section=1">Gradebook</a><a data-grades-tab="to-grade" href="/instructor/grades?term=4&tab=to-grade">To grade</a></nav>
         <nav>${card(1, "alpha", "aria-current=\"true\" data-has-scheme=\"1\"")}${card(2, "beta", "data-has-scheme=\"1\"")}${card(3, "gamma").replace("data-state=\"ready\"", "data-state=\"finalized\"")}${card(4, "delta").replace("data-offering-status=\"active\"", "data-offering-status=\"completed\"")}${card(5, "epsilon", "data-has-scheme=\"0\"").replace("data-state=\"ready\"", "data-state=\"not_published\"")}</nav>
         <div data-section-actions data-section-id="1">
             <span data-action-label>C-1</span> · <span data-action-note>Note 1</span>
@@ -80,6 +80,14 @@ describe("switchSection", () => {
         expect(order).toEqual(["flush", "/instructor/api/courses/2/grades/roster?embedded=1"]);
         expect(document.querySelector("[data-grades-grid]").textContent).toContain("two");
         expect(document.querySelector("[data-grades-grid]").dataset.apiBase).toBe("/instructor/api/courses/2");
+    });
+
+    it("the Gradebook sub-pill keeps the chosen section too", async () => {
+        vi.stubGlobal("fetch", vi.fn(() => ok({ success: true, html: ROSTER("two") })));
+
+        await switchSection(document.querySelector("[data-section-card=\"2\"]"));
+
+        expect(document.querySelector("[data-grades-sub=\"gradebook\"]").getAttribute("href")).toBe("/chairperson/grades?term=4&section=2");
     });
 
     it("the selected card gets aria-current and the address changes with replaceState", async () => {

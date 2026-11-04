@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Grades;
 
-use App\Services\Courses\Grades\GradingSchemeService;
-use App\Services\Courses\Grades\PendingGrading;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -76,14 +74,13 @@ final class InstructorGradesOverview
      * category gone) is blocked with the reason GradingSchemeService::publishProblem gives, since Finalize
      * would refuse it; that check is made from rows read for every section at once. has_scheme says whether
      * the section has any scheme at all: without one its grid is not opened, since opening it creates one.
+     * The states come from SectionStates, which the chairperson's program table reads too.
      *
      * @return list<array{offering_id: int, course_code: string, course_title: string, section_code: string, slug: string, students: int, waiting: int, state: string, note: string, offering_status: string, has_scheme: bool}>
      */
     public function sections(User $user, int $termId): array
     {
-        $db = db_connect();
-
-        $rows = $db->table('instructor_assignments ia')
+        $rows = db_connect()->table('instructor_assignments ia')
             ->select([
                 'co.id AS offering_id',
                 'co.section_code',
@@ -112,46 +109,7 @@ final class InstructorGradesOverview
             return [];
         }
 
-        $ids = array_map(static fn (array $row): int => (int) $row['offering_id'], $rows);
-
-        $hasScheme = [];
-        $published = [];
-
-        foreach ($db->table('grading_schemes')
-            ->select(['id', 'course_offering_id', 'status', 'uses_periods'])
-            ->whereIn('course_offering_id', $ids)
-            ->get()->getResultArray() as $scheme) {
-            $hasScheme[(int) $scheme['course_offering_id']] = true;
-
-            if ($scheme['status'] === 'Published') {
-                $published[(int) $scheme['course_offering_id']] = $scheme;
-            }
-        }
-
-        $problems = $this->publishProblems($published);
-
-        $finalized = [];
-
-        foreach ($db->table('grade_finalizations')
-            ->select('course_offering_id')
-            ->whereIn('course_offering_id', $ids)
-            ->where('reopened_at IS NULL', null, false)
-            ->get()->getResultArray() as $row) {
-            $finalized[(int) $row['course_offering_id']] = true;
-        }
-
-        $requests = [];
-
-        foreach ($db->table('grade_override_requests')
-            ->select(['offering_id', 'COUNT(*) AS open_requests'], false)
-            ->whereIn('offering_id', $ids)
-            ->where('open_marker', 1)
-            ->groupBy('offering_id')
-            ->get()->getResultArray() as $row) {
-            $requests[(int) $row['offering_id']] = (int) $row['open_requests'];
-        }
-
-        $waitingBy = (new PendingGrading())->forOfferings($ids)['byOffering'];
+        $states = SectionStates::for($rows);
 
         helper('url');
 
@@ -159,22 +117,7 @@ final class InstructorGradesOverview
 
         foreach ($rows as $row) {
             $id = (int) $row['offering_id'];
-            $waiting = (int) ($waitingBy[$id] ?? 0);
-            $open = $requests[$id] ?? 0;
-
-            if (isset($finalized[$id])) {
-                [$state, $note] = ['finalized', 'Finalized'];
-            } elseif (! isset($published[$id])) {
-                [$state, $note] = ['not_published', 'Grades not published yet'];
-            } elseif ($waiting > 0) {
-                [$state, $note] = ['waiting', $waiting . ' waiting to be graded'];
-            } elseif (isset($problems[$id])) {
-                [$state, $note] = ['blocked', $problems[$id]];
-            } elseif ($open > 0) {
-                [$state, $note] = ['blocked', $open . ($open === 1 ? ' override request open' : ' override requests open')];
-            } else {
-                [$state, $note] = ['ready', 'Ready to finalize'];
-            }
+            $status = $states[$id];
 
             $cards[] = [
                 'offering_id' => $id,
@@ -183,79 +126,15 @@ final class InstructorGradesOverview
                 'section_code' => (string) $row['section_code'],
                 'slug' => url_title((string) $row['course_title'], '-', true),
                 'students' => (int) $row['students'],
-                'waiting' => $waiting,
-                'state' => $state,
-                'note' => $note,
+                'waiting' => $status['waiting'],
+                'state' => $status['state'],
+                'note' => $status['note'],
                 'offering_status' => (string) $row['offering_status'],
-                'has_scheme' => isset($hasScheme[$id]),
+                'has_scheme' => $status['has_scheme'],
             ];
         }
 
         return $cards;
-    }
-
-    /**
-     * What stops each published scheme from being published now, by offering id; a scheme with nothing wrong
-     * is left out. Two queries for every scheme together: the periods, then the categories.
-     *
-     * @param array<int, array<string, mixed>> $schemes published scheme rows, by offering id
-     *
-     * @return array<int, string>
-     */
-    private function publishProblems(array $schemes): array
-    {
-        if ($schemes === []) {
-            return [];
-        }
-
-        $db = db_connect();
-        $schemeIds = array_map(static fn (array $scheme): int => (int) $scheme['id'], array_values($schemes));
-
-        $periods = [];
-
-        foreach ($db->table('grading_periods')
-            ->select(['id', 'grading_scheme_id', 'name', 'weight_percentage'])
-            ->whereIn('grading_scheme_id', $schemeIds)
-            ->where('status', 'Active')
-            ->orderBy('sort_order', 'ASC')
-            ->orderBy('id', 'ASC')
-            ->get()->getResultArray() as $period) {
-            $periods[(int) $period['grading_scheme_id']][] = $period;
-        }
-
-        $bySchemes = [];
-        $byPeriod = [];
-
-        foreach ($db->table('grade_categories')
-            ->select(['grading_scheme_id', 'period_id', 'weight_percentage'])
-            ->whereIn('grading_scheme_id', $schemeIds)
-            ->where('status', 'Active')
-            ->get()->getResultArray() as $category) {
-            $bySchemes[(int) $category['grading_scheme_id']][] = $category;
-
-            if ($category['period_id'] !== null) {
-                $byPeriod[(int) $category['period_id']][] = $category;
-            }
-        }
-
-        $problems = [];
-
-        foreach ($schemes as $offeringId => $scheme) {
-            $schemeId = (int) $scheme['id'];
-
-            $problem = GradingSchemeService::publishProblemFrom(
-                ! empty($scheme['uses_periods']),
-                static fn (): array => $bySchemes[$schemeId] ?? [],
-                static fn (): array => $periods[$schemeId] ?? [],
-                static fn (int $periodId): array => $byPeriod[$periodId] ?? [],
-            );
-
-            if ($problem !== null) {
-                $problems[$offeringId] = $problem;
-            }
-        }
-
-        return $problems;
     }
 
     /**

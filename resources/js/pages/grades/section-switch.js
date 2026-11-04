@@ -34,7 +34,7 @@ export function sectionHref(currentHref, sectionId)
 }
 
 // "/instructor/api/courses/5" -> "/instructor" (everything before /api/courses/{id}).
-const areaOf = (apiBase) => apiBase.replace(/\/api\/courses\/\d+$/, "");
+export const areaOf = (apiBase) => apiBase.replace(/\/api\/courses\/\d+$/, "");
 
 // The section's own Grades tab in its course.
 const courseGradesHref = (card, apiBase) => `${areaOf(apiBase)}/courses/${card.dataset.sectionCard}/${card.dataset.slug}/grades`;
@@ -65,7 +65,7 @@ function redrawActionBar(card, apiBase)
 }
 
 // The sentence for a section without a scheme, from the page's template, its link pointing at the course.
-function showNoScheme(grid, href)
+export function showNoScheme(grid, href)
 {
     const template = document.querySelector("[data-no-scheme-template]");
     const state = template ? template.content.cloneNode(true) : document.createTextNode("Grading isn't set up for this section yet.");
@@ -101,13 +101,13 @@ export function bindDownloadLinks(bar = document.querySelector("[data-section-ac
 
 // Loads the chosen section's grid into its own slot of the grid, as the newest load: any load still in flight
 // from before writes into a slot that is no longer on the page.
-export function loadInto(grid)
+export function loadInto(grid, query = GRID_QUERY)
 {
     const slot = document.createElement("div");
 
     grid.replaceChildren(slot);
 
-    return loadGradebookRoster(null, { container: slot, query: GRID_QUERY });
+    return loadGradebookRoster(null, { container: slot, query });
 }
 
 export async function switchSection(card)
@@ -148,6 +148,11 @@ export async function switchSection(card)
     const tab = document.querySelector("[data-grades-tab=\"gradebook\"]");
 
     tab?.setAttribute("href", sectionHref(tab.getAttribute("href"), id));
+
+    // On the chairperson page the Gradebook sub-pill keeps it too.
+    const sub = document.querySelector("[data-grades-sub=\"gradebook\"]");
+
+    sub?.setAttribute("href", sectionHref(sub.getAttribute("href"), id));
 
     window.history.replaceState(null, "", sectionHref(window.location.href, id));
 

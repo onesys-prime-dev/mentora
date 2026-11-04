@@ -8,6 +8,7 @@ use App\Controllers\BaseController;
 use App\Services\Auth\RolePermissions;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Grades\PendingGrading;
+use App\Services\Grades\ChairpersonProgramOverview;
 use App\Services\Grades\GradesAtRisk;
 use App\Services\Grades\GradesSeen;
 use App\Services\Grades\InstructorGradesOverview;
@@ -36,16 +37,28 @@ use CodeIgniter\Shield\Entities\User;
  * section's grid, which the page script fetches), To grade (work waiting across every section, oldest first)
  * and At risk. Every number is read from stored rows; nothing is created or recalculated by looking, so a
  * section that never had its Grades tab opened reads as "not published yet" (spec §13).
+ *
+ * The chairperson's has two tabs (spec §8): My sections, the instructor's workbench over the sections they teach
+ * in the sub-departments they chair, without its finalize controls (finalizing is the instructor's); and Program,
+ * the program's sections as a table with the finalization tracker, the chosen section's grid below it (read-only
+ * until Edit as chairperson) and the program's at-risk list. A tab the chairperson cannot use is not shown.
  */
 class GradesController extends BaseController
 {
     private const TABS = ['gradebook', 'to-grade', 'at-risk'];
+
+    /** The chairperson's tabs, and the lists inside each (the first is the default). */
+    private const CHAIR_SUBS = ['mine' => ['gradebook', 'to-grade', 'at-risk'], 'program' => ['sections', 'at-risk']];
 
     public function index(): string
     {
         $user = auth()->user();
         $area = $this->area();
         $base = site_url($area . '/grades');
+
+        if ($area === 'chairperson') {
+            return $this->chairperson($user, $base);
+        }
 
         if ($area === 'student') {
             return $this->student($user, $user, $base, [
@@ -87,7 +100,7 @@ class GradesController extends BaseController
             $risk     = (new GradesAtRisk())->forSections($sections, null);
 
             if ($tab === 'to-grade') {
-                [$queue, $types, $filters] = $this->toGrade($sections, $termId, $area);
+                [$queue, $types, $filters] = $this->toGrade($sections, $termId, $area, ['tab' => 'to-grade']);
             }
         } catch (\Throwable $e) {
             log_message('error', 'Grades failed to load: ' . $e->getMessage());
@@ -178,12 +191,212 @@ class GradesController extends BaseController
         ], ParentAccessService::readsAsStudent($child));
     }
 
+    /**
+     * The chairperson's page. My sections shows only when they teach a section of what they chair (or when
+     * Program is not theirs, so the page always has a tab); Program needs program.monitor. Without a tab in the
+     * address the page opens on My sections when there is one, else on Program.
+     *
+     * Program's table is one page of the term's sections, searched, filtered (not finalized only) and sorted from
+     * the address; the tracker counts the whole term. The grid below it is the chosen section's (?section=, else
+     * the page's first row), drawn by the page script; rendering never opens the roster or creates a scheme. A
+     * section outside the open tab's sections is a 404.
+     */
+    private function chairperson(User $user, string $base): string
+    {
+        $permissions = new RolePermissions();
+        $canProgram  = $permissions->allows($user, 'program.monitor', 'chairperson');
+
+        $requestedSection = $this->number('section');
+
+        if ($requestedSection === false) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $reason = (string) $this->request->getGet('reason');
+        $reason = in_array($reason, GradesAtRisk::KINDS, true) ? $reason : null;
+
+        $overview  = new ChairpersonProgramOverview();
+        $loadError = false;
+        $terms     = [];
+        $termId    = null;
+        $tabs      = $canProgram ? ['program'] : ['mine'];
+        $tab       = $tabs[0];
+        $sub       = self::CHAIR_SUBS[$tab][0];
+        $sections  = []; // My sections: the workbench rows; Program: every section of the term
+        $risk      = [];
+        $queue     = [];
+        $types     = [];
+        $filters   = ['qsection' => null, 'type' => null, 'late' => false];
+        $program   = ['rows' => [], 'total' => 0, 'tracker' => ['finalized' => 0, 'ready' => 0, 'blocked' => 0, 'total' => 0]];
+        $termEnd   = null;
+
+        // The table's choices, as the address gives them; anything else is the default.
+        $sort  = (string) $this->request->getGet('sort');
+        $dir   = (string) $this->request->getGet('dir');
+        $page  = $this->number('page');
+        $state = [
+            'q'    => mb_substr(trim((string) $this->request->getGet('q')), 0, 100),
+            'nf'   => $this->request->getGet('nf') === '1',
+            'sort' => in_array($sort, ChairpersonProgramOverview::SORTS, true) ? $sort : null,
+            'dir'  => in_array($dir, ['asc', 'desc'], true) ? $dir : null,
+            'page' => is_int($page) && $page > 0 ? $page : 1,
+        ];
+
+        try {
+            $terms  = $overview->terms($user);
+            $termId = $overview->defaultTermId($terms, $this->number('term') ?: null);
+            $mine   = $termId === null ? [] : $overview->mySections($user, $termId);
+
+            $tabs = array_keys(array_filter(['mine' => $mine !== [] || ! $canProgram, 'program' => $canProgram]));
+            $tab  = (string) $this->request->getGet('tab');
+            $tab  = in_array($tab, $tabs, true) ? $tab : $tabs[0];
+            $sub  = (string) $this->request->getGet('sub');
+            $sub  = in_array($sub, self::CHAIR_SUBS[$tab], true) ? $sub : self::CHAIR_SUBS[$tab][0];
+
+            if ($tab === 'mine') {
+                $sections = $mine;
+                $risk     = (new GradesAtRisk())->forSections($sections, null);
+
+                if ($sub === 'to-grade') {
+                    [$queue, $types, $filters] = $this->toGrade($sections, $termId, 'chairperson', ['tab' => 'mine', 'sub' => 'to-grade']);
+                }
+            } elseif ($termId !== null) {
+                $sections = $overview->all($user, $termId);
+                $risk     = (new GradesAtRisk())->forSections($sections, null);
+                $program  = $overview->pageOf($sections, [
+                    'q'            => $state['q'],
+                    'notFinalized' => $state['nf'],
+                    'sort'         => $state['sort'],
+                    'dir'          => $state['dir'],
+                    'page'         => $state['page'],
+                ]);
+
+                // A page past the end shows the last one (the service's rule); the links follow what is shown.
+                $state['page'] = min($state['page'], max(1, (int) ceil($program['total'] / ChairpersonProgramOverview::PER_PAGE)));
+
+                $program['rows'] = $this->forNudge($program['rows'], (int) $user->id);
+                $termEnd         = $overview->termEnd($termId);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Grades failed to load: ' . $e->getMessage());
+            $loadError = true;
+        }
+
+        $byId = array_column($sections, null, 'offering_id');
+
+        // A section outside the open tab's sections (another program's, or one they do not teach) is a 404.
+        if (! $loadError && $requestedSection !== null && ! isset($byId[$requestedSection])) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $instructor = new InstructorGradesOverview();
+
+        if ($tab === 'mine') {
+            $summary  = $instructor->summary($sections);
+            $selected = $byId[$instructor->defaultSectionId($sections, $requestedSection)] ?? null;
+            $counts   = ['to-grade' => $summary['waiting'], 'at-risk' => count($risk)];
+        } else {
+            $summary  = null;
+            $selected = $requestedSection !== null ? ($byId[$requestedSection] ?? null) : ($program['rows'][0] ?? null);
+
+            // The action bar carries what Nudge needs for the shown section, also when its row is on another page
+            // or filtered out of this one.
+            if ($selected !== null) {
+                $onPage   = array_column($program['rows'], null, 'offering_id');
+                $selected = $onPage[$selected['offering_id']] ?? $this->forNudge([$selected], (int) $user->id)[0];
+            }
+            $counts   = ['sections' => $program['tracker']['total'], 'at-risk' => count($risk)];
+        }
+
+        // The At risk count is everyone, whatever reason is picked; the list keeps only that reason.
+        $atRisk = $reason === null ? $risk : array_values(array_filter(
+            $risk,
+            static fn (array $row): bool => in_array($reason, array_column($row['reasons'], 'kind'), true),
+        ));
+
+        return view('pages/grades/index', [
+            'title'        => 'Grades',
+            'page'         => 'grades',
+            'user'         => $user,
+            'area'         => 'chairperson',
+            'base'         => $base,
+            'chairTabs'    => $tabs,
+            'tab'          => $tab,
+            'sub'          => $sub,
+            'terms'        => $terms,
+            'termId'       => $termId,
+            'sections'     => $tab === 'mine' ? $sections : [],
+            'program'      => $program,
+            'state'        => $state,
+            'termEnd'      => $termEnd,
+            'selected'     => $selected,
+            'summary'      => $summary,
+            'counts'       => $counts,
+            'atRisk'       => $atRisk,
+            'reason'       => $reason,
+            'queue'        => $queue,
+            'types'        => $types,
+            'filters'      => $filters,
+            'canManage'    => $permissions->allows($user, 'grading.manage', 'chairperson'),
+            'canNudge'     => $permissions->allows($user, 'followups.manage', 'chairperson'),
+            'loadError'    => $loadError,
+            'previousPage' => 'dashboard',
+        ]);
+    }
+
+    /**
+     * Each row with what Nudge words its message from and sends to: oldest_days (withOldestWaiting) and recipients,
+     * the section's instructors less the chairperson themselves (the Instructor column still names everyone).
+     *
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function forNudge(array $rows, int $userId): array
+    {
+        $rows = $this->withOldestWaiting($rows);
+
+        foreach ($rows as $i => $row) {
+            $rows[$i]['recipients'] = array_values(array_filter($row['instructors'], static fn (array $person): bool => (int) $person['id'] !== $userId));
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Each row with oldest_days: whole days since its oldest submission still waiting to be graded (null when none
+     * is waiting), for the nudge's wording. One PendingGrading call for every row together.
+     *
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function withOldestWaiting(array $rows): array
+    {
+        $waiting = array_column(array_filter($rows, static fn (array $row): bool => $row['waiting'] > 0), 'offering_id');
+        $oldest  = [];
+
+        foreach ((new PendingGrading())->forOfferings($waiting)['assessments'] as $assessment) {
+            if ($assessment['oldest_at'] !== null) {
+                $oldest[$assessment['offering_id']] = min($oldest[$assessment['offering_id']] ?? PHP_INT_MAX, $assessment['oldest_at']);
+            }
+        }
+
+        $now = time();
+
+        foreach ($rows as $i => $row) {
+            $rows[$i]['oldest_days'] = isset($oldest[$row['offering_id']]) ? max(0, intdiv($now - $oldest[$row['offering_id']], 86400)) : null;
+        }
+
+        return $rows;
+    }
+
     /** The area this request is in: its first address segment, one of those that have the page. */
     private function area(): string
     {
         $area = $this->request->getUri()->getSegment(1);
 
-        return in_array($area, ['instructor', 'student'], true) ? $area : 'instructor';
+        return in_array($area, ['instructor', 'student', 'chairperson'], true) ? $area : 'instructor';
     }
 
     /**
@@ -289,10 +502,11 @@ class GradesController extends BaseController
      * late work. Each row's Grade → carries the way back to this queue, filters and all.
      *
      * @param list<array<string, mixed>> $sections
+     * @param array<string, string>      $list     the address parameters that name the queue on this page
      *
      * @return array{0: list<array<string, mixed>>, 1: list<string>, 2: array{qsection: ?int, type: ?string, late: bool}}
      */
-    private function toGrade(array $sections, ?int $termId, string $area): array
+    private function toGrade(array $sections, ?int $termId, string $area, array $list): array
     {
         $byId = array_column($sections, null, 'offering_id');
         $rows = (new PendingGrading())->forOfferings(array_keys($byId))['assessments'];
@@ -315,8 +529,7 @@ class GradesController extends BaseController
         usort($rows, static fn (array $a, array $b): int => [$a['oldest_at'] === null, $a['oldest_at'], $a['offering_id'], $a['assessment_id']]
             <=> [$b['oldest_at'] === null, $b['oldest_at'], $b['offering_id'], $b['assessment_id']]);
 
-        $back = (string) parse_url(site_url($area . '/grades'), PHP_URL_PATH) . '?' . http_build_query(array_filter([
-            'tab'      => 'to-grade',
+        $back = (string) parse_url(site_url($area . '/grades'), PHP_URL_PATH) . '?' . http_build_query(array_filter($list + [
             'term'     => $termId,
             'qsection' => $qsection,
             'type'     => $type,

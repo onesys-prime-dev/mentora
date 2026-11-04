@@ -493,6 +493,11 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
     $routes->get('courses', 'Courses\ChairpersonCoursesController::index', ['filter' => 'permission:courses.view']);
+
+    // Grades: the sections they teach (the instructor's workbench, without finalizing) and their program's.
+    $routes->get('grades', 'Grades\GradesController::index', ['filter' => 'permission:courses.view']);
+    $routes->get('grades/download-program', 'Grades\GradesBulkController::downloadProgram', ['filter' => 'permission:program.monitor']);
+
     $routes->get('monitor-program', 'Courses\MonitorProgramController::index', ['filter' => 'permission:program.monitor']);
 
     // Monitor Program's data layer (R5) — a separate URL space from

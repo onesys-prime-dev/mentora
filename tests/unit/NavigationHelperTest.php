@@ -60,15 +60,23 @@ final class NavigationHelperTest extends CIUnitTestCase
     public function testTheTileOpensTheGradesPage(): void
     {
         $this->assertStringEndsWith('instructor/grades', (string) array_column(global_apps('instructor'), 'url', 'key')['grades']);
+    }
 
-        // The chairperson's page comes in a later phase.
-        $this->assertNull(array_column(global_apps('chairperson'), 'url', 'key')['grades']);
+    public function testTheTileOpensTheGradesPageForChairpersons(): void
+    {
+        $url = array_column(global_apps('chairperson'), 'url', 'key')['grades'];
+
+        $this->assertSame(site_url('chairperson/grades'), $url);
+
+        $collection = \Config\Services::routes(false);
+        $collection->loadRoutes();
+
+        $this->assertArrayHasKey('chairperson/grades', $collection->getRoutes('GET'));
     }
 
     public function testTheTileOpensTheGradesPageForStudents(): void
     {
         $this->assertSame(site_url('student/grades'), array_column(global_apps('student'), 'url', 'key')['grades']);
-        $this->assertNull(array_column(global_apps('chairperson'), 'url', 'key')['grades'], 'the chairperson page is not built yet');
     }
 
     public function testTheParentsGradesTileOpensTheParentsGradesPage(): void

@@ -239,6 +239,25 @@ adds **Download report**. A child who is also staff shows nothing, as on the par
 - "Read-only until Edit as chairperson" is a **page** behaviour only: the server already lets a
   chairperson edit program grades and audits it, and that stays.
 
+Phase 4 layout (agreed 2026-11-04):
+- **Program tab** = the finalization tracker ("Finalized 18 of 24 · 4 ready · 2 blocked", with a "Not
+  finalized only" filter), then a sortable, searchable table (Section, Instructor, Average, At risk,
+  Waiting, Status; 25 per page), then **Nudge** and **Download program**. Clicking a row opens that
+  section's grid **below the table**, read-only, with an action bar holding **Edit as chairperson** and
+  **Open in course →**. Sub-pills: **Sections · At risk**.
+- **Edit as chairperson** asks once: "You're editing {section} as chairperson. Every change is recorded
+  in the audit log and the instructor can see it." After Continue the grid is editable until another
+  section is opened or **Done** is pressed. Overrides still ask for a reason.
+- **Nudge** opens a dialog on the page, prefilled from the row ("IT101-B: 23 submissions waiting to be
+  graded, oldest 9 days" / "Not finalized; the term ends Dec 15"), recipient = the section's instructor,
+  a reason and an optional due date; Send posts to the existing Follow-ups and the chairperson stays on
+  the Program tab.
+- **My sections** = the instructor workbench over the sections the chairperson teaches **inside the
+  sub-departments they chair** (the chairperson area reaches only those); without any, the tab is not
+  shown and the page opens on Program. Edits there go through the chairperson area like every other
+  chairperson edit and are audited the same way.
+- **Download program** needs `program.monitor` (reading program gradebooks), not `grading.manage`.
+
 ## 9. Dean (Q12)
 
 One **Department** view: a program picker over the same section table with a **Signed off** column. Grids

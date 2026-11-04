@@ -5,6 +5,7 @@ declare(strict_types=1);
 use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
+use Tests\Support\DeanFactory;
 use Tests\Support\GradeFactory;
 use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
@@ -116,6 +117,88 @@ final class GlobalGradesQueryBudgetTest extends RouteTestCase
         $this->assertGreaterThan(0, $three[0]);
         // Six visits (each tab, warmed and measured). A loose bound for a test machine: about 2 s a visit.
         $this->assertLessThan(12.0, microtime(true) - $started, 'six visits on 750 students');
+    }
+
+    /**
+     * A section of the chairperson's program: published, fifty students with an ungraded quiz, one failing, two
+     * instructors (the chairperson among them, so My sections has it too).
+     */
+    private function addProgramSection(User $chair, int $program, int $term, int $n): void
+    {
+        $db       = db_connect();
+        $offering = DeanFactory::offering($program, $term, sprintf('IT%03d', $n));
+
+        CourseFactory::assignInstructor($offering, $chair);
+        CourseFactory::assignInstructor($offering, $this->instructor);
+
+        $scheme = GradeFactory::scheme($offering);
+        $db->table('grading_schemes')->where('id', $scheme)->update(['status' => 'Published']);
+        GradeFactory::category($scheme, 'Exams', 100);
+
+        $module = CourseFactory::module($offering);
+        $quiz   = CourseFactory::assessment($offering, $this->instructor, $module);
+        $db->table('assessments')->where('id', $quiz)->update(['status' => 'Published']);
+
+        $now = date('Y-m-d H:i:s');
+
+        for ($i = 0; $i < self::STUDENTS; $i++) {
+            $db->table('users')->insert(['username' => 'qc' . uniqid('', false) . $i, 'active' => 1, 'created_at' => $now]);
+            $student = (int) $db->insertID();
+
+            $db->table('auth_groups_users')->insert(['user_id' => $student, 'group' => 'student', 'created_at' => $now]);
+            $db->table('user_profiles')->insert(['user_id' => $student, 'first_name' => 'Stu', 'last_name' => 'Dent' . $i, 'created_at' => $now]);
+            $db->table('enrollments')->insert(['offering_id' => $offering, 'student_user_id' => $student, 'status' => 'enrolled', 'enrolled_at' => $now]);
+            $db->table('assessment_submissions')->insert([
+                'assessment_id' => $quiz, 'student_id' => $student, 'attempt_number' => 1, 'started_at' => $now,
+                'submitted_at' => $now, 'score' => 0, 'is_graded' => 0, 'status' => 'Submitted',
+            ]);
+            $db->table('gradebook_records')->insert([
+                'course_offering_id' => $offering, 'student_id' => $student, 'grading_scheme_id' => $scheme,
+                'calculated_percentage' => $i === 0 ? 40 : 85, 'remarks' => $i === 0 ? 'Failed' : 'Passed',
+            ]);
+        }
+    }
+
+    public function testTheChairpersonPageCostsTheSameForThreeOrFifteenSections(): void
+    {
+        $unit    = DeanFactory::department('QCH');
+        $sub     = DeanFactory::subDepartment($unit['department'], 'QCH');
+        $program = DeanFactory::program($sub, 'QCH');
+        $term    = DeanFactory::term($unit['institution']);
+        $chair   = DeanFactory::chair($sub);
+
+        $views = ['tab=mine', 'tab=mine&sub=to-grade', 'tab=mine&sub=at-risk', 'tab=program', 'tab=program&sub=at-risk', 'tab=program&sort=average&dir=desc&q=IT'];
+
+        $cost = function (string $query) use ($chair): int {
+            $this->loggedInAs($chair);
+            $this->get('chairperson/grades?' . $query)->assertStatus(200);
+
+            $queries  = 0;
+            $listener = static function () use (&$queries): void {
+                $queries++;
+            };
+
+            Events::on('DBQuery', $listener);
+            $result = $this->get('chairperson/grades?' . $query);
+            Events::removeListener('DBQuery', $listener);
+
+            $result->assertStatus(200);
+
+            return $queries;
+        };
+
+        for ($n = 1; $n <= 3; $n++) {
+            $this->addProgramSection($chair, $program, $term, $n);
+        }
+
+        $three = array_map($cost, $views);
+
+        for ($n = 4; $n <= 15; $n++) {
+            $this->addProgramSection($chair, $program, $term, $n);
+        }
+
+        $this->assertSame(array_combine($views, $three), array_combine($views, array_map($cost, $views)), 'fifteen sections must cost the same queries as three');
+        $this->assertGreaterThan(0, $three[0]);
     }
 
     /** A course of the student's term with a published scheme, a running grade, an instructor and a band. */
