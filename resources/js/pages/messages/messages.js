@@ -28,6 +28,7 @@ import { createGuard, createPoller, watchVisibility } from "./poller.js";
 import { bindMenuTriggers } from "./gestures.js";
 import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
+import { createSettings } from "./settings.js";
 import { createMenu } from "./menu.js";
 import { conversationRow, dayLabel, messageNode } from "./render.js";
 
@@ -857,7 +858,22 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const prefsEnd = $("[data-role=prefs-end]");
     const prefsNote = $("[data-role=prefs-note]");
 
+    const settings = createSettings({
+        root,
+        api,
+        getConversation: current,
+        managesAny: () => state.conversations.some((c) => c.can_manage_controls),
+        onControlsChanged: (c) => {
+            if (c.id === state.openId) {
+                applyConversation(c);
+            }
+
+            renderList();
+        },
+    });
+
     $("[data-role=prefs-open]")?.addEventListener("click", async () => {
+        settings.sync();
         prefsNote.textContent = "";
 
         const { status, data } = await api.preferences();

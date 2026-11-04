@@ -29,7 +29,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                         <a href="<?= esc(site_url('messages/reports')) ?>" class="rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-[#646464] hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Reports</a>
                     <?php endif; ?>
                     <button type="button" data-role="new-group" data-dialog-open="messages-group" hidden class="rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New group</button>
-                    <button type="button" data-role="prefs-open" data-dialog-open="messages-prefs" aria-label="Notification settings" class="rounded-full border border-gray-300 px-2.5 py-1 text-[13px] font-semibold text-[#646464] hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Alerts</button>
+                    <button type="button" data-role="prefs-open" data-dialog-open="messages-prefs" aria-label="Settings" class="rounded-full border border-gray-300 px-2.5 py-1 text-[13px] font-semibold text-[#646464] hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Settings</button>
                     <button type="button" data-role="new" data-dialog-open="messages-new" class="rounded-full bg-brand px-3 py-1 text-[13px] font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New</button>
                 </span>
             </div>
@@ -152,17 +152,32 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
 
     <?= view('components/dialog', [
         'id'    => 'messages-prefs',
-        'title' => 'Notification settings',
+        'title' => 'Settings',
         'size'  => 'sm',
         'body'  => '<div class="flex flex-col gap-3">'
+            . '<div data-role="settings-tabs" role="tablist" hidden class="flex gap-1 border-b border-gray-100">'
+            . '<button type="button" role="tab" data-role="settings-tab-alerts" aria-selected="true" class="-mb-px border-b-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">My alerts</button>'
+            . '<button type="button" role="tab" data-role="settings-tab-controls" aria-selected="false" class="-mb-px border-b-2 border-transparent px-3 py-1.5 text-sm text-[#646464] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Chat controls</button>'
+            . '</div>'
+            . '<div data-role="settings-panel-controls" hidden class="flex flex-col gap-1">'
+            . '<p data-role="controls-title" class="rounded-lg bg-brand-tint px-3 py-1.5 text-sm text-brand-dark"></p>'
+            . '<p data-role="controls-empty" hidden class="py-6 text-center text-sm text-[#646464]">Open a chat to change its controls.</p>'
+            . '<div data-role="controls-list" class="flex flex-col"></div>'
+            . '<p data-role="controls-note" role="status" class="text-xs text-[#C33939]"></p>'
+            . '</div>'
+            . '<div data-role="settings-panel-alerts" class="flex flex-col gap-3">'
             . '<p class="text-xs text-[#646464]">Notifications and emails say who wrote and where. They never include what was written.</p>'
             . '<label class="flex items-center gap-2 text-sm text-[#1A1C1E]"><input type="checkbox" data-role="prefs-email" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"> Email me about new messages</label>'
             . '<fieldset data-role="prefs-quiet" hidden class="flex flex-col gap-2"><legend class="text-sm font-semibold text-gray-900">Quiet hours</legend>'
             . '<p class="text-xs text-[#646464]">Nothing is notified or emailed during these hours; messages still arrive and are counted.</p>'
             . '<div class="flex items-center gap-2"><label class="text-xs text-gray-600" for="messages-prefs-start">From</label><input id="messages-prefs-start" data-role="prefs-start" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
             . '<label class="text-xs text-gray-600" for="messages-prefs-end">to</label><input id="messages-prefs-end" data-role="prefs-end" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div></fieldset>'
+            . '<div class="flex flex-col gap-1"><p class="text-sm font-semibold text-gray-900">Blocked people (<span data-role="blocked-count">0</span>)</p>'
+            . '<ul data-role="blocked-list" class="flex flex-col gap-1"></ul>'
+            . '<p data-role="blocked-empty" class="text-xs text-[#646464]">No one blocked.</p></div>'
             . '<p data-role="prefs-note" role="status" class="text-xs text-[#646464]"></p>'
             . '<button type="button" data-role="prefs-save" class="self-end rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>'
+            . '</div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 
