@@ -1,88 +1,137 @@
 /*
 |--------------------------------------------------------------------------
-| Notifications page — list on the left, the chosen one on the right
+| Notifications page — click to open, right-click for the menu
 |--------------------------------------------------------------------------
-| Choosing a row shows its panel and marks it read at once (the count, the dot
-| and the row update without a reload). The filter chips only hide rows.
-| Everything is already on the page; the only request is the read mark.
+| A row is a link: clicking it goes to that notification and marks it read on
+| the way. Right-click, long-press or Shift+F10 opens a small menu with Mark as
+| read and Delete. The filter chips only hide rows. Counts, dots and the empty
+| messages follow every change without a reload.
 |--------------------------------------------------------------------------
 */
+
+import { createMenu } from "../messages/menu.js";
+import { bindMenuTriggers } from "../messages/gestures.js";
 
 export function initNotificationsPage(root = document.querySelector("[data-notifications-page]")) {
     if (!root) {
         return;
     }
 
-    const rows = [...root.querySelectorAll("[data-open]")];
-    const panels = [...root.querySelectorAll("[data-detail]")];
-    const countEl = root.querySelector("[data-role=unread-count]");
+    const list = root.querySelector("[data-role=list]");
     const markAll = root.querySelector("[data-role=mark-all]");
-    const emptyEl = root.querySelector("[data-role=filter-empty]");
-    const readUrl = root.dataset.readUrl;
+    const summary = root.querySelector("[data-role=summary]");
+    const countEl = root.querySelector("[data-role=unread-count]");
+    const emptyEl = root.querySelector("[data-role=empty]");
+    const filterEmptyEl = root.querySelector("[data-role=filter-empty]");
+    const menu = createMenu(document);
     let filter = "all";
 
-    const itemOf = (button) => button.closest("li");
-    const unreadCount = () => root.querySelectorAll("li[data-notification=unread]").length;
+    const items = () => [...list.querySelectorAll("li[data-id]")];
+    const isUnread = (li) => li.dataset.notification === "unread";
 
-    function syncCount() {
-        const n = unreadCount();
-
-        if (countEl) {
-            countEl.textContent = String(n);
-        }
-
-        if (markAll) {
-            markAll.hidden = n === 0;
-        }
-    }
-
-    function markRead(button) {
-        const item = itemOf(button);
-
-        if (item.dataset.notification !== "unread") {
-            return;
-        }
-
-        item.dataset.notification = "read";
-        item.querySelector("[data-role=dot]")?.classList.add("invisible");
-        item.querySelector("[data-role=badge]")?.classList.replace("bg-brand", "bg-gray-100");
-        item.querySelector("[data-role=badge]")?.classList.replace("text-white", "text-gray-600");
-        item.querySelector("[data-role=title]")?.classList.replace("font-semibold", "font-medium");
-        root.querySelector(`[data-detail="${button.dataset.open}"] [data-role=read-form]`)?.setAttribute("hidden", "");
-        syncCount();
-
+    function post(url, id, keepalive = false) {
         const body = new FormData();
 
-        body.set("id", button.dataset.open);
-        fetch(readUrl, { method: "POST", body, credentials: "same-origin", redirect: "manual" }).catch(() => {});
+        body.set("id", id);
+
+        return fetch(url, { method: "POST", body, credentials: "same-origin", redirect: "manual", keepalive }).catch(() => null);
     }
 
-    function select(button) {
-        rows.forEach((row) => row.setAttribute("aria-current", row === button ? "true" : "false"));
-        panels.forEach((panel) => { panel.hidden = panel.dataset.detail !== button.dataset.open; });
-        markRead(button);
-    }
-
-    function applyFilter() {
+    function refresh() {
+        const unread = items().filter(isUnread).length;
         let shown = 0;
 
-        rows.forEach((button) => {
-            const item = itemOf(button);
-            const show = filter === "all" || (filter === "unread" && item.dataset.notification === "unread") || item.dataset.type === filter;
+        items().forEach((li) => {
+            const show = filter === "all" || (filter === "unread" && isUnread(li)) || li.dataset.type === filter;
 
-            item.hidden = !show;
+            li.hidden = !show;
             shown += show ? 1 : 0;
         });
 
-        // With nothing to list, the list steps aside so the message sits in the middle of the card.
-        root.querySelector("[data-role=list]")?.classList.toggle("hidden", shown === 0 && rows.length > 0);
+        list.querySelectorAll("[data-group]").forEach((group) => {
+            group.hidden = [...group.querySelectorAll("li[data-id]")].every((li) => li.hidden);
+        });
 
-        if (emptyEl) {
-            emptyEl.classList.toggle("hidden", shown > 0 || rows.length === 0);
+        if (countEl) {
+            countEl.textContent = String(unread);
         }
+
+        if (markAll) {
+            markAll.hidden = unread === 0;
+        }
+
+        if (summary) {
+            summary.textContent = items().length === 0 ? "" : unread === 0 ? "Everything is read" : `${unread} unread · everything else is read`;
+        }
+
+        emptyEl?.classList.toggle("hidden", items().length > 0);
+        filterEmptyEl?.classList.toggle("hidden", shown > 0 || items().length === 0);
     }
 
-    rows.forEach((button) => button.addEventListener("click", () => select(button)));
+    function showRead(li) {
+        li.dataset.notification = "read";
+        li.querySelector("[data-role=row]")?.classList.remove("bg-[#F2F7FF]");
+        li.querySelector("[data-role=dot]")?.classList.add("invisible");
+        li.querySelector("[data-role=badge]")?.classList.replace("bg-brand", "bg-gray-100");
+        li.querySelector("[data-role=badge]")?.classList.replace("text-white", "text-gray-600");
+        li.querySelector("[data-role=title]")?.classList.replace("font-semibold", "font-medium");
+        li.querySelector("[data-role=title]")?.classList.replace("text-gray-900", "text-gray-700");
+    }
+
+    function markRead(li, { keepalive = false } = {}) {
+        if (!isUnread(li)) {
+            return;
+        }
+
+        showRead(li);
+        refresh();
+        post(root.dataset.readUrl, li.dataset.id, keepalive);
+    }
+
+    async function remove(li) {
+        const response = await post(root.dataset.deleteUrl, li.dataset.id);
+
+        if (response === null || (response.status !== 200 && response.status !== 404)) {
+            return;
+        }
+
+        li.remove();
+        refresh();
+    }
+
+    // Left click: the row's own link takes the person there; the read mark must still get out first.
+    list.addEventListener("click", (event) => {
+        const row = event.target.closest("[data-role=row]");
+
+        if (!row || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
+            return;
+        }
+
+        markRead(row.closest("li"), { keepalive: true });
+    });
+
+    list.addEventListener("keydown", (event) => {
+        const row = event.target.closest?.("[data-role=row]");
+
+        if (row && row.tagName !== "A" && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            markRead(row.closest("li"));
+        }
+    });
+
+    bindMenuTriggers(list, {
+        selector: "li[data-id]",
+        onOpen: (li, at) => {
+            const entries = [];
+
+            if (isUnread(li)) {
+                entries.push({ id: "read", label: "Mark as read", onSelect: () => markRead(li) });
+            }
+
+            entries.push({ id: "delete", label: "Delete", danger: true, onSelect: () => remove(li) });
+            menu.open(entries, at);
+        },
+    });
 
     root.querySelectorAll("[data-filter]").forEach((chip) => chip.addEventListener("click", () => {
         filter = chip.dataset.filter;
@@ -90,22 +139,13 @@ export function initNotificationsPage(root = document.querySelector("[data-notif
             const on = other === chip;
 
             other.setAttribute("aria-pressed", String(on));
-            other.classList.toggle("bg-brand", on);
-            other.classList.toggle("text-white", on);
-            other.classList.toggle("border-brand", on);
-            other.classList.toggle("bg-white", !on);
-            other.classList.toggle("text-gray-700", !on);
-            other.classList.toggle("border-gray-300", !on);
+            other.classList.remove(...(on ? other.dataset.off : other.dataset.on).split(" "));
+            other.classList.add(...(on ? other.dataset.on : other.dataset.off).split(" "));
         });
-        applyFilter();
+        refresh();
     }));
 
-    // The notification open on arrival counts as read, like choosing it.
-    const open = rows.find((row) => row.getAttribute("aria-current") === "true");
-
-    if (open) {
-        markRead(open);
-    }
+    refresh();
 }
 
 initNotificationsPage();

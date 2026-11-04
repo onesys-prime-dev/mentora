@@ -45,6 +45,7 @@ $routes->group('internal/ai', ['filter' => 'aiworker'], function ($routes) {
 $routes->get('notifications', 'NotificationController::index', ['filter' => 'session']);
 $routes->get('notifications/feed', 'NotificationController::feed', ['filter' => 'session']);
 $routes->get('notifications/latest', 'NotificationController::latest', ['filter' => 'session']);
+$routes->post('notifications/delete', 'NotificationController::delete', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served

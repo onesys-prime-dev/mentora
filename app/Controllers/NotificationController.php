@@ -85,6 +85,19 @@ class NotificationController extends BaseController
         return $this->response->setJSON(['last_id' => $lastId, 'unread' => $service->unreadCount($userId), 'items' => $items]);
     }
 
+    /** Deletes one notification of the caller's own; anything else answers the same 404. */
+    public function delete(): ResponseInterface
+    {
+        $id = $this->request->getPost('id');
+
+        if (! (is_string($id) && preg_match('/^\d{1,10}$/', $id) === 1)
+            || ! (new NotificationService())->delete((int) auth()->id(), (int) $id)) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false]);
+        }
+
+        return $this->response->setJSON(['ok' => true]);
+    }
+
     public function read(): RedirectResponse
     {
         $id = $this->request->getPost('id');
