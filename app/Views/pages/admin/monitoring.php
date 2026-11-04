@@ -41,7 +41,7 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
 
 <?= $this->section('content') ?>
 
-<div class="flex flex-col gap-5 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:h-full lg:min-h-[30rem]" data-page-panel data-live-url="<?= esc($monLiveUrl, 'attr') ?>">
+<div class="flex flex-col gap-5 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel data-live-url="<?= esc($monLiveUrl, 'attr') ?>">
 
     <?= view('components/page-head', ['title' => 'System status', 'icon' => 'score', 'actions' => '<span class="rounded-full px-3 py-1 text-sm font-semibold ' . $badge[$monOverall][1] . '" data-overall="' . esc($monOverall) . '">' . esc($badge[$monOverall][0]) . '</span>'], ['saveData' => false]) ?>
     <?php /* Without scripts the browser's own refresh does it; with them the graphs move and the person can pause them (WCAG 2.2.1). */ ?>
@@ -58,7 +58,7 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
         <h2 class="sr-only">Health</h2>
         <ul class="grid grid-cols-2 overflow-hidden rounded-2xl border border-gray-200 sm:grid-cols-3 lg:grid-cols-6">
             <?php foreach ($monHealth as $name => $result): ?>
-                <li class="border-b border-r border-gray-200 px-3 py-2.5 text-sm" data-check="<?= esc($name) ?>" data-status="<?= esc($result['status']) ?>" title="<?= esc($result['detail']) ?>">
+                <li class="h-24 min-w-0 overflow-hidden border-b border-r border-gray-200 px-3 py-2.5 text-sm" data-check="<?= esc($name) ?>" data-status="<?= esc($result['status']) ?>" title="<?= esc($result['detail']) ?>">
                     <span class="block text-xs text-[#646464]"><?= esc(SystemHealth::LABELS[$name] ?? $name) ?></span>
                     <span class="mt-0.5 flex items-center gap-1.5 font-semibold text-gray-900">
                         <span class="h-2 w-2 shrink-0 rounded-full <?= $badge[$result['status']][2] ?>" data-dot></span>
@@ -87,9 +87,9 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
                 <polyline fill="none" stroke="#0B3A8F" stroke-width="1.8" vector-effect="non-scaling-stroke" data-spark="sessions"/>
             </svg>
         </div>
-        <dl class="grid grid-cols-3 gap-2 text-sm">
+        <dl class="grid auto-rows-min grid-cols-3 content-start gap-2 text-sm">
             <?php foreach ($tiles as $key => $label): ?>
-                <div class="rounded-2xl border border-gray-200 px-3 py-2"><dt class="text-xs text-[#646464]"><?= esc($label) ?></dt><dd class="text-xl font-semibold text-gray-900" data-tile="<?= esc($key) ?>"><?= esc(number_format($monPlatform[$key])) ?></dd></div>
+                <div class="h-16 min-w-0 overflow-hidden rounded-2xl border border-gray-200 px-3 py-2"><dt class="truncate text-xs text-[#646464]"><?= esc($label) ?></dt><dd class="text-xl font-semibold text-gray-900" data-tile="<?= esc($key) ?>"><?= esc(number_format($monPlatform[$key])) ?></dd></div>
             <?php endforeach; ?>
         </dl>
     </section>

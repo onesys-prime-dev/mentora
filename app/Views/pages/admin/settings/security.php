@@ -17,9 +17,9 @@ $tick    = 'h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40';
 
 <?= $this->section('content') ?>
 
-<div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
+<div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8 sm:pt-4" data-page-panel>
 
-<div class="mx-auto max-w-2xl">
+<div class="mx-auto mb-5 w-full max-w-2xl shrink-0">
     <?= view('components/page-head', [
         'title'       => 'Security settings',
         'icon'        => 'attention',
@@ -33,9 +33,12 @@ $tick    = 'h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40';
     <?php endif; ?>
     <?php if (session()->has('error')): ?>
         <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
-    <?php endif; ?>
+    <?php endif; ?></div>
 
-    <form method="post" action="<?= site_url('admin/settings/security') ?>" data-dialog-form class="mt-6 flex flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm">
+<div data-panel-scroll>
+<div class="mx-auto max-w-2xl">
+
+    <form method="post" action="<?= site_url('admin/settings/security') ?>" data-dialog-form class="flex flex-col gap-6">
         <?= csrf_field() ?>
 
         <fieldset class="flex flex-col gap-3">
@@ -73,6 +76,7 @@ $tick    = 'h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40';
             <button type="submit" class="<?= $primary ?>">Save</button>
         </div>
     </form>
+</div>
 </div>
 
 </div>
