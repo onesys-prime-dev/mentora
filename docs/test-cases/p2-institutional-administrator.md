@@ -916,6 +916,7 @@ P3 scenarios. QA status as in the README; none has been run.
 | TC-IAA-17 | Giving someone the dean role before a department is assigned | Institutional administrator | P3 | IBR |
 | TC-IAA-18 | The institution's banner | Institutional administrator | P3 | VCI |
 | TC-UPL-05 | A CSV preview nobody applies is removed within an hour | Institutional administrator | P3 | REG? |
+| TC-UPL-06 | CSV upload names people and courses as an administrator knows them, and shows the sections it creates | Institutional administrator | P1 | VCI |
 | TC-STR-09 | A program's status: inactive, archived, reactivated | Institutional administrator | P3 | VCI |
 | TC-BRD-05 | Brand colours must keep text readable | Institutional administrator | P3 | VCI |
 | TC-HOM-02 | The home page's attention list | Institutional administrator | P3 | VCI |
@@ -959,6 +960,18 @@ P3 scenarios. QA status as in the README; none has been run.
 - **Playwright:** no
 - **Basis:** decision AMB-INST-06. Suspected: abandoned previews are removed only at the next preview [audit agent; not run].
 - **QA status:** REG? (PS-CSV-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
+- **Review:** Draft
+
+### TC-UPL-06 CSV upload names people and courses as an administrator knows them, and shows the sections it creates
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a students file with a middle name and suffix; an existing student whose email changed; an enrolments file naming students by student number and by email, a course by code alone and by code with program, a section that exists and one that does not; a course code used in two programs; a file in the SIS columns (`external_id`)
+- **Steps:** download every template; upload the files; read the preview; apply.
+- **Expected:** no template has an `external_id` column; the student keeps the middle name and suffix; the existing student is found by number and their email corrected (no second account); enrolments go into the right course and section of the active term; the missing section is listed once under "New sections" (not with the refused rows) and is created on applying; a code in two programs without program_code is refused naming both programs; a student not in the institution is refused with "add them in students.csv or on the People page"; the SIS-columns file is refused whole; nothing is written to `sis_links`.
+- **Already automated:** `CsvUploadServiceTest`, `InstitutionCsvUploadTest`, `SisCsvParserTest`, `SisMapperTest`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-UPL-01)
+- **Basis:** `CsvUploadService`, `SisCsvParser::KEYS_UPLOAD`, `SisImporter`
+- **QA status:** VCI
 - **Review:** Draft
 
 ### TC-STR-09 A program's status: inactive, archived, reactivated

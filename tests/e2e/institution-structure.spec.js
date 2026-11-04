@@ -507,10 +507,10 @@ test("TC-UPL-01 Files are previewed first, and applying them (after the password
         name: "students.csv",
         mimeType: "text/csv",
         buffer: Buffer.from(
-            "external_id,email,first_name,last_name,student_number\n" +
-                "UP1,e2e.upload1@mentora.test,Una,Upload,2026-9001\n" +
-                "UP2,e2e.upload2@mentora.test,Uri,Upload,2026-9002\n" +
-                "UP3,not-an-email,Uma,Upload,2026-9003\n",
+            "student_number,email,first_name,middle_name,last_name,suffix\n" +
+                "2026-9001,e2e.upload1@mentora.test,Una,,Upload,\n" +
+                "2026-9002,e2e.upload2@mentora.test,Uri,,Upload,\n" +
+                "2026-9003,not-an-email,Uma,,Upload,\n",
         ),
     });
     await page.getByRole("button", { name: "Preview the changes" }).click();

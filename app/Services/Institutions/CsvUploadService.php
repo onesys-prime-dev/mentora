@@ -17,10 +17,13 @@ use InvalidArgumentException;
 
 /**
  * Bulk entry from CSV files an institutional administrator uploads: students,
- * instructors, courses and enrolments, in the same columns as the SIS files.
+ * instructors, courses, enrolments, staff assignments and class times. Their
+ * columns name records the way an administrator knows them (a student by
+ * student number or email, a course by program and course code, a section by
+ * its code), not by SIS ids: SisCsvParser::KEYS_UPLOAD.
  *
  * It is the SIS import with a different source (UploadConnections stands in
- * for the connection, so SisImporter runs unchanged), which gives it the same
+ * for the connection, and its files are read with the upload's columns), which gives it the same
  * guarantees: a preview that writes nothing and reports exactly what applying
  * will do, one transaction, all or nothing, and a bad row refused with its
  * reason while the rest still go in.
@@ -61,9 +64,19 @@ class CsvUploadService
     /** The header line of a template file. */
     public static function template(string $dataset): string
     {
-        $spec = SisCsvParser::spec($dataset);
+        return implode(',', self::columns($dataset)) . "\r\n";
+    }
 
-        return implode(',', array_merge($spec['required'], $spec['optional'])) . "\r\n";
+    /**
+     * A file's columns, in the template's order.
+     *
+     * @return list<string>
+     */
+    public static function columns(string $dataset): array
+    {
+        $spec = SisCsvParser::spec($dataset, SisCsvParser::KEYS_UPLOAD);
+
+        return $spec['template'] ?? array_merge($spec['required'], $spec['optional']);
     }
 
     /**
@@ -96,7 +109,7 @@ class CsvUploadService
             }
 
             try {
-                SisCsvParser::parse($dataset, $contents);
+                SisCsvParser::parse($dataset, $contents, SisCsvParser::KEYS_UPLOAD);
             } catch (SisException $e) {
                 throw StructureException::field($dataset, $e->getMessage());
             }

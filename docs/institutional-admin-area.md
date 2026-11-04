@@ -209,12 +209,25 @@ Institution settings has a **Parents** tab (`institution/settings/parents`, `ins
 
 `/institution/people/upload` (People page, "Upload CSV"; `people.manage`; applying also needs the password; read-only while the institution is read-only). A three-step page: Upload, Preview, Apply.
 
-- **It is the SIS import with a different source.** `UploadConnections` stands in for a SIS connection and points `SisImporter` at the uploaded files, so the importer runs unchanged and gives the same guarantees: a preview that writes nothing and reports exactly what applying does, one transaction (all or nothing), and a bad row refused with its reason while the rest still go in. Same columns as the SIS files (`docs/sis-integration.md`); a header-only template of each file can be downloaded.
-- **Upload:** any of students, instructors, courses and enrolments (at least one). A file that cannot be used as a whole (missing column, empty, over 10 MB) is refused and nothing is kept.
-- **Preview:** counts to create, to update, unchanged and refused (as a whole and per file), the refused rows with their reason, and "Nothing has been saved yet". The files are kept for an hour under a random token inside the institution's own folder (`writable/csv-uploads/<institution>/<token>`, or `upload.csvPath`); another institution's token is a 404.
+- **It is the SIS import with a different source.** `UploadConnections` stands in for a SIS connection and points `SisImporter` at the uploaded files, which gives the same guarantees: a preview that writes nothing and reports exactly what applying does, one transaction (all or nothing), and a bad row refused with its reason while the rest still go in. A header-only template of each file can be downloaded.
+- **Its own columns, with no SIS ids** (`SisCsvParser::KEYS_UPLOAD`). An administrator names records the way they know them, never by `external_id` (that stays for the SIS files, `docs/sis-integration.md`). `sis_links` is neither read nor written.
+
+  | File | Columns (required **bold**) | How a record is found |
+  |---|---|---|
+  | students.csv | student_number, **email**, **first_name**, middle_name, **last_name**, suffix | by student number, or else by email (so an email can be corrected) |
+  | instructors.csv | **email**, **first_name**, middle_name, **last_name**, suffix | by email |
+  | courses.csv | **program_code**, **course_code**, **course_title**, units | by program and course code |
+  | enrollments.csv | student_number or email (one is required), program_code, **course_code**, section, status | student by number or email; course by code (program_code only when the code is in more than one program) |
+  | staff_assignments.csv | **role**, **email**, department_code, sub_department_code, program_code, course_code, section | person by email; an instructor's section by course code and section |
+  | class_schedules.csv | program_code, **course_code**, section, **day_of_week**, **start_time**, **end_time**, room, delivery_mode | course by code; section by its code |
+
+  A person found must already be of this institution with the file's role; a course code in more than one program without program_code is refused with the programs it is in. A student or instructor not here yet is created (with middle name and suffix when given).
+- **Sections:** enrolments, staff assignments and class times go into the active term, in the section named ("A" when empty). A section that is not there yet is **created**, and the preview lists it under "New sections" (once each, apart from the refused rows) so a mistyped section is seen before applying. These are issues with `note: true`; they are not counted as refused.
+- **Upload:** any of the six files (at least one). A file that cannot be used as a whole (missing column, empty, over 10 MB, the SIS columns instead of these) is refused and nothing is kept.
+- **Preview:** counts to create, to update, unchanged and refused (as a whole and per file), the new sections, the refused rows with their reason, and "Nothing has been saved yet". The files are kept for an hour under a random token inside the institution's own folder (`writable/csv-uploads/<institution>/<token>`, or `upload.csvPath`); another institution's token is a 404.
 - **Apply:** behind the password, uses the kept files, removes them, and says how many were created, updated and refused. If the run fails part-way nothing is changed and the files are kept for another try. Starting over removes them, and a preview nobody applies is removed once its hour is up by the every-minute `exports:run` job (it does not wait for the next upload).
 - **Refused while a SIS connection is enabled:** one source of truth at a time (a connection that is configured but switched off does not block it).
-- **Records linked by an upload** are not SIS-owned and stay editable while no connection is enabled; if one is enabled later, matching external ids become SIS-owned as usual.
+- **Records made by an upload** are not SIS-owned and stay editable while no connection is enabled. If one is enabled later, the SIS finds them as it finds any record it has no link for (a person by email, a course by program and code) and links them.
 - **History:** preview and apply appear in the run history like any import (trigger "manual"); applying is audited as `sis.import_run`.
 
 ## Closing a term

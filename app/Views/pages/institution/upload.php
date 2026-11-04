@@ -15,12 +15,12 @@ $second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-sem
 $link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 
 $labels = [
-    'students'    => ['Students', 'external_id, email, first_name, last_name; student_number is optional.'],
-    'instructors' => ['Instructors', 'external_id, email, first_name, last_name.'],
-    'courses'     => ['Courses', 'external_id, course_code, course_title; units and program_code are optional.'],
-    'enrollments' => ['Enrolments', 'course_external_id, student_external_id; section and status are optional.'],
-    'staff_assignments' => ['Staff assignments', 'role (dean, chairperson or instructor), person_external_id, and what they lead or teach: department_code for a dean, sub_department_code for a chairperson, course_external_id (and section) for an instructor. People and courses must be known already or be in the same upload. Whoever is no longer listed, among those a file like this assigned before, is ended.'],
-    'class_schedules' => ['Class times', 'course_external_id, day_of_week (mon to sun, or the day\'s name), start_time and end_time (as 09:00); section, room and delivery_mode (onsite, online or hybrid) are optional. The rows for a section are its whole week. A section this kind of file set before and no longer lists loses those times.'],
+    'students'    => ['Students', 'email, first_name, last_name; student_number, middle_name and suffix are optional. A student already here is found by student number, or else by email, and updated.'],
+    'instructors' => ['Instructors', 'email, first_name, last_name; middle_name and suffix are optional. An instructor already here is found by email and updated.'],
+    'courses'     => ['Courses', 'program_code, course_code, course_title; units is optional (3 when empty). A course already in the program with that code is updated.'],
+    'enrollments' => ['Enrolments', 'student_number or email, and course_code; program_code (needed only when the course code is in more than one program), section (A when empty) and status (enrolled, dropped, withdrawn or completed) are optional. Students go into the active term; a section that is not there yet is created, and the preview says so.'],
+    'staff_assignments' => ['Staff assignments', 'role (dean, chairperson or instructor), email, and what they lead or teach: department_code for a dean, sub_department_code for a chairperson, course_code (with program_code when needed, and section) for an instructor. People and courses must be here already or be in the same upload. Whoever is no longer listed, among those a file like this assigned before, is ended.'],
+    'class_schedules' => ['Class times', 'course_code, day_of_week (mon to sun, or the day\'s name), start_time and end_time (as 09:00); program_code (when needed), section, room and delivery_mode (onsite, online or hybrid) are optional. The rows for a section are its whole week. A section this kind of file set before and no longer lists loses those times.'],
 ];
 ?>
 
@@ -126,17 +126,38 @@ $labels = [
             </ul>
         </section>
 
-        <?php if ($uploadKept['issues'] !== []): ?>
+        <?php
+        // A note (a section the upload creates) is not a refusal: its row goes in, so it is listed apart.
+        $notes   = array_values(array_filter($uploadKept['issues'], static fn (array $i): bool => ! empty($i['note'])));
+        $refused = array_values(array_filter($uploadKept['issues'], static fn (array $i): bool => empty($i['note'])));
+        ?>
+
+        <?php if ($notes !== []): ?>
+            <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="New sections" data-upload-notes>
+                <h2 class="text-sm font-bold text-brand">New sections</h2>
+                <p class="mt-1 text-xs text-[#646464]">These sections are not in the active term yet and will be created. If one is a typo, fix the file and start over.</p>
+                <ul class="mt-3 flex flex-col gap-1 text-sm">
+                    <?php foreach (array_slice($notes, 0, 50) as $issue): ?>
+                        <li><span class="font-medium"><?= esc($issue['dataset']) ?>.csv <?= esc($issue['item']) ?>:</span> <?= esc($issue['reason']) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php if (count($notes) > 50): ?>
+                    <p class="mt-2 text-xs text-[#646464]">And <?= esc((string) (count($notes) - 50)) ?> more.</p>
+                <?php endif; ?>
+            </section>
+        <?php endif; ?>
+
+        <?php if ($refused !== []): ?>
             <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="Refused rows" data-upload-issues>
                 <h2 class="text-sm font-bold text-[#C33939]">Refused rows</h2>
                 <p class="mt-1 text-xs text-[#646464]">These rows are left out. Everything else is still applied.</p>
                 <ul class="mt-3 flex flex-col gap-1 text-sm">
-                    <?php foreach (array_slice($uploadKept['issues'], 0, 50) as $issue): ?>
+                    <?php foreach (array_slice($refused, 0, 50) as $issue): ?>
                         <li><span class="font-medium"><?= esc($issue['dataset']) ?>.csv <?= esc($issue['item']) ?>:</span> <?= esc($issue['reason']) ?></li>
                     <?php endforeach; ?>
                 </ul>
-                <?php if (count($uploadKept['issues']) > 50): ?>
-                    <p class="mt-2 text-xs text-[#646464]">And <?= esc((string) (count($uploadKept['issues']) - 50)) ?> more.</p>
+                <?php if (count($refused) > 50): ?>
+                    <p class="mt-2 text-xs text-[#646464]">And <?= esc((string) (count($refused) - 50)) ?> more.</p>
                 <?php endif; ?>
             </section>
         <?php endif; ?>

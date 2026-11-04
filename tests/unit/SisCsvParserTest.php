@@ -196,4 +196,50 @@ final class SisCsvParserTest extends CIUnitTestCase
         $this->assertSame(['department_code', 'sub_department_code', 'course_external_id', 'section'], $spec['optional']);
         $this->assertSame(['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_external_id'], SisCsvParser::STAFF_TARGET_COLUMN);
     }
+
+    public function testAnUploadNamesNoSisIds(): void
+    {
+        foreach (SisCsvParser::datasets() as $dataset) {
+            $spec = SisCsvParser::spec($dataset, SisCsvParser::KEYS_UPLOAD);
+
+            foreach (array_merge($spec['required'], $spec['optional'], $spec['template']) as $column) {
+                $this->assertStringNotContainsString('external_id', $column, $dataset);
+            }
+
+            $this->assertEqualsCanonicalizing(array_merge($spec['required'], $spec['optional']), $spec['template'], "{$dataset}: the template has every column, once");
+        }
+    }
+
+    public function testAnUploadedStudentHasAnOptionalMiddleNameAndSuffix(): void
+    {
+        $batch = SisCsvParser::parse('students', "student_number,email,first_name,middle_name,last_name,suffix\n2026-001,ann@example.com,Ann,Cruz,Lee,Jr.\n,ben@example.com,Ben,,Ng,\n", SisCsvParser::KEYS_UPLOAD);
+
+        $this->assertSame([], $batch->rejected);
+        $this->assertSame(['student_number' => '2026-001', 'email' => 'ann@example.com', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.'], $batch->records[0]);
+        $this->assertSame('', $batch->records[1]['middle_name']);
+    }
+
+    public function testAnUploadedEnrolmentNeedsAStudentNumberOrAnEmail(): void
+    {
+        $batch = SisCsvParser::parse('enrollments', "student_number,email,program_code,course_code,section,status\n2026-001,,,IT101,,\n,ann@example.com,BSIT,IT101,B,\n,,BSIT,IT101,A,\n", SisCsvParser::KEYS_UPLOAD);
+
+        $this->assertCount(2, $batch->records);
+        $this->assertSame([['row' => 4, 'reason' => 'student_number or email is required.']], $batch->rejected);
+    }
+
+    public function testAnUploadedFileInSisColumnsIsRefusedWhole(): void
+    {
+        $this->expectException(SisException::class);
+        $this->expectExceptionMessage('enrollments.csv is missing the column(s): course_code.');
+
+        SisCsvParser::parse('enrollments', "course_external_id,student_external_id\nC1,S1\n", SisCsvParser::KEYS_UPLOAD);
+    }
+
+    public function testAnUploadedInstructorAssignmentNeedsACourseCode(): void
+    {
+        $batch = SisCsvParser::parse('staff_assignments', "role,email,department_code,sub_department_code,program_code,course_code,section\ninstructor,ivy@example.com,,,BSIT,,A\ninstructor,ivy@example.com,,,BSIT,IT101,A\n", SisCsvParser::KEYS_UPLOAD);
+
+        $this->assertCount(1, $batch->records);
+        $this->assertSame('course_code is required for an instructor.', $batch->rejected[0]['reason']);
+    }
 }

@@ -44,6 +44,12 @@ use App\Services\Subscriptions\EffectiveStatus;
  * Records are matched through `sis_links` (SIS id -> Mentora id). A person
  * with no link is matched by email, but only an account that already belongs
  * to this institution with the same role; any other clash is a failed row.
+ *
+ * Files an administrator uploaded (CsvUploadService) have no SIS ids
+ * (SisCsvParser::KEYS_UPLOAD): a student is found by student number or email,
+ * an instructor by email, a course by program and code, and sis_links is
+ * neither read nor written. A section an upload creates is noted in the
+ * issues (`note`), so a mistyped one shows in the preview.
  * Things the SIS no longer lists are left alone, never deleted. People get no
  * password: they are given a link by an administrator (Users page).
  *
@@ -88,8 +94,17 @@ class SisImporter
     /** @var array<string, array{created: int, updated: int, skipped: int, failed: int, ended?: int, removed?: int}> */
     private array $counts = [];
 
-    /** @var list<array{dataset: string, item: string, reason: string}> */
+    /** @var list<array{dataset: string, item: string, reason: string, note?: true}> a `note` is not a refusal: the row went in */
     private array $issues = [];
+
+    /**
+     * Files an administrator uploaded (SisCsvParser::KEYS_UPLOAD): records are named by email, student number and
+     * course code, not by SIS ids, so sis_links is neither read nor written.
+     */
+    private bool $upload = false;
+
+    /** @var array<int, true> sections this run created, noted once each */
+    private array $newSections = [];
 
     private ?int $termId = null;
 
@@ -115,6 +130,8 @@ class SisImporter
         $this->termId        = null;
         $this->termLooked    = false;
         $this->actor         = $actor;
+        $this->upload        = false;
+        $this->newSections   = [];
 
         $institution = (new InstitutionModel())->find($institutionId) ?? throw new InvalidArgumentException('That institution does not exist.');
         $connections = $this->connections ?? new SisConnectionService();
@@ -147,8 +164,9 @@ class SisImporter
         $runId = $runs->start($institutionId, SisRunLog::INBOUND, $trigger, $actor === null ? null : (int) $actor->id, $dryRun, $this->now);
 
         try {
-            $connector = $connections->connector($institutionId);
-            $batches   = [];
+            $connector    = $connections->connector($institutionId);
+            $batches      = [];
+            $this->upload = $connector instanceof FileConnector && $connector->keys() === SisCsvParser::KEYS_UPLOAD;
 
             foreach (SisCsvParser::datasets() as $dataset) {
                 if ($connector->has($dataset)) {
@@ -251,28 +269,41 @@ class SisImporter
 
         foreach ($batch->records as $i => $record) {
             $mapped = SisMapper::person($record);
-            $item   = $mapped['external_id'] . ' (row ' . ($batch->rows[$i] ?? '?') . ')';
+            $item   = ($this->upload ? $mapped['email'] : $mapped['external_id']) . ' (row ' . ($batch->rows[$i] ?? '?') . ')';
 
             $this->person($dataset, $item, $mapped, $role);
         }
     }
 
     /**
-     * @param array{external_id: string, first_name: string, last_name: string, email: string, student_number: ?string} $m
+     * @param array{external_id: string, first_name: string, middle_name: ?string, last_name: string, suffix: ?string, email: string, student_number: ?string} $m
      */
     private function person(string $dataset, string $item, array $m, string $role): void
     {
-        $db     = db_connect();
-        $userId = $this->linked('person', $m['external_id']);
-
-        if ($userId !== null && ! $this->isMember($userId)) {
-            $this->unlink('person', $m['external_id']); // the account is gone; start again from the email
-            $userId = null;
-        }
-
+        $db    = db_connect();
         $owner = $db->table('auth_identities')->select('user_id')->where('type', 'email_password')->where('secret', $m['email'])->get()->getRowArray();
 
-        if ($userId === null && $owner !== null) {
+        if ($this->upload) {
+            // No SIS ids: the same person is the student with this student number, or else the account with this
+            // email (so a student's email can be corrected by listing their number with the new address).
+            $userId = $role === 'student' ? $this->studentNumbered($m['student_number']) : null;
+            $userId ??= $owner === null ? null : (int) $owner['user_id'];
+
+            if ($userId !== null && (! $this->isMember($userId) || ! $this->hasRole($userId, $role) || $this->hasRole($userId, 'admin'))) {
+                $this->fail($dataset, $item, "An account with {$m['email']} already exists and is not a {$role} of this institution.");
+
+                return;
+            }
+        } else {
+            $userId = $this->linked('person', $m['external_id']);
+
+            if ($userId !== null && ! $this->isMember($userId)) {
+                $this->unlink('person', $m['external_id']); // the account is gone; start again from the email
+                $userId = null;
+            }
+        }
+
+        if (! $this->upload && $userId === null && $owner !== null) {
             $other = (int) $owner['user_id'];
 
             if (! $this->isMember($other) || ! $this->hasRole($other, $role) || $this->hasRole($other, 'admin')) {
@@ -299,7 +330,7 @@ class SisImporter
 
         $profile = $db->table('user_profiles')->where('user_id', $userId)->get()->getRowArray() ?? [];
         $current = $profile + ['email' => (string) ($db->table('auth_identities')->select('secret')->where('user_id', $userId)->where('type', 'email_password')->get()->getRowArray()['secret'] ?? '')];
-        $changes = SisMapper::changes($current, $m, ['first_name', 'last_name', 'email', 'student_number']);
+        $changes = SisMapper::changes($current, $m, ['first_name', 'middle_name', 'last_name', 'suffix', 'email', 'student_number']);
 
         if ($changes === []) {
             $this->counts[$dataset]['skipped']++;
@@ -330,7 +361,7 @@ class SisImporter
             }
 
             $profiles = new UserProfileModel();
-            $saved    = $profile === [] ? $profiles->insert(['user_id' => $userId, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number'], 'student_number_institution_id' => $this->issuer($m['student_number'])]) : $profiles->update($userId, $changes);
+            $saved    = $profile === [] ? $profiles->insert($this->profileRow($userId, $m)) : $profiles->update($userId, $changes);
 
             if ($saved === false) {
                 throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
@@ -341,7 +372,7 @@ class SisImporter
     }
 
     /**
-     * @param array{external_id: string, first_name: string, last_name: string, email: string, student_number: ?string} $m
+     * @param array{external_id: string, first_name: string, middle_name: ?string, last_name: string, suffix: ?string, email: string, student_number: ?string} $m
      */
     private function createPerson(string $dataset, string $item, array $m, string $role): void
     {
@@ -375,7 +406,7 @@ class SisImporter
 
         $profiles = new UserProfileModel();
 
-        if ($profiles->insert(['user_id' => $user->id, 'first_name' => $m['first_name'], 'last_name' => $m['last_name'], 'student_number' => $m['student_number'], 'student_number_institution_id' => $this->issuer($m['student_number'])]) === false) {
+        if ($profiles->insert($this->profileRow((int) $user->id, $m)) === false) {
             throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
         }
 
@@ -385,8 +416,31 @@ class SisImporter
             throw new RuntimeException('The account could not be linked to the institution.');
         }
 
-        $this->link('person', $m['external_id'], (int) $user->id);
+        if (! $this->upload) {
+            $this->link('person', $m['external_id'], (int) $user->id);
+        }
+
         $this->counts[$dataset]['created']++;
+    }
+
+    /**
+     * A new profile's row.
+     *
+     * @param array{first_name: string, middle_name: ?string, last_name: string, suffix: ?string, student_number: ?string} $m
+     *
+     * @return array<string, mixed>
+     */
+    private function profileRow(int $userId, array $m): array
+    {
+        return [
+            'user_id'                       => $userId,
+            'first_name'                    => $m['first_name'],
+            'middle_name'                   => $m['middle_name'],
+            'last_name'                     => $m['last_name'],
+            'suffix'                        => $m['suffix'],
+            'student_number'                => $m['student_number'],
+            'student_number_institution_id' => $this->issuer($m['student_number']),
+        ];
     }
 
     /*
@@ -401,13 +455,34 @@ class SisImporter
 
         foreach ($batch->records as $i => $record) {
             $m    = SisMapper::course($record);
-            $item = $m['external_id'] . ' (row ' . ($batch->rows[$i] ?? '?') . ')';
+            $item = ($this->upload ? "{$m['program_code']} {$m['course_code']}" : $m['external_id']) . ' (row ' . ($batch->rows[$i] ?? '?') . ')';
 
-            $courseId = $this->linked('course', $m['external_id']);
+            if ($this->upload) {
+                // A course is its program and code: the same pair updates it, a new pair adds one.
+                $programId = $this->programFor($m['program_code']);
 
-            if ($courseId !== null && $this->courseRow($courseId) === null) {
-                $this->unlink('course', $m['external_id']);
-                $courseId = null;
+                if ($programId === null) {
+                    $this->fail('courses', $item, "program_code \"{$m['program_code']}\" is not a program of this institution.");
+
+                    continue;
+                }
+
+                $existing = $db->table('courses')->where('program_id', $programId)->where('course_code', $m['course_code'])->get()->getRowArray();
+
+                if ($existing === null) {
+                    $this->createCourse($programId, $m);
+
+                    continue;
+                }
+
+                $courseId = (int) $existing['id'];
+            } else {
+                $courseId = $this->linked('course', $m['external_id']);
+
+                if ($courseId !== null && $this->courseRow($courseId) === null) {
+                    $this->unlink('course', $m['external_id']);
+                    $courseId = null;
+                }
             }
 
             if ($courseId === null) {
@@ -431,22 +506,7 @@ class SisImporter
                     $this->link('course', $m['external_id'], (int) $existing['id']);
                     $courseId = (int) $existing['id'];
                 } else {
-                    $stamp = $this->stamp();
-
-                    if (! $db->table('courses')->insert([
-                        'program_id'   => $programId,
-                        'course_code'  => $m['course_code'],
-                        'course_title' => $m['course_title'],
-                        'units'        => $m['units'] ?? SisMapper::DEFAULT_UNITS,
-                        'status'       => 'active',
-                        'created_at'   => $stamp,
-                        'updated_at'   => $stamp,
-                    ])) {
-                        throw new RuntimeException('The course could not be created.');
-                    }
-
-                    $this->link('course', $m['external_id'], (int) $db->insertID());
-                    $this->counts['courses']['created']++;
+                    $this->link('course', $m['external_id'], $this->createCourse($programId, $m));
 
                     continue;
                 }
@@ -487,17 +547,18 @@ class SisImporter
             $m    = SisMapper::enrollment($record);
             $item = "{$m['student_external_id']} in {$m['course_external_id']} (row " . ($batch->rows[$i] ?? '?') . ')';
 
-            $courseId  = $this->linked('course', $m['course_external_id']);
-            $studentId = $this->linked('person', $m['student_external_id']);
+            $courseId = $this->courseOf('enrollments', $item, $m['course_external_id'], $m['program_code']);
 
-            if ($courseId === null || $this->courseRow($courseId) === null) {
-                $this->fail('enrollments', $item, "The course {$m['course_external_id']} is not known; list it in courses.csv.");
-
+            if ($courseId === null) {
                 continue;
             }
 
+            $studentId = $this->personOf($m['student_external_id']);
+
             if ($studentId === null || ! $this->isMember($studentId) || ! $this->hasRole($studentId, 'student')) {
-                $this->fail('enrollments', $item, "{$m['student_external_id']} is not a known student; list them in students.csv.");
+                $this->fail('enrollments', $item, $this->upload
+                    ? "{$m['student_external_id']} is not a student of this institution; add them in students.csv or on the People page."
+                    : "{$m['student_external_id']} is not a known student; list them in students.csv.");
 
                 continue;
             }
@@ -510,7 +571,7 @@ class SisImporter
                 continue;
             }
 
-            $offeringId = $this->offeringFor($courseId, $termId, $m['section']);
+            $offeringId = $this->offeringFor($courseId, $termId, $m['section'], 'enrollments');
 
             $existing = $db->table('enrollments')->where(['offering_id' => $offeringId, 'student_user_id' => $studentId])->get()->getRowArray();
 
@@ -542,8 +603,11 @@ class SisImporter
         \App\Services\Messaging\CourseChatHooks::offeringsChanged($touched);
     }
 
-    /** The section of a course in a term, created when it is not there yet. */
-    private function offeringFor(int $courseId, int $termId, string $section): int
+    /**
+     * The section of a course in a term, created when it is not there yet. From an upload, a section it creates
+     * is noted (once) with the file's issues, so a mistyped section is seen in the preview; it is not a refusal.
+     */
+    private function offeringFor(int $courseId, int $termId, string $section, string $dataset): int
     {
         $db       = db_connect();
         $offering = $db->table('course_offerings')->where(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $section])->get()->getRowArray();
@@ -558,7 +622,16 @@ class SisImporter
             throw new RuntimeException('The course offering could not be created.');
         }
 
-        return (int) $db->insertID();
+        $offeringId = (int) $db->insertID();
+
+        if ($this->upload && ! isset($this->newSections[$offeringId])) {
+            $this->newSections[$offeringId] = true;
+
+            $code           = (string) ($this->courseRow($courseId)['course_code'] ?? '');
+            $this->issues[] = ['dataset' => $dataset, 'item' => "{$code} {$section}", 'reason' => "Section {$section} of {$code} is not in the active term yet, so it is created.", 'note' => true];
+        }
+
+        return $offeringId;
     }
 
     /*
@@ -585,10 +658,12 @@ class SisImporter
             $m    = SisMapper::staffAssignment($record);
             $item = "{$m['person_external_id']} as {$m['role']} (row " . ($batch->rows[$i] ?? '?') . ')';
 
-            $personId = $this->linked('person', $m['person_external_id']);
+            $personId = $this->personOf($m['person_external_id']);
 
             if ($personId === null || ! $this->isMember($personId)) {
-                $this->fail($dataset, $item, "{$m['person_external_id']} is not a known person; list them in students.csv or instructors.csv.");
+                $this->fail($dataset, $item, $this->upload
+                    ? "{$m['person_external_id']} is not a person of this institution; add them in instructors.csv or on the People page."
+                    : "{$m['person_external_id']} is not a known person; list them in students.csv or instructors.csv.");
 
                 continue;
             }
@@ -679,11 +754,9 @@ class SisImporter
             $m    = SisMapper::classSchedule($record);
             $item = "{$m['course_external_id']} {$m['section']}, {$record['day_of_week']} {$m['start']} (row " . ($batch->rows[$i] ?? '?') . ')';
 
-            $courseId = $this->linked('course', $m['course_external_id']);
+            $courseId = $this->courseOf($dataset, $item, $m['course_external_id'], $m['program_code']);
 
             if ($courseId === null || ($course = $this->courseRow($courseId)) === null) {
-                $this->fail($dataset, $item, "The course {$m['course_external_id']} is not known; list it in courses.csv.");
-
                 continue;
             }
 
@@ -695,7 +768,7 @@ class SisImporter
                 continue;
             }
 
-            $offeringId          = $this->offeringFor($courseId, $termId, $m['section']);
+            $offeringId          = $this->offeringFor($courseId, $termId, $m['section'], $dataset);
             $listed[$offeringId] = true;
             $labels[$offeringId] = $course['course_code'] . ' ' . $m['section'];
 
@@ -807,7 +880,7 @@ class SisImporter
      * The department, sub-department or offering the row names (the offering is created when it is not there yet),
      * or null after failing the row with the reason.
      *
-     * @param array{role: string, person_external_id: string, target: string, section: string} $m
+     * @param array{role: string, person_external_id: string, target: string, section: string, program_code: ?string} $m
      */
     private function staffTarget(array $m, string $item): ?int
     {
@@ -848,11 +921,9 @@ class SisImporter
             return (int) $rows[0]['id'];
         }
 
-        $courseId = $this->linked('course', $m['target']);
+        $courseId = $this->courseOf($dataset, $item, $m['target'], $m['program_code']);
 
-        if ($courseId === null || $this->courseRow($courseId) === null) {
-            $this->fail($dataset, $item, "The course {$m['target']} is not known; list it in courses.csv.");
-
+        if ($courseId === null) {
             return null;
         }
 
@@ -864,7 +935,7 @@ class SisImporter
             return null;
         }
 
-        return $this->offeringFor($courseId, $termId, $m['section']);
+        return $this->offeringFor($courseId, $termId, $m['section'], $dataset);
     }
 
     /**
@@ -1047,6 +1118,116 @@ class SisImporter
             ->where('departments.institution_id', $this->institutionId)
             ->where('courses.id', $courseId)
             ->get()->getRowArray();
+    }
+
+    /**
+     * @param array{course_code: string, course_title: string, units: ?float} $m
+     *
+     * @return int the new course's id
+     */
+    private function createCourse(int $programId, array $m): int
+    {
+        $db    = db_connect();
+        $stamp = $this->stamp();
+
+        if (! $db->table('courses')->insert([
+            'program_id'   => $programId,
+            'course_code'  => $m['course_code'],
+            'course_title' => $m['course_title'],
+            'units'        => $m['units'] ?? SisMapper::DEFAULT_UNITS,
+            'status'       => 'active',
+            'created_at'   => $stamp,
+            'updated_at'   => $stamp,
+        ])) {
+            throw new RuntimeException('The course could not be created.');
+        }
+
+        $this->counts['courses']['created']++;
+
+        return (int) $db->insertID();
+    }
+
+    /**
+     * The course a row names, or null after failing the row with the reason. A SIS names it by its own id; an
+     * upload by its code, and by its program too when the code is used in more than one.
+     */
+    private function courseOf(string $dataset, string $item, string $ref, ?string $programCode): ?int
+    {
+        if (! $this->upload) {
+            $courseId = $this->linked('course', $ref);
+
+            if ($courseId === null || $this->courseRow($courseId) === null) {
+                $this->fail($dataset, $item, "The course {$ref} is not known; list it in courses.csv.");
+
+                return null;
+            }
+
+            return $courseId;
+        }
+
+        $query = db_connect()->table('courses')
+            ->select('courses.id, programs.code AS program_code')
+            ->join('programs', 'programs.id = courses.program_id')
+            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
+            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->where('departments.institution_id', $this->institutionId)
+            ->where('courses.course_code', $ref);
+
+        if ($programCode !== null) {
+            $query->where('programs.code', $programCode);
+        }
+
+        $rows = $query->get()->getResultArray();
+
+        if ($rows === []) {
+            $this->fail($dataset, $item, $programCode === null
+                ? "There is no course {$ref} in this institution; add it in courses.csv."
+                : "Program {$programCode} has no course {$ref}; add it in courses.csv.");
+
+            return null;
+        }
+
+        if (count($rows) > 1) {
+            $programs = array_values(array_unique(array_column($rows, 'program_code')));
+            sort($programs);
+
+            $this->fail($dataset, $item, "Course {$ref} is in more than one program (" . implode(', ', $programs) . '); add program_code to say which.');
+
+            return null;
+        }
+
+        return (int) $rows[0]['id'];
+    }
+
+    /**
+     * The account a row names, whatever it is: a SIS id, or from an upload an email or a student number. The
+     * caller checks that it belongs to this institution with the right role.
+     */
+    private function personOf(string $ref): ?int
+    {
+        if (! $this->upload) {
+            return $this->linked('person', $ref);
+        }
+
+        if (str_contains($ref, '@')) {
+            $row = db_connect()->table('auth_identities')->select('user_id')->where('type', 'email_password')->where('secret', strtolower($ref))->get()->getRowArray();
+
+            return $row === null ? null : (int) $row['user_id'];
+        }
+
+        return $this->studentNumbered($ref);
+    }
+
+    /** The student this institution gave the number to. */
+    private function studentNumbered(?string $number): ?int
+    {
+        if ($number === null) {
+            return null;
+        }
+
+        $row = db_connect()->table('user_profiles')->select('user_id')->where(['student_number_institution_id' => $this->institutionId, 'student_number' => $number])->get()->getRowArray();
+
+        return $row === null ? null : (int) $row['user_id'];
     }
 
     private function programFor(?string $code): ?int

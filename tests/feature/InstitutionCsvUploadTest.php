@@ -89,12 +89,19 @@ final class InstitutionCsvUploadTest extends RouteTestCase
     {
         $institution ??= $this->institution;
 
-        return (new CsvUploadService($this->base))->preview($institution, ['students' => SisFixture::STUDENTS, 'courses' => SisFixture::COURSES], $this->admin)['token'];
+        return (new CsvUploadService($this->base))->preview($institution, ['students' => self::STUDENTS, 'courses' => self::COURSES], $this->admin)['token'];
     }
 
+    /** Upload columns: two good students and one with a bad email. */
+    private const STUDENTS = "student_number,email,first_name,middle_name,last_name,suffix\n2026-001,ann@example.com,Ann,,Lee,\n2026-002,ben@example.com,Ben,,Ng,\n,not-an-email,Cy,,Ho,\n";
+
+    /** One good course; one in a program the institution does not have. */
+    private const COURSES = "program_code,course_code,course_title,units\nBSIT,IT101,Intro to Computing,3\nNOPE,IT102,No Program,3\n";
+
+    /** The accounts STUDENTS adds: there only once an upload of it was applied. */
     private function students(): int
     {
-        return db_connect()->table('sis_links')->where(['institution_id' => $this->institution, 'entity' => 'person'])->countAllResults();
+        return db_connect()->table('auth_identities')->where('type', 'email_password')->whereIn('secret', ['ann@example.com', 'ben@example.com'])->countAllResults();
     }
 
     /** @return iterable<string, array{string}> */
@@ -140,7 +147,7 @@ final class InstitutionCsvUploadTest extends RouteTestCase
 
         $this->assertStringContainsString('text/csv', $response->getHeaderLine('Content-Type'));
         $this->assertStringContainsString('students.csv', $response->getHeaderLine('Content-Disposition'));
-        $this->assertSame("external_id,email,first_name,last_name,student_number\r\n", $response->getBody());
+        $this->assertSame("student_number,email,first_name,middle_name,last_name,suffix\r\n", $response->getBody());
     }
 
     public function testAnUnknownTemplateIsNotFound(): void
@@ -163,6 +170,40 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         $this->assertStringContainsString('Start over', $body);
     }
 
+    public function testANewSectionIsListedApartFromTheRefusedRows(): void
+    {
+        $enrol = "student_number,email,program_code,course_code,section,status\n2026-001,,,IT101,C,\n";
+        $token = (new CsvUploadService($this->base))->preview($this->institution, ['students' => self::STUDENTS, 'courses' => self::COURSES, 'enrollments' => $enrol], $this->admin)['token'];
+
+        $body = html_entity_decode($this->step('GET', "institution/people/upload/{$token}")->response()->getBody());
+
+        $this->assertMatchesRegularExpression('/data-upload-notes.*New sections.*Section C of IT101 is not in the active term yet, so it is created\./s', $body);
+        $this->assertDoesNotMatchRegularExpression('/data-upload-issues.*Section C of IT101/s', $body, 'not a refused row');
+        $this->assertMatchesRegularExpression('/data-upload-file="enrollments".*?1 to create.*?0 refused/s', $body);
+    }
+
+    public function testAnInstructorIsAssignedToASectionByEmailAndCourseCode(): void
+    {
+        $service = new CsvUploadService($this->base);
+        $files   = [
+            'instructors'       => "email,first_name,last_name\nivy@example.com,Ivy,Tan\n",
+            'courses'           => self::COURSES,
+            'staff_assignments' => "role,email,department_code,sub_department_code,program_code,course_code,section\ninstructor,ivy@example.com,,,BSIT,IT101,B\n",
+        ];
+
+        $service->apply($this->institution, $service->preview($this->institution, $files, $this->admin)['token'], $this->admin);
+
+        $row = db_connect()->table('instructor_assignments ia')
+            ->select('o.section_code, c.course_code')
+            ->join('course_offerings o', 'o.id = ia.offering_id')
+            ->join('courses c', 'c.id = o.course_id')
+            ->join('auth_identities ai', "ai.user_id = ia.instructor_user_id AND ai.type = 'email_password'")
+            ->where('ai.secret', 'ivy@example.com')
+            ->get()->getRowArray();
+
+        $this->assertSame(['section_code' => 'B', 'course_code' => 'IT101'], $row);
+    }
+
     /**
      * A kept preview of a staff file that lists nobody, in an institution where a chairperson was assigned by an
      * earlier upload of one: applying it would end that chairperson and nothing else. (A test transaction cannot be
@@ -174,15 +215,15 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         $service = new CsvUploadService($this->base);
         $db      = db_connect();
 
-        $people = "external_id,email,first_name,last_name\nI2,ian@example.com,Ian,Ong\n";
-        $header = "role,person_external_id,department_code,sub_department_code,course_external_id,section\n";
+        $people = "email,first_name,last_name\nian@example.com,Ian,Ong\n";
+        $header = "role,email,department_code,sub_department_code,program_code,course_code,section\n";
         $sub    = (string) $db->table('sub_departments sd')->select('sd.code')->join('departments d', 'd.id = sd.department_id')->where('d.institution_id', $this->institution)->get()->getRow('code');
 
         // First upload: the person, then the chairperson, applied for real.
         $service->apply($this->institution, $service->preview($this->institution, ['instructors' => $people], $this->admin)['token'], $this->admin);
         $ian = (int) $db->table('auth_identities')->where('secret', 'ian@example.com')->get()->getRow('user_id');
         $db->table('auth_groups_users')->insert(['user_id' => $ian, 'group' => 'chairperson', 'created_at' => date('Y-m-d H:i:s')]);
-        $service->apply($this->institution, $service->preview($this->institution, ['staff_assignments' => $header . "chairperson,I2,,{$sub},,\n"], $this->admin)['token'], $this->admin);
+        $service->apply($this->institution, $service->preview($this->institution, ['staff_assignments' => $header . "chairperson,ian@example.com,,{$sub},,,\n"], $this->admin)['token'], $this->admin);
 
         $this->assertSame(1, $db->table('chairperson_assignments')->where('status', 'active')->countAllResults(), 'assigned by the first upload');
 
@@ -206,13 +247,13 @@ final class InstitutionCsvUploadTest extends RouteTestCase
     public function testThePreviewSaysWhatClassTimesWouldBeRemovedAndOffersToApplyIt(): void
     {
         $service = new CsvUploadService($this->base);
-        $header  = "course_external_id,section,day_of_week,start_time,end_time,room,delivery_mode\n";
+        $header  = "course_code,section,day_of_week,start_time,end_time,room,delivery_mode\n";
         SisFixture::course($this->institution, 'C1', 'IT101');
         SisFixture::course($this->institution, 'C2', 'IT102');
 
-        // First upload: times for both sections. Second: only C2, unchanged, so C1's times would go.
-        $service->apply($this->institution, $service->preview($this->institution, ['class_schedules' => $header . "C1,A,mon,09:00,10:00,,\nC2,A,tue,09:00,10:00,,\n"], $this->admin)['token'], $this->admin);
-        $token = $service->preview($this->institution, ['class_schedules' => $header . "C2,A,tue,09:00,10:00,,\n"], $this->admin)['token'];
+        // First upload: times for both sections. Second: only IT102, unchanged, so IT101's times would go.
+        $service->apply($this->institution, $service->preview($this->institution, ['class_schedules' => $header . "IT101,A,mon,09:00,10:00,,\nIT102,A,tue,09:00,10:00,,\n"], $this->admin)['token'], $this->admin);
+        $token = $service->preview($this->institution, ['class_schedules' => $header . "IT102,A,tue,09:00,10:00,,\n"], $this->admin)['token'];
 
         $body = html_entity_decode($this->step('GET', "institution/people/upload/{$token}")->response()->getBody());
 

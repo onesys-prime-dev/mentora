@@ -227,6 +227,6 @@ final class SisStaffLockPagesTest extends RouteTestCase
         $template = $this->step('GET', 'institution/people/upload/template/staff_assignments')->response();
 
         $this->assertSame(200, $template->getStatusCode());
-        $this->assertStringContainsString('role,person_external_id,department_code,sub_department_code,course_external_id,section', $template->getBody());
+        $this->assertStringContainsString('role,email,department_code,sub_department_code,program_code,course_code,section', $template->getBody());
     }
 }

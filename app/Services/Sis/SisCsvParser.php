@@ -8,6 +8,12 @@ namespace App\Services\Sis;
  * Reads a SIS export (CSV) into a SisBatch, with the rules every inbound
  * dataset follows. Pure: text in, batch out.
  *
+ * Two sets of columns. A SIS names records by its own ids (KEYS_SIS:
+ * external_id, course_external_id and so on, matched through sis_links). An
+ * administrator's upload names them the way people know them (KEYS_UPLOAD):
+ * a student by student number or email, an instructor by email, a course by
+ * its code (and program), a section by its code.
+ *
  * Column names are matched case-insensitively with spaces as underscores;
  * unknown columns are ignored; a missing required column rejects the whole
  * file. A row that breaks a rule is rejected on its own, with its row number
@@ -17,10 +23,19 @@ final class SisCsvParser
 {
     public const MAX_ROWS = 50000;
 
+    /** Records named by the SIS's own ids, through sis_links. */
+    public const KEYS_SIS = 'sis';
+
+    /** Records named the way an administrator knows them: email, student number, course code. */
+    public const KEYS_UPLOAD = 'upload';
+
     public const ENROLLMENT_STATUSES = ['enrolled', 'dropped', 'withdrawn', 'completed'];
 
     /** What a staff assignment can be, and the column that says what they lead or teach. */
     public const STAFF_TARGET_COLUMN = ['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_external_id'];
+
+    /** The same in an upload, where an instructor's section is named by its course code. */
+    public const UPLOAD_STAFF_TARGET_COLUMN = ['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_code'];
 
     /**
      * required columns, optional columns, and which columns make a row unique.
@@ -41,6 +56,26 @@ final class SisCsvParser
         'class_schedules' => ['required' => ['course_external_id', 'day_of_week', 'start_time', 'end_time'], 'optional' => ['section', 'room', 'delivery_mode'], 'unique' => ['course_external_id', 'section', 'day_of_week', 'start_time']],
     ];
 
+    /**
+     * An upload's columns (KEYS_UPLOAD). `template` is their order in the downloadable template; `one_of` lists
+     * columns of which a row needs at least one.
+     *
+     * @var array<string, array{required: list<string>, optional: list<string>, unique: list<string>, template: list<string>, one_of?: list<string>}>
+     */
+    private const UPLOAD_SPECS = [
+        'students'    => ['required' => ['email', 'first_name', 'last_name'], 'optional' => ['student_number', 'middle_name', 'suffix'], 'unique' => ['email'], 'template' => ['student_number', 'email', 'first_name', 'middle_name', 'last_name', 'suffix']],
+        'instructors' => ['required' => ['email', 'first_name', 'last_name'], 'optional' => ['middle_name', 'suffix'], 'unique' => ['email'], 'template' => ['email', 'first_name', 'middle_name', 'last_name', 'suffix']],
+        'courses'     => ['required' => ['program_code', 'course_code', 'course_title'], 'optional' => ['units'], 'unique' => ['program_code', 'course_code'], 'template' => ['program_code', 'course_code', 'course_title', 'units']],
+
+        // The student by student number or email (either is enough); the course by its code, with its program
+        // when the code is used in more than one.
+        'enrollments' => ['required' => ['course_code'], 'optional' => ['student_number', 'email', 'program_code', 'section', 'status'], 'one_of' => ['student_number', 'email'], 'unique' => ['student_number', 'email', 'program_code', 'course_code', 'section'], 'template' => ['student_number', 'email', 'program_code', 'course_code', 'section', 'status']],
+
+        'staff_assignments' => ['required' => ['role', 'email'], 'optional' => ['department_code', 'sub_department_code', 'program_code', 'course_code', 'section'], 'unique' => ['role', 'email', 'department_code', 'sub_department_code', 'program_code', 'course_code', 'section'], 'template' => ['role', 'email', 'department_code', 'sub_department_code', 'program_code', 'course_code', 'section']],
+
+        'class_schedules' => ['required' => ['course_code', 'day_of_week', 'start_time', 'end_time'], 'optional' => ['program_code', 'section', 'room', 'delivery_mode'], 'unique' => ['program_code', 'course_code', 'section', 'day_of_week', 'start_time'], 'template' => ['program_code', 'course_code', 'section', 'day_of_week', 'start_time', 'end_time', 'room', 'delivery_mode']],
+    ];
+
     /** @return list<string> */
     public static function datasets(): array
     {
@@ -48,19 +83,31 @@ final class SisCsvParser
     }
 
     /**
-     * @return array{required: list<string>, optional: list<string>, unique: list<string>}
+     * @return array{required: list<string>, optional: list<string>, unique: list<string>, template?: list<string>, one_of?: list<string>}
      */
-    public static function spec(string $dataset): array
+    public static function spec(string $dataset, string $keys = self::KEYS_SIS): array
     {
-        return self::SPECS[$dataset] ?? throw new SisException("Unknown dataset \"{$dataset}\".");
+        $specs = $keys === self::KEYS_UPLOAD ? self::UPLOAD_SPECS : self::SPECS;
+
+        return $specs[$dataset] ?? throw new SisException("Unknown dataset \"{$dataset}\".");
+    }
+
+    /**
+     * The column that says what each staff role leads or teaches.
+     *
+     * @return array<string, string> role => column
+     */
+    public static function staffTargetColumns(string $keys = self::KEYS_SIS): array
+    {
+        return $keys === self::KEYS_UPLOAD ? self::UPLOAD_STAFF_TARGET_COLUMN : self::STAFF_TARGET_COLUMN;
     }
 
     /**
      * @throws SisException when the file as a whole cannot be used
      */
-    public static function parse(string $dataset, string $csv): SisBatch
+    public static function parse(string $dataset, string $csv, string $keys = self::KEYS_SIS): SisBatch
     {
-        $spec = self::spec($dataset);
+        $spec = self::spec($dataset, $keys);
 
         // A byte order mark from a spreadsheet export would end up in the first column name.
         $csv = preg_replace('/^\xEF\xBB\xBF/', '', $csv) ?? $csv;
@@ -124,7 +171,7 @@ final class SisCsvParser
                 $values[$column] ??= '';
             }
 
-            $problem = self::problem($values, $spec['required']);
+            $problem = self::problem($values, $spec['required'], $spec['one_of'] ?? [], self::staffTargetColumns($keys));
 
             if ($problem === null) {
                 $key = strtolower(implode("\x1f", array_map(static fn (string $c): string => $values[$c] ?? '', $spec['unique'])));
@@ -154,13 +201,19 @@ final class SisCsvParser
     /**
      * @param array<string, string> $values
      * @param list<string>          $required
+     * @param list<string>          $oneOf    columns of which at least one must have a value
+     * @param array<string, string> $targets  role => the column naming what it leads or teaches
      */
-    private static function problem(array $values, array $required): ?string
+    private static function problem(array $values, array $required, array $oneOf, array $targets): ?string
     {
         foreach ($required as $column) {
             if (($values[$column] ?? '') === '') {
                 return "{$column} is empty.";
             }
+        }
+
+        if ($oneOf !== [] && array_filter($oneOf, static fn (string $c): bool => ($values[$c] ?? '') !== '') === []) {
+            return implode(' or ', $oneOf) . ' is required.';
         }
 
         foreach ($values as $column => $value) {
@@ -169,7 +222,8 @@ final class SisCsvParser
             }
         }
 
-        if (isset($values['email']) && filter_var($values['email'], FILTER_VALIDATE_EMAIL) === false) {
+        // An empty email is only possible where it is optional (an upload's enrolment names the student number).
+        if (($values['email'] ?? '') !== '' && filter_var($values['email'], FILTER_VALIDATE_EMAIL) === false) {
             return 'email is not a valid address.';
         }
 
@@ -184,11 +238,11 @@ final class SisCsvParser
         if (array_key_exists('role', $values)) {
             $role = strtolower($values['role']);
 
-            if (! isset(self::STAFF_TARGET_COLUMN[$role])) {
-                return 'role must be one of: ' . implode(', ', array_keys(self::STAFF_TARGET_COLUMN)) . '.';
+            if (! isset($targets[$role])) {
+                return 'role must be one of: ' . implode(', ', array_keys($targets)) . '.';
             }
 
-            $needs = self::STAFF_TARGET_COLUMN[$role];
+            $needs = $targets[$role];
 
             if (($values[$needs] ?? '') === '') {
                 return "{$needs} is required for " . ($role === 'instructor' ? 'an' : 'a') . " {$role}.";

@@ -9,7 +9,8 @@ namespace App\Services\Sis;
  * connection: it answers the importer's questions (is the feature on, is it
  * configured and enabled, which connector) as "yes, the uploaded folder".
  *
- * The importer is used unchanged; this only stands in for the connection.
+ * The files use the upload's columns (SisCsvParser::KEYS_UPLOAD): people,
+ * courses and sections by what an administrator knows of them, not SIS ids.
  * Whether an upload is allowed at all (never while a real SIS connection is
  * enabled) is decided by CsvUploadService before it gets here.
  */
@@ -35,6 +36,6 @@ class UploadConnections extends SisConnectionService
 
     public function connector(int $institutionId): SisConnector
     {
-        return new FileConnector($this->folder, $this->folder);
+        return new FileConnector($this->folder, $this->folder, null, SisCsvParser::KEYS_UPLOAD);
     }
 }

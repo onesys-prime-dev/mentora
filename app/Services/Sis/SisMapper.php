@@ -18,18 +18,24 @@ final class SisMapper
     public const DEFAULT_SECTION = 'A';
 
     /**
+     * A record from either set of columns (SisCsvParser::KEYS_SIS or KEYS_UPLOAD). An upload has no SIS ids, so
+     * `external_id` is '' for its people and courses, and its course code and student number or email stand where
+     * a SIS file has `course_external_id` and `student_external_id`.
+     *
      * @param array<string, string> $record a students.csv or instructors.csv record
      *
-     * @return array{external_id: string, first_name: string, last_name: string, email: string, student_number: ?string}
+     * @return array{external_id: string, first_name: string, middle_name: ?string, last_name: string, suffix: ?string, email: string, student_number: ?string}
      */
     public static function person(array $record): array
     {
         return [
-            'external_id'    => $record['external_id'],
+            'external_id'    => $record['external_id'] ?? '',
             'first_name'     => $record['first_name'],
+            'middle_name'    => self::optional($record, 'middle_name'),
             'last_name'      => $record['last_name'],
+            'suffix'         => self::optional($record, 'suffix'),
             'email'          => strtolower($record['email']),
-            'student_number' => ($record['student_number'] ?? '') === '' ? null : $record['student_number'],
+            'student_number' => self::optional($record, 'student_number'),
         ];
     }
 
@@ -41,7 +47,7 @@ final class SisMapper
     public static function course(array $record): array
     {
         return [
-            'external_id'  => $record['external_id'],
+            'external_id'  => $record['external_id'] ?? '',
             'course_code'  => $record['course_code'],
             'course_title' => $record['course_title'],
             'units'        => ($record['units'] ?? '') === '' ? null : round((float) $record['units'], 1),
@@ -52,13 +58,16 @@ final class SisMapper
     /**
      * @param array<string, string> $record an enrollments.csv record
      *
-     * @return array{course_external_id: string, student_external_id: string, section: string, status: string}
+     * @return array{course_external_id: string, student_external_id: string, program_code: ?string, section: string, status: string}
+     *         from an upload, `course_external_id` is the course code and `student_external_id` the student number
+     *         (or, without one, the email)
      */
     public static function enrollment(array $record): array
     {
         return [
-            'course_external_id'  => $record['course_external_id'],
-            'student_external_id' => $record['student_external_id'],
+            'course_external_id'  => $record['course_external_id'] ?? $record['course_code'],
+            'student_external_id' => $record['student_external_id'] ?? (self::optional($record, 'student_number') ?? strtolower($record['email'] ?? '')),
+            'program_code'        => self::optional($record, 'program_code'),
             'section'             => ($record['section'] ?? '') === '' ? self::DEFAULT_SECTION : $record['section'],
             'status'              => ($record['status'] ?? '') === '' ? 'enrolled' : strtolower($record['status']),
         ];
@@ -67,27 +76,32 @@ final class SisMapper
     /**
      * @param array<string, string> $record a staff_assignments.csv record
      *
-     * @return array{role: string, person_external_id: string, target: string, section: string}
-     *         `target` is the department code, sub-department code or course id the role's column names;
-     *         `section` only means something for an instructor (the default section when none is named).
+     * @return array{role: string, person_external_id: string, target: string, section: string, program_code: ?string}
+     *         `target` is the department code, sub-department code or course id (from an upload, course code) the
+     *         role's column names; `section` and `program_code` only mean something for an instructor (the default
+     *         section when none is named). From an upload, `person_external_id` is the email.
      */
     public static function staffAssignment(array $record): array
     {
-        $role = strtolower($record['role']);
+        $role    = strtolower($record['role']);
+        $upload  = ! array_key_exists('person_external_id', $record);
+        $columns = SisCsvParser::staffTargetColumns($upload ? SisCsvParser::KEYS_UPLOAD : SisCsvParser::KEYS_SIS);
 
         return [
             'role'               => $role,
-            'person_external_id' => $record['person_external_id'],
-            'target'             => $record[SisCsvParser::STAFF_TARGET_COLUMN[$role]],
+            'person_external_id' => $upload ? strtolower($record['email']) : $record['person_external_id'],
+            'target'             => $record[$columns[$role]],
             'section'            => $role === 'instructor' && ($record['section'] ?? '') !== '' ? $record['section'] : self::DEFAULT_SECTION,
+            'program_code'       => $role === 'instructor' ? self::optional($record, 'program_code') : null,
         ];
     }
 
     /**
      * @param array<string, string> $record a class_schedules.csv record
      *
-     * @return array{course_external_id: string, section: string, day: ?string, start: string, end: string, room: string, mode: string}
-     *         `day` is mon–sun, from that or the day's English name in any case, or null when it is neither
+     * @return array{course_external_id: string, program_code: ?string, section: string, day: ?string, start: string, end: string, room: string, mode: string}
+     *         `day` is mon–sun, from that or the day's English name in any case, or null when it is neither;
+     *         from an upload, `course_external_id` is the course code
      */
     public static function classSchedule(array $record): array
     {
@@ -95,7 +109,8 @@ final class SisMapper
         $names = array_map('strtolower', ClassScheduleService::DAYS);
 
         return [
-            'course_external_id' => $record['course_external_id'],
+            'course_external_id' => $record['course_external_id'] ?? $record['course_code'],
+            'program_code'       => self::optional($record, 'program_code'),
             'section'            => ($record['section'] ?? '') === '' ? self::DEFAULT_SECTION : $record['section'],
             'day'                => isset($names[$day]) ? $day : (array_search($day, $names, true) ?: null),
             'start'              => $record['start_time'],
@@ -136,5 +151,11 @@ final class SisMapper
         }
 
         return $changed;
+    }
+
+    /** @param array<string, string> $record */
+    private static function optional(array $record, string $column): ?string
+    {
+        return ($record[$column] ?? '') === '' ? null : $record[$column];
     }
 }
