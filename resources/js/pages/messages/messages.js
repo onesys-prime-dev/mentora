@@ -121,6 +121,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     }
 
     function updateBadge(count) {
+        state.badge = count;
         document.querySelectorAll("[data-messages-badge]").forEach((el) => {
             el.textContent = count > 99 ? "99+" : String(count);
             el.hidden = count <= 0;
@@ -161,6 +162,39 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
+    // The last answer for each filter, shown at once while a fresh one is fetched.
+    const listCache = new Map();
+    const cacheKey = (unread = state.unreadOnly) => `${state.filter}|${unread}|${state.archived}`;
+    const isUnread = (c) => c.unread > 0 || c.marked_unread;
+
+    function showCached() {
+        const exact = listCache.get(cacheKey());
+        const wider = state.unreadOnly ? listCache.get(cacheKey(false))?.filter(isUnread) : null;
+        const known = exact ?? wider;
+
+        if (known) {
+            state.conversations = known;
+            renderList();
+        }
+    }
+
+    // Opening a chat reads it: its count goes at once, not after the next refresh.
+    function markOpenedRead(id) {
+        const row = state.conversations.find((c) => c.id === id);
+
+        if (!row || (!(row.unread > 0) && !row.marked_unread)) {
+            return;
+        }
+
+        if (!row.muted) {
+            updateBadge(Math.max(0, (state.badge ?? 0) - (row.unread > 0 ? row.unread : 0)));
+        }
+
+        row.unread = 0;
+        row.marked_unread = false;
+        renderList();
+    }
+
     async function loadList() {
         const token = listGuard.next();
         const { status, data } = await api.conversations({ filter: state.filter, unread: state.unreadOnly, archived: state.archived });
@@ -179,10 +213,21 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         state.listLoaded = true;
+        listCache.set(cacheKey(), data.conversations);
         state.conversations = data.conversations;
         state.archivedCount = data.archived_count ?? state.archivedCount;
         state.switching = false;
         updateBadge(data.unread ?? 0);
+
+        // The chat on screen is being read, whatever the server has not heard yet.
+        const openRow = state.conversations.find((c) => c.id === state.openId);
+
+        if (openRow && (openRow.unread > 0 || openRow.marked_unread)) {
+            updateBadge(Math.max(0, (data.unread ?? 0) - (openRow.muted ? 0 : openRow.unread ?? 0)));
+            openRow.unread = 0;
+            openRow.marked_unread = false;
+        }
+
         renderList();
 
         if (state.openId !== null && current() !== null) {
@@ -452,6 +497,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.openId = id;
         state.token = token;
+        markOpenedRead(id);
         state.cursor = 0;
         state.loadingOlder = false;
         state.confirmRemove = null;
@@ -1450,6 +1496,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             other.classList.remove(...(on ? CHIP_OFF : CHIP_ON));
             other.classList.add(...(on ? CHIP_ON : CHIP_OFF));
         });
+        showCached();
         loadList();
     }));
 
@@ -1460,6 +1507,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         unreadToggle.setAttribute("aria-pressed", String(state.unreadOnly));
         unreadToggle.classList.toggle("bg-brand", state.unreadOnly);
         unreadToggle.classList.toggle("text-white", state.unreadOnly);
+        showCached();
         loadList();
     });
 
