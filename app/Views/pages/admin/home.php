@@ -66,7 +66,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
 <?= $this->section('content') ?>
 
 <?php // From lg up the panel fills the screen and only the activity list scrolls, on its own. ?>
-<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:h-full lg:min-h-[34rem]" data-page-panel>
+<div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
     <?= view('components/page-head', [
         'title'       => 'Home',
@@ -84,11 +84,11 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         <div class="overflow-hidden rounded-2xl border <?= $rule ?>">
 
         <?php if ($homeHealth !== []): ?>
-            <ul class="-mr-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" data-health>
+            <ul class="-mr-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" data-health>
                 <?php foreach ($homeHealth as $cell): ?>
                     <?php [$dot, $word] = $healthTone[$cell['status']] ?? $healthTone[SystemHealth::DEGRADED]; ?>
-                    <li class="border-b border-r <?= $rule ?> px-3 py-2.5" data-health-cell="<?= esc($cell['key']) ?>" title="<?= esc($cell['detail']) ?>">
-                        <p class="<?= $cellLabel ?>"><?= esc($cell['label']) ?></p>
+                    <li class="h-16 min-w-0 overflow-hidden border-b border-r <?= $rule ?> px-3 py-2.5" data-health-cell="<?= esc($cell['key']) ?>" title="<?= esc($cell['detail']) ?>">
+                        <p class="truncate <?= $cellLabel ?>"><?= esc($cell['label']) ?></p>
                         <p class="mt-1 flex items-center gap-2 text-sm font-semibold text-[#1A1C1E]">
                             <span class="h-2 w-2 shrink-0 rounded-full <?= $dot ?>" aria-hidden="true"></span><?= esc($word) ?>
                             <span class="sr-only">: <?= esc($cell['detail']) ?></span>
@@ -128,15 +128,15 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
 
         <div class="overflow-hidden rounded-2xl border <?= $rule ?>">
         <dl class="-mb-px -mr-px grid grid-cols-1 sm:grid-cols-3">
-            <div class="border-b border-r <?= $rule ?> px-3 py-3" data-status-count="active">
+            <div class="h-20 min-w-0 overflow-hidden border-b border-r <?= $rule ?> px-3 py-3" data-status-count="active">
                 <dt class="<?= $cellLabel ?>">Active institutions</dt>
                 <dd class="font-display text-3xl font-bold <?= $value($homeSnapshot['byStatus']['active']) ?>"><?= esc((string) $homeSnapshot['byStatus']['active']) ?></dd>
             </div>
-            <div class="border-b border-r <?= $rule ?> px-3 py-3" data-total="users">
+            <div class="h-20 min-w-0 overflow-hidden border-b border-r <?= $rule ?> px-3 py-3" data-total="users">
                 <dt class="<?= $cellLabel ?>">Active users</dt>
                 <dd class="font-display text-3xl font-bold <?= $value($homeSnapshot['users']) ?>"><?= esc(number_format($homeSnapshot['users'])) ?></dd>
             </div>
-            <div class="border-b border-r <?= $rule ?> px-3 py-3" data-total="today">
+            <div class="h-20 min-w-0 overflow-hidden border-b border-r <?= $rule ?> px-3 py-3" data-total="today">
                 <dt class="<?= $cellLabel ?>">Active today</dt>
                 <dd class="font-display text-3xl font-bold <?= $value($homeSnapshot['signedInToday']) ?>"><?= esc(number_format($homeSnapshot['signedInToday'])) ?></dd>
             </div>
