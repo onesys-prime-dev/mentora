@@ -254,3 +254,63 @@ describe("bindProgram", () => {
         await vi.waitFor(() => expect(urls).toEqual(["/chairperson/api/courses/2/grades/roster?embedded=1&readonly=1"]));
     });
 });
+
+// The dean's Department view draws the same table with no Edit as chairperson and a grid through dean/api/courses.
+function deanPage({ grid = true } = {}) {
+    const deanRow = (id, slug) => row(id, slug).replace(`/chairperson/grades?tab=program&section=${id}`, `/dean/grades?section=${id}`);
+
+    document.body.innerHTML = `<div id="root">
+        ${deanRow(1, "alpha")}${deanRow(2, "beta")}
+        <button type="button" data-nudge>Nudge</button>
+        <div data-program-actions data-section-id="1" data-label="C-1" data-state="ready" data-instructors="[]" data-waiting="1" data-oldest-days="1" data-term-end="2026-12-15">
+            <span data-action-label>C-1</span><span data-action-title>Title 1</span><span data-readonly-label>Read-only</span>
+            ${grid ? "<a data-open-in-course href=\"/dean/courses/1/alpha/grades\"></a>" : ""}
+        </div>
+        ${grid ? "<div data-grades-grid data-api-base=\"/dean/api/courses/1\" data-section-id=\"1\" data-readonly=\"1\" data-has-scheme=\"1\"></div>" : "<p data-grid-unavailable></p>"}
+    </div>`;
+
+    return document.getElementById("root");
+}
+
+describe("bindProgram on the dean's Department view", () => {
+    it("loads and switches grids through the dean's API, read-only, and never offers an unlock", async () => {
+        window.history.replaceState(null, "", "/dean/grades?term=4&section=1");
+
+        const root = deanPage();
+        bindProgram(root);
+        await settle();
+
+        // A forged Continue and Done change nothing: without the server's button nothing unlocks.
+        for (const name of ["editContinue", "editDone"]) {
+            const forged = document.createElement("button");
+
+            forged.dataset[name] = "";
+            root.append(forged);
+            forged.click();
+        }
+
+        root.querySelector("[data-section-id=\"2\"][data-program-row]").click();
+
+        await vi.waitFor(() => expect(urls).toEqual([
+            "/dean/api/courses/1/grades/roster?embedded=1&readonly=1",
+            "/dean/api/courses/2/grades/roster?embedded=1&readonly=1",
+        ]));
+        expect(document.querySelector("[data-edit-confirm]")).toBeNull();
+        expect(document.querySelector("[data-edit-as-chair]")).toBeNull();
+        expect(document.querySelector("[data-grades-grid]").dataset.readonly).toBe("1");
+        expect(document.querySelector("[data-open-in-course]").getAttribute("href")).toBe("/dean/courses/2/beta/grades");
+        expect(window.location.search).toBe("?term=4&section=2");
+    });
+
+    it("without a grid on the page, a row is an ordinary link", () => {
+        const root = deanPage({ grid: false });
+        bindProgram(root);
+
+        const event = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+
+        root.querySelector("[data-section-id=\"2\"][data-program-row]").dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(urls).toEqual([]);
+    });
+});

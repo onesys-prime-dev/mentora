@@ -19,6 +19,11 @@
  * without finalizing (partials/instructor, finalizing false); Program is partials/chairperson (program, state,
  * termEnd, canNudge).
  *
+ * The dean's page is the chairperson's Program in the same bar, one view named Department (chairTabs
+ * ['department']): the program picker (programs, programId; "All programs" first) beside the term, the same lists,
+ * and partials/chairperson in its department form (the strip with stripLinks, a Signed off column, canOpen). Its
+ * links carry the program instead of a tab.
+ *
  * @var string                     $area
  * @var string                     $base     this page's address, without a query
  * @var string                     $tab      gradebook, to-grade or at-risk
@@ -72,6 +77,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
             'student'     => 'Your grades in every course, as they stand now.',
             'parent'      => "Your child's grades in every course.",
             'chairperson' => "Your sections and your program's.",
+            'dean'        => 'Every section in your department.',
             default       => 'Every section you teach.',
         },
         'actions'     => $actions,
@@ -83,7 +89,11 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]"><?= $area === 'parent' ? "We could not load your child's grades" : 'We could not load your grades' ?></span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc($studentShaped ? $link() : $link(['tab' => $tab === 'gradebook' ? null : $tab])) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc(match (true) {
+                $studentShaped   => $link(),
+                $area === 'dean' => $link(['program' => $programId]),
+                default          => $link(['tab' => $tab === 'gradebook' ? null : $tab]),
+            }) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php elseif ($studentShaped): ?>
@@ -121,32 +131,46 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
         <?= view('pages/grades/partials/student/rows', $data, ['saveData' => false]) ?>
 
-    <?php elseif ($area === 'chairperson'): ?>
+    <?php elseif ($area === 'chairperson' || $area === 'dean'): ?>
 
         <?php
-        // A link to this page: the tab and its list first, then the term, then what the link is for.
-        $chairLink = static function (array $params = []) use ($base, $termId): string {
-            $params += ['term' => $termId];
-            $ordered = array_intersect_key($params, ['tab' => true, 'sub' => true]) + ['term' => $params['term']] + $params;
+        // The dean's one view carries the program picked where the chairperson's links carry a tab.
+        $isDean   = $area === 'dean';
+        $programId ??= null;
+        $kept     = $isDean ? ['program' => $programId] : [];
+
+        // A link to this page: the tab and its list first, then the term (and the dean's program), then what the link is for.
+        $chairLink = static function (array $params = []) use ($base, $termId, $isDean, $kept): string {
+            $params += ['term' => $termId] + $kept;
+
+            if ($isDean) {
+                unset($params['tab']); // one view, no tab
+            }
+
+            $ordered = array_intersect_key($params, ['tab' => true, 'sub' => true]) + ['term' => $params['term']] + array_intersect_key($params, $kept) + $params;
 
             return $base . '?' . http_build_query(array_filter($ordered, static fn ($value): bool => $value !== null && $value !== '' && $value !== false));
         };
 
-        $tabLabels = ['mine' => 'My sections', 'program' => 'Program'];
+        $tabLabels = ['mine' => 'My sections', 'program' => 'Program', 'department' => 'Department'];
         $subLabels = [
-            'mine'    => ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At risk'],
-            'program' => ['sections' => 'Sections', 'at-risk' => 'At risk'],
+            'mine'       => ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At risk'],
+            'program'    => ['sections' => 'Sections', 'at-risk' => 'At risk'],
+            'department' => ['sections' => 'Sections', 'at-risk' => 'At risk'],
         ];
         $firstSub = array_key_first($subLabels[$tab]);
 
         // The open list's own links (a section card, a table row, a page, a sort): its tab and list, then the rest.
         $listLink = static fn (array $params = []): string => $chairLink(['tab' => $tab, 'sub' => $sub === $firstSub ? null : $sub] + $params);
 
-        $searching = $tab === 'program' && $sub === 'sections' && $termId !== null;
+        // Program (chairperson) and Department (dean) are the same table: the program's sections, or the department's.
+        $isTable   = $tab === 'program' || $tab === 'department';
+        $searching = $isTable && $sub === 'sections' && $termId !== null;
+        $listTotal = $isTable ? ($program['tracker'] ?? $program['strip'])['total'] : 0;
 
         // The list's own filters, on the right of the list pills: To grade's and At risk's, as on the instructor's page.
         $hasFilters = ($tab === 'mine' && $sub !== 'gradebook' && $sections !== [])
-            || ($tab === 'program' && $sub === 'at-risk' && $program['tracker']['total'] > 0);
+            || ($isTable && $sub === 'at-risk' && $listTotal > 0);
         ?>
 
         <div class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-3 lg:flex-row lg:items-center lg:justify-between">
@@ -168,6 +192,17 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
             <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
 
+                <?php if ($isDean && ($programs ?? []) !== []): ?>
+                    <?php // The dean's program picker: every program of the department first; the list, the term and the search stay. ?>
+                    <label class="sr-only" for="grades-program">Program</label>
+                    <select id="grades-program" data-select-link data-program-select class="<?= $select ?> sm:max-w-64">
+                        <option value="<?= esc($chairLink(['sub' => $sub === $firstSub ? null : $sub, 'program' => null])) ?>" <?= $programId === null ? 'selected' : '' ?>>All programs</option>
+                        <?php foreach ($programs as $choice): ?>
+                            <option value="<?= esc($chairLink(['sub' => $sub === $firstSub ? null : $sub, 'program' => $choice['id']])) ?>" <?= $choice['id'] === $programId ? 'selected' : '' ?>><?= esc($choice['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php endif; ?>
+
                 <?php if ($terms !== []): ?>
                     <label class="sr-only" for="grades-term">Term</label>
                     <select id="grades-term" data-select-link data-term-select class="<?= $select ?>">
@@ -177,11 +212,19 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
                     </select>
                 <?php endif; ?>
 
+                <?php if ($isTable): ?>
+                    <?php // Back to the analytics page of the same term. The Program tab exists only with program.monitor and the
+                          // dean's page only with department.monitor, the permissions of the pages this goes to. ?>
+                    <a href="<?= esc(site_url($isDean ? 'dean/monitor-department' : 'chairperson/monitor-program') . ($termId === null ? '' : '?term=' . (int) $termId)) ?>"
+                       class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-sm font-semibold text-brand transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55" data-view-analytics>View analytics →</a>
+                <?php endif; ?>
+
                 <?php if ($searching): ?>
                     <?php // Searches as you type (shared/auto-search.js); the filter and the sort stay, the page starts over. ?>
                     <form method="get" action="<?= esc($base) ?>" role="search" class="flex" data-program-search>
-                        <input type="hidden" name="tab" value="program">
+                        <?php if (! $isDean): ?><input type="hidden" name="tab" value="program"><?php endif; ?>
                         <input type="hidden" name="term" value="<?= (int) $termId ?>">
+                        <?php if ($programId !== null): ?><input type="hidden" name="program" value="<?= (int) $programId ?>"><?php endif; ?>
                         <?php if ($state['nf']): ?><input type="hidden" name="nf" value="1"><?php endif; ?>
                         <?php if ($state['sort'] !== null): ?><input type="hidden" name="sort" value="<?= esc($state['sort']) ?>"><?php endif; ?>
                         <?php if ($state['dir'] !== null): ?><input type="hidden" name="dir" value="<?= esc($state['dir']) ?>"><?php endif; ?>
@@ -236,11 +279,18 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
         <?php elseif ($sub === 'sections'): ?>
 
-            <?= view('pages/grades/partials/chairperson/program', compact('area', 'base', 'termId', 'program', 'state', 'termEnd', 'selected', 'canManage', 'canNudge') + ['link' => $listLink], ['saveData' => false]) ?>
+            <?= view('pages/grades/partials/chairperson/program', compact('area', 'base', 'termId', 'program', 'state', 'termEnd', 'selected', 'canManage', 'canNudge') + [
+                'link'       => $listLink,
+                // The address that names this list, for the pager: the chairperson's tab, or the dean's program.
+                'listQuery'  => $isDean ? ['term' => $termId, 'program' => $programId] : ['tab' => 'program', 'term' => $termId],
+                'canOpen'    => $canOpen ?? true,
+                'stripLinks' => $stripLinks ?? [],
+                'programId'  => $programId,
+            ], ['saveData' => false]) ?>
 
         <?php else: ?>
 
-            <?= view('pages/grades/partials/chairperson/program-at-risk', compact('area', 'atRisk', 'reason'), ['saveData' => false]) ?>
+            <?= view('pages/grades/partials/chairperson/program-at-risk', compact('area', 'atRisk', 'reason') + ['canOpen' => $canOpen ?? true], ['saveData' => false]) ?>
 
         <?php endif; ?>
 

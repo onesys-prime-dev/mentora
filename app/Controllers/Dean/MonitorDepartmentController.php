@@ -193,6 +193,8 @@ class MonitorDepartmentController extends BaseController
             // The chairperson's page, addressed and worded for the dean.
             'monitorBase'  => site_url("dean/monitor-department/programs/{$programId}"),
             'monitorCourseBase'  => 'dean',
+            'monitorGradesBase'  => site_url('dean/grades'),
+            'monitorGradesQuery' => ['program' => $programId],
             'monitorHeading'     => (string) ($program['program'] ?? 'Program'),
             'monitorSubheading'  => ($program['department'] ?? '') . ' · ' . ($program['sub_department'] ?? '') . ': how this program is performing. You can look, not change.',
             'monitorAuditTitle'  => 'Recent chairperson actions in this program',

@@ -18,7 +18,7 @@ test("TC-GGR-07 Parent opens Grades from the Apps menu, sees the child's courses
     const page = await parentOnGrades(browser);
 
     await page.getByRole("button", { name: /apps/i }).first().click();
-    await page.getByRole("link", { name: /^Grades$/ }).first().click();
+    await page.locator("[data-app-tile='grades']").first().click();
     await expect(page).toHaveURL(/\/parent\/children\/\d+\/grades$/);
 
     await expect(page.getByText("Your child's grades in every course.")).toBeVisible();

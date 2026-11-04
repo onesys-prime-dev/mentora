@@ -70,7 +70,11 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
 $exportQuery = http_build_query($filters->toQuery());
 $exportClass = 'rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $exportSolid = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
+// The Grades page that goes with this one (the same permission opens both), for the term shown.
+$gradesLink  = site_url('dean/grades') . (($filters->base->termId ?? null) === null ? '' : '?term=' . (int) $filters->base->termId);
+$gradesLinks = '<a data-grade-records href="' . esc($gradesLink, 'attr') . '" class="' . $exportClass . '">View grade records →</a>';
 $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
+    . $gradesLinks
     . '<a data-export="csv" href="' . esc(site_url('dean/reports/export/monitor') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportSolid . '">Download CSV</a>'
     . '<a data-export="print" href="' . esc(site_url('dean/reports/print') . ($exportQuery === '' ? '' : '?' . $exportQuery), 'attr') . '" class="' . $exportClass . '" target="_blank" rel="noopener">Print view</a>'
     . '</div>';
@@ -91,7 +95,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
         'title'       => 'Monitor Department',
         'icon'        => 'score',
         'description' => $departmentName . ': how its sub-departments and programs are doing.',
-        'actions'     => $loadError ? '' : $exportLinks,
+        'actions'     => $loadError ? '<div class="flex flex-wrap items-center gap-2">' . $gradesLinks . '</div>' : $exportLinks,
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [

@@ -1,10 +1,10 @@
 # P2 test cases: the Grades page (every section an instructor teaches, every course a student takes)
 
-12 cases in the browser, and the PHP and JavaScript tests that stand behind the rest. Read
+15 cases in the browser, and the PHP and JavaScript tests that stand behind the rest. Read
 [README.md](README.md) first. All are `Draft` (see the README).
 
 `tests/e2e/global-grades.spec.js` holds TC-GGR-01 to 03, and `tests/e2e/global-grades-student.spec.js` TC-GGR-04 to 06 (the
-student's page, below) and `tests/e2e/global-grades-parent.spec.js` TC-GGR-07 to 09 (the parent's page, for a linked child) and `tests/e2e/global-grades-chairperson.spec.js` TC-GGR-10 to 12 (the chairperson's Program tab, as `chairperson1@mentora.test`). The instructor cases run as the main instructor
+student's page, below) and `tests/e2e/global-grades-parent.spec.js` TC-GGR-07 to 09 (the parent's page, for a linked child) and `tests/e2e/global-grades-chairperson.spec.js` TC-GGR-10 to 12 (the chairperson's Program tab, as `chairperson1@mentora.test`) and `tests/e2e/global-grades-dean.spec.js` TC-GGR-13 to 15 (the dean's page as `dean2@mentora.test`, and the badge and entry link as `instructor1@mentora.test`). The instructor cases run as the main instructor
 (`instructor1@mentora.test`) on the demo data: **IT101-A** (5 students, work waiting to be graded, and a
 manual Class Participation item) and **IT101-B** (nobody enrolled, so its grades are ready to be
 finalized). The cases leave the data as they found it: the score is put back, the students and the
@@ -28,6 +28,9 @@ it are tested without a browser (see "Already automated").
 | [TC-GGR-10](#tc-ggr-10-chairperson-opens-program-sees-the-tracker-and-table-and-opens-a-section-read-only) | Chairperson opens Program, sees the tracker and table, and opens a section read-only | Chairperson |
 | [TC-GGR-11](#tc-ggr-11-chairperson-edits-a-manual-score-as-chairperson-and-the-change-is-kept) | Chairperson edits a manual score as chairperson and the change is kept | Chairperson |
 | [TC-GGR-12](#tc-ggr-12-chairperson-nudges-an-instructor-and-the-follow-up-exists) | Chairperson nudges an instructor and the follow-up exists | Chairperson |
+| [TC-GGR-13](#tc-ggr-13-dean-opens-grades-from-the-apps-menu-picks-a-program-and-opens-a-section-read-only) | Dean opens Grades from the Apps menu, picks a program, and opens a section read-only | Dean |
+| [TC-GGR-14](#tc-ggr-14-the-strips-sign-off-link-opens-sign-off) | The strip's Sign-off link opens Sign-off | Dean |
+| [TC-GGR-15](#tc-ggr-15-instructor-sees-the-waiting-badge-on-grades-and-all-my-sections-lands-on-that-section) | Instructor sees the waiting badge on Grades and "All my sections" lands on that section | Instructor |
 
 ---
 
@@ -274,4 +277,56 @@ it are tested without a browser (see "Already automated").
   `tests/js/pages/grades-nudge.test.js`
 - **Playwright:** `tests/e2e/global-grades-chairperson.spec.js`
 - **Basis:** `resources/js/pages/grades/nudge.js`, `app/Services/Courses/FollowUpService.php`
+- **Review:** Draft
+
+### TC-GGR-13 Dean opens Grades from the Apps menu, picks a program, and opens a section read-only
+
+- **Role:** Dean. **Priority:** P2
+- **Data:** dean2 (College of Business and Management; IT101-A is in the BSIT program). Nothing is changed.
+- **Steps:**
+  1. Open the Apps menu and choose Grades.
+  2. Read the strip and the table; open the program picker.
+  3. Choose "Bachelor of Science in Information Technology", then "All programs" again.
+  4. Choose the IT101-A row.
+- **Expected:**
+  - The page says "Every section in your department."; the strip reads "Finalized {f} of {n} · Signed off {s} ·
+    Override requests waiting: {o}"; the table has a Signed off column; "Download department" is offered.
+  - The picker's first option is "All programs".
+  - Choosing a program keeps the strip; choosing the IT101-A row shows its grid read-only, with no score fields, no
+    "Edit as chairperson" and no Finalize.
+- **Already automated:** `tests/feature/DeanGradesPageTest.php`, `tests/feature/DeanDownloadDepartmentTest.php`,
+  `tests/database/DeanDepartmentOverviewTest.php`
+- **Playwright:** `tests/e2e/global-grades-dean.spec.js`
+- **Basis:** `app/Services/Grades/DeanDepartmentOverview.php`, `app/Views/pages/grades/index.php`
+- **Review:** Draft
+
+### TC-GGR-14 The strip's Sign-off link opens Sign-off
+
+- **Role:** Dean. **Priority:** P2
+- **Data:** dean2. Nothing is changed.
+- **Steps:**
+  1. On the dean's Grades page, choose "Signed off {s}" in the strip.
+- **Expected:**
+  - The Sign-off page opens (`dean/signoff`). Nothing is signed off from the Grades page itself.
+- **Already automated:** `tests/feature/DeanGradesPageTest.php` (the links appear only with the permission)
+- **Playwright:** `tests/e2e/global-grades-dean.spec.js`
+- **Basis:** `app/Views/pages/grades/partials/chairperson/program.php`
+- **Review:** Draft
+
+### TC-GGR-15 Instructor sees the waiting badge on Grades and "All my sections" lands on that section
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** instructor1, IT101-A (work waiting to be graded). The badge is cached for 60 seconds per user, so the case
+  checks that it is drawn after a fresh sign-in and never a changed count. Nothing is changed.
+- **Steps:**
+  1. Sign in and open the Apps menu.
+  2. Open IT101-A and its Grades tab; choose "All my sections →".
+- **Expected:**
+  - The Grades tile carries a pill with the count, spoken as "{n} waiting to grade".
+  - The link opens `instructor/grades` with IT101-A selected and its grid shown.
+- **Already automated:** `tests/database/GradesBadgeTest.php`, `tests/feature/GradesBadgeTileTest.php` (no pill at 0,
+  "99+" from 100, no second query within 60 seconds), `tests/feature/GradesEntryLinksTest.php`
+- **Playwright:** `tests/e2e/global-grades-dean.spec.js`
+- **Basis:** `app/Services/Grades/GradesBadge.php`, `app/Views/components/app-tile.php`,
+  `app/Services/Courses/GradeService.php`
 - **Review:** Draft

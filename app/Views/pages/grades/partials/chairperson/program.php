@@ -15,19 +15,30 @@
  * Every state is said in a word beside its dot; a not-published section shows no average (its numbers are not
  * final enough to compare).
  *
+ * The dean's Department view (area "dean", spec §9 "Phase 5 layout") is this list over the department's sections:
+ * the strip in place of the tracker ("Finalized {f} of {n} · Signed off {s} · Override requests waiting: {o}", the
+ * last two linking to Sign-off and Approvals only where stripLinks gives an address), a Signed off column, Download
+ * department, and never Edit as chairperson: the grid is always read-only. Without courses.view (canOpen false) the
+ * dean's course API would refuse the grid, so neither the grid nor Open in course is drawn.
+ *
  * @var string                                                                $area
  * @var string                                                                $base
  * @var int|null                                                              $termId
- * @var array{rows: list<array<string, mixed>>, total: int, tracker: array<string, int>} $program
+ * @var array{rows: list<array<string, mixed>>, total: int, tracker?: array<string, int>, strip?: array<string, int>} $program
  * @var array{q: string, nf: bool, sort: ?string, dir: ?string, page: int}    $state
  * @var string|null                                                           $termEnd  the term's last day, Y-m-d
  * @var array<string, mixed>|null                                             $selected the section whose grid is shown
  * @var bool                                                                  $canManage Edit as chairperson
  * @var bool                                                                  $canNudge
  * @var Closure                                                               $link     this list's links: its tab and the term, then what each is for
+ * @var array<string, mixed>                                                  $listQuery the address that names this list, for the pager
+ * @var bool                                                                  $canOpen  the grid and Open in course (the course API's permission)
+ * @var array{signed_off?: ?string, requests?: ?string}                       $stripLinks the dean's strip links; null is plain text
+ * @var int|null                                                              $programId the dean's program picked; null is every program
  */
 
-$tracker = $program['tracker'];
+$dean    = $area === 'dean';
+$tracker = $dean ? $program['strip'] : $program['tracker'];
 $rows    = $program['rows'];
 $sort    = $state['sort'] ?? 'section';
 $dir     = $state['dir'] ?? 'asc';
@@ -47,10 +58,14 @@ $look = static fn (string $state): array => match ($state) {
     default     => ['dot' => 'bg-gray-300', 'word' => 'Not published', 'class' => 'text-[#646464]'],
 };
 
-$columns = ['section' => 'Section', 'instructor' => 'Instructor', 'average' => 'Average', 'at_risk' => 'At risk', 'waiting' => 'Waiting', 'status' => 'Status'];
+$columns = ['section' => 'Section', 'instructor' => 'Instructor', 'average' => 'Average', 'at_risk' => 'At risk', 'waiting' => 'Waiting', 'status' => 'Status']
+    + ($dean ? ['signed_off' => 'Signed off'] : []);
 
 // The At risk column counts grade standing only; the At risk list also has students falling behind on work.
 $explain = ['at_risk' => 'Students failing or with an Incomplete'];
+
+// Edit as chairperson: the chairperson's only, where they may grade; the dean never edits here.
+$canEdit = $canManage && ! $dean;
 
 // Nudge and Edit as chairperson have nothing to do in a finalized section.
 $selectedFinalized = $selected !== null && $selected['state'] === 'finalized';
@@ -65,22 +80,47 @@ $noScheme = static fn (string $href): string => '<div class="flex flex-col items
     . '<a href="' . esc($href) . '" class="' . $secondary . '" data-no-scheme-open>Open in course →</a>'
     . '</div>';
 
-// The tracker's bar: finalized, ready and blocked as parts of the whole term.
+// The tracker's bar: finalized, ready and blocked as parts of the whole term (the dean's: signed off, then finalized).
 $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(number_format($count / $tracker['total'] * 100, 2, '.', ''), '0'), '.') : '0';
+
+// A count of the dean's strip: a link to the page where it is acted on, or plain text without the permission there.
+$stripPart = static function (string $text, ?string $href, string $key, ?string $note = null): string {
+    // $note: what the count covers, for a pointer and a screen reader, without changing the line's words.
+    $noteAttrs = $note === null ? '' : ' title="' . esc($note, 'attr') . '"';
+
+    if ($href === null) {
+        return '<span data-strip-' . $key . $noteAttrs . '>' . esc($text) . '</span>';
+    }
+
+    if ($note !== null) {
+        $noteAttrs .= ' aria-label="' . esc($text . ' (' . $note . ')', 'attr') . '"';
+    }
+
+    return '<a href="' . esc($href, 'attr') . '"' . $noteAttrs . ' class="rounded font-semibold text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-strip-' . $key . '>' . esc($text) . '</a>';
+};
 ?>
 
 <?php if ($tracker['total'] > 0): ?>
 
-    <?php // The finalization tracker counts the whole term, whatever the search or the filter. ?>
-    <div class="flex flex-col gap-3 rounded-2xl border border-[#E3E6EE] px-4 py-3 sm:flex-row sm:items-center sm:justify-between" data-tracker>
+    <?php // The finalization tracker (the dean's strip) counts the whole term, whatever the search or the filter. ?>
+    <div class="flex flex-col gap-3 rounded-2xl border border-[#E3E6EE] px-4 py-3 sm:flex-row sm:items-center sm:justify-between" <?= $dean ? 'data-strip' : 'data-tracker' ?>>
 
         <div class="flex min-w-0 flex-1 flex-col gap-2">
-            <p class="text-sm text-[#3D3D3D]" data-tracker-line><strong class="font-bold text-[#1A1C1E]">Finalized <?= (int) $tracker['finalized'] ?> of <?= (int) $tracker['total'] ?></strong> · <?= (int) $tracker['ready'] ?> ready · <?= (int) $tracker['blocked'] ?> blocked</p>
-            <div class="flex h-2 w-full max-w-md overflow-hidden rounded-full bg-[#EEF1F8]" aria-hidden="true">
-                <span class="h-full bg-gray-400" style="width: <?= $share($tracker['finalized']) ?>%"></span>
-                <span class="h-full bg-[#2E7D4F]" style="width: <?= $share($tracker['ready']) ?>%"></span>
-                <span class="h-full bg-[#D99A00]" style="width: <?= $share($tracker['blocked']) ?>%"></span>
-            </div>
+            <?php if ($dean): ?>
+                <?php // Signed off is a part of finalized: the bar shows it, then the rest of what is finalized. ?>
+                <p class="text-sm text-[#3D3D3D]" data-strip-line><strong class="font-bold text-[#1A1C1E]">Finalized <?= (int) $tracker['finalized'] ?> of <?= (int) $tracker['total'] ?></strong> · <?= $stripPart('Signed off ' . (int) $tracker['signed_off'], $stripLinks['signed_off'] ?? null, 'signed-off') ?> · <?= $stripPart('Override requests waiting: ' . (int) $tracker['requests_waiting'], $stripLinks['requests'] ?? null, 'requests', 'Counted for the sections of this term; Approvals lists every term') ?></p>
+                <div class="flex h-2 w-full max-w-md overflow-hidden rounded-full bg-[#EEF1F8]" aria-hidden="true">
+                    <span class="h-full bg-[#2E7D4F]" style="width: <?= $share(min($tracker['signed_off'], $tracker['finalized'])) ?>%"></span>
+                    <span class="h-full bg-gray-400" style="width: <?= $share(max(0, $tracker['finalized'] - $tracker['signed_off'])) ?>%"></span>
+                </div>
+            <?php else: ?>
+                <p class="text-sm text-[#3D3D3D]" data-tracker-line><strong class="font-bold text-[#1A1C1E]">Finalized <?= (int) $tracker['finalized'] ?> of <?= (int) $tracker['total'] ?></strong> · <?= (int) $tracker['ready'] ?> ready · <?= (int) $tracker['blocked'] ?> blocked</p>
+                <div class="flex h-2 w-full max-w-md overflow-hidden rounded-full bg-[#EEF1F8]" aria-hidden="true">
+                    <span class="h-full bg-gray-400" style="width: <?= $share($tracker['finalized']) ?>%"></span>
+                    <span class="h-full bg-[#2E7D4F]" style="width: <?= $share($tracker['ready']) ?>%"></span>
+                    <span class="h-full bg-[#D99A00]" style="width: <?= $share($tracker['blocked']) ?>%"></span>
+                </div>
+            <?php endif; ?>
         </div>
 
         <?php // A link that turns the filter on or off; the box and the hidden word say which it is. ?>
@@ -105,6 +145,12 @@ $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(n
             'title' => $state['q'] !== '' ? 'No sections match "' . $state['q'] . '"' : 'No sections match',
             'text'  => $state['nf'] ? 'Try another word, or turn off "Not finalized only".' : 'Try another word: a course code, a title or an instructor.',
         ], ['saveData' => false]) ?>
+    <?php elseif ($dean): ?>
+        <?= view('components/empty-state', [
+            'icon'  => 'grades',
+            'title' => $programId === null ? 'No sections in your department this term' : 'No sections in this program this term',
+            'text'  => $programId === null ? 'Sections of your department show here once they are offered this term.' : 'Pick "All programs" to see every section of your department.',
+        ], ['saveData' => false]) ?>
     <?php else: ?>
         <?= view('components/empty-state', [
             'icon'  => 'grades',
@@ -119,9 +165,11 @@ $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(n
 
         <h2 id="grades-program-sections" class="sr-only">Sections</h2>
 
-        <div class="overflow-x-auto rounded-2xl border border-[#E3E6EE]">
-            <table class="w-full min-w-[46rem] text-left text-sm" data-program-table>
-                <caption class="sr-only">The program's sections this term. Pick a section to open its gradebook below.</caption>
+        <?php // Positioned, so the card also clips what is absolutely placed inside it (a header's sr-only words): the
+              // page itself never scrolls sideways on a phone. ?>
+        <div class="relative overflow-x-auto rounded-2xl border border-[#E3E6EE]">
+            <table class="w-full <?= $dean ? 'min-w-[52rem]' : 'min-w-[46rem]' ?> text-left text-sm" data-program-table>
+                <caption class="sr-only"><?= $dean ? "The department's sections this term." : "The program's sections this term." ?><?= $canOpen ? ' Pick a section to open its gradebook below.' : '' ?></caption>
                 <thead class="bg-[#F6F7FA] text-xs font-semibold uppercase tracking-wide text-[#646464]">
                     <tr>
                         <?php foreach ($columns as $key => $name): ?>
@@ -180,6 +228,9 @@ $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(n
                                     <span class="mt-0.5 block max-w-[14rem] text-xs text-[#646464]"><?= esc($row['note']) ?></span>
                                 <?php endif; ?>
                             </td>
+                            <?php if ($dean): ?>
+                                <td class="px-4 py-3 align-top <?= $row['signed_off'] ? 'font-semibold text-[#2E7D4F]' : 'text-[#646464]' ?> <?= $bg ?>" data-cell="signed_off"><?= $row['signed_off'] ? 'Yes' : '—' ?></td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -196,7 +247,7 @@ $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(n
                         'pages'   => $pages,
                         'baseUrl' => $base,
                         'total'   => $program['total'],
-                        'query'   => array_filter(['tab' => 'program', 'term' => $termId] + $keep, static fn ($value): bool => $value !== null && $value !== ''),
+                        'query'   => array_filter($listQuery + $keep, static fn ($value): bool => $value !== null && $value !== ''),
                     ], ['saveData' => false]) ?>
                 <?php else: ?>
                     <p class="text-sm text-[#646464]"><?= (int) $program['total'] ?> <?= $program['total'] === 1 ? 'section' : 'sections' ?></p>
@@ -209,7 +260,11 @@ $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(n
                           // finalized section (nothing to nudge about); the page script hides and shows it per row. ?>
                     <button type="button" class="<?= $secondary ?>" data-nudge <?= $selected === null || $selectedFinalized ? 'hidden' : '' ?>>Nudge</button>
                 <?php endif; ?>
-                <a href="<?= site_url('chairperson/grades/download-program') . ($termId === null ? '' : '?term=' . (int) $termId) ?>" class="<?= $secondary ?>" data-download-program>Download program</a>
+                <?php if ($dean): ?>
+                    <a href="<?= site_url('dean/grades/download-department') . ($termId === null ? '' : '?term=' . (int) $termId) ?>" class="<?= $secondary ?>" data-download-department>Download department</a>
+                <?php else: ?>
+                    <a href="<?= site_url('chairperson/grades/download-program') . ($termId === null ? '' : '?term=' . (int) $termId) ?>" class="<?= $secondary ?>" data-download-program>Download program</a>
+                <?php endif; ?>
             </div>
 
         </div>
@@ -245,17 +300,30 @@ $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(n
             </p>
 
             <div class="flex flex-wrap items-center gap-2">
-                <?php if ($canManage): ?>
+                <?php if ($canEdit): ?>
                     <?php // Hidden where there is nothing to edit (no grading yet, a closed section, or a finalized one,
                           // where edits are refused); the page script shows and hides it as rows are opened, and asks
                           // before unlocking. ?>
                     <button type="button" class="<?= $primary ?>" data-edit-as-chair <?= ! $selected['has_scheme'] || $selected['offering_status'] !== 'active' || $selectedFinalized ? 'hidden' : '' ?>>Edit as chairperson</button>
                     <button type="button" class="<?= $secondary ?>" data-edit-done hidden>Done</button>
                 <?php endif; ?>
-                <a href="<?= esc($inCourse) ?>" class="<?= $secondary ?>" data-open-in-course>Open in course →</a>
+                <?php if ($canOpen): ?>
+                    <a href="<?= esc($inCourse) ?>" class="<?= $secondary ?>" data-open-in-course>Open in course →</a>
+                <?php endif; ?>
             </div>
 
         </div>
+
+        <?php if (! $canOpen): ?>
+
+            <?php // The dean's course API asks courses.view: without it the grid cannot be fetched, so the page says why. ?>
+            <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center" data-grid-unavailable>
+                <?= icon('lock', 'h-10 w-10 text-gray-300') ?>
+                <span class="text-sm font-semibold text-[#646464]"><?= esc("Opening a section's gradebook needs access to the department's courses.") ?></span>
+                <span class="text-xs text-[#646464]">Ask your institution's administrator if you need it.</span>
+            </div>
+
+        <?php else: ?>
 
         <?php // Filled by the page script, read-only; until then the shape of what is coming. A section without a
               // scheme gets the sentence instead. ?>
@@ -269,6 +337,8 @@ $share = static fn (int $count): string => $tracker['total'] > 0 ? rtrim(rtrim(n
 
         <?php // What opening a row without a scheme draws; the script sets the link's address. ?>
         <template data-no-scheme-template><?= $noScheme('#') ?></template>
+
+        <?php endif; ?>
 
     </section>
 

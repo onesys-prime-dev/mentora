@@ -59,7 +59,7 @@ class ParentCourseController extends BaseController
         $child  = $access->childUser(auth()->user(), $studentId) ?? throw PageNotFoundException::forPageNotFound();
         $course = $access->childOffering(auth()->user(), $studentId, $offeringId) ?? throw PageNotFoundException::forPageNotFound();
 
-        return $this->response->setJSON((new ParentCourseTabs())->grades($child, ['id' => $offeringId, 'course_id' => (int) $course['course_id']]));
+        return $this->response->setJSON((new ParentCourseTabs())->grades($child, ['id' => $offeringId, 'course_id' => (int) $course['course_id'], 'term_id' => (int) $course['term_id']]));
     }
 
     /**

@@ -265,7 +265,22 @@ are always read-only. A strip, "Finalized 40/52 · Signed off 31 · Override req
 counts link to the existing **Sign-off** and **Approvals** pages (decisions, re-authentication and the
 audit stay there). Also nudges, the department at-risk list and the department download.
 
+Phase 5 layout (decided 2026-11-04, reusing the approved chairperson Program layout): a program picker
+("All programs" first), the strip with its links, sub-pills **Sections · At risk**, the section table
+with an added **Signed off** column (same sort, search, filter, paging), and the selected section's grid
+below, always read-only (no Edit button). Nudge (the chairperson's dialog, dean as sender; needs
+`followups.manage`) and **Download department** (one workbook, audited per section; needs
+`department.monitor`) sit under the table.
+
 ## 10. Entry points (Q17)
+
+Phase 5 decisions (2026-11-04): each person's tile badge count is cached for 60 seconds, because the
+Apps menu and Quick Access render on every page and the page-speed anti-goal (§0) outweighs a badge
+lagging by up to a minute; a count of 0 shows no badge; 100 or more reads "99+". The course-tab link
+reads "All my grades →" (student), "All grades →" (parent) and "All my sections →" (instructor). The
+dashboard's grading-queue card links to the Grades page's To grade view and its at-risk card to the At
+risk view of the same role.
+
 
 - The Grades tile gets a URL per role in `global_apps()`; dean and parent lists get a Grades tile.
 - **Tile badges** (menu and Quick Access): instructor and chairperson, waiting to grade; student and

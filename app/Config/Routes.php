@@ -336,6 +336,11 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
     $routes->get('courses', 'Dean\DeanCoursesController::index', ['filter' => 'permission:courses.view@dean']);
+
+    // Grades: every section of the department, read-only, and its gradebooks in one workbook (department.monitor).
+    $routes->get('grades', 'Grades\GradesController::index', ['filter' => 'permission:department.monitor@dean']);
+    $routes->get('grades/download-department', 'Grades\GradesBulkController::downloadDepartment', ['filter' => 'permission:department.monitor@dean']);
+
     // Grade-override requests of the department that wait for the dean: approve (the grade is
     // changed) or reject (with a reason). The only writes in this group besides the dean's own pages.
     $routes->get('approvals', 'Dean\ApprovalsController::index', ['filter' => 'permission:grades.approve@dean']);

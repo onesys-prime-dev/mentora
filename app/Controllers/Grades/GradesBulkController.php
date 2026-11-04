@@ -10,14 +10,15 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Auth\RolePermissions;
 use App\Services\Courses\Grades\GradeReportService;
 use App\Services\Grades\ChairpersonProgramOverview;
+use App\Services\Grades\DeanDepartmentOverview;
 use App\Services\Grades\InstructorGradesOverview;
 use App\Services\Grades\ReadySectionFinalizer;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * The two actions of the Grades page that span every section of a term: Finalize ready sections and
- * Download all.
+ * The actions of the Grades page that span every section of a term: Finalize ready sections and Download all
+ * (instructor), Download program (chairperson) and Download department (dean).
  *
  * They sit outside api/courses, so the course filters (coursemember, closedoffering, coursepermission) do
  * not run; the checks are made here instead (spec §13). The sections are only those the person teaches in
@@ -88,6 +89,26 @@ class GradesBulkController extends BaseController
             'chairperson',
             "None of the program's sections this term has grading yet, so there is nothing to download.",
             'program-gradebooks',
+        );
+    }
+
+    /**
+     * GET dean/grades/download-department?term=: the class gradebook of every section of the dean's department(s),
+     * every program, in one Excel file. The sections are the ones the dean's Grades page lists with "All programs"
+     * (so another department's are never in it); department.monitor (as dean) is the route's filter.
+     */
+    public function downloadDepartment(): ResponseInterface
+    {
+        $user   = auth()->user();
+        $termId = $this->termId($this->request->getGet('term'));
+
+        return $this->workbook(
+            $user,
+            $termId === null ? [] : (new DeanDepartmentOverview())->all($user, $termId, null),
+            $termId,
+            'dean',
+            "None of the department's sections this term has grading yet, so there is nothing to download.",
+            'department-gradebooks',
         );
     }
 

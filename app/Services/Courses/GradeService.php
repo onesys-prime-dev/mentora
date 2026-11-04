@@ -9,6 +9,7 @@ use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Grades\GradingSchemeService;
 use App\Services\Courses\Grades\GradingEngineService;
 use App\Models\Grades\GradeScaleItemModel;
+use App\Services\Auth\ActiveRoleService;
 
 use CodeIgniter\Shield\Entities\User;
 
@@ -38,7 +39,7 @@ class GradeService
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $viewData = ['user' => $user];
+        $viewData = ['user' => $user, 'allGrades' => $this->allGradesLink($user, $offering)];
 
         if (\App\Services\Courses\CourseViewer::seesInstructorView($user)) {
 
@@ -57,6 +58,43 @@ class GradeService
             ),
         ];
 
+    }
+
+    /**
+     * The way from this course's Grades tab to the Grades page (spec §10): "All my grades →" for a student,
+     * "All my sections →" for an instructor acting as the instructor of this very course, both for the course's
+     * term. Nobody else gets one: a chairperson acting in a course, a dean and the institution's administrator
+     * would be sent to a page that is not theirs, and a section the Grades page does not list (not active or
+     * completed) would be a 404 there.
+     *
+     * @return array{href: string, label: string}|null
+     */
+    private function allGradesLink(User $user, array $offering): ?array
+    {
+        $offeringId = (int) $offering['id'];
+
+        if (! in_array($offering['status'] ?? null, ['active', 'completed'], true) || empty($offering['term_id'])) {
+            return null;
+        }
+
+        $term = (int) $offering['term_id'];
+
+        if (CourseViewer::isReadOnlyViewer($user)) {
+            return null;
+        }
+
+        if (! CourseViewer::seesInstructorView($user)) {
+            return CourseViewer::isStudentHere($user, $offeringId)
+                ? ['href' => site_url('student/grades?term=' . $term), 'label' => 'All my grades →']
+                : null;
+        }
+
+        $actsAsInstructor = (new CourseMembership())->roleIn($user, $offeringId) === 'instructor'
+            && (new ActiveRoleService())->resolve($user) === 'instructor';
+
+        return $actsAsInstructor
+            ? ['href' => site_url('instructor/grades?term=' . $term . '&section=' . $offeringId), 'label' => 'All my sections →']
+            : null;
     }
 
     /**

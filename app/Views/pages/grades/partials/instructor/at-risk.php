@@ -7,7 +7,9 @@
  * @var string                     $area
  * @var list<array<string, mixed>> $atRisk
  * @var string|null                $reason
+ * @var bool                       $canOpen  default true; false draws the section as plain text
  */
+$canOpen = $canOpen ?? true;
 $chip = [
     'grade'    => 'bg-[#FDEDEC] text-[#C33939]',
     'inc'      => 'bg-[#FFF8E8] text-[#946200]',
@@ -43,7 +45,11 @@ $chip = [
                         <tr class="bg-white" data-risk-row data-offering-id="<?= (int) $row['offering_id'] ?>" data-student-id="<?= (int) $row['student_id'] ?>">
                             <th scope="row" class="sticky left-0 bg-white px-4 py-3 font-semibold text-[#1A1C1E]"><?= esc($row['name']) ?></th>
                             <td class="px-4 py-3">
-                                <a href="<?= esc(site_url("{$area}/courses/{$row['offering_id']}/{$row['slug']}/grades")) ?>" class="rounded font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><?= esc($row['section']) ?></a>
+                                <?php if ($canOpen): ?>
+                                    <a href="<?= esc(site_url("{$area}/courses/{$row['offering_id']}/{$row['slug']}/grades")) ?>" class="rounded font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><?= esc($row['section']) ?></a>
+                                <?php else: ?>
+                                    <span class="font-semibold text-[#1A1C1E]"><?= esc($row['section']) ?></span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-4 py-3">
                                 <span class="flex flex-wrap gap-1.5">

@@ -32,6 +32,18 @@ final class GradesSeen
     }
 
     /**
+     * The signature of a course row as the Grades page shows it: an unpublished row shows only its chip (a
+     * withdrawn one keeps its Withdrawn tag), so a grade published since the last look is a change too. The page
+     * and the tile badge both compare this one.
+     *
+     * @param array{percentage: ?float, band: ?string, tag: string, finalized: bool, signed_off: bool, published: bool, withdrawn: bool} $row
+     */
+    public static function shownSignature(array $row): string
+    {
+        return self::signature($row['published'] || $row['withdrawn'] ? $row : ['tag' => 'Not published yet'] + $row);
+    }
+
+    /**
      * True for an offering only when a signature was stored and the current one differs.
      *
      * @param array<int, string> $signatures offering id => current signature

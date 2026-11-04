@@ -46,7 +46,7 @@ test("TC-GGR-04 Student opens Grades from the Apps menu, sees the term and expan
         await signInAs(page, accounts.student1, "student");
 
         await page.getByRole("button", { name: /apps/i }).first().click();
-        await page.getByRole("link", { name: /^Grades$/ }).first().click();
+        await page.locator("[data-app-tile='grades']").first().click();
         await expect(page).toHaveURL(/\/student\/grades$/);
 
         await expect(page.locator("[data-term-line]")).toContainText("1st Semester");

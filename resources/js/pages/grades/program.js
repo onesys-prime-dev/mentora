@@ -1,7 +1,9 @@
 /*
 |--------------------------------------------------------------------------
-| The chairperson's Program tab: a row opens that section's grid, read-only
+| The chairperson's Program tab (and the dean's Department view): a row opens that section's grid, read-only
 |--------------------------------------------------------------------------
+|
+| The dean's page draws no Edit as chairperson, so nothing there ever unlocks; its grid base is dean/api/courses.
 |
 | A row of the Sections table is a link (it works without JavaScript). With JavaScript, a click saves any score
 | still waiting for its debounce, points the gradebook calls at the chosen section and loads its grid with
@@ -265,8 +267,9 @@ export function bindProgram(root)
         const row = event.target.closest("[data-program-row]");
 
         if (row) {
-            // Leave new-tab and new-window clicks to the link itself.
-            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            // Leave new-tab and new-window clicks to the link itself, and every click when the page has no grid to
+            // fill (the dean without courses.view): the link opens the page on that section.
+            if (!gridOf() || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
                 return;
             }
 

@@ -16,6 +16,16 @@ $userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 $queue = $data['queue'] ?? [];
 
 /**
+ * "See all" opens the same list on the Grades page, for the area that card belongs to. Only an instructor acting
+ * as one has that page (the chairperson's merged Needs Attention card has its own); only with courses.view, which
+ * the page's route asks.
+ */
+$seeAll = static fn (string $tab): ?string => $userRole === 'instructor' && (new \App\Services\Auth\RolePermissions())->allows($user, 'courses.view', 'instructor')
+    ? site_url('instructor/grades?tab=' . $tab)
+    : null;
+$seeAllClass = 'text-xs font-semibold text-blue-900 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 rounded';
+
+/**
  * What kind of work is waiting — a quiz reads differently from a lab or an
  * essay, and marking them takes different effort, so the row leads with type.
  * Falls back to the quiz glyph for any type the map doesn't know.
@@ -59,8 +69,13 @@ $totalUngraded = array_sum(array_column($queue, 'ungraded'));
         <span class="text-xl font-display">Grading Queue</span>
 
         <?php if ($queue !== []): ?>
-            <span class="text-xs text-gray-700">
-                <?= esc($totalUngraded) ?> to grade
+            <span class="flex items-center gap-3">
+                <span class="text-xs text-gray-700">
+                    <?= esc($totalUngraded) ?> to grade
+                </span>
+                <?php if (($all = $seeAll('to-grade')) !== null): ?>
+                    <a href="<?= esc($all, 'attr') ?>" class="<?= $seeAllClass ?>" data-see-all>See all</a>
+                <?php endif; ?>
             </span>
         <?php endif; ?>
     </div>

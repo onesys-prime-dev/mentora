@@ -201,6 +201,50 @@ final class GlobalGradesQueryBudgetTest extends RouteTestCase
         $this->assertGreaterThan(0, $three[0]);
     }
 
+    public function testTheDeanPageCostsTheSameForThreeOrFifteenSections(): void
+    {
+        $unit     = DeanFactory::department('QDN');
+        $programA = DeanFactory::program(DeanFactory::subDepartment($unit['department'], 'QDA'), 'QDA');
+        $programB = DeanFactory::program(DeanFactory::subDepartment($unit['department'], 'QDB'), 'QDB');
+        $term     = DeanFactory::term($unit['institution']);
+        $chair    = DeanFactory::chair((int) db_connect()->table('programs')->where('id', $programA)->get()->getRow()->sub_department_id);
+        $dean     = DeanFactory::dean($unit['institution'], $unit['department']);
+
+        $views = ['', 'sub=at-risk', 'program=' . $programA, 'sort=signed_off&dir=desc&q=IT&nf=1'];
+
+        $cost = function (string $query) use ($dean): int {
+            $this->loggedInAs($dean);
+            $this->get('dean/grades?' . $query)->assertStatus(200);
+
+            $queries  = 0;
+            $listener = static function () use (&$queries): void {
+                $queries++;
+            };
+
+            Events::on('DBQuery', $listener);
+            $result = $this->get('dean/grades?' . $query);
+            Events::removeListener('DBQuery', $listener);
+
+            $result->assertStatus(200);
+
+            return $queries;
+        };
+
+        // The sections alternate between the two programs, so a program's share grows as well.
+        for ($n = 1; $n <= 3; $n++) {
+            $this->addProgramSection($chair, $n % 2 === 0 ? $programB : $programA, $term, $n);
+        }
+
+        $three = array_map($cost, $views);
+
+        for ($n = 4; $n <= 15; $n++) {
+            $this->addProgramSection($chair, $n % 2 === 0 ? $programB : $programA, $term, $n);
+        }
+
+        $this->assertSame(array_combine($views, $three), array_combine($views, array_map($cost, $views)), 'fifteen sections must cost the same queries as three');
+        $this->assertGreaterThan(0, $three[0]);
+    }
+
     /** A course of the student's term with a published scheme, a running grade, an instructor and a band. */
     private function addStudentCourse(User $student, ?int &$term): void
     {

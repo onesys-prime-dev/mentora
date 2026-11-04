@@ -21,8 +21,9 @@ bindFinalizeReady();
 
 const grid = document.querySelector("[data-grades-grid]");
 
-// The chairperson's Program tab owns its read-only grid (program.js): it is never loaded editable here.
-if (grid?.dataset.readonly === "1") {
+// The chairperson's Program tab and the dean's Department view own their read-only grid (program.js): it is never
+// loaded editable here. A dean without courses.view has no grid there, but still the table and Nudge.
+if (grid?.dataset.readonly === "1" || (!grid && document.querySelector("[data-program-search], [data-program-actions]"))) {
     bindProgram(document.body);
     bindNudge(document.body);
 } else if (grid) {

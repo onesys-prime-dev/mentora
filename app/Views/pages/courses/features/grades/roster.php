@@ -46,10 +46,16 @@ $scoresReadOnly = ! empty($readonly);
 
     </div>
 
-    <p class="text-sm text-gray-500">
+    <?php if ($viewOnly): ?>
+    <p class="text-sm text-gray-500" data-roster-intro="readonly">
+        Read-only. Quiz and assignment scores come from Grade Work — the <?= $uses_periods ? 'period' : 'category' ?> columns are for context.
+    </p>
+    <?php else: ?>
+    <p class="text-sm text-gray-500" data-roster-intro>
         Only manual items (<?= esc(implode(', ', array_map(static fn ($i) => $i['name'], $items)) ?: 'none yet') ?>) are editable here.
         Quiz and assignment scores come from Grade Work — the <?= $uses_periods ? 'period' : 'category' ?> columns below are read-only, for context. Click a final grade to <?= $isRequestMode ? 'request an override of it: the grade stays as calculated until the request is approved' : 'override it' ?>.
     </p>
+    <?php endif; ?>
 
     <!-- The class at a glance. Only students with a grade count; how many that is is said. -->
     <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4" data-roster-stats>

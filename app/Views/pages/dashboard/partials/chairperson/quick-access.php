@@ -33,6 +33,15 @@ $links = global_apps($userRole);
                 <?php // The colour is given to the icon itself: a few icons are registered in white (for blue tiles) and would vanish on this white pill. ?>
                 <span class="flex"><?= icon($link['icon'], 'w-4 h-4 text-[#0040A6]') ?></span>
                 <?= esc($link['label']) ?>
+                <?php // The Grades tile's count, as on the tiles (components/app-tile.php). ?>
+                <?php if (($link['badge'] ?? 0) > 0): ?>
+                    <span
+                        class="min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-[#C33939] text-[10px] font-bold leading-none text-white tabular-nums"
+                        role="img"
+                        aria-label="<?= esc($link['badge_label'] ?? (string) $link['badge']) ?>"
+                        title="<?= esc($link['badge_label'] ?? (string) $link['badge']) ?>"
+                        data-app-badge><?= esc(\App\Services\Grades\GradesBadge::text((int) $link['badge'])) ?></span>
+                <?php endif; ?>
             </a>
 
         <?php endif; ?>

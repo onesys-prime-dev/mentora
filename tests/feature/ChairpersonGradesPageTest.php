@@ -387,6 +387,13 @@ final class ChairpersonGradesPageTest extends RouteTestCase
         $this->assertSame(site_url("chairperson/api/courses/{$finalized}"), $grid->getAttribute('data-api-base'));
         $this->assertSame((string) $finalized, $grid->getAttribute('data-section-id'));
         $this->assertSame('1', $grid->getAttribute('data-readonly'));
+
+        $roster = $this->get("chairperson/api/courses/{$finalized}/grades/roster?embedded=1&readonly=1");
+        $roster->assertStatus(200);
+        $intro = html_entity_decode((string) json_decode((string) $roster->getJSON(), true)['html']);
+        $this->assertStringContainsString('Read-only. Quiz and assignment scores come from Grade Work', $intro);
+        $this->assertStringNotContainsString('Click a final grade', $intro);
+
         $this->assertSame('Edit as chairperson', $this->text($x->query('//button[@data-edit-as-chair]')->item(0)));
         $done = $x->query('//button[@data-edit-done]')->item(0);
         $this->assertSame('Done', $this->text($done));

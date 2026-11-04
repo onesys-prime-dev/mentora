@@ -74,6 +74,22 @@ final class NavigationHelperTest extends CIUnitTestCase
         $this->assertArrayHasKey('chairperson/grades', $collection->getRoutes('GET'));
     }
 
+    public function testTheTileOpensTheGradesPageForDeans(): void
+    {
+        $tile = array_column(global_apps('dean'), null, 'key')['grades'];
+
+        $this->assertSame(['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('dean/grades')], $tile);
+
+        // Beside Courses: the dean's lists of the department's sections sit together.
+        $keys = array_column(global_apps('dean'), 'key');
+        $this->assertSame(array_search('courses', $keys, true) + 1, array_search('grades', $keys, true));
+
+        $collection = \Config\Services::routes(false);
+        $collection->loadRoutes();
+
+        $this->assertArrayHasKey('dean/grades', $collection->getRoutes('GET'));
+    }
+
     public function testTheTileOpensTheGradesPageForStudents(): void
     {
         $this->assertSame(site_url('student/grades'), array_column(global_apps('student'), 'url', 'key')['grades']);

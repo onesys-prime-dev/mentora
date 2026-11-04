@@ -23,6 +23,18 @@ $monitorEmptyText   = $monitorEmptyText ?? 'Courses in the programs you chair wi
 $monitorBackUrl     = $monitorBackUrl ?? null;
 $monitorBackLabel   = $monitorBackLabel ?? 'Back';
 
+// "View grade records →": the Grades page that goes with this one, for the term shown (the chairperson's Program tab;
+// the dean's drill-down sets the dean's page and its program).
+// A null base (set by the controller) means the Grades page is closed to this person: no link.
+$monitorGradesBase  = array_key_exists('monitorGradesBase', get_defined_vars()) ? $monitorGradesBase : site_url('chairperson/grades');
+$monitorGradesQuery = $monitorGradesQuery ?? ['tab' => 'program'];
+$gradesLink         = $monitorGradesBase === null ? null : $monitorGradesBase . (
+    ($gradesQuery = http_build_query(array_filter(
+        $monitorGradesQuery + ['term' => $filters->termId],
+        static fn ($value): bool => $value !== null && $value !== '',
+    ))) === '' ? '' : '?' . $gradesQuery
+);
+
 $link = static fn (array $override = []): string => $monitorBase
     . (($query = http_build_query($filters->toQuery($override))) === '' ? '' : '?' . $query);
 
@@ -61,12 +73,17 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
 
 <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scroll-smooth lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden" data-page-panel>
 
-    <div class="flex flex-col gap-1">
-        <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
-            <?= icon('score', 'h-6 w-6 shrink-0 text-brand') ?>
-            <?= esc($monitorHeading) ?>
-        </h1>
-        <p class="text-sm text-[#3D3D3D]"><?= esc($monitorSubheading) ?></p>
+    <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div class="flex flex-col gap-1">
+            <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
+                <?= icon('score', 'h-6 w-6 shrink-0 text-brand') ?>
+                <?= esc($monitorHeading) ?>
+            </h1>
+            <p class="text-sm text-[#3D3D3D]"><?= esc($monitorSubheading) ?></p>
+        </div>
+        <?php if ($gradesLink !== null): ?>
+        <a href="<?= esc($gradesLink, 'attr') ?>" data-grade-records class="inline-flex min-h-9 items-center justify-center rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">View grade records →</a>
+        <?php endif; ?>
     </div>
 
     <!-- One-line filter toolbar (term · date range · apply), like an analytics report bar. -->

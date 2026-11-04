@@ -344,6 +344,17 @@ final class GradeRoutesTest extends RouteTestCase
         $this->assertStringNotContainsString('data-gradebook-roster-back', $this->send('GET', "{$base}?embedded=1")['json']['html']);
     }
 
+    public function testTheEditableRosterKeepsItsIntro(): void
+    {
+        $this->as($this->teacher);
+
+        $html = html_entity_decode($this->send('GET', "instructor/api/courses/{$this->mine}/grades/roster")['json']['html']);
+
+        $this->assertStringContainsString('are editable here', $html);
+        $this->assertStringContainsString('Click a final grade to', $html);
+        $this->assertStringNotContainsString('Read-only. Quiz', $html);
+    }
+
     public function testReadonlyMakesTheRosterViewOnlyButNeverEditable(): void
     {
         $this->as($this->teacher);

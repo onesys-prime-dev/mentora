@@ -25,7 +25,7 @@ test("TC-GGR-01 Instructor opens Grades from the Apps menu, switches sections an
 
     // The Grades tile in the Apps menu leads to the page.
     await page.getByRole("button", { name: /apps/i }).first().click();
-    await page.getByRole("link", { name: /^Grades$/ }).first().click();
+    await page.locator("[data-app-tile='grades']").first().click();
     await expect(page).toHaveURL(/\/instructor\/grades$/);
 
     // The busiest section (most work waiting) is selected and its grid is shown.

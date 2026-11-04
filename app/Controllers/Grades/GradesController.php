@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Controllers\Grades;
 
 use App\Controllers\BaseController;
+use App\Services\Admin\Impersonation;
 use App\Services\Auth\RolePermissions;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Grades\PendingGrading;
 use App\Services\Grades\ChairpersonProgramOverview;
+use App\Services\Grades\DeanDepartmentOverview;
 use App\Services\Grades\GradesAtRisk;
+use App\Services\Grades\GradesBadge;
 use App\Services\Grades\GradesSeen;
 use App\Services\Grades\InstructorGradesOverview;
 use App\Services\Grades\StudentGradesOverview;
@@ -42,6 +45,10 @@ use CodeIgniter\Shield\Entities\User;
  * in the sub-departments they chair, without its finalize controls (finalizing is the instructor's); and Program,
  * the program's sections as a table with the finalization tracker, the chosen section's grid below it (read-only
  * until Edit as chairperson) and the program's at-risk list. A tab the chairperson cannot use is not shown.
+ *
+ * The dean's is one Department view (spec §9): the chairperson's Program table over every section of their
+ * department, narrowed by a program picker, with a Signed off column and, in place of the tracker, a strip whose
+ * counts link to Sign-off and Approvals; the chosen section's grid is always read-only.
  */
 class GradesController extends BaseController
 {
@@ -49,6 +56,9 @@ class GradesController extends BaseController
 
     /** The chairperson's tabs, and the lists inside each (the first is the default). */
     private const CHAIR_SUBS = ['mine' => ['gradebook', 'to-grade', 'at-risk'], 'program' => ['sections', 'at-risk']];
+
+    /** The dean's lists (the first is the default). */
+    private const DEAN_SUBS = ['sections', 'at-risk'];
 
     public function index(): string
     {
@@ -58,6 +68,10 @@ class GradesController extends BaseController
 
         if ($area === 'chairperson') {
             return $this->chairperson($user, $base);
+        }
+
+        if ($area === 'dean') {
+            return $this->dean($user, $base);
         }
 
         if ($area === 'student') {
@@ -230,17 +244,7 @@ class GradesController extends BaseController
         $program   = ['rows' => [], 'total' => 0, 'tracker' => ['finalized' => 0, 'ready' => 0, 'blocked' => 0, 'total' => 0]];
         $termEnd   = null;
 
-        // The table's choices, as the address gives them; anything else is the default.
-        $sort  = (string) $this->request->getGet('sort');
-        $dir   = (string) $this->request->getGet('dir');
-        $page  = $this->number('page');
-        $state = [
-            'q'    => mb_substr(trim((string) $this->request->getGet('q')), 0, 100),
-            'nf'   => $this->request->getGet('nf') === '1',
-            'sort' => in_array($sort, ChairpersonProgramOverview::SORTS, true) ? $sort : null,
-            'dir'  => in_array($dir, ['asc', 'desc'], true) ? $dir : null,
-            'page' => is_int($page) && $page > 0 ? $page : 1,
-        ];
+        $state = $this->tableState(ChairpersonProgramOverview::SORTS);
 
         try {
             $terms  = $overview->terms($user);
@@ -345,6 +349,158 @@ class GradesController extends BaseController
     }
 
     /**
+     * The dean's page: the sections of their department(s) in a term, of every program or the one picked (?program=,
+     * one of the department's, else a 404). The table is one page, searched, filtered and sorted from the address;
+     * the strip counts every section of the choice. The grid below is the chosen section's (?section=, else the
+     * page's first row), through the dean's read-only course API and only with courses.view, which that API asks;
+     * it is never editable here. A section outside the choice is a 404. department.monitor is the route's filter.
+     */
+    private function dean(User $user, string $base): string
+    {
+        $permissions = new RolePermissions();
+
+        $requestedSection = $this->number('section');
+        $requestedProgram = $this->number('program');
+
+        if ($requestedSection === false || $requestedProgram === false) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $reason = (string) $this->request->getGet('reason');
+        $reason = in_array($reason, GradesAtRisk::KINDS, true) ? $reason : null;
+
+        $sub = (string) $this->request->getGet('sub');
+        $sub = in_array($sub, self::DEAN_SUBS, true) ? $sub : self::DEAN_SUBS[0];
+
+        $overview   = new DeanDepartmentOverview();
+        $loadError  = false;
+        $programs   = [];
+        $terms      = [];
+        $termId     = null;
+        $sections   = []; // every section of the term and the program choice
+        $risk       = [];
+        $department = ['rows' => [], 'total' => 0, 'strip' => ['finalized' => 0, 'signed_off' => 0, 'total' => 0, 'requests_waiting' => 0]];
+        $termEnd    = null;
+        $state      = $this->tableState(DeanDepartmentOverview::SORTS);
+
+        try {
+            $programs = $overview->programs($user);
+
+            // A program that is not the department's is no page (thrown below, outside this catch).
+            if ($requestedProgram === null || in_array($requestedProgram, array_column($programs, 'id'), true)) {
+                $terms  = $overview->terms($user);
+                $termId = $overview->defaultTermId($terms, $this->number('term') ?: null);
+            }
+
+            if ($termId !== null) {
+                $sections   = $overview->all($user, $termId, $requestedProgram);
+                $risk       = (new GradesAtRisk())->forSections($sections, null);
+                $department = $overview->pageOf($sections, [
+                    'q'            => $state['q'],
+                    'notFinalized' => $state['nf'],
+                    'sort'         => $state['sort'],
+                    'dir'          => $state['dir'],
+                    'page'         => $state['page'],
+                ]);
+
+                // A page past the end shows the last one (the service's rule); the links follow what is shown.
+                $state['page'] = min($state['page'], max(1, (int) ceil($department['total'] / ChairpersonProgramOverview::PER_PAGE)));
+
+                $department['rows'] = $this->forNudge($department['rows'], (int) $user->id);
+                $termEnd            = $overview->termEnd($termId);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Grades failed to load: ' . $e->getMessage());
+            $loadError = true;
+        }
+
+        $byId = array_column($sections, null, 'offering_id');
+
+        // Another department's program, or a section outside the choice, is a 404.
+        if (! $loadError && (
+            ($requestedProgram !== null && ! in_array($requestedProgram, array_column($programs, 'id'), true))
+            || ($requestedSection !== null && ! isset($byId[$requestedSection]))
+        )) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $selected = $requestedSection !== null ? ($byId[$requestedSection] ?? null) : ($department['rows'][0] ?? null);
+
+        // As on the chairperson's Program tab: the action bar carries what Nudge needs, wherever the row is.
+        if ($selected !== null) {
+            $onPage   = array_column($department['rows'], null, 'offering_id');
+            $selected = $onPage[$selected['offering_id']] ?? $this->forNudge([$selected], (int) $user->id)[0];
+        }
+
+        // The At risk count is everyone, whatever reason is picked; the list keeps only that reason.
+        $atRisk = $reason === null ? $risk : array_values(array_filter(
+            $risk,
+            static fn (array $row): bool => in_array($reason, array_column($row['reasons'], 'kind'), true),
+        ));
+
+        // The strip's counts link to the pages where those decisions are made, only for a dean who may open them.
+        $stripLinks = [
+            'signed_off' => $permissions->allows($user, 'grades.signoff', 'dean') ? site_url('dean/signoff') . ($termId === null ? '' : '?term=' . $termId) : null,
+            'requests'   => $permissions->allows($user, 'grades.approve', 'dean') ? site_url('dean/approvals') . ($requestedProgram === null ? '' : '?program=' . $requestedProgram) : null,
+        ];
+
+        return view('pages/grades/index', [
+            'title'        => 'Grades',
+            'page'         => 'grades',
+            'user'         => $user,
+            'area'         => 'dean',
+            'base'         => $base,
+            'chairTabs'    => ['department'],
+            'tab'          => 'department',
+            'sub'          => $sub,
+            'terms'        => $terms,
+            'termId'       => $termId,
+            'programs'     => $programs,
+            'programId'    => $requestedProgram,
+            'sections'     => [],
+            'program'      => $department,
+            'state'        => $state,
+            'termEnd'      => $termEnd,
+            'selected'     => $selected,
+            'summary'      => null,
+            'counts'       => ['sections' => $department['strip']['total'], 'at-risk' => count($risk)],
+            'atRisk'       => $atRisk,
+            'reason'       => $reason,
+            'queue'        => [],
+            'types'        => [],
+            'filters'      => ['qsection' => null, 'type' => null, 'late' => false],
+            'canManage'    => false, // the dean never edits here, whatever else they may do
+            'canNudge'     => $permissions->allows($user, 'followups.manage', 'dean'),
+            'canOpen'      => $permissions->allows($user, 'courses.view', 'dean'),
+            'stripLinks'   => $stripLinks,
+            'loadError'    => $loadError,
+            'previousPage' => 'dashboard',
+        ]);
+    }
+
+    /**
+     * The section table's choices, as the address gives them; anything else is the default.
+     *
+     * @param list<string> $sorts the columns the table sorts by
+     *
+     * @return array{q: string, nf: bool, sort: ?string, dir: ?string, page: int}
+     */
+    private function tableState(array $sorts): array
+    {
+        $sort = (string) $this->request->getGet('sort');
+        $dir  = (string) $this->request->getGet('dir');
+        $page = $this->number('page');
+
+        return [
+            'q'    => mb_substr(trim((string) $this->request->getGet('q')), 0, 100),
+            'nf'   => $this->request->getGet('nf') === '1',
+            'sort' => in_array($sort, $sorts, true) ? $sort : null,
+            'dir'  => in_array($dir, ['asc', 'desc'], true) ? $dir : null,
+            'page' => is_int($page) && $page > 0 ? $page : 1,
+        ];
+    }
+
+    /**
      * Each row with what Nudge words its message from and sends to: oldest_days (withOldestWaiting) and recipients,
      * the section's instructors less the chairperson themselves (the Instructor column still names everyone).
      *
@@ -396,7 +552,7 @@ class GradesController extends BaseController
     {
         $area = $this->request->getUri()->getSegment(1);
 
-        return in_array($area, ['instructor', 'student', 'chairperson'], true) ? $area : 'instructor';
+        return in_array($area, ['instructor', 'student', 'chairperson', 'dean'], true) ? $area : 'instructor';
     }
 
     /**
@@ -439,12 +595,9 @@ class GradesController extends BaseController
                 $summary     = $overview->summary($rows, $scaleId);
                 $bar         = $overview->barLine($term, $rows, date('Y-m-d'));
 
-                // Every row is remembered as shown, so a grade published since the last look is a change too;
-                // an unpublished row shows only its chip (a withdrawn one keeps its Withdrawn tag).
+                // Every row is remembered as shown, so a grade published since the last look is a change too.
                 foreach ($rows as $row) {
-                    $shown = $row['published'] || $row['withdrawn'] ? $row : ['tag' => 'Not published yet'] + $row;
-
-                    $signatures[$row['offering_id']] = GradesSeen::signature($shown);
+                    $signatures[$row['offering_id']] = GradesSeen::shownSignature($row);
                 }
 
                 $changed = $seen->changed((int) $viewer->id, (int) $user->id, $signatures);
@@ -478,6 +631,12 @@ class GradesController extends BaseController
 
         if (! $loadError) {
             $seen->remember((int) $viewer->id, (int) $user->id, $signatures);
+
+            // What they have now seen no longer counts on their Grades tile: the next page counts again rather
+            // than show the cached number for up to a minute. Nothing was remembered while viewing as them.
+            if (! Impersonation::active()) {
+                GradesBadge::forget((int) $viewer->id, $links['area']);
+            }
         }
 
         return $html;

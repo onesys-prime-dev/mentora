@@ -36,8 +36,19 @@ final class ChairpersonProgramOverview
      */
     public function terms(User $chair): array
     {
-        $subDepartments = $this->subDepartments($chair);
+        return $this->termsIn($this->subDepartments($chair));
+    }
 
+    /**
+     * Terms of the active or completed sections in these sub-departments, newest first: what terms() reads for
+     * the chairperson, and the dean's Department tab for the sub-departments of their department(s).
+     *
+     * @param list<int> $subDepartments
+     *
+     * @return list<array{id: int, name: string, academic_year: string, status: string}>
+     */
+    public function termsIn(array $subDepartments): array
+    {
         if ($subDepartments === []) {
             return [];
         }
@@ -87,12 +98,16 @@ final class ChairpersonProgramOverview
     /**
      * sections() over rows already read with all().
      *
+     * $sorts are the columns the table may sort by; a caller whose rows carry more columns (the dean's Signed
+     * off) passes its own list.
+     *
      * @param list<array<string, mixed>>                                                         $all
      * @param array{q?: string, notFinalized?: bool, sort?: string, dir?: string, page?: int} $opts
+     * @param list<string>                                                                       $sorts
      *
      * @return array{rows: list<array<string, mixed>>, total: int, tracker: array{finalized: int, ready: int, blocked: int, total: int}}
      */
-    public function pageOf(array $all, array $opts = []): array
+    public function pageOf(array $all, array $opts = [], array $sorts = self::SORTS): array
     {
         $tracker = ['finalized' => 0, 'ready' => 0, 'blocked' => 0, 'total' => count($all)];
 
@@ -113,7 +128,7 @@ final class ChairpersonProgramOverview
             $rows = array_values(array_filter($rows, static fn (array $row): bool => $row['state'] !== 'finalized'));
         }
 
-        $sort = in_array($opts['sort'] ?? null, self::SORTS, true) ? $opts['sort'] : 'section';
+        $sort = in_array($opts['sort'] ?? null, $sorts, true) ? $opts['sort'] : 'section';
         $rows = $this->sort($rows, $sort, ($opts['dir'] ?? 'asc') === 'desc');
 
         $total = count($rows);
@@ -190,21 +205,45 @@ final class ChairpersonProgramOverview
      */
     private function termRows(User $chair, int $termId): array
     {
-        $subDepartments = $this->subDepartments($chair);
+        // The chairperson's rows have no program column: they chair the programs of their sub-departments.
+        return array_map(static function (array $row): array {
+            unset($row['program_id']);
 
+            return $row;
+        }, $this->rowsIn($this->subDepartments($chair), $termId));
+    }
+
+    /**
+     * Every active or completed section of the term in these sub-departments (and only this program, when one
+     * is given), in section order, with all the table's columns and the section's program_id: the chairperson's
+     * Program tab reads it for the sub-departments they chair, the dean's Department tab for those of their
+     * department(s). The query count does not grow with the number of sections.
+     *
+     * @param list<int> $subDepartments
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function rowsIn(array $subDepartments, int $termId, ?int $programId = null): array
+    {
         if ($subDepartments === []) {
             return [];
         }
 
         $db = db_connect();
 
-        $offerings = $db->table('course_offerings co')
-            ->select(['co.id AS offering_id', 'co.section_code', 'co.status AS offering_status', 'c.course_code', 'c.course_title'])
+        $builder = $db->table('course_offerings co')
+            ->select(['co.id AS offering_id', 'co.section_code', 'co.status AS offering_status', 'c.course_code', 'c.course_title', 'p.id AS program_id'])
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
             ->whereIn('p.sub_department_id', $subDepartments)
             ->where('co.term_id', $termId)
-            ->whereIn('co.status', self::OPEN)
+            ->whereIn('co.status', self::OPEN);
+
+        if ($programId !== null) {
+            $builder->where('p.id', $programId);
+        }
+
+        $offerings = $builder
             ->orderBy('c.course_code', 'ASC')
             ->orderBy('co.section_code', 'ASC')
             ->orderBy('co.id', 'ASC')
@@ -242,6 +281,7 @@ final class ChairpersonProgramOverview
                 'note' => $state['note'],
                 'has_scheme' => $state['has_scheme'],
                 'offering_status' => (string) $offering['offering_status'],
+                'program_id' => (int) $offering['program_id'],
             ];
         }
 

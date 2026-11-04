@@ -4,12 +4,16 @@
 |--------------------------------------------------------------------------
 | One global app tile (see global_apps() in navigation_helper.php).
 |--------------------------------------------------------------------------
-| $app      array{key, label, icon, url}
+| $app      array{key, label, icon, url, badge?: int, badge_label?: string}
 | $variant  'dashboard' (Quick Access card) | 'menu' (header app menu)
 | $active   bool — the page you're on
 |
 | An app without a url isn't built yet: same icon and label, but no link
 | and no hover, so it doesn't read as clickable.
+|
+| A badge (the Grades tile's count, GradesBadge) is a pill on the square's
+| corner: the number ("99+" from 100) for the eye, and badge_label ("3
+| waiting to grade") for screen readers and on hover. 0 draws nothing.
 */
 
 $variant ??= 'dashboard';
@@ -33,6 +37,8 @@ $surface = match (true) {
     default => 'bg-white/30 border-black/5',
 };
 
+$badge = (int) ($app['badge'] ?? 0);
+
 $hover = $isLive && !$active
     ? ($variant === 'menu' ? 'group-hover:bg-brand-tint' : 'group-hover:bg-white/60')
     : '';
@@ -49,8 +55,17 @@ $hover = $isLive && !$active
     <?php endif; ?>
     data-app-tile="<?= esc($app['key'], 'attr') ?>">
 
-    <span class="<?= $square ?> flex justify-center items-center border shadow-md transition <?= $surface ?> <?= $hover ?>">
+    <span class="relative <?= $square ?> flex justify-center items-center border shadow-md transition <?= $surface ?> <?= $hover ?>">
         <?= icon($app['icon'], $iconClass) ?>
+
+        <?php if ($badge > 0): ?>
+            <span
+                class="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-[#C33939] text-[10px] font-bold leading-none text-white ring-2 ring-white tabular-nums"
+                role="img"
+                aria-label="<?= esc($app['badge_label'] ?? (string) $badge) ?>"
+                title="<?= esc($app['badge_label'] ?? (string) $badge) ?>"
+                data-app-badge><?= esc(\App\Services\Grades\GradesBadge::text($badge)) ?></span>
+        <?php endif; ?>
     </span>
 
     <span class="text-[11px] leading-tight text-center <?= $active ? 'font-semibold text-brand' : 'text-gray-700' ?>">

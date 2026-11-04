@@ -76,6 +76,8 @@ final class PermissionsTakeEffectTest extends RouteTestCase
         yield 'dean approvals'      => ['dean', 'grades.approve', 'GET', 'dean/approvals'];
         yield 'dean sign-off'       => ['dean', 'grades.signoff', 'GET', 'dean/signoff'];
         yield 'dean announcements'  => ['dean', 'department.announce', 'GET', 'dean/announcements'];
+        yield 'dean grades'         => ['dean', 'department.monitor', 'GET', 'dean/grades'];
+        yield 'dean grades download' => ['dean', 'department.monitor', 'GET', 'dean/grades/download-department'];
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -86,6 +88,7 @@ final class PermissionsTakeEffectTest extends RouteTestCase
         yield 'Announcements' => ['announcements', 'department.announce'];
         yield 'Courses'       => ['courses', 'courses.view'];
         yield 'Monitor'       => ['monitor-department', 'department.monitor'];
+        yield 'Grades'        => ['grades', 'department.monitor'];
     }
 
     /** A dean's menu shows only the pages they can open (QA AMB-AUTH-08); the rest of it stays. */
