@@ -25,6 +25,9 @@ import { createGroupPicker, MAX_MEMBERS } from "./group.js";
 import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
+import { bindMenuTriggers } from "./gestures.js";
+import { chatMenuItems } from "./menu-items.js";
+import { createMenu } from "./menu.js";
 import { conversationRow, dayLabel, messageNode } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
@@ -50,6 +53,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const lockEl = $("[data-role=lock]");
     const lockNoteEl = $("[data-role=lock-note]");
     const olderEl = $("[data-role=older]");
+    const archivedOpenEl = $("[data-role=archived-open]");
+    const archivedBackEl = $("[data-role=archived-back]");
     const pickerNote = $("[data-role=picker-state]");
 
     const listGuard = createGuard();
@@ -58,6 +63,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const state = {
         filter: "all",
         unreadOnly: false,
+        archived: false,
+        archivedCount: 0,
         search: "",
         conversations: [],
         listLoaded: false,
@@ -108,9 +115,17 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const needle = state.search.trim().toLowerCase();
         const shown = state.conversations.filter((c) => needle === "" || [c.name, c.subtitle].some((t) => (t ?? "").toLowerCase().includes(needle)));
 
+        if (archivedOpenEl) {
+            archivedOpenEl.hidden = state.archived || state.archivedCount <= 0;
+            archivedOpenEl.querySelector("[data-role=archived-count]").textContent = String(state.archivedCount);
+        }
+        if (archivedBackEl) {
+            archivedBackEl.hidden = !state.archived;
+        }
+
         rowsEl.replaceChildren(...shown.map((c) => conversationRow(c, { selected: c.id === state.openId })));
 
-        if (state.conversations.length === 0 && state.filter === "all" && !state.unreadOnly) {
+        if (state.conversations.length === 0 && state.filter === "all" && !state.unreadOnly && !state.archived) {
             listState("empty");
         } else {
             listState(shown.length === 0 ? "no-match" : null);
@@ -119,7 +134,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
     async function loadList() {
         const token = listGuard.next();
-        const { status, data } = await api.conversations({ filter: state.filter, unread: state.unreadOnly });
+        const { status, data } = await api.conversations({ filter: state.filter, unread: state.unreadOnly, archived: state.archived });
 
         if (!listGuard.isCurrent(token)) {
             return;
@@ -135,6 +150,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.listLoaded = true;
         state.conversations = data.conversations;
+        state.archivedCount = data.archived_count ?? state.archivedCount;
         updateBadge(data.unread ?? 0);
         renderList();
 
@@ -880,7 +896,88 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
     // ---- the list controls ---------------------------------------------
 
+    // ---- the chat menu -------------------------------------------------
+
+    const menu = createMenu(document);
+
+    async function chatAction(c, action) {
+        const result = await api.chatAction(c.id, action);
+
+        if (result.status === 409 && result.data?.error === "limit") {
+            showSafetyNote(`You can pin up to ${result.data.max ?? 5} chats.`);
+        } else if (result.status === 403) {
+            showSafetyNote("You can't do that in this chat.");
+        } else if (result.status !== 200) {
+            showSafetyNote("That didn't work. Try again.");
+        } else {
+            if (action === "delete" && state.openId === c.id) {
+                closeThread();
+            }
+            await loadList();
+        }
+    }
+
+    function openChatMenu(row, at) {
+        const c = state.conversations.find((x) => x.id === Number(row.dataset.id));
+
+        if (!c) {
+            return;
+        }
+
+        const act = (name) => () => chatAction(c, name);
+        const handlers = {
+            pin: act("pin"),
+            unpin: act("unpin"),
+            unread: act("unread"),
+            mute: act("mute"),
+            unmute: act("unmute"),
+            archive: act("archive"),
+            unarchive: act("unarchive"),
+            delete: act("delete"),
+            // The existing block flow: open the chat and ask for the second click there.
+            block: async () => {
+                await open(c.id);
+                state.confirmBlock = c.id;
+                applyConversation(current() ?? c);
+            },
+        };
+
+        menu.open(chatMenuItems(c, handlers), at);
+    }
+
+    bindMenuTriggers(rowsEl, { selector: "button[data-id]", onOpen: openChatMenu });
+
+    const openFromMore = (event) => {
+        const more = event.target.closest?.("[data-role=row-menu]");
+
+        if (!more) {
+            return false;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const rect = more.getBoundingClientRect();
+
+        openChatMenu(more.closest("button[data-id]"), { x: rect.left, y: rect.bottom, trigger: more });
+
+        return true;
+    };
+
+    rowsEl.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+            openFromMore(event);
+        }
+    });
+
+    archivedOpenEl?.addEventListener("click", () => { state.archived = true; closeThread(); listState("loading"); loadList(); });
+    archivedBackEl?.addEventListener("click", () => { state.archived = false; closeThread(); loadList(); });
+
     rowsEl.addEventListener("click", (event) => {
+        if (openFromMore(event)) {
+            return;
+        }
+
         const row = event.target.closest("button[data-id]");
 
         if (row) {

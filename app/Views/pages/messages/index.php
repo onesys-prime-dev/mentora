@@ -58,6 +58,8 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <p>Messages could not load.</p>
                     <button type="button" data-role="retry-list" class="mt-2 rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand hover:bg-brand/10">Try again</button>
                 </div>
+                <button type="button" data-role="archived-open" hidden class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-2.5 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span>Archived chats (<span data-role="archived-count">0</span>)</span><span aria-hidden="true">&rsaquo;</span></button>
+                <button type="button" data-role="archived-back" hidden class="flex w-full items-center gap-1 border-b border-gray-100 px-4 py-2.5 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span aria-hidden="true">&lsaquo;</span> Back to chats</button>
                 <div data-role="rows"></div>
             </div>
         </section>

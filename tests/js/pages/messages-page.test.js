@@ -14,6 +14,7 @@ const SHELL = `
     <div data-role="list">
       <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p>
       <div data-state="error" hidden><button data-role="retry-list"></button></div>
+      <button data-role="archived-open" hidden><span data-role="archived-count"></span></button><button data-role="archived-back" hidden></button>
       <div data-role="rows"></div>
     </div>
   </section>
@@ -128,6 +129,25 @@ describe("the conversation list", () => {
 
     });
 
+    it("opens the Archived view from the count row and comes back", async () => {
+
+        const api = makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv()], unread: 0, archived_count: 2 })) });
+
+        await mount(api);
+        expect(q("[data-role=archived-open]").hidden).toBe(false);
+        expect(q("[data-role=archived-count]").textContent).toBe("2");
+
+        q("[data-role=archived-open]").click();
+        await flush();
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "all", unread: false, archived: true });
+        expect(q("[data-role=archived-back]").hidden).toBe(false);
+
+        q("[data-role=archived-back]").click();
+        await flush();
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "all", unread: false, archived: false });
+
+    });
+
     it("asks the server for the chosen kind and for unread only", async () => {
 
         const api = makeApi();
@@ -135,13 +155,13 @@ describe("the conversation list", () => {
         await mount(api);
         q("[data-chip=direct]").click();
         await flush();
-        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: false });
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: false, archived: false });
         expect(q("[data-chip=direct]").getAttribute("aria-pressed")).toBe("true");
         expect(q("[data-chip=all]").getAttribute("aria-pressed")).toBe("false");
 
         q("[data-role=unread-toggle]").click();
         await flush();
-        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: true });
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: true, archived: false });
 
     });
 

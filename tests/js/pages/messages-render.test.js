@@ -143,6 +143,32 @@ describe("a conversation row", () => {
 
     });
 
+    it("shows a pin for a pinned chat and a muted icon for a muted one", () => {
+
+        expect(conversationRow(row(), { selected: false }).querySelector("svg")).toBeNull();
+
+        const node = conversationRow(row({ pinned: true, muted: true }), { selected: false });
+
+        expect(node.querySelectorAll("svg")).toHaveLength(2);
+        expect(node.querySelector("[data-muted]")).not.toBeNull();
+
+    });
+
+    it("dims an archived chat and offers the chat actions control", () => {
+
+        const node = conversationRow(row({ archived: true }), { selected: false });
+
+        expect(node.className).toContain("opacity-70");
+        expect(node.querySelector("[aria-label='Chat actions']")).not.toBeNull();
+
+    });
+
+    it("shows a dot for a chat marked unread", () => {
+
+        expect(conversationRow(row({ marked_unread: true }), { selected: false }).querySelector("[data-marked-unread]")).not.toBeNull();
+
+    });
+
     it("shows the child's name under a parent thread", () => {
 
         expect(conversationRow(row({ subtitle: "Stu Dent" }), { selected: false }).textContent).toContain("Stu Dent");

@@ -22,6 +22,8 @@ const URL_PATTERN = /https?:\/\/(?:(?!&quot;|&#39;|&lt;|&gt;)\S)+/g;
 
 const PIN = "<svg aria-hidden=\"true\" viewBox=\"0 0 20 20\" class=\"mr-1 inline h-3 w-3 text-brand\" fill=\"currentColor\"><path d=\"M11 2l7 7-2 1-3-1-3 3 1 4-2 1-3-3-4 4-1-1 4-4-3-3 1-2 4 1 3-3-1-3z\"/></svg>";
 
+const MUTED = "<svg aria-hidden=\"true\" data-muted viewBox=\"0 0 20 20\" class=\"ml-1 inline h-3 w-3 text-gray-400\" fill=\"currentColor\"><path d=\"M10 3a5 5 0 00-5 5v3l-1.5 3h13L15 11V8a5 5 0 00-5-5zm-2 12a2 2 0 004 0H8zM3 2l15 15-1 1L2 3z\"/></svg>";
+
 export function escapeHtml(text) {
     return String(text ?? "").replace(/[&<>"']/g, (c) => ESCAPES[c]);
 }
@@ -176,11 +178,15 @@ export function conversationRow(conversation, { selected }) {
     const text = el("span", "min-w-0 flex-1");
     const name = el("span", "block truncate text-[13px] font-semibold text-gray-900");
 
-    if (conversation.type === "course") {
+    if (conversation.pinned || conversation.type === "course") {
         name.insertAdjacentHTML("beforeend", PIN);
     }
 
     name.append(document.createTextNode(conversation.name ?? ""));
+
+    if (conversation.muted) {
+        name.insertAdjacentHTML("beforeend", MUTED);
+    }
     text.append(name);
 
     if (conversation.subtitle) {
@@ -200,7 +206,27 @@ export function conversationRow(conversation, { selected }) {
         meta.append(pill, el("span", "sr-only", " unread"));
     }
 
-    row.append(avatar, text, meta);
+    if (conversation.marked_unread && !(conversation.unread > 0)) {
+        const dot = el("span", "mt-0.5 inline-block h-2 w-2 rounded-full bg-brand");
+
+        dot.dataset.markedUnread = "";
+        meta.append(dot, el("span", "sr-only", " marked unread"));
+    }
+
+    // Not a nested <button>: a span with the button role, opened by click or Enter/Space (messages.js).
+    const more = el("span", "ml-1 flex-none cursor-pointer rounded-full px-1.5 text-[15px] leading-none text-gray-500 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 max-md:opacity-100", "⋯");
+
+    more.dataset.role = "row-menu";
+    more.setAttribute("role", "button");
+    more.setAttribute("tabindex", "0");
+    more.setAttribute("aria-label", "Chat actions");
+
+    row.className += " group/row";
+    if (conversation.archived) {
+        row.className += " opacity-70";
+    }
+
+    row.append(avatar, text, meta, more);
 
     return row;
 }
