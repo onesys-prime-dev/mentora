@@ -445,6 +445,14 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations', 'Messaging\ConversationController::start');
     $routes->post('conversations/(:num)/lock', 'Messaging\ConversationController::lock/$1');
     $routes->post('conversations/(:num)/unlock', 'Messaging\ConversationController::unlock/$1');
+    $routes->post('conversations/(:num)/pin', 'Messaging\ChatStateController::pin/$1');
+    $routes->post('conversations/(:num)/unpin', 'Messaging\ChatStateController::unpin/$1');
+    $routes->post('conversations/(:num)/mute', 'Messaging\ChatStateController::mute/$1');
+    $routes->post('conversations/(:num)/unmute', 'Messaging\ChatStateController::unmute/$1');
+    $routes->post('conversations/(:num)/archive', 'Messaging\ChatStateController::archive/$1');
+    $routes->post('conversations/(:num)/unarchive', 'Messaging\ChatStateController::unarchive/$1');
+    $routes->post('conversations/(:num)/unread', 'Messaging\ChatStateController::unread/$1');
+    $routes->post('conversations/(:num)/delete', 'Messaging\ChatStateController::delete/$1');
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');
     $routes->get('group-candidates', 'Messaging\GroupController::candidates');
