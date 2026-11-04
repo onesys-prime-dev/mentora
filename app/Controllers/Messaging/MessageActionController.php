@@ -14,7 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class MessageActionController extends MessagingController
 {
-    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'parent_thread' => 403,'too_late' => 403, 'invalid' => 422, 'limit' => 409, 'unavailable' => 503];
+    private const FAILURES = ['not_allowed' => 403, 'switched_off' => 403, 'parent_thread' => 403, 'too_late' => 403, 'invalid' => 422, 'limit' => 409, 'unavailable' => 503];
 
     public function react(int $conversationId, int $messageId): ResponseInterface
     {

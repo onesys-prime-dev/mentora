@@ -395,6 +395,12 @@ class MessageActions
                 continue;
             }
 
+            if ($target['subject_student_id'] !== null) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'parent_thread'];
+
+                continue;
+            }
+
             if (! $this->policy->canPost($this->resolver->forPost($user, $target))) {
                 $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'not_allowed'];
 

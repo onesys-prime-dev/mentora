@@ -184,7 +184,7 @@ final class MessageActionsForwardTest extends DatabaseTestCase
         $result = $this->actions()->forward($this->student, $this->conversation, $this->message, [$locked, $open]);
 
         $this->assertTrue($result['ok']);
-        $this->assertFalse($result['results'][0]['ok']);
+        $this->assertSame(['conversation_id' => $locked, 'ok' => false, 'reason' => 'not_allowed'], $result['results'][0]);
         $this->assertTrue($result['results'][1]['ok']);
         $this->assertSame(0, db_connect()->table('messages')->where('conversation_id', $locked)->countAllResults());
         $this->assertSame(1, db_connect()->table('messages')->where('conversation_id', $open)->countAllResults());
@@ -211,6 +211,33 @@ final class MessageActionsForwardTest extends DatabaseTestCase
         $this->assertSame(0, db_connect()->table('messages')->where('conversation_id', $a)->countAllResults());
     }
 
+    public function testForwardingIntoAParentThreadIsRefusedForThatTargetOnly(): void
+    {
+        [$parent, $open] = $this->chats(2);
+        db_connect()->table('conversations')->where('id', $parent)->update(['subject_student_id' => $this->student->id]);
+
+        $result = $this->actions()->forward($this->student, $this->conversation, $this->message, [$parent, $open]);
+
+        $this->assertSame([['conversation_id' => $parent, 'ok' => false, 'reason' => 'parent_thread'], ['conversation_id' => $open, 'ok' => true]], $result['results']);
+        $this->assertSame(0, db_connect()->table('messages')->where('conversation_id', $parent)->countAllResults());
+        $this->assertSame(1, db_connect()->table('messages')->where('conversation_id', $open)->countAllResults());
+    }
+
+    public function testABlockedTargetIsRefusedForThatTargetOnly(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Other', 'Blocker', null, $this->institution);
+        CourseFactory::assignInstructor($this->offering, $other);
+        $blocked = (int) (new ConversationService())->startDirect($this->student, (int) $other->id)['id'];
+        [$open]  = $this->chats(1);
+        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $other->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+
+        $result = $this->actions()->forward($this->student, $this->conversation, $this->message, [$blocked, $open]);
+
+        $this->assertSame(['conversation_id' => $blocked, 'ok' => false, 'reason' => 'not_allowed'], $result['results'][0]);
+        $this->assertTrue($result['results'][1]['ok']);
+        $this->assertSame(0, db_connect()->table('messages')->where('conversation_id', $blocked)->countAllResults());
+    }
+
     public function testCanForwardFollowsTheSwitchAndParentThread(): void
     {
         $service = new MessageService($this->cipher);
@@ -218,7 +245,9 @@ final class MessageActionsForwardTest extends DatabaseTestCase
         $this->assertTrue($service->page($this->student, $this->conversation)['messages'][0]['can_forward']);
 
         db_connect()->table('conversations')->where('id', $this->conversation)->update(['allow_forwarding' => 0]);
-        $off = new MessageService($this->cipher);
-        $this->assertFalse($off->page($this->student, $this->conversation)['messages'][0]['can_forward']);
+        $this->assertFalse((new MessageService($this->cipher))->page($this->student, $this->conversation)['messages'][0]['can_forward']);
+
+        db_connect()->table('conversations')->where('id', $this->conversation)->update(['allow_forwarding' => 1, 'subject_student_id' => $this->student->id]);
+        $this->assertFalse((new MessageService($this->cipher))->page($this->student, $this->conversation)['messages'][0]['can_forward']);
     }
 }
