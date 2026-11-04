@@ -9,7 +9,9 @@
  * grid), To grade, or At risk. The student's bar has no tabs: the term's line on the left, "Change term" on the
  * right; the list is the term's courses (partials/student).
  *
- * The student's page also gets rows, summary, bar (StudentGradesOverview::barLine) and hasScale.
+ * The student's page also gets rows, summary, bar (StudentGradesOverview::barLine) and hasScale, and where its
+ * links go (courseBase, breakdownBase, reportBase). The parent's page is the student's for one child (area
+ * "parent"): it also gets the children and the child shown (childId), for the "Showing" switcher in the head.
  *
  * @var string                     $area
  * @var string                     $base     this page's address, without a query
@@ -24,7 +26,16 @@
  * @var list<string>               $types
  * @var array<string, mixed>       $filters  the To grade filters: qsection, type, late
  * @var bool                       $loadError
+ * @var string|null                $backTo   the way back; the area's dashboard when not given (not $backUrl, which page-head would also draw)
  */
+
+// The student's page, for the student or for a parent looking at their child.
+$studentShaped = $area === 'student' || $area === 'parent';
+
+// The parent's head carries the existing child switcher, opening the same page for another child.
+$actions = $area === 'parent' && count($children ?? []) > 1
+    ? view('pages/parent/partials/child-switcher', ['children' => $children, 'selected' => (int) $childId, 'path' => 'grades'], ['saveData' => false])
+    : '';
 
 // A link to this page that keeps the term; the rest is what the link is for.
 $link = static fn (array $params = []): string => $base . '?' . http_build_query(array_filter(
@@ -44,26 +55,31 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 <div class="py-3">
 
 <?php // The way back stays on the background, above the panel, not in the box. ?>
-<?= view('components/back-link', ['backUrl' => site_url($area . '/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
+<?= view('components/back-link', ['backUrl' => $backTo ?? site_url($area . '/dashboard'), 'backLabel' => 'Back to dashboard'], ['saveData' => false]) ?>
 
 <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
         'title'       => 'Grades',
         'icon'        => 'grades',
-        'description' => $area === 'student' ? 'Your grades in every course, as they stand now.' : 'Every section you teach.',
+        'description' => match ($area) {
+            'student' => 'Your grades in every course, as they stand now.',
+            'parent'  => "Your child's grades in every course.",
+            default   => 'Every section you teach.',
+        },
+        'actions'     => $actions,
     ], ['saveData' => false]) ?>
 
     <?php if ($loadError): ?>
 
         <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#C33939]/30 bg-white px-8 py-14 text-center" role="alert" data-load-error>
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
-            <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your grades</span>
+            <span class="text-sm font-semibold text-[#1A1C1E]"><?= $area === 'parent' ? "We could not load your child's grades" : 'We could not load your grades' ?></span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc($area === 'student' ? $link() : $link(['tab' => $tab === 'gradebook' ? null : $tab])) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($studentShaped ? $link() : $link(['tab' => $tab === 'gradebook' ? null : $tab])) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
-    <?php elseif ($area === 'student'): ?>
+    <?php elseif ($studentShaped): ?>
 
         <?php if ($bar !== null): ?>
             <?php
@@ -90,7 +106,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
             </div>
         <?php endif; ?>
 
-        <?php $data = compact('rows', 'summary', 'hasScale') + ['hasTerms' => $terms !== []]; ?>
+        <?php $data = compact('rows', 'summary', 'hasScale', 'courseBase', 'breakdownBase', 'reportBase', 'area') + ['hasTerms' => $terms !== []]; ?>
 
         <?php if ($rows !== []): ?>
             <?= view('pages/grades/partials/student/summary', $data, ['saveData' => false]) ?>

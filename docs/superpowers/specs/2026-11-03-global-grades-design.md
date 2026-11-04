@@ -178,6 +178,15 @@ Expanded rows show periods, categories and standing, **never an item, a manual s
 Each finalized row has **Download report** (the existing PDF route, audited as `grades.report_exported`).
 The "changed" badge is per parent.
 
+Phase 3 layout (agreed 2026-11-03): the student page's layout, at `parent/children/{id}/grades`
+(`parent/grades` opens the first linked child; the portal-off and not-linked pages are the existing parent
+ones). The page head carries the existing "Showing [Name ▾]" child switcher (`pages/parent/partials/
+child-switcher`, two or more children only) and the description "Your child's grades in every course."
+The bar, summary, rows and small breakdown are the student's. Course links and "Open course grades →" go
+to the parent's view of the course (`parent/children/{id}/courses/{offering}/{slug}…`); a finalized row
+adds **Download report**. A child who is also staff shows nothing, as on the parent course tab
+(`ParentAccessService::readsAsStudent`). The parent's app menu gets a Grades tile.
+
 ## 7. Instructor workbench (Q7–Q9, Q15, Q16)
 
 - **Section cards** above the content, one per section the instructor teaches this term: code and

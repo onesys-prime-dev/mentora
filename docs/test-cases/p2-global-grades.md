@@ -1,10 +1,10 @@
 # P2 test cases: the Grades page (every section an instructor teaches, every course a student takes)
 
-6 cases in the browser, and the PHP and JavaScript tests that stand behind the rest. Read
+9 cases in the browser, and the PHP and JavaScript tests that stand behind the rest. Read
 [README.md](README.md) first. All are `Draft` (see the README).
 
 `tests/e2e/global-grades.spec.js` holds TC-GGR-01 to 03, and `tests/e2e/global-grades-student.spec.js` TC-GGR-04 to 06 (the
-student's page, below). The instructor cases run as the main instructor
+student's page, below) and `tests/e2e/global-grades-parent.spec.js` TC-GGR-07 to 09 (the parent's page, for a linked child). The instructor cases run as the main instructor
 (`instructor1@mentora.test`) on the demo data: **IT101-A** (5 students, work waiting to be graded, and a
 manual Class Participation item) and **IT101-B** (nobody enrolled, so its grades are ready to be
 finalized). The cases leave the data as they found it: the score is put back, the students and the
@@ -22,6 +22,9 @@ it are tested without a browser (see "Already automated").
 | [TC-GGR-04](#tc-ggr-04-student-opens-grades-from-the-apps-menu-sees-the-term-and-expands-a-course) | Student opens Grades from the Apps menu, sees the term and expands a course | Student |
 | [TC-GGR-05](#tc-ggr-05-student-changes-term-with-the-picker) | Student changes term with the picker | Student |
 | [TC-GGR-06](#tc-ggr-06-a-grade-changed-by-the-instructor-shows-changed-once) | A grade changed by the instructor shows Changed once | Student, Instructor |
+| [TC-GGR-07](#tc-ggr-07-parent-opens-grades-from-the-apps-menu-sees-the-childs-courses-and-expands-one) | Parent opens Grades from the Apps menu, sees the child's courses and expands one | Parent |
+| [TC-GGR-08](#tc-ggr-08-parent-with-two-children-switches-child) | Parent with two children switches child | Parent |
+| [TC-GGR-09](#tc-ggr-09-with-the-parent-portal-off-the-parent-sees-the-portal-off-page) | With the parent portal off the parent sees the portal-off page | Parent, Institution administrator |
 
 ---
 
@@ -154,4 +157,60 @@ it are tested without a browser (see "Already automated").
   as someone does not clear it)
 - **Playwright:** `tests/e2e/global-grades-student.spec.js`
 - **Basis:** `app/Services/Grades/GradesSeen.php`, `app/Models/Grades/GradesSeenModel.php`
+- **Review:** Draft
+
+### TC-GGR-07 Parent opens Grades from the Apps menu, sees the child's courses and expands one
+
+- **Role:** Parent. **Priority:** P2
+- **Data:** parent1 (follows student1 and student5); both children are in IT101-A, which has a published scheme.
+- **Steps:**
+  1. Sign in, open the Apps menu, then Grades.
+  2. Read the description, the term line, the summary and the IT101-A row.
+  3. Press the arrow on IT101-A: its breakdown opens under it.
+  4. Press "Open course grades →".
+- **Expected:**
+  - The page opens at `parent/children/{child}/grades` for the first child; it reads "Your child's grades in
+    every course.", with the term line and the summary cards.
+  - The breakdown shows the course's periods or categories and "Passing is {p}%", and lists no assessment, item or
+    manual score.
+  - The link opens the parent's view of the course (read-only, "View only").
+- **Already automated:** `tests/feature/ParentGradesPageTest.php`; `tests/feature/ParentGradesBreakdownTest.php`;
+  `tests/feature/ParentAuthorizationMatrixTest.php` (another child: 404); `tests/database/GlobalGradesQueryBudgetTest.php`
+- **Playwright:** `tests/e2e/global-grades-parent.spec.js`
+- **Basis:** `app/Controllers/Grades/GradesController.php`, `app/Controllers/Grades/ParentCourseGradesController.php`,
+  `app/Services/Grades/CourseBreakdownFragment.php`, `app/Views/pages/grades/`
+- **Review:** Draft
+
+### TC-GGR-08 Parent with two children switches child
+
+- **Role:** Parent. **Priority:** P2
+- **Data:** parent1 follows two children.
+- **Steps:**
+  1. Open `parent/grades`.
+  2. In "Showing", choose the other child.
+- **Expected:**
+  - "Showing" lists both children, with the one shown selected.
+  - Choosing the other opens the same page for that child (the address changes to the other child's id), with its
+    own term line and rows.
+- **Already automated:** `tests/feature/ParentGradesPageTest.php` (the switcher; one child shows none)
+- **Playwright:** `tests/e2e/global-grades-parent.spec.js`
+- **Basis:** `app/Views/pages/parent/partials/child-switcher.php`, `app/Views/pages/grades/index.php`
+- **Review:** Draft
+
+### TC-GGR-09 With the parent portal off the parent sees the portal-off page
+
+- **Role:** Parent, Institution administrator. **Priority:** P2
+- **Data:** parent1. The institution administrator switches the parent portal off in Institution settings, Parent
+  portal, and the case turns it back on at the end.
+- **Steps:**
+  1. As the administrator, set the parent portal to Off and save.
+  2. As the parent, open `parent/grades`.
+  3. As the administrator, set it back to On; the parent opens `parent/grades` again.
+- **Expected:**
+  - The parent sees "The parent portal is switched off" and no grade rows.
+  - After it is on again, the page opens the child's grades.
+- **Already automated:** `tests/feature/ParentGradesPageTest.php` (portal off and not linked use the existing
+  pages); `tests/feature/ParentGradesBreakdownTest.php` (the breakdown answers 403 JSON)
+- **Playwright:** `tests/e2e/global-grades-parent.spec.js`
+- **Basis:** `app/Controllers/Grades/GradesController.php`, `app/Controllers/Parents/ParentCalendarController.php`
 - **Review:** Draft

@@ -6,12 +6,17 @@
  * under it; the page script fetches it from data-breakdown-base/{offering}. Everything here reads without script.
  *
  * The course's name links to the course, a link of its own beside the disclosure, on every row but a withdrawn one
- * (the course routes refuse a withdrawn enrolment).
+ * (the course routes refuse a withdrawn enrolment). Where the links go is the caller's: the student's own views, or
+ * the parent's views of their child. With a reportBase, a finalized row also offers its grade report.
  *
  * Status and standing are words; their colour and icon only repeat them.
  *
  * @var list<array<string, mixed>> $rows     StudentGradesOverview::courses(), plus changed and updated (relative time)
- * @var bool                       $hasTerms whether the student has any term at all (the empty state's wording)
+ * @var string|null                $area          "parent" words the empty state for a parent; anything else is the student's
+ * @var bool                       $hasTerms     whether the student has any term at all (the empty state's wording)
+ * @var string                     $courseBase    the course links' prefix: {courseBase}/{offering}/{slug}
+ * @var string                     $breakdownBase the breakdowns' address, without the offering
+ * @var string|null                $reportBase    the reports' prefix ({reportBase}/{offering}/grades/report/mine); null for none
  */
 $chips = [
     'not_published' => ['label' => 'Not published yet', 'tone' => 'neutral', 'icon' => 'clock'],
@@ -37,15 +42,16 @@ $percent = static fn (?float $value): ?string => $value === null ? null : number
 
     <?php if ($rows === []): ?>
 
+        <?php $forParent = ($area ?? 'student') === 'parent'; ?>
         <?= view('components/empty-state', [
             'icon'  => 'grades',
-            'title' => ($hasTerms ?? false) ? 'No courses this term' : 'No courses yet',
-            'text'  => 'When you are enrolled in a course, its grade shows here.',
+            'title' => $forParent ? 'No courses to show' : (($hasTerms ?? false) ? 'No courses this term' : 'No courses yet'),
+            'text'  => $forParent ? 'When your child is enrolled in a course, its grade shows here.' : 'When you are enrolled in a course, its grade shows here.',
         ], ['saveData' => false]) ?>
 
     <?php else: ?>
 
-        <ul class="flex flex-col gap-3" data-grades-rows data-breakdown-base="<?= esc(site_url('student/api/grades/courses'), 'attr') ?>">
+        <ul class="flex flex-col gap-3" data-grades-rows data-breakdown-base="<?= esc($breakdownBase, 'attr') ?>">
 
             <?php foreach ($rows as $row): ?>
                 <?php
@@ -85,7 +91,7 @@ $percent = static fn (?float $value): ?string => $value === null ? null : number
                                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                     <h3 class="text-sm font-bold text-[#1A1C1E] sm:text-base">
                                         <?php if (! $row['withdrawn']): ?>
-                                            <a href="<?= esc(site_url('student/courses/' . $id . '/' . $row['slug']), 'attr') ?>" class="rounded hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2" data-course-link><?= esc($name) ?> · <?= esc($row['course_title']) ?></a>
+                                            <a href="<?= esc($courseBase . '/' . $id . '/' . $row['slug'], 'attr') ?>" class="rounded hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2" data-course-link><?= esc($name) ?> · <?= esc($row['course_title']) ?></a>
                                         <?php else: ?>
                                             <?= esc($name) ?> · <?= esc($row['course_title']) ?>
                                         <?php endif; ?>
@@ -95,6 +101,9 @@ $percent = static fn (?float $value): ?string => $value === null ? null : number
                                     <?php endif; ?>
                                 </div>
                                 <p class="mt-1 text-xs text-[#646464]"><?= esc(implode(' · ', $meta)) ?></p>
+                                <?php if (($reportBase ?? null) !== null && $row['finalized'] && ! $row['withdrawn']): ?>
+                                    <a href="<?= esc($reportBase . '/' . $id . '/grades/report/mine', 'attr') ?>" class="mt-2 inline-flex items-center gap-1.5 rounded text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2" data-report-link><?= icon('grades', 'h-3.5 w-3.5 text-current') ?>Download report</a>
+                                <?php endif; ?>
                             </div>
 
                             <div class="flex items-center justify-between gap-4 sm:contents">

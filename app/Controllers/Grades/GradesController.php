@@ -13,16 +13,24 @@ use App\Services\Grades\GradesSeen;
 use App\Services\Grades\InstructorGradesOverview;
 use App\Services\Grades\StudentGradesOverview;
 use App\Services\Institutions\AcademicDefaults;
+use App\Services\Parents\ParentAccessService;
+use App\Services\Parents\ParentPortal;
+use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\Shield\Entities\User;
 
 /**
  * The Grades app: grades across every section a person teaches or course they take, on one page, so term end
  * is not a course-by-course walk. One controller under each role's own area, the way Announcements is; the
- * instructor and the student have it so far (spec §2, §5, §7).
+ * instructor, the student and the parent have it so far (spec §2, §5, §6, §7).
  *
  * The student's page is one term at a time: a row per course with its grade, the summary with the GWA, and a
  * "Changed" badge on a course whose grade moved since they last looked (spec §5).
+ *
+ * The parent's is the same page for one linked child, read through the parent boundary (the `parentportal` and
+ * `parentchild` filters, and ParentAccessService): its links go to the parent's views, a finalized course offers
+ * its report, and the "Changed" memory is the parent's own (spec §6).
  *
  * The instructor's has three tabs, all in the query string so a view can be bookmarked: the Gradebook (a card per section and that
  * section's grid, which the page script fetches), To grade (work waiting across every section, oldest first)
@@ -40,7 +48,13 @@ class GradesController extends BaseController
         $base = site_url($area . '/grades');
 
         if ($area === 'student') {
-            return $this->student($user, $base);
+            return $this->student($user, $user, $base, [
+                'area'          => 'student',
+                'backTo'        => site_url('student/dashboard'),
+                'courseBase'    => site_url('student/courses'),
+                'breakdownBase' => site_url('student/api/grades/courses'),
+                'reportBase'    => null,
+            ]);
         }
 
         $tab = (string) $this->request->getGet('tab');
@@ -120,6 +134,50 @@ class GradesController extends BaseController
         ]);
     }
 
+    /**
+     * The parent's menu entry: the first child's grades, or the existing explanation while the portal is off or
+     * no child is linked (as the parent's calendar does).
+     */
+    public function parentIndex(): string|RedirectResponse
+    {
+        $user  = auth()->user();
+        $shell = ['title' => 'Grades', 'page' => 'grades', 'user' => $user];
+
+        if (! (new ParentPortal())->enabled((new PlanLimits())->institutionOf((int) $user->id))) {
+            return view('pages/parent/portal-off', $shell);
+        }
+
+        $children = (new ParentAccessService())->children($user);
+
+        if ($children === []) {
+            return view('pages/parent/not-linked', $shell);
+        }
+
+        return redirect()->to(site_url('parent/children/' . $children[0]['student_id'] . '/grades'));
+    }
+
+    /**
+     * One linked child's Grades page, for the parent. The filters have answered for the portal and the link; a
+     * child who is also staff is read by the course services as staff, so no grade of theirs is read or shown.
+     */
+    public function parentChild(int $studentId): string
+    {
+        $parent = auth()->user();
+        $access = new ParentAccessService();
+        $child  = $access->childUser($parent, $studentId) ?? throw PageNotFoundException::forPageNotFound();
+        $prefix = 'parent/children/' . $studentId;
+
+        return $this->student($parent, $child, site_url($prefix . '/grades'), [
+            'area'          => 'parent',
+            'backTo'        => site_url($prefix),
+            'courseBase'    => site_url($prefix . '/courses'),
+            'breakdownBase' => site_url($prefix . '/api/grades/courses'),
+            'reportBase'    => site_url($prefix . '/api/courses'),
+            'children'      => $access->children($parent),
+            'childId'       => $studentId,
+        ], ParentAccessService::readsAsStudent($child));
+    }
+
     /** The area this request is in: its first address segment, one of those that have the page. */
     private function area(): string
     {
@@ -129,12 +187,17 @@ class GradesController extends BaseController
     }
 
     /**
-     * The student's page for one term: its courses, the summary and the bar's line, all from stored rows.
+     * The student's page for one term: its courses, the summary and the bar's line, all from stored rows. The
+     * viewer is the student themselves or their parent; $links carries what differs between the two (the area,
+     * the way back, and where the course links, the breakdowns and the reports go).
      *
-     * The page's one write is the "seen" snapshot of every row it showed (published or not), made after the page
-     * is built so each badge compares with the previous look; GradesSeen skips it while someone views as them.
+     * The page's one write is the viewer's "seen" snapshot of every row it showed (published or not), made after
+     * the page is built so each badge compares with the previous look; GradesSeen skips it while someone views as
+     * the viewer. With $readable false (a child who is also staff) nothing is read and nothing is written.
+     *
+     * @param array<string, mixed> $links
      */
-    private function student(User $user, string $base): string
+    private function student(User $viewer, User $user, string $base, array $links, bool $readable = true): string
     {
         $overview   = new StudentGradesOverview();
         $seen       = new GradesSeen();
@@ -149,7 +212,7 @@ class GradesController extends BaseController
         $signatures = [];
 
         try {
-            $terms  = $overview->terms($user);
+            $terms  = $readable ? $overview->terms($user) : [];
             $termId = $overview->defaultTermId($terms, $this->number('term') ?: null);
             $term   = $termId === null ? null : array_column($terms, null, 'id')[$termId];
 
@@ -171,7 +234,7 @@ class GradesController extends BaseController
                     $signatures[$row['offering_id']] = GradesSeen::signature($shown);
                 }
 
-                $changed = $seen->changed((int) $user->id, (int) $user->id, $signatures);
+                $changed = $seen->changed((int) $viewer->id, (int) $user->id, $signatures);
             }
         } catch (\Throwable $e) {
             log_message('error', 'Grades failed to load: ' . $e->getMessage());
@@ -185,11 +248,10 @@ class GradesController extends BaseController
             $rows[$i]['updated'] = $relative->relativeTime($row['updated_at']);
         }
 
-        $html = view('pages/grades/index', [
+        $html = view('pages/grades/index', $links + [
             'title'        => 'Grades',
             'page'         => 'grades',
-            'user'         => $user,
-            'area'         => 'student',
+            'user'         => $viewer,
             'base'         => $base,
             'terms'        => $terms,
             'termId'       => $term['id'] ?? null,
@@ -202,7 +264,7 @@ class GradesController extends BaseController
         ]);
 
         if (! $loadError) {
-            $seen->remember((int) $user->id, (int) $user->id, $signatures);
+            $seen->remember((int) $viewer->id, (int) $user->id, $signatures);
         }
 
         return $html;

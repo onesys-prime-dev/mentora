@@ -181,4 +181,49 @@ final class GlobalGradesQueryBudgetTest extends RouteTestCase
         $this->assertSame($three, $cost(), 'fifteen courses must cost the same queries as three');
         $this->assertGreaterThan(0, $three);
     }
+
+    public function testTheParentPageCostsTheSameForThreeOrFifteenCourses(): void
+    {
+        $institution = PeopleFactory::institution('QBP');
+        $student     = PeopleFactory::person('student', 'Ada', 'Lovelace', null, $institution);
+        $parent      = PeopleFactory::person('parent', 'Pam', 'Parent', null, $institution);
+        $term        = null;
+
+        db_connect()->table('parent_student_links')->insert([
+            'institution_id' => $institution, 'parent_user_id' => $parent->id, 'student_user_id' => $student->id, 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $path = 'parent/children/' . $student->id . '/grades';
+        $cost = function () use ($parent, $path): int {
+            $this->loggedInAs($parent);
+            $this->get($path)->assertStatus(200);
+
+            $queries  = 0;
+            $listener = static function () use (&$queries): void {
+                $queries++;
+            };
+
+            Events::on('DBQuery', $listener);
+            $result = $this->get($path);
+            Events::removeListener('DBQuery', $listener);
+
+            $result->assertStatus(200);
+            $this->assertStringContainsString('data-grades-row', $result->getBody());
+
+            return $queries;
+        };
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->addStudentCourse($student, $term);
+        }
+
+        $three = $cost();
+
+        for ($i = 0; $i < 12; $i++) {
+            $this->addStudentCourse($student, $term);
+        }
+
+        $this->assertSame($three, $cost(), 'fifteen courses must cost the same queries as three');
+        $this->assertGreaterThan(0, $three);
+    }
 }

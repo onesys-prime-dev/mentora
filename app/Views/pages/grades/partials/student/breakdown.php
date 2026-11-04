@@ -8,6 +8,7 @@
  * @var list<array<string, mixed>> $periods    periodBreakdown: name, weight, percentage, categories
  * @var list<array<string, mixed>> $categories categoryBreakdown: name, weight, percentage
  * @var string                     $courseUrl  the course's Grades tab
+ * @var bool                       $forParent  optional: the reader is a parent, so the wording is "the instructor"
  */
 helper('grade');
 
@@ -90,7 +91,7 @@ $reason   = $tag === 'INC' ? trim((string) ($summary['inc_reason'] ?? '')) : '';
             <?php endif; ?>
             <span>Passing is <?= esc(grade_number($summary['passing_percentage'])) ?>%</span>
             <?php if (! empty($summary['is_adjusted'])): ?>
-                <span>Adjusted by your instructor</span>
+                <span>Adjusted by <?= ! empty($forParent) ? 'the' : 'your' ?> instructor</span>
             <?php endif; ?>
         </div>
 

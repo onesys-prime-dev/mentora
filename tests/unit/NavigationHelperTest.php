@@ -71,15 +71,23 @@ final class NavigationHelperTest extends CIUnitTestCase
         $this->assertNull(array_column(global_apps('chairperson'), 'url', 'key')['grades'], 'the chairperson page is not built yet');
     }
 
+    public function testTheParentsGradesTileOpensTheParentsGradesPage(): void
+    {
+        $tile = array_column(global_apps('parent'), null, 'key')['grades'];
+
+        $this->assertSame(['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('parent/grades')], $tile);
+    }
+
     public function testAParentOnlyGetsTilesThatLeadSomewhere(): void
     {
         $apps = global_apps('parent');
 
-        $this->assertSame(['dashboard', 'calendar', 'notifications', 'profile'], array_column($apps, 'key'));
+        $this->assertSame(['dashboard', 'calendar', 'grades', 'notifications', 'profile'], array_column($apps, 'key'));
         $this->assertSame(site_url('parent/dashboard'), $apps[0]['url']);
         $this->assertSame(site_url('parent/calendar'), $apps[1]['url']);
-        $this->assertSame(site_url('notifications'), $apps[2]['url']);
-        $this->assertSame(site_url('parent/profile'), $apps[3]['url']);
+        $this->assertSame(site_url('parent/grades'), $apps[2]['url']);
+        $this->assertSame(site_url('notifications'), $apps[3]['url']);
+        $this->assertSame(site_url('parent/profile'), $apps[4]['url']);
 
         $collection = \Config\Services::routes(false);
         $collection->loadRoutes();

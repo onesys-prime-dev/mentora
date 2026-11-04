@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Courses\GradeService;
+use App\Services\Courses\Grades\GradeAdjustmentService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
@@ -222,6 +223,20 @@ final class StudentGradesBreakdownTest extends RouteTestCase
         $this->assertSame($expected, $this->texts($x, '//table[@data-grades-breakdown]//td'));
         $this->assertSame('87.5%', $expected[0]);
         $this->assertStringContainsString($page['summary']['tag'], $this->text($x->query('//body')->item(0)));
+    }
+
+    public function testACurvedCourseSaysAdjustedByYourInstructor(): void
+    {
+        [$offering, $scheme] = $this->course(false);
+        $category            = GradeFactory::category($scheme, 'Quizzes', 100, null);
+        $item                = GradeFactory::item($scheme, $category, 'Quiz 1', 100);
+        GradeFactory::score($offering, $this->student, $item, 80);
+
+        $instructor = CourseFactory::user('instructor');
+        CourseFactory::assignInstructor($offering, $instructor);
+        $this->assertTrue((new GradeAdjustmentService())->apply($instructor, $offering, 'item', $item, 'add_points', ['points' => 5], '')['success']);
+
+        $this->assertStringContainsString('Adjusted by your instructor', $this->fragment($offering)['html']);
     }
 
     public function testTheStandingLooksTheSameAsOnTheRow(): void
