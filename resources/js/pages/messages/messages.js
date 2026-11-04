@@ -293,6 +293,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
+    const ICON_BUTTON = "grid h-6 w-6 place-items-center rounded-full text-gray-500 opacity-0 hover:bg-gray-200/70 hover:text-gray-800 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100 [@media(hover:none)]:opacity-100";
+    const svg = (d) => `<svg aria-hidden="true" viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+    const ICONS = {
+        trash: svg('<path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10M9 9v4M11 9v4"/>'),
+        more: svg('<circle cx="4.5" cy="10" r="1" fill="currentColor"/><circle cx="10" cy="10" r="1" fill="currentColor"/><circle cx="15.5" cy="10" r="1" fill="currentColor"/>'),
+        flag: svg('<path d="M5 17V3M5 4h9l-2 3 2 3H5"/>'),
+        remove: svg('<circle cx="10" cy="10" r="7"/><path d="M7 7l6 6M13 7l-6 6"/>'),
+    };
+
     function messageRow(item) {
         const row = document.createElement("div");
 
@@ -301,7 +310,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         const note = document.createElement("div");
 
-        note.className = "flex gap-2 text-[12px] text-[#646464]";
+        // Under the bubble, on the side away from the edge the bubble hugs: left for my messages, right for theirs.
+        note.className = `flex items-center gap-1 text-[#646464] ${item.mine ? "self-start" : "self-end"}`;
 
         if (item.pending) {
             note.textContent = "Sending…";
@@ -321,8 +331,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             hide.type = "button";
             hide.dataset.action = "hide";
             hide.dataset.messageId = String(item.id);
-            hide.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
-            hide.textContent = "Delete for me";
+            hide.className = ICON_BUTTON;
+            hide.setAttribute("aria-label", "Delete");
+            hide.title = "Delete";
+            hide.innerHTML = ICONS.trash;
+            hide.dataset.canEveryone = item.can_delete_everyone ? "true" : "false";
             note.append(hide);
 
             const more = document.createElement("button");
@@ -331,8 +344,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             more.dataset.action = "more";
             more.dataset.messageId = String(item.id);
             more.setAttribute("aria-label", "Message actions");
-            more.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100 [@media(hover:none)]:opacity-100";
-            more.textContent = "\u22EF";
+            more.className = ICON_BUTTON;
+            more.title = "More";
+            more.innerHTML = ICONS.more;
             note.append(more);
 
             if (!item.mine) {
@@ -341,8 +355,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
                 report.type = "button";
                 report.dataset.action = "report";
                 report.dataset.messageId = String(item.id);
-                report.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
-                report.textContent = "Report";
+                report.className = ICON_BUTTON;
+                report.setAttribute("aria-label", "Report");
+                report.title = "Report";
+                report.innerHTML = ICONS.flag;
                 note.append(report);
             }
 
@@ -354,8 +370,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
                 remove.type = "button";
                 remove.dataset.action = "remove";
                 remove.dataset.messageId = String(item.id);
-                remove.className = `${confirming ? "font-semibold text-red-700" : "opacity-0 group-hover/msg:opacity-100"} hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50`;
-                remove.textContent = confirming ? "Click again to remove" : "Remove message";
+                remove.className = confirming ? "rounded px-1 text-[12px] font-semibold text-red-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" : ICON_BUTTON;
+
+                if (confirming) {
+                    remove.textContent = "Click again to remove";
+                } else {
+                    remove.setAttribute("aria-label", "Remove message");
+                    remove.title = "Remove message";
+                    remove.innerHTML = ICONS.remove;
+                }
                 note.append(remove);
             }
         }
@@ -756,7 +779,16 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
             renderMessages();
         } else if (button.dataset.action === "hide") {
-            await hideMessage(Number(button.dataset.messageId));
+            const id = Number(button.dataset.messageId);
+            const rect = button.getBoundingClientRect();
+            const items = [{ id: "delete-me", label: "Delete for me", onSelect: () => hideMessage(id) }];
+
+            // "For everyone" is offered only where the server says it is allowed (own message, inside the window, switch on).
+            if (button.dataset.canEveryone === "true") {
+                items.push({ id: "delete-everyone", label: "Delete for everyone", danger: true, onSelect: () => deleteEveryone(id) });
+            }
+
+            menu.open(items, { x: rect.left, y: rect.bottom, trigger: button });
         }
     });
 
@@ -1349,6 +1381,16 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         $("[data-role=forward-open]")?.click();
     }
 
+    async function deleteEveryone(id) {
+        if (!window.confirm("Delete this message for everyone? This can't be undone.")) {
+            return;
+        }
+
+        if (!refused(await api.deleteEveryone(state.openId, id))) {
+            await refreshThread();
+        }
+    }
+
     function openMessageMenu(node, at) {
         const m = node ? messageById(Number(node.dataset.id)) : null;
         const c = current();
@@ -1366,15 +1408,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             unpin: async () => { if (!refused(await api.pinMessage(state.openId, m.id, false))) { await refreshThread(); } },
             bump: async () => { if (!refused(await api.bump(state.openId, m.id))) { await refreshThread(); readUpTo(); } },
             "delete-me": () => hideMessage(m.id),
-            "delete-everyone": async () => {
-                if (!window.confirm("Delete this message for everyone? This can't be undone.")) {
-                    return;
-                }
-
-                if (!refused(await api.deleteEveryone(state.openId, m.id))) {
-                    await refreshThread();
-                }
-            },
+            "delete-everyone": () => deleteEveryone(m.id),
             report: () => openReport(m.id),
             remove: async () => {
                 if (!window.confirm("Remove this message for everyone in this chat?")) {

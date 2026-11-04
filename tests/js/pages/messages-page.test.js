@@ -650,6 +650,7 @@ describe("deleting for me", () => {
         await mount(api);
         await openFirst();
         all("[data-action=hide]")[0].click();
+        document.querySelector("[data-role=menu] [data-action=delete-me]").click();
         await flush();
 
         expect(api.hide).toHaveBeenCalledWith(1, 10);
