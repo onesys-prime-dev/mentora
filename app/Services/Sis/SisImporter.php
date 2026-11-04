@@ -480,7 +480,8 @@ class SisImporter
 
     private function enrollments(SisBatch $batch): void
     {
-        $db = db_connect();
+        $db      = db_connect();
+        $touched = [];
 
         foreach ($batch->records as $i => $record) {
             $m    = SisMapper::enrollment($record);
@@ -534,7 +535,11 @@ class SisImporter
                 $db->table('enrollments')->where('id', $existing['id'])->update(['status' => $m['status'], 'updated_at' => $this->stamp()]);
                 $this->counts['enrollments']['updated']++;
             }
+
+            $touched[] = $offeringId;
         }
+
+        \App\Services\Messaging\CourseChatHooks::offeringsChanged($touched);
     }
 
     /** The section of a course in a term, created when it is not there yet. */

@@ -17,6 +17,8 @@ const loaders = {
 
     grades: () => import("../features/grades/index.js"),
 
+    instructor: () => import("../features/instructor/index.js"),
+
 };
 
 // The loading shape of each tab, the same one the server draws on a page load
@@ -38,6 +40,8 @@ const skeletons = {
     assessments: () => import("../features/assessments/skeleton.js").then((m) => m.renderAssessmentsSkeleton),
 
     grades: () => import("../features/grades/skeleton.js").then((m) => m.renderGradesSkeleton),
+
+    instructor: () => import("../features/instructor/skeleton.js").then((m) => m.renderInstructorSkeleton),
 
 };
 

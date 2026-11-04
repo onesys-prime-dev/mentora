@@ -7,6 +7,7 @@ namespace App\Services\Monitoring;
 use App\Services\AI\AiJobService;
 use App\Services\AI\LocalQuestionBuilderClient;
 use App\Services\Courses\Assessments\AiJobGeneration;
+use App\Services\Messaging\MessageCipher;
 use Closure;
 use DateTimeImmutable;
 use Throwable;
@@ -46,6 +47,7 @@ class SystemHealth
             'ai'       => fn (): array => $this->ai(),
             'jobs'     => fn (): array => $this->jobs(),
             'backups'  => fn (): array => $this->backups(),
+            'messages' => fn (): array => $this->messages(),
         ];
     }
 
@@ -56,6 +58,7 @@ class SystemHealth
         'ai'       => 'Question-builder (AI) service',
         'jobs'     => 'Scheduled jobs',
         'backups'  => 'Backups',
+        'messages' => 'Messages encryption',
     ];
 
     /**
@@ -126,6 +129,32 @@ class SystemHealth
     | Real probes
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * The Messages key (spec 5.1): down when Messages is switched on without a usable key, since nothing can be
+     * sent, and degraded when a previous key is malformed, since the messages it encrypted cannot be read. The
+     * detail never holds a key.
+     *
+     * @return array{status: string, detail: string}
+     */
+    private function messages(): array
+    {
+        $cipher = new MessageCipher();
+        $on     = (bool) (config(\Config\FeatureFlags::class)->flags['messages']['default'] ?? false)
+            || db_connect()->table('feature_flag_overrides')->where(['flag_key' => 'messages', 'enabled' => 1])->countAllResults() > 0;
+
+        if (! $cipher->isUsable()) {
+            return $on
+                ? ['status' => self::DOWN, 'detail' => 'Messages is on but its encryption key is missing or too short, so nothing can be sent. Set messages.encryptionKey on the server.']
+                : ['status' => self::UP, 'detail' => 'Messages is off.'];
+        }
+
+        if ($cipher->droppedPreviousKeys() > 0) {
+            return ['status' => self::DEGRADED, 'detail' => $cipher->droppedPreviousKeys() . ' previous Messages key(s) are malformed and ignored; messages encrypted with them cannot be read.'];
+        }
+
+        return ['status' => self::UP, 'detail' => 'The Messages encryption key is set.'];
+    }
 
     /** @return array{status: string, detail: string} */
     private function database(): array
@@ -213,7 +242,7 @@ class SystemHealth
     }
 
     /**
-     * All seven scheduled jobs (6.2): degraded while any has missed its window, down once one has been silent
+     * All the scheduled jobs (6.2): degraded while any has missed its window, down once one has been silent
      * for three times its allowed gap.
      *
      * @return array{status: string, detail: string}
@@ -224,7 +253,7 @@ class SystemHealth
         $stale = ScheduledJobs::stale($now);
 
         if ($stale === []) {
-            return ['status' => self::UP, 'detail' => 'All seven scheduled jobs reported on time.'];
+            return ['status' => self::UP, 'detail' => 'All scheduled jobs reported on time.'];
         }
 
         $dead = array_filter($stale, static fn (string $command): bool => ($last = ScheduledJobs::lastRun($command)) !== null && $now - $last >= 3 * ScheduledJobs::JOBS[$command]['gap']);

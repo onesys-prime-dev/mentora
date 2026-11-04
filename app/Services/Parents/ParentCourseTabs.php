@@ -54,6 +54,17 @@ class ParentCourseTabs
     }
 
     /**
+     * What the instructors posted in the child's course chat, newest first, and a button to message each of
+     * them. Plain text only (escaped in the view); no replies, no student's words, no composer.
+     *
+     * @param array{instructors: list<array{id: int, name: string}>, posts: list<array<string, mixed>>} $feed from ParentFeedService
+     */
+    public function instructor(array $feed, int $studentId): array
+    {
+        return ['html' => view('pages/parent/course/instructor', ['feed' => $feed, 'studentId' => $studentId], ['saveData' => false])];
+    }
+
+    /**
      * What the child has been given and where it stands: title, type, due date
      * and a status word. Never a score, an attempt, feedback or a way into a
      * quiz. A child who is also staff has no list (the shared service would

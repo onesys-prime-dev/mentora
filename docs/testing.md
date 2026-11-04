@@ -75,6 +75,12 @@ npx playwright install chromium  # once: downloads the browser
 npm run e2e
 ```
 
+The Messages cases (`tests/e2e/messages.spec.js`) need a Messages key: `serve.js` and `spark.js` give PHP a
+fixed one as `messages_encryptionKey` (the database is thrown away on every run). The spec switches Messages on,
+makes the chats of the seeded offerings with `messages:sync-course-chats`, and when it finishes switches Messages
+off and clears what it made, because it shares the database with the specs after it (the parent's course page
+has four tabs only while Messages is off).
+
 It needs a MySQL or MariaDB server on `127.0.0.1` that `root` with no password can
 use (XAMPP's is). `npm run e2e` then does everything itself
 (`tests/e2e/support/serve.js`): it empties a database, runs the migrations and the

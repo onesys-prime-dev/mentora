@@ -68,6 +68,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         ['label' => 'Announcement', 'href' => site_url($base . '/announcement'), 'active' => $settingsTab === 'announcement'],
         ['label' => 'Security', 'href' => site_url($base . '/security'), 'active' => $settingsTab === 'security'],
         ['label' => 'Parents', 'href' => site_url($base . '/parents'), 'active' => $settingsTab === 'parents'],
+        ['label' => 'Messages', 'href' => site_url($base . '/messages'), 'active' => $settingsTab === 'messages'],
     ]], ['saveData' => false]) ?>
 
     <?php if ($settingsTab === 'profile'): ?>
@@ -198,6 +199,41 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <div class="<?= $bar ?>">
                     <p class="text-xs text-[#646464]">Switching it off hides it from every parent. Nothing is deleted.</p>
                     <button type="submit" class="<?= $primary ?>">Save parent portal</button>
+                </div>
+            <?php endif; ?>
+        </form>
+
+    <?php elseif ($settingsTab === 'messages'): ?>
+
+        <?php $mm = $settingsMessages; ?>
+
+        <form method="post" action="<?= esc(site_url($base . '/messages')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-messages-settings-form>
+            <?= csrf_field() ?>
+
+            <div class="<?= $sections ?>" data-panel-scroll>
+                <fieldset class="<?= $section ?>" <?= $disabled ?>>
+                    <legend class="<?= $heading ?> w-full">Students messaging each other</legend>
+                    <p class="text-sm text-[#3D3D3D]">Lets students who share a course start a message with each other. Switching it off stops new conversations between students; the ones that exist stay readable but nobody can add to them. Messages between students and their instructors are not affected.</p>
+
+                    <div class="flex flex-wrap gap-4">
+                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                            <input type="radio" name="enabled" value="1" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? 'checked' : '' ?> <?= $disabled ?>>
+                            On
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                            <input type="radio" name="enabled" value="0" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? '' : 'checked' ?> <?= $disabled ?>>
+                            Off
+                        </label>
+                    </div>
+                </fieldset>
+            </div>
+
+            <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>
+
+            <?php if ($settingsCanEdit): ?>
+                <div class="<?= $bar ?>">
+                    <p class="text-xs text-[#646464]">Nothing is deleted when it is off.</p>
+                    <button type="submit" class="<?= $primary ?>">Save</button>
                 </div>
             <?php endif; ?>
         </form>

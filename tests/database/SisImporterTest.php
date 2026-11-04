@@ -614,4 +614,17 @@ final class SisImporterTest extends DatabaseTestCase
 
         $this->assertStringContainsString('No institution has an enabled', $this->command('sis:sync'));
     }
+
+    public function testAnImportedEnrolmentJoinsTheCourseChat(): void
+    {
+        SisFixture::dropAll($this->institution);
+        $this->run_();
+
+        $ann  = (int) $this->user('ann@example.com')['user_id'];
+        $chat = db_connect()->table('conversations c')->select('c.id')
+            ->join('conversation_participants p', 'p.conversation_id = c.id')
+            ->where(['c.type' => 'course', 'p.user_id' => $ann, 'p.left_at' => null])->get()->getRowArray();
+
+        $this->assertNotNull($chat);
+    }
 }

@@ -42,7 +42,7 @@ nginx serves each site's `public/` folder. The site runs on PHP **8.5** (`php-fp
 4b. **Copy the worker's code** to `QB_PATH` and install its libraries (only when `QB_PATH` is set). The running worker keeps its old code for now.
 5. **Fix `writable/` permissions.**
 6. **Run `php8.5 spark migrate --all`** so the database matches the code. Not every migration can be undone: `2026-11-14-000002_RemoveInapplicablePermissionRows` does not bring its deleted rows back on a rollback (they were ignored anyway), so restore the backup rather than rolling it back.
-6a. **Install the scheduled jobs** (audit D5): the block between `# BEGIN mentora jobs` and `# END mentora jobs` in the site user's crontab is written from `deploy/crontab.txt` with this site's folder and `PHP_BIN` (`spark jobs:crontab`), leaving every other line alone; then `crontab -l` is checked to hold all seven jobs, and the deploy **fails** if one is missing. See `server-setup.md` section 6.
+6a. **Install the scheduled jobs** (audit D5): the block between `# BEGIN mentora jobs` and `# END mentora jobs` in the site user's crontab is written from `deploy/crontab.txt` with this site's folder and `PHP_BIN` (`spark jobs:crontab`), leaving every other line alone; then `crontab -l` is checked to hold all nine jobs, and the deploy **fails** if one is missing. See `server-setup.md` section 6.
 6b. **Clear the application cache** (`spark cache:clear`; a warning, not a failure).
 6c. **Restart the worker** (only when `QB_PATH` is set), after the migrations so the new worker never meets an old schema. See "The question-builder worker" below. A warning, not a failure: the website does not depend on the worker.
 7. **Health check**: `GET /health` must answer `{"status":"ok"}` (it only does when the app can reach its database). Retried for about a minute, then the deploy fails. The check skips certificate verification (`curl -k`) only while the environment's `TLS_INSECURE` variable is `true` (staging uses a self-signed certificate); set it to `false` once the site has a real one. Production defaults to verifying.
@@ -157,6 +157,16 @@ The secrets file is **root-owned, mode 600, in both environments**: systemd read
 | Worker folder contents | no `eval/` | has `eval/` (copied by hand before the deploy step existed) | harmless; the deploy never deletes excluded folders |
 | `questionBuilder.useJobs` | true | true | none needed |
 | `questionBuilder.serviceUrl` | `http://127.0.0.1:8008`, nothing listens | same | unused while `useJobs` is true; can be removed |
+
+## The Messages key
+
+Messages encrypts what people write with its own key, `messages.encryptionKey` in the site's `.env`
+(never in git, never in a GitHub secret the build can print). A deploy does not touch `.env`, so the
+key survives it. It must be set, at least 32 random bytes and different from `encryption.key`, **before**
+the `messages` feature flag is switched on; the flag refuses to switch on without it, and the health
+page ("Messages encryption") reports it. Keep a copy of the key somewhere other than the server and its
+backups. How to make it, rotate it and check Messages before turning it on is in `messages.md`. The
+deploy also installs the two Messages jobs with the others (step 6a).
 
 ## When a deploy fails
 

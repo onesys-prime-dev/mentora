@@ -56,6 +56,10 @@ abstract class DatabaseTestCase extends CIUnitTestCase
 
         parent::setUp();
 
+        // Sending a message now tells the other members and may email them: a test never reaches a real mailer.
+        // A test that looks at the mail installs its own FakeEmail after this.
+        FakeEmail::install();
+
         // The course of the last request is not this test's (a real request starts with none).
         service('courseContext')->clear();
 

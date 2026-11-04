@@ -49,8 +49,14 @@ $hover = $isLive && !$active
     <?php endif; ?>
     data-app-tile="<?= esc($app['key'], 'attr') ?>">
 
-    <span class="<?= $square ?> flex justify-center items-center border shadow-md transition <?= $surface ?> <?= $hover ?>">
+    <span class="<?= $square ?> relative flex justify-center items-center border shadow-md transition <?= $surface ?> <?= $hover ?>">
         <?= icon($app['icon'], $iconClass) ?>
+
+        <?php if ($app['key'] === 'messages' && isset($app['badge'])): ?>
+            <?php // The count at load; shared/messages-badge.js keeps it fresh from data-url. ?>
+            <span data-messages-badge data-url="<?= esc(site_url('messages/api/unread-count')) ?>" <?= (int) $app['badge'] > 0 ? '' : 'hidden' ?> class="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= (int) $app['badge'] > 99 ? '99+' : (int) $app['badge'] ?></span>
+            <span class="sr-only"> unread</span>
+        <?php endif; ?>
     </span>
 
     <span class="text-[11px] leading-tight text-center <?= $active ? 'font-semibold text-brand' : 'text-gray-700' ?>">

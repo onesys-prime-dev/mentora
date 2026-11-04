@@ -31,7 +31,7 @@ final class InstitutionRoles
     public const ACADEMIC = [
         'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage',
         'program.monitor', 'department.monitor', 'grades.approve', 'grades.signoff',
-        'children.view', 'followups.manage', 'department.announce',
+        'children.view', 'followups.manage', 'department.announce', 'messages.use',
     ];
 
     /**

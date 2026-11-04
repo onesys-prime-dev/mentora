@@ -78,9 +78,9 @@ final class SystemHealthTest extends CIUnitTestCase
     {
         $ok = static fn (): array => ['status' => SystemHealth::UP, 'detail' => 'fine'];
 
-        $results = (new SystemHealth(['database' => $ok, 'storage' => $ok, 'disk' => $ok, 'ai' => $ok, 'jobs' => $ok, 'backups' => $ok]))->run();
+        $results = (new SystemHealth(['database' => $ok, 'storage' => $ok, 'disk' => $ok, 'ai' => $ok, 'jobs' => $ok, 'backups' => $ok, 'messages' => $ok, 'messages' => $ok]))->run();
 
-        $this->assertSame(['database', 'storage', 'disk', 'ai', 'jobs', 'backups'], array_keys($results));
+        $this->assertSame(['database', 'storage', 'disk', 'ai', 'jobs', 'backups', 'messages'], array_keys($results));
         $this->assertSame('fine', $results['ai']['detail']);
     }
 

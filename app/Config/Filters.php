@@ -16,6 +16,7 @@ use App\Filters\CoursePermissionFilter;
 use App\Filters\CsrfFilter;
 use App\Filters\InstitutionCourseFilter;
 use App\Filters\ParentChildFilter;
+use App\Filters\MessagesFilter;
 use App\Filters\ParentPortalFilter;
 use App\Filters\PermissionFilter;
 use App\Filters\ReadOnlyFilter;
@@ -64,6 +65,7 @@ class Filters extends BaseFilters
         'role'          => RoleFilter::class,
         'parentchild'   => ParentChildFilter::class,
         'parentportal'  => ParentPortalFilter::class,
+        'messages'      => MessagesFilter::class,
         'accountstate'  => AccountStateFilter::class,
         'impersonation' => ImpersonationFilter::class,
         'loginlockout'  => LoginLockoutFilter::class,

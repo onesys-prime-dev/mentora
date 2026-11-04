@@ -25,11 +25,21 @@ final class NavigationHelperTest extends CIUnitTestCase
 
         // The instructor has the student's apps, and the Requests a dean or chairperson sent them.
         $this->assertSame([...array_column($student, 'key'), 'follow-ups'], array_column($instructor, 'key'));
-        $this->assertSame(['courses', 'calendar', 'schedule', 'grades', 'announcements', 'inbox'], array_column($student, 'key'));
+        $this->assertSame(['courses', 'calendar', 'schedule', 'grades', 'announcements'], array_column($student, 'key'));
 
         $this->assertSame(site_url('student/courses'), $student[0]['url']);
         $this->assertSame(site_url('instructor/calendar'), $instructor[1]['url']);
         $this->assertSame(site_url('instructor/schedule'), $instructor[2]['url']);
+    }
+
+    public function testNoInboxTileAnyMoreAndNoMessagesTileWhileTheFlagIsOff(): void
+    {
+        foreach (['student', 'instructor', 'chairperson', 'dean', 'parent', 'institutional_admin', 'admin'] as $role) {
+            $keys = array_column(global_apps($role), 'key');
+
+            $this->assertNotContains('inbox', $keys, $role);
+            $this->assertNotContains('messages', $keys, $role);
+        }
     }
 
     public function testFollowUpsAreLinkedForTheDeanTheChairpersonAndTheInstructorOnly(): void
@@ -54,7 +64,6 @@ final class NavigationHelperTest extends CIUnitTestCase
         $apps = array_column(global_apps('student'), 'url', 'key');
 
         $this->assertNull($apps['grades']);
-        $this->assertNull($apps['inbox']);
         $this->assertNotNull($apps['courses']);
     }
 

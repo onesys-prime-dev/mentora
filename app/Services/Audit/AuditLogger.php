@@ -22,6 +22,9 @@ class AuditLogger
     /** Keys whose values are never stored, matched anywhere in the name. */
     private const SECRET_PATTERN = '/pass(word|phrase)?|secret|token|credential|api[_-]?key|private[_-]?key/i';
 
+    /** Keys that would hold what someone wrote in Messages (or its ciphertext): never recorded, even by mistake. */
+    private const MESSAGE_TEXT_PATTERN = '/^(body|body_enc|message_body|message_text|snapshot|snapshot_enc|note_enc)$/i';
+
     /**
      * @param array{
      *     actor_label?: ?string,
@@ -70,7 +73,7 @@ class AuditLogger
     public static function redact(array $values): array
     {
         foreach ($values as $key => $value) {
-            if (is_string($key) && preg_match(self::SECRET_PATTERN, $key) === 1) {
+            if (is_string($key) && (preg_match(self::SECRET_PATTERN, $key) === 1 || preg_match(self::MESSAGE_TEXT_PATTERN, $key) === 1)) {
                 $values[$key] = '[redacted]';
             } elseif (is_array($value)) {
                 $values[$key] = self::redact($value);

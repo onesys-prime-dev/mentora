@@ -15,6 +15,8 @@ export function spark(...args) {
             E2E_DATABASE: process.env.E2E_DATABASE ?? "mentora_e2e",
             E2E_DB_HOST: process.env.E2E_DB_HOST ?? "127.0.0.1",
             E2E_MAIL_SINK: `${root}tests/e2e/support/mail-sink.php`,
+            // The same Messages key the web server runs with (see serve.js), for the commands that read messages.
+            messages_encryptionKey: `hex2bin:${"61".repeat(32)}`,
         },
     });
 

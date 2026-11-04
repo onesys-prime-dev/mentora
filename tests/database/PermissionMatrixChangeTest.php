@@ -139,13 +139,17 @@ final class PermissionMatrixChangeTest extends DatabaseTestCase
 
     public function testARoleCannotLoseItsLastPermission(): void
     {
+        // A student holds courses.view and messages.use: one can go, the other cannot.
+        $this->assertTrue($this->matrix->set('student', 'messages.use', false, $this->admin));
+        $this->assertSame(['courses.view'], $this->matrix->effective()['student']);
+
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('at least one permission');
 
         try {
             $this->matrix->set('student', 'courses.view', false, $this->admin);
         } finally {
-            $this->assertSame(0, $this->rowCount());
+            $this->assertSame(1, $this->rowCount());
             $this->assertSame(['courses.view'], $this->matrix->effective()['student']);
         }
     }

@@ -1,0 +1,181 @@
+/*
+|--------------------------------------------------------------------------
+| Messages — rendering
+|--------------------------------------------------------------------------
+| Everything the Messages page puts on screen from server data. Text is set
+| with textContent; the only innerHTML is the output of linkify(), which
+| escapes first and then adds links for http(s) addresses and nothing else.
+|--------------------------------------------------------------------------
+*/
+
+const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" };
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const ROLE_LABELS = { instructor: "Instructor", chairperson: "Chairperson", dean: "Dean", parent: "Parent", institutional_admin: "Administrator" };
+
+// An address ends at whitespace or at an escaped quote or bracket.
+const URL_PATTERN = /https?:\/\/(?:(?!&quot;|&#39;|&lt;|&gt;)\S)+/g;
+
+const PIN = "<svg aria-hidden=\"true\" viewBox=\"0 0 20 20\" class=\"mr-1 inline h-3 w-3 text-brand\" fill=\"currentColor\"><path d=\"M11 2l7 7-2 1-3-1-3 3 1 4-2 1-3-3-4 4-1-1 4-4-3-3 1-2 4 1 3-3-1-3z\"/></svg>";
+
+export function escapeHtml(text) {
+    return String(text ?? "").replace(/[&<>"']/g, (c) => ESCAPES[c]);
+}
+
+export function linkify(text) {
+    const html = escapeHtml(text).replace(URL_PATTERN, (match) => {
+        let url = match;
+        let tail = "";
+
+        while (/[.,!?:)]$/.test(url)) {
+            tail = url.slice(-1) + tail;
+            url = url.slice(0, -1);
+        }
+
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer nofollow" class="underline">${url}</a>${tail}`;
+    });
+
+    return html.replace(/\r?\n/g, "<br>");
+}
+
+function el(tag, className, text) {
+    const node = document.createElement(tag);
+
+    if (className) {
+        node.className = className;
+    }
+
+    if (text !== undefined) {
+        node.textContent = text;
+    }
+
+    return node;
+}
+
+function parseTime(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(iso ?? ""));
+
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5])) : null;
+}
+
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+export function formatTime(iso, now) {
+    const at = parseTime(iso);
+
+    if (at === null) {
+        return "";
+    }
+
+    const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+
+    if (days <= 0) {
+        return `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+    }
+
+    if (days === 1) {
+        return "Yesterday";
+    }
+
+    return days < 7 ? WEEKDAYS[at.getDay()] : `${at.getDate()} ${MONTHS[at.getMonth()]}`;
+}
+
+/** The label of the separator above a day's messages: Today, Yesterday, "30 Oct", or "30 Dec 2025" in another year. */
+export function dayLabel(iso, now) {
+    const at = parseTime(iso);
+
+    if (at === null) {
+        return "";
+    }
+
+    const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+
+    if (days <= 0) {
+        return "Today";
+    }
+
+    if (days === 1) {
+        return "Yesterday";
+    }
+
+    const label = `${at.getDate()} ${MONTHS[at.getMonth()]}`;
+
+    return at.getFullYear() === now.getFullYear() ? label : `${label} ${at.getFullYear()}`;
+}
+
+export function messageNode(message, { mine }) {
+    const node = el("div", `max-w-[70%] break-words rounded-2xl border px-3 py-1.5 text-sm ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
+
+    node.dataset.id = String(message.id);
+    node.dataset.mine = mine ? "true" : "false";
+
+    if (!mine && message.sender_name) {
+        const role = ROLE_LABELS[message.sender_role];
+        const label = el("small", `mb-0.5 block text-[10px] font-semibold ${message.sender_role === "instructor" ? "text-brand" : "text-gray-500"}`, role ? `${message.sender_name} · ${role}` : message.sender_name);
+
+        node.append(label);
+    }
+
+    if (message.removed) {
+        node.append(el("span", "italic text-gray-500", "Message removed"));
+
+        return node;
+    }
+
+    const body = el("div", "whitespace-normal");
+
+    body.innerHTML = linkify(message.body ?? "");
+    node.append(body);
+
+    return node;
+}
+
+export function conversationRow(conversation, { selected }) {
+    const row = el("button", `flex w-full items-center gap-2 border-l-[3px] px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${selected ? "border-brand bg-brand-tint" : "border-transparent hover:bg-gray-50"}`);
+
+    row.type = "button";
+    row.dataset.id = String(conversation.id);
+
+    if (selected) {
+        row.setAttribute("aria-current", "true");
+    }
+
+    const shape = conversation.type === "course" ? "rounded-lg bg-brand text-white" : conversation.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark";
+    const avatar = el("span", `grid h-[30px] w-[30px] flex-none place-items-center text-[11px] font-semibold ${shape}`, conversation.initials ?? "");
+
+    avatar.dataset.avatar = "";
+    avatar.setAttribute("aria-hidden", "true");
+
+    const text = el("span", "min-w-0 flex-1");
+    const name = el("span", "block truncate text-xs font-semibold text-gray-900");
+
+    if (conversation.type === "course") {
+        name.insertAdjacentHTML("beforeend", PIN);
+    }
+
+    name.append(document.createTextNode(conversation.name ?? ""));
+    text.append(name);
+
+    if (conversation.subtitle) {
+        text.append(el("span", "block truncate text-[10px] font-medium text-brand", conversation.subtitle));
+    }
+
+    text.append(el("span", "block truncate text-[11px] text-gray-500", conversation.preview ?? ""));
+
+    const meta = el("span", "flex-none text-right text-[10px] text-gray-500");
+
+    meta.append(el("span", "block", formatTime(conversation.last_message_at, new Date())));
+
+    if (conversation.unread > 0) {
+        const pill = el("span", "mt-0.5 inline-block min-w-[16px] rounded-full bg-brand px-1 text-center text-[10px] font-semibold text-white", String(conversation.unread));
+
+        pill.dataset.unread = "";
+        meta.append(pill, el("span", "sr-only", " unread"));
+    }
+
+    row.append(avatar, text, meta);
+
+    return row;
+}
