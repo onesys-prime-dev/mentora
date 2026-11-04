@@ -14,7 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class MessageController extends MessagingController
 {
-    private const FAILURES = ['invalid_body' => 422, 'not_allowed' => 403, 'unavailable' => 503];
+    private const FAILURES = ['invalid_body' => 422, 'not_allowed' => 403, 'unavailable' => 503, 'switched_off' => 403, 'invalid_reply' => 422];
 
     public function page(int $conversationId): ResponseInterface
     {
@@ -34,7 +34,7 @@ class MessageController extends MessagingController
         $input  = $this->input();
 
         try {
-            $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''));
+            $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''), $this->intOrNull($input['reply_to'] ?? null));
         } catch (RateLimitedException $e) {
             return $this->rateLimited($e);
         }

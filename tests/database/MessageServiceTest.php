@@ -312,4 +312,78 @@ final class MessageServiceTest extends DatabaseTestCase
 
         $this->assertSame([], (new ConversationService())->listFor($this->instructor));
     }
+
+    private function reply(User $user, string $body, ?int $to): array
+    {
+        return $this->service()->send($user, $this->conversation, $body, $this->uuid(), $to);
+    }
+
+    public function testAReplyStoresTheIdAndQuotesTheOriginalCutAtEighty(): void
+    {
+        $orig   = $this->send($this->student, str_repeat('a', 100))['message'];
+        $result = $this->reply($this->instructor, 'answer', $orig['id']);
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame($orig['id'], (int) db_connect()->table('messages')->where('id', $result['message']['id'])->get()->getRow('reply_to_message_id'));
+        $this->assertSame(['id' => $orig['id'], 'sender_name' => 'Stu Dent', 'text' => str_repeat('a', 80) . '…'], $result['message']['reply']);
+        $this->assertFalse($result['message']['forwarded']);
+        $this->assertFalse($result['message']['bumped']);
+    }
+
+    public function testAMessageWithoutReplyToHasNoQuote(): void
+    {
+        $message = $this->send($this->student)['message'];
+
+        $this->assertNull($message['reply']);
+    }
+
+    public function testAReplyToAnotherConversationIsInvalid(): void
+    {
+        $other = $this->send($this->student)['message']['id'];
+        db_connect()->table('messages')->where('id', $other)->update(['conversation_id' => $this->conversation + 999]);
+
+        $this->assertSame('invalid_reply', $this->reply($this->instructor, 'x', $other)['reason']);
+        $this->assertSame('invalid_reply', $this->reply($this->instructor, 'x', 987654)['reason']);
+    }
+
+    public function testAReplyToAMessageBeforeTheSenderJoinedOrHiddenIsInvalid(): void
+    {
+        $first  = $this->send($this->student, 'before')['message']['id'];
+        $second = $this->send($this->student, 'after')['message']['id'];
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $this->conversation, 'user_id' => $this->instructor->id])->update(['first_visible_message_id' => $second]);
+
+        $this->assertSame('invalid_reply', $this->reply($this->instructor, 'x', $first)['reason']);
+        $this->assertTrue($this->reply($this->instructor, 'x', $second)['ok']);
+
+        $this->service()->hideForMe($this->instructor, $this->conversation, $second);
+        $this->assertSame('invalid_reply', $this->reply($this->instructor, 'y', $second)['reason']);
+    }
+
+    public function testAReplyWhenRepliesAreSwitchedOffIsRefused(): void
+    {
+        $id = $this->send($this->student)['message']['id'];
+        db_connect()->table('conversations')->where('id', $this->conversation)->update(['allow_replies' => 0]);
+
+        $this->assertSame('switched_off', $this->reply($this->instructor, 'x', $id)['reason']);
+        $this->assertTrue($this->send($this->instructor, 'plain')['ok']);
+    }
+
+    public function testTheQuoteOfARemovedOrDeletedMessageReadsMessageRemoved(): void
+    {
+        $a = $this->send($this->student, 'one')['message']['id'];
+        $b = $this->send($this->student, 'two')['message']['id'];
+        $ra = $this->reply($this->instructor, 'ra', $a)['message']['id'];
+        $rb = $this->reply($this->instructor, 'rb', $b)['message']['id'];
+        db_connect()->table('messages')->where('id', $a)->update(['removed_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('messages')->where('id', $b)->update(['deleted_everyone_at' => date('Y-m-d H:i:s')]);
+
+        $byId = [];
+
+        foreach ($this->service()->page($this->student, $this->conversation)['messages'] as $m) {
+            $byId[$m['id']] = $m;
+        }
+
+        $this->assertSame('Message removed', $byId[$ra]['reply']['text']);
+        $this->assertSame('Message removed', $byId[$rb]['reply']['text']);
+    }
 }

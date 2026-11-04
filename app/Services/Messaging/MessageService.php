@@ -39,11 +39,11 @@ class MessageService
     }
 
     /**
-     * @return array{ok: bool, reason?: 'not_found'|'invalid_body'|'not_allowed'|'unavailable', message?: array<string, mixed>}
+     * @return array{ok: bool, reason?: 'not_found'|'invalid_body'|'not_allowed'|'unavailable'|'switched_off'|'invalid_reply', message?: array<string, mixed>}
      *
      * @throws RateLimitedException when the sender has sent too many messages in the last minute
      */
-    public function send(User $user, int $conversationId, string $body, string $clientUuid): array
+    public function send(User $user, int $conversationId, string $body, string $clientUuid, ?int $replyTo = null): array
     {
         $conversation = $this->conversations->find($user, $conversationId);
 
@@ -52,7 +52,6 @@ class MessageService
         }
 
         $userId = (int) $user->id;
-        $db     = db_connect();
 
         if (preg_match('/^[A-Za-z0-9-]{8,36}$/', $clientUuid) !== 1) {
             return ['ok' => false, 'reason' => 'invalid_body'];
@@ -79,17 +78,48 @@ class MessageService
             return ['ok' => false, 'reason' => 'unavailable'];
         }
 
+        $extra = [];
+
+        if ($replyTo !== null) {
+            if (! ChatControls::allows($conversation, 'replies')) {
+                return ['ok' => false, 'reason' => 'switched_off'];
+            }
+
+            if (! $this->replyable($userId, $conversationId, $replyTo)) {
+                return ['ok' => false, 'reason' => 'invalid_reply'];
+            }
+
+            $extra['reply_to_message_id'] = $replyTo;
+        }
+
         // Only a send that is about to create a row counts; the retry above has already returned.
         (new MessageRateLimiter())->check('message', $userId);
 
-        $now = date('Y-m-d H:i:s');
+        return $this->post($user, $conversation, $clean, $clientUuid, $extra);
+    }
+
+    /**
+     * Inserts the message, advances the sender's read mark, brings the chat back for the others and notifies.
+     * The one insert path; `$extra` holds more `messages` columns (reply, forward, bump).
+     *
+     * @param array<string, mixed> $conversation a `conversations` row
+     * @param array<string, mixed> $extra
+     *
+     * @return array{ok: bool, message: array<string, mixed>}
+     */
+    private function post(User $user, array $conversation, string $clean, string $clientUuid, array $extra = []): array
+    {
+        $conversationId = (int) $conversation['id'];
+        $userId         = (int) $user->id;
+        $db             = db_connect();
+        $now            = date('Y-m-d H:i:s');
 
         $db->transStart();
         $db->table('messages')->ignore(true)->insert([
             'conversation_id' => $conversationId, 'sender_id' => $userId,
             'body_enc' => $this->cipher->encrypt($clean, $conversationId, $userId),
             'client_uuid' => $clientUuid, 'created_at' => $now,
-        ]);
+        ] + $extra);
         $inserted = $db->affectedRows() > 0;
         $row      = $this->byUuid($conversationId, $userId, $clientUuid);
 
@@ -277,7 +307,55 @@ class MessageService
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
             'sender_name' => $sender['name'], 'sender_role' => $sender['role'],
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
+            'reply' => $this->quote($row['reply_to_message_id'] ?? null),
+            'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
+            'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
         ];
+    }
+
+    /** Whether the sender may reply to this message: in this chat, not before their first visible one, not hidden by them. */
+    private function replyable(int $userId, int $conversationId, int $messageId): bool
+    {
+        if ($messageId < 1 || ! $this->inConversation($conversationId, $messageId)) {
+            return false;
+        }
+
+        $db   = db_connect();
+        $mine = $db->table('conversation_participants')->select('first_visible_message_id')
+            ->where(['conversation_id' => $conversationId, 'user_id' => $userId])->get()->getRowArray();
+
+        if ($messageId < (int) ($mine['first_visible_message_id'] ?? 0)) {
+            return false;
+        }
+
+        return $db->table('message_hidden')->where(['message_id' => $messageId, 'user_id' => $userId])->countAllResults() === 0;
+    }
+
+    /**
+     * The quoted original of a reply: who wrote it and its first 80 characters, decrypted here on the server.
+     *
+     * @return array{id: int, sender_name: string, text: string}|null
+     */
+    private function quote(mixed $originalId): ?array
+    {
+        if ($originalId === null) {
+            return null;
+        }
+
+        $orig = db_connect()->table('messages')->where('id', (int) $originalId)->get()->getRowArray();
+
+        if ($orig === null) {
+            return null;
+        }
+
+        $text = 'Message removed';
+
+        if ($orig['removed_at'] === null && ($orig['deleted_everyone_at'] ?? null) === null) {
+            $plain = $this->cipher->decrypt((string) $orig['body_enc'], (int) $orig['conversation_id'], (int) $orig['sender_id']) ?? 'Message unavailable';
+            $text  = mb_strlen($plain) > 80 ? mb_substr($plain, 0, 80) . '…' : $plain;
+        }
+
+        return ['id' => (int) $orig['id'], 'sender_name' => $this->sender((int) $orig['sender_id'])['name'], 'text' => $text];
     }
 
     /**
