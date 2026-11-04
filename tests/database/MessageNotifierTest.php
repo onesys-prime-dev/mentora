@@ -24,7 +24,7 @@ final class MessageNotifierTest extends DatabaseTestCase
 {
     use ParentScenario;
 
-    private const SECRET = 'notify-secret-8842';
+    private const MARKER = 'notify-marker-8842';
 
     protected bool $isolateTests = true;
 
@@ -74,7 +74,7 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testADirectMessageNotifiesTheOtherPersonWithoutAnyText(): void
     {
-        $this->plant($this->thread, $this->parent, self::SECRET);
+        $this->plant($this->thread, $this->parent, self::MARKER);
 
         $this->assertSame(1, $this->notifier()->notifyConversation($this->thread));
 
@@ -84,7 +84,7 @@ final class MessageNotifierTest extends DatabaseTestCase
         $this->assertSame('Pat Parent sent you a message.', $notice['body']);
         $this->assertSame('messages/' . $this->thread, $notice['link']);
         $this->assertSame($this->institution, (int) $notice['institution_id']);
-        $this->assertStringNotContainsString(self::SECRET, json_encode($notice));
+        $this->assertStringNotContainsString(self::MARKER, json_encode($notice));
         $this->assertSame([], $this->notices($this->parent), 'nothing for the sender');
     }
 
@@ -174,14 +174,14 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testTheEmailCarriesTheSameWordsAndLinkAndNoText(): void
     {
-        $this->plant($this->thread, $this->parent, self::SECRET);
+        $this->plant($this->thread, $this->parent, self::MARKER);
 
         $this->notifier()->notifyConversation($this->thread);
 
         $this->assertCount(1, $this->mail->sent);
         $this->assertStringContainsString('Pat Parent sent you a message.', $this->mail->sent[0]['message']);
         $this->assertStringContainsString('messages/' . $this->thread, $this->mail->sent[0]['message']);
-        $this->assertStringNotContainsString(self::SECRET, $this->mail->sent[0]['subject'] . $this->mail->sent[0]['message']);
+        $this->assertStringNotContainsString(self::MARKER, $this->mail->sent[0]['subject'] . $this->mail->sent[0]['message']);
         $this->assertNotNull($this->notices($this->instructor)[0]['emailed_at']);
     }
 
@@ -224,7 +224,7 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testASendTellsASmallChatAtOnce(): void
     {
-        (new MessageService($this->parentCipher()))->send($this->parent, $this->thread, self::SECRET, 'uuid-parent-1');
+        (new MessageService($this->parentCipher()))->send($this->parent, $this->thread, self::MARKER, 'uuid-parent-1');
 
         $this->assertCount(1, $this->notices($this->instructor));
     }
