@@ -114,7 +114,7 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     node.dataset.mine = mine ? "true" : "false";
     node.tabIndex = 0;
 
-    if (!mine && message.sender_name) {
+    if (!mine && message.sender_name && !(message.deleted_everyone && !message.removed)) {
         const role = ROLE_LABELS[message.sender_role];
         const label = el("small", `mb-0.5 block text-[12px] font-semibold ${message.sender_role === "instructor" ? "text-brand" : "text-gray-500"}`, role ? `${message.sender_name} · ${role}` : message.sender_name);
 
@@ -122,7 +122,7 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     }
 
     if (message.removed || message.deleted_everyone) {
-        node.append(el("span", "italic text-gray-500", message.removed ? "Message removed" : "This message was deleted"));
+        node.append(el("span", "italic text-gray-500", message.removed ? "Message removed" : mine ? "You deleted a message" : `${message.sender_name ?? "Someone"} deleted a message`));
 
         return node;
     }
@@ -139,7 +139,7 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
         const quote = el("blockquote", "mb-1 border-l-2 border-gray-400 pl-2 text-[13px] text-gray-500");
 
         quote.dataset.replyTo = String(message.reply.id);
-        quote.append(el("strong", "block text-[12px] font-semibold", message.reply.sender_name ?? ""), el("span", "block truncate", message.reply.text ?? ""));
+        quote.append(el("strong", "block text-[12px] font-semibold", message.reply.sender_name ?? ""), el("span", "block truncate", message.reply.text || "Message removed"));
         node.append(quote);
     }
 
