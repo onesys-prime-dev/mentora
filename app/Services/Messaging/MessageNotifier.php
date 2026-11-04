@@ -128,6 +128,38 @@ class MessageNotifier
         $this->notes->send($userId, 'message', 'New message', $body, $emails, "msg:{$conversationId}:{$maxId}", (int) $chat['institution_id'], 'messages/' . $conversationId, $now);
     }
 
+    /**
+     * Tells a message's author that someone reacted: once while the earlier notice is unread, never for their own
+     * reaction or in a chat they muted. Who and where only, never the text.
+     */
+    public function notifyReaction(int $messageId, int $reactorId): void
+    {
+        $db  = db_connect();
+        $row = $db->table('messages m')->select('m.sender_id, c.id AS conversation_id, c.institution_id')
+            ->join('conversations c', 'c.id = m.conversation_id')->where('m.id', $messageId)->get()->getRowArray();
+
+        if ($row === null || (int) $row['sender_id'] === $reactorId) {
+            return;
+        }
+
+        $authorId = (int) $row['sender_id'];
+        $member   = $db->table('conversation_participants')->where(['conversation_id' => (int) $row['conversation_id'], 'user_id' => $authorId, 'left_at' => null])->get()->getRowArray();
+
+        if ($member === null || (int) $member['is_muted'] === 1 || ! $this->resolver->accountActive($authorId)) {
+            return;
+        }
+
+        $key = "react:{$messageId}";
+
+        if ($db->table('notifications')->where(['user_id' => $authorId, 'dedupe_key' => $key, 'read_at' => null])->countAllResults() > 0) {
+            return;
+        }
+
+        $name = ConversationPresenter::names([$reactorId])[$reactorId] ?? 'Someone';
+
+        $this->notes->send($authorId, 'message', 'New reaction', "{$name} reacted to your message.", false, $key, (int) $row['institution_id'], 'messages/' . $row['conversation_id']);
+    }
+
     private function hasUnreadNoticeForThread(int $userId, int $conversationId): bool
     {
         return db_connect()->table('notifications')->where('user_id', $userId)->like('dedupe_key', "msg:{$conversationId}:", 'after')->where('read_at', null)->countAllResults() > 0;

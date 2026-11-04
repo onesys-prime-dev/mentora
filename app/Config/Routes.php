@@ -468,6 +468,8 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
     $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/remove', 'Messaging\MessageController::remove/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/react', 'Messaging\MessageActionController::react/$1/$2');
+    $routes->get('conversations/(:num)/messages/(:num)/reactors', 'Messaging\MessageActionController::reactors/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/report', 'Messaging\ReportController::create/$1/$2');
     // The institutional administrator's reports; anyone else gets the shared 404.
     $routes->get('reports', 'Messaging\ReportController::index');
