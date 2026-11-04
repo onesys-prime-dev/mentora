@@ -96,6 +96,11 @@ class MessageService
         if ($inserted) {
             $db->table('conversations')->where('id', $conversationId)->update(['last_message_id' => $row['id'], 'last_message_at' => $now, 'updated_at' => $now]);
             $this->advanceRead($userId, $conversationId, (int) $row['id']);
+            // A new message brings an archived chat back for everyone who has not muted it.
+            $db->query(
+                'UPDATE conversation_participants SET archived_at = NULL WHERE conversation_id = ? AND user_id <> ? AND is_muted = 0',
+                [$conversationId, $userId],
+            );
         }
 
         $db->transComplete();
@@ -139,8 +144,9 @@ class MessageService
 
         $userId = (int) $user->id;
         $limit  = max(1, min(self::PAGE_MAX, $limit));
-        $first  = (int) db_connect()->table('conversation_participants')->select('first_visible_message_id')
-            ->where(['conversation_id' => $conversationId, 'user_id' => $userId])->get()->getRow('first_visible_message_id');
+        $mine   = db_connect()->table('conversation_participants')->select('first_visible_message_id, cleared_before_message_id')
+            ->where(['conversation_id' => $conversationId, 'user_id' => $userId])->get()->getRowArray();
+        $first  = max((int) ($mine['first_visible_message_id'] ?? 0), (int) ($mine['cleared_before_message_id'] ?? 0) + 1);
 
         $builder = db_connect()->table('messages m')->select('m.*')
             ->where('m.conversation_id', $conversationId)->where('m.id >=', $first)
@@ -229,7 +235,7 @@ class MessageService
     private function advanceRead(int $userId, int $conversationId, int $messageId): void
     {
         db_connect()->query(
-            'UPDATE conversation_participants SET last_read_message_id = GREATEST(COALESCE(last_read_message_id, 0), ?) WHERE conversation_id = ? AND user_id = ?',
+            'UPDATE conversation_participants SET last_read_message_id = GREATEST(COALESCE(last_read_message_id, 0), ?), marked_unread = 0 WHERE conversation_id = ? AND user_id = ?',
             [$messageId, $conversationId, $userId],
         );
 

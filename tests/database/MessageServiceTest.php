@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Messaging\ChatStateService;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\MessageCipher;
 use App\Services\Messaging\MessageService;
@@ -278,5 +279,37 @@ final class MessageServiceTest extends DatabaseTestCase
         }
 
         $this->assertSame(0, messages_unread_count());
+    }
+
+    private function state(): ChatStateService
+    {
+        return new ChatStateService();
+    }
+
+    public function testAfterDeleteForMeOnlyNewerMessagesShow(): void
+    {
+        $this->send($this->student, 'old');
+        $this->state()->deleteForMe($this->instructor, $this->conversation);
+        $new = $this->send($this->student, 'new')['message']['id'];
+
+        $page = $this->service()->page($this->instructor, $this->conversation);
+        $this->assertSame([$new], array_column($page['messages'], 'id'));
+    }
+
+    public function testANewMessageUnarchivesAnUnmutedChat(): void
+    {
+        $this->state()->setArchived($this->instructor, $this->conversation, true);
+        $this->send($this->student, 'hi');
+
+        $this->assertSame([$this->conversation], array_map(static fn (array $r): int => (int) $r['id'], (new ConversationService())->listFor($this->instructor)));
+    }
+
+    public function testANewMessageDoesNotUnarchiveAMutedChat(): void
+    {
+        $this->state()->setMuted($this->instructor, $this->conversation, true);
+        $this->state()->setArchived($this->instructor, $this->conversation, true);
+        $this->send($this->student, 'hi');
+
+        $this->assertSame([], (new ConversationService())->listFor($this->instructor));
     }
 }
