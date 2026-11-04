@@ -94,12 +94,20 @@ starts with a row of quick reactions.
 
 ### 3.3 Turning forwarding off (the owner's decision)
 
-Instructors, deans and chairpersons can switch **forwarding off** for a chat they moderate, and back on. The
-natural reading, which the builder should follow unless the owner says otherwise **(my call on the exact scope)**:
-the instructor in the course chats they teach; a chairperson or dean in the staff groups they created; and the
-institutional administrator in any chat of their institution (as with the other moderation powers, original design
-3.3 rule 8). It is the same "who may moderate this chat" check as the lock, through `MessagingPolicy::canModerate`;
-no new role logic. While off, "Forward" is hidden for everyone in that chat (including moderators) and the server
+Instructors, deans and chairpersons can switch **forwarding off**, and back on, for these chats (confirmed by the
+owner):
+
+- the **instructor** in the course chats they teach;
+- a **chairperson** in the course chats of their sub-department and in the staff groups they created;
+- a **dean** in the course chats of their department and in the staff groups they created;
+- the **institutional administrator** in any chat of their institution **(my call; the owner did not mention
+  them)**, as with the other moderation powers (original design 3.3 rule 8).
+
+Scope for chairpersons and deans comes from the existing access services (`ChairpersonAccessService`,
+`DeanAccessService`): a course chat is in scope when its offering belongs to their sub-department / department.
+Do not write new scope SQL. This is a separate decision from `canModerate` (which does not give chairpersons and
+deans power over course chats), so add a `canToggleForwarding` decision to `MessagingPolicy` with its own table of
+tests; it must not widen who can lock, remove or pin. While off, "Forward" is hidden for everyone in that chat (including moderators) and the server
 refuses it. It does not stop copy-and-paste, and the interface should not claim it does. A short notice in the chat
 header ("Forwarding is off") tells members why. Switching it is an audit entry (ids only), like lock/unlock.
 
@@ -200,7 +208,7 @@ Layers as in the original design (section 8). In addition:
 
 - **Policy (unit, data provider):** every action × role × context (participant or not, own or other's message,
   moderator or not, locked, closed, read-only, blocked, parent thread, course vs direct vs group).
-- **Services (database):** forwarding switch (who may toggle: instructor of that course, chairperson/dean of their own group, institutional admin; nobody else; forward out refused while off, forward in still allowed); pin limit (5 chats, 3 messages); archive returns on a new message unless muted; delete-for-me
+- **Services (database):** forwarding switch (who may toggle: instructor of that course, chairperson/dean for course chats in their scope and staff groups they created, institutional admin; a chairperson/dean outside the scope, a student and a parent cannot; forward out refused while off, forward in still allowed); pin limit (5 chats, 3 messages); archive returns on a new message unless muted; delete-for-me
   hides history only for the caller and resurfaces with newer messages only; mute excludes from badge and from
   notifications; reply across chats refused; forward to a chat the person cannot post in refused, per target;
   forward from a parent thread refused; bump limit; **unsend: raw `body_enc` no longer decrypts to the old text,
@@ -226,7 +234,7 @@ Layers as in the original design (section 8). In addition:
 | TC-MSG-23 | Bump your own message; it arrives as a reminder; a second bump within the hour is refused |
 | TC-MSG-24 | Unsend within 15 minutes: both sides see the tombstone and the text is gone; others' messages offer no Unsend |
 | TC-MSG-25 | Phone width: long-press a message opens the sheet; keyboard opens the same menu |
-| TC-MSG-26 | Instructor turns forwarding off in a course chat: Forward disappears for students and the server refuses it; a chairperson does the same in their staff group; a student has no switch |
+| TC-MSG-26 | Instructor turns forwarding off in a course chat: Forward disappears for students and the server refuses it; a chairperson and a dean do the same in a course chat of their scope and in their staff group; a student has no switch |
 
 ---
 
@@ -243,11 +251,11 @@ Layers as in the original design (section 8). In addition:
 9. Reactions: one per person, quick row of 5 plus a ~24-emoji palette, allowed in locked chats, 60/minute, one notice per message.
 10. Personal list actions follow the existing read-only-institution rule (blocked when read-only).
 11. The migrations and endpoints are named by the builder; names above are proposals.
-12. Who may switch forwarding off: whoever may moderate that chat (instructor of the course, chairperson/dean of their own staff group, institutional administrator). The owner said instructors, deans and chairpersons have this power; the exact chats are my reading.
+12. Forwarding switch: instructors (own course chats), chairpersons and deans (course chats in their scope and staff groups they created) per the owner; I added the institutional administrator for any chat in their institution.
 
 ## 10. Still needs the owner's answer
 
 None block the build; the defaults above apply until answered:
 
-- Should a chairperson or dean also be able to turn forwarding off in **course chats within their scope** (not only in staff groups they created)?
+- Should the institutional administrator also be able to turn forwarding off? (Default: yes, any chat of their institution.)
 - Should the reaction list ("who reacted") be visible to everyone in a course chat of 40+ people, or only counts?
