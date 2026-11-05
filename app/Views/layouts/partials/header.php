@@ -96,8 +96,10 @@ $accountLinks = [
                 aria-haspopup="true"
                 aria-expanded="false"
                 aria-controls="notifications-panel"
-                class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white aria-[current=page]:bg-brand aria-[current=page]:text-white aria-[current=page]:hover:bg-brand aria-[current=page]:hover:text-white">
+                class="relative h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white aria-[current=page]:bg-brand aria-[current=page]:text-white aria-[current=page]:hover:bg-brand aria-[current=page]:hover:text-white">
                 <?= icon('bell', 'h-5 w-5 text-current') ?>
+                <?php $bellCount = (new \App\Services\Notifications\NotificationService())->unreadCount((int) $user->id); ?>
+                <span data-notifications-badge data-count="<?= $bellCount ?>" <?= $bellCount > 0 ? '' : 'hidden' ?> class="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= $bellCount > 99 ? '99+' : $bellCount ?></span>
             </button>
 
             <!-- Latest notifications, 7 at a time; more load as the list is scrolled -->

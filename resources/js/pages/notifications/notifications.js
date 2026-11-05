@@ -9,6 +9,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { adjustBellCount } from "../../shared/notifications-badge.js";
 import { createMenu } from "../messages/menu.js";
 import { bindMenuTriggers } from "../messages/gestures.js";
 
@@ -84,6 +85,7 @@ export function initNotificationsPage(root = document.querySelector("[data-notif
         }
 
         showRead(li);
+        adjustBellCount(-1);
         refresh();
         post(root.dataset.readUrl, li.dataset.id, keepalive);
     }
@@ -93,6 +95,10 @@ export function initNotificationsPage(root = document.querySelector("[data-notif
 
         if (response === null || (response.status !== 200 && response.status !== 404)) {
             return;
+        }
+
+        if (isUnread(li)) {
+            adjustBellCount(-1);
         }
 
         li.remove();

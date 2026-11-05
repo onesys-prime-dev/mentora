@@ -9,6 +9,8 @@
 |
 */
 
+import { adjustBellCount, setBellCount } from "./notifications-badge.js";
+
 const BATCH_SKELETON_ROWS = 3;
 
 // The panel is a glance: the latest few, scrolling inside it. Everything else is on the Notifications page.
@@ -92,6 +94,7 @@ if (button && panel) {
         }
 
         showRead(li);
+        adjustBellCount(-1);
         refresh();
         post(readUrl, li.dataset.notificationId, keepalive);
     }
@@ -100,6 +103,10 @@ if (button && panel) {
         const response = await post(deleteUrl, li.dataset.notificationId);
 
         if (response !== null && (response.status === 200 || response.status === 404)) {
+            if (isUnread(li)) {
+                adjustBellCount(-1);
+            }
+
             li.remove();
             refresh();
         }
@@ -211,6 +218,7 @@ if (button && panel) {
 
     markAllButton?.addEventListener("click", () => {
         rowsOf().forEach(showRead);
+        setBellCount(0);
         refresh();
         post(readUrl, null);
     });

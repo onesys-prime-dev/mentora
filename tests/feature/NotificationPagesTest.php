@@ -186,6 +186,21 @@ final class NotificationPagesTest extends RouteTestCase
         $this->assertStringNotContainsString('data-notifications-strip', $this->step('GET', 'student/dashboard')->response()->getBody());
     }
 
+    public function testTheBellShowsTheUnreadCountAndHidesAtZero(): void
+    {
+        $student = $this->signIn('student', 'stu@example.com');
+
+        $this->assertMatchesRegularExpression('#data-notifications-badge data-count="0" hidden#', $this->step('GET', 'student/dashboard')->response()->getBody());
+
+        $this->tell($student, 'One');
+        $this->tell($student, 'Two');
+
+        $body = $this->step('GET', 'student/dashboard')->response()->getBody();
+
+        $this->assertStringContainsString('data-notifications-badge data-count="2"', $body);
+        $this->assertDoesNotMatchRegularExpression('#data-notifications-badge data-count="2"[^>]*hidden#', $body);
+    }
+
     public function testTheDailyCommandCreatesThemAndAskedAgainCreatesNone(): void
     {
         $admin = (int) PeopleFactory::person('admin', 'Ada', 'Admin', 'ada@example.com')->id;

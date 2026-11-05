@@ -11,6 +11,8 @@
 |--------------------------------------------------------------------------
 */
 
+import { setBellCount } from "./notifications-badge.js";
+
 const SHOW_MS = 8000;
 const POLL_MS = 20000;
 const POLL_HIDDEN_MS = 60000;
@@ -89,6 +91,10 @@ export function startNotificationToast(doc = document, fetchImpl = (...args) => 
 
         if (response?.status === 200) {
             const data = await response.json().catch(() => null);
+
+            if (data && typeof data.unread === "number") {
+                setBellCount(data.unread, doc);
+            }
 
             if (data && typeof data.last_id === "number") {
                 // The panel being open already shows what arrived, so only preview while it is shut.
