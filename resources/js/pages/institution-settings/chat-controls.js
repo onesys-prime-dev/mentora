@@ -10,6 +10,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { showToast } from "../../shared/toast.js";
 import { createApi } from "../messages/api.js";
 import { SWITCHES } from "../messages/chat-switches.js";
 
@@ -103,9 +104,13 @@ export async function initChatControls(root = document.querySelector("[data-chat
                 if (result.status === 200) {
                     chat.controls = { ...(chat.controls ?? {}), ...(result.data?.controls ?? { [s.name]: next }) };
                     paint(Boolean(chat.controls[s.name]));
+
+                    // Say what was done, to which chat: these switches save the moment they are flipped.
+                    showToast(`${s.label} is now ${next ? "on" : "off"} in ${chat.name}.`, { tone: "success" });
                 } else {
                     paint(!next);
                     note.textContent = "Couldn't change that. Try again.";
+                    showToast(`Couldn't change ${s.label} in ${chat.name}. Try again.`, { tone: "danger" });
                 }
             });
 

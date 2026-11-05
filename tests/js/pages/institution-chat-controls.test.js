@@ -43,6 +43,7 @@ describe("the institution settings chat controls", () => {
         q("[data-control=forwarding]").click();
         await vi.waitFor(() => expect(q("[data-control=forwarding]").getAttribute("aria-checked")).toBe("false"));
         expect(setControl).toHaveBeenCalledWith(7, "forwarding", false);
+        expect(document.querySelector('[data-toast="success"]').textContent).toContain("Forwarding is now off in IT101.");
 
         const picker = q("[data-role=controls-picker]");
 
