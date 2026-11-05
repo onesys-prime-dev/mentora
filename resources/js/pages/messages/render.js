@@ -240,8 +240,8 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     const chips = reactionChips(message, { onToggle, onShowWho });
 
     if (chips) {
-        // The pill hangs off the bubble's bottom edge, so the bubble leaves room for it.
-        node.classList.add("relative", "mb-2");
+        // The pill hangs off the bubble's bottom edge into the gap between messages; nothing moves when it appears.
+        node.classList.add("relative");
         node.append(chips);
     }
 
