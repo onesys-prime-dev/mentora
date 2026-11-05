@@ -256,7 +256,7 @@ final class MessagesActionRoutesTest extends RouteTestCase
             'forward'         => ['POST', "{$m}/forward", ['targets' => [$this->conversation]]],
             'pin'             => ['POST', "{$m}/pin", []],
             'unpin'           => ['POST', "{$m}/unpin", []],
-            'controls'        => ['POST', "conversations/{$conversationId}/controls", ['allow_reactions' => 0]],
+            'controls'        => ['POST', "conversations/{$conversationId}/controls", ['switch' => 'reactions', 'on' => false]],
             'changes'         => ['GET', "conversations/{$conversationId}/changes?since=2000-01-01+00:00:00", []],
         ];
     }

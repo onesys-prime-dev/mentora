@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Messaging\ConversationService;
+use App\Services\Messaging\CourseChatSync;
 use App\Services\Messaging\MessageActions;
 use App\Services\Messaging\MessageCipher;
 use App\Services\Messaging\MessageService;
@@ -132,11 +133,21 @@ final class MessageActionsBumpTest extends DatabaseTestCase
         $own = (int) db_connect()->insertID();
         db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $peer->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
         $this->assertSame('not_allowed', $this->actions()->bump($this->student, $direct, $own)['reason']);
-        db_connect()->table('user_blocks')->truncate();
+        // emptyTable, not truncate: TRUNCATE commits, and the test transaction could no longer roll the rest back.
+        db_connect()->table('user_blocks')->emptyTable();
 
-        db_connect()->table('conversations')->where('id', $this->conversation)->update(['is_locked' => 1]);
-        $this->assertSame('not_allowed', $this->actions()->bump($this->student, $this->conversation, $this->message)['reason']);
-        $this->assertSame(1, db_connect()->table('messages')->where('conversation_id', $this->conversation)->countAllResults());
+        // Only a course chat locks (the instructor still posts there); a direct chat has no lock.
+        $offeringId = (int) db_connect()->table('enrollments')->get()->getRow('offering_id');
+        $chat       = (int) (new CourseChatSync())->syncOffering($offeringId)['conversation_id'];
+        db_connect()->table('messages')->insert([
+            'conversation_id' => $chat, 'sender_id' => $this->student->id,
+            'body_enc' => $this->cipher->encrypt('bump me', $chat, (int) $this->student->id),
+            'client_uuid' => bin2hex(random_bytes(16)), 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $inChat = (int) db_connect()->insertID();
+        db_connect()->table('conversations')->where('id', $chat)->update(['is_locked' => 1]);
+        $this->assertSame('not_allowed', $this->actions()->bump($this->student, $chat, $inChat)['reason']);
+        $this->assertSame(1, db_connect()->table('messages')->where('conversation_id', $chat)->countAllResults());
     }
 
     public function testWithTheSwitchOffItIsRefused(): void

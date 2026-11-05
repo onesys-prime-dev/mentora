@@ -172,7 +172,8 @@ final class MessageActionsReactionsTest extends DatabaseTestCase
         $theirs = $this->post($direct, $peer);
         db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $peer->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
         $this->assertSame('not_allowed', $this->actions()->react($this->student, $direct, $theirs, '👍')['reason']);
-        db_connect()->table('user_blocks')->truncate();
+        // emptyTable, not truncate: TRUNCATE commits, and the test transaction could no longer roll the rest back.
+        db_connect()->table('user_blocks')->emptyTable();
 
         $chat = (int) (new CourseChatSync())->syncOffering($this->offering)['conversation_id'];
         $msg  = $this->post($chat, $this->instructor);

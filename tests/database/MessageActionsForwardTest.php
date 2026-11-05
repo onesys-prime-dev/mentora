@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Messaging\ConversationService;
+use App\Services\Messaging\CourseChatSync;
 use App\Services\Messaging\MessageActions;
 use App\Services\Messaging\MessageCipher;
 use App\Services\Messaging\MessageService;
@@ -167,6 +168,7 @@ final class MessageActionsForwardTest extends DatabaseTestCase
     public function testATargetThePersonIsNotInIsNotFoundAndNothingIsCreated(): void
     {
         $outsider = PeopleFactory::person('student', 'Out', 'Sider', null, $this->institution);
+        CourseFactory::enroll($this->offering, $outsider);
         $theirs   = (int) (new ConversationService())->startDirect($outsider, (int) $this->instructor->id)['id'];
         [$mine]   = $this->chats(1);
 
@@ -178,7 +180,9 @@ final class MessageActionsForwardTest extends DatabaseTestCase
 
     public function testALockedTargetRefusesOnlyThatTarget(): void
     {
-        [$locked, $open] = $this->chats(2);
+        // Only a course chat locks; the student is a member of this one.
+        $locked = (int) (new CourseChatSync())->syncOffering($this->offering)['conversation_id'];
+        [$open] = $this->chats(1);
         db_connect()->table('conversations')->where('id', $locked)->update(['is_locked' => 1]);
 
         $result = $this->actions()->forward($this->student, $this->conversation, $this->message, [$locked, $open]);
@@ -200,7 +204,8 @@ final class MessageActionsForwardTest extends DatabaseTestCase
 
         db_connect()->table('message_hidden')->insert(['message_id' => $this->message, 'user_id' => $this->student->id]);
         $this->assertSame('not_found', $this->actions()->forward($this->student, $this->conversation, $this->message, [$a])['reason']);
-        db_connect()->table('message_hidden')->truncate();
+        // emptyTable, not truncate: TRUNCATE commits, and the test transaction could no longer roll the rest back.
+        db_connect()->table('message_hidden')->emptyTable();
 
         $this->actions()->deleteForEveryone($this->student, $this->conversation, $this->message);
         $this->assertSame('not_found', $this->actions()->forward($this->student, $this->conversation, $this->message, [$a])['reason']);
