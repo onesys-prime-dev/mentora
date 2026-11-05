@@ -217,7 +217,7 @@ works on a fresh seed. A full run needs a fresh seed.
   1. Complete the two items before the quiz: reading "What Is a Variable?" and PDF "Data Types Cheat Sheet".
   2. Open Quiz 1. It shows "0 of 2 attempts used", and Mark as Completed is off. Press Take Quiz.
   3. Answer questions 1 to 4 correctly and write a short essay. Each answer saves as you go.
-  4. Press Submit Quiz and accept the confirmation ("Submit your answers? You won't be able to change them afterward.").
+  4. Press Submit Quiz (it is off until every required question is answered, with "Answer the N required questions to submit." beside it), and press Submit in the dialog that asks "Submit your answers? You won't be able to change them afterward." A toast says "Quiz submitted." Before answering, following a course tab asks "Leave this quiz?" and Stay keeps the quiz.
   5. Return to the quiz item in Modules.
 - **Expected:**
   - Step 1: the quiz is locked until both are completed.

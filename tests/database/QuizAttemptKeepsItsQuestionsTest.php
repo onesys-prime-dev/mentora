@@ -102,6 +102,7 @@ final class QuizAttemptKeepsItsQuestionsTest extends DatabaseTestCase
     public function testAnAttemptStartedAfterTheEditUsesTheEditedQuestion(): void
     {
         $first = $this->start();
+        $this->attempts->saveAnswer($this->ada, $first, $this->question, ['selected_choice_id' => $this->choices[0]]);
         $this->attempts->submitAttempt($this->ada, $first);
         $this->editTheQuestion();
 

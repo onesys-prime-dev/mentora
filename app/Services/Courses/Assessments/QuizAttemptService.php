@@ -101,6 +101,9 @@ class QuizAttemptService
     /** Seconds past the timer a late save or submit is still accepted (the browser's own delay). */
     public const TIME_LIMIT_GRACE_SECONDS = 60;
 
+    /** The browser hands a quiz in the moment its timer ends: a few seconds' slack for the two clocks, not the full minute. */
+    public const AUTO_SUBMIT_GRACE_SECONDS = 5;
+
     /** What the student is told when the database refuses the write. */
     public const START_FAILED = 'The quiz could not be started. Reload the page to try again.';
 
@@ -556,7 +559,7 @@ class QuizAttemptService
     }
 
     /** True when the quiz has a time limit and this attempt has used it up. */
-    private function timeIsUp(array $submission): bool
+    private function timeIsUp(array $submission, int $graceSeconds = self::TIME_LIMIT_GRACE_SECONDS): bool
     {
         $assessment = $this->assessmentModel->find((int) $submission['assessment_id']);
 
@@ -566,7 +569,7 @@ class QuizAttemptService
             return false;
         }
 
-        return time() > strtotime($submission['started_at']) + $minutes * 60 + self::TIME_LIMIT_GRACE_SECONDS;
+        return time() > strtotime($submission['started_at']) + $minutes * 60 + $graceSeconds;
     }
 
     /**
@@ -662,6 +665,20 @@ class QuizAttemptService
                 return ['success' => false, 'message' => 'This attempt has already been submitted.'];
             }
 
+            // A required question left unanswered holds the attempt back, unless the timer has run out: then
+            // whatever was answered is handed in, so a student is never stuck behind a question they ran out of time for.
+            $missing = $this->timeIsUp($submission, self::AUTO_SUBMIT_GRACE_SECONDS) ? 0 : $this->unansweredRequired($submission);
+
+            if ($missing > 0) {
+                $db->transComplete();
+
+                return [
+                    'success'             => false,
+                    'unanswered_required' => $missing,
+                    'message'             => "Answer the {$missing} required " . ($missing === 1 ? 'question' : 'questions') . ' you left blank, then submit.',
+                ];
+            }
+
             $submitted = $this->handIn($submissionId, $submission, $db);
         } catch (DatabaseException) {
             $submitted = false;
@@ -685,6 +702,44 @@ class QuizAttemptService
             'message' => 'Quiz submitted successfully.',
             'submission' => $this->submissionModel->find($submissionId),
         ];
+    }
+
+    /**
+     * How many required questions of this attempt have no answer. A question counts as answered when a choice is
+     * picked or some text is typed (not just spaces), the same as the page. A file upload cannot be answered in a
+     * quiz yet, so it is never counted.
+     */
+    private function unansweredRequired(array $submission): int
+    {
+        $responses = [];
+
+        foreach ($this->responseModel->where('submission_id', (int) $submission['id'])->findAll() as $row) {
+            $responses[(int) $row['question_id']] = $row;
+        }
+
+        $missing = 0;
+
+        foreach ($this->questionsOf($submission) as $question) {
+            if (empty($question['is_required']) || $question['question_type'] === 'File Upload') {
+                continue;
+            }
+
+            $response = $responses[(int) $question['id']] ?? null;
+
+            $choices = $response && !empty($response['selected_choice_ids']) ? json_decode((string) $response['selected_choice_ids'], true) : [];
+
+            $answered = $response && (
+                $response['selected_choice_id'] !== null
+                || (is_array($choices) && $choices !== [])
+                || trim((string) ($response['response_text'] ?? '')) !== ''
+            );
+
+            if (!$answered) {
+                $missing++;
+            }
+        }
+
+        return $missing;
     }
 
     /**

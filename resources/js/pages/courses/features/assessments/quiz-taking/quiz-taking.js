@@ -11,6 +11,9 @@ import {
 } from "../api.js";
 import { showToast } from "../../../../../shared/toast.js";
 import { bindAttemptGuard } from "./attempt-guard.js";
+import { askInQuiz } from "./confirm.js";
+import { bindLeaveGuard } from "./leave-guard.js";
+import { bindSubmitRules } from "./submit-rules.js";
 
 let state = {
     offeringId: null,
@@ -24,6 +27,11 @@ let timerInterval = null;
 
 // What watches the attempt in progress (see attempt-guard.js); only one at a time.
 let guard = null;
+
+// Warns before the student leaves the page, and keeps Submit to the rules (see leave-guard.js, submit-rules.js).
+let leaveGuard = null;
+
+let submitRules = null;
 
 export function initializeQuizTaking(offeringId, assessmentId, submitQuiz) {
 
@@ -39,6 +47,7 @@ export function initializeQuizTaking(offeringId, assessmentId, submitQuiz) {
     bindAnswerInputs(form);
     bindSubmit(form);
     bindTimer();
+    startLeaveGuard(form);
 
     // A quiz that records leaving the page, or locks the browser, is watched while it is being answered.
     guard?.stop();
@@ -294,6 +303,9 @@ function setSaveStatus(status) {
 
 function updateProgress() {
 
+    // Submit follows what is answered.
+    submitRules?.refresh();
+
     const questions =
         Array.from(document.querySelectorAll("[data-quiz-question]"));
 
@@ -361,7 +373,7 @@ function bindTimer() {
             }
 
             if (form) {
-                submitNow(form);
+                submitNow(form, { timeUp: true });
             }
 
             return;
@@ -397,34 +409,67 @@ function bindTimer() {
 
 function bindSubmit(form) {
 
-    document
-        .querySelector("[data-submit-quiz]")
-        ?.addEventListener("click", () => {
-
-            const confirmed =
-                window.confirm("Submit your answers? You won't be able to change them afterward.");
-
-            if (!confirmed) {
-                return;
-            }
-
-            submitNow(form);
-
-        });
+    submitRules = bindSubmitRules({
+        form,
+        button: document.querySelector("[data-submit-quiz]"),
+        hint: document.querySelector("[data-submit-hint]"),
+        ask: askInQuiz,
+        submit: () => submitNow(form),
+    });
 
 }
 
-async function submitNow(form) {
+/*
+|--------------------------------------------------------------------------
+| Leaving the page
+|--------------------------------------------------------------------------
+*/
+
+function startLeaveGuard(form) {
+
+    leaveGuard?.stop();
+
+    leaveGuard = bindLeaveGuard({
+        form,
+        timed: document.querySelector("[data-quiz-timer]") !== null,
+        ask: askInQuiz,
+    });
+
+}
+
+async function submitNow(form, { timeUp = false } = {}) {
 
     if (timerInterval) {
         clearInterval(timerInterval);
     }
 
+    // Handing the quiz in is leaving it: no warning for that, nor after.
+    leaveGuard?.stop();
+
     try {
 
-        await submitQuizAttempt(
+        const result = await submitQuizAttempt(
             state.offeringId,
             form.dataset.submissionId
+        );
+
+        if (!result?.success) {
+
+            // Still in progress (a required question is blank, or the server could not save it): keep going.
+            showToast(result?.message || "The quiz could not be submitted. Try again.", { tone: "danger" });
+
+            if (form.isConnected) {
+                startLeaveGuard(form);
+                bindTimer();
+            }
+
+            return;
+
+        }
+
+        showToast(
+            timeUp ? "Time is up. Your quiz was submitted." : "Quiz submitted.",
+            { tone: "success" }
         );
 
         await state.submitQuiz();
@@ -432,6 +477,13 @@ async function submitNow(form) {
     } catch (error) {
 
         console.error(error);
+
+        showToast("The quiz could not be submitted. Check your connection and try again.", { tone: "danger" });
+
+        if (form.isConnected) {
+            startLeaveGuard(form);
+            bindTimer();
+        }
 
     }
 

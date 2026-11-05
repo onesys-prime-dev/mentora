@@ -349,6 +349,7 @@ $answeredCount = count(array_filter($responsesByQuestion ?? [], static fn (array
                                 data-quiz-question
                                 data-question-id="<?= esc($question['id']) ?>"
                                 data-answered="<?= $isAnswered ? '1' : '0' ?>"
+                                data-required="<?= !empty($question['is_required']) && $question['question_type'] !== 'File Upload' ? '1' : '0' ?>"
                                 data-multiple-answer="<?= $isMultipleAnswer ? '1' : '0' ?>"
                                 data-answers-count="<?= esc($answersCount) ?>"
                                 class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -454,10 +455,12 @@ $answeredCount = count(array_filter($responsesByQuestion ?? [], static fn (array
 
                     <div class="sticky bottom-0 mt-6 flex items-center justify-end gap-3 rounded-2xl border border-gray-200 bg-white/95 p-4 backdrop-blur">
 
+                        <p data-submit-hint role="status" class="mr-auto hidden text-xs font-medium text-[#946200]"></p>
+
                         <button
                             type="button"
                             data-submit-quiz
-                            class="inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand">
 
                             Submit Quiz
 
@@ -468,6 +471,17 @@ $answeredCount = count(array_filter($responsesByQuestion ?? [], static fn (array
                     <?php endif; ?>
 
                 </form>
+
+                <?php if (!$readOnly): ?>
+                    <?= view('components/dialog', [
+                        'id'     => 'quiz-confirm',
+                        'title'  => 'Submit your answers?',
+                        'size'   => 'sm',
+                        'body'   => '<p data-quiz-confirm-text class="text-sm text-[#3D3D3D]"></p>',
+                        'footer' => '<button type="button" data-dialog-close data-quiz-confirm-no class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Keep working</button>'
+                            . '<button type="button" data-quiz-confirm-yes class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Submit</button>',
+                    ], ['saveData' => false]) ?>
+                <?php endif; ?>
 
             </div>
 

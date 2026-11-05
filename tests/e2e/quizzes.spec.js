@@ -11,9 +11,6 @@ async function savingAnswer(page, action) {
 }
 
 test("TC-QUIZ-01 Student takes and submits a quiz", async ({ page }) => {
-    // The native "Submit your answers?" confirmation must be accepted (Playwright cancels it otherwise).
-    page.on("dialog", (dialog) => dialog.accept());
-
     await signInAs(page, accounts.student, "student");
     await openCourse(page, "student", "IT101", "A");
     await openModule(page, "Programming Fundamentals");
@@ -38,6 +35,19 @@ test("TC-QUIZ-01 Student takes and submits a quiz", async ({ page }) => {
     await page.getByRole("button", { name: "Take Quiz" }).click();
     await expect(page.locator("#quiz-answer-form")).toBeVisible();
 
+    // Submit waits for the required questions, and says how many are left.
+    await expect(page.locator("[data-submit-quiz]")).toBeDisabled();
+    await expect(page.locator("[data-submit-hint]")).toContainText(/Answer the \d+ required questions to submit/);
+
+    // Leaving while the quiz is open asks first; staying changes nothing.
+    await page.getByRole("tab", { name: "Announcements" }).or(page.locator('[data-course-feature="announcements"]').first()).click();
+    const leave = page.getByRole("dialog", { name: "Leave this quiz?" });
+    await expect(leave).toBeVisible();
+    await expect(leave).toContainText(/Your answers are saved/);
+    await leave.getByRole("button", { name: "Stay" }).click();
+    await expect(leave).toBeHidden();
+    await expect(page.locator("#quiz-answer-form")).toBeVisible();
+
     // 3. Answer: four auto-graded questions correctly (3 + 4 + 3 + 3 = 13 points) and the essay.
     const question = (text) => page.locator("[data-quiz-question]").filter({ hasText: text });
     const choice = (text, answer) => question(text).locator("[data-quiz-choice-row]").filter({ hasText: answer });
@@ -53,10 +63,16 @@ test("TC-QUIZ-01 Student takes and submits a quiz", async ({ page }) => {
         )
     );
 
-    // 4. Submit.
+    // 4. Submit: every required question is answered, so the button is on; it asks once, then a toast says it worked.
+    await expect(page.locator("[data-submit-quiz]")).toBeEnabled();
+    await expect(page.locator("[data-submit-hint]")).toBeHidden();
     const submitted = page.waitForResponse((r) => /\/submissions\/\d+\/submit$/.test(r.url()) && r.request().method() === "POST");
     await page.locator("[data-submit-quiz]").click();
+    const confirm = page.getByRole("dialog", { name: "Submit your answers?" });
+    await expect(confirm).toContainText("You won't be able to change them afterward.");
+    await confirm.getByRole("button", { name: "Submit", exact: true }).click();
     expect((await submitted).ok()).toBe(true);
+    await expect(page.getByText("Quiz submitted.")).toBeVisible();
 
     // The four auto-graded answers are worth 13 of 20; the essay waits for the instructor.
     await expect(page.getByText("13/20", { exact: true })).toBeVisible();
