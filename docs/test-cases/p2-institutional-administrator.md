@@ -917,6 +917,9 @@ P3 scenarios. QA status as in the README; none has been run.
 | TC-IAA-18 | The institution's banner | Institutional administrator | P3 | VCI |
 | TC-UPL-05 | A CSV preview nobody applies is removed within an hour | Institutional administrator | P3 | REG? |
 | TC-UPL-06 | CSV upload names people and courses as an administrator knows them, and shows the sections it creates | Institutional administrator | P1 | VCI |
+| TC-SEC-01 | A block section takes courses and students; students are enrolled in every course | Institutional administrator | P1 | VCI |
+| TC-SEC-02 | Taking a student or a course out of a section keeps work and grades; a section with students cannot be archived | Institutional administrator | P1 | VCI |
+| TC-SEC-03 | A CSV row naming a block section joins the course to it | Institutional administrator | P2 | VCI |
 | TC-STR-09 | A program's status: inactive, archived, reactivated | Institutional administrator | P3 | VCI |
 | TC-BRD-05 | Brand colours must keep text readable | Institutional administrator | P3 | VCI |
 | TC-HOM-02 | The home page's attention list | Institutional administrator | P3 | VCI |
@@ -971,6 +974,47 @@ P3 scenarios. QA status as in the README; none has been run.
 - **Already automated:** `CsvUploadServiceTest`, `InstitutionCsvUploadTest`, `SisCsvParserTest`, `SisMapperTest`
 - **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-UPL-01)
 - **Basis:** `CsvUploadService`, `SisCsvParser::KEYS_UPLOAD`, `SisImporter`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-SEC-01 A block section takes courses and students; students are enrolled in every course
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a program, an active term, two active courses (IT101, IT102), three students with student numbers, one of them an instructor of IT101 as well
+- **Steps:**
+  1. Sections › Add a section: BSIT 1-A, year 1, capacity 2. You are taken to the section.
+  2. Add IT101 and IT102.
+  3. Add two students by number; then add the third without the tick box, and again with it.
+  4. Add the person who teaches IT101 as a student. Add a name that is not a student.
+  5. Add IT103 afterwards.
+- **Expected:** the section is listed with its program, year, term, 2 courses and its students over capacity; each student is enrolled in IT101 and IT102 (on their rosters); the third is refused with "over capacity by 1" until the box is ticked; the instructor is skipped for IT101 with the reason and still goes into IT102; the unknown name is listed as skipped; IT103 enrols the existing students at once. A section name already used in the term is refused; another institution may use it.
+- **Already automated:** `tests/database/ClassSectionServiceTest.php`, `tests/feature/InstitutionSectionsTest.php`
+- **Playwright:** no
+- **Basis:** `ClassSectionService`, `EnrolmentService`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-SEC-02 Taking a student or a course out of a section keeps work and grades; a section with students cannot be archived
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a section with two courses and two students, one with graded work
+- **Steps:** take a student out; try to take a course out; try to archive the section; take the other student out, then the courses, then archive; reactivate it and add a course again.
+- **Expected:** the student leaves the section and their places in its courses become Dropped (the rows, work and grades stay; they can be reinstated on the roster); a course with students enrolled cannot be taken out and the message says to drop them first; the section cannot be archived while it has students or enrolled places; once empty it can, and its offerings are archived; reactivated in an open term, adding the course brings the same offering back with its content.
+- **Already automated:** `ClassSectionServiceTest`, `InstitutionSectionsTest`
+- **Playwright:** no
+- **Basis:** `ClassSectionService`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-SEC-03 A CSV row naming a block section joins the course to it
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** an active block section BSIT 1-A with two students, and an enrolments file with a student not in it, course IT101 and section `BSIT 1-A`
+- **Steps:** upload; read the preview; apply.
+- **Expected:** the preview lists "IT101 is added to the block section BSIT 1-A, and its 2 students are enrolled in it" under New sections (not as a refusal) and writes nothing; applying makes the block's IT101 offering, enrols its two students and the row's student, and does not make the row's student a member of the block.
+- **Already automated:** `CsvUploadServiceTest::testASectionNamingABlockJoinsTheCourseToItAndEnrolsItsStudents`
+- **Playwright:** no
+- **Basis:** `SisImporter::offeringFor`
 - **QA status:** VCI
 - **Review:** Draft
 

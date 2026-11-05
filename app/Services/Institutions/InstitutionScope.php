@@ -118,6 +118,11 @@ class InstitutionScope
         ) > 0;
     }
 
+    public function ownsClassSection(int $id): bool
+    {
+        return $this->count('class_sections cs', 'cs.id', $id, 'cs.institution_id') > 0;
+    }
+
     public function ownsTerm(int $id): bool
     {
         return $this->count('academic_terms t', 't.id', $id, 't.institution_id') > 0;
@@ -143,7 +148,7 @@ class InstitutionScope
     /**
      * Passes when the thing is the institution's own, otherwise a 404.
      *
-     * @param 'department'|'subDepartment'|'program'|'course'|'offering'|'term'|'person' $kind
+     * @param 'department'|'subDepartment'|'program'|'course'|'offering'|'term'|'person'|'classSection' $kind
      *
      * @throws PageNotFoundException
      */
@@ -156,6 +161,7 @@ class InstitutionScope
             'course'        => $this->ownsCourse($id),
             'offering'      => $this->ownsOffering($id),
             'term'          => $this->ownsTerm($id),
+            'classSection'  => $this->ownsClassSection($id),
             'person'        => $this->ownsPerson($id),
             default         => false,
         };

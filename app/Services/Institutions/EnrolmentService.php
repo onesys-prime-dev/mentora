@@ -368,11 +368,11 @@ class EnrolmentService
     }
 
     /**
-     * The student a student number or an email names, or why there is none.
+     * The student a student number or an email names, or why there is none (also used by block sections).
      *
      * @return array<string, mixed>|string
      */
-    private function findStudent(int $institutionId, string $name): array|string
+    public function findStudent(int $institutionId, string $name): array|string
     {
         $builder = db_connect()->table('users u')
             ->select('u.id, u.active, u.deleted_at')

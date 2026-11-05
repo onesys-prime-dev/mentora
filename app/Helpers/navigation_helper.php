@@ -101,6 +101,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'courses',     'label' => 'Courses',     'icon' => 'resources', 'url' => site_url('institution/courses')],
                 ['key' => 'terms',       'label' => 'Terms',       'icon' => 'calendar', 'url' => site_url('institution/terms')],
                 ['key' => 'offerings',   'label' => 'Offerings',   'icon' => 'modules',  'url' => site_url('institution/offerings')],
+                ['key' => 'sections',    'label' => 'Sections',    'icon' => 'user',     'url' => site_url('institution/sections')],
                 ['key' => 'people',      'label' => 'People',      'icon' => 'user',     'url' => site_url('institution/people')],
                 ['key' => 'roles',       'label' => 'Roles and permissions', 'icon' => 'lock', 'url' => site_url('institution/roles')],
                 ['key' => 'approvals',   'label' => 'Approvals',   'icon' => 'tasks',    'url' => site_url('institution/approvals')],

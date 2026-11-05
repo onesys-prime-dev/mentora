@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Audit\AuditLogger;
+use App\Services\Institutions\ClassSectionService;
 use App\Services\Institutions\CsvUploadService;
 use App\Services\Institutions\StructureException;
 use CodeIgniter\Config\Services;
@@ -42,7 +43,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     /** Touched by these tests; emptied with foreign keys off. */
     private const TABLES = [
-        'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'course_offerings', 'courses',
+        'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'class_section_students', 'course_offerings', 'class_sections', 'courses',
         'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs', 'notifications',
     ];
@@ -482,6 +483,46 @@ final class CsvUploadServiceTest extends DatabaseTestCase
         $refused = array_values(array_filter($kept['issues'], static fn (array $i): bool => $i['dataset'] === 'enrollments'));
 
         $this->assertSame('2026-404 is not a student of this institution; add them in students.csv or on the People page.', $refused[0]['reason']);
+    }
+
+    public function testASectionNamingABlockJoinsTheCourseToItAndEnrolsItsStudents(): void
+    {
+        $setup = $this->service->preview($this->institution, ['courses' => self::COURSES, 'students' => self::STUDENTS], $this->actor);
+        $this->service->apply($this->institution, $setup['token'], $this->actor);
+
+        $db      = db_connect();
+        $blocks  = new ClassSectionService();
+        $program = (int) $db->table('programs')->where('code', 'BSIT')->get()->getRowArray()['id'];
+        $term    = (int) $db->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
+        $block   = $blocks->create($this->institution, ['term_id' => (string) $term, 'program_id' => (string) $program, 'year_level' => '1', 'code' => 'BSIT 1-A', 'capacity' => '5'], $this->actor);
+        $blocks->addStudents($this->institution, $block, '2026-002', false, $this->actor); // Ben is in the block
+
+        // Ann is enrolled in IT101 of the block by the upload, without being in the block.
+        $enrol   = "student_number,email,program_code,course_code,section,status
+2026-001,,,IT101,BSIT 1-A,
+";
+        $preview = $this->service->preview($this->institution, ['enrollments' => $enrol], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+        $notes   = array_values(array_filter($kept['issues'], static fn (array $i): bool => ! empty($i['note'])));
+
+        $this->assertSame(['IT101 BSIT 1-A'], array_column($notes, 'item'));
+        $this->assertSame('IT101 is added to the block section BSIT 1-A, and its 1 student is enrolled in it.', $notes[0]['reason']);
+        $this->assertSame(0, $db->table('course_offerings')->where('class_section_id', $block)->countAllResults(), 'a preview writes nothing');
+
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $offering = $db->table('course_offerings')->where(['class_section_id' => $block])->get()->getRowArray();
+
+        $this->assertSame('BSIT 1-A', $offering['section_code']);
+        $this->assertSame(
+            ['enrolled', 'enrolled'],
+            [
+                $db->table('enrollments')->where(['offering_id' => $offering['id'], 'student_user_id' => $this->userId('ann@example.com')])->get()->getRowArray()['status'],
+                $db->table('enrollments')->where(['offering_id' => $offering['id'], 'student_user_id' => $this->userId('ben@example.com')])->get()->getRowArray()['status'],
+            ],
+            'Ann by the file, Ben because he is in the block',
+        );
+        $this->assertSame(1, $db->table('class_section_students')->where('class_section_id', $block)->countAllResults(), 'Ann is not made a member');
     }
 
     private function userId(string $email): int

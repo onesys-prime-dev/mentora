@@ -22,7 +22,7 @@ foreach (global_apps('institutional_admin') as $app) {
 
 $groups = [
     ''            => ['dashboard'],
-    'Academics'   => ['academics', 'courses', 'terms', 'offerings'],
+    'Academics'   => ['academics', 'courses', 'terms', 'offerings', 'sections'],
     'Community'   => ['people'],
     'Insights'    => ['reports', 'audit'],
     'Institution' => ['settings', 'subscription', 'integrations', 'institution'],

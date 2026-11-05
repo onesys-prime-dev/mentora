@@ -114,6 +114,22 @@ On the Structure page, each sub-department shows its chairperson with **Assign c
 - **From the SIS:** a section whose times the SIS sends (`class_schedules.csv`, see `sis-integration.md`) shows them read-only, with a "From the SIS" badge and "These class times come from your student information system. Change them there; the next sync brings them here." The server refuses a save as well. Disabling the connection hands the times back.
 - **Audit:** `structure.offering_schedule_changed` with the week before and after.
 
+## Sections (block sections)
+
+`/institution/sections` and `/institution/sections/{id}` (the section and its courses: `offerings.manage`; putting students in and out: `enrolments.manage`; read-only while the institution is read-only). In the Academics group of the menu and an Apps tile.
+
+A **section** is a cohort of students for one term, such as **BSIT 1-A**: it belongs to a program, a year level and a term, has a capacity, and takes a set of courses together. It is the `class_sections` table; its members are `class_section_students`; and each course it takes is an ordinary offering with `course_offerings.class_section_id` set and `section_code` equal to the section's name.
+
+- **The name is unique within the institution's term** (shown in capitals, up to 50 characters). That is what lets it be every offering's section code: two blocks that share a general-education course never clash. Another institution may use the same name.
+- **Courses:** "Add a course" makes the section's offering of it (or brings back one that was taken out) and enrols the section's students in it. "Take out" archives that offering, and only works while nobody is enrolled in it (an offering holds work and grades; drop the enrolments on its roster first).
+- **Students:** "Add students" takes student numbers or emails (up to 500). Each is put in the section and enrolled in every one of its courses **through `EnrolmentService`**, so its rules hold: the student role, an active account, the conflict of teaching or leading the same course, the SIS lock. A place that cannot be given is listed with its reason and the rest go in. Going over the capacity needs the tick box and says by how many. "Take out" drops (never deletes) their places in the section's courses, so their work and grades stay.
+- **Irregular students** are just enrolled in one offering, on its roster or by upload; they are not members of the section. A student already enrolled in a course of the section is not enrolled twice when they join.
+- **Edit:** name, year level, capacity. Renaming moves the section's offerings to the new name (refused if a course already has that section in the term); capacity cannot go below the students in the section.
+- **Archive:** only a section with no students in it and nobody enrolled in its courses; its offerings are archived with it. It can be brought back while its term is open, and its courses are added again.
+- **Existing offerings** (section "A" and so on) are not block sections and are left as they are: `class_section_id` is empty for them.
+- **CSV upload and SIS import:** a row whose `section` names an active block section of the active term (for example `BSIT 1-A`) puts that course in the block, enrols the block's students in it, and enrols the row's student; the preview lists it under "New sections" ("IT101 is added to the block section BSIT 1-A, and its 3 students are enrolled in it."). The row's student is not made a member of the block.
+- **Audit:** `structure.class_section_created|updated|archived|reactivated|course_added|course_restored|course_removed|student_added|student_removed`.
+
 ## Enrolment
 
 `/institution/enrolments/offering/{id}` (permission `enrolments.manage`; read-only while the institution is read-only). Reached from the "enrolled / capacity" figure on the Offerings list.

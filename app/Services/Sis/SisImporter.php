@@ -8,6 +8,7 @@ use App\Models\Academic\InstitutionModel;
 use App\Models\Users\UserProfileModel;
 use App\Services\Courses\CourseRoleConflicts;
 use App\Services\Institutions\ChairAssignmentService;
+use App\Services\Institutions\ClassSectionService;
 use App\Services\Institutions\ClassScheduleService;
 use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\OfferingService;
@@ -571,7 +572,11 @@ class SisImporter
                 continue;
             }
 
-            $offeringId = $this->offeringFor($courseId, $termId, $m['section'], 'enrollments');
+            $offeringId = $this->offeringFor($courseId, $termId, $m['section'], 'enrollments', $item);
+
+            if ($offeringId === null) {
+                continue;
+            }
 
             $existing = $db->table('enrollments')->where(['offering_id' => $offeringId, 'student_user_id' => $studentId])->get()->getRowArray();
 
@@ -604,16 +609,43 @@ class SisImporter
     }
 
     /**
-     * The section of a course in a term, created when it is not there yet. From an upload, a section it creates
-     * is noted (once) with the file's issues, so a mistyped section is seen in the preview; it is not a refusal.
+     * The section of a course in a term, created when it is not there yet, or null after failing the row with
+     * the reason.
+     *
+     * A section named like an active block section of the term (BSIT 1-A) is that block's: the course joins the
+     * block, whose students are enrolled in it. From an upload, a section it creates is noted (once) with the
+     * file's issues, so a mistyped section is seen in the preview; that is not a refusal.
      */
-    private function offeringFor(int $courseId, int $termId, string $section, string $dataset): int
+    private function offeringFor(int $courseId, int $termId, string $section, string $dataset, string $item): ?int
     {
         $db       = db_connect();
         $offering = $db->table('course_offerings')->where(['course_id' => $courseId, 'term_id' => $termId, 'section_code' => $section])->get()->getRowArray();
 
         if ($offering !== null) {
             return (int) $offering['id'];
+        }
+
+        $code   = (string) ($this->courseRow($courseId)['course_code'] ?? '');
+        $blocks = new ClassSectionService();
+        $block  = $blocks->activeByCode($this->institutionId, $termId, $section);
+
+        if ($block !== null) {
+            try {
+                $joined = $blocks->attachCourse($this->institutionId, (int) $block['id'], $courseId, $this->actor);
+            } catch (StructureException $e) {
+                $this->fail($dataset, $item, $e->getMessage());
+
+                return null;
+            }
+
+            if (! isset($this->newSections[$joined['offering_id']])) {
+                $this->newSections[$joined['offering_id']] = true;
+
+                $students       = (int) $joined['enrolled'];
+                $this->issues[] = ['dataset' => $dataset, 'item' => "{$code} {$section}", 'reason' => "{$code} is added to the block section {$section}" . ($students > 0 ? ", and its {$students} student" . ($students === 1 ? ' is' : 's are') . " enrolled in it." : '.'), 'note' => true];
+            }
+
+            return $joined['offering_id'];
         }
 
         $stamp = $this->stamp();
@@ -627,7 +659,6 @@ class SisImporter
         if ($this->upload && ! isset($this->newSections[$offeringId])) {
             $this->newSections[$offeringId] = true;
 
-            $code           = (string) ($this->courseRow($courseId)['course_code'] ?? '');
             $this->issues[] = ['dataset' => $dataset, 'item' => "{$code} {$section}", 'reason' => "Section {$section} of {$code} is not in the active term yet, so it is created.", 'note' => true];
         }
 
@@ -768,7 +799,12 @@ class SisImporter
                 continue;
             }
 
-            $offeringId          = $this->offeringFor($courseId, $termId, $m['section'], $dataset);
+            $offeringId = $this->offeringFor($courseId, $termId, $m['section'], $dataset, $item);
+
+            if ($offeringId === null) {
+                continue;
+            }
+
             $listed[$offeringId] = true;
             $labels[$offeringId] = $course['course_code'] . ' ' . $m['section'];
 
@@ -935,7 +971,7 @@ class SisImporter
             return null;
         }
 
-        return $this->offeringFor($courseId, $termId, $m['section'], $dataset);
+        return $this->offeringFor($courseId, $termId, $m['section'], $dataset, $item);
     }
 
     /**

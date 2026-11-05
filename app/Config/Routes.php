@@ -813,6 +813,24 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/schedule', 'Institution\OfferingScheduleController::save/$1');
         });
 
+        // Block sections (BSIT 1-A): a cohort of students that takes a set of courses together. The section
+        // and its courses are offerings.manage; putting students in and out is enrolments.manage.
+        $routes->group('sections', ['filter' => 'permission:offerings.manage'], function ($routes) {
+            $routes->get('/', 'Institution\SectionsController::index');
+            $routes->post('/', 'Institution\SectionsController::create');
+            $routes->get('(:num)', 'Institution\SectionsController::show/$1');
+            $routes->post('(:num)', 'Institution\SectionsController::update/$1');
+            $routes->post('(:num)/archive', 'Institution\SectionsController::archive/$1');
+            $routes->post('(:num)/reactivate', 'Institution\SectionsController::reactivate/$1');
+            $routes->post('(:num)/courses', 'Institution\SectionsController::addCourse/$1');
+            $routes->post('(:num)/courses/(:num)/remove', 'Institution\SectionsController::removeCourse/$1/$2');
+        });
+
+        $routes->group('sections', ['filter' => 'permission:enrolments.manage'], function ($routes) {
+            $routes->post('(:num)/students', 'Institution\SectionsController::addStudents/$1');
+            $routes->post('(:num)/students/(:num)/remove', 'Institution\SectionsController::removeStudent/$1/$2');
+        });
+
         // Who is enrolled in an offering (enrolments.manage).
         $routes->group('enrolments', ['filter' => 'permission:enrolments.manage'], function ($routes) {
             $routes->get('offering/(:num)', 'Institution\EnrolmentsController::roster/$1');
