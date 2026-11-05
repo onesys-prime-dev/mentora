@@ -132,13 +132,9 @@ export function messageMenuItems(message, conversation, handlers = {}) {
         destructive.push(item(handlers, "delete-everyone", "Delete for everyone", { danger: true }));
     }
 
-    // Someone else's message only: moderators get Remove instead of Report.
+    // Someone else's message only.
     if (!m.mine) {
-        destructive.push(
-            conversation?.can_moderate
-                ? item(handlers, "remove", "Remove", { danger: true })
-                : item(handlers, "report", "Report", { danger: true }),
-        );
+        destructive.push(item(handlers, "report", "Report", { danger: true }));
     }
 
     groups.push(destructive);

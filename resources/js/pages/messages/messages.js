@@ -1426,17 +1426,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             "delete-me": () => hideMessage(m.id),
             "delete-everyone": () => deleteEveryone(m.id),
             report: () => openReport(m.id),
-            remove: async () => {
-                if (!window.confirm("Remove this message for everyone in this chat?")) {
-                    return;
-                }
-
-                if (!refused(await api.remove(state.openId, m.id))) {
-                    m.removed = true;
-                    m.body = null;
-                    renderMessages();
-                }
-            },
         };
 
         menu.open(messageMenuItems(m, c, handlers), at);

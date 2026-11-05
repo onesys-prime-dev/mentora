@@ -90,17 +90,12 @@ describe("messageMenuItems", () => {
         expect(ids(items)).toContain("unpin");
     });
 
-    it("shows Remove instead of Report on others' messages for moderators", () => {
-        const items = messageMenuItems(msg({ mine: false }), { can_moderate: true }, {});
-        expect(ids(items).at(-1)).toBe("remove");
-        expect(items.at(-1).label).toBe("Remove");
-        expect(ids(items)).not.toContain("report");
-    });
-
-    it("shows Report and no Remove on others' messages for non-moderators", () => {
-        const items = messageMenuItems(msg({ mine: false }), { can_moderate: false }, {});
-        expect(ids(items)).toContain("report");
-        expect(ids(items)).not.toContain("remove");
+    it("shows Report and no Remove on others' messages, moderator or not", () => {
+        for (const can_moderate of [true, false]) {
+            const items = messageMenuItems(msg({ mine: false }), { can_moderate }, {});
+            expect(ids(items)).toContain("report");
+            expect(ids(items)).not.toContain("remove");
+        }
     });
 
     it("shows neither Report nor Remove on own messages, even for moderators", () => {
