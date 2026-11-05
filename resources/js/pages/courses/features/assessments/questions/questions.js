@@ -5,6 +5,7 @@
 */
 
 import { bindModal } from "../modals/index.js";
+import { showToast } from "../../../../../shared/toast.js";
 
 import {
     createQuestion,
@@ -1054,9 +1055,13 @@ async function duplicateQuestionAction(questionId) {
 
         newCard.querySelector("[data-question-text]")?.focus();
 
+        showToast("Question duplicated.", { tone: "success" });
+
     } catch (error) {
 
         console.error(error);
+
+        showToast("The question could not be duplicated. Try again.", { tone: "danger" });
 
     }
 
@@ -1097,9 +1102,13 @@ function bindDeleteModal() {
 
                 modals.delete.close();
 
+                showToast("Question deleted.", { tone: "success" });
+
             } catch (error) {
 
                 console.error(error);
+
+                showToast("The question could not be deleted. Try again.", { tone: "danger" });
 
             }
 
@@ -1135,9 +1144,13 @@ function bindClearAllModal() {
 
                 modals.clearAll?.close();
 
+                showToast("All questions removed from this quiz.", { tone: "success" });
+
             } catch (error) {
 
                 console.error(error);
+
+                showToast("The questions could not be removed. Try again.", { tone: "danger" });
 
             }
 

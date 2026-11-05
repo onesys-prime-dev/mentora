@@ -8,6 +8,7 @@
 | taken from and does the copy; this file only shows and collects.
 */
 
+import { showToast } from "../../../../../shared/toast.js";
 import {
     fetchQuestionSources,
     fetchSourceQuestions,
@@ -344,6 +345,7 @@ export function bindQuestionPicker({ ids, onAdded }) {
 
                 message.dataset.keep = "1";
                 say(result.message || "Those questions could not be added.", "error");
+                showToast(result.message || "Those questions could not be added.", { tone: "danger" });
 
                 return;
 
@@ -357,6 +359,7 @@ export function bindQuestionPicker({ ids, onAdded }) {
 
             message.dataset.keep = "1";
             say("Those questions could not be added. Nothing was changed.", "error");
+            showToast("Those questions could not be added. Nothing was changed.", { tone: "danger" });
 
         } finally {
 
