@@ -196,6 +196,14 @@ export function dayLabel(iso, now) {
     return at.getFullYear() === now.getFullYear() ? label : `${label} ${at.getFullYear()}`;
 }
 
+/** Whole minutes from one stamp to a later one; 0 when either is unreadable. */
+export function minutesBetween(earlier, later) {
+    const a = parseTime(earlier);
+    const b = parseTime(later);
+
+    return a === null || b === null ? 0 : Math.max(0, Math.floor((b - a) / 60000));
+}
+
 export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     const node = el("div", `max-w-[70%] min-w-[4.5rem] break-words rounded-2xl border px-4 py-2.5 text-base leading-snug ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
 

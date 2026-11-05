@@ -30,7 +30,7 @@ import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
 import { createMenu } from "./menu.js";
-import { conversationRow, dayLabel, hoverTime, messageNode, serverStamp, setServerOffset } from "./render.js";
+import { clockTime, conversationRow, dayLabel, hoverTime, messageNode, minutesBetween, serverStamp, setServerOffset } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
 const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
@@ -38,6 +38,8 @@ const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
 const ROLE_WORDS = { instructor: "Instructor", chairperson: "Chairperson", dean: "Dean", parent: "Parent", student: "Student", institutional_admin: "Administrator" };
 
 const stamp = (d) => serverStamp(d);
+// A message sent this long after the one before it gets a time above it.
+const GAP_MINUTES = 15;
 const visible = () => document.visibilityState !== "hidden";
 
 export function mountMessages(root, { api, now = () => new Date() }) {
@@ -413,6 +415,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const heightBefore = scroller.scrollHeight;
         const nodes = [];
         let day = null;
+        let previous = null;
 
         for (const item of state.items) {
             const label = dayLabel(item.created_at, now());
@@ -424,7 +427,17 @@ export function mountMessages(root, { api, now = () => new Date() }) {
                 separator.textContent = label;
                 nodes.push(separator);
                 day = label;
+            } else if (previous !== null && minutesBetween(previous.created_at, item.created_at) >= GAP_MINUTES) {
+                // A pause inside the day: the time the conversation picked up again, like Messenger.
+                const separator = document.createElement("div");
+
+                separator.dataset.role = "time-separator";
+                separator.className = "py-1 text-center text-[12px] text-[#646464]";
+                separator.textContent = clockTime(item.created_at);
+                nodes.push(separator);
             }
+
+            previous = item;
 
             nodes.push(messageRow(item));
         }

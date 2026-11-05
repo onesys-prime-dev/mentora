@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, serverStamp, setServerOffset, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
+import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, minutesBetween, serverStamp, setServerOffset, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
 
 const fragment = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
 
@@ -320,6 +320,19 @@ describe("the server's timezone", () => {
         setServerOffset(480);
 
         expect(serverStamp(new Date(Date.UTC(2026, 10, 5, 2, 26, 9)))).toBe("2026-11-05 10:26:09");
+
+    });
+
+});
+
+describe("minutesBetween", () => {
+
+    it("counts whole minutes between two stamps", () => {
+
+        expect(minutesBetween("2026-11-03 09:00:00", "2026-11-03 09:16:00")).toBe(16);
+        expect(minutesBetween("2026-11-03 09:00:00", "2026-11-03 10:05:00")).toBe(65);
+        expect(minutesBetween("2026-11-03 09:10:00", "2026-11-03 09:00:00")).toBe(0);
+        expect(minutesBetween("x", "2026-11-03 09:00:00")).toBe(0);
 
     });
 

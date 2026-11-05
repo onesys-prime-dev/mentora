@@ -287,6 +287,21 @@ describe("opening a conversation", () => {
 
     });
 
+    it("puts a time above a message that comes after a pause, and not above one that follows quickly", async () => {
+
+        const api = makeApi({ page: vi.fn().mockResolvedValue(ok({ messages: [
+            msg(10, { created_at: "2026-11-03 09:00:00" }),
+            msg(11, { created_at: "2026-11-03 09:05:00" }),
+            msg(12, { created_at: "2026-11-03 09:30:00" }),
+        ], has_more: false })) });
+
+        await mount(api);
+        await openFirst();
+
+        expect(all("[data-role=time-separator]").map((el) => el.textContent)).toEqual(["9:30 AM"]);
+
+    });
+
     it("separates the days", async () => {
 
         const api = makeApi({ page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { created_at: "2026-11-02 09:00:00" }), msg(11)], has_more: false })) });
