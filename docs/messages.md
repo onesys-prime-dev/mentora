@@ -103,6 +103,7 @@ to your institution, have a second administrator account review reports about th
   students cannot start new messages with each other; existing student conversations stay
   readable but nobody can add to them. Messages with instructors are unaffected. The
   change is in the audit log.
+- **Chat controls** (Institution settings, Messages): a picker of every course chat and staff group, then that chat's switches (Reactions, Replies, Forwarding, Bump, Delete for everyone, and the lock for course chats). The same controls are in the Messages page's Settings, Chat controls tab.
 - **Reports** (Messages, Reports): open reports of the institution, the snapshot, and the
   decision (dismiss, mark as actioned, or remove the message where that is allowed).
 

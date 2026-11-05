@@ -11,7 +11,7 @@
 |--------------------------------------------------------------------------
 */
 
-const SWITCHES = [
+export const SWITCHES = [
     { name: "lock", label: "Only the instructor can post", help: "Students can read but not write (announcements only).", courseOnly: true },
     { name: "reactions", label: "Reactions", help: "Members can react to messages." },
     { name: "replies", label: "Replies", help: "Members can reply with a quote." },
