@@ -17,7 +17,7 @@ $tabs    = ['open' => 'Open', 'dismissed' => 'Dismissed', 'actioned' => 'Actione
 
 <?= $this->section('content') ?>
 
-<div class="mx-auto flex w-full max-w-4xl flex-col gap-5" data-messages-reports>
+<div class="mx-auto mt-5 flex w-full max-w-4xl flex-col gap-5 rounded-[28px] border border-white/90 bg-white/60 p-5 shadow-[0_8px_30px_rgba(0,40,120,0.12)] backdrop-blur sm:p-7" data-messages-reports>
 
     <div class="flex items-center justify-between gap-3">
         <h1 class="font-display text-xl font-bold text-brand"><?= $report === null ? 'Message reports' : 'Message report' ?></h1>
