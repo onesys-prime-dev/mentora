@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
+import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, serverStamp, setServerOffset, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
 
 const fragment = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
 
@@ -291,6 +291,35 @@ describe("hoverTime", () => {
 
         expect(hoverTime("2026-10-01 10:00:00", now)).toBe("1 Oct, 10:00 AM");
         expect(hoverTime("2025-12-30 21:30:00", now)).toBe("30 Dec 2025, 9:30 PM");
+
+    });
+
+});
+
+describe("the server's timezone", () => {
+
+    afterEach(() => setServerOffset(Number.NaN));
+
+    it("reads the server's UTC stamps as real moments, so a message sent now says now, not 8h", () => {
+
+        setServerOffset(0);
+
+        const now = new Date(Date.UTC(2026, 10, 5, 2, 26, 0));
+
+        expect(formatTime("2026-11-05 02:26:00", now)).toBe("now");
+        expect(formatTime("2026-11-05 02:21:00", now)).toBe("5m");
+
+    });
+
+    it("stamps a message the page makes the way the server would", () => {
+
+        setServerOffset(0);
+
+        expect(serverStamp(new Date(Date.UTC(2026, 10, 5, 2, 26, 9)))).toBe("2026-11-05 02:26:09");
+
+        setServerOffset(480);
+
+        expect(serverStamp(new Date(Date.UTC(2026, 10, 5, 2, 26, 9)))).toBe("2026-11-05 10:26:09");
 
     });
 

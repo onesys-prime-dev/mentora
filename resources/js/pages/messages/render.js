@@ -58,10 +58,39 @@ function el(tag, className, text) {
     return node;
 }
 
+// The server writes times as wall-clock text in its own timezone (UTC). Told its offset in minutes, the page
+// reads each stamp as that instant and shows it in the viewer's own time; with none, a stamp is taken as local.
+let serverOffsetMinutes = null;
+
+export function setServerOffset(minutes) {
+    serverOffsetMinutes = Number.isFinite(minutes) ? minutes : null;
+}
+
+/** A moment as the server would write it ("2026-11-05 02:26:00"), for a message the page itself stamps. */
+export function serverStamp(date) {
+    const pad = (n) => String(n).padStart(2, "0");
+
+    if (serverOffsetMinutes === null) {
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    }
+
+    const shifted = new Date(date.getTime() + serverOffsetMinutes * 60000);
+
+    return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())} ${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}`;
+}
+
 function parseTime(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(iso ?? ""));
 
-    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5])) : null;
+    if (!m) {
+        return null;
+    }
+
+    const [year, month, day, hour, minute] = [Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5])];
+
+    return serverOffsetMinutes === null
+        ? new Date(year, month, day, hour, minute)
+        : new Date(Date.UTC(year, month, day, hour, minute) - serverOffsetMinutes * 60000);
 }
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());

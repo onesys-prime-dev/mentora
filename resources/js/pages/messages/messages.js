@@ -30,15 +30,14 @@ import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
 import { createMenu } from "./menu.js";
-import { conversationRow, dayLabel, hoverTime, messageNode } from "./render.js";
+import { conversationRow, dayLabel, hoverTime, messageNode, serverStamp, setServerOffset } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
 const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
 
 const ROLE_WORDS = { instructor: "Instructor", chairperson: "Chairperson", dean: "Dean", parent: "Parent", student: "Student", institutional_admin: "Administrator" };
 
-const pad = (n) => String(n).padStart(2, "0");
-const stamp = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const stamp = (d) => serverStamp(d);
 const visible = () => document.visibilityState !== "hidden";
 
 export function mountMessages(root, { api, now = () => new Date() }) {
@@ -1632,5 +1631,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 const root = document.getElementById("messages-app");
 
 if (root) {
+    setServerOffset(root.dataset.tzOffset === undefined ? Number.NaN : Number(root.dataset.tzOffset));
     mountMessages(root, { api: createApi(root.dataset.api) });
 }
