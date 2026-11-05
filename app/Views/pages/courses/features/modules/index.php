@@ -124,8 +124,8 @@ $formatDuration = static function (int $minutes): string {
                                             <?= esc($module['title']) ?>
                                         </span>
                                         <?php if ($isDraft): ?>
-                                            <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
-                                                Draft
+                                            <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]" data-publish-chip="<?= !empty($module['scheduled_publish_at']) ? 'scheduled' : 'draft' ?>">
+                                                <?= !empty($module['scheduled_publish_at']) ? 'Scheduled · ' . esc(date('M j, g:i A', strtotime($module['scheduled_publish_at']))) : 'Draft' ?>
                                             </span>
                                         <?php endif; ?>
                                     </div>

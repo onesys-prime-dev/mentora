@@ -32,7 +32,9 @@
                 data-edit-module
                 data-module-id="<?= esc($module['id']) ?>"
                 data-module-title="<?= esc($module['title']) ?>"
-                data-module-description="<?= esc($module['description']) ?>">
+                data-module-description="<?= esc($module['description']) ?>"
+                data-status="<?= esc($module['status']) ?>"
+                data-scheduled-at="<?= esc($module['scheduled_publish_at'] ?? '') ?>">
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"

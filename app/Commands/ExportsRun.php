@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
+use App\Services\Courses\ScheduledPublishing;
 use App\Services\Institutions\CsvUploadService;
 use App\Services\Institutions\InstitutionExport;
 use App\Services\Monitoring\ScheduledJobs;
@@ -18,7 +19,8 @@ use Throwable;
  *   php spark exports:run
  *
  * Prepares the institution exports administrators asked for, one at a time, and removes expired ones, and
- * expired CSV upload previews too, and sends the emails people are owed (MailOutbox). Run it
+ * expired CSV upload previews too, sends the emails people are owed (MailOutbox), and publishes the modules, learning
+ * units and learning items whose scheduled time has come (ScheduledPublishing). Run it
  * from the scheduler every minute: with nothing queued it exits at once. See docs/institution-data-export.md.
  */
 class ExportsRun extends BaseCommand
@@ -56,6 +58,18 @@ class ExportsRun extends BaseCommand
             }
         } catch (Throwable $e) {
             log_message('error', 'The mail outbox could not be sent: ' . $e->getMessage());
+        }
+
+        // Modules, learning units and items scheduled to publish at a time that has come. Same rule: a failure is
+        // logged and tried again next minute.
+        try {
+            $published = ScheduledPublishing::publishDue();
+
+            if (array_sum($published) > 0) {
+                CLI::write("Published {$published['modules']} module(s), {$published['units']} learning unit(s) and {$published['items']} learning item(s) that were scheduled.");
+            }
+        } catch (Throwable $e) {
+            log_message('error', 'Scheduled publishing failed: ' . $e->getMessage());
         }
 
         // The scheduler check watches for this job going quiet (6.2).

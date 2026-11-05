@@ -1,5 +1,7 @@
 import { csrfExpired } from "../../../../../shared/csrf-expired.js";
 
+import { bindPublishFields } from "./publish-fields.js";
+
 import {
     createModule,
     updateModule,
@@ -68,6 +70,9 @@ function bindEditor(modal, refresh) {
     const submit =
         document.querySelector("[data-module-editor-submit]");
 
+    const publish =
+        bindPublishFields(form.querySelector("[data-publish-fields]"));
+
     /*
     |--------------------------------------------------------------------------
     | Create
@@ -79,6 +84,8 @@ function bindEditor(modal, refresh) {
         ?.addEventListener("click", () => {
 
             form.reset();
+
+            publish.reset();
 
             mode.value = "create";
 
@@ -119,6 +126,11 @@ function bindEditor(modal, refresh) {
 
                 description.value =
                     button.dataset.moduleDescription;
+
+                publish.fill({
+                    status: button.dataset.status,
+                    scheduledAt: button.dataset.scheduledAt,
+                });
 
                 heading.textContent =
                     "Edit Module";

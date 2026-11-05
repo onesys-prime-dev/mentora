@@ -17,6 +17,8 @@ import {
 
 import { state } from "../state.js";
 
+import { bindPublishFields } from "./publish-fields.js";
+
 export function bindLearningUnitModals({
 
     editor,
@@ -98,6 +100,9 @@ function bindLearningUnitEditor(
             "[data-learning-unit-editor-submit]"
         );
 
+    const publish =
+        bindPublishFields(form.querySelector("[data-publish-fields]"));
+
     /*
     |--------------------------------------------------------------------------
     | Create
@@ -120,6 +125,13 @@ function bindLearningUnitEditor(
                         );
 
                     form.reset();
+
+                    publish.reset();
+
+                    // Published under a draft module: students will not see it yet.
+                    publish.setHiddenBy(
+                        button.dataset.moduleStatus === "published" ? null : "module"
+                    );
 
                     modeInput.value =
                         "create";
@@ -175,6 +187,15 @@ function bindLearningUnitEditor(
 
                     descriptionInput.value =
                         button.dataset.learningUnitDescription;
+
+                    publish.fill({
+                        status: button.dataset.status,
+                        scheduledAt: button.dataset.scheduledAt,
+                    });
+
+                    publish.setHiddenBy(
+                        button.dataset.moduleStatus === "published" ? null : "module"
+                    );
 
                     heading.textContent =
                         "Edit Learning Unit";

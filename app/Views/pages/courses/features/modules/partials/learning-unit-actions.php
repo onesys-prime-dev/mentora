@@ -33,7 +33,10 @@
                 data-module-id="<?= esc($module['id']) ?>"
                 data-learning-unit-id="<?= esc($learning_unit['id']) ?>"
                 data-learning-unit-title="<?= esc($learning_unit['title']) ?>"
-                data-learning-unit-description="<?= esc($learning_unit['description']) ?>">
+                data-learning-unit-description="<?= esc($learning_unit['description']) ?>"
+                data-module-status="<?= esc($module['status']) ?>"
+                data-status="<?= esc($learning_unit['status']) ?>"
+                data-scheduled-at="<?= esc($learning_unit['scheduled_publish_at'] ?? '') ?>">
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"

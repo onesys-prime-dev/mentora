@@ -33,6 +33,7 @@ class LearningItemModel extends Model
         'estimated_minutes',
         'order_index',
         'status',
+        'scheduled_publish_at',
         'prerequisite_mode',
     ];
 
@@ -50,6 +51,7 @@ class LearningItemModel extends Model
                 'estimated_minutes',
                 'order_index',
                 'status',
+                'scheduled_publish_at',
                 'prerequisite_mode',
             ])
             ->where('learning_unit_id', $learningUnitId);
@@ -78,6 +80,7 @@ class LearningItemModel extends Model
                 'estimated_minutes',
                 'order_index',
                 'status',
+                'scheduled_publish_at',
                 'prerequisite_mode',
             ])
             ->where('id', $learningItemId);
