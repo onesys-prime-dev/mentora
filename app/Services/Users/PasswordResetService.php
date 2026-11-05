@@ -74,13 +74,66 @@ class PasswordResetService
             throw new InvalidArgumentException('This account has no email address to send the link to.');
         }
 
+        $hours  = (int) (new PlatformSettings())->get('passwordResetValidityHours');
+        $issued = $this->issue($userId, $email, $actor ?? auth()->user(), $now, $hours, 'user.password_reset_sent');
+
+        return ['email' => $email, 'expires_at' => $issued['expires'], 'email_error' => $this->deliver($issued['id'], $email, $issued['token'], $issued['expires'], $now)];
+    }
+
+    /**
+     * A link for a new account to choose its first password (the welcome email of an upload or an import), good
+     * for as long as an invitation is. It is made when the email is sent, so its time starts then. The email is
+     * the caller's: this only issues the link, and sentAt() notes it went.
+     *
+     * @return array{id: int, url: string, expires: string}
+     *
+     * @throws InvalidArgumentException when the account is missing, deactivated or has no email
+     */
+    public function welcomeLink(int $userId, ?DateTimeImmutable $now = null): array
+    {
+        $now ??= new DateTimeImmutable();
+
+        $user = model(UserModel::class)->findById($userId)
+            ?? throw new InvalidArgumentException('That user does not exist.');
+
+        if ((new AccountControl())->isDeactivated($userId) || ! $user->isActivated()) {
+            throw new InvalidArgumentException('This account is deactivated.');
+        }
+
+        $email = (string) $user->email;
+
+        if ($email === '') {
+            throw new InvalidArgumentException('This account has no email address to send the link to.');
+        }
+
+        $days   = (int) (new PlatformSettings())->get('invitationValidityDays');
+        $issued = $this->issue($userId, $email, null, $now, $days * 24, 'user.welcome_link_sent');
+
+        if ($this->isDevelopment()) {
+            log_message('warning', 'DEVELOPMENT ONLY - welcome link for {email}: {link}', ['email' => $email, 'link' => site_url('reset-password/' . $issued['token'])]);
+        }
+
+        return ['id' => $issued['id'], 'url' => site_url('reset-password/' . $issued['token']), 'expires' => $issued['expires']];
+    }
+
+    /** Notes that the email carrying a link went out. */
+    public function sentAt(int $resetId, DateTimeImmutable $now): void
+    {
+        db_connect()->table('password_resets')->where('id', $resetId)->update(['sent_at' => $now->format('Y-m-d H:i:s')]);
+    }
+
+    /**
+     * Stores a new link (cancelling the one before it) and audits it.
+     *
+     * @return array{id: int, token: string, expires: string}
+     */
+    private function issue(int $userId, string $email, ?User $by, DateTimeImmutable $now, int $hours, string $auditAction): array
+    {
         $secret = InvitationToken::generate();
         $stamp  = $now->format('Y-m-d H:i:s');
-        $hours  = (int) (new PlatformSettings())->get('passwordResetValidityHours');
         $expiry = $now->modify("+{$hours} hours")->format('Y-m-d H:i:s');
-        $by     = $actor ?? auth()->user();
 
-        $id = $this->inTransaction(function () use ($userId, $secret, $stamp, $expiry, $by, $email): int {
+        $id = $this->inTransaction(function () use ($userId, $secret, $stamp, $expiry, $by, $email, $auditAction): int {
             $db = db_connect();
 
             $db->table('password_resets')
@@ -101,7 +154,7 @@ class PasswordResetService
 
             $id = (int) $db->insertID();
 
-            service('auditLogger')->log('user.password_reset_sent', $by, [
+            service('auditLogger')->log($auditAction, $by, [
                 'target_type'    => 'user',
                 'target_id'      => $userId,
                 'institution_id' => $this->institutionOf($userId),
@@ -111,7 +164,7 @@ class PasswordResetService
             return $id;
         });
 
-        return ['email' => $email, 'expires_at' => $expiry, 'email_error' => $this->deliver($id, $email, $secret['token'], $expiry, $now)];
+        return ['id' => $id, 'token' => $secret['token'], 'expires' => $expiry];
     }
 
     /**

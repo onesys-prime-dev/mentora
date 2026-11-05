@@ -369,6 +369,8 @@ class OfferingService
 
         $this->audit('structure.offering_instructor_assigned', $actor, $institutionId, $offeringId, null, ['instructor_user_id' => $userId]);
 
+        (new \App\Services\Notifications\MailOutbox())->tell($institutionId, $userId, \App\Services\Notifications\MailOutbox::TEACHING, \App\Services\Notifications\MailOutbox::offeringLabel($offeringId));
+
         \App\Services\Messaging\CourseChatHooks::offeringChanged($offeringId);
 
         return $id;

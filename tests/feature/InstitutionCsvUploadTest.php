@@ -141,6 +141,33 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         }
     }
 
+    public function testTheUploadStepOffersToEmailThePeopleAndItIsTickedByDefault(): void
+    {
+        $body = $this->step('GET', 'institution/people/upload')->response()->getBody();
+
+        $this->assertStringContainsString('data-upload-email-choice', $body);
+        $this->assertMatchesRegularExpression('/<input type="checkbox" value="1"[^>]*name="email_people"[^>]*checked|<input type="checkbox" value="1"[^>]*checked[^>]*name="email_people"/', $body);
+        $this->assertStringContainsString('Email the people in these files', $body);
+    }
+
+    public function testThePreviewSaysWhoWillBeEmailed(): void
+    {
+        $body = html_entity_decode($this->step('GET', 'institution/people/upload/' . $this->keep())->response()->getBody());
+
+        $this->assertStringContainsString('data-mail-plan', $body);
+        $this->assertMatchesRegularExpression('/2 people will be emailed within a few minutes of applying:\s*2 new accounts get a link to choose a password,\s*and 0 people are told what changed/', $body);
+    }
+
+    public function testThePreviewSaysWhenYouChoseNotToEmailAnyone(): void
+    {
+        $token = (new CsvUploadService($this->base))->preview($this->institution, ['students' => self::STUDENTS], $this->admin, false)['token'];
+
+        $body = $this->step('GET', "institution/people/upload/{$token}")->response()->getBody();
+
+        $this->assertStringContainsString('data-mail-off', $body);
+        $this->assertStringNotContainsString('data-mail-plan', $body);
+    }
+
     public function testATemplateIsAHeaderRowDownload(): void
     {
         $response = $this->step('GET', 'institution/people/upload/template/students')->response();

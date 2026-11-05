@@ -12,6 +12,8 @@ final class SisImportResult
      *        `ended` is only there for a dataset that can end things (staff_assignments): an assignment the SIS no longer lists;
      *        `removed` only for class_schedules: a section whose SIS class times were cleared because the SIS no longer lists it
      * @param list<array{dataset: string, item: string, reason: string}>                  $issues   rows that were not imported
+     * @param array{people: int, welcome: int, notices: int}|array{}                        $mail     who a run emails (or, for a preview, would):
+     *        people in all, of them new accounts getting a link to choose a password, and the rest told of what changed; empty when nobody is
      */
     public function __construct(
         public readonly int $runId,
@@ -20,6 +22,7 @@ final class SisImportResult
         public readonly array $datasets,
         public readonly array $issues,
         public readonly string $message,
+        public readonly array $mail = [],
     ) {
     }
 

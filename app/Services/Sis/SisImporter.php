@@ -14,6 +14,7 @@ use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\OfferingService;
 use App\Services\Institutions\StructureException;
 use App\Services\Flags\FeatureFlags;
+use App\Services\Notifications\MailOutbox;
 use App\Services\Notifications\NotificationTriggers;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UsernameGenerator;
@@ -116,6 +117,8 @@ class SisImporter
     public function __construct(
         private readonly ?SisConnectionService $connections = null,
         private readonly ?SisRunLog $runs = null,
+        /** Whether the run emails the people it adds and the places it gives (an upload lets the administrator choose). */
+        private readonly bool $email = true,
     ) {
     }
 
@@ -182,6 +185,13 @@ class SisImporter
             return $this->failed($runs, $runId, $dryRun, $institution, $e->getMessage());
         }
 
+        // Who is emailed is decided before anything is written. A preview counts them (its rows are rolled back with
+        // everything else). A first import from a SIS, which can add thousands of accounts at once, emails nobody:
+        // the administrator sends the first password links from People.
+        $mailBatch = 'run-' . $runId;
+        $quiet     = ! $this->email || (! $this->upload && ! $this->hasRealRunBefore($institutionId));
+        MailOutbox::context($mailBatch, $quiet);
+
         $db = db_connect();
         $db->transBegin();
 
@@ -218,7 +228,7 @@ class SisImporter
                 $this->classSchedules($batches['class_schedules']);
             }
 
-            $result = new SisImportResult($runId, true, $dryRun, $this->counts, $this->issues, $this->summary($dryRun));
+            $result = new SisImportResult($runId, true, $dryRun, $this->counts, $this->issues, $this->summary($dryRun), $quiet ? [] : (new MailOutbox())->plan($mailBatch));
 
             if (! $dryRun) {
                 service('auditLogger')->log('sis.import_run', $actor, [
@@ -237,6 +247,8 @@ class SisImporter
             log_message('error', 'SIS import for institution ' . $institutionId . ' failed: ' . $e->getMessage());
 
             return $this->failed($runs, $runId, $dryRun, $institution, 'An unexpected error stopped the import; nothing was changed. The details are in the server log.');
+        } finally {
+            MailOutbox::reset();
         }
 
         $runs->finish($runId, true, [
@@ -422,6 +434,9 @@ class SisImporter
         }
 
         $this->counts[$dataset]['created']++;
+
+        // A new account has no password yet: it is emailed a link to choose one.
+        (new MailOutbox())->tell($this->institutionId, (int) $user->id, MailOutbox::WELCOME, $role, $this->now);
     }
 
     /**
@@ -587,6 +602,8 @@ class SisImporter
                 continue;
             }
 
+            $becameEnrolled = false;
+
             if ($existing === null) {
                 $stamp = $this->stamp();
 
@@ -595,11 +612,18 @@ class SisImporter
                 }
 
                 $this->counts['enrollments']['created']++;
+                $becameEnrolled = true;
             } elseif ($existing['status'] === $m['status']) {
                 $this->counts['enrollments']['skipped']++;
             } else {
                 $db->table('enrollments')->where('id', $existing['id'])->update(['status' => $m['status'], 'updated_at' => $this->stamp()]);
                 $this->counts['enrollments']['updated']++;
+                $becameEnrolled = true;
+            }
+
+            // Told they have a place (not that they dropped one).
+            if ($becameEnrolled && $m['status'] === 'enrolled') {
+                (new MailOutbox())->tell($this->institutionId, $studentId, MailOutbox::ENROLLED, MailOutbox::offeringLabel($offeringId), $this->now);
             }
 
             $touched[] = $offeringId;
@@ -1293,6 +1317,15 @@ class SisImporter
         }
 
         return $this->termId;
+    }
+
+    /** Whether the SIS has already been imported for real (a preview or a connection test does not count). */
+    private function hasRealRunBefore(int $institutionId): bool
+    {
+        return db_connect()->table('sis_runs')
+            ->where(['institution_id' => $institutionId, 'direction' => 'inbound', 'status' => 'succeeded', 'dry_run' => 0])
+            ->where('trigger !=', 'test')
+            ->countAllResults() > 0;
     }
 
     private function hasSucceededBefore(int $institutionId): bool

@@ -242,6 +242,14 @@ class EnrolmentService
 
         \App\Services\Messaging\CourseChatHooks::offeringChanged($offeringId);
 
+        // Told (by email, once the job runs) that they have a place; a place that was only reinstated counts too.
+        $outbox = new \App\Services\Notifications\MailOutbox();
+        $label  = \App\Services\Notifications\MailOutbox::offeringLabel($offeringId);
+
+        foreach (array_merge(array_keys($new), array_column($back, 'student')) as $studentId) {
+            $outbox->tell($institutionId, (int) $studentId, \App\Services\Notifications\MailOutbox::ENROLLED, $label);
+        }
+
         return [
             'added'      => count($new),
             'reinstated' => count($back),
@@ -299,6 +307,11 @@ class EnrolmentService
         $this->audit('enrolment.status_changed', $actor, $institutionId, $enrollmentId, ['status' => $row['status']], ['status' => $status, 'offering_id' => (int) $row['offering_id'], 'student_user_id' => (int) $row['student_user_id']]);
 
         \App\Services\Messaging\CourseChatHooks::offeringChanged((int) $row['offering_id']);
+
+        // A place given back is news to the student; dropping or withdrawing one is not emailed.
+        if ($status === 'enrolled') {
+            (new \App\Services\Notifications\MailOutbox())->tell($institutionId, (int) $row['student_user_id'], \App\Services\Notifications\MailOutbox::ENROLLED, \App\Services\Notifications\MailOutbox::offeringLabel((int) $row['offering_id']));
+        }
     }
 
     /*

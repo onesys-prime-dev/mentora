@@ -6,6 +6,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Institutions\ClassSectionService;
 use App\Services\Institutions\CsvUploadService;
 use App\Services\Institutions\StructureException;
+use App\Services\Notifications\MailOutbox;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
@@ -43,7 +44,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     /** Touched by these tests; emptied with foreign keys off. */
     private const TABLES = [
-        'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'class_section_students', 'course_offerings', 'class_sections', 'courses',
+        'mail_outbox', 'password_resets', 'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'class_section_students', 'course_offerings', 'class_sections', 'courses',
         'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs', 'notifications',
     ];
@@ -483,6 +484,112 @@ final class CsvUploadServiceTest extends DatabaseTestCase
         $refused = array_values(array_filter($kept['issues'], static fn (array $i): bool => $i['dataset'] === 'enrollments'));
 
         $this->assertSame('2026-404 is not a student of this institution; add them in students.csv or on the People page.', $refused[0]['reason']);
+    }
+
+    private function outbox(): int
+    {
+        return db_connect()->table('mail_outbox')->countAllResults();
+    }
+
+    public function testAPreviewWritesNoEmailsButSaysWhoWillBeEmailed(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertSame(0, $this->outbox(), 'a preview tells nobody');
+        $this->assertTrue($kept['email']);
+
+        // Ann, Ben and Ivy are new accounts: each gets a link to choose a password (Ann's place is in the same email).
+        $this->assertSame(['people' => 3, 'welcome' => 3, 'notices' => 0], $kept['mail']);
+    }
+
+    public function testApplyingNotesAWelcomeForEachNewAccountAndTheirPlacesButNotADroppedOne(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $applied = $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(['people' => 3, 'welcome' => 3, 'notices' => 0], $applied->mail);
+
+        $rows = db_connect()->table('mail_outbox')->select('kind, detail, user_id')->orderBy('id')->get()->getResultArray();
+        $kinds = array_count_values(array_column($rows, 'kind'));
+
+        $this->assertSame(['welcome' => 3, 'enrolled' => 1], $kinds, 'Ben was uploaded as dropped, so he is not told of a place');
+        $this->assertSame(['student', 'student', 'instructor'], array_values(array_column(array_filter($rows, static fn (array $r): bool => $r['kind'] === 'welcome'), 'detail')));
+
+        $enrolled = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] === 'enrolled'))[0];
+        $this->assertSame('IT101 Intro to Computing, section A', $enrolled['detail']);
+        $this->assertSame($this->userId('ann@example.com'), (int) $enrolled['user_id']);
+    }
+
+    public function testTheJobThenEmailsEachPersonOnceWithTheirLinkAndTheirPlace(): void
+    {
+        $mail    = \Tests\Support\FakeEmail::install();
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(3, (new MailOutbox())->sendDue(new DateTimeImmutable('+10 minutes')));
+
+        $byTo = array_column($mail->sent, null, 'to');
+        $this->assertSame(['ann@example.com', 'ben@example.com', 'ivy@example.com'], array_keys($byTo));
+
+        $this->assertStringContainsString('as a student', $byTo['ann@example.com']['message']);
+        $this->assertStringContainsString(' - IT101 Intro to Computing, section A', $byTo['ann@example.com']['message']);
+        $this->assertStringContainsString('as an instructor', $byTo['ivy@example.com']['message']);
+        $this->assertSame(3, db_connect()->table('password_resets')->countAllResults(), 'a link each');
+    }
+
+    public function testUntickingTheBoxAddsThemQuietly(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor, false);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertFalse($kept['email']);
+        $this->assertSame([], $kept['mail']);
+
+        $applied = $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame([], $applied->mail);
+        $this->assertSame(0, $this->outbox());
+        $this->assertGreaterThan(0, $this->userId('ann@example.com'), 'they were still added');
+    }
+
+    public function testSomeoneWhoAlreadyHasAnAccountIsToldWhatChangedNotWelcomed(): void
+    {
+        // Ann exists and is a student here; this upload only enrols her.
+        $first = $this->service->preview($this->institution, ['students' => self::STUDENTS, 'courses' => self::COURSES], $this->actor, false);
+        $this->service->apply($this->institution, $first['token'], $this->actor);
+
+        $preview = $this->service->preview($this->institution, ['enrollments' => "student_number,email,program_code,course_code,section,status\n2026-001,,,IT101,A,\n"], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertSame(['people' => 1, 'welcome' => 0, 'notices' => 1], $kept['mail']);
+
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(['enrolled'], array_column(db_connect()->table('mail_outbox')->get()->getResultArray(), 'kind'));
+    }
+
+    public function testAnApplyThatFailsPartWayNotesNoEmails(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+
+        Services::injectMock('auditLogger', new class () extends AuditLogger {
+            public function log(string $action, ?User $actor = null, array $details = []): int
+            {
+                if ($action === 'sis.import_run') {
+                    throw new RuntimeException('audit down');
+                }
+
+                return parent::log($action, $actor, $details);
+            }
+        });
+
+        $this->refused(fn () => $this->service->apply($this->institution, $preview['token'], $this->actor));
+
+        $this->assertSame(0, $this->outbox(), 'what was rolled back tells nobody');
+        $this->assertFalse(MailOutbox::isMuted(), 'and the run left the outbox as it found it');
+
+        Services::resetSingle('auditLogger');
     }
 
     public function testASectionNamingABlockJoinsTheCourseToItAndEnrolsItsStudents(): void

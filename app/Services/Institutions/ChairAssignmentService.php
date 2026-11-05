@@ -192,6 +192,8 @@ class ChairAssignmentService
 
         $this->audit('structure.chairperson_assigned', $actor, $institutionId, $id, null, ['sub_department_id' => $subDepartmentId, 'chairperson_user_id' => $userId]);
 
+        (new \App\Services\Notifications\MailOutbox())->tell($institutionId, $userId, \App\Services\Notifications\MailOutbox::CHAIRPERSON, (string) $sub['name']);
+
         // Requests waiting for a chairperson's endorsement are now theirs (16.0c, U5); their own move on.
         (new GradeOverrideRequestService())->retargetChairStep($subDepartmentId);
 

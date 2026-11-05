@@ -917,6 +917,7 @@ P3 scenarios. QA status as in the README; none has been run.
 | TC-IAA-18 | The institution's banner | Institutional administrator | P3 | VCI |
 | TC-UPL-05 | A CSV preview nobody applies is removed within an hour | Institutional administrator | P3 | REG? |
 | TC-UPL-06 | CSV upload names people and courses as an administrator knows them, and shows the sections it creates | Institutional administrator | P1 | VCI |
+| TC-UPL-07 | After an upload, new people are emailed a link to choose a password and others are told what changed | Institutional administrator | P1 | VCI |
 | TC-SEC-01 | A block section takes courses and students; students are enrolled in every course | Institutional administrator | P1 | VCI |
 | TC-SEC-02 | Taking a student or a course out of a section keeps work and grades; a section with students cannot be archived | Institutional administrator | P1 | VCI |
 | TC-SEC-03 | A CSV row naming a block section joins the course to it | Institutional administrator | P2 | VCI |
@@ -974,6 +975,18 @@ P3 scenarios. QA status as in the README; none has been run.
 - **Already automated:** `CsvUploadServiceTest`, `InstitutionCsvUploadTest`, `SisCsvParserTest`, `SisMapperTest`
 - **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-UPL-01)
 - **Basis:** `CsvUploadService`, `SisCsvParser::KEYS_UPLOAD`, `SisImporter`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-UPL-07 After an upload, new people are emailed a link to choose a password and others are told what changed
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a students file with two new students (one also enrolled in a course), an instructors file with one new instructor, and an enrolments file for a student who already has an account; a mail server (or the log in development)
+- **Steps:** upload with the "Email the people in these files" box ticked; read the preview; apply; wait two minutes and run the job (`php spark exports:run`); open each email. Repeat with the box unticked. Repeat with the mail server down, then up.
+- **Expected:** the preview says how many people will be emailed (new accounts getting a link, others told what changed) and sends nothing; after applying, each new person gets ONE email with their sign-in email, what they were given and a link that opens "Choose a new password" and works once; the person who already had an account gets one email and an app notification listing the new places and no link; a place uploaded as dropped is not announced; unticked, nobody is emailed and the accounts exist; a refused or rolled-back apply emails nobody; with the mail server down nothing is lost and the emails go out when it is back; a deactivated account is never emailed. The first real SIS import emails nobody, later ones do.
+- **Already automated:** `tests/database/MailOutboxTest.php`, `CsvUploadServiceTest` (the email tests), `SisImporterTest::testTheFirstRealImportEmailsNobodyButLaterOnesWelcomeNewPeople`, `InstitutionCsvUploadTest`
+- **Playwright:** no
+- **Basis:** `MailOutbox`, `SisImporter`, `PasswordResetService::welcomeLink`
 - **QA status:** VCI
 - **Review:** Draft
 

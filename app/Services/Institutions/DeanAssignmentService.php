@@ -119,6 +119,8 @@ class DeanAssignmentService
             'new' => ['department_id' => $departmentId, 'dean_user_id' => $userId],
         ]);
 
+        (new \App\Services\Notifications\MailOutbox())->tell($institutionId, $userId, \App\Services\Notifications\MailOutbox::DEAN, (string) $department['name']);
+
         return $id;
     }
 

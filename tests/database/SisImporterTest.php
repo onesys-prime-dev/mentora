@@ -627,4 +627,25 @@ final class SisImporterTest extends DatabaseTestCase
 
         $this->assertNotNull($chat);
     }
+
+    public function testTheFirstRealImportEmailsNobodyButLaterOnesWelcomeNewPeople(): void
+    {
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name,student_number\nS1,ann@example.com,Ann,Lee,2026-001\n");
+
+        $first = $this->run_();
+
+        $this->assertSame([], $first->mail, 'the first import adds a whole school at once: nobody is emailed');
+        $this->assertSame(0, db_connect()->table('mail_outbox')->countAllResults());
+
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name,student_number\nS1,ann@example.com,Ann,Lee,2026-001\nS2,ben@example.com,Ben,Ng,2026-002\n");
+
+        // (That a preview writes no rows is proven in CsvUploadServiceTest, where its rollback is real.)
+        $second = $this->run_();
+
+        $this->assertSame(['people' => 1, 'welcome' => 1, 'notices' => 0], $second->mail);
+
+        $row = db_connect()->table('mail_outbox')->get()->getRowArray();
+        $this->assertSame(['welcome', 'student', (string) $this->user('ben@example.com')['user_id']], [$row['kind'], $row['detail'], (string) $row['user_id']]);
+        $this->assertSame(1, db_connect()->table('mail_outbox')->countAllResults());
+    }
 }

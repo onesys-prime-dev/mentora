@@ -69,7 +69,8 @@ class CsvUploadController extends BaseController
         }
 
         try {
-            $preview = $this->uploads->preview($institutionId, $files, auth()->user());
+            // The box is ticked on the page; unticked, nothing is posted.
+            $preview = $this->uploads->preview($institutionId, $files, auth()->user(), (string) $this->request->getPost('email_people') === '1');
         } catch (StructureException $e) {
             return redirect()->to(self::BASE)->with('error', $e->getMessage());
         }
@@ -110,13 +111,15 @@ class CsvUploadController extends BaseController
         }
 
         $totals = $result->totals();
+        $mail   = $result->mail;
 
         return redirect()->to('institution/people')->with(
             'message',
             "The upload was applied: {$totals['created']} created, {$totals['updated']} updated, {$totals['skipped']} unchanged"
                 . ($result->ended() > 0 ? ", {$result->ended()} ended" : '')
                 . ($result->removed() > 0 ? ', class times removed from ' . $result->removed() . ' section' . ($result->removed() === 1 ? '' : 's') : '')
-                . ($totals['failed'] > 0 ? ", {$totals['failed']} refused." : '.'),
+                . ($totals['failed'] > 0 ? ", {$totals['failed']} refused." : '.')
+                . (($mail['people'] ?? 0) > 0 ? ' ' . $mail['people'] . ($mail['people'] === 1 ? ' person' : ' people') . ' will be emailed within a few minutes.' : ''),
         );
     }
 

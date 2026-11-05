@@ -88,7 +88,7 @@ class CsvUploadService
      *
      * @throws StructureException refused: nothing stored, nothing written
      */
-    public function preview(int $institutionId, array $files, ?User $actor = null): array
+    public function preview(int $institutionId, array $files, ?User $actor = null, bool $email = true): array
     {
         $this->mustBeAllowed($institutionId);
         $this->forget($institutionId);
@@ -126,7 +126,7 @@ class CsvUploadService
             file_put_contents($folder . DIRECTORY_SEPARATOR . $dataset . '.csv', $contents);
         }
 
-        $result = $this->run($institutionId, $folder, true, $actor);
+        $result = $this->run($institutionId, $folder, true, $actor, $email);
 
         if (! $result->ok) {
             $this->remove($folder);
@@ -140,6 +140,8 @@ class CsvUploadService
             'issues'   => $result->issues,
             'message'  => $result->message,
             'files'    => array_keys($files),
+            'email'    => $email,
+            'mail'     => $result->mail,
         ]));
 
         return ['token' => $token, 'result' => $result];
@@ -148,7 +150,7 @@ class CsvUploadService
     /**
      * What a kept preview found.
      *
-     * @return array{datasets: array<string, array<string, int>>, issues: list<array<string, string>>, message: string, files: list<string>, totals: array{created: int, updated: int, skipped: int, failed: int, ended: int}}
+     * @return array{datasets: array<string, array<string, int>>, issues: list<array<string, mixed>>, message: string, files: list<string>, email: bool, mail: array<string, int>, totals: array{created: int, updated: int, skipped: int, failed: int, ended: int}}
      *
      * @throws PageNotFoundException when the token is not this institution's, or has expired
      */
@@ -182,12 +184,13 @@ class CsvUploadService
     public function apply(int $institutionId, string $token, ?User $actor = null): SisImportResult
     {
         $this->mustBeAllowed($institutionId);
-        $this->kept($institutionId, $token);
+        $kept = $this->kept($institutionId, $token);
 
         $folder = $this->folderOf($institutionId, $token);
 
         try {
-            $result = $this->run($institutionId, $folder, false, $actor);
+            // Emailed, or not, as the administrator chose when previewing.
+            $result = $this->run($institutionId, $folder, false, $actor, (bool) ($kept['email'] ?? true));
         } catch (InvalidArgumentException $e) {
             throw new StructureException($e->getMessage());
         }
@@ -223,9 +226,9 @@ class CsvUploadService
         }
     }
 
-    private function run(int $institutionId, string $folder, bool $dryRun, ?User $actor): SisImportResult
+    private function run(int $institutionId, string $folder, bool $dryRun, ?User $actor, bool $email): SisImportResult
     {
-        return (new SisImporter(new UploadConnections($folder)))->run($institutionId, $actor ?? auth()->user(), $dryRun);
+        return (new SisImporter(new UploadConnections($folder), null, $email))->run($institutionId, $actor ?? auth()->user(), $dryRun);
     }
 
     private function folder(int $institutionId, string $token): string

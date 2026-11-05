@@ -75,6 +75,17 @@ $labels = [
                 </div>
             <?php endforeach; ?>
 
+            <div class="rounded-xl border border-gray-200 bg-white p-4" data-upload-email-choice>
+                <?= view('components/form-field', [
+                    'name'  => 'email_people',
+                    'label' => 'Email the people in these files',
+                    'type'  => 'checkbox',
+                    'value' => true,
+                    'attrs' => ($uploadBlocked || ! $uploadCanEdit) ? 'disabled' : '',
+                    'help'  => 'After you apply the upload, new students and instructors get an email with a link to choose their password, and people who already have an account are told about their new courses, sections or roles. Untick it to add them quietly; you can send password links later from People.',
+                ], ['saveData' => false]) ?>
+            </div>
+
             <div class="flex flex-wrap items-center justify-end gap-3">
                 <a class="<?= $second ?>" href="<?= esc(site_url('institution/people')) ?>">Cancel</a>
                 <button type="submit" class="<?= $primary ?>" <?= $uploadBlocked || ! $uploadCanEdit ? 'disabled' : '' ?>>Preview the changes</button>
@@ -124,6 +135,26 @@ $labels = [
                     </li>
                 <?php endforeach; ?>
             </ul>
+        </section>
+
+        <?php
+        $mailPlan  = $uploadKept['mail'] ?? [];
+        $mailPeople = (int) ($mailPlan['people'] ?? 0);
+        ?>
+
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="Emails" data-upload-mail>
+            <h2 class="text-sm font-bold text-brand">Emails</h2>
+            <?php if (! ($uploadKept['email'] ?? true)): ?>
+                <p class="mt-1 text-sm text-[#3D3D3D]" data-mail-off>You chose not to email anyone. People are added quietly; send password links later from People.</p>
+            <?php elseif ($mailPeople === 0): ?>
+                <p class="mt-1 text-sm text-[#3D3D3D]" data-mail-none>Nobody needs an email from this upload.</p>
+            <?php else: ?>
+                <p class="mt-1 text-sm text-[#3D3D3D]" data-mail-plan>
+                    <?= esc((string) $mailPeople) ?> <?= $mailPeople === 1 ? 'person' : 'people' ?> will be emailed within a few minutes of applying:
+                    <?= esc((string) ($mailPlan['welcome'] ?? 0)) ?> new <?= ($mailPlan['welcome'] ?? 0) === 1 ? 'account gets' : 'accounts get' ?> a link to choose a password,
+                    and <?= esc((string) ($mailPlan['notices'] ?? 0)) ?> <?= ($mailPlan['notices'] ?? 0) === 1 ? 'person is' : 'people are' ?> told what changed for them.
+                </p>
+            <?php endif; ?>
         </section>
 
         <?php
