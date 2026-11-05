@@ -198,7 +198,7 @@ final class MessageActionsForwardTest extends DatabaseTestCase
         $this->assertSame('not_found', $this->actions()->forward($this->student, $this->conversation, 999999, [$a])['reason']);
         $this->assertSame('not_found', $this->actions()->forward($outsider, $this->conversation, $this->message, [$a])['reason']);
 
-        db_connect()->table('message_hidden')->insert(['message_id' => $this->message, 'user_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('message_hidden')->insert(['message_id' => $this->message, 'user_id' => $this->student->id]);
         $this->assertSame('not_found', $this->actions()->forward($this->student, $this->conversation, $this->message, [$a])['reason']);
         db_connect()->table('message_hidden')->truncate();
 
