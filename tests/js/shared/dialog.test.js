@@ -276,6 +276,22 @@ describe("a dialog form", () => {
 
         expect(assign).toHaveBeenCalledWith("/people");
     });
+
+    it("stays on the page when the form says so, asks the server not to redirect, and does not reload", async () => {
+        page(FORM.replace("data-dialog-form", "data-dialog-form data-stay"));
+        bindDialogs();
+        const assign = vi.fn();
+        const reload = vi.fn();
+        vi.stubGlobal("location", { assign, reload });
+        answer(200, { message: "Students can message each other.", stay: true });
+
+        await submit();
+
+        expect(fetch.mock.calls[0][1].headers["X-Stay-On-Page"]).toBe("1");
+        expect(assign).not.toHaveBeenCalled();
+        expect(reload).not.toHaveBeenCalled();
+        expect(document.getElementById("go").disabled).toBe(false);
+    });
 });
 
 describe("a guarded action", () => {

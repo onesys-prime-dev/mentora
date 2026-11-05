@@ -25,7 +25,9 @@ $title = $title ?? '';
 };
 
 if ($tone === 'success') {
-    $said = $title !== '' ? $title . ': ' . $text : $text;
+    // The words only: a title here is usually the page's own title leaking in, and the toast a form answers
+    // with after saving has none, so the two must read the same.
+    $said = $text;
     ?>
 <div hidden data-toast-message data-tone="success" data-alert="success"><?= esc($said) ?></div>
     <?php

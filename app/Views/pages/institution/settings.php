@@ -73,7 +73,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
     <?php if ($settingsTab === 'profile'): ?>
 
-        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>">
+        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>">
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -115,7 +115,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $n = $settingsAnnouncement; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-announcement-form>
+        <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-announcement-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -168,7 +168,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $pp = $settingsParents; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-parent-portal-form>
+        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-parent-portal-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -207,7 +207,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $mm = $settingsMessages; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/messages')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-messages-settings-form>
+        <form method="post" action="<?= esc(site_url($base . '/messages')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-messages-settings-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -264,7 +264,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         $canReset  = $settingsCanEdit && $hasOwn;
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-security-form>
+        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-security-form>
             <?= csrf_field() ?>
 
             <div class="flex flex-col gap-6" data-panel-scroll>
@@ -351,7 +351,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         }
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-academic-form>
+        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-academic-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
