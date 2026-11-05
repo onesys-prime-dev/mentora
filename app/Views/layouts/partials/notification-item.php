@@ -21,15 +21,15 @@ $isReact = $isMsg && str_contains((string) $row['title'], 'reaction');
     <<?= $tag ?>
         <?php if ($row['link'] !== null): ?>href="<?= esc(site_url((string) $row['link']), 'attr') ?>"<?php endif; ?>
         data-role="note-row"
-        class="flex gap-3 px-5 py-3 pr-[4.5rem] transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55 <?= $unread ? 'bg-brand/5' : '' ?>">
+        class="flex gap-3 px-5 py-3 pr-[5rem] transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55 <?= $unread ? 'bg-brand/5' : '' ?>">
 
-        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full <?= $isReact ? 'bg-[#ffe4ec] text-[#e11d48]' : ($unread ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600') ?>" data-role="note-icon" aria-hidden="true">
+        <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full <?= $isReact ? 'bg-[#ffe4ec] text-[#e11d48]' : ($unread ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600') ?>" data-role="note-icon" aria-hidden="true">
             <?php if ($isReact): ?>
-                <span class="text-base leading-none">&#9829;</span>
+                <span class="text-xl leading-none">&#9829;</span>
             <?php elseif ($isMsg): ?>
-                <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor"><path d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"/></svg>
+                <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor"><path d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"/></svg>
             <?php else: ?>
-                <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+                <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
             <?php endif; ?>
         </span>
 
@@ -49,12 +49,12 @@ $isReact = $isMsg && str_contains((string) $row['title'], 'reaction');
 
     <span class="absolute right-3 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-hover/note:opacity-100 group-focus-within/note:opacity-100 [@media(hover:none)]:opacity-100">
         <button type="button" data-action="read" aria-label="Mark as read" title="Mark as read" <?= $unread ? '' : 'hidden' ?>
-            class="grid h-7 w-7 place-items-center rounded-full bg-white text-brand shadow ring-1 ring-black/5 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
-            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+            class="grid h-8 w-8 place-items-center rounded-full bg-white text-brand shadow ring-1 ring-black/5 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
+            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
         </button>
         <button type="button" data-action="delete" aria-label="Delete" title="Delete"
-            class="grid h-7 w-7 place-items-center rounded-full bg-white text-[#b91c1c] shadow ring-1 ring-black/5 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
-            <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
+            class="grid h-8 w-8 place-items-center rounded-full bg-white text-[#b91c1c] shadow ring-1 ring-black/5 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
         </button>
     </span>
 </li>
