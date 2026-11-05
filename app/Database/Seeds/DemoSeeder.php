@@ -53,6 +53,58 @@ abstract class DemoSeeder extends Seeder
             ->get()->getRowArray()['id'] ?? $this->missing("offering {$courseCode}-{$section}"));
     }
 
+    protected function programId(string $programCode, int $institutionId = 1): int
+    {
+        return self::$cache["program:{$institutionId}:{$programCode}"] ??= (int) ($this->db->table('programs')
+            ->select('programs.id')
+            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
+            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->where(['departments.institution_id' => $institutionId, 'programs.code' => $programCode])
+            ->get()->getRowArray()['id'] ?? $this->missing("program {$programCode}"));
+    }
+
+    /**
+     * A block section (class_sections) by its name, in the demo institution's term. Its name is also the
+     * section_code of every offering it owns, so IT101's offering in block "A" is IT101-A.
+     */
+    protected function classSectionId(string $code, int $institutionId = 1): int
+    {
+        return self::$cache["section:{$institutionId}:{$code}"] ??= (int) ($this->db->table('class_sections')
+            ->select('id')
+            ->where(['institution_id' => $institutionId, 'code' => $code])
+            ->get()->getRowArray()['id'] ?? $this->missing("section {$code}"));
+    }
+
+    /**
+     * Enrols the members of a block section in every offering the section owns: what the Sections page does when a
+     * student is added to a section. Anyone outside the section who takes one of its courses is enrolled by the
+     * caller, one offering at a time (an irregular student).
+     *
+     * @return int how many places were made
+     */
+    protected function enrolBlockMembers(string $code, string $enrolledAt): int
+    {
+        $sectionId = $this->classSectionId($code);
+        $members   = $this->db->table('class_section_students')->select('student_user_id')->where('class_section_id', $sectionId)->get()->getResultArray();
+        $offerings = $this->db->table('course_offerings')->select('id')->where('class_section_id', $sectionId)->get()->getResultArray();
+        $made      = 0;
+
+        foreach ($offerings as $offering) {
+            foreach ($members as $member) {
+                $this->db->table('enrollments')->insert([
+                    'offering_id'     => (int) $offering['id'],
+                    'student_user_id' => (int) $member['student_user_id'],
+                    'status'          => 'enrolled',
+                    'enrolled_at'     => $enrolledAt,
+                    'updated_at'      => $enrolledAt,
+                ]);
+                $made++;
+            }
+        }
+
+        return $made;
+    }
+
     protected function termId(string $name, string $academicYear, int $institutionId = 1): int
     {
         return (int) ($this->db->table('academic_terms')

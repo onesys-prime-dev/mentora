@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Institutions\ClassSectionService;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -75,6 +76,17 @@ final class InstitutionOfferingsTest extends RouteTestCase
         return (int) db_connect()->table('course_offerings')->where(['course_id' => $this->course, 'section_code' => strtoupper($section)])->get()->getRowArray()['id'];
     }
 
+    /** A block section of the institution's term (the Sections page's table), which an offering is added to. */
+    private function section(string $code = 'BSIT 1-A', string $capacity = '30', ?int $institution = null): int
+    {
+        $institution ??= $this->institution;
+        $db           = db_connect();
+        $program      = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$institution])->getRow()->id;
+        $term         = (int) $db->table('academic_terms')->where('institution_id', $institution)->get()->getRowArray()['id'];
+
+        return (new ClassSectionService())->create($institution, ['term_id' => (string) $term, 'program_id' => (string) $program, 'year_level' => '1', 'code' => $code, 'capacity' => $capacity], $this->admin);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function provideOtherRoles(): iterable
     {
@@ -97,11 +109,112 @@ final class InstitutionOfferingsTest extends RouteTestCase
 
     public function testTheEmptyPageOffersTheFirstOffering(): void
     {
+        $this->section();
+
         $body = $this->page();
 
         $this->assertStringContainsString('No offerings yet', $body);
         $this->assertStringContainsString('Add an offering', $body);
         $this->assertStringContainsString('id="offering-add"', $body);
+    }
+
+    public function testTheAddDialogChoosesASectionFromTheSectionsTableAndNoTermOrCapacity(): void
+    {
+        $id = $this->section('BSIT 1-A');
+        $this->section('BSIT 2-A');
+        (new ClassSectionService())->setArchived($this->institution, $this->section('BSIT 3-A'), true, $this->admin);
+        $this->section('THEIRS', '30', $this->other);
+
+        $body = html_entity_decode($this->page());
+        $add  = substr($body, (int) strpos($body, 'id="offering-add"'));
+        $add  = substr($add, 0, (int) strpos($add, 'id="offering-edit"'));
+
+        $this->assertMatchesRegularExpression('/<select[^>]*name="class_section_id"[^>]*required/s', $add);
+        $this->assertStringContainsString("value=\"{$id}\"", $add);
+        $this->assertStringContainsString('BSIT 1-A · BSIT year 1 · First Term 2026-2027', $add);
+        $this->assertStringContainsString('BSIT 2-A', $add);
+        $this->assertStringNotContainsString('BSIT 3-A', $add, 'an archived section is not offered');
+        $this->assertStringNotContainsString('THEIRS', $add, 'another institution has its own sections');
+        $this->assertStringNotContainsString('name="section_code"', $add, 'the section is chosen, not typed');
+        $this->assertStringNotContainsString('name="term_id"', $add, 'its term is the section term');
+        $this->assertStringNotContainsString('name="capacity"', $add, 'and so is its capacity');
+    }
+
+    public function testWithNoSectionThePageSaysToAddOneFirst(): void
+    {
+        $body = $this->page();
+
+        $this->assertStringContainsString('Add a section first', $body);
+        $this->assertStringNotContainsString('id="offering-add"', $body);
+    }
+
+    public function testAnOfferingIsAddedToASectionAndTakesItsTermNameAndCapacity(): void
+    {
+        $section = $this->section('BSIT 1-A', '30');
+        $ann     = PeopleFactory::person('student', 'Ann', 'Student', 'ann@offer.example', $this->institution);
+        db_connect()->table('user_profiles')->where('user_id', $ann->id)->update(['student_number' => '2026-001']);
+        (new ClassSectionService())->addStudents($this->institution, $section, '2026-001', false, $this->admin);
+
+        $this->withHeaders(['Accept' => 'application/json']);
+        $result = $this->step('POST', 'institution/offerings', ['course_id' => (string) $this->course, 'class_section_id' => (string) $section, 'description' => 'Mornings.']);
+
+        $this->assertTrue($result->isOK());
+        $this->assertSame('The offering was added and 1 student of the section was enrolled in it.', json_decode($result->getJSON(), true)['message']);
+
+        $offering = db_connect()->table('course_offerings')->where(['course_id' => $this->course])->get()->getRowArray();
+
+        $this->assertSame(['BSIT 1-A', (string) $section, (string) $this->term, '30', 'Mornings.'], [$offering['section_code'], $offering['class_section_id'], $offering['term_id'], $offering['capacity'], $offering['description']]);
+        $this->assertSame('enrolled', db_connect()->table('enrollments')->where(['offering_id' => $offering['id'], 'student_user_id' => $ann->id])->get()->getRowArray()['status']);
+
+        $this->withHeaders(['Accept' => 'text/html']);
+        $this->assertStringContainsString('BSIT 1-A', $this->page());
+    }
+
+    public function testASectionIsRequiredAndAForeignOneIs404(): void
+    {
+        $this->withHeaders(['Accept' => 'application/json']);
+
+        $none = $this->step('POST', 'institution/offerings', ['course_id' => (string) $this->course, 'class_section_id' => '']);
+        $this->assertSame(422, $none->response()->getStatusCode());
+        $this->assertArrayHasKey('class_section_id', json_decode($none->getJSON(), true)['errors']);
+
+        $theirs = $this->section('THEIRS', '30', $this->other);
+
+        try {
+            $status = $this->step('POST', 'institution/offerings', ['course_id' => (string) $this->course, 'class_section_id' => (string) $theirs])->response()->getStatusCode();
+        } catch (\CodeIgniter\Exceptions\PageNotFoundException) {
+            $status = 404;
+        }
+
+        $this->assertSame(404, $status);
+        $this->assertSame(0, db_connect()->table('course_offerings')->countAllResults());
+    }
+
+    public function testACourseAlreadyInTheSectionIsRefusedOnTheCourseField(): void
+    {
+        $section = $this->section();
+        $this->withHeaders(['Accept' => 'application/json']);
+
+        $this->step('POST', 'institution/offerings', ['course_id' => (string) $this->course, 'class_section_id' => (string) $section]);
+        $again = $this->step('POST', 'institution/offerings', ['course_id' => (string) $this->course, 'class_section_id' => (string) $section]);
+
+        $this->assertSame(422, $again->response()->getStatusCode());
+        $this->assertArrayHasKey('course_id', json_decode($again->getJSON(), true)['errors']);
+    }
+
+    public function testAnOfferingOfASectionCannotBeRenamedHereButItsCapacityCanChange(): void
+    {
+        $section = $this->section();
+        $this->step('POST', 'institution/offerings', ['course_id' => (string) $this->course, 'class_section_id' => (string) $section]);
+        $id = (int) db_connect()->table('course_offerings')->where('course_id', $this->course)->get()->getRowArray()['id'];
+        $this->withHeaders(['Accept' => 'application/json']);
+
+        $renamed = $this->step('POST', "institution/offerings/{$id}", ['section_code' => 'OTHER', 'capacity' => '30']);
+        $this->assertSame(422, $renamed->response()->getStatusCode());
+        $this->assertStringContainsString('Rename the section on the Sections page', json_decode($renamed->getJSON(), true)['errors']['section_code']);
+
+        $this->assertTrue($this->step('POST', "institution/offerings/{$id}", ['section_code' => 'BSIT 1-A', 'capacity' => '25'])->isOK());
+        $this->assertSame('25', db_connect()->table('course_offerings')->where('id', $id)->get()->getRowArray()['capacity']);
     }
 
     public function testWithNoCourseOrTermThePageSaysWhatToAddFirst(): void

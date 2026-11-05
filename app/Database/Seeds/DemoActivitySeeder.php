@@ -36,14 +36,18 @@ class DemoActivitySeeder extends DemoSeeder
 
     private function seedEnrollments(): void
     {
-        $rosters = [
-            ['IT101', 'A', ['student1', 'student2', 'student3', 'student4', 'student5']],
-            ['IT102', 'A', ['student1', 'student2', 'student3']],
+        // The members of a block section (ClassSectionsSeeder) are enrolled in every course the section takes: block
+        // A's students 1-3 in IT101-A and IT102-A. Block B has no members yet — an instructor's empty section.
+        $this->enrolBlockMembers('A', $this->at('-40 days'));
+
+        // Everyone else is enrolled one offering at a time, as an irregular student is on a roster: students 4 and 5
+        // sit in IT101-A without being in block A, and IT201-A belongs to no block at all.
+        $irregular = [
+            ['IT101', 'A', ['student4', 'student5']],
             ['IT201', 'A', ['student2', 'student4', 'student5']],
-            // IT101-B has no students yet — an instructor's empty section.
         ];
 
-        foreach ($rosters as [$code, $section, $students]) {
+        foreach ($irregular as [$code, $section, $students]) {
             foreach ($students as $student) {
                 $this->db->table('enrollments')->insert([
                     'offering_id' => $this->offeringId($code, $section),

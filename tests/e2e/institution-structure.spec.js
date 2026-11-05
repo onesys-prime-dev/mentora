@@ -285,25 +285,38 @@ test("TC-TRM-02 A term that ends before it starts is refused beside the date", a
 });
 
 
-test("TC-OFF-01 Adding an offering opens a course in a term and lists it with no instructor yet", async ({ page }) => {
+test("TC-OFF-01 Adding an offering opens a course in a section and lists it with no instructor yet", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    // An offering is added to a section, so the section is made first (Sections page).
+    await page.goto("/institution/sections");
+    await page.getByRole("button", { name: "Add a section" }).first().click();
+
+    const sectionDialog = page.getByRole("dialog", { name: "Add a section" });
+    await sectionDialog.getByLabel("Term").selectOption({ index: 1 });
+    await sectionDialog.getByLabel("Program").selectOption({ index: 1 });
+    await sectionDialog.getByLabel("Year level").fill("1");
+    await sectionDialog.getByLabel("Section name").fill("e2e-a");
+    await sectionDialog.getByLabel("Capacity").fill("30");
+    await sectionDialog.getByRole("button", { name: "Add section" }).click();
+    await expect(page.getByRole("heading", { name: "E2E-A", level: 1 })).toBeVisible();
+
     await page.goto("/institution/offerings");
     await expect(page.getByRole("heading", { name: "Offerings", level: 1 })).toBeVisible();
 
     await page.getByRole("button", { name: "Add an offering" }).first().click();
 
+    // The section is chosen from the Sections table; its term and capacity come with it.
     const dialog = page.getByRole("dialog", { name: "Add an offering" });
     await dialog.getByLabel("Course").selectOption({ index: 1 });
-    await dialog.getByLabel("Term").selectOption({ index: 1 });
-    await dialog.getByLabel("Section").fill("e2e-a");
-    await dialog.getByLabel("Capacity").fill("30");
+    await dialog.getByLabel("Section").selectOption({ index: 1 });
     await dialog.getByRole("button", { name: "Add offering" }).click();
 
     await expect(page.getByText("The offering was added.")).toBeVisible();
     await expect(page.getByRole("row", { name: /E2E-A/ })).toContainText("No instructor");
 });
 
-test("TC-OFF-02 The same section twice is refused beside the field, keeping what was typed", async ({ page }) => {
+test("TC-OFF-02 The same course twice in a section is refused beside the field", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await page.goto("/institution/offerings?q=E2E-A");
 
@@ -314,13 +327,11 @@ test("TC-OFF-02 The same section twice is refused beside the field, keeping what
 
     const dialog = page.getByRole("dialog", { name: "Add an offering" });
     await dialog.getByLabel("Course").selectOption({ index: 1 });
-    await dialog.getByLabel("Term").selectOption({ index: 1 });
-    await dialog.getByLabel("Section").fill("E2E-A");
+    await dialog.getByLabel("Section").selectOption({ index: 1 });
     await dialog.getByRole("button", { name: "Add offering" }).click();
 
-    // Only refuses when the first course and term chosen are the same pair.
-    await expect(dialog.getByText(/already has a section/)).toBeVisible();
-    await expect(dialog.getByLabel("Section")).toHaveValue("E2E-A");
+    // Only refuses when the first course and section chosen are the pair TC-OFF-01 added.
+    await expect(dialog.getByText(/is already in this section/)).toBeVisible();
 });
 
 test("TC-OFF-03 An offering with no students can be archived and brought back", async ({ page }) => {

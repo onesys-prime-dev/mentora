@@ -112,9 +112,10 @@ class OfferingService
     }
 
     /**
-     * What the add form can choose from.
+     * What the add form can choose from. The sections are the active block sections of an upcoming or active term
+     * (the table the Sections page keeps): an offering is added to one of them, which fixes its term.
      *
-     * @return array{courses: list<array{id: int, code: string, title: string}>, terms: list<array{id: int, name: string, year: string, status: string}>}
+     * @return array{courses: list<array{id: int, code: string, title: string}>, terms: list<array{id: int, name: string, year: string, status: string}>, sections: list<array{id: int, code: string, year_level: int, program: string, term: string, term_year: string}>}
      */
     public function options(int $institutionId): array
     {
@@ -137,7 +138,18 @@ class OfferingService
             ->orderBy('start_date', 'DESC')
             ->get()->getResultArray();
 
+        $sections = $db->table('class_sections cs')
+            ->select('cs.id, cs.code, cs.year_level, p.code AS program_code, t.name AS term_name, t.academic_year')
+            ->join('programs p', 'p.id = cs.program_id')
+            ->join('academic_terms t', 't.id = cs.term_id')
+            ->where('cs.institution_id', $institutionId)
+            ->where('cs.status', 'active')
+            ->whereIn('t.status', ['upcoming', 'active'])
+            ->orderBy('t.start_date', 'DESC')->orderBy('cs.year_level')->orderBy('cs.code')
+            ->get()->getResultArray();
+
         return [
+            'sections' => array_map(static fn (array $r): array => ['id' => (int) $r['id'], 'code' => (string) $r['code'], 'year_level' => (int) $r['year_level'], 'program' => (string) $r['program_code'], 'term' => (string) $r['term_name'], 'term_year' => (string) $r['academic_year']], $sections),
             'courses' => array_map(static fn (array $r): array => ['id' => (int) $r['id'], 'code' => (string) $r['course_code'], 'title' => (string) $r['course_title']], $courses),
             'terms'   => array_map(static fn (array $r): array => ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'year' => (string) $r['academic_year'], 'status' => (string) $r['status']], $terms),
         ];
@@ -205,6 +217,38 @@ class OfferingService
     }
 
     /**
+     * Adds an offering of a course to a block section (the Add an offering dialog): the term, the section name and
+     * the capacity are the section's, and its students are enrolled in the new offering.
+     *
+     * @param array<string, mixed> $input course_id, class_section_id, description
+     *
+     * @return array{offering_id: int, enrolled: int, warnings: list<string>}
+     *
+     * @throws StructureException
+     */
+    public function createInSection(int $institutionId, array $input, ?User $actor = null): array
+    {
+        $sectionId = (int) ($input['class_section_id'] ?? 0);
+        $text      = trim((string) ($input['description'] ?? ''));
+
+        if ($sectionId < 1) {
+            throw StructureException::field('class_section_id', 'Choose a section.');
+        }
+
+        if (mb_strlen($text) > 5000) {
+            throw StructureException::field('description', 'The description can be at most 5000 characters.');
+        }
+
+        $result = (new ClassSectionService())->addCourse($institutionId, $sectionId, (int) ($input['course_id'] ?? 0), $actor);
+
+        if ($text !== '') {
+            db_connect()->table('course_offerings')->where('id', $result['offering_id'])->update(['description' => $text, 'updated_at' => date('Y-m-d H:i:s')]);
+        }
+
+        return $result;
+    }
+
+    /**
      * @param array<string, mixed> $input section_code, capacity, description
      *
      * @throws StructureException
@@ -220,6 +264,11 @@ class OfferingService
         }
 
         $values = $this->values($input);
+
+        // An offering of a block section carries the section's name; rename the section to rename it.
+        if ($before['class_section_id'] !== null && $values['section_code'] !== $before['section_code']) {
+            throw StructureException::field('section_code', "This offering belongs to the section {$before['section_code']}. Rename the section on the Sections page instead.");
+        }
 
         $this->sectionIsFree((int) $before['course_id'], (int) $before['term_id'], $values['section_code'], $id);
 
