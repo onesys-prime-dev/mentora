@@ -885,6 +885,10 @@ test("TC-MSG-26 The institution's administrator turns off Forwarding, Reactions 
                     await expect(toggle).toHaveAttribute("aria-checked", String(on));
                 }
             }
+
+            // The switches are a draft until Save.
+            await admin.page.getByRole("button", { name: "Save", exact: true }).click();
+            await expect(admin.page.locator("[data-toast]").first()).toBeVisible();
         };
 
         await setSwitches(false);

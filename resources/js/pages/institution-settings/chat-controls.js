@@ -4,8 +4,10 @@
 |--------------------------------------------------------------------------
 | A picker of every course chat and staff group of the institution, then that
 | chat's switches (reactions, replies, forwarding, bump, delete for everyone,
-| the lock). Only the institution's administrator is sent any chats; the server
-| refuses everyone else. Names and switches only, never a message. Text is set
+| the lock). The switches are a draft: nothing is sent until the page's Save
+| button is pressed, which saves them together with the students setting and
+| says what changed. Only the institution's administrator is sent any chats; the
+| server refuses everyone else. Names and switches only, never a message. Text is set
 | with textContent only.
 |--------------------------------------------------------------------------
 */
@@ -43,8 +45,19 @@ export async function initChatControls(root = document.querySelector("[data-chat
     }
 
     const { status, data } = await api.chatControls();
-    const chats = status === 200 && Array.isArray(data?.chats) ? data.chats : [];
+    const chats = (status === 200 && Array.isArray(data?.chats) ? data.chats : []).map((c) => ({ ...c, draft: { ...(c.controls ?? {}) } }));
     let selected = chats[0]?.id ?? null;
+    const form = root.closest("form");
+    const radios = form ? [...form.querySelectorAll("input[name=enabled]")] : [];
+    const checkedRadio = () => radios.find((r) => r.checked)?.value ?? null;
+    let studentsAtStart = checkedRadio();
+    let saving = false;
+
+    /** Every switch whose draft differs from what is saved. */
+    const pending = () => chats.flatMap((chat) => SWITCHES
+        .filter((s) => Boolean(chat.draft[s.name]) !== Boolean(chat.controls?.[s.name]))
+        .map((s) => ({ chat, s, on: Boolean(chat.draft[s.name]) })));
+    const studentsChanged = () => studentsAtStart !== null && checkedRadio() !== studentsAtStart;
 
     function render() {
         const chat = chats.find((c) => c.id === selected) ?? null;
@@ -88,30 +101,15 @@ export async function initChatControls(root = document.querySelector("[data-chat
                 knob.style.transform = value ? "translateX(15px)" : "translateX(0)";
             };
 
-            paint(Boolean(chat.controls?.[s.name]));
+            paint(Boolean(chat.draft[s.name]));
 
-            toggle.addEventListener("click", async () => {
+            // Only the draft changes here; Save sends it.
+            toggle.addEventListener("click", () => {
                 const next = toggle.getAttribute("aria-checked") !== "true";
 
+                chat.draft[s.name] = next;
                 paint(next);
-                toggle.disabled = true;
                 note.textContent = "";
-
-                const result = await api.setControl(chat.id, s.name, next);
-
-                toggle.disabled = false;
-
-                if (result.status === 200) {
-                    chat.controls = { ...(chat.controls ?? {}), ...(result.data?.controls ?? { [s.name]: next }) };
-                    paint(Boolean(chat.controls[s.name]));
-
-                    // Say what was done, to which chat: these switches save the moment they are flipped.
-                    showToast(`${s.label} is now ${next ? "on" : "off"} in ${chat.name}.`, { tone: "success" });
-                } else {
-                    paint(!next);
-                    note.textContent = "Couldn't change that. Try again.";
-                    showToast(`Couldn't change ${s.label} in ${chat.name}. Try again.`, { tone: "danger" });
-                }
             });
 
             row.append(text, toggle);
@@ -119,6 +117,81 @@ export async function initChatControls(root = document.querySelector("[data-chat
             return row;
         }));
     }
+
+    // Save: the controls go first, then the students setting if that changed too. Each says what it did.
+    async function saveControls() {
+        const changes = pending();
+        const failed = [];
+
+        for (const { chat, s, on } of changes) {
+            const result = await api.setControl(chat.id, s.name, on);
+
+            if (result.status === 200) {
+                chat.controls = { ...(chat.controls ?? {}), ...(result.data?.controls ?? { [s.name]: on }) };
+                chat.draft = { ...chat.controls };
+            } else {
+                chat.draft[s.name] = Boolean(chat.controls?.[s.name]);
+                failed.push({ chat, s });
+            }
+        }
+
+        const saved = changes.length - failed.length;
+
+        if (saved === 1) {
+            const one = changes.find(({ chat, s }) => !failed.some((f) => f.chat === chat && f.s === s));
+
+            showToast(`${one.s.label} is now ${one.on ? "on" : "off"} in ${one.chat.name}.`, { tone: "success" });
+        } else if (saved > 1) {
+            showToast(`${saved} chat settings saved.`, { tone: "success" });
+        }
+
+        if (failed.length > 0) {
+            showToast(`Couldn't save ${failed.length} chat ${failed.length === 1 ? "setting" : "settings"}. Try again.`, { tone: "danger" });
+        }
+
+        render();
+    }
+
+    if (form) {
+        // Capture phase: runs before the form's own save, so the two can be told apart.
+        form.addEventListener("submit", (event) => {
+            if (saving) {
+                return;
+            }
+
+            const controlsChanged = pending().length > 0;
+
+            if (!controlsChanged && studentsChanged()) {
+                return; // only the students setting: the form saves it as always
+            }
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            if (!controlsChanged) {
+                showToast("Nothing to save.", { tone: "info" });
+
+                return;
+            }
+
+            saving = true;
+
+            saveControls().then(() => {
+                saving = false;
+
+                if (studentsChanged()) {
+                    saving = true;
+                    form.requestSubmit();
+                    saving = false;
+                }
+            });
+        }, true);
+    }
+
+    // Once the students setting has gone to the server, that is the new starting point for "changed".
+    form?.addEventListener("submit", () => {
+        studentsAtStart = checkedRadio();
+    });
 
     picker.addEventListener("change", () => {
         selected = Number(picker.value);
