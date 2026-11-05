@@ -1,6 +1,6 @@
 <?php
 /**
- * Personal, student-created nudges — distinct from Upcoming Tasks, which
+ * Personal, student-created nudges — distinct from Pending Tasks, which
  * are instructor-set deadlines. Empty is the normal state here, so the
  * empty state is the design rather than an afterthought.
  */
