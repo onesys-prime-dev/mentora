@@ -303,7 +303,19 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         remove: svg('<circle cx="10" cy="10" r="7"/><path d="M7 7l6 6M13 7l-6 6"/>'),
     };
 
-    function messageRow(item) {
+    // Under my newest message: "Sent", then "Seen" (a direct chat) or "Seen by 3" (a group, a course; a count, never names).
+    function deliveryStatus(item) {
+        const mine = state.myLast;
+        const seen = mine && mine.id === item.id ? mine.seen : 0;
+
+        if (seen <= 0) {
+            return "Sent";
+        }
+
+        return current()?.type === "direct" ? "Seen" : `Seen by ${seen}`;
+    }
+
+    function messageRow(item, status = null) {
         const row = document.createElement("div");
 
         row.className = `flex flex-col ${item.mine ? "items-end" : "items-start"}`;
@@ -383,6 +395,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         }
 
+        // The delivery word goes under the bubble after the time and icons are placed.
+        const statusLine = status === null ? null : document.createElement("div");
+
+        if (statusLine) {
+            statusLine.dataset.role = "delivery";
+            statusLine.className = "mr-1 mt-0.5 text-[11px] text-gray-500";
+            statusLine.textContent = status;
+        }
+
         if (note.querySelector("[data-action=hide]") !== null) {
             // Like Messenger: the time and icons float beside the bubble, on the side facing the middle of the
             // chat, while the pointer is over the message. They are laid over the margin, not in the line, so the
@@ -416,6 +437,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         }
 
+        if (statusLine) {
+            row.append(statusLine);
+        }
+
         return row;
     }
 
@@ -425,6 +450,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const nodes = [];
         let day = null;
         let previous = null;
+        const lastMine = [...state.items].reverse().find((i) => i.mine && typeof i.id === "number" && !i.removed && !i.deleted_everyone);
 
         for (const item of state.items) {
             const label = dayLabel(item.created_at, now());
@@ -448,7 +474,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
             previous = item;
 
-            nodes.push(messageRow(item));
+            nodes.push(messageRow(item, lastMine && item.id === lastMine.id ? deliveryStatus(item) : null));
         }
 
         messagesEl.replaceChildren(...nodes);
@@ -509,6 +535,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         const known = new Set(serverItems().map((item) => item.id));
         const fresh = data.messages.filter((m) => !known.has(m.id));
+        const seenBefore = JSON.stringify(state.myLast);
+
+        state.myLast = data.my_last ?? state.myLast;
 
         if (fresh.length > 0) {
             state.items.push(...fresh);
@@ -516,6 +545,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             sortItems();
             renderMessages();
             readUpTo();
+        } else if (JSON.stringify(state.myLast) !== seenBefore) {
+            renderMessages();
         }
 
         await pollChanges(id, token);
@@ -566,6 +597,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.confirmRemove = null;
         state.confirmBlock = null;
         state.pinned = [];
+        state.myLast = null;
         state.pinIndex = 0;
         setReply(null);
         renderPinbar();
@@ -620,6 +652,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.cursor = Math.max(0, ...data.messages.map((m) => m.id));
         state.hasMore = data.has_more;
         state.pinned = data.pinned ?? [];
+        state.myLast = data.my_last ?? null;
         renderPinbar();
         renderMessages({ stick: true });
         readUpTo();

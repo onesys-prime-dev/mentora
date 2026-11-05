@@ -302,6 +302,24 @@ describe("opening a conversation", () => {
 
     });
 
+    it("says Sent under my newest message, and Seen once the other person has read it", async () => {
+
+        const mine = [msg(10, { mine: true, sender_name: "Me" }), msg(11)];
+        const page = vi.fn().mockResolvedValue(ok({ messages: mine, has_more: false, my_last: { id: 10, seen: 0, others: 1 } }));
+        const api = makeApi({ page });
+
+        await mount(api);
+        await openFirst();
+
+        expect(all("[data-role=delivery]").map((el) => el.textContent)).toEqual(["Sent"]);
+
+        page.mockResolvedValue(ok({ messages: [], has_more: false, my_last: { id: 10, seen: 1, others: 1 } }));
+        await vi.advanceTimersByTimeAsync(5000);
+
+        expect(all("[data-role=delivery]").map((el) => el.textContent)).toEqual(["Seen"]);
+
+    });
+
     it("separates the days", async () => {
 
         const api = makeApi({ page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { created_at: "2026-11-02 09:00:00" }), msg(11)], has_more: false })) });

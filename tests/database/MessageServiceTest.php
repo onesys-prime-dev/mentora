@@ -266,6 +266,23 @@ final class MessageServiceTest extends DatabaseTestCase
         $this->assertFalse($this->service()->markRead($this->instructor, $this->conversation, 999999));
     }
 
+    public function testThePageSaysHowManyHaveReadMyNewestMessageWithoutSayingWho(): void
+    {
+        $one = $this->send($this->student, 'one')['message']['id'];
+        $two = $this->send($this->student, 'two')['message']['id'];
+
+        $before = $this->service()->page($this->student, $this->conversation)['my_last'];
+        $this->assertSame(['id' => $two, 'seen' => 0, 'others' => 1], $before);
+
+        $this->service()->markRead($this->instructor, $this->conversation, $one);
+        $this->assertSame(0, $this->service()->page($this->student, $this->conversation)['my_last']['seen']);
+
+        $this->service()->markRead($this->instructor, $this->conversation, $two);
+        $this->assertSame(1, $this->service()->page($this->student, $this->conversation)['my_last']['seen']);
+
+        $this->assertNull($this->service()->page($this->instructor, $this->conversation)['my_last']);
+    }
+
     public function testTheNavigationBadgeCountsUnreadMessages(): void
     {
         helper(['navigation']);

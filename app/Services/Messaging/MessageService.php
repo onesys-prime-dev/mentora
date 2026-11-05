@@ -164,7 +164,7 @@ class MessageService
      * before that message; `$afterId` what came after it (for polling).
      * Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>}|null
+     * @return array{messages: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>, my_last: array{id: int, seen: int, others: int}|null}|null
      */
     public function page(User $user, int $conversationId, ?int $beforeId = null, ?int $afterId = null, int $limit = self::PAGE): ?array
     {
@@ -204,7 +204,32 @@ class MessageService
             'messages' => $this->presentRows($rows, $user, $conversation),
             'has_more' => $more,
             'pinned'   => $this->pinnedPreviews($userId, $conversationId, $first),
+            'my_last'  => $this->myLastSeen($userId, $conversationId),
         ];
+    }
+
+    /**
+     * The viewer's newest message that still stands, and how many of the others in the chat have read up to it.
+     * Counts only; never who. Null when the viewer has sent nothing here.
+     *
+     * @return array{id: int, seen: int, others: int}|null
+     */
+    private function myLastSeen(int $userId, int $conversationId): ?array
+    {
+        $db   = db_connect();
+        $last = $db->table('messages')->selectMax('id', 'id')
+            ->where(['conversation_id' => $conversationId, 'sender_id' => $userId, 'removed_at' => null, 'deleted_everyone_at' => null])->get()->getRowArray();
+        $id   = (int) ($last['id'] ?? 0);
+
+        if ($id === 0) {
+            return null;
+        }
+
+        $others = $db->table('conversation_participants')->where('conversation_id', $conversationId)->where('user_id <>', $userId)->where('left_at', null);
+        $total  = $others->countAllResults(false);
+        $seen   = $others->where('last_read_message_id >=', $id)->countAllResults();
+
+        return ['id' => $id, 'seen' => $seen, 'others' => $total];
     }
 
     /**
