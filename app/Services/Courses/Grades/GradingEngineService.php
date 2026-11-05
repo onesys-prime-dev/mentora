@@ -144,12 +144,62 @@ class GradingEngineService
             'items' => $items,
             'studentIds' => $studentIds,
             'scores' => $this->scoreModel->mapForItems(array_map('intval', array_column($items, 'id')), $studentIds),
+            // Items whose assessment is given to chosen students only: item id => the students it was given to.
+            'restricted' => $this->restrictedItems($items),
             // Curves that count now: how an item's scores, or the final percentage, are read.
             'adjustments' => (new \App\Models\Grades\GradeAdjustmentModel())->liveFor($offeringId),
             'bands' => !empty($scheme['grade_scale_id'])
                 ? $this->scaleItemModel->listForScale((int) $scheme['grade_scale_id'])
                 : [],
         ];
+    }
+
+    /**
+     * The items whose assessment is given to chosen students only ("specific students"), with those students.
+     *
+     * @param list<array> $items
+     * @return array<int, list<int>> item id => student ids
+     */
+    private function restrictedItems(array $items): array
+    {
+        $byAssessment = [];
+
+        foreach ($items as $item) {
+            if (!empty($item['assessment_id'])) {
+                $byAssessment[(int) $item['assessment_id']][] = (int) $item['id'];
+            }
+        }
+
+        if ($byAssessment === []) {
+            return [];
+        }
+
+        $db = db_connect();
+
+        $chosenOnly = array_map('intval', array_column(
+            $db->table('assessment_settings')->select('assessment_id')->whereIn('assessment_id', array_keys($byAssessment))->where('assign_to_specific_students', 1)->get()->getResultArray(),
+            'assessment_id'
+        ));
+
+        if ($chosenOnly === []) {
+            return [];
+        }
+
+        $assignees = array_fill_keys($chosenOnly, []);
+
+        foreach ($db->table('assessment_assignees')->select('assessment_id, student_user_id')->whereIn('assessment_id', $chosenOnly)->get()->getResultArray() as $row) {
+            $assignees[(int) $row['assessment_id']][] = (int) $row['student_user_id'];
+        }
+
+        $restricted = [];
+
+        foreach ($chosenOnly as $assessmentId) {
+            foreach ($byAssessment[$assessmentId] as $itemId) {
+                $restricted[$itemId] = $assignees[$assessmentId];
+            }
+        }
+
+        return $restricted;
     }
 
     /**
@@ -177,6 +227,11 @@ class GradingEngineService
                 }
 
                 $score = $this->scoreFor($context, $overrideScores, (int) $item['id'], $studentId);
+
+                // Work given to other students only never existed for this one: not a zero, not in the grade.
+                if ($score === null && isset($context['restricted'][(int) $item['id']]) && !in_array($studentId, $context['restricted'][(int) $item['id']], true)) {
+                    continue;
+                }
 
                 // An excused item is left out of the grade altogether.
                 if ($score === null && !empty($context['scores'][(int) $item['id']][$studentId]['is_missing'])) {

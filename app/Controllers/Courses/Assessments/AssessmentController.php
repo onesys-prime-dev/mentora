@@ -129,6 +129,43 @@ class AssessmentController extends BaseController
         );
     }
 
+    /** Sets the quiz's password (JSON {password}). The answer says whether it was saved, never what it is. */
+    public function setPassword(int $assessmentId)
+    {
+        $data = $this->request->getJSON(true) ?? [];
+
+        return $this->response->setJSON(
+            $this->assessmentService->setQuizPassword(
+                auth()->user(),
+                $assessmentId,
+                is_string($data['password'] ?? null) ? $data['password'] : ''
+            )
+        );
+    }
+
+    /** The students of the assessment's section and who it is given to (specific students). */
+    public function assignees(int $assessmentId)
+    {
+        return $this->response->setJSON([
+            'success'  => true,
+            'students' => $this->assessmentService->assignmentRoster($assessmentId),
+        ]);
+    }
+
+    /** Saves who the assessment is given to (JSON {student_ids: []}). */
+    public function setAssignees(int $assessmentId)
+    {
+        $data = $this->request->getJSON(true) ?? [];
+
+        return $this->response->setJSON(
+            $this->assessmentService->setAssignees(
+                auth()->user(),
+                $assessmentId,
+                is_array($data['student_ids'] ?? null) ? $data['student_ids'] : []
+            )
+        );
+    }
+
     public function publish(int $assessmentId)
     {
         $user = auth()->user();

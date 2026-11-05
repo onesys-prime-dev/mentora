@@ -114,8 +114,12 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
         $routes->get('(:num)/assessments/(:num)/view', 'Courses\Assessments\AssessmentController::viewAssessment/$1/$2');
 
         $routes->get('(:num)/assessments/(:num)/take', 'Courses\Assessments\QuizAttemptController::start/$1/$2');
+        // The same page with the password given: starts the attempt of a quiz that has one, only if it is right.
+        $routes->post('(:num)/assessments/(:num)/take', 'Courses\Assessments\QuizAttemptController::unlock/$1/$2');
         $routes->post('(:num)/submissions/(:num)/questions/(:num)/answer', 'Courses\Assessments\QuizAttemptController::saveAnswer/$2/$3');
         $routes->post('(:num)/submissions/(:num)/submit', 'Courses\Assessments\QuizAttemptController::submit/$2');
+        // What the quiz page saw during the attempt: the student left the page, left fullscreen, tried to copy...
+        $routes->post('(:num)/submissions/(:num)/security-events', 'Courses\Assessments\QuizAttemptController::securityEvent/$2');
 
         $routes->post('(:num)/assessments/(:num)/assignment-submissions', 'Courses\Assessments\AssignmentSubmissionController::submit/$1/$2');
 
@@ -223,6 +227,11 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->get('(:num)/assessments/(:num)/editor', 'Courses\Assessments\AssessmentController::editAssessment/$2');
         $routes->get('(:num)/assessments/(:num)/quiz-builder', 'Courses\Assessments\AssessmentController::quizBuilder/$2');
         $routes->patch('(:num)/assessments/(:num)', 'Courses\Assessments\AssessmentController::update/$2');
+        // A quiz's password: sent only when it is being set; it is never given back.
+        $routes->patch('(:num)/assessments/(:num)/password', 'Courses\Assessments\AssessmentController::setPassword/$2');
+        // Specific students: the section's students with who is chosen, and saving the choice.
+        $routes->get('(:num)/assessments/(:num)/assignees', 'Courses\Assessments\AssessmentController::assignees/$2');
+        $routes->put('(:num)/assessments/(:num)/assignees', 'Courses\Assessments\AssessmentController::setAssignees/$2');
         $routes->delete('(:num)/assessments/(:num)', 'Courses\Assessments\AssessmentController::destroy/$2');
         $routes->patch('(:num)/assessments/(:num)/instructions', 'Courses\Assessments\AssessmentController::updateInstructions/$2');
         $routes->patch('(:num)/assessments/(:num)/submission-settings', 'Courses\Assessments\AssessmentController::updateSubmissionSettings/$2');
@@ -625,6 +634,11 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('(:num)/assessments/(:num)/editor', 'Courses\Assessments\AssessmentController::editAssessment/$2');
         $routes->get('(:num)/assessments/(:num)/quiz-builder', 'Courses\Assessments\AssessmentController::quizBuilder/$2');
         $routes->patch('(:num)/assessments/(:num)', 'Courses\Assessments\AssessmentController::update/$2');
+        // A quiz's password: sent only when it is being set; it is never given back.
+        $routes->patch('(:num)/assessments/(:num)/password', 'Courses\Assessments\AssessmentController::setPassword/$2');
+        // Specific students: the section's students with who is chosen, and saving the choice.
+        $routes->get('(:num)/assessments/(:num)/assignees', 'Courses\Assessments\AssessmentController::assignees/$2');
+        $routes->put('(:num)/assessments/(:num)/assignees', 'Courses\Assessments\AssessmentController::setAssignees/$2');
         $routes->delete('(:num)/assessments/(:num)', 'Courses\Assessments\AssessmentController::destroy/$2');
         $routes->patch('(:num)/assessments/(:num)/instructions', 'Courses\Assessments\AssessmentController::updateInstructions/$2');
         $routes->patch('(:num)/assessments/(:num)/submission-settings', 'Courses\Assessments\AssessmentController::updateSubmissionSettings/$2');

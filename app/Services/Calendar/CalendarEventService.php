@@ -113,6 +113,8 @@ class CalendarEventService
                 ->whereIn('cm.offering_id', $studied)
                 ->where('a.status', 'Published')
                 ->where('cm.status', 'published')
+                // Given to chosen students only: the others never learn of it.
+                ->where('(NOT EXISTS (SELECT 1 FROM assessment_settings st WHERE st.assessment_id = a.id AND st.assign_to_specific_students = 1) OR EXISTS (SELECT 1 FROM assessment_assignees aa WHERE aa.assessment_id = a.id AND aa.student_user_id = ' . (int) $user->id . '))', null, false)
                 ->groupStart()
                     ->where('a.learning_item_id IS NULL', null, false)
                     ->orGroupStart()

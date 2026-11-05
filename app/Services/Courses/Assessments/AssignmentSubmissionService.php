@@ -124,6 +124,10 @@ class AssignmentSubmissionService
             return ['success' => false, 'message' => 'Only students enrolled in this course can submit.'];
         }
 
+        if (!(new AssessmentService())->isAssignedTo($assessmentId, (int) $user->id)) {
+            return ['success' => false, 'message' => 'Assignment not found.'];
+        }
+
         $state = $this->getState($user, $assessmentId);
 
         if (!$state['canSubmit']) {

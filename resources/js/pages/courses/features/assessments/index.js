@@ -44,6 +44,8 @@ import {
     initializeInspectorPanel,
 } from "./inspector/inspector.js";
 
+import { bindPasswordGate } from "./quiz-taking/password-gate.js";
+
 import {
     initializeQuestions,
 } from "./questions/questions.js";
@@ -801,7 +803,7 @@ export async function loadQuizAttempt(
     offeringId,
     assessmentId,
     refresh,
-    { pushState = true, mode = "navigate" } = {}
+    { pushState = true, mode = "navigate", password = null } = {}
 ) {
 
     const container =
@@ -809,7 +811,7 @@ export async function loadQuizAttempt(
 
     const swapped = await swapContent(
         container,
-        async () => (await fetchQuizAttempt(offeringId, assessmentId)).html,
+        async () => (await fetchQuizAttempt(offeringId, assessmentId, password)).html,
         {
             mode,
             skeleton: mode === "navigate" ? renderAssessmentDetailSkeleton() : null,
@@ -847,6 +849,17 @@ export async function loadQuizAttempt(
                 "click",
                 backToView
             );
+
+        // A quiz with a password shows its prompt first: the password is posted to the same page, which
+        // comes back as the quiz, or as the prompt again with the reason.
+        bindPasswordGate({
+            submit: (typed) => loadQuizAttempt(
+                offeringId,
+                assessmentId,
+                refresh,
+                { pushState: false, mode: "refresh", password: typed }
+            ),
+        });
 
         initializeQuizTaking(
             offeringId,

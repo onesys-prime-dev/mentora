@@ -11,6 +11,11 @@ $previewLabels = [
 $viewAs = $viewAs ?? null;
 // The database refused the new attempt (not the same as one already handed in).
 $startFailed = $startFailed ?? false;
+// A quiz with a password: no attempt is made until the right one is given.
+$passwordRequired = $passwordRequired ?? false;
+$passwordError = $passwordError ?? null;
+// What the page script watches: recording that the student leaves the page, and the fullscreen lock.
+$guard = $guard ?? ['detect' => false, 'lock' => false];
 $inProgress = $submission && $submission['status'] === 'In Progress';
 $readOnly = $viewAs !== null;
 
@@ -188,6 +193,53 @@ $answeredCount = count(array_filter($responsesByQuestion ?? [], static fn (array
 
         </div>
 
+    <?php elseif ($passwordRequired): ?>
+
+        <div class="flex flex-1 flex-col items-center justify-center gap-4 py-20 text-center" data-quiz-password-gate>
+
+            <?= icon('lock', 'h-10 w-10') ?>
+
+            <span class="text-lg font-bold text-[#1A1C1E]">This quiz needs a password</span>
+
+            <span class="max-w-sm text-sm text-[#646464]">
+                Your teacher gives you the password. Starting the quiz begins your attempt only after the right one is entered.
+            </span>
+
+            <form
+                data-quiz-password-form
+                data-assessment-id="<?= esc($currentAssessment['id']) ?>"
+                class="flex w-full max-w-xs flex-col gap-3"
+                novalidate>
+
+                <label class="flex flex-col gap-1.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500" for="quiz-password-input">
+                    Password
+                </label>
+
+                <input
+                    id="quiz-password-input"
+                    type="password"
+                    name="password"
+                    autocomplete="off"
+                    autofocus
+                    data-quiz-password-input
+                    maxlength="64"
+                    aria-describedby="quiz-password-error"
+                    aria-invalid="<?= $passwordError ? 'true' : 'false' ?>"
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand aria-[invalid=true]:border-[#C33939]">
+
+                <p id="quiz-password-error" role="alert" data-quiz-password-error class="min-h-4 text-xs font-medium text-[#C33939]"><?= $passwordError ? esc($passwordError) : '' ?></p>
+
+                <button
+                    type="submit"
+                    data-quiz-password-submit
+                    class="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                    Start the quiz
+                </button>
+
+            </form>
+
+        </div>
+
     <?php elseif ($blocked): ?>
 
         <div class="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
@@ -250,7 +302,32 @@ $answeredCount = count(array_filter($responsesByQuestion ?? [], static fn (array
 
                 </div>
 
-                <form <?= $readOnly ? 'data-view-only' : 'id="quiz-answer-form"' ?> data-submission-id="<?= esc($submission['id']) ?>">
+                <?php if (!$readOnly && ($guard['detect'] || $guard['lock'])): ?>
+
+                    <div data-quiz-guard-notice class="mb-5 flex flex-col gap-2 rounded-xl border border-[#F3D9A4] bg-[#FFF8E8] px-4 py-3 text-sm text-[#7A5600]">
+
+                        <?php if ($guard['detect']): ?>
+                            <p>This quiz records when you leave this page and for how long (not where you went). Your teacher can see it with your attempt.</p>
+                        <?php endif; ?>
+
+                        <?php if ($guard['lock']): ?>
+                            <p>
+                                This quiz asks for fullscreen and turns off copying, pasting and printing. Leaving fullscreen and trying
+                                those are recorded for your teacher.
+                            </p>
+                            <button
+                                type="button"
+                                data-guard-fullscreen
+                                class="w-fit rounded-lg border border-[#946200] bg-white px-3 py-1.5 text-xs font-semibold text-[#6F4A00] transition hover:bg-[#FFF1D6]">
+                                Go fullscreen
+                            </button>
+                        <?php endif; ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+                <form <?= $readOnly ? 'data-view-only' : 'id="quiz-answer-form"' ?> data-submission-id="<?= esc($submission['id']) ?>"<?= !$readOnly && $guard['detect'] ? ' data-detect-tab-switch="1"' : '' ?><?= !$readOnly && $guard['lock'] ? ' data-lock-browser="1"' : '' ?>>
 
                     <div class="flex flex-col gap-5">
 

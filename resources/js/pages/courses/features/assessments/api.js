@@ -200,6 +200,78 @@ export async function fetchQuizBuilder(
 
 }
 
+/**
+ * Sets a quiz's password. It has its own request so the password is only ever sent when it is being set; the answer
+ * says whether it was saved and never what the password is.
+ *
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export async function setQuizPassword(offeringId, assessmentId, password)
+{
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/password`,
+        {
+            method: "PATCH",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ password }),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to save the password.");
+    }
+
+    return response.json();
+}
+
+/**
+ * The students of the assessment's section, and whether each is chosen ("Specific students").
+ *
+ * @returns {Promise<Array<{id: number, name: string, email: string, selected: boolean}>>}
+ */
+export async function fetchAssignees(offeringId, assessmentId)
+{
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/assignees`,
+        { headers: defaultHeaders() }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to load the students.");
+    }
+
+    return (await response.json()).students;
+}
+
+/**
+ * Saves who the assessment is given to.
+ *
+ * @returns {Promise<{success: boolean, count?: number, message?: string}>}
+ */
+export async function saveAssignees(offeringId, assessmentId, studentIds)
+{
+    const response = await fetch(
+        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/assignees`,
+        {
+            method: "PUT",
+            headers: {
+                ...defaultHeaders(),
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ student_ids: studentIds }),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Unable to save the students.");
+    }
+
+    return response.json();
+}
+
 export async function updateAssessmentInstructions(
     offeringId,
     assessmentId,
@@ -583,11 +655,23 @@ export async function duplicateQuestion(offeringId, questionId) {
 |--------------------------------------------------------------------------
 */
 
-export async function fetchQuizAttempt(offeringId, assessmentId) {
+/**
+ * Opens a quiz for the student. With a password it is posted to the same address, which starts the attempt of a quiz
+ * that has one only if it is right; the answer is the page to show either way (the quiz, or the prompt again).
+ */
+export async function fetchQuizAttempt(offeringId, assessmentId, password = null) {
+
+    const url = `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/take`;
 
     const response = await fetch(
-        `${window.coursesConfig.apiBaseUrl}/assessments/${assessmentId}/take`,
-        { headers: defaultHeaders() }
+        url,
+        password === null
+            ? { headers: defaultHeaders() }
+            : {
+                method: "POST",
+                headers: { ...defaultHeaders(), "Content-Type": "application/json" },
+                body: JSON.stringify({ password }),
+            }
     );
 
     if (!response.ok) {
@@ -595,6 +679,40 @@ export async function fetchQuizAttempt(offeringId, assessmentId) {
     }
 
     return response.json();
+
+}
+
+/**
+ * Reports what the quiz page saw during an attempt (the student left the page, left fullscreen, tried to copy...).
+ * Fire and forget: it keeps the request alive if the page closes, and never throws into the quiz, because a report
+ * that did not get through must not disturb the student's answers.
+ *
+ * @returns {Promise<boolean>} whether the server kept it
+ */
+export async function recordSecurityEvent(submissionId, event) {
+
+    try {
+
+        const response = await fetch(
+            `${window.coursesConfig.apiBaseUrl}/submissions/${submissionId}/security-events`,
+            {
+                method: "POST",
+                keepalive: true,
+                headers: {
+                    ...defaultHeaders(),
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(event),
+            }
+        );
+
+        return response.ok && (await response.json()).success === true;
+
+    } catch {
+
+        return false;
+
+    }
 
 }
 

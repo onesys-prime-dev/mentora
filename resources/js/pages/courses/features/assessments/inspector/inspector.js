@@ -4,7 +4,10 @@
 |--------------------------------------------------------------------------
 */
 
-import { updateAssessment } from "../api.js";
+import { fetchAssignees, saveAssignees, setQuizPassword, updateAssessment } from "../api.js";
+import { showToast } from "../../../../../shared/toast.js";
+import { bindQuizSecurity } from "./quiz-security.js";
+import { bindSpecificStudents } from "./specific-students.js";
 
 export function initializeInspectorPanel(
     offeringId,
@@ -23,10 +26,30 @@ export function initializeInspectorPanel(
 
     bindAttemptLimitToggle();
 
+    // The password section of a quiz (nothing happens on an assignment, which has none).
+    const security = bindQuizSecurity({
+        savePassword: (password) => setQuizPassword(offeringId, assessmentId, password),
+        notify: (message, tone) => showToast(message, { tone }),
+    });
+
+    // "Specific students" is on every assessment.
+    const students = bindSpecificStudents({
+        fetchStudents: () => fetchAssignees(offeringId, assessmentId),
+        saveStudents: (ids) => saveAssignees(offeringId, assessmentId, ids),
+        notify: (message, tone) => showToast(message, { tone }),
+    });
+
+    // What stops a save before anything is sent: a password on and not created, or specific students on with
+    // nobody chosen. The first one found is said.
+    const checks = {
+        passwordProblem: () => security?.passwordProblem() ?? students.problem(),
+    };
+
     bindSaveActions(
         offeringId,
         assessmentId,
-        refresh
+        refresh,
+        checks
     );
 
 }
@@ -143,7 +166,8 @@ function bindAttemptLimitToggle() {
 function bindSaveActions(
     offeringId,
     assessmentId,
-    refresh
+    refresh,
+    security
 ) {
 
     document
@@ -154,7 +178,8 @@ function bindSaveActions(
                 offeringId,
                 assessmentId,
                 "Draft",
-                refresh
+                refresh,
+                security
             )
         );
 
@@ -166,7 +191,8 @@ function bindSaveActions(
                 offeringId,
                 assessmentId,
                 "Published",
-                refresh
+                refresh,
+                security
             )
         );
 
@@ -176,8 +202,21 @@ async function saveAssessment(
     offeringId,
     assessmentId,
     status,
-    refresh
+    refresh,
+    security
 ) {
+
+    // A password switched on and not yet created is said before anything is sent.
+    const problem =
+        security?.passwordProblem();
+
+    if (problem) {
+
+        showToast(problem, { tone: "danger" });
+
+        return;
+
+    }
 
     const payload =
         collectInspectorPayload();
@@ -186,17 +225,30 @@ async function saveAssessment(
 
     try {
 
-        await updateAssessment(
-            offeringId,
-            assessmentId,
-            payload
-        );
+        const result =
+            await updateAssessment(
+                offeringId,
+                assessmentId,
+                payload
+            );
+
+        // The server answers 200 with {success: false, message} for settings it refuses (dates that
+        // do not add up, a password required before it exists...): the form stays as it is.
+        if (result && result.success === false) {
+
+            showToast(result.message || "The settings could not be saved.", { tone: "danger" });
+
+            return;
+
+        }
 
         await refresh();
 
     } catch (error) {
 
         console.error(error);
+
+        showToast("The settings could not be saved. Check your connection and try again.", { tone: "danger" });
 
     }
 

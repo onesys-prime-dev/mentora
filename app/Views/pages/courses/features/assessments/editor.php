@@ -81,4 +81,10 @@
 
     <?= $this->include('pages/courses/features/assessments/partials/modals/assessment-delete') ?>
 
+    <?= $this->include('pages/courses/features/assessments/partials/modals/assignees') ?>
+
+    <?php if (strtolower((string) ($currentAssessment['assessment_type'] ?? '')) === 'quiz') : ?>
+        <?= $this->include('pages/courses/features/assessments/partials/modals/quiz-password') ?>
+    <?php endif; ?>
+
 </div>

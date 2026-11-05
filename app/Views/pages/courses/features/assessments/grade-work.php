@@ -274,6 +274,8 @@ $attemptTabs ??= [];
 
                         </div>
 
+                        <?= view('pages/courses/features/assessments/partials/security-report', ['security' => $submission['security'] ?? null]) ?>
+
                         <?php if ($attemptTabs): ?>
 
                             <!-- One tab per attempt; ★ marks the attempt that counts -->

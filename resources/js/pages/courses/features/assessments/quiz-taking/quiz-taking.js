@@ -5,9 +5,12 @@
 */
 
 import {
+    recordSecurityEvent,
     saveQuizAnswer,
     submitQuizAttempt,
 } from "../api.js";
+import { showToast } from "../../../../../shared/toast.js";
+import { bindAttemptGuard } from "./attempt-guard.js";
 
 let state = {
     offeringId: null,
@@ -18,6 +21,9 @@ let state = {
 const saveTimers = new Map();
 
 let timerInterval = null;
+
+// What watches the attempt in progress (see attempt-guard.js); only one at a time.
+let guard = null;
 
 export function initializeQuizTaking(offeringId, assessmentId, submitQuiz) {
 
@@ -33,6 +39,15 @@ export function initializeQuizTaking(offeringId, assessmentId, submitQuiz) {
     bindAnswerInputs(form);
     bindSubmit(form);
     bindTimer();
+
+    // A quiz that records leaving the page, or locks the browser, is watched while it is being answered.
+    guard?.stop();
+
+    guard = bindAttemptGuard({
+        form,
+        record: (event) => recordSecurityEvent(form.dataset.submissionId, event),
+        notify: (message) => showToast(message, { tone: "warning" }),
+    });
 
     // Resuming an in-progress attempt — apply the selection cap to
     // whatever's already checked, same as a fresh change event would.

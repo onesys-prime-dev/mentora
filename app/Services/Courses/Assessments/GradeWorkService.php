@@ -162,6 +162,9 @@ class GradeWorkService
                         $submission['id']
                     );
 
+                    // What the quiz page saw while the student answered (empty unless the quiz watched).
+                    $submission['security'] = (new QuizAttemptService())->securityReport((int) $submission['id']);
+
                 }
 
                 $submission['file'] = !empty($submission['submission_file_id'])
@@ -680,6 +683,8 @@ class GradeWorkService
 
         $builder->whereIn('enrollments.status', ['enrolled', 'completed']);
 
+        // Given to chosen students only: the others are not in this assessment's list, so they are never "missing".
+        $builder->where("(NOT EXISTS (SELECT 1 FROM assessment_settings st WHERE st.assessment_id = {$assessmentId} AND st.assign_to_specific_students = 1) OR EXISTS (SELECT 1 FROM assessment_assignees aa WHERE aa.assessment_id = {$assessmentId} AND aa.student_user_id = enrollments.student_user_id))", null, false);
 
         $builder->orderBy('student_name', 'ASC');
 

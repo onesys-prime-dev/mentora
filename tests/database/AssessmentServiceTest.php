@@ -272,10 +272,11 @@ final class AssessmentServiceTest extends DatabaseTestCase
     /** @return iterable<string, array{0: string, 1: mixed}> */
     public static function settingsNothingEnforces(): iterable
     {
+        // A quiz password is set only through setQuizPassword(), never as a field of an update; requiring one before it
+        // exists is refused. (Randomized questions, the browser lock and recording tab switches ARE acted on now:
+        // AssessmentSecuritySettingsTest.)
         yield 'a quiz password' => ['password', 'secret'];
         yield 'requiring the password' => ['require_password', true];
-        yield 'browser lockdown' => ['browser_lockdown', true];
-        yield 'randomised questions' => ['randomize_questions', true];
         yield 'randomised choices' => ['randomize_choices', true];
         yield 'showing results immediately' => ['show_results_immediately', true];
         yield 'showing correct answers' => ['show_correct_answers', true];
@@ -284,8 +285,8 @@ final class AssessmentServiceTest extends DatabaseTestCase
 
     /**
      * No screen offers these and nothing in the app acts on them, so storing
-     * them would only suggest protection (a quiz password, lockdown) that
-     * does not exist. They are not accepted.
+     * them would only suggest protection that does not exist. They are not
+     * accepted.
      */
     #[PHPUnit\Framework\Attributes\DataProvider('settingsNothingEnforces')]
     public function testSettingsThatNothingEnforcesAreNotStored(string $key, mixed $value): void

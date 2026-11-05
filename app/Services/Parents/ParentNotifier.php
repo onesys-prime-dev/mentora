@@ -237,6 +237,8 @@ class ParentNotifier
             ->join('learning_units lu', 'lu.id = li.learning_unit_id', 'left')
             ->join('user_profiles up', 'up.user_id = e.student_user_id', 'left')
             ->where('a.status', 'Published')
+            // Not given to this student: nothing is missing from them.
+            ->where('(NOT EXISTS (SELECT 1 FROM assessment_settings st WHERE st.assessment_id = a.id AND st.assign_to_specific_students = 1) OR EXISTS (SELECT 1 FROM assessment_assignees aa WHERE aa.assessment_id = a.id AND aa.student_user_id = e.student_user_id))', null, false)
             ->where('a.due_date <', $stamp)
             ->where('a.due_date >=', $since)
             ->groupStart()->where('a.available_until IS NULL', null, false)->orWhere('a.available_until >=', $stamp)->groupEnd()
