@@ -23,7 +23,7 @@ $isReact = $isMsg && str_contains((string) $row['title'], 'reaction');
         data-role="note-row"
         class="flex gap-3 px-5 py-3 pr-[4.5rem] transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55 <?= $unread ? 'bg-brand/5' : '' ?>">
 
-        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full <?= $isReact ? 'bg-[#ffe4ec] text-[#e11d48]' : ($unread ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600') ?>" data-role="note-icon" aria-hidden="true">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full <?= $isReact ? 'bg-[#ffe4ec] text-[#e11d48]' : ($unread ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600') ?>" data-role="note-icon" aria-hidden="true">
             <?php if ($isReact): ?>
                 <span class="text-base leading-none">&#9829;</span>
             <?php elseif ($isMsg): ?>
@@ -34,14 +34,14 @@ $isReact = $isMsg && str_contains((string) $row['title'], 'reaction');
         </span>
 
         <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span class="text-sm <?= $unread ? 'font-bold' : 'font-medium' ?> text-[#1A1C1E]" data-role="note-title">
+            <span class="text-[15px] <?= $unread ? 'font-bold' : 'font-medium' ?> text-[#1A1C1E]" data-role="note-title">
                 <?= esc($row['title']) ?>
                 <?php if ((int) $row['urgent'] === 1): ?>
                     <span class="ml-1 rounded-full bg-[#FDEDEC] px-2 py-0.5 text-[10px] font-bold text-[#C33939]">Urgent</span>
                 <?php endif; ?>
             </span>
-            <span class="line-clamp-2 text-xs text-[#646464]"><?= esc((string) $row['body']) ?></span>
-            <span class="text-[11px] font-semibold <?= $unread ? 'text-brand' : 'text-[#767676]' ?>" data-role="note-time"><?= esc($ago) ?></span>
+            <span class="line-clamp-2 text-[13px] text-[#646464]"><?= esc((string) $row['body']) ?></span>
+            <span class="text-xs font-semibold <?= $unread ? 'text-brand' : 'text-[#767676]' ?>" data-role="note-time"><?= esc($ago) ?></span>
         </span>
 
         <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand group-hover/note:invisible <?= $unread ? '' : 'invisible' ?>" data-role="note-dot" aria-hidden="true"></span>

@@ -104,16 +104,16 @@ $accountLinks = [
             <div
                 id="notifications-panel"
                 data-feed-url="<?= site_url('notifications/feed') ?>"
-                class="hidden z-50 absolute right-0 top-full mt-2 w-80 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                class="hidden z-50 absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1.5rem)] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
 
                 <div class="flex items-center justify-between px-5 pt-4 pb-2">
-                    <span class="text-md font-display">Notifications</span>
-                    <button type="button" data-notifications-mark-all hidden class="text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Mark all read</button>
+                    <span class="text-lg font-display">Notifications</span>
+                    <button type="button" data-notifications-mark-all hidden class="text-[13px] font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Mark all read</button>
                 </div>
 
                 <div class="flex gap-1.5 px-5 pb-2" role="group" aria-label="Filter notifications">
-                    <button type="button" data-notifications-filter="all" aria-pressed="true" class="rounded-full border border-brand bg-brand px-3 py-1 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">All</button>
-                    <button type="button" data-notifications-filter="unread" aria-pressed="false" class="rounded-full border border-transparent bg-[#eef2f8] px-3 py-1 text-xs text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Unread</button>
+                    <button type="button" data-notifications-filter="all" aria-pressed="true" class="rounded-full border border-brand bg-brand px-3.5 py-1 text-[13px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">All</button>
+                    <button type="button" data-notifications-filter="unread" aria-pressed="false" class="rounded-full border border-transparent bg-[#eef2f8] px-3.5 py-1 text-[13px] text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Unread</button>
                 </div>
 
                 <div class="max-h-96 overflow-y-auto" data-notifications-scroll>
