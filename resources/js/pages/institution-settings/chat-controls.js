@@ -11,7 +11,7 @@
 */
 
 import { createApi } from "../messages/api.js";
-import { SWITCHES } from "../messages/settings.js";
+import { SWITCHES } from "../messages/chat-switches.js";
 
 function node(tag, className, text) {
     const el = document.createElement(tag);

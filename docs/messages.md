@@ -103,7 +103,7 @@ to your institution, have a second administrator account review reports about th
   students cannot start new messages with each other; existing student conversations stay
   readable but nobody can add to them. Messages with instructors are unaffected. The
   change is in the audit log.
-- **Chat controls** (Institution settings, Messages): a picker of every course chat and staff group, then that chat's switches (Reactions, Replies, Forwarding, Bump, Delete for everyone, and the lock for course chats). The same controls are in the Messages page's Settings, Chat controls tab.
+- **Chat controls** (Institution settings, Messages): a picker of every course chat and staff group, then that chat's switches (Reactions, Replies, Forwarding, Bump, Delete for everyone, and the lock for course chats).
 - **Reports** (Messages, Reports): open reports of the institution, the snapshot, and the
   decision (dismiss, mark as actioned, or remove the message where that is allowed).
 
@@ -111,7 +111,7 @@ to your institution, have a second administrator account review reports about th
 
 - **Email alerts** for new messages (everyone). At most one email per conversation per hour.
 - **Blocked people** (everyone): the list of people you have blocked, with Unblock, in Settings.
-- **Chat controls** (the institution's administrator only): Settings has a second tab, "Chat controls", with a picker of every course chat and staff group of the institution (the administrator does not need to be in the chat), then that chat's switches. It has switches for **Reactions**, **Replies**, **Forwarding**, **Bump** and **Delete for everyone**, and for course chats the lock ("Only the instructor can post"). Turning one off hides it from members' menus and the server refuses it. Two things are never switches: **Delete for me** is always available, and a manager's **Remove** is always available. Turning Forwarding off does not stop someone copying the text by hand. Instructors, chairpersons, deans, students and parents see Settings without the tab bar; instructors keep the **Lock chat** button on their own course chat. Who manages a chat is in `roles-and-permissions.md`.
+- **Chat controls** (the institution's administrator only, in **Institution settings, Messages**; not in the Messages page): a picker of every course chat and staff group of the institution (the administrator does not need to be in the chat), then that chat's switches. It has switches for **Reactions**, **Replies**, **Forwarding**, **Bump** and **Delete for everyone**, and for course chats the lock ("Only the instructor can post"). Turning one off hides it from members' menus and the server refuses it. Two things are never switches: **Delete for me** is always available, and a manager's **Remove** is always available. Turning Forwarding off does not stop someone copying the text by hand. Everyone else cannot change them; the Messages page's Settings is only "My alerts" and blocked people. Instructors keep the **Lock chat** button on their own course chat. Who manages a chat is in `roles-and-permissions.md`.
 - **Quiet hours** (instructors, chairpersons and deans): during them nothing is notified or
   emailed; the notification is made afterwards, once. Messages still arrive and the unread
   count still shows them.

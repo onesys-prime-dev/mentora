@@ -156,16 +156,6 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
         'title' => 'Settings',
         'size'  => 'sm',
         'body'  => '<div class="flex flex-col gap-3">'
-            . '<div data-role="settings-tabs" role="tablist" hidden class="flex gap-1 border-b border-gray-100">'
-            . '<button type="button" role="tab" data-role="settings-tab-alerts" aria-selected="true" class="-mb-px border-b-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">My alerts</button>'
-            . '<button type="button" role="tab" data-role="settings-tab-controls" aria-selected="false" class="-mb-px border-b-2 border-transparent px-3 py-1.5 text-sm text-[#646464] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Chat controls</button>'
-            . '</div>'
-            . '<div data-role="settings-panel-controls" hidden class="flex flex-col gap-1">'
-            . '<p data-role="controls-title" class="rounded-lg bg-brand-tint px-3 py-1.5 text-sm text-brand-dark"></p>'
-            . '<p data-role="controls-empty" hidden class="py-6 text-center text-sm text-[#646464]">Open a chat to change its controls.</p>'
-            . '<div data-role="controls-list" class="flex flex-col"></div>'
-            . '<p data-role="controls-note" role="status" class="text-xs text-[#C33939]"></p>'
-            . '</div>'
             . '<div data-role="settings-panel-alerts" class="flex flex-col gap-3">'
             . '<p class="text-xs text-[#646464]">Notifications and emails say who wrote and where. They never include what was written.</p>'
             . '<label class="flex items-center gap-2 text-sm text-[#1A1C1E]"><input type="checkbox" data-role="prefs-email" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"> Email me about new messages</label>'

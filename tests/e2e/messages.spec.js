@@ -867,15 +867,14 @@ test("TC-MSG-26 The institution's administrator turns off Forwarding, Reactions 
         await chat.click();
         await sendMessage(student.page, "A line to test the controls");
 
-        // A student's Settings has only My alerts.
+        // A student's Settings has only My alerts, and the Messages Settings has no Chat controls for anyone.
         await student.page.locator("[data-role=prefs-open]").click();
         await expect(student.page.locator("[data-role=settings-tabs]")).toBeHidden();
         await expect(student.page.locator("[data-control]")).toHaveCount(0);
         await student.page.locator("#messages-prefs [data-dialog-close]").first().click();
 
         const setSwitches = async (on) => {
-            await admin.page.locator("[data-role=prefs-open]").click();
-            await admin.page.locator("[data-role=settings-tab-controls]").click();
+            await admin.page.goto("/institution/settings/messages");
             await admin.page.locator("[data-role=controls-picker]").selectOption(id);
 
             for (const name of names) {
@@ -886,8 +885,6 @@ test("TC-MSG-26 The institution's administrator turns off Forwarding, Reactions 
                     await expect(toggle).toHaveAttribute("aria-checked", String(on));
                 }
             }
-
-            await admin.page.locator("#messages-prefs [data-dialog-close]").first().click();
         };
 
         await setSwitches(false);

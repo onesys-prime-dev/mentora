@@ -497,10 +497,10 @@ Each case writes texts of its own. The design is
 - **Data:** `institution.admin@mentora.test`, `student5@mentora.test`, IT101-A
 - **Steps:**
   1. The student opens Settings.
-  2. The administrator opens Settings, Chat controls, picks the IT101 chat and turns off Forwarding, Reactions and Delete for everyone.
+  2. The administrator opens Institution settings, Messages, picks the IT101 chat under Chat controls and turns off Forwarding, Reactions and Delete for everyone.
   3. The student reloads and opens a message's menu, and tries to react with a request the screen no longer offers.
 - **Expected:**
-  - The student's Settings has no tab bar and no Chat controls.
+  - The student's Settings has only My alerts (no Chat controls anywhere in Messages).
   - The student's menu has no Forward, no reaction row and no "Delete for everyone", but still "Delete for me".
   - The server refuses the stale reaction with 403.
   - The case turns the switches back on at the end.

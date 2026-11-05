@@ -1029,17 +1029,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const prefsEnd = $("[data-role=prefs-end]");
     const prefsNote = $("[data-role=prefs-note]");
 
-    const settings = createSettings({
-        root,
-        api,
-        // The administrator's picker holds only names and switches, so the open chat is reloaded for the new ones.
-        onControlsChanged: (c) => {
-            if (c.id === state.openId) {
-                loadList();
-                refreshThread();
-            }
-        },
-    });
+    const settings = createSettings({ root, api });
 
     $("[data-role=prefs-open]")?.addEventListener("click", async () => {
         settings.sync();
