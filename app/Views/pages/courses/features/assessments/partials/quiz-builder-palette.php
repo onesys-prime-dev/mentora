@@ -30,7 +30,7 @@ $elements = [
 
 <div
     id="quiz-builder-palette"
-    class="sticky top-6 flex w-[290px] shrink-0 flex-col gap-3 self-start"
+    class="sticky top-24 flex w-[290px] shrink-0 flex-col gap-3 self-start"
     data-builder-palette>
 
     <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">

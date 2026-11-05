@@ -208,6 +208,20 @@
 }
 
 @layer components {
+    /*
+     * Action bars that stay in view while a long page scrolls (course pages scroll inside their card
+     * from lg up; below that the course banner is pinned, so the bars stay in the flow).
+     * The negative margin and the matching padding cancel out, so the bar sits where it always did
+     * and has room above it once it sticks.
+     */
+    .sticky-bar-top {
+        @apply bg-white lg:sticky lg:top-0 lg:z-20 lg:-mt-6 lg:pt-6;
+    }
+
+    .sticky-bar-bottom {
+        @apply bg-white lg:sticky lg:bottom-0 lg:z-20 lg:-mb-6 lg:pb-6;
+    }
+
     .spa-enter {
         animation: spa-fade-in 220ms ease-out;
     }
@@ -356,6 +370,8 @@ html[data-theme="dark"] body {
 
 /* Surfaces */
 html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .sticky-bar-top,
+html[data-theme="dark"] .sticky-bar-bottom,
 html[data-theme="dark"] .hover\:bg-white:hover { background-color: var(--dk-surface); }
 html[data-theme="dark"] .bg-white\/90 { background-color: rgb(23 27 36 / 0.9); }
 html[data-theme="dark"] .bg-white\/80 { background-color: rgb(23 27 36 / 0.8); }

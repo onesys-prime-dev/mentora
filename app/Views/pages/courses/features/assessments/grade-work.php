@@ -55,7 +55,7 @@ $attemptTabs ??= [];
 
 <div class="flex min-w-0 flex-1 flex-col p-10">
 
-    <div class="flex items-center justify-between border-b border-gray-200 pb-4">
+    <div class="sticky-bar-top flex items-center justify-between border-b border-gray-200 pb-4">
 
         <div class="flex items-center gap-3">
 
@@ -103,7 +103,7 @@ $attemptTabs ??= [];
 
     <div class="flex flex-1 items-start gap-6 py-6">
 
-        <div class="sticky top-6 flex w-[290px] shrink-0 flex-col gap-3 self-start">
+        <div class="sticky top-24 flex w-[290px] shrink-0 flex-col gap-3 self-start">
 
             <div class="flex items-center justify-between">
 

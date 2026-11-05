@@ -1,4 +1,4 @@
-<footer class="mt-6 flex items-center justify-end border-t border-gray-200 pt-6">
+<footer class="sticky-bar-bottom mt-6 flex items-center justify-end border-t border-gray-200 pt-6">
 
     <!-- Actions -->
     <div class="flex items-center gap-3">

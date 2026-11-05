@@ -4,7 +4,7 @@
 
     <div class="flex min-w-0 flex-1 flex-col p-10">
 
-        <div class="flex items-center justify-between border-b border-gray-200 pb-4">
+        <div class="sticky-bar-top flex items-center justify-between border-b border-gray-200 pb-4">
 
             <?= $this->include('pages/courses/features/modules/partials/breadcrumb') ?>
 
