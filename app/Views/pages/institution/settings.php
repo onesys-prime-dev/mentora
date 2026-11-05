@@ -115,7 +115,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $n = $settingsAnnouncement; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-announcement-form>
+        <form method="post" action="<?= esc(site_url($base . '/announcement')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-announcement-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -286,7 +286,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                             <p class="text-xs text-[#646464]"><?= esc($hint) ?></p>
                             <p class="text-xs text-[#646464]">
                                 Platform: <span data-platform-value><?= esc((string) $s['platform'][$key]) ?> <?= esc($unit) ?><?= $key === 'lockoutAttempts' && (int) $s['platform'][$key] === 0 ? ' (never)' : '' ?></span>
-                                Â· <span class="font-semibold text-brand">In force: <span data-in-force><?= esc((string) $s['effective'][$key]) ?> <?= esc($unit) ?></span></span>
+                                · <span class="font-semibold text-brand">In force: <span data-in-force><?= esc((string) $s['effective'][$key]) ?> <?= esc($unit) ?></span></span>
                             </p>
                             <p class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
                         </div>

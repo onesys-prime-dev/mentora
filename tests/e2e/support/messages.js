@@ -108,6 +108,9 @@ export async function sendMessage(page, text) {
     await page.locator("[data-role=body]").fill(text);
     await page.locator("[data-role=send]").click();
     await expect(thread(page).getByText(text)).toBeVisible();
+
+    // The bubble shows at once under a local id; its menu only opens once the server has given it a real one.
+    await expect(thread(page).locator("[data-id]", { hasText: text }).last()).toHaveAttribute("data-id", /^\d+$/);
 }
 
 /** "+ New", search by name, pick the person whose result mentions `role`; leaves their thread open. */
