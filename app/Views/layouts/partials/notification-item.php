@@ -44,7 +44,7 @@ $isReact = $isMsg && str_contains((string) $row['title'], 'reaction');
             <span class="text-xs font-semibold <?= $unread ? 'text-brand' : 'text-[#767676]' ?>" data-role="note-time"><?= esc($ago) ?></span>
         </span>
 
-        <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand group-hover/note:invisible <?= $unread ? '' : 'invisible' ?>" data-role="note-dot" aria-hidden="true"></span>
+        <span class="pointer-events-none absolute right-5 top-5 h-2 w-2 rounded-full bg-brand group-hover/note:invisible <?= $unread ? '' : 'invisible' ?>" data-role="note-dot" aria-hidden="true"></span>
     </<?= $tag ?>>
 
     <span class="absolute right-3 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-hover/note:opacity-100 group-focus-within/note:opacity-100 [@media(hover:none)]:opacity-100">
