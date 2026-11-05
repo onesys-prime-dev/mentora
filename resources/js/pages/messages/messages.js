@@ -384,20 +384,29 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         if (note.querySelector("[data-action=hide]") !== null) {
-            // Like Messenger: the icons sit beside the bubble, on the side facing the middle of the chat, and
-            // show only while the pointer is over the message itself (the group is just as wide as the two).
+            // Like Messenger: the time and icons float beside the bubble, on the side facing the middle of the
+            // chat, while the pointer is over the message. They are laid over the margin, not in the line, so the
+            // bubble is the same size and in the same place with or without them. The padding on the side next to
+            // the bubble keeps the pointer inside the message while it travels to them.
             const line = document.createElement("div");
 
-            line.className = "group/msg flex w-fit max-w-full items-center gap-1";
+            line.className = "group/msg relative w-fit max-w-[70%]";
+            bubble.classList.remove("max-w-[70%]");
+            bubble.classList.add("max-w-full");
+
+            const side = document.createElement("div");
+
+            side.className = `absolute top-1/2 hidden -translate-y-1/2 items-center gap-1 group-hover/msg:flex ${item.mine ? "right-full pr-2" : "left-full pl-2"}`;
 
             // Shown only while the pointer is over the message: on the left of my messages, the right of theirs.
             const sentAt = document.createElement("time");
 
             sentAt.dataset.role = "sent-at";
             sentAt.setAttribute("datetime", String(item.created_at ?? ""));
-            sentAt.className = "hidden whitespace-nowrap px-1 text-[11px] text-gray-500 group-hover/msg:block";
+            sentAt.className = "whitespace-nowrap px-1 text-[11px] text-gray-500";
             sentAt.textContent = hoverTime(item.created_at, new Date());
-            line.append(...(item.mine ? [sentAt, note, bubble] : [bubble, note, sentAt]));
+            side.append(...(item.mine ? [sentAt, note] : [note, sentAt]));
+            line.append(bubble, side);
             row.append(line);
         } else {
             row.append(bubble);
