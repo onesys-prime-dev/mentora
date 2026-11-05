@@ -264,7 +264,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         $canReset  = $settingsCanEdit && $hasOwn;
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-security-form>
+        <form method="post" action="<?= esc(site_url($base . '/security')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-security-form>
             <?= csrf_field() ?>
 
             <div class="flex flex-col gap-6" data-panel-scroll>
@@ -286,7 +286,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                             <p class="text-xs text-[#646464]"><?= esc($hint) ?></p>
                             <p class="text-xs text-[#646464]">
                                 Platform: <span data-platform-value><?= esc((string) $s['platform'][$key]) ?> <?= esc($unit) ?><?= $key === 'lockoutAttempts' && (int) $s['platform'][$key] === 0 ? ' (never)' : '' ?></span>
-                                · <span class="font-semibold text-brand">In force: <span data-in-force><?= esc((string) $s['effective'][$key]) ?> <?= esc($unit) ?></span></span>
+                                Â· <span class="font-semibold text-brand">In force: <span data-in-force><?= esc((string) $s['effective'][$key]) ?> <?= esc($unit) ?></span></span>
                             </p>
                             <p class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
                         </div>
@@ -351,7 +351,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
         }
         ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-academic-form>
+        <form method="post" action="<?= esc(site_url($base . '/academic')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-academic-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
