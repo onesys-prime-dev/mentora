@@ -88,7 +88,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         cursor: 0,
         token: null,
         loadingOlder: false,
-        confirmRemove: null,
         confirmBlock: null,
         reportFor: null,
         reporting: false,
@@ -300,7 +299,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         trash: svg('<path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10M9 9v4M11 9v4"/>'),
         more: svg('<circle cx="10" cy="4.5" r="1" fill="currentColor"/><circle cx="10" cy="10" r="1" fill="currentColor"/><circle cx="10" cy="15.5" r="1" fill="currentColor"/>'),
         flag: svg('<path d="M5 17V3M5 4h9l-2 3 2 3H5"/>'),
-        remove: svg('<circle cx="10" cy="10" r="7"/><path d="M7 7l6 6M13 7l-6 6"/>'),
     };
 
     // Under my newest message: "Sent", then "Seen" (a direct chat) or "Seen by 3" (a group, a course; a count, never names).
@@ -372,26 +370,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
                 report.title = "Report";
                 report.innerHTML = ICONS.flag;
                 note.append(report);
-            }
-
-            // A moderator of this chat can blank the message for everyone; it takes a second click to be sure.
-            if (current()?.can_moderate) {
-                const confirming = state.confirmRemove === item.id;
-                const remove = document.createElement("button");
-
-                remove.type = "button";
-                remove.dataset.action = "remove";
-                remove.dataset.messageId = String(item.id);
-                remove.className = confirming ? "rounded px-1 text-[12px] font-semibold text-red-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" : ICON_BUTTON;
-
-                if (confirming) {
-                    remove.textContent = "Click again to remove";
-                } else {
-                    remove.setAttribute("aria-label", "Remove message");
-                    remove.title = "Remove message";
-                    remove.innerHTML = ICONS.remove;
-                }
-                note.append(remove);
             }
         }
 
@@ -594,7 +572,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         markOpenedRead(id);
         state.cursor = 0;
         state.loadingOlder = false;
-        state.confirmRemove = null;
         state.confirmBlock = null;
         state.pinned = [];
         state.myLast = null;
@@ -830,27 +807,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         } else if (button.dataset.action === "report") {
             openReport(Number(button.dataset.messageId));
-        } else if (button.dataset.action === "remove") {
-            const id = Number(button.dataset.messageId);
-
-            if (state.confirmRemove !== id) {
-                state.confirmRemove = id;
-                renderMessages();
-
-                return;
-            }
-
-            state.confirmRemove = null;
-
-            const { status } = await api.remove(state.openId, id);
-            const item = state.items.find((i) => i.id === id);
-
-            if (status === 200 && item) {
-                item.removed = true;
-                item.body = null;
-            }
-
-            renderMessages();
         } else if (button.dataset.action === "hide") {
             const id = Number(button.dataset.messageId);
             const rect = button.getBoundingClientRect();
