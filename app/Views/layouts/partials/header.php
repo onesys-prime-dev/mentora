@@ -118,7 +118,7 @@ $accountLinks = [
                     <button type="button" data-notifications-filter="unread" aria-pressed="false" class="rounded-full border border-transparent bg-[#eef2f8] px-3.5 py-1 text-[13px] text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Unread</button>
                 </div>
 
-                <div class="max-h-[min(24rem,60vh)] overflow-y-auto overscroll-contain" data-notifications-scroll>
+                <div class="max-h-[min(24rem,60vh)] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-notifications-scroll>
                     <ul class="flex flex-col divide-y divide-gray-100" data-notifications-list></ul>
                     <p class="hidden px-5 py-8 text-center text-sm text-[#767676]" data-notifications-empty>You have no notifications yet.</p>
                     <p class="hidden px-5 py-6 text-center text-sm text-[#C33939]" data-notifications-error>

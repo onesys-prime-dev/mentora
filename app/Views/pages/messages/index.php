@@ -47,7 +47,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                 <button type="button" data-role="unread-toggle" aria-pressed="false" class="rounded-full border border-gray-300 flex-none px-2 py-0.5 text-[13px] text-[#646464] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Unread only</button>
             </div>
 
-            <div class="min-h-0 flex-1 overflow-y-auto" data-role="list" aria-live="off">
+            <div class="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-role="list" aria-live="off">
                 <div data-state="loading" class="flex flex-col gap-2 p-3" aria-hidden="true">
                     <?php for ($i = 0; $i < 4; $i++): ?>
                         <div class="flex animate-pulse items-center gap-2"><div class="h-[34px] w-[34px] rounded-full bg-gray-200"></div><div class="flex-1 space-y-1.5"><div class="h-2.5 w-2/3 rounded bg-gray-200"></div><div class="h-2 w-1/2 rounded bg-gray-100"></div></div></div>
@@ -94,7 +94,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <button type="button" data-role="pinbar-next" class="flex-none rounded-full border border-gray-300 px-2 py-0.5 text-[12px] font-semibold hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" aria-label="Next pinned message"></button>
                 </div>
 
-                <div class="relative min-h-0 flex-1 overflow-y-auto bg-[#fafbfd] px-3.5 py-3" data-role="scroller">
+                <div class="relative min-h-0 flex-1 overflow-y-auto bg-[#fafbfd] px-3.5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-role="scroller">
                     <button type="button" data-role="older" hidden class="mx-auto mb-2 block rounded-full border border-gray-300 bg-white px-3 py-1 text-[13px] text-[#646464] hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Load older messages</button>
                     <div data-role="messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Messages" class="flex flex-col gap-3"></div>
                     <p data-state="thread-empty" hidden class="py-10 text-center text-[13px] text-[#646464]">No messages yet. Say hello.</p>

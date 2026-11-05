@@ -53,7 +53,7 @@ $chipOff = 'border-gray-300 bg-white text-gray-700';
         <button type="button" data-filter="message" aria-pressed="false" data-on="<?= $chipOn ?>" data-off="<?= $chipOff ?>" class="<?= $chip ?> <?= $chipOff ?>">Messages</button>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto pr-1" data-role="list">
+    <div class="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-role="list">
         <?php foreach ($groups as $label => $rows): ?>
             <section class="mb-4 overflow-hidden rounded-2xl bg-white shadow-sm" data-group aria-label="<?= esc($label, 'attr') ?>">
                 <h2 class="px-5 pb-1.5 pt-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500"><?= esc($label) ?></h2>
