@@ -36,10 +36,71 @@ if (button && panel) {
     const empty = panel.querySelector("[data-notifications-empty]");
     const errorBox = panel.querySelector("[data-notifications-error]");
 
+    const readUrl = panel.dataset.feedUrl.replace("/feed", "/read");
+    const deleteUrl = panel.dataset.feedUrl.replace("/feed", "/delete");
+    const markAllButton = panel.querySelector("[data-notifications-mark-all]");
+    const chips = [...panel.querySelectorAll("[data-notifications-filter]")];
+    let filter = "all";
+
     let loaded = false;
     let loading = false;
     let hasMore = true;
     let before = null;
+
+    const rowsOf = () => [...list.querySelectorAll("[data-notification-item]")];
+    const isUnread = (li) => li.dataset.notification === "unread";
+
+    function post(url, id, keepalive = false) {
+        const body = new FormData();
+
+        if (id !== null) {
+            body.set("id", id);
+        }
+
+        return fetch(url, { method: "POST", body, credentials: "same-origin", redirect: "manual", keepalive }).catch(() => null);
+    }
+
+    // Filter and the "Mark all read" link follow whatever is in the list now.
+    function refresh() {
+        rowsOf().forEach((li) => { li.hidden = filter === "unread" && !isUnread(li); });
+
+        if (markAllButton) {
+            markAllButton.hidden = !rowsOf().some(isUnread);
+        }
+
+        empty.classList.toggle("hidden", rowsOf().some((li) => !li.hidden) || !loaded);
+        empty.textContent = filter === "unread" && rowsOf().length > 0 ? "No unread notifications." : "You have no notifications yet.";
+    }
+
+    function showRead(li) {
+        li.dataset.notification = "read";
+        li.querySelector("[data-role=note-row]")?.classList.remove("bg-brand/5");
+        li.querySelector("[data-role=note-dot]")?.classList.add("invisible");
+        li.querySelector("[data-role=note-icon]")?.classList.replace("bg-brand", "bg-gray-100");
+        li.querySelector("[data-role=note-icon]")?.classList.replace("text-white", "text-gray-600");
+        li.querySelector("[data-role=note-title]")?.classList.replace("font-bold", "font-medium");
+        li.querySelector("[data-role=note-time]")?.classList.replace("text-brand", "text-[#767676]");
+        li.querySelector("[data-action=read]")?.setAttribute("hidden", "");
+    }
+
+    function markRead(li, keepalive = false) {
+        if (!isUnread(li)) {
+            return;
+        }
+
+        showRead(li);
+        refresh();
+        post(readUrl, li.dataset.notificationId, keepalive);
+    }
+
+    async function remove(li) {
+        const response = await post(deleteUrl, li.dataset.notificationId);
+
+        if (response !== null && (response.status === 200 || response.status === 404)) {
+            li.remove();
+            refresh();
+        }
+    }
 
     const isOpen = () => !panel.classList.contains("hidden");
 
@@ -95,7 +156,7 @@ if (button && panel) {
             before = result.next_before ?? before;
             loaded = true;
 
-            empty.classList.toggle("hidden", list.children.length > 0);
+            refresh();
 
         } catch (error) {
 
@@ -121,6 +182,49 @@ if (button && panel) {
     button.addEventListener("click", () => {
         isOpen() ? closePanel() : openPanel();
     });
+
+    list.addEventListener("click", (event) => {
+        const action = event.target.closest("[data-action]");
+        const li = event.target.closest("[data-notification-item]");
+
+        if (!li) {
+            return;
+        }
+
+        if (action?.dataset.action === "read") {
+            event.preventDefault();
+            markRead(li);
+        } else if (action?.dataset.action === "delete") {
+            event.preventDefault();
+            remove(li);
+        } else if (event.target.closest("[data-role=note-row]")) {
+            // A click on the row goes to its link; the read mark has to get out first.
+            markRead(li, true);
+        }
+    });
+
+    markAllButton?.addEventListener("click", () => {
+        rowsOf().forEach(showRead);
+        refresh();
+        post(readUrl, null);
+    });
+
+    chips.forEach((chip) => chip.addEventListener("click", () => {
+        filter = chip.dataset.notificationsFilter;
+        chips.forEach((other) => {
+            const on = other === chip;
+
+            other.setAttribute("aria-pressed", String(on));
+            other.classList.toggle("bg-brand", on);
+            other.classList.toggle("text-white", on);
+            other.classList.toggle("font-semibold", on);
+            other.classList.toggle("border-brand", on);
+            other.classList.toggle("border-transparent", !on);
+            other.classList.toggle("bg-[#eef2f8]", !on);
+            other.classList.toggle("text-gray-700", !on);
+        });
+        refresh();
+    }));
 
     scroller.addEventListener("scroll", () => {
 
