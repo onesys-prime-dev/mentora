@@ -46,6 +46,10 @@ describe("showToast", () => {
         expect(document.querySelector('[data-toast="danger"]')).not.toBeNull();
 
         document.querySelector("[data-toast] button").click();
+
+        // It fades out first, then goes.
+        expect(document.querySelector("[data-toast]").classList.contains("opacity-0")).toBe(true);
+        vi.advanceTimersByTime(300);
         expect(document.querySelector("[data-toast]")).toBeNull();
     });
 

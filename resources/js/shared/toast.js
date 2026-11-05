@@ -21,6 +21,19 @@ const TONES = {
 
 const LABELS = { success: "Done", warning: "Warning", danger: "Problem", info: "Note" };
 
+// A toast eases in from just above and out the same way; the leave takes this long before it is removed.
+const LEAVE_MS = 250;
+
+function dismiss(toast) {
+    if (toast.dataset.leaving === "1") {
+        return;
+    }
+
+    toast.dataset.leaving = "1";
+    toast.classList.add("-translate-y-2", "opacity-0");
+    setTimeout(() => toast.remove(), LEAVE_MS);
+}
+
 const REGION_ATTR = "data-toast-region";
 
 function region() {
@@ -49,7 +62,7 @@ export function showToast(message, options = {}) {
 
     const toast = document.createElement("div");
     toast.setAttribute("data-toast", tone);
-    toast.className = `pointer-events-auto flex max-w-full items-center gap-2.5 rounded-full py-2 pl-3 pr-2 text-sm shadow-lg ${TONES[tone].pill}`;
+    toast.className = `pointer-events-auto flex max-w-full -translate-y-2 items-center gap-2.5 rounded-full py-2 pl-3 pr-2 text-sm opacity-0 shadow-lg transition duration-300 ease-out motion-reduce:transition-none ${TONES[tone].pill}`;
 
     const chip = document.createElement("span");
     chip.className = `grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-xs font-bold leading-none ${TONES[tone].chip}`;
@@ -70,13 +83,16 @@ export function showToast(message, options = {}) {
     close.setAttribute("aria-label", "Dismiss");
     close.className = "grid h-6 w-6 shrink-0 place-items-center rounded-full text-lg leading-none opacity-70 transition hover:bg-white/15 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70";
     close.textContent = "×";
-    close.addEventListener("click", () => toast.remove());
+    close.addEventListener("click", () => dismiss(toast));
 
     toast.append(chip, text, close);
     region().append(toast);
 
+    // One frame after it is in the page, so the change from hidden to shown is animated.
+    requestAnimationFrame(() => toast.classList.remove("-translate-y-2", "opacity-0"));
+
     if (timeout > 0) {
-        setTimeout(() => toast.remove(), timeout);
+        setTimeout(() => dismiss(toast), timeout);
     }
 
     return toast;
