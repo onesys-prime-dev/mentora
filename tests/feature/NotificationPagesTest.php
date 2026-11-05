@@ -121,6 +121,24 @@ final class NotificationPagesTest extends RouteTestCase
         }
     }
 
+    public function testTheAdministratorsListLooksLikeEveryoneElses(): void
+    {
+        $this->signIn('admin', 'ada@example.com');
+
+        // Same background and lit bell as every other role's copy; the rest of the admin area stays flat grey.
+        $body = $this->step('GET', 'notifications')->response()->getBody();
+
+        $this->assertStringContainsString('data-page="notifications"', $body);
+        $this->assertStringNotContainsString('admin-flat', $body);
+    }
+
+    public function testTheRestOfTheAdminAreaStaysFlat(): void
+    {
+        $this->signIn('admin', 'ada@example.com');
+
+        $this->assertStringContainsString('admin-flat', $this->step('GET', 'admin/users')->response()->getBody());
+    }
+
     public function testTheListShowsUrgencyAndSaysWhenThereIsNothing(): void
     {
         $id = $this->signIn('instructor', 'mine@example.com');
