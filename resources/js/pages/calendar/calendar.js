@@ -98,6 +98,16 @@ function isReadOnly()
     return role === "parent";
 }
 
+/**
+ * A student cannot add anything to a day that has already passed (yesterday and
+ * earlier): the day tile is not clickable and the day view offers no Add button.
+ * Dates are YYYY-MM-DD, so comparing them as text compares them as days.
+ */
+function isPastDay(dateStr)
+{
+    return role === "student" && dateStr < root.dataset.today;
+}
+
 /*
 |--------------------------------------------------------------------------
 | Date helpers
@@ -387,7 +397,8 @@ function renderMonth()
         <button
             type="button"
             data-calendar-cell="${dateStr}"
-            class="flex h-full min-h-[96px] flex-col items-stretch gap-1 border-b border-r border-[#A9A9A9]/20 p-2 text-left transition hover:bg-brand/5 ${inMonth ? "" : "bg-black/[0.02]"}">
+            ${isPastDay(dateStr) ? 'data-calendar-past aria-disabled="true"' : ""}
+            class="flex h-full min-h-[96px] flex-col items-stretch gap-1 border-b border-r border-[#A9A9A9]/20 p-2 text-left transition ${isPastDay(dateStr) ? "cursor-default" : "hover:bg-brand/5"} ${inMonth ? "" : "bg-black/[0.02]"}">
 
             <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${sameDay(cellDate, today) ? "bg-brand text-white" : inMonth ? "text-[#646464]" : "text-[#A9A9A9]"}">
                 ${cellDate.getDate()}
@@ -453,7 +464,7 @@ function bindCellClicks()
 
     });
 
-    document.querySelectorAll("[data-calendar-cell]").forEach((cell) => {
+    document.querySelectorAll("[data-calendar-cell]:not([data-calendar-past])").forEach((cell) => {
 
         cell.addEventListener("click", () => {
             openDateMenu(cell.dataset.calendarCell);
@@ -482,7 +493,7 @@ function renderDay()
 
     <div class="flex flex-col gap-4 p-6">
 
-        ${isReadOnly() ? "" : `
+        ${isReadOnly() || isPastDay(dateStr) ? "" : `
         <button
             type="button"
             data-calendar-add="${dateStr}"
