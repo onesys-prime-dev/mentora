@@ -833,6 +833,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
 
         // Who is enrolled in an offering (enrolments.manage).
         $routes->group('enrolments', ['filter' => 'permission:enrolments.manage'], function ($routes) {
+            // Who to suggest while an email or a student number is typed in an "add students" box (JSON).
+            $routes->get('suggest', 'Institution\EnrolmentsController::suggest');
             $routes->get('offering/(:num)', 'Institution\EnrolmentsController::roster/$1');
             $routes->post('offering/(:num)', 'Institution\EnrolmentsController::add/$1');
             $routes->post('(:num)/status', 'Institution\EnrolmentsController::setStatus/$1');

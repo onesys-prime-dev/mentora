@@ -219,7 +219,7 @@ foreach ($sectionStudents as $st) {
     <?php endif; ?>
 
     <?= view('components/dialog', ['id' => 'section-students', 'title' => 'Add students', 'body' => $form(
-        $field(['name' => 'students', 'label' => 'Student numbers or email addresses', 'type' => 'textarea', 'required' => true, 'help' => 'One per line, or separated by commas. Up to 500 at once. They are enrolled in each of the section\'s courses; anyone who cannot be is listed.'])
+        $field(['name' => 'students', 'label' => 'Student numbers or email addresses', 'type' => 'textarea', 'required' => true, 'attrs' => 'autocomplete="off" data-student-autocomplete="' . esc(site_url('institution/enrolments/suggest') . '?section=' . $s['id'], 'attr') . '"', 'help' => 'One per line, or separated by commas. Up to 500 at once. Start typing to pick a student from your institution. They are enrolled in each of the section\'s courses; anyone who cannot be is listed.'])
         . $field(['name' => 'over_capacity', 'label' => 'Add them even if the section goes over capacity', 'type' => 'checkbox', 'help' => $capacity . ' places, ' . $members . ' taken.']),
         'Add students',
     )], ['saveData' => false]) ?>

@@ -16,6 +16,7 @@ import "./shared/announcement";
 import "./shared/toast";
 import "./shared/theme";
 import "./shared/dialog";
+import "./shared/student-autocomplete";
 import "./shared/data-table";
 import "./shared/spa/page-progress";
 import "./shared/messages-badge";

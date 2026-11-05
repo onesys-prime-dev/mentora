@@ -116,6 +116,16 @@ final class InstitutionEnrolmentsTest extends RouteTestCase
         $this->assertStringContainsString('data-usage', $body);
     }
 
+    public function testTheAddBoxAsksForSuggestionsLeavingOutThoseAlreadyInThisOffering(): void
+    {
+        $body = html_entity_decode($this->page());
+        $box  = substr($body, (int) strpos($body, 'id="roster-add"'));
+        $box  = substr($box, 0, (int) strpos($box, 'id="roster-status"'));
+
+        $this->assertMatchesRegularExpression('/<textarea[^>]*name="students"[^>]*data-student-autocomplete="[^"]*institution\/enrolments\/suggest\?offering=' . $this->offering . '"/s', $box);
+        $this->assertStringContainsString('autocomplete="off"', $box, 'and the browser\'s own suggestions stay out of the way');
+    }
+
     public function testAStudentWhoTeachesTheCourseIsSkippedWithTheReason(): void
     {
         $ann = $this->student('Ann', '2026-001');

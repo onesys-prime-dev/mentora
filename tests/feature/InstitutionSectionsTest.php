@@ -196,6 +196,17 @@ final class InstitutionSectionsTest extends RouteTestCase
         $this->assertMatchesRegularExpression('/Students in the section.*1.*3/s', $body);
     }
 
+    public function testTheAddStudentsBoxAsksForSuggestionsLeavingOutThoseAlreadyInTheSection(): void
+    {
+        $id   = $this->section();
+        $body = html_entity_decode($this->step('GET', "institution/sections/{$id}")->response()->getBody());
+        $box  = substr($body, (int) strpos($body, 'id="section-students"'));
+        $box  = substr($box, 0, (int) strpos($box, 'id="section-confirm"'));
+
+        $this->assertMatchesRegularExpression('/<textarea[^>]*name="students"[^>]*data-student-autocomplete="[^"]*institution\/enrolments\/suggest\?section=' . $id . '"/s', $box);
+        $this->assertStringContainsString('autocomplete="off"', $box);
+    }
+
     public function testTakingAStudentOutDropsTheirPlaceAndKeepsTheRow(): void
     {
         $id  = $this->section();

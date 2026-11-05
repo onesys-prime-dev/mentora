@@ -368,6 +368,67 @@ test("TC-ENR-01 Students are enrolled by email from the roster, and listed with 
     await expect(page.getByRole("row", { name: new RegExp(accounts.student.email) })).toContainText("Enrolled");
 });
 
+test("TC-ENR-08 Typing in the Add students box suggests students of the institution, and picking one fills the box", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    // IT101-B has no students, so every demo student is still there to be suggested.
+    await page.goto("/institution/offerings?q=IT101");
+    await page.getByRole("link", { name: "Roster of IT101 B" }).click();
+    await page.getByRole("button", { name: "Add students" }).first().click();
+
+    const dialog = page.getByRole("dialog", { name: /Add students/ });
+    const box = dialog.getByLabel("Student numbers or email addresses");
+    const options = dialog.getByRole("option");
+
+    // Nothing for one character; a list once there are two.
+    await box.pressSequentially("s");
+    await expect(options).toHaveCount(0);
+    await box.pressSequentially("tudent");
+    await expect(options).toHaveCount(5);
+    await expect(options.first()).toContainText("@mentora.test");
+
+    // Escape closes the list and leaves the dialog open.
+    await box.press("Escape");
+    await expect(options).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+
+    // Narrowing it down, then picking with the mouse puts the email in the box, ready for the next entry.
+    await box.fill("");
+    await box.pressSequentially("student3@");
+    await expect(options).toHaveCount(1);
+    await options.first().click();
+    await expect(box).toHaveValue("student3@mentora.test\n");
+    await expect(options).toHaveCount(0);
+
+    // The next entry is searched alone, and picking with the keyboard keeps what is already there.
+    await box.pressSequentially("student4@");
+    await expect(options).toHaveCount(1);
+    await box.press("ArrowDown");
+    await box.press("Enter");
+    await expect(box).toHaveValue("student3@mentora.test\nstudent4@mentora.test\n");
+
+    // Nobody was enrolled by looking: the roster is still empty.
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("No students enrolled yet")).toBeVisible();
+});
+
+test("TC-ENR-09 The Add students box of a section suggests students too", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    // E2E-A is the section TC-OFF-01 made.
+    await page.goto("/institution/sections");
+    await page.getByRole("link", { name: "E2E-A" }).first().click();
+    await page.getByRole("button", { name: "Add students" }).first().click();
+
+    const dialog = page.getByRole("dialog", { name: /Add students/ });
+    const box = dialog.getByLabel("Student numbers or email addresses");
+
+    await box.pressSequentially("student2@");
+    await expect(dialog.getByRole("option")).toHaveCount(1);
+    await dialog.getByRole("option").first().click();
+    await expect(box).toHaveValue("student2@mentora.test\n");
+});
+
 test("TC-ENR-02 A student can be dropped and the row stays with its new status", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await page.goto("/institution/offerings?q=E2E-A");

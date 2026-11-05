@@ -676,6 +676,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 | TC-OFF-08 | Class times from the SIS replace a section's week and lock it | Institutional administrator | P2 | FIX? |
 | TC-ENR-06 | A former student may later teach; a former dean or administrator never enrols where they led | Institutional administrator | P2 | IBR |
 | TC-ENR-07 | Bringing a student back through Add refreshes the gradebook like a status change | Institutional administrator | P2 | REG |
+| TC-ENR-08 | Typing in an Add students box suggests students of the institution, and picking one fills the box | Institutional administrator | P2 | VCI |
 | TC-PPL-06 | A password link sent from People needs the password and goes to the person | Institutional administrator | P2 | VCI |
 | TC-UPL-03 | CSV upload: file limits, the header, and the staff-assignments file | Institutional administrator | P1 | VCI |
 | TC-UPL-04 | CSV upload: each row's rule, a preview equal to the result, and no upload while the SIS is connected | Institutional administrator | P1 | VCI |
@@ -815,6 +816,18 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **Playwright:** no
 - **Basis:** `CourseRoleConflicts`; decisions D7, D10
 - **QA status:** IBR (PS-ENR-06)
+- **Review:** Draft
+
+### TC-ENR-08 Typing in an Add students box suggests students of the institution, and picking one fills the box
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** an offering with some students enrolled and some not; a student of another institution whose email or number resembles one of ours; the same on a block section
+- **Steps:** open the roster's (and a section's) Add students dialog; type one character, then two or more of an email, a student number and a name; keep typing, then change the text quickly; type a second entry after a first; pick with the mouse, then with Down/Up and Enter; press Escape with the list open, then again; click elsewhere with the list open; switch the network off and type.
+- **Expected:** nothing for one character; from two, a list of at most 8 with name, number and email, updating as you type without the page moving or reloading, and never showing an answer for older text; only students of this institution who could still be added (not those already enrolled or completed in this offering, not members of this section, not inactive or switched-off accounts, not instructors or parents, never another institution's); a dropped student is still offered; only the entry under the caret is searched; picking writes the email in place of the typed piece and a new line, keeping the other entries; the first Escape closes the list and leaves the dialog, the second closes the dialog; clicking away closes the list; with the network down the list closes and the box still works as a plain textarea; nobody is enrolled until Enrol/Add students is pressed, and the server checks every entry again.
+- **Already automated:** `tests/database/StudentSuggestionsTest.php`, `tests/feature/InstitutionStudentSuggestTest.php`, `InstitutionEnrolmentsTest::testTheAddBoxAsksForSuggestionsLeavingOutThoseAlreadyInThisOffering`, `InstitutionSectionsTest::testTheAddStudentsBoxAsksForSuggestionsLeavingOutThoseAlreadyInTheSection`, `tests/js/shared/student-autocomplete.test.js`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-ENR-08, TC-ENR-09)
+- **Basis:** `StudentSuggestions`, `shared/student-autocomplete.js`
+- **QA status:** VCI
 - **Review:** Draft
 
 ### TC-ENR-07 Bringing a student back through Add refreshes the gradebook like a status change
