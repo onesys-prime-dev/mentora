@@ -18,88 +18,99 @@ const markup = `
 
 const ok = (data) => ({ status: 200, data });
 
-function build({ conversation = null, managesAny = false, setControl = vi.fn().mockResolvedValue(ok({})), blocked = [] } = {}) {
+function build({ chats = [], setControl = vi.fn().mockResolvedValue(ok({})), blocked = [] } = {}) {
     document.body.innerHTML = markup;
 
     const root = document.getElementById("root");
-    const api = { setControl, blocks: vi.fn().mockResolvedValue(ok({ blocked })), unblock: vi.fn().mockResolvedValue(ok({ ok: true })) };
+    const api = {
+        setControl,
+        chatControls: vi.fn().mockResolvedValue(ok({ chats })),
+        blocks: vi.fn().mockResolvedValue(ok({ blocked })),
+        unblock: vi.fn().mockResolvedValue(ok({ ok: true })),
+    };
     const onControlsChanged = vi.fn();
-    const settings = createSettings({ root, api, getConversation: () => conversation, managesAny: () => managesAny, onControlsChanged });
+    const settings = createSettings({ root, api, onControlsChanged });
 
-    settings.sync();
-
-    return { root, api, onControlsChanged, settings, q: (s) => root.querySelector(s) };
+    return { root, api, onControlsChanged, settings, q: (s) => root.querySelector(s), ready: () => settings.sync() };
 }
 
-const course = (extra = {}) => ({ id: 7, name: "IT101", type: "course", can_manage_controls: true, controls: { lock: false, reactions: true, replies: true, forwarding: true, bump: true, delete_everyone: true }, ...extra });
+const course = (extra = {}) => ({ id: 7, name: "IT101", type: "course", controls: { lock: false, reactions: true, replies: true, forwarding: true, bump: true, delete_everyone: true }, ...extra });
 
 describe("Settings", () => {
     beforeEach(() => { document.body.innerHTML = ""; });
 
-    it("shows no tab bar to someone who manages nothing", () => {
-        const { q } = build({ conversation: { id: 1, type: "direct", can_manage_controls: false } });
+    it("shows no tab bar to anyone but the administrator (the server sends them no chats)", async () => {
+        const b = build({ chats: [] });
 
-        expect(q("[data-role=settings-tabs]").hidden).toBe(true);
-        expect(q("[data-role=settings-panel-alerts]").hidden).toBe(false);
+        await b.ready();
+
+        expect(b.q("[data-role=settings-tabs]").hidden).toBe(true);
+        expect(b.q("[data-role=settings-panel-alerts]").hidden).toBe(false);
     });
 
-    it("shows both tabs to a manager", () => {
-        const { q } = build({ conversation: course() });
+    it("shows both tabs and a picker of every chat to the administrator", async () => {
+        const b = build({ chats: [course(), course({ id: 8, name: "Staff", type: "group" })] });
 
-        expect(q("[data-role=settings-tabs]").hidden).toBe(false);
+        await b.ready();
+
+        expect(b.q("[data-role=settings-tabs]").hidden).toBe(false);
+        expect([...b.q("[data-role=controls-picker]").options].map((o) => o.textContent)).toEqual(["IT101 · course chat", "Staff · group"]);
     });
 
-    it("tells a manager with no chat open to open one", () => {
-        const { q } = build({ conversation: null, managesAny: true });
+    it("shows the lock switch only for course chats, and changes with the picker", async () => {
+        const b = build({ chats: [course(), course({ id: 8, name: "Staff", type: "group" })] });
 
-        q("[data-role=settings-tab-controls]").click();
+        await b.ready();
+        expect(b.q("[data-control=lock]")).not.toBeNull();
 
-        expect(q("[data-role=settings-tabs]").hidden).toBe(false);
-        expect(q("[data-role=controls-empty]").textContent).toBe("Open a chat to change its controls.");
-    });
+        const picker = b.q("[data-role=controls-picker]");
 
-    it("shows the lock switch only for course chats", () => {
-        const a = build({ conversation: course() });
-
-        expect(a.q("[data-control=lock]")).not.toBeNull();
-
-        const b = build({ conversation: course({ type: "group" }) });
+        picker.value = "8";
+        picker.dispatchEvent(new Event("change"));
 
         expect(b.q("[data-control=lock]")).toBeNull();
         expect(b.q("[data-control=reactions]")).not.toBeNull();
     });
 
-    it("sends the switch and the new value, and keeps the new state on success", async () => {
-        const conversation = course();
-        const setControl = vi.fn().mockResolvedValue(ok({ controls: { ...conversation.controls, forwarding: false } }));
-        const { q, onControlsChanged } = build({ conversation, setControl });
-        const toggle = q("[data-control=forwarding]");
+    it("sends the chosen chat, the switch and the new value, and keeps the new state on success", async () => {
+        const chat = course();
+        const setControl = vi.fn().mockResolvedValue(ok({ controls: { ...chat.controls, forwarding: false } }));
+        const b = build({ chats: [chat], setControl });
+
+        await b.ready();
+
+        const toggle = b.q("[data-control=forwarding]");
 
         expect(toggle.getAttribute("aria-checked")).toBe("true");
         toggle.click();
-        await vi.waitFor(() => expect(onControlsChanged).toHaveBeenCalled());
+        await vi.waitFor(() => expect(b.onControlsChanged).toHaveBeenCalled());
 
         expect(setControl).toHaveBeenCalledWith(7, "forwarding", false);
-        expect(q("[data-control=forwarding]").getAttribute("aria-checked")).toBe("false");
+        expect(b.q("[data-control=forwarding]").getAttribute("aria-checked")).toBe("false");
     });
 
     it("reverts the switch and says so when the server refuses", async () => {
-        const setControl = vi.fn().mockResolvedValue({ status: 403, data: { error: "not_allowed" } });
-        const { q } = build({ conversation: course(), setControl });
-        const toggle = q("[data-control=reactions]");
+        const setControl = vi.fn().mockResolvedValue({ status: 404, data: { error: "not_found" } });
+        const b = build({ chats: [course()], setControl });
+
+        await b.ready();
+
+        const toggle = b.q("[data-control=reactions]");
 
         toggle.click();
-        await vi.waitFor(() => expect(q("[data-role=controls-note]").textContent).toBe("Couldn't change that. Try again."));
+        await vi.waitFor(() => expect(b.q("[data-role=controls-note]").textContent).toBe("Couldn't change that. Try again."));
 
         expect(toggle.getAttribute("aria-checked")).toBe("true");
     });
 
     it("lists blocked people with an Unblock button, or says no one is blocked", async () => {
-        const none = build({ conversation: null });
+        const none = build();
+        none.settings.sync();
 
         await vi.waitFor(() => expect(none.q("[data-role=blocked-empty]").hidden).toBe(false));
 
-        const some = build({ conversation: null, blocked: [{ id: 5, name: "Ann Lee" }] });
+        const some = build({ blocked: [{ id: 5, name: "Ann Lee" }] });
+        some.settings.sync();
 
         await vi.waitFor(() => expect(some.q("[data-role=blocked-count]").textContent).toBe("1"));
         some.q("[data-unblock='5']").click();

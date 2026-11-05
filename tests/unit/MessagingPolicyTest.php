@@ -284,31 +284,19 @@ final class MessagingPolicyTest extends CIUnitTestCase
      */
     public static function provideControlsMatrix(): array
     {
-        // role, type, teachesCourse, inScope, createdGroup, sameInstitution, expected
+        // role, type, teachesCourse, inScope, createdGroup, sameInstitution, expected. Only the institution's
+        // administrator manages a chat's controls, whatever the other facts say.
         return [
-            'instructor of the course'          => ['instructor', 'course', true, false, false, true, true],
-            'instructor of another course'      => ['instructor', 'course', false, true, false, true, false],
-            'instructor in a group'             => ['instructor', 'group', true, true, true, true, false],
-            'chairperson in scope on course'    => ['chairperson', 'course', false, true, false, true, true],
-            'chairperson out of scope'          => ['chairperson', 'course', false, false, false, true, false],
-            'dean in scope on course'           => ['dean', 'course', false, true, false, true, true],
-            'dean out of scope on course'       => ['dean', 'course', false, false, false, true, false],
-            'chairperson created the group'     => ['chairperson', 'group', false, true, true, true, true],
-            'chairperson did not create group'  => ['chairperson', 'group', false, true, false, true, false],
-            'dean created the group'            => ['dean', 'group', false, false, true, true, true],
-            'dean did not create group'         => ['dean', 'group', false, true, false, true, false],
+            'instructor of the course'          => ['instructor', 'course', true, true, true, true, false],
+            'chairperson in scope on course'    => ['chairperson', 'course', false, true, false, true, false],
+            'dean in scope on course'           => ['dean', 'course', false, true, false, true, false],
+            'chairperson created the group'     => ['chairperson', 'group', false, true, true, true, false],
+            'dean created the group'            => ['dean', 'group', false, false, true, true, false],
             'student course'                    => ['student', 'course', true, true, true, true, false],
-            'student group'                     => ['student', 'group', true, true, true, true, false],
-            'parent course'                     => ['parent', 'course', true, true, true, true, false],
             'parent group'                      => ['parent', 'group', true, true, true, true, false],
             'institutional admin course'        => ['institutional_admin', 'course', false, false, false, true, true],
             'institutional admin group'         => ['institutional_admin', 'group', false, false, false, true, true],
             'institutional admin direct'        => ['institutional_admin', 'direct', true, true, true, true, false],
-            'instructor direct'                 => ['instructor', 'direct', true, true, true, true, false],
-            'chairperson direct'                => ['chairperson', 'direct', true, true, true, true, false],
-            'dean direct'                       => ['dean', 'direct', true, true, true, true, false],
-            'other institution instructor'      => ['instructor', 'course', true, true, true, false, false],
-            'other institution chairperson'     => ['chairperson', 'group', true, true, true, false, false],
             'other institution admin'           => ['institutional_admin', 'course', true, true, true, false, false],
         ];
     }

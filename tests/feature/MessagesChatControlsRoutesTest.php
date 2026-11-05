@@ -68,9 +68,14 @@ final class MessagesChatControlsRoutesTest extends RouteTestCase
         return $this->step('POST', "messages/api/conversations/{$chat}/controls", $body);
     }
 
-    public function testAnInstructorFlipsASwitch(): void
+    private function admin(): User
     {
-        $this->signIn($this->instructor);
+        return PeopleFactory::person('institutional_admin', 'Ad', 'Min', null, $this->institution, true);
+    }
+
+    public function testTheAdministratorFlipsASwitchWithoutBeingInTheChat(): void
+    {
+        $this->signIn($this->admin());
 
         $response = $this->flip($this->courseChat, ['switch' => 'reactions', 'on' => false])->response();
         $json     = json_decode($response->getBody(), true);
@@ -83,12 +88,12 @@ final class MessagesChatControlsRoutesTest extends RouteTestCase
 
     public function testAnInvalidSwitchIsRefused(): void
     {
-        $this->signIn($this->instructor);
+        $this->signIn($this->admin());
 
         $this->assertSame(422, $this->flip($this->courseChat, ['switch' => 'nope', 'on' => false])->response()->getStatusCode());
     }
 
-    public function testAForeignChatAndAnOutOfScopeChairpersonAnswerLikeAMissingId(): void
+    public function testAnInstructorAChairpersonAndAForeignChatAnswerLikeAMissingId(): void
     {
         $a        = PeopleFactory::person('student', 'Oth', 'Er', null, $this->institution);
         $b        = PeopleFactory::person('instructor', 'Oth', 'Teach', null, $this->institution);
@@ -97,53 +102,44 @@ final class MessagesChatControlsRoutesTest extends RouteTestCase
         CourseFactory::assignInstructor($offering, $b);
         $foreign = (int) (new ConversationService())->startDirect($a, (int) $b->id)['id'];
 
-        $other = DeanFactory::department('RX', $this->institution);
-        $chair = DeanFactory::chair(DeanFactory::subDepartment($other['department'], 'RX'));
+        $chair = DeanFactory::chair((int) db_connect()->table('programs')->where('id', $this->program)->get()->getRow()->sub_department_id);
         $this->join($this->courseChat, $chair);
 
-        $this->signIn($this->instructor);
+        $this->signIn($this->admin());
         $missing = $this->flip(999999, ['switch' => 'reactions', 'on' => false])->response();
         $missing = [$missing->getStatusCode(), $missing->getBody()];
         $theirs  = $this->flip($foreign, ['switch' => 'reactions', 'on' => false])->response();
 
-        $this->signIn($chair);
-        $scope = $this->flip($this->courseChat, ['switch' => 'reactions', 'on' => false])->response();
-
         $this->assertSame(404, $missing[0]);
         $this->assertSame($missing, [$theirs->getStatusCode(), $theirs->getBody()]);
-        $this->assertSame($missing, [$scope->getStatusCode(), $scope->getBody()]);
-    }
 
-    public function testParticipantChairAndDeanOutOfScopeGetTheSharedNotFoundAndInScopeSucceed(): void
-    {
-        $other = DeanFactory::department('RY', $this->institution);
-        $out   = [DeanFactory::chair(DeanFactory::subDepartment($other['department'], 'RY')), DeanFactory::dean($this->institution, $other['department'])];
-        $in    = [DeanFactory::chair((int) db_connect()->table('programs')->where('id', $this->program)->get()->getRow()->sub_department_id)];
-
-        foreach ([...$out, ...$in] as $user) {
-            $this->join($this->courseChat, $user);
-        }
-
-        $this->signIn($this->instructor);
-        $missing = $this->flip(999999, ['switch' => 'lock', 'on' => true])->response();
-        $missing = [$missing->getStatusCode(), $missing->getBody()];
-
-        foreach ($out as $user) {
+        // Nobody else manages controls, in scope or not, in the chat or not.
+        foreach ([$this->instructor, $chair, $this->student] as $user) {
             $this->signIn($user);
             $response = $this->flip($this->courseChat, ['switch' => 'lock', 'on' => true])->response();
             $this->assertSame($missing, [$response->getStatusCode(), $response->getBody()]);
         }
 
         $this->assertSame(0, (int) db_connect()->table('conversations')->where('id', $this->courseChat)->get()->getRow()->is_locked);
+    }
 
-        $this->signIn($in[0]);
-        $this->assertSame(200, $this->flip($this->courseChat, ['switch' => 'lock', 'on' => true])->response()->getStatusCode());
+    public function testThePickerListsChatsForTheAdministratorOnly(): void
+    {
+        $this->withHeaders(['Accept' => 'application/json']);
+        $this->signIn($this->admin());
+        $ids = array_column(json_decode($this->step('GET', 'messages/api/chat-controls')->response()->getBody(), true)['chats'], 'id');
+
+        $this->assertContains($this->courseChat, $ids);
+
+        $this->signIn($this->instructor);
+        $this->withHeaders(['Accept' => 'application/json']);
+        $this->assertSame([], json_decode($this->step('GET', 'messages/api/chat-controls')->response()->getBody(), true)['chats']);
     }
 
     public function testAReadOnlyInstitutionIsRefused(): void
     {
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
-        $this->signIn($this->instructor);
+        $this->signIn($this->admin());
 
         $this->assertSame(403, $this->flip($this->courseChat, ['switch' => 'reactions', 'on' => false])->response()->getStatusCode());
     }
@@ -152,7 +148,7 @@ final class MessagesChatControlsRoutesTest extends RouteTestCase
     {
         db_connect()->table('feature_flag_overrides')->where('flag_key', 'messages')->delete();
         \App\Services\Admin\PermissionMatrix::flush();
-        $this->signIn($this->instructor);
+        $this->signIn($this->admin());
 
         $this->assertSame(404, $this->flip($this->courseChat, ['switch' => 'reactions', 'on' => false])->response()->getStatusCode());
     }

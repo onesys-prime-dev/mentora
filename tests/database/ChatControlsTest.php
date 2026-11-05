@@ -12,7 +12,7 @@ use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * Who may flip a chat's controls, and what a flip writes.
+ * Only the institution's administrator flips a chat's controls, member or not; everyone else gets null. And what a flip writes.
  *
  * @internal
  */
@@ -78,12 +78,18 @@ final class ChatControlsTest extends DatabaseTestCase
         return db_connect()->table('audit_logs')->where('action', $action)->countAllResults();
     }
 
-    public function testTheInstructorMaySetEverySwitchAndLock(): void
+    private function admin(?int $institution = null): User
     {
-        [$chat, , $instructor] = $this->courseChat();
+        return PeopleFactory::person('institutional_admin', 'Ad', 'Min', null, $institution ?? $this->institution, true);
+    }
+
+    public function testTheAdministratorMaySetEverySwitchAndLockWithoutBeingInTheChat(): void
+    {
+        [$chat] = $this->courseChat();
+        $admin  = $this->admin();
 
         foreach ([...ChatControls::SWITCHES, 'lock'] as $switch) {
-            $result = $this->controls->set($instructor, $chat, $switch, false);
+            $result = $this->controls->set($admin, $chat, $switch, false);
 
             $this->assertTrue($result['ok'], $switch);
             $this->assertFalse($result['controls'][$switch], $switch);
@@ -94,76 +100,24 @@ final class ChatControlsTest extends DatabaseTestCase
         $this->assertFalse(ChatControls::forConversation($row)['bump']);
     }
 
-    public function testAChairpersonAndADeanInScopeMayManageACourseChat(): void
+    public function testInstructorsChairpersonsAndDeansGetNullEvenInTheirOwnChats(): void
     {
-        [$chat] = $this->courseChat();
-        $chair  = DeanFactory::chair($this->subDepartment);
-        $dean   = DeanFactory::dean($this->institution, $this->department);
+        [$chat, , $instructor] = $this->courseChat();
+        $chair                 = DeanFactory::chair($this->subDepartment);
+        $dean                  = DeanFactory::dean($this->institution, $this->department);
         $this->join($chat, $chair);
         $this->join($chat, $dean);
 
-        $this->assertTrue($this->controls->set($chair, $chat, 'replies', false)['ok']);
-        $this->assertTrue($this->controls->set($dean, $chat, 'forwarding', false)['ok']);
-        $this->assertTrue($this->controls->set($chair, $chat, 'lock', true)['ok']);
-        $this->assertSame(1, (int) $this->chatRow($chat)['is_locked']);
-    }
-
-    public function testAnOutOfScopeChairpersonOrDeanGetsNull(): void
-    {
-        [$chat] = $this->courseChat();
-        $other  = DeanFactory::department('CX', $this->institution);
-        $chair  = DeanFactory::chair(DeanFactory::subDepartment($other['department'], 'CX'));
-        $dean   = DeanFactory::dean($this->institution, $other['department']);
-        $this->join($chat, $chair);
-        $this->join($chat, $dean);
-
-        $this->assertNull($this->controls->set($chair, $chat, 'replies', false));
-        $this->assertNull($this->controls->set($dean, $chat, 'replies', false));
-        $this->assertTrue(ChatControls::allows($this->chatRow($chat), 'replies'));
-    }
-
-    public function testParticipantChairAndDeanAreRefusedOutOfScopeAndAllowedInScope(): void
-    {
-        [$chat] = $this->courseChat();
-        $other  = DeanFactory::department('CY', $this->institution);
-        $people = [
-            'out' => [DeanFactory::chair(DeanFactory::subDepartment($other['department'], 'CY')), DeanFactory::dean($this->institution, $other['department'])],
-            'in'  => [DeanFactory::chair($this->subDepartment), DeanFactory::dean($this->institution, $this->department)],
-        ];
-
-        foreach ($people as $group) {
-            foreach ($group as $user) {
-                $this->join($chat, $user);
-            }
-        }
-
-        foreach ($people['out'] as $user) {
+        foreach ([$instructor, $chair, $dean] as $user) {
             $this->assertNull($this->controls->set($user, $chat, 'replies', false));
-            $this->assertNull($this->controls->set($user, 999999, 'replies', false));
         }
 
         $this->assertTrue(ChatControls::allows($this->chatRow($chat), 'replies'));
-
-        foreach ($people['in'] as $user) {
-            $this->assertTrue($this->controls->set($user, $chat, 'replies', false)['ok']);
-            $this->assertTrue($this->controls->set($user, $chat, 'replies', true)['ok']);
-        }
     }
 
-    public function testAnInstitutionalAdminParticipantMayChangeASwitch(): void
-    {
-        [$chat] = $this->courseChat();
-        $admin  = PeopleFactory::person('institutional_admin', 'Ad', 'Min', null, $this->institution, true);
-        $this->join($chat, $admin);
-
-        $this->assertTrue($this->controls->set($admin, $chat, 'bump', false)['ok']);
-        $this->assertFalse(ChatControls::allows($this->chatRow($chat), 'bump'));
-    }
-
-    public function testOnlyTheCreatorChairpersonMayLockAStaffGroup(): void
+    public function testAStaffGroupsCreatorCannotLockItButTheAdministratorCan(): void
     {
         $creator = DeanFactory::chair($this->subDepartment);
-        $second  = DeanFactory::chair(DeanFactory::subDepartment($this->department, 'CZ'), 'Other');
         $now     = date('Y-m-d H:i:s');
         db_connect()->table('conversations')->insert([
             'institution_id' => $this->institution, 'type' => 'group', 'created_by' => $creator->id, 'is_locked' => 0,
@@ -171,23 +125,24 @@ final class ChatControlsTest extends DatabaseTestCase
         ]);
         $group = (int) db_connect()->insertID();
         $this->join($group, $creator);
-        $this->join($group, $second);
 
-        $this->assertNull($this->controls->set($second, $group, 'lock', true));
+        $this->assertNull($this->controls->set($creator, $group, 'lock', true));
         $this->assertSame(0, (int) $this->chatRow($group)['is_locked']);
-        $this->assertTrue($this->controls->set($creator, $group, 'lock', true)['ok']);
+        $this->assertTrue($this->controls->set($this->admin(), $group, 'lock', true)['ok']);
         $this->assertSame(1, (int) $this->chatRow($group)['is_locked']);
         $this->assertSame(1, $this->auditCount('messages.chat_control_changed'));
     }
 
-    public function testAStudentAndAnOutsiderGetNull(): void
+    public function testAStudentAnOutsiderAndAnotherInstitutionsAdministratorGetNull(): void
     {
         [$chat, $student] = $this->courseChat();
         $outsider         = PeopleFactory::person('instructor', 'Out', 'Sider', null, $this->institution, true);
+        $other            = $this->admin(DeanFactory::department('CW')['institution']);
 
         $this->assertNull($this->controls->set($student, $chat, 'reactions', false));
         $this->assertNull($this->controls->set($outsider, $chat, 'reactions', false));
-        $this->assertNull($this->controls->set($student, 999999, 'reactions', false));
+        $this->assertNull($this->controls->set($other, $chat, 'reactions', false));
+        $this->assertNull($this->controls->set($this->admin(), 999999, 'reactions', false));
     }
 
     public function testADirectChatCannotBeManagedByAnyone(): void
@@ -195,22 +150,22 @@ final class ChatControlsTest extends DatabaseTestCase
         [, $student, $instructor] = $this->courseChat();
         $direct                   = (int) (new ConversationService())->startDirect($student, (int) $instructor->id)['id'];
 
-        $this->assertNull($this->controls->set($instructor, $direct, 'reactions', false));
+        $this->assertNull($this->controls->set($this->admin(), $direct, 'reactions', false));
         $this->assertNull($this->controls->set($student, $direct, 'reactions', false));
     }
 
     public function testAnUnknownSwitchIsInvalid(): void
     {
-        [$chat, , $instructor] = $this->courseChat();
+        [$chat] = $this->courseChat();
 
-        $this->assertSame(['ok' => false, 'reason' => 'invalid'], $this->controls->set($instructor, $chat, 'nope', true));
+        $this->assertSame(['ok' => false, 'reason' => 'invalid'], $this->controls->set($this->admin(), $chat, 'nope', true));
     }
 
     public function testASwitchChangeIsAuditedWithTheSwitchNameOnly(): void
     {
-        [$chat, , $instructor] = $this->courseChat();
+        [$chat] = $this->courseChat();
 
-        $this->controls->set($instructor, $chat, 'bump', false);
+        $this->controls->set($this->admin(), $chat, 'bump', false);
 
         $row = db_connect()->table('audit_logs')->where('action', 'messages.chat_control_changed')->get()->getRowArray();
         $this->assertNotNull($row);
@@ -220,21 +175,32 @@ final class ChatControlsTest extends DatabaseTestCase
 
     public function testSettingTheSameValueWritesNoAuditRow(): void
     {
-        [$chat, , $instructor] = $this->courseChat();
+        [$chat] = $this->courseChat();
 
-        $this->assertTrue($this->controls->set($instructor, $chat, 'reactions', true)['ok']);
+        $this->assertTrue($this->controls->set($this->admin(), $chat, 'reactions', true)['ok']);
         $this->assertSame(0, $this->auditCount('messages.chat_control_changed'));
     }
 
     public function testLockingACourseChatKeepsItsExistingAuditAction(): void
     {
-        [$chat, , $instructor] = $this->courseChat();
+        [$chat] = $this->courseChat();
+        $admin  = $this->admin();
 
-        $this->controls->set($instructor, $chat, 'lock', true);
-        $this->controls->set($instructor, $chat, 'lock', false);
+        $this->controls->set($admin, $chat, 'lock', true);
+        $this->controls->set($admin, $chat, 'lock', false);
 
         $this->assertSame(1, $this->auditCount('messages.course_chat_locked'));
         $this->assertSame(1, $this->auditCount('messages.course_chat_unlocked'));
         $this->assertSame(0, $this->auditCount('messages.chat_control_changed'));
+    }
+
+    public function testThePickerListsOnlyTheAdministratorsOwnInstitutionsChatsAndNothingForOthers(): void
+    {
+        [$chat, $student] = $this->courseChat();
+        $names            = array_column($this->controls->chatsFor($this->admin()), 'id');
+
+        $this->assertContains($chat, $names);
+        $this->assertSame([], $this->controls->chatsFor($student));
+        $this->assertNotContains($chat, array_column($this->controls->chatsFor($this->admin(DeanFactory::department('CV')['institution'])), 'id'));
     }
 }

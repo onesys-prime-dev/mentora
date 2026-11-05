@@ -448,6 +448,7 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations/(:num)/lock', 'Messaging\ConversationController::lock/$1');
     $routes->post('conversations/(:num)/unlock', 'Messaging\ConversationController::unlock/$1');
     $routes->post('conversations/(:num)/controls', 'Messaging\ChatControlsController::update/$1');
+    $routes->get('chat-controls', 'Messaging\ChatControlsController::index');
     $routes->post('conversations/(:num)/pin', 'Messaging\ChatStateController::pin/$1');
     $routes->post('conversations/(:num)/unpin', 'Messaging\ChatStateController::unpin/$1');
     $routes->post('conversations/(:num)/mute', 'Messaging\ChatStateController::mute/$1');

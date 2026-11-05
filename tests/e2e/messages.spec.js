@@ -855,9 +855,9 @@ test("TC-MSG-25 On a phone a long press opens the menu; on a desktop the keyboar
     }
 });
 
-test("TC-MSG-26 The instructor turns off Forwarding, Reactions and Delete for everyone; the student's menu follows", async ({ browser }) => {
+test("TC-MSG-26 The institution's administrator turns off Forwarding, Reactions and Delete for everyone; the student's menu follows", async ({ browser }) => {
     const student = await openMessagesAs(browser, people.michael);
-    const instructor = await openMessagesAs(browser, people.instructor1);
+    const admin = await openMessagesAs(browser, people.institutionAdmin);
     const names = ["forwarding", "reactions", "delete_everyone"];
 
     try {
@@ -873,14 +873,13 @@ test("TC-MSG-26 The instructor turns off Forwarding, Reactions and Delete for ev
         await expect(student.page.locator("[data-control]")).toHaveCount(0);
         await student.page.locator("#messages-prefs [data-dialog-close]").first().click();
 
-        await rowById(instructor.page, id).click();
-
         const setSwitches = async (on) => {
-            await instructor.page.locator("[data-role=prefs-open]").click();
-            await instructor.page.locator("[data-role=settings-tab-controls]").click();
+            await admin.page.locator("[data-role=prefs-open]").click();
+            await admin.page.locator("[data-role=settings-tab-controls]").click();
+            await admin.page.locator("[data-role=controls-picker]").selectOption(id);
 
             for (const name of names) {
-                const toggle = instructor.page.locator(`[data-control="${name}"]`);
+                const toggle = admin.page.locator(`[data-control="${name}"]`);
 
                 if ((await toggle.getAttribute("aria-checked")) !== String(on)) {
                     await toggle.click();
@@ -888,7 +887,7 @@ test("TC-MSG-26 The instructor turns off Forwarding, Reactions and Delete for ev
                 }
             }
 
-            await instructor.page.locator("#messages-prefs [data-dialog-close]").first().click();
+            await admin.page.locator("#messages-prefs [data-dialog-close]").first().click();
         };
 
         await setSwitches(false);
@@ -921,6 +920,6 @@ test("TC-MSG-26 The instructor turns off Forwarding, Reactions and Delete for ev
         }
     } finally {
         await student.context.close();
-        await instructor.context.close();
+        await admin.context.close();
     }
 });

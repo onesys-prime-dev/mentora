@@ -970,15 +970,12 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const settings = createSettings({
         root,
         api,
-        getConversation: current,
-        managesAny: () => state.conversations.some((c) => c.can_manage_controls),
+        // The administrator's picker holds only names and switches, so the open chat is reloaded for the new ones.
         onControlsChanged: (c) => {
             if (c.id === state.openId) {
-                applyConversation(c);
+                loadList();
                 refreshThread();
             }
-
-            renderList();
         },
     });
 

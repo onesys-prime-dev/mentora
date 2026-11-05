@@ -72,7 +72,7 @@ What these prove, in the order of the design (`docs/superpowers/specs/2026-11-02
 | [TC-MSG-23](#tc-msg-23-bump-a-message) | Bump a message | Student |
 | [TC-MSG-24](#tc-msg-24-delete-for-everyone) | Delete for everyone | Student |
 | [TC-MSG-25](#tc-msg-25-phone-and-keyboard) | Phone and keyboard | Student |
-| [TC-MSG-26](#tc-msg-26-settings-and-chat-controls) | Settings and Chat controls | Instructor, Student |
+| [TC-MSG-26](#tc-msg-26-settings-and-chat-controls) | Settings and Chat controls | Institution admin, Student |
 
 Not in the browser (manual, before turning the flag on; the checklist is in
 `docs/messages.md`): a captured email for a test phrase, restoring a backup with
@@ -493,11 +493,11 @@ Each case writes texts of its own. The design is
 
 ### TC-MSG-26 Settings and Chat controls
 
-- **Role:** Instructor, Student. **Priority:** P2
-- **Data:** `instructor1@mentora.test`, `student5@mentora.test`, IT101-A
+- **Role:** Institution admin, Student. **Priority:** P2
+- **Data:** `institution.admin@mentora.test`, `student5@mentora.test`, IT101-A
 - **Steps:**
   1. The student opens Settings.
-  2. The instructor opens Settings, Chat controls, for the IT101 chat and turns off Forwarding, Reactions and Delete for everyone.
+  2. The administrator opens Settings, Chat controls, picks the IT101 chat and turns off Forwarding, Reactions and Delete for everyone.
   3. The student reloads and opens a message's menu, and tries to react with a request the screen no longer offers.
 - **Expected:**
   - The student's Settings has no tab bar and no Chat controls.

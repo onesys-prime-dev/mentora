@@ -47,6 +47,7 @@ export function createApi(base, fetchImpl = (...args) => fetch(...args)) {
         deleteEveryone: (id, messageId) => request("POST", `conversations/${id}/messages/${messageId}/delete-everyone`, {}),
         pinMessage: (id, messageId, pinned) => request("POST", `conversations/${id}/messages/${messageId}/${pinned ? "pin" : "unpin"}`, {}),
         changes: (id, since) => request("GET", `conversations/${id}/changes${query({ since })}`),
+        chatControls: () => request("GET", "chat-controls"),
         setControl: (id, name, on) => request("POST", `conversations/${id}/controls`, { switch: name, on }),
         blocks: () => request("GET", "blocks"),
         markRead: (id, messageId) => request("POST", `conversations/${id}/read`, { message_id: messageId }),

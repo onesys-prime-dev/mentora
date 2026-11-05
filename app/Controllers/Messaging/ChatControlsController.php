@@ -13,6 +13,12 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class ChatControlsController extends MessagingController
 {
+    /** The administrator's picker: every course chat and staff group of their institution, switches only. */
+    public function index(): ResponseInterface
+    {
+        return $this->response->setJSON(['chats' => (new ChatControls())->chatsFor(auth()->user())]);
+    }
+
     public function update(int $conversationId): ResponseInterface
     {
         $input  = $this->input();

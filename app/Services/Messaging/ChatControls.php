@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
-use App\Services\Courses\ChairpersonAccessService;
-use App\Services\Courses\DeanAccessService;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -54,27 +52,58 @@ class ChatControls
     /** @param array<string, mixed> $conversation a `conversations` row */
     public function canManage(User $user, array $conversation): bool
     {
-        $role       = $this->resolver->activeRole($user);
-        $offeringId = ($conversation['offering_id'] ?? null) === null ? null : (int) $conversation['offering_id'];
-        $teaches    = $offeringId !== null && $this->resolver->isCourseInstructor((int) $user->id, $offeringId);
-        $inScope    = false;
-
-        if ($offeringId !== null) {
-            $inScope = match ($role) {
-                'chairperson' => (new ChairpersonAccessService())->canAccess($user, $offeringId),
-                'dean'        => (new DeanAccessService())->canAccessOffering($user, $offeringId),
-                default       => false,
-            };
-        }
-
         return $this->policy->canManageControls(
-            $role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role),
+            $this->resolver->activeRole($user),
             (string) $conversation['type'],
-            $teaches,
-            $inScope,
-            (int) ($conversation['created_by'] ?? 0) === (int) $user->id,
+            false,
+            false,
+            false,
             $this->resolver->institutionOf($user) === (int) $conversation['institution_id'],
         );
+    }
+
+    /**
+     * Every course chat and staff group of the administrator's institution with its switches, for the Settings
+     * picker. Names and switches only, never a message. Empty for anyone who is not that administrator.
+     *
+     * @return list<array{id: int, name: string, type: string, controls: array<string, bool>}>
+     */
+    public function chatsFor(User $user): array
+    {
+        $institution = $this->resolver->institutionOf($user);
+
+        if ($institution === null || $this->resolver->activeRole($user) !== 'institutional_admin') {
+            return [];
+        }
+
+        $rows = db_connect()->table('conversations c')
+            ->select('c.*, k.course_code, k.course_title')
+            ->join('course_offerings o', 'o.id = c.offering_id', 'left')
+            ->join('courses k', 'k.id = o.course_id', 'left')
+            ->where('c.institution_id', $institution)->whereIn('c.type', ['course', 'group'])
+            ->orderBy('c.type')->orderBy('c.id')->get()->getResultArray();
+
+        return array_map(static fn (array $row): array => [
+            'id'       => (int) $row['id'],
+            'name'     => $row['type'] === 'course'
+                ? trim((string) $row['course_code'] . ' · ' . (string) $row['course_title'], ' ·')
+                : (string) ($row['title'] ?? 'Group'),
+            'type'     => (string) $row['type'],
+            'controls' => self::forConversation($row),
+        ], $rows);
+    }
+
+    /** The administrator's own institution's course chat or staff group by id, member or not; null otherwise. */
+    private function adminChat(User $user, int $conversationId): ?array
+    {
+        $institution = $this->resolver->institutionOf($user);
+
+        if ($institution === null || $this->resolver->activeRole($user) !== 'institutional_admin') {
+            return null;
+        }
+
+        return db_connect()->table('conversations')->where(['id' => $conversationId, 'institution_id' => $institution])
+            ->whereIn('type', ['course', 'group'])->get()->getRowArray();
     }
 
     /**
@@ -82,7 +111,8 @@ class ChatControls
      */
     public function set(User $user, int $conversationId, string $switch, bool $on): ?array
     {
-        $conversation = (new ConversationService())->find($user, $conversationId);
+        // Not through the person's membership: the administrator is in no course chat.
+        $conversation = $this->adminChat($user, $conversationId);
 
         if ($conversation === null || ! $this->canManage($user, $conversation)) {
             return null;

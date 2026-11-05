@@ -3,9 +3,11 @@
 | Messages — Settings dialog
 |--------------------------------------------------------------------------
 | "My alerts" (the existing email and quiet-hours form, plus the people the
-| person has blocked) for everyone, and "Chat controls" for people who manage
-| a chat. The server decides who manages (`can_manage_controls` on each
-| chat); this only shows what it says. Text is set with textContent only.
+| person has blocked) for everyone, and "Chat controls" for the institution's
+| administrator only: a picker of every course chat and staff group of the
+| institution, then that chat's switches. The server decides who that is (it
+| answers `chat-controls` with an empty list for anyone else); this only shows
+| what it says. Text is set with textContent only.
 |--------------------------------------------------------------------------
 */
 
@@ -33,10 +35,10 @@ function node(tag, className, text) {
 }
 
 /**
- * @param {{root: HTMLElement, api: object, getConversation: () => object|null, managesAny: () => boolean, onControlsChanged?: (c: object) => void}} deps
+ * @param {{root: HTMLElement, api: object, onControlsChanged?: (c: object) => void}} deps
  * @returns {{sync: () => void}}
  */
-export function createSettings({ root, api, getConversation, managesAny, onControlsChanged = () => {} }) {
+export function createSettings({ root, api, onControlsChanged = () => {} }) {
     const $ = (selector) => root.querySelector(selector);
     const tabs = $("[data-role=settings-tabs]");
     const tabAlerts = $("[data-role=settings-tab-alerts]");
@@ -57,6 +59,19 @@ export function createSettings({ root, api, getConversation, managesAny, onContr
     }
 
     let tab = "alerts";
+    let chats = [];
+    let selectedId = null;
+
+    const picker = node("select", "w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50");
+
+    picker.dataset.role = "controls-picker";
+    picker.setAttribute("aria-label", "Chat");
+    picker.hidden = true;
+    picker.addEventListener("change", () => {
+        selectedId = Number(picker.value);
+        renderControls();
+    });
+    title.parentNode.insertBefore(picker, title);
 
     function showTab(next) {
         tab = next;
@@ -69,22 +84,31 @@ export function createSettings({ root, api, getConversation, managesAny, onContr
     }
 
     function renderControls() {
-        const c = getConversation();
+        const c = chats.find((chat) => chat.id === selectedId) ?? null;
 
         note.textContent = "";
 
-        if (!c || !c.can_manage_controls) {
+        picker.hidden = chats.length === 0;
+        picker.replaceChildren(...chats.map((chat) => {
+            const option = node("option", "", `${chat.name} · ${chat.type === "course" ? "course chat" : "group"}`);
+
+            option.value = String(chat.id);
+            option.selected = chat.id === selectedId;
+
+            return option;
+        }));
+
+        if (!c) {
             title.hidden = true;
             list.replaceChildren();
             empty.hidden = false;
-            empty.textContent = c ? "You can't change the controls of this chat." : "Open a chat to change its controls.";
+            empty.textContent = "Only your institution's administrator can change chat controls.";
 
             return;
         }
 
         empty.hidden = true;
-        title.hidden = false;
-        title.textContent = `${c.name} · ${c.type === "course" ? "course chat" : c.type === "group" ? "group" : "direct chat"}`;
+        title.hidden = true;
 
         list.replaceChildren(...SWITCHES.filter((s) => !s.courseOnly || c.type === "course").map((s) => {
             const row = node("div", "flex items-center justify-between gap-3 border-b border-gray-100 py-2");
@@ -175,21 +199,21 @@ export function createSettings({ root, api, getConversation, managesAny, onContr
         }));
     }
 
-    // Called when the dialog opens or the open chat changes.
-    function sync() {
-        const c = getConversation();
-        const manager = Boolean(c?.can_manage_controls) || managesAny();
+    // Called when the dialog opens.
+    async function sync() {
+        renderBlocked();
 
-        tabs.hidden = !manager;
+        const { status, data } = await api.chatControls();
 
-        if (!manager) {
-            showTab("alerts");
-        } else {
-            showTab(tab);
+        chats = status === 200 && Array.isArray(data?.chats) ? data.chats : [];
+
+        if (!chats.some((chat) => chat.id === selectedId)) {
+            selectedId = chats[0]?.id ?? null;
         }
 
+        tabs.hidden = chats.length === 0;
+        showTab(chats.length === 0 ? "alerts" : tab);
         renderControls();
-        renderBlocked();
     }
 
     tabAlerts.addEventListener("click", () => showTab("alerts"));

@@ -155,8 +155,9 @@ final class MessagingPolicy
     }
 
     /**
-     * Who may change a chat's controls (lock, rename, and so on). Direct
-     * threads have no controls.
+     * Who may change a chat's controls (reactions, replies, forwarding, bump, delete for everyone, the lock).
+     * Only the institution's administrator, for a course chat or staff group of their own institution; direct
+     * threads have no controls. The other parameters stay so a caller states every fact; none of them matters.
      */
     public function canManageControls(
         string $role,
@@ -170,15 +171,7 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($role === 'institutional_admin') {
-            return true;
-        }
-
-        return match ($type) {
-            'course' => ($role === 'instructor' && $teachesCourse)
-                || (in_array($role, ['chairperson', 'dean'], true) && $inScope),
-            'group'  => in_array($role, ['chairperson', 'dean'], true) && $createdGroup,
-        };
+        return $role === 'institutional_admin';
     }
 
     /** A course chat pins by moderators only; direct and group chats by anyone in them. */
