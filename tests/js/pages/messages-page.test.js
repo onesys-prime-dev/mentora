@@ -62,7 +62,14 @@ function makeApi(over = {}) {
 
 const q = (sel) => document.querySelector(sel);
 const all = (sel) => [...document.querySelectorAll(sel)];
-const texts = () => all("[data-role=messages] [data-id]").map((n) => n.textContent);
+// The words of each message, without the time it was sent.
+const texts = () => all("[data-role=messages] [data-id]").map((n) => {
+    const copy = n.cloneNode(true);
+
+    copy.querySelector("[data-role=sent-at]")?.remove();
+
+    return copy.textContent;
+});
 const flush = () => vi.advanceTimersByTimeAsync(0);
 
 async function mount(api, { open = "" } = {}) {

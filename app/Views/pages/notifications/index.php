@@ -81,7 +81,7 @@ $chipOff = 'border-gray-300 bg-white text-gray-700';
                                         <?php if ($urgent): ?><span class="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">Urgent</span><?php endif; ?>
                                     </span>
                                     <span class="text-sm text-gray-600"><?= esc((string) $row['body']) ?></span>
-                                    <span class="mt-1 text-xs text-gray-500"><?= esc(Time::parse((string) $row['created_at'])->humanize()) ?> · <?= esc(substr((string) $row['created_at'], 11, 5)) ?></span>
+                                    <span class="mt-1 text-xs text-gray-500"><?= esc(Time::parse((string) $row['created_at'])->humanize()) ?> · <?= esc(date('g:i A', (int) strtotime((string) $row['created_at']))) ?></span>
                                 </span>
                                 <span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-brand <?= $isUnread ? '' : 'invisible' ?>" data-role="dot" aria-hidden="true"></span>
                             </<?= $tag ?>>

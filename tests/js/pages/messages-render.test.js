@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { conversationRow, dayLabel, escapeHtml, formatTime, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
+import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
 
 const fragment = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
 
@@ -232,31 +232,45 @@ describe("dayLabel", () => {
 
 });
 
+describe("clockTime", () => {
+
+    it("uses a 12-hour clock with AM or PM", () => {
+
+        expect(clockTime("2026-11-03 00:05:00")).toBe("12:05 AM");
+        expect(clockTime("2026-11-03 09:41:00")).toBe("9:41 AM");
+        expect(clockTime("2026-11-03 12:00:00")).toBe("12:00 PM");
+        expect(clockTime("2026-11-03 23:59:00")).toBe("11:59 PM");
+        expect(clockTime("nonsense")).toBe("");
+
+    });
+
+});
+
 describe("formatTime", () => {
 
     const now = new Date(2026, 10, 3, 15, 0, 0);
 
     it("shows the clock for today", () => {
 
-        expect(formatTime("2026-11-03 09:41:00", now)).toBe("09:41");
+        expect(formatTime("2026-11-03 09:41:00", now)).toBe("9:41 AM");
 
     });
 
     it("says Yesterday for the day before", () => {
 
-        expect(formatTime("2026-11-02 23:59:00", now)).toBe("Yesterday");
+        expect(formatTime("2026-11-02 23:59:00", now)).toBe("Yesterday 11:59 PM");
 
     });
 
     it("shows the weekday within a week", () => {
 
-        expect(formatTime("2026-10-30 10:00:00", now)).toBe("Fri");
+        expect(formatTime("2026-10-30 10:00:00", now)).toBe("Fri 10:00 AM");
 
     });
 
     it("shows the day and month when older", () => {
 
-        expect(formatTime("2026-10-01 10:00:00", now)).toBe("1 Oct");
+        expect(formatTime("2026-10-01 10:00:00", now)).toBe("1 Oct 10:00 AM");
 
     });
 

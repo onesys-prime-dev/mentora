@@ -66,6 +66,20 @@ function parseTime(iso) {
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
+/** The clock time on a 12-hour clock with AM or PM: "8:24 AM", "12:05 PM". Empty when the stamp is unreadable. */
+export function clockTime(iso) {
+    const at = parseTime(iso);
+
+    if (at === null) {
+        return "";
+    }
+
+    const hours = at.getHours();
+
+    return `${hours % 12 === 0 ? 12 : hours % 12}:${String(at.getMinutes()).padStart(2, "0")} ${hours < 12 ? "AM" : "PM"}`;
+}
+
+/** The time on a chat row: the clock today, and the day with the clock for anything older ("Yesterday 8:24 AM"). */
 export function formatTime(iso, now) {
     const at = parseTime(iso);
 
@@ -74,16 +88,17 @@ export function formatTime(iso, now) {
     }
 
     const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+    const clock = clockTime(iso);
 
     if (days <= 0) {
-        return `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+        return clock;
     }
 
     if (days === 1) {
-        return "Yesterday";
+        return `Yesterday ${clock}`;
     }
 
-    return days < 7 ? WEEKDAYS[at.getDay()] : `${at.getDate()} ${MONTHS[at.getMonth()]}`;
+    return `${days < 7 ? WEEKDAYS[at.getDay()] : `${at.getDate()} ${MONTHS[at.getMonth()]}`} ${clock}`;
 }
 
 /** The label of the separator above a day's messages: Today, Yesterday, "30 Oct", or "30 Dec 2025" in another year. */
@@ -149,6 +164,17 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
 
     body.innerHTML = linkify(message.body ?? "");
     node.append(body);
+
+    // When it was sent, on a 12-hour clock with AM or PM.
+    const sentAt = clockTime(message.created_at);
+
+    if (sentAt !== "") {
+        const stamp = el("time", `mt-0.5 block text-right text-[11px] ${mine ? "text-white/70" : "text-gray-400"}`, sentAt);
+
+        stamp.dataset.role = "sent-at";
+        stamp.setAttribute("datetime", String(message.created_at));
+        node.append(stamp);
+    }
 
     const chips = reactionChips(message, { onToggle, onShowWho });
 
