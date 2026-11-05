@@ -1147,6 +1147,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 | TC-QUIZ-26 | Generating questions without the job queue, and what the provider is sent | Instructor | P2 | VCI, IBR |
 | TC-QUIZ-27 | A generation request asks for 1 to 50 questions, and only questions made count toward the allowance | Instructor | P2 | REG? |
 | TC-QUIZ-28 | Generated questions are measured against a recorded baseline before release | (QA, AI owner) | P2 | NB |
+| TC-QUIZ-31 | The Export modal: an editable file or a printable test, each with only the formats we can write | Instructor | P2 | VCI |
 | TC-ASG-05 | Assignment uploads accept only the allowed file types | Student | P2 | NB |
 | TC-GRD-08 | The feedback thread on a piece of work | Instructor, student | P2 | VCI |
 | TC-DSC-01 | Discussions: titles, replies, attachments, unread marks and filters | Instructor, student | P2 | VCI |
@@ -1279,12 +1280,24 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 
 - **Role:** Instructor. **Priority:** P2
 - **Data:** Quiz 1 of IT101-A; an empty quiz
-- **Steps:** export as Word, RTF, PDF and HTML; one version, with and without shuffling; four versions; five versions; key only; Letter and an unknown paper size; print the same export twice. Export the empty quiz and an unknown format.
+- **Steps:** from the Export modal's Printable test (TC-QUIZ-31), export as Word, RTF, PDF and HTML; one version, with and without shuffling; four versions; five versions; key only; Letter and an unknown paper size; print the same export twice. Export the empty quiz and an unknown format.
 - **Expected:** the test numbers every question with its points and marks no answer; the key gives the right answer of every kind and says when a question has none; the key comes after a page break (Word), after the questions (RTF), on later pages (PDF); the Word file opens again; typed text is escaped in HTML; one version keeps the quiz order unless shuffling is asked; versions are letters, A being the quiz as written, at most four; each version's key follows its own shuffle, and the shuffle is the same every time; choices that point at each other ("all of the above") are not shuffled; key only leaves out the questions; an unknown paper falls back to A4; an empty quiz still prints saying so; an unknown format is refused.
 - **Already automated:** `tests/database/PrintableTestExportTest.php` (all)
 - **Playwright:** no
 - **Basis:** `PrintableTestExport`
 - **QA status:** VCI (PS-QBK-07)
+- **Review:** Draft
+
+### TC-QUIZ-31 The Export modal: an editable file or a printable test, each with only the formats we can write
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** Quiz 1 of IT101-A in the quiz builder
+- **Steps:** press the export icon; look at the modal; choose Editable file, then Printable test; change Versions, Paper and each checkbox; export one of each; reload the builder and open the modal again; close it with the X, Cancel, the backdrop and Escape.
+- **Expected:** the icon opens a modal (no dropdown panel) with two choices, Editable file and Printable test (the printable test is chosen first). **Editable file** offers Word (.docx), Rich Text (.rtf), Excel (.xlsx), CSV (.csv), GIFT (Moodle, .txt) and Aiken (.txt): the formats the question builder writes and reads back. **Printable test** offers PDF (.pdf), Word (.docx) and Rich Text (.rtf), and under that picker Versions (1 to 4), Paper (A4, Letter, Legal) and the checkboxes "Shuffle the order of questions", "Shuffle the choices" and "Answer key only"; a hint appears when more than one version is chosen. Print settings show only with the printable test and never reach an editable export. Exporting downloads the chosen file, closes the modal and is remembered in this browser: reopened, the modal is on the same choice, format and print settings. Nothing offered is a format the server cannot write: Blackboard, D2L, Sakai and QTI packages, Moodle XML, TestGen (.tst) and HTML are import-only.
+- **Already automated:** `tests/unit/ExportQuestionsModalTest.php`, `tests/js/pages/quiz-export-modal.test.js`, `tests/js/pages/quiz-export-url.test.js`, `tests/js/pages/quiz-import-ui.test.js`, `AssessmentServiceTest::testTheQuizBuilderOpensTheExportModalFromItsIconForItsOwnQuiz`
+- **Playwright:** `tests/e2e/export-modal.spec.js` (TC-QUIZ-31)
+- **Basis:** `partials/modals/export-questions.php`, `export-modal.js`, `QuestionExportService`
+- **QA status:** VCI
 - **Review:** Draft
 
 ### TC-QUIZ-26 Generating questions without the job queue, and what the provider is sent

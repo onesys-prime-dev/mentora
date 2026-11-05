@@ -830,6 +830,17 @@ final class AssessmentServiceTest extends DatabaseTestCase
         $this->assertIsString($this->service->quizBuilder($this->instructor, $ids['assessment'])['html']);
     }
 
+    public function testTheQuizBuilderOpensTheExportModalFromItsIconForItsOwnQuiz(): void
+    {
+        $ids  = $this->publishable($this->create());
+        $html = $this->service->quizBuilder($this->instructor, $ids['assessment'])['html'];
+
+        $this->assertStringContainsString('data-open-export-questions', $html, 'the icon');
+        $this->assertStringContainsString('id="export-questions-modal"', $html, 'the modal');
+        $this->assertMatchesRegularExpression('/<button[^>]*data-export-questions[^>]*data-assessment-id="' . $ids['assessment'] . '"/s', $html, 'for this quiz');
+        $this->assertStringNotContainsString('data-export-options-panel', $html, 'no dropdown panel any more');
+    }
+
     public function testStudentsGetANotFoundForDraftsEvenThroughADirectLink(): void
     {
         $id = $this->create()['assessment'];

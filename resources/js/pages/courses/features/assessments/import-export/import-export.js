@@ -5,20 +5,18 @@
 */
 
 import { bindModal } from "../modals/index.js";
+import { bindExportModal } from "./export-modal.js";
 import { bindQuestionPicker } from "./question-picker.js";
 import {
     fileSummary,
     detectedLine,
     importLabel,
     isAcceptedFile,
-    recallExportPrefs,
-    rememberExportPrefs,
     statusChip,
     stepState,
 } from "./import-ui.js";
 
 import {
-    exportQuestionsUrl,
     importSampleUrl,
     importTemplateUrl,
     previewImport,
@@ -60,131 +58,8 @@ export function initializeImportExport(offeringId, assessmentId, refresh) {
         onAdded: showQuestionsAdded,
     });
 
-    bindExportButton();
+    bindExportModal({ ids: () => ({ offeringId: state.offeringId, assessmentId: state.assessmentId }) });
     bindImportModal();
-
-}
-
-/*
-|--------------------------------------------------------------------------
-| Export
-|--------------------------------------------------------------------------
-*/
-
-function bindExportButton() {
-
-    const toggleButton = document.querySelector("[data-toggle-export-options]");
-    const panel = document.querySelector("[data-export-options-panel]");
-
-    function closePanel() {
-        panel?.classList.add("hidden");
-        panel?.classList.remove("flex");
-    }
-
-    toggleButton?.addEventListener("click", (event) => {
-
-        event.stopPropagation();
-
-        panel?.classList.toggle("hidden");
-        panel?.classList.toggle("flex");
-
-    });
-
-    document.addEventListener("click", (event) => {
-
-        if (!panel || panel.classList.contains("hidden")) {
-            return;
-        }
-
-        if (!panel.contains(event.target) && event.target !== toggleButton) {
-            closePanel();
-        }
-
-    });
-
-    restoreExportPrefs();
-
-    // The print settings only apply to the printable test.
-    function syncPrintOptions() {
-
-        const format = document.querySelector("[data-export-format-option]:checked")?.value || "docx";
-        const options = document.querySelector("[data-print-options]");
-        const versions = Number(document.querySelector("[data-print-versions]")?.value || 1);
-
-        options?.classList.toggle("hidden", !format.startsWith("test-"));
-        options?.classList.toggle("flex", format.startsWith("test-"));
-        document.querySelector("[data-print-hint]")?.classList.toggle("hidden", versions < 2);
-
-    }
-
-    document.querySelectorAll("[data-export-format-option], [data-print-versions]").forEach((control) => {
-        control.addEventListener("change", syncPrintOptions);
-    });
-
-    syncPrintOptions();
-
-    document
-        .querySelector("[data-export-questions]")
-        ?.addEventListener("click", () => {
-
-            const format =
-                document.querySelector("[data-export-format-option]:checked")?.value
-                || "docx";
-
-            rememberExportPrefs({ format, print: printSettings() });
-
-            window.location.href = exportQuestionsUrl(state.offeringId, state.assessmentId, format, printSettings());
-
-            closePanel();
-
-        });
-
-}
-
-/** Puts the export panel back the way this teacher last left it. */
-function restoreExportPrefs() {
-
-    const prefs = recallExportPrefs();
-
-    if (prefs.format) {
-
-        const radio = Array.from(document.querySelectorAll("[data-export-format-option]"))
-            .find((option) => option.value === prefs.format);
-
-        if (radio) {
-            radio.checked = true;
-        }
-
-    }
-
-    const print = prefs.print || {};
-    const set = (selector, value, key = "value") => {
-
-        const el = document.querySelector(selector);
-
-        if (el && value !== undefined) {
-            el[key] = value;
-        }
-
-    };
-
-    set("[data-print-versions]", print.versions === undefined ? undefined : String(print.versions));
-    set("[data-print-paper]", print.paper);
-    set("[data-print-shuffle-questions]", print.shuffleQuestions, "checked");
-    set("[data-print-shuffle-choices]", print.shuffleChoices, "checked");
-    set("[data-print-key-only]", print.keyOnly, "checked");
-
-}
-
-function printSettings() {
-
-    return {
-        versions: Number(document.querySelector("[data-print-versions]")?.value || 1),
-        paper: document.querySelector("[data-print-paper]")?.value || "A4",
-        shuffleQuestions: !!document.querySelector("[data-print-shuffle-questions]")?.checked,
-        shuffleChoices: !!document.querySelector("[data-print-shuffle-choices]")?.checked,
-        keyOnly: !!document.querySelector("[data-print-key-only]")?.checked,
-    };
 
 }
 

@@ -140,6 +140,41 @@ export function recallExportPrefs(storage = safeStorage()) {
 }
 
 /**
+ * What was remembered, made safe to use: a choice ("editable" or "printable"), a format and print settings, each only
+ * if it is the right kind of value. The export panel this modal replaced remembered a format and no choice, so the
+ * choice is worked out from the format (printable tests are the "test-" ones).
+ *
+ * @param {unknown} stored
+ * @returns {{kind?: "editable"|"printable", format?: string, print?: object}}
+ */
+export function normalizeExportPrefs(stored) {
+
+    if (!stored || typeof stored !== "object") {
+        return {};
+    }
+
+    const out = {};
+    const format = typeof stored.format === "string" && stored.format !== "" ? stored.format : undefined;
+
+    if (stored.kind === "editable" || stored.kind === "printable") {
+        out.kind = stored.kind;
+    } else if (format !== undefined) {
+        out.kind = format.startsWith("test-") ? "printable" : "editable";
+    }
+
+    if (format !== undefined) {
+        out.format = format;
+    }
+
+    if (stored.print && typeof stored.print === "object") {
+        out.print = stored.print;
+    }
+
+    return out;
+
+}
+
+/**
  * @param {object} prefs
  * @param {Storage|undefined} storage
  */
