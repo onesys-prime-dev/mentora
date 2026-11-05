@@ -8,6 +8,9 @@
  * @var array<int, list<array<string, mixed>>> $structureChairs     active chairpersons by sub-department id
  * @var array<int, true>                        $structureSisChairs  chairperson assignments the SIS supplies (not editable here)
  * @var list<array<string, mixed>> $structureCandidates people who can be assigned
+ * @var array<int, array<string, mixed>> $structureDeans    active dean by department id
+ * @var array<int, true>                 $structureSisDeans  dean assignments the SIS supplies (not editable here)
+ * @var list<array<string, mixed>> $structureDeanCandidates people who hold the dean role
  */
 $base    = 'institution/structure';
 $primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
@@ -41,7 +44,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         'icon'        => 'hat',
         'description' => 'Departments, their sub-departments and the programs under them.',
         'actions'     => $structureCanEdit
-            ? '<button type="button" class="' . $primary . '" data-dialog-open="structure-department" data-dialog-title="Add a department" data-dialog-action="' . esc(site_url($base . '/departments')) . '" data-dialog-label="Add department">Add a department</button>'
+            ? '<button type="button" class="' . $primary . '" data-dialog-open="structure-department-new" data-dialog-title="Add a department" data-dialog-action="' . esc(site_url($base . '/departments')) . '" data-dialog-label="Add department">Add a department</button>'
             : '',
     ], ['saveData' => false]) ?>
 
@@ -174,6 +177,40 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
+                    </div>
+
+                    <?php $dean = $structureDeans[(int) $department['id']] ?? null; ?>
+                    <div class="flex flex-col gap-2" data-dean>
+                        <h3 class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-[#646464]">
+                            Dean
+                            <?php if ($structureCanEdit && $deptActive && ($dean === null || ! isset($structureSisDeans[(int) $dean['id']]))): ?>
+                                <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
+                                    data-dialog-open="structure-dean"
+                                    data-dialog-title="<?= $dean === null ? 'Assign a dean to ' . esc($department['name']) : 'Replace ' . esc($dean['name']) . ' as dean of ' . esc($department['name']) . '? Their assignment ends.' ?>"
+                                    data-dialog-label="<?= $dean === null ? 'Assign' : 'Replace' ?>"
+                                    data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/deans')) ?>"><?= $dean === null ? 'Assign dean' : 'Replace dean' ?></button>
+                            <?php endif; ?>
+                        </h3>
+                        <div class="flex flex-wrap items-center gap-2 text-sm">
+                            <?php if ($dean === null): ?>
+                                <span class="rounded-full border border-dashed border-gray-300 px-3 py-1 text-[#646464]" data-dean-empty>None assigned yet.</span>
+                            <?php else: ?>
+                                <span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1" data-dean-name="<?= esc((string) $dean['id']) ?>">
+                                    <?= esc($dean['name']) ?>
+                                    <?php if (isset($structureSisDeans[(int) $dean['id']])): ?>
+                                        <span class="inline-flex items-center gap-1 text-xs text-[#646464]" data-sis-managed title="Managed by your student information system. Change it there; the next sync brings it here."><?= icon('lock', 'h-3 w-3') ?>From the SIS</span>
+                                    <?php elseif ($structureCanEdit): ?>
+                                        <button type="button" class="rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
+                                            aria-label="Remove <?= esc($dean['name']) ?> as dean"
+                                            data-dialog-open="structure-confirm"
+                                            data-dialog-title="Remove <?= esc($dean['name']) ?> as dean?"
+                                            data-dialog-text="They keep their account and their other roles. Approvals and sign-off for this department go to the institution's administrators until another dean is assigned."
+                                            data-dialog-label="Remove"
+                                            data-dialog-action="<?= esc(site_url($base . '/deans/' . $dean['id'] . '/remove')) ?>">Remove</button>
+                                    <?php endif; ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <div class="flex flex-col gap-2">
@@ -396,12 +433,31 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         return [$body, ''];
     };
 
-    $code = view('components/form-field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'maxlength' => 50, 'help' => 'Letters, numbers, dots, dashes or underscores. Shown in capitals.', 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
-    $name = view('components/form-field', ['name' => 'name', 'label' => 'Name', 'required' => true, 'maxlength' => 255, 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
+    // Built per dialog: each field needs its own id, or a label would point into another dialog.
+    $code = static fn (): string => view('components/form-field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'maxlength' => 50, 'help' => 'Letters, numbers, dots, dashes or underscores. Shown in capitals.', 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
+    $name = static fn (): string => view('components/form-field', ['name' => 'name', 'label' => 'Name', 'required' => true, 'maxlength' => 255, 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
 
-    [$deptBody, $deptFooter] = $form('structure-department', $code . $name
+    [$deptBody, $deptFooter] = $form('structure-department', $code() . $name()
         . view('components/form-field', ['name' => 'location', 'label' => 'Location', 'maxlength' => 255, 'help' => 'Optional. A building or campus.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'established_year', 'label' => 'Year established', 'type' => 'number', 'attrs' => 'min="1800" inputmode="numeric"', 'help' => 'Optional.'], ['saveData' => false]));
+
+    $deanOptions = ['' => $structureDeanCandidates === [] ? 'No one holds the dean role yet' : 'Choose a person'];
+
+    foreach ($structureDeanCandidates as $candidate) {
+        $deanOptions[(string) $candidate['id']] = $candidate['name'] . ' (' . $candidate['email'] . ')';
+    }
+
+    $deanHelp = 'People who hold the dean role in your institution. Give someone the role on the People page.';
+
+    // Adding a college also picks its dean, so grades and requests there have someone to decide them.
+    [$deptNewBody, $deptNewFooter] = $form('structure-department-new', $code() . $name()
+        . view('components/form-field', ['name' => 'location', 'label' => 'Location', 'maxlength' => 255, 'help' => 'Optional. A building or campus.'], ['saveData' => false])
+        . view('components/form-field', ['name' => 'established_year', 'label' => 'Year established', 'type' => 'number', 'attrs' => 'min="1800" inputmode="numeric"', 'help' => 'Optional.'], ['saveData' => false])
+        . view('components/form-field', ['name' => 'dean_user_id', 'label' => 'Dean', 'type' => 'select', 'options' => $deanOptions, 'help' => $deanHelp . ' You can also assign one later.'], ['saveData' => false]));
+
+    [$deanBody, $deanFooter] = $form('structure-dean', view('components/form-field', [
+        'name' => 'user_id', 'label' => 'Dean', 'type' => 'select', 'options' => $deanOptions, 'required' => true, 'help' => $deanHelp,
+    ], ['saveData' => false]));
 
     $candidateOptions = ['' => $structureCandidates === [] ? 'No one holds the chairperson role yet' : 'Choose a person'];
 
@@ -414,11 +470,13 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         'help' => 'People who hold the chairperson role in your institution. Give someone the role on the People page.',
     ], ['saveData' => false]) . '<input type="hidden" name="replace" value="">');
 
-    [$subBody, $subFooter]   = $form('structure-sub', $code . $name);
-    [$progBody, $progFooter] = $form('structure-program', $code . $name);
+    [$subBody, $subFooter]   = $form('structure-sub', $code() . $name());
+    [$progBody, $progFooter] = $form('structure-program', $code() . $name());
     ?>
 
     <?= view('components/dialog', ['id' => 'structure-department', 'title' => 'Department', 'body' => $deptBody, 'footer' => $deptFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-department-new', 'title' => 'Add a department', 'body' => $deptNewBody, 'footer' => $deptNewFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-dean', 'title' => 'Assign a dean', 'body' => $deanBody, 'footer' => $deanFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-sub', 'title' => 'Sub-department', 'body' => $subBody, 'footer' => $subFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-chair', 'title' => 'Assign a chairperson', 'body' => $chairBody, 'footer' => $chairFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-program', 'title' => 'Program', 'body' => $progBody, 'footer' => $progFooter], ['saveData' => false]) ?>

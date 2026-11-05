@@ -774,6 +774,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
 
             $routes->post('sub-departments/(:num)/chairpersons', 'Institution\StructureController::assignChairperson/$1');
             $routes->post('chairpersons/(:num)/remove', 'Institution\StructureController::revokeChairperson/$1');
+            $routes->post('departments/(:num)/deans', 'Institution\StructureController::assignDean/$1');
+            $routes->post('deans/(:num)/remove', 'Institution\StructureController::revokeDean/$1');
         });
 
         // Academic terms (terms.manage).
