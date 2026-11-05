@@ -31,7 +31,7 @@ $chipOff = 'border-gray-300 bg-white text-gray-700';
 
 <?= $this->section('content') ?>
 
-<div class="mx-auto mt-5 flex h-[calc(100dvh-8.3rem)] min-h-[440px] w-full max-w-3xl flex-col gap-4 rounded-[28px] border border-white/90 bg-white/60 p-5 shadow-[0_8px_30px_rgba(0,40,120,0.12)] backdrop-blur sm:p-7"
+<div class="mx-auto mt-5 flex h-[calc(100dvh-8.3rem)] min-h-[440px] w-full max-w-3xl flex-col gap-4 rounded-[28px] border border-gray-200 bg-white p-5 shadow-[0_8px_30px_rgba(0,40,120,0.12)] sm:p-7"
      data-notifications-page
      data-read-url="<?= esc(site_url('notifications/read'), 'attr') ?>"
      data-delete-url="<?= esc(site_url('notifications/delete'), 'attr') ?>">
