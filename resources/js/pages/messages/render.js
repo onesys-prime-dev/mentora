@@ -79,7 +79,10 @@ export function clockTime(iso) {
     return `${hours % 12 === 0 ? 12 : hours % 12}:${String(at.getMinutes()).padStart(2, "0")} ${hours < 12 ? "AM" : "PM"}`;
 }
 
-/** The time on a chat row: the clock today, and the day with the clock for anything older ("Yesterday 8:24 AM"). */
+/**
+ * The time on a chat row, the way Messenger shows it: "now", minutes ("5m"), hours ("3h"), days ("2d"), weeks
+ * ("3w"), and a date once it is a year old.
+ */
 export function formatTime(iso, now) {
     const at = parseTime(iso);
 
@@ -87,18 +90,58 @@ export function formatTime(iso, now) {
         return "";
     }
 
-    const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+    const minutes = Math.floor((now - at) / 60000);
+
+    if (minutes < 1) {
+        return "now";
+    }
+
+    if (minutes < 60) {
+        return `${minutes}m`;
+    }
+
+    if (minutes < 1440) {
+        return `${Math.floor(minutes / 60)}h`;
+    }
+
+    const days = Math.floor(minutes / 1440);
+
+    if (days < 7) {
+        return `${days}d`;
+    }
+
+    if (days < 365) {
+        return `${Math.floor(days / 7)}w`;
+    }
+
+    return `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`;
+}
+
+/**
+ * The time shown beside a message when the pointer is over it: just the clock today, the weekday and clock
+ * inside the last week, and the date and clock after that ("30 Oct, 8:24 AM", with the year when it is another year's).
+ */
+export function hoverTime(iso, now) {
+    const at = parseTime(iso);
+
+    if (at === null) {
+        return "";
+    }
+
     const clock = clockTime(iso);
+    const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
 
     if (days <= 0) {
         return clock;
     }
 
-    if (days === 1) {
-        return `Yesterday ${clock}`;
+    if (days < 7) {
+        return `${WEEKDAYS[at.getDay()]} ${clock}`;
     }
 
-    return `${days < 7 ? WEEKDAYS[at.getDay()] : `${at.getDate()} ${MONTHS[at.getMonth()]}`} ${clock}`;
+    const date = `${at.getDate()} ${MONTHS[at.getMonth()]}${at.getFullYear() === now.getFullYear() ? "" : ` ${at.getFullYear()}`}`;
+
+    return `${date}, ${clock}`;
 }
 
 /** The label of the separator above a day's messages: Today, Yesterday, "30 Oct", or "30 Dec 2025" in another year. */
@@ -164,17 +207,6 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
 
     body.innerHTML = linkify(message.body ?? "");
     node.append(body);
-
-    // When it was sent, on a 12-hour clock with AM or PM.
-    const sentAt = clockTime(message.created_at);
-
-    if (sentAt !== "") {
-        const stamp = el("time", `mt-0.5 block text-right text-[11px] ${mine ? "text-white/70" : "text-gray-400"}`, sentAt);
-
-        stamp.dataset.role = "sent-at";
-        stamp.setAttribute("datetime", String(message.created_at));
-        node.append(stamp);
-    }
 
     const chips = reactionChips(message, { onToggle, onShowWho });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
+import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
 
 const fragment = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
 
@@ -250,33 +250,47 @@ describe("formatTime", () => {
 
     const now = new Date(2026, 10, 3, 15, 0, 0);
 
-    it("shows the clock for today", () => {
+    it("says now, then minutes, hours, days and weeks like Messenger", () => {
 
-        expect(formatTime("2026-11-03 09:41:00", now)).toBe("9:41 AM");
-
-    });
-
-    it("says Yesterday for the day before", () => {
-
-        expect(formatTime("2026-11-02 23:59:00", now)).toBe("Yesterday 11:59 PM");
-
-    });
-
-    it("shows the weekday within a week", () => {
-
-        expect(formatTime("2026-10-30 10:00:00", now)).toBe("Fri 10:00 AM");
+        expect(formatTime("2026-11-03 15:00:00", now)).toBe("now");
+        expect(formatTime("2026-11-03 14:55:00", now)).toBe("5m");
+        expect(formatTime("2026-11-03 12:00:00", now)).toBe("3h");
+        expect(formatTime("2026-11-01 15:00:00", now)).toBe("2d");
+        expect(formatTime("2026-10-20 15:00:00", now)).toBe("2w");
+        expect(formatTime("nonsense", now)).toBe("");
 
     });
 
-    it("shows the day and month when older", () => {
+    it("shows a date once it is a year old, and never a negative time", () => {
 
-        expect(formatTime("2026-10-01 10:00:00", now)).toBe("1 Oct 10:00 AM");
+        expect(formatTime("2025-10-01 10:00:00", now)).toBe("1 Oct 2025");
+        expect(formatTime("2026-11-03 15:00:30", now)).toBe("now");
 
     });
 
-    it("shows nothing for a missing time", () => {
+});
 
-        expect(formatTime(null, now)).toBe("");
+describe("hoverTime", () => {
+
+    const now = new Date(2026, 10, 3, 15, 0, 0);
+
+    it("is just the clock today", () => {
+
+        expect(hoverTime("2026-11-03 09:41:00", now)).toBe("9:41 AM");
+
+    });
+
+    it("is the weekday and clock inside a week", () => {
+
+        expect(hoverTime("2026-11-02 23:59:00", now)).toBe("Mon 11:59 PM");
+        expect(hoverTime("2026-10-30 10:00:00", now)).toBe("Fri 10:00 AM");
+
+    });
+
+    it("is the date and clock after a week, with the year in another year", () => {
+
+        expect(hoverTime("2026-10-01 10:00:00", now)).toBe("1 Oct, 10:00 AM");
+        expect(hoverTime("2025-12-30 21:30:00", now)).toBe("30 Dec 2025, 9:30 PM");
 
     });
 

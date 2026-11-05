@@ -30,7 +30,7 @@ import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
 import { createMenu } from "./menu.js";
-import { conversationRow, dayLabel, messageNode } from "./render.js";
+import { conversationRow, dayLabel, hoverTime, messageNode } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
 const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
@@ -388,7 +388,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const line = document.createElement("div");
 
             line.className = "group/msg flex w-fit max-w-full items-center gap-1";
-            line.append(...(item.mine ? [note, bubble] : [bubble, note]));
+
+            // Shown only while the pointer is over the message: on the left of my messages, the right of theirs.
+            const sentAt = document.createElement("time");
+
+            sentAt.dataset.role = "sent-at";
+            sentAt.setAttribute("datetime", String(item.created_at ?? ""));
+            sentAt.className = "hidden whitespace-nowrap px-1 text-[11px] text-gray-500 group-hover/msg:block";
+            sentAt.textContent = hoverTime(item.created_at, new Date());
+            line.append(...(item.mine ? [sentAt, note, bubble] : [bubble, note, sentAt]));
             row.append(line);
         } else {
             row.append(bubble);
