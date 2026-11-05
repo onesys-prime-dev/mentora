@@ -73,8 +73,8 @@ $accountLinks = [
     <div class="flex gap-4 items-center">
         <?php // One pill for the quick-access icons: Messages, notifications, dark mode, Apps. ?>
         <div class="flex items-center gap-0.5 rounded-full bg-white p-1 shadow" data-header-pill>
-        <?php // Messages is quick access: next to the bell and dark mode, not inside the Apps menu. Null while the flag is off or the role has no messages.use; the institutional administrator keeps the sidebar entry. ?>
-        <?php $messagesTile = $userRole === 'institutional_admin' ? null : messages_tile($userRole); ?>
+        <?php // Messages is quick access: next to the bell and dark mode, not inside the Apps menu. Null while the flag is off or the role has no messages.use. ?>
+        <?php $messagesTile = messages_tile($userRole); ?>
         <?php if ($messagesTile !== null): ?>
         <a
             href="<?= esc($messagesTile['url']) ?>"
