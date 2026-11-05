@@ -16,6 +16,7 @@ if ($level === 'unit' && $unit) {
 }
 ?>
 
-<div data-resources-breadcrumb>
-    <?= view('components/breadcrumb', ['crumbs' => $crumbs], ['saveData' => false]) ?>
+<?php // The wrapper pins (the script swaps what is inside it), so the trail itself does not. ?>
+<div data-resources-breadcrumb class="sticky-bar-top lg:-mb-4 lg:pb-4">
+    <?= view('components/breadcrumb', ['crumbs' => $crumbs, 'sticky' => false], ['saveData' => false]) ?>
 </div>

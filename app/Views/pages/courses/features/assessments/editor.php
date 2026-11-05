@@ -2,7 +2,11 @@
 
     <div class="sticky-bar-top flex items-center justify-between border-b border-gray-200 pb-4">
 
-        <?= $this->include('pages/courses/features/assessments/partials/breadcrumb') ?>
+        <?php // The bar pins, so the trail inside it does not pin on its own. ?>
+        <?= view('pages/courses/features/assessments/partials/breadcrumb', [
+            'currentAssessment' => $currentAssessment,
+            'breadcrumbSticky' => false,
+        ], ['saveData' => false]) ?>
 
         <div class="flex items-center gap-4">
 
