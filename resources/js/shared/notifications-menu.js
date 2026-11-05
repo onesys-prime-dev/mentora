@@ -11,6 +11,9 @@
 
 const BATCH_SKELETON_ROWS = 3;
 
+// The panel is a glance: the latest few, scrolling inside it. Everything else is on the Notifications page.
+const PANEL_LIMIT = 10;
+
 const button = document.getElementById("notifications-button");
 const panel = document.getElementById("notifications-panel");
 
@@ -134,6 +137,8 @@ if (button && panel) {
 
             const url = new URL(panel.dataset.feedUrl, window.location.origin);
 
+            url.searchParams.set("limit", String(PANEL_LIMIT));
+
             if (before !== null) {
                 url.searchParams.set("before", String(before));
             }
@@ -152,7 +157,8 @@ if (button && panel) {
 
             list.insertAdjacentHTML("beforeend", result.html);
 
-            hasMore = Boolean(result.has_more);
+            // One batch only; "View all notifications" is the way to the rest.
+            hasMore = false;
             before = result.next_before ?? before;
             loaded = true;
 

@@ -33,11 +33,13 @@ class NotificationController extends BaseController
     public function feed(): ResponseInterface
     {
         $before = $this->request->getGet('before');
+        $limit  = $this->request->getGet('limit');
+        $limit  = is_string($limit) && ctype_digit($limit) ? max(1, min(10, (int) $limit)) : 7;
 
         $page = (new NotificationService())->page(
             (int) auth()->id(),
             is_string($before) && preg_match('/^\d{1,10}$/', $before) === 1 ? (int) $before : null,
-            7,
+            $limit,
         );
 
         $html = '';
