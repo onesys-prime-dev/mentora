@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, minutesBetween, serverStamp, setServerOffset, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
+import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, minutesBetween, separatorTime, serverStamp, setServerOffset, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
 
 const fragment = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
 
@@ -333,6 +333,22 @@ describe("minutesBetween", () => {
         expect(minutesBetween("2026-11-03 09:00:00", "2026-11-03 10:05:00")).toBe(65);
         expect(minutesBetween("2026-11-03 09:10:00", "2026-11-03 09:00:00")).toBe(0);
         expect(minutesBetween("x", "2026-11-03 09:00:00")).toBe(0);
+
+    });
+
+});
+
+describe("separatorTime", () => {
+
+    const now = new Date(2026, 10, 3, 15, 0, 0);
+
+    it("spells out Today and Yesterday with the clock, then follows the hover time", () => {
+
+        expect(separatorTime("2026-11-03 09:00:00", now)).toBe("Today 9:00 AM");
+        expect(separatorTime("2026-11-02 23:30:00", now)).toBe("Yesterday 11:30 PM");
+        expect(separatorTime("2026-10-30 10:00:00", now)).toBe("Fri 10:00 AM");
+        expect(separatorTime("2026-10-01 10:00:00", now)).toBe("1 Oct, 10:00 AM");
+        expect(separatorTime("nonsense", now)).toBe("");
 
     });
 

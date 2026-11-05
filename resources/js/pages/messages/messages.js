@@ -30,7 +30,7 @@ import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
 import { createMenu } from "./menu.js";
-import { clockTime, conversationRow, dayLabel, hoverTime, messageNode, minutesBetween, serverStamp, setServerOffset } from "./render.js";
+import { conversationRow, dayLabel, hoverTime, messageNode, minutesBetween, separatorTime, serverStamp, setServerOffset } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
 const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
@@ -424,7 +424,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
                 const separator = document.createElement("div");
 
                 separator.className = "py-1 text-center text-[12px] text-[#646464]";
-                separator.textContent = label;
+                separator.textContent = separatorTime(item.created_at, now());
                 nodes.push(separator);
                 day = label;
             } else if (previous !== null && minutesBetween(previous.created_at, item.created_at) >= GAP_MINUTES) {
@@ -433,7 +433,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
                 separator.dataset.role = "time-separator";
                 separator.className = "py-1 text-center text-[12px] text-[#646464]";
-                separator.textContent = clockTime(item.created_at);
+                separator.textContent = separatorTime(item.created_at, now());
                 nodes.push(separator);
             }
 

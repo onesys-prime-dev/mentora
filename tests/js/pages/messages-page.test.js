@@ -298,7 +298,7 @@ describe("opening a conversation", () => {
         await mount(api);
         await openFirst();
 
-        expect(all("[data-role=time-separator]").map((el) => el.textContent)).toEqual(["9:30 AM"]);
+        expect(all("[data-role=time-separator]").map((el) => el.textContent)).toEqual(["Today 9:30 AM"]);
 
     });
 

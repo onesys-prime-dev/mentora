@@ -196,6 +196,26 @@ export function dayLabel(iso, now) {
     return at.getFullYear() === now.getFullYear() ? label : `${label} ${at.getFullYear()}`;
 }
 
+/**
+ * The words on a separator above a message: the same time the hover shows, with Today and Yesterday spelled out
+ * ("Today 9:00 AM", "Yesterday 9:00 AM", then "Mon 9:00 AM" inside a week and "30 Oct, 9:00 AM" after).
+ */
+export function separatorTime(iso, now) {
+    const at = parseTime(iso);
+
+    if (at === null) {
+        return "";
+    }
+
+    const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+
+    if (days <= 0) {
+        return `Today ${clockTime(iso)}`;
+    }
+
+    return days === 1 ? `Yesterday ${clockTime(iso)}` : hoverTime(iso, now);
+}
+
 /** Whole minutes from one stamp to a later one; 0 when either is unreadable. */
 export function minutesBetween(earlier, later) {
     const a = parseTime(earlier);
