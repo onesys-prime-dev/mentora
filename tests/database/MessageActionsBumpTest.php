@@ -120,8 +120,18 @@ final class MessageActionsBumpTest extends DatabaseTestCase
 
     public function testBlockedOrLockedIsRefused(): void
     {
-        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $this->instructor->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
-        $this->assertSame('not_allowed', $this->actions()->bump($this->student, $this->conversation, $this->message)['reason']);
+        // A teacher's block never binds the student, so the blocker here is a classmate.
+        $peer = PeopleFactory::person('student', 'Pe', 'Er', null, $this->institution);
+        CourseFactory::enroll((int) db_connect()->table('enrollments')->get()->getRow('offering_id'), $peer);
+        $direct = (int) (new ConversationService())->startDirect($this->student, (int) $peer->id)['id'];
+        db_connect()->table('messages')->insert([
+            'conversation_id' => $direct, 'sender_id' => $this->student->id,
+            'body_enc' => $this->cipher->encrypt('bump me', $direct, (int) $this->student->id),
+            'client_uuid' => bin2hex(random_bytes(16)), 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $own = (int) db_connect()->insertID();
+        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $peer->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+        $this->assertSame('not_allowed', $this->actions()->bump($this->student, $direct, $own)['reason']);
         db_connect()->table('user_blocks')->truncate();
 
         db_connect()->table('conversations')->where('id', $this->conversation)->update(['is_locked' => 1]);

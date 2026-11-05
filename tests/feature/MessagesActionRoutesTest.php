@@ -307,7 +307,7 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $missing = $this->sweepActions(999999, 999999);
 
         foreach ($missing as $name => $answer) {
-            $this->assertSame([404, json_encode(\App\Filters\MessagesFilter::NOT_FOUND)], [$answer[0], trim($answer[1])], $name);
+            $this->assertSame([404, \App\Filters\MessagesFilter::NOT_FOUND], [$answer[0], json_decode($answer[1], true)], $name);
         }
 
         foreach (['someone else\'s chat' => [$theirs, $theirMessage], 'another institution\'s chat' => [$far, $farMessage]] as $label => [$conversationId, $messageId]) {
@@ -393,8 +393,11 @@ final class MessagesActionRoutesTest extends RouteTestCase
 
         $this->assertSame((int) $this->student->id, (int) ($_SESSION['user']['id'] ?? 0), 'the view of the student must be on');
 
+        // Reads answer the shared 404; writes are stopped earlier, by the view-only rule of an impersonation session.
         foreach ($this->sweepActions($this->conversation, $this->message) as $name => $answer) {
-            $this->assertSame([404, json_encode(\App\Filters\MessagesFilter::NOT_FOUND)], [$answer[0], trim($answer[1])], $name);
+            $error = json_decode($answer[1], true)['error'] ?? null;
+
+            $this->assertContains([$answer[0], $error], [[404, 'not_found'], [403, 'impersonation_view_only']], $name);
         }
 
         $this->assertSame(0, db_connect()->table('message_reactions')->countAllResults());

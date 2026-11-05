@@ -225,7 +225,7 @@ test("TC-SA-07 Recording a renewal brings a read-only institution back", async (
     await renewal.locator("input[name=period_end]").fill(dateIn(340));
     await renewal.getByRole("button", { name: "Record renewal" }).click();
 
-    await expect(page.getByRole("status")).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Renewal recorded" })).toBeVisible();
 
     await openCollege(page);
     await expect(page.locator("[data-institution-status]")).toHaveAttribute("data-institution-status", "active");

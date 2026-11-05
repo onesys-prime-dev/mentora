@@ -357,7 +357,11 @@ final class MessageServiceTest extends DatabaseTestCase
     public function testAReplyToAnotherConversationIsInvalid(): void
     {
         $other = $this->send($this->student)['message']['id'];
-        db_connect()->table('messages')->where('id', $other)->update(['conversation_id' => $this->conversation + 999]);
+        // Moved into a real second conversation (a made-up id would be refused by the foreign key).
+        $peer = PeopleFactory::person('student', 'Pe', 'Er', null, $this->institution);
+        CourseFactory::enroll((int) db_connect()->table('enrollments')->get()->getRow('offering_id'), $peer);
+        $elsewhere = (int) (new ConversationService())->startDirect($this->instructor, (int) $peer->id)['id'];
+        db_connect()->table('messages')->where('id', $other)->update(['conversation_id' => $elsewhere]);
 
         $this->assertSame('invalid_reply', $this->reply($this->instructor, 'x', $other)['reason']);
         $this->assertSame('invalid_reply', $this->reply($this->instructor, 'x', 987654)['reason']);

@@ -357,7 +357,8 @@ test("TC-MSG-11 A student blocks a classmate and reports a message; the administ
         await rowFor(michael.page, people.juan.name).click();
         await expect(thread(michael.page).getByText("This is the message to report.")).toBeVisible();
 
-        // Report it.
+        // Report it (the icons appear while the pointer is over the message).
+        await thread(michael.page).getByText("This is the message to report.").hover();
         await michael.page.locator("[data-action=report]").last().click();
         await michael.page.locator("[data-role=report-reason]").selectOption("spam");
         await michael.page.locator("[data-role=report-send]").click();

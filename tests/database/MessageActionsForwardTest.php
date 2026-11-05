@@ -26,7 +26,7 @@ final class MessageActionsForwardTest extends DatabaseTestCase
 
     private int $institution;
 
-    private array $offering;
+    private int $offering;
 
     private User $student;
 
@@ -225,9 +225,10 @@ final class MessageActionsForwardTest extends DatabaseTestCase
 
     public function testABlockedTargetIsRefusedForThatTargetOnly(): void
     {
-        $other = PeopleFactory::person('instructor', 'Other', 'Blocker', null, $this->institution);
-        CourseFactory::assignInstructor($this->offering, $other);
-        $blocked = (int) (new ConversationService())->startDirect($this->student, (int) $other->id)['id'];
+        // A teacher's block never binds the student, so the blocker is a classmate.
+        $other = PeopleFactory::person('student', 'Other', 'Blocker', null, $this->institution);
+        CourseFactory::enroll($this->offering, $other);
+        $blocked =(int) (new ConversationService())->startDirect($this->student, (int) $other->id)['id'];
         [$open]  = $this->chats(1);
         db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $other->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
 

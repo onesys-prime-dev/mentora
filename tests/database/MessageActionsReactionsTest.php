@@ -165,8 +165,13 @@ final class MessageActionsReactionsTest extends DatabaseTestCase
 
     public function testRefusedWhenBlockedOrTheOfferingIsClosed(): void
     {
-        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $this->instructor->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
-        $this->assertSame('not_allowed', $this->actions()->react($this->student, $this->conversation, $this->message, '👍')['reason']);
+        // A teacher's block never binds the student, so the blocker here is a classmate.
+        $peer = PeopleFactory::person('student', 'Pe', 'Er', null, $this->institution);
+        CourseFactory::enroll($this->offering, $peer);
+        $direct = (int) (new ConversationService())->startDirect($this->student, (int) $peer->id)['id'];
+        $theirs = $this->post($direct, $peer);
+        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $peer->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+        $this->assertSame('not_allowed', $this->actions()->react($this->student, $direct, $theirs, '👍')['reason']);
         db_connect()->table('user_blocks')->truncate();
 
         $chat = (int) (new CourseChatSync())->syncOffering($this->offering)['conversation_id'];
@@ -188,7 +193,9 @@ final class MessageActionsReactionsTest extends DatabaseTestCase
     public function testAForeignOrMismatchedMessageIsNotFound(): void
     {
         $outsider = PeopleFactory::person('student', 'Out', 'Sider', null, $this->institution);
-        $other    = (int) (new ConversationService())->startDirect($this->instructor, (int) PeopleFactory::person('instructor', 'Oth', 'Er', null, $this->institution)->id)['id'];
+        $peer     = PeopleFactory::person('student', 'Oth', 'Er', null, $this->institution);
+        CourseFactory::enroll($this->offering, $peer);
+        $other    = (int) (new ConversationService())->startDirect($this->instructor, (int) $peer->id)['id'];
         $foreign  = $this->post($other, $this->instructor);
 
         $this->assertSame('not_found', $this->actions()->react($outsider, $this->conversation, $this->message, '👍')['reason']);
