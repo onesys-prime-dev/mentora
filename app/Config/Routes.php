@@ -44,6 +44,8 @@ $routes->group('internal/ai', ['filter' => 'aiworker'], function ($routes) {
 // A signed-in person's own notifications, for every role.
 $routes->get('notifications', 'NotificationController::index', ['filter' => 'session']);
 $routes->get('notifications/feed', 'NotificationController::feed', ['filter' => 'session']);
+$routes->get('notifications/latest', 'NotificationController::latest', ['filter' => 'session']);
+$routes->post('notifications/delete', 'NotificationController::delete', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
@@ -445,6 +447,17 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('conversations', 'Messaging\ConversationController::start');
     $routes->post('conversations/(:num)/lock', 'Messaging\ConversationController::lock/$1');
     $routes->post('conversations/(:num)/unlock', 'Messaging\ConversationController::unlock/$1');
+    $routes->post('conversations/(:num)/controls', 'Messaging\ChatControlsController::update/$1');
+    $routes->get('chat-controls', 'Messaging\ChatControlsController::index');
+    $routes->post('conversations/(:num)/pin', 'Messaging\ChatStateController::pin/$1');
+    $routes->post('conversations/(:num)/unpin', 'Messaging\ChatStateController::unpin/$1');
+    $routes->post('conversations/(:num)/mute', 'Messaging\ChatStateController::mute/$1');
+    $routes->post('conversations/(:num)/unmute', 'Messaging\ChatStateController::unmute/$1');
+    $routes->post('conversations/(:num)/archive', 'Messaging\ChatStateController::archive/$1');
+    $routes->post('conversations/(:num)/unarchive', 'Messaging\ChatStateController::unarchive/$1');
+    $routes->post('conversations/(:num)/unread', 'Messaging\ChatStateController::unread/$1');
+    $routes->post('conversations/(:num)/read', 'Messaging\ChatStateController::read/$1');
+    $routes->post('conversations/(:num)/delete', 'Messaging\ChatStateController::delete/$1');
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');
     $routes->get('group-candidates', 'Messaging\GroupController::candidates');
@@ -455,10 +468,18 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');
     $routes->post('groups', 'Messaging\GroupController::create');
     $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
+    $routes->get('conversations/(:num)/changes', 'Messaging\MessageController::changes/$1');
     $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
     $routes->post('conversations/(:num)/read', 'Messaging\MessageController::read/$1');
     $routes->post('conversations/(:num)/messages/(:num)/hide', 'Messaging\MessageController::hide/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/remove', 'Messaging\MessageController::remove/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/react', 'Messaging\MessageActionController::react/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/delete-everyone', 'Messaging\MessageActionController::deleteEveryone/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/bump', 'Messaging\MessageActionController::bump/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/forward', 'Messaging\MessageActionController::forward/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/pin', 'Messaging\MessageActionController::pin/$1/$2');
+    $routes->post('conversations/(:num)/messages/(:num)/unpin', 'Messaging\MessageActionController::unpin/$1/$2');
+    $routes->get('conversations/(:num)/messages/(:num)/reactors', 'Messaging\MessageActionController::reactors/$1/$2');
     $routes->post('conversations/(:num)/messages/(:num)/report', 'Messaging\ReportController::create/$1/$2');
     // The institutional administrator's reports; anyone else gets the shared 404.
     $routes->get('reports', 'Messaging\ReportController::index');

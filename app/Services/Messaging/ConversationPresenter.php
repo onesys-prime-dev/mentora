@@ -22,11 +22,14 @@ class ConversationPresenter
 
     private MessagingPolicy $policy;
 
+    private ChatControls $controls;
+
     public function __construct(?MessageCipher $cipher = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null)
     {
         $this->cipher   = $cipher ?? new MessageCipher();
         $this->resolver = $resolver ?? new MessagingContextResolver();
         $this->policy   = $policy ?? new MessagingPolicy();
+        $this->controls = new ChatControls($this->resolver, $this->policy);
     }
 
     /**
@@ -77,11 +80,21 @@ class ConversationPresenter
                 'offering_id' => $row['offering_id'], 'is_locked' => $row['is_locked'], 'subject_student_id' => $row['subject_student_id'],
             ]));
 
+            $row['pinned']        = ($row['pinned_at'] ?? null) !== null;
+            $row['archived']      = ($row['archived_at'] ?? null) !== null;
+            $row['muted']         = (int) ($row['is_muted'] ?? 0) === 1;
+            $row['marked_unread'] = (int) ($row['marked_unread'] ?? 0) === 1;
+            $row['can_pin_chat']  = $row['type'] !== 'course';
+            $row['can_delete']    = in_array($row['type'], ['direct', 'group'], true);
+
             $row['blocked_by_me'] = $row['type'] === 'direct' && $other !== null && isset($blocked[$other]);
             $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && $this->canBlock($other);
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
             $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
             $row['can_moderate'] = $this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches || $created);
+
+            $row['controls']            = ChatControls::forConversation($row);
+            $row['can_manage_controls'] = $this->controls->canManage($viewer, $row);
 
             $out[] = $row;
         }

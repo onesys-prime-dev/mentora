@@ -136,6 +136,60 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         $this->assertTrue($indexed, 'messages has an index on (sender_id, created_at) for the send limit');
     }
 
+    public function testTheChatActionColumnsExist(): void
+    {
+        db_connect()->resetDataCache();
+
+        foreach (['pinned_at', 'archived_at', 'marked_unread', 'cleared_before_message_id'] as $column) {
+            $this->assertTrue(db_connect()->fieldExists($column, 'conversation_participants'), "column {$column}");
+        }
+
+        $defaults = [];
+
+        foreach (db_connect()->getFieldData('conversation_participants') as $field) {
+            $defaults[$field->name] = $field->default;
+        }
+
+        $this->assertSame(0, (int) $defaults['marked_unread']);
+        $this->assertSame(0, (int) $defaults['cleared_before_message_id']);
+    }
+
+    public function testTheMessageActionColumnsAndReactionsTableExist(): void
+    {
+        db_connect()->resetDataCache();
+
+        foreach (['reply_to_message_id', 'forwarded', 'bumped_from_message_id', 'deleted_everyone_at', 'pinned_at', 'pinned_by', 'changed_at'] as $column) {
+            $this->assertTrue(db_connect()->fieldExists($column, 'messages'), "messages.{$column}");
+        }
+
+        $switches = ['allow_reactions', 'allow_replies', 'allow_forwarding', 'allow_bump', 'allow_delete_everyone'];
+        $defaults = [];
+
+        foreach (db_connect()->getFieldData('conversations') as $field) {
+            $defaults[$field->name] = $field->default;
+        }
+
+        foreach ($switches as $switch) {
+            $this->assertTrue(db_connect()->fieldExists($switch, 'conversations'), "conversations.{$switch}");
+            $this->assertSame(1, (int) $defaults[$switch], "{$switch} defaults on");
+        }
+
+        $this->assertTrue(db_connect()->tableExists('message_reactions'));
+
+        $conversation = $this->conversation($this->institution('MSG6'), 'group');
+        $user         = $this->user('r');
+
+        db_connect()->table('messages')->insert($this->message($conversation, $user, '33333333-3333-4333-8333-333333333333'));
+        $message  = (int) db_connect()->insertID();
+        $reaction = ['message_id' => $message, 'user_id' => $user, 'emoji' => '👍', 'created_at' => '2026-11-22 00:00:00'];
+
+        db_connect()->table('message_reactions')->insert($reaction);
+
+        $this->expectException(DatabaseException::class);
+
+        db_connect()->table('message_reactions')->insert(['emoji' => '❤️'] + $reaction);
+    }
+
     public function testOneCourseChatPerOffering(): void
     {
         $institution = $this->institution('MSG1');
@@ -234,7 +288,15 @@ final class MessagingMigrationsTest extends DatabaseTestCase
             $migrations[$firstTable] = $this->migration($file, $class);
         }
 
+        // The columns migration sits on top of the three: undone first, redone last.
+        $columns = $this->migration('2026-11-22-000001_AddChatActionColumns', 'AddChatActionColumns');
+
+        $messageActions = $this->migration('2026-11-22-000002_AddMessageActionColumns', 'AddMessageActionColumns');
+
         try {
+            $messageActions->down();
+            $columns->down();
+
             foreach (array_reverse($migrations) as $migration) {
                 $migration->down();
             }
@@ -264,10 +326,30 @@ final class MessagingMigrationsTest extends DatabaseTestCase
                 $migration->up();
                 db_connect()->resetDataCache();
             }
+
+            // Put the four columns back whether or not the participants table was rebuilt.
+            db_connect()->resetDataCache();
+
+            if (! db_connect()->fieldExists('pinned_at', 'conversation_participants')) {
+                $columns->up();
+                db_connect()->resetDataCache();
+            }
+
+            // The message action migration goes last: its down() dropped the reactions table.
+            if (! db_connect()->tableExists('message_reactions')) {
+                $messageActions->up();
+                db_connect()->resetDataCache();
+            }
         }
 
         foreach (self::TABLES as $table) {
             $this->assertTrue(db_connect()->tableExists($table), "up restores {$table}");
         }
+
+        $this->assertTrue(db_connect()->tableExists('message_reactions'), 'up restores the reactions table');
+        $this->assertTrue(db_connect()->fieldExists('changed_at', 'messages'), 'up restores the message action columns');
+        $this->assertTrue(db_connect()->fieldExists('allow_bump', 'conversations'), 'up restores the chat switches');
+
+        $this->assertTrue(db_connect()->fieldExists('pinned_at', 'conversation_participants'), 'up restores the chat action columns');
     }
 }

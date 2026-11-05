@@ -17,7 +17,7 @@ $tabs    = ['open' => 'Open', 'dismissed' => 'Dismissed', 'actioned' => 'Actione
 
 <?= $this->section('content') ?>
 
-<div class="mx-auto flex w-full max-w-4xl flex-col gap-5" data-messages-reports>
+<div class="mx-auto mt-5 flex h-[calc(100dvh-8.3rem)] min-h-[440px] w-full max-w-4xl flex-col gap-5 rounded-[28px] border border-gray-200 bg-white p-5 shadow-[0_8px_30px_rgba(0,40,120,0.12)] sm:p-7" data-messages-reports>
 
     <div class="flex items-center justify-between gap-3">
         <h1 class="font-display text-xl font-bold text-brand"><?= $report === null ? 'Message reports' : 'Message report' ?></h1>
@@ -25,6 +25,8 @@ $tabs    = ['open' => 'Open', 'dismissed' => 'Dismissed', 'actioned' => 'Actione
             <?= $report === null ? 'Back to Messages' : 'Back to reports' ?>
         </a>
     </div>
+
+    <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
     <?php if ($report === null): ?>
 
@@ -97,6 +99,7 @@ $tabs    = ['open' => 'Open', 'dismissed' => 'Dismissed', 'actioned' => 'Actione
 
     <?php endif; ?>
 
+    </div>
 </div>
 
 <?= $this->endSection() ?>

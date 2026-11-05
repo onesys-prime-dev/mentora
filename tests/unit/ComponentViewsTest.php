@@ -44,11 +44,21 @@ final class ComponentViewsTest extends CIUnitTestCase
 
     public function testAnAlertEscapesItsText(): void
     {
-        $html = $this->render('alert', ['tone' => 'success', 'text' => '<script>x</script>', 'title' => '<b>t</b>']);
+        $html = $this->render('alert', ['tone' => 'danger', 'text' => '<script>x</script>', 'title' => '<b>t</b>']);
 
         $this->assertStringNotContainsString('<script>', $html);
         $this->assertStringContainsString('&lt;script&gt;', $html);
-        $this->assertStringContainsString('Done: ', $html);
+        $this->assertStringContainsString('Problem: ', $html);
+    }
+
+    public function testASuccessAlertBecomesAHiddenToastWithTheWordsOnly(): void
+    {
+        $html = $this->render('alert', ['tone' => 'success', 'text' => '<script>x</script>', 'title' => 'Page title']);
+
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringContainsString('data-toast-message', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        $this->assertStringNotContainsString('Page title', $html);
     }
 
     /*

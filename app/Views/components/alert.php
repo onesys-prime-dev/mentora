@@ -5,6 +5,9 @@
 | Alert — an inline message on a page
 |--------------------------------------------------------------------------
 | Params: tone (success|warning|danger|info), text (required), title.
+| A success is not drawn here: it becomes a toast, the slim pill at the top
+| centre (shared/toast.js shows and removes the hidden element below). The
+| other tones stay inline, next to the thing they are about.
 | Danger is announced at once (role="alert"); the rest politely (role="status").
 | Status never relies on colour alone: the icon and the word for screen
 | readers carry it too.
@@ -20,6 +23,17 @@ $title = $title ?? '';
     'danger'  => ['border-[#C33939]/30 bg-[#FDEDEC] text-[#8E2424]', 'warning', 'Problem'],
     default   => ['border-brand/20 bg-brand-tint text-brand-dark', 'info', 'Note'],
 };
+
+if ($tone === 'success') {
+    // The words only: a title here is usually the page's own title leaking in, and the toast a form answers
+    // with after saving has none, so the two must read the same.
+    $said = $text;
+    ?>
+<div hidden data-toast-message data-tone="success" data-alert="success"><?= esc($said) ?></div>
+    <?php
+
+    return;
+}
 ?>
 
 <div class="flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm <?= $surface ?>" role="<?= $tone === 'danger' ? 'alert' : 'status' ?>" data-alert="<?= esc($tone) ?>">

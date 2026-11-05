@@ -163,6 +163,14 @@ class NotificationService
         return db_connect()->affectedRows();
     }
 
+    /** Deletes one of the person's own notifications. False when it is not theirs or does not exist. */
+    public function delete(int $userId, int $id): bool
+    {
+        db_connect()->table('notifications')->where(['id' => $id, 'user_id' => $userId])->delete();
+
+        return db_connect()->affectedRows() > 0;
+    }
+
     private function email(int $userId, string $title, string $body, ?string $link): bool
     {
         $to = db_connect()->table('auth_identities')->select('secret')->where(['user_id' => $userId, 'type' => 'email_password'])->get()->getRowArray()['secret'] ?? null;

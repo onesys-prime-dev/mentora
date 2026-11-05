@@ -1,0 +1,499 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Messaging;
+
+use CodeIgniter\Shield\Entities\User;
+
+/**
+ * What a participant can do to one message beyond reading it: react (this class grows with the other actions).
+ * A conversation or message that is not the person's is "not_found", never "forbidden". No text is logged or notified.
+ */
+class MessageActions
+{
+    /** The only reactions accepted, in display order; the first five are the quick row. */
+    public const PALETTE = ['👍', '❤️', '😂', '😮', '😢', '🙏', '👏', '🎉', '🔥', '💯', '✅', '❌', '😀', '😍', '🤔', '😅', '😭', '😡', '👀', '💪', '🙌', '👌', '🤝', '⭐'];
+
+    public const QUICK = ['👍', '❤️', '😂', '😮', '😢'];
+
+    /** How long after sending the author can still delete a message for everyone. */
+    public const DELETE_EVERYONE_MINUTES = 15;
+
+    /** How long an original must wait before it can be bumped again. */
+    public const BUMP_COOLDOWN_MINUTES = 60;
+
+    /** Most live pinned messages one chat can hold (erased or removed ones do not count). */
+    public const PIN_LIMIT = 3;
+
+    private ConversationService $conversations;
+
+    private MessagingContextResolver $resolver;
+
+    private MessagingPolicy $policy;
+
+    private MessageCipher $cipher;
+
+    private MessageService $messages;
+
+    public function __construct(?MessageService $messages = null, ?ConversationService $conversations = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null, ?MessageCipher $cipher = null)
+    {
+        $this->cipher        = $cipher ?? new MessageCipher();
+        $this->messages      = $messages ?? new MessageService($this->cipher);
+        $this->resolver      = $resolver ?? new MessagingContextResolver();
+        $this->conversations = $conversations ?? new ConversationService($this->resolver);
+        $this->policy        = $policy ?? new MessagingPolicy();
+    }
+
+    /**
+     * Sets, replaces or removes the caller's reaction. `$emoji` null, or the one already there, removes it.
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'invalid'|'switched_off', reactions?: list<array{emoji: string, count: int, mine: bool}>}
+     *
+     * @throws RateLimitedException when the person has reacted too often in the last minute
+     */
+    public function react(User $user, int $conversationId, int $messageId, ?string $emoji): array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+        $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
+
+        if ($conversation === null || $message === null || ! $this->messages->visibleTo((int) $user->id, $conversationId, $messageId)) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        if ($emoji !== null && ! in_array($emoji, self::PALETTE, true)) {
+            return ['ok' => false, 'reason' => 'invalid'];
+        }
+
+        if (! $this->policy->canReact($this->resolver->forPost($user, $conversation))) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if (! ChatControls::allows($conversation, 'reactions')) {
+            return ['ok' => false, 'reason' => 'switched_off'];
+        }
+
+        $userId   = (int) $user->id;
+        $db       = db_connect();
+        $current  = $db->table('message_reactions')->where(['message_id' => $messageId, 'user_id' => $userId])->get()->getRowArray();
+        $previous = $current === null ? null : (string) $current['emoji'];
+        $target   = $emoji === $previous ? null : $emoji;
+
+        if ($target !== null) {
+            (new MessageRateLimiter())->check('reaction', $userId);
+        }
+
+        if ($previous !== null || $target !== null) {
+            $now = date('Y-m-d H:i:s');
+
+            $db->transStart();
+
+            if ($target === null) {
+                $db->table('message_reactions')->where(['message_id' => $messageId, 'user_id' => $userId])->delete();
+            } else {
+                // One statement, so two quick requests end with the last emoji chosen rather than a duplicate-key error.
+                $db->query(
+                    'INSERT INTO message_reactions (message_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE emoji = VALUES(emoji), created_at = VALUES(created_at)',
+                    [$messageId, $userId, $target, $now],
+                );
+            }
+
+            $db->table('messages')->where('id', $messageId)->update(['changed_at' => $now]);
+            $db->transComplete();
+
+            if (! $db->transStatus()) {
+                log_message('error', 'Reaction could not be saved for message ' . $messageId . '.');
+
+                return ['ok' => false, 'reason' => 'not_found'];
+            }
+        }
+
+        if ($target !== null && $previous === null) {
+            try {
+                (new MessageNotifier())->notifyReaction($messageId, $userId);
+            } catch (\Throwable) {
+                log_message('error', 'Reaction notification failed for message ' . $messageId . '.');
+            }
+        }
+
+        return ['ok' => true, 'reactions' => self::summary([$messageId], $userId)[$messageId] ?? []];
+    }
+
+    /**
+     * Who reacted with what, by display name. Null when the conversation or message is not the person's.
+     *
+     * @return array<string, list<string>>|null
+     */
+    public function reactors(User $user, int $conversationId, int $messageId): ?array
+    {
+        if ($this->conversations->find($user, $conversationId) === null || $this->message($conversationId, $messageId) === null || ! $this->messages->visibleTo((int) $user->id, $conversationId, $messageId)) {
+            return null;
+        }
+
+        $rows  = db_connect()->table('message_reactions')->where('message_id', $messageId)->orderBy('created_at')->orderBy('id')->get()->getResultArray();
+        $names = ConversationPresenter::names(array_map(static fn (array $r): int => (int) $r['user_id'], $rows));
+        $out   = [];
+
+        foreach (self::PALETTE as $emoji) {
+            foreach ($rows as $row) {
+                if ($row['emoji'] === $emoji) {
+                    $out[$emoji][] = $names[(int) $row['user_id']] ?? 'Former member';
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Counts per emoji, in palette order, for each message.
+     *
+     * @param list<int> $messageIds
+     *
+     * @return array<int, list<array{emoji: string, count: int, mine: bool}>>
+     */
+    public static function summary(array $messageIds, int $userId): array
+    {
+        if ($messageIds === []) {
+            return [];
+        }
+
+        // Counted in PHP: the connection collation treats different non-BMP emoji as equal, so SQL would merge groups.
+        $rows   = db_connect()->table('message_reactions')->select('message_id, emoji, user_id')->whereIn('message_id', $messageIds)->get()->getResultArray();
+        $counts = [];
+        $mine   = [];
+
+        foreach ($rows as $row) {
+            $key          = (int) $row['message_id'] . '|' . $row['emoji'];
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+            $mine[$key]   = ($mine[$key] ?? false) || (int) $row['user_id'] === $userId;
+        }
+
+        $out = [];
+
+        foreach ($messageIds as $messageId) {
+            foreach (self::PALETTE as $emoji) {
+                $key = $messageId . '|' . $emoji;
+
+                if (isset($counts[$key])) {
+                    $out[$messageId][] = ['emoji' => $emoji, 'count' => $counts[$key], 'mine' => $mine[$key]];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Whether the viewer may still delete this message for everyone: their own, not yet deleted, not removed,
+     * inside the window, and the chat's switch on. The one place the rule lives (payload flag and the action).
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canDeleteEveryone(array $row, int $viewerId, bool $switchOn): bool
+    {
+        return $switchOn
+            && (int) $row['sender_id'] === $viewerId
+            && ($row['deleted_everyone_at'] ?? null) === null
+            && ($row['removed_at'] ?? null) === null
+            && ! self::pastDeleteWindow((string) $row['created_at']);
+    }
+
+    private static function pastDeleteWindow(string $createdAt): bool
+    {
+        $at = strtotime($createdAt);
+
+        return $at === false || time() - $at > self::DELETE_EVERYONE_MINUTES * 60;
+    }
+
+    /**
+     * Erases the text of the caller's own message for everyone, within DELETE_EVERYONE_MINUTES of sending.
+     * The row stays (replies and reactions keep pointing at it); only the ciphertext is overwritten with an
+     * empty one. Report snapshots are separate copies and stay readable. Repeating it changes nothing.
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'switched_off'|'too_late'}
+     */
+    public function deleteForEveryone(User $user, int $conversationId, int $messageId): array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+        $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
+
+        if ($conversation === null || $message === null) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        $userId = (int) $user->id;
+
+        if ((int) $message['sender_id'] !== $userId) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if ($message['deleted_everyone_at'] !== null) {
+            return ['ok' => true];
+        }
+
+        if (! ChatControls::allows($conversation, 'delete_everyone')) {
+            return ['ok' => false, 'reason' => 'switched_off'];
+        }
+
+        if (self::pastDeleteWindow((string) $message['created_at'])) {
+            return ['ok' => false, 'reason' => 'too_late'];
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $db  = db_connect();
+        $db->table('messages')->where(['id' => $messageId, 'deleted_everyone_at' => null])->update([
+            'body_enc'            => $this->cipher->encrypt('', $conversationId, $userId),
+            'deleted_everyone_at' => $now,
+            'changed_at'          => $now,
+        ]);
+
+        if ($db->affectedRows() > 0) {
+            // Ids and the action only, never the text.
+            service('auditLogger')->log('messages.message_deleted_everyone', $user, [
+                'target_type'    => 'message',
+                'target_id'      => $messageId,
+                'institution_id' => (int) $conversation['institution_id'],
+                'new'            => ['conversation_id' => $conversationId],
+            ]);
+        }
+
+        return ['ok' => true];
+    }
+
+    /**
+     * Whether the viewer may bump this message: their own, not deleted for everyone, not removed, and the chat's switch on.
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canBump(array $row, int $viewerId, bool $switchOn): bool
+    {
+        return $switchOn
+            && (int) $row['sender_id'] === $viewerId
+            && ($row['deleted_everyone_at'] ?? null) === null
+            && ($row['removed_at'] ?? null) === null;
+    }
+
+    /**
+     * Posts the caller's own message again as a new one at the bottom. A bump of a bump bumps the original.
+     * Once per original per hour. Goes through MessageService::post, so blocks, locks and read-only apply.
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'switched_off'|'limit'|'unavailable', message?: array<string, mixed>}
+     *
+     * @throws RateLimitedException when the person has sent too many messages in the last minute
+     */
+    public function bump(User $user, int $conversationId, int $messageId): array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+        $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
+
+        if ($conversation === null || $message === null) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        $userId = (int) $user->id;
+
+        if ($message['bumped_from_message_id'] !== null) {
+            $original = $this->message($conversationId, (int) $message['bumped_from_message_id']);
+            $message  = $original ?? $message;
+        }
+
+        if ((int) $message['sender_id'] !== $userId || ($message['deleted_everyone_at'] ?? null) !== null) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if (! $this->policy->canPost($this->resolver->forPost($user, $conversation))) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if (! ChatControls::allows($conversation, 'bump')) {
+            return ['ok' => false, 'reason' => 'switched_off'];
+        }
+
+        $originalId = (int) $message['id'];
+        $since      = date('Y-m-d H:i:s', time() - self::BUMP_COOLDOWN_MINUTES * 60);
+        $recent     = db_connect()->table('messages')->where('bumped_from_message_id', $originalId)->where('created_at >', $since)->countAllResults();
+
+        if ($recent > 0) {
+            return ['ok' => false, 'reason' => 'limit'];
+        }
+
+        $body = $this->cipher->isUsable() ? $this->cipher->decrypt((string) $message['body_enc'], $conversationId, $userId) : null;
+
+        if ($body === null || $body === '') {
+            return ['ok' => false, 'reason' => 'unavailable'];
+        }
+
+        (new MessageRateLimiter())->check('message', $userId);
+
+        $result = $this->messages->post($user, $conversation, $body, bin2hex(random_bytes(16)), ['bumped_from_message_id' => $originalId]);
+
+        return ['ok' => true, 'message' => $result['message']];
+    }
+
+    /** Most chats one forward can reach. */
+    public const FORWARD_LIMIT = 5;
+
+    /**
+     * Whether a message of this chat can be forwarded: not deleted or removed, the chat's switch on, not a parent thread.
+     * Visibility to the viewer is checked by the caller (the payload only lists visible rows).
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canForward(array $row, bool $switchOn, bool $parentThread): bool
+    {
+        return $switchOn
+            && ! $parentThread
+            && ($row['deleted_everyone_at'] ?? null) === null
+            && ($row['removed_at'] ?? null) === null;
+    }
+
+    /**
+     * Sends a copy of a message to up to five of the person's other chats, each as a new message from them marked
+     * forwarded and carrying no original sender. Each target goes through MessageService::post's rules; one refusal
+     * is reported in `results` and does not stop the rest. Forwarding into a chat with its own switch off is fine.
+     *
+     * @param list<int> $targetIds
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'switched_off'|'parent_thread'|'too_many'|'unavailable', results?: list<array{conversation_id: int, ok: bool, reason?: string}>}
+     */
+    public function forward(User $user, int $conversationId, int $messageId, array $targetIds): array
+    {
+        $source  = $this->conversations->find($user, $conversationId);
+        $message = $source === null ? null : $this->message($conversationId, $messageId);
+        $userId  = (int) $user->id;
+
+        if ($source === null || $message === null || ($message['deleted_everyone_at'] ?? null) !== null || ! $this->messages->visibleTo($userId, $conversationId, $messageId)) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        if (! ChatControls::allows($source, 'forwarding')) {
+            return ['ok' => false, 'reason' => 'switched_off'];
+        }
+
+        if ($source['subject_student_id'] !== null) {
+            return ['ok' => false, 'reason' => 'parent_thread'];
+        }
+
+        $targetIds = array_values(array_unique(array_map('intval', $targetIds)));
+
+        if (count($targetIds) > self::FORWARD_LIMIT) {
+            return ['ok' => false, 'reason' => 'too_many'];
+        }
+
+        $body = $this->cipher->isUsable() ? $this->cipher->decrypt((string) $message['body_enc'], $conversationId, (int) $message['sender_id']) : null;
+
+        if ($body === null || $body === '') {
+            return ['ok' => false, 'reason' => 'unavailable'];
+        }
+
+        $results = [];
+
+        foreach ($targetIds as $targetId) {
+            $target = $targetId > 0 ? $this->conversations->find($user, $targetId) : null;
+
+            if ($target === null) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'not_found'];
+
+                continue;
+            }
+
+            if ($target['subject_student_id'] !== null) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'parent_thread'];
+
+                continue;
+            }
+
+            if (! $this->policy->canPost($this->resolver->forPost($user, $target))) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'not_allowed'];
+
+                continue;
+            }
+
+            try {
+                (new MessageRateLimiter())->check('message', $userId);
+            } catch (RateLimitedException) {
+                $results[] = ['conversation_id' => $targetId, 'ok' => false, 'reason' => 'rate_limited'];
+
+                continue;
+            }
+
+            $this->messages->post($user, $target, $body, bin2hex(random_bytes(16)), ['forwarded' => 1]);
+            $results[] = ['conversation_id' => $targetId, 'ok' => true];
+        }
+
+        return ['ok' => true, 'results' => $results];
+    }
+
+    /**
+     * Whether a message can carry a pin: not deleted for everyone and not removed. Who may pin is the policy's call.
+     *
+     * @param array<string, mixed> $row a `messages` row
+     */
+    public static function canPin(array $row): bool
+    {
+        return ($row['deleted_everyone_at'] ?? null) === null && ($row['removed_at'] ?? null) === null;
+    }
+
+    /**
+     * Pins or unpins a message for everyone in the chat. Course chats: moderators only. At most PIN_LIMIT pinned per chat.
+     * Pinning a pinned message (or unpinning an unpinned one) is ok and changes nothing.
+     *
+     * @return array{ok: bool, reason?: 'not_found'|'not_allowed'|'limit'}
+     */
+    public function pinMessage(User $user, int $conversationId, int $messageId, bool $pinned): array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+        $message      = $conversation === null ? null : $this->message($conversationId, $messageId);
+        $userId       = (int) $user->id;
+
+        if ($conversation === null || $message === null || ! self::canPin($message) || ! $this->messages->visibleTo($userId, $conversationId, $messageId)) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        if (! $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation))) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
+        if (($message['pinned_at'] !== null) === $pinned) {
+            return ['ok' => true];
+        }
+
+        $db = db_connect();
+
+        if ($pinned && $db->table('messages')->where('conversation_id', $conversationId)->where(['removed_at' => null, 'deleted_everyone_at' => null])->where('pinned_at IS NOT NULL', null, false)->countAllResults() >= self::PIN_LIMIT) {
+            return ['ok' => false, 'reason' => 'limit'];
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $db->table('messages')->where('id', $messageId)->update([
+            'pinned_at'  => $pinned ? $now : null,
+            'pinned_by'  => $pinned ? $userId : null,
+            'changed_at' => $now,
+        ]);
+
+        // Ids and the action only, never the text.
+        service('auditLogger')->log($pinned ? 'messages.message_pinned' : 'messages.message_unpinned', $user, [
+            'target_type'    => 'message',
+            'target_id'      => $messageId,
+            'institution_id' => (int) $conversation['institution_id'],
+            'new'            => ['conversation_id' => $conversationId],
+        ]);
+
+        return ['ok' => true];
+    }
+
+    /**
+     * A live message of this conversation, or null.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function message(int $conversationId, int $messageId): ?array
+    {
+        if ($messageId <= 0) {
+            return null;
+        }
+
+        return db_connect()->table('messages')->where(['id' => $messageId, 'conversation_id' => $conversationId, 'removed_at' => null])->get()->getRowArray();
+    }
+}

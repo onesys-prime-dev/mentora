@@ -177,24 +177,28 @@ final class NotificationPagesTest extends RouteTestCase
         $this->assertSame(1, (new NotificationService())->unreadCount($other));
     }
 
-    public function testTheUnreadCountShowsOnAnAdministratorsPagesAndTheNoticeOnOthers(): void
+    public function testNoUnreadStripIsDrawnUnderTheHeader(): void
     {
-        $admin = $this->signIn('admin', 'ada@example.com');
-        $this->tell($admin, 'Admin news');
-
-        $this->assertStringContainsString('data-unread-count', $this->step('GET', 'admin/users')->response()->getBody());
-
         $student = $this->signIn('student', 'stu@example.com');
         $this->tell($student, 'Student news');
 
-        $this->assertStringContainsString('data-notifications-strip', $this->step('GET', 'student/dashboard')->response()->getBody());
+        // The toast beside the bell previews new ones; the strip under the header is gone.
+        $this->assertStringNotContainsString('data-notifications-strip', $this->step('GET', 'student/dashboard')->response()->getBody());
     }
 
-    public function testNoNoticeWhenThereIsNothingUnread(): void
+    public function testTheBellShowsTheUnreadCountAndHidesAtZero(): void
     {
-        $this->signIn('student', 'stu@example.com');
+        $student = $this->signIn('student', 'stu@example.com');
 
-        $this->assertStringNotContainsString('data-notifications-strip', $this->step('GET', 'student/dashboard')->response()->getBody());
+        $this->assertMatchesRegularExpression('#data-notifications-badge data-count="0" hidden#', $this->step('GET', 'student/dashboard')->response()->getBody());
+
+        $this->tell($student, 'One');
+        $this->tell($student, 'Two');
+
+        $body = $this->step('GET', 'student/dashboard')->response()->getBody();
+
+        $this->assertStringContainsString('data-notifications-badge data-count="2"', $body);
+        $this->assertDoesNotMatchRegularExpression('#data-notifications-badge data-count="2"[^>]*hidden#', $body);
     }
 
     public function testTheDailyCommandCreatesThemAndAskedAgainCreatesNone(): void

@@ -143,4 +143,45 @@ final class ConversationPresenterTest extends DatabaseTestCase
         $this->assertStringNotContainsString('body_enc', $json);
         $this->assertStringNotContainsString($stored, $json);
     }
+
+    public function testARowCarriesThePersonalFlagsAndWhatTheChatAllows(): void
+    {
+        $row = $this->row();
+
+        $this->assertFalse($row['pinned']);
+        $this->assertFalse($row['archived']);
+        $this->assertFalse($row['muted']);
+        $this->assertFalse($row['marked_unread']);
+        $this->assertTrue($row['can_pin_chat']);
+        $this->assertTrue($row['can_delete']);
+
+        $state = new \App\Services\Messaging\ChatStateService();
+        $state->pin($this->student, $this->conversation);
+        $state->setMuted($this->student, $this->conversation, true);
+        $state->markUnread($this->student, $this->conversation);
+
+        $row = $this->row();
+
+        $this->assertTrue($row['pinned']);
+        $this->assertTrue($row['muted']);
+        $this->assertTrue($row['marked_unread']);
+        $this->assertFalse($row['archived']);
+    }
+
+    public function testACourseChatCannotBePinnedOrDeleted(): void
+    {
+        $offering = (int) db_connect()->table('enrollments')->get()->getRow('offering_id');
+        (new \App\Services\Messaging\CourseChatSync())->syncOffering($offering);
+
+        foreach ((new ConversationPresenter())->present($this->student, (new ConversationService())->listFor($this->student)) as $row) {
+            if ($row['type'] === 'course') {
+                $this->assertFalse($row['can_pin_chat']);
+                $this->assertFalse($row['can_delete']);
+
+                return;
+            }
+        }
+
+        $this->fail('no course row');
+    }
 }

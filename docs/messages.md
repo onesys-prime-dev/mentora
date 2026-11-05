@@ -14,6 +14,8 @@ is for the people who run it and the people who use it. The design it follows is
 | **Direct messages** | Between two people. Nobody can message a stranger: the table below is enforced in one place (`MessagingPolicy`) and tested for every pair of roles. Starting a thread that exists opens it. |
 | **Staff groups** | A chairperson (instructors of their sub-department) or a dean (instructors and chairpersons of their department) starts a group of 1 to 30 people in their scope. Membership is fixed when the group is made. |
 | **Parents** | A parent's thread with an instructor or chairperson is about one of their children and is labelled with the child's name; the child never sees it. A parent also has a read-only **From the instructor** tab in each of the child's courses (the instructors' posts in the course chat, nothing from students). A chairperson can reply to a parent but cannot start with one. If the parent's link to the child ends, the thread stays readable and nobody can post in it. |
+| **Chat actions** | Right-click a chat in the list (long-press on a phone, or Shift+F10) to **pin** it to the top (at most 5 chats; course chats are always at the top), **mark it unread**, **mute** it, **archive** it or **delete it for me**. A muted chat keeps its unread count on its row but is left out of the Messages badge and sends no notification or email. An archived chat moves to "Archived chats" and comes back when a new message arrives, unless it is muted. Deleting for me hides the chat and its history from that person only; a new message brings it back showing only what is newer. A course chat can be neither unpinned nor deleted. |
+| **Message actions** | Right-click a message (or long-press) to **react** with one of 24 emoji (one reaction per person per message, at most 60 reactions a minute), **reply** with a quote, **copy**, **forward** it to up to 5 other chats, **pin** it (instructors, chairpersons and deans in a chat; either person in a direct thread; at most 3 pinned messages per chat), **bump** your own message (a new copy marked "Bump" at the bottom, once an hour per original), **delete it for me**, **delete it for everyone** (your own message, within 15 minutes) or report it. A message deleted for everyone has its text erased on the server and shows as "You deleted a message" / "{Name} deleted a message"; a message that was reported keeps its report snapshot. A moderator sees Remove instead of Report on other people's messages. Parent threads cannot be forwarded out of. |
 | **Blocks and reports** | A person can block someone in a direct thread (that person can no longer start with them or post to them; instructors and administrators cannot be blocked). Any message from another person can be reported; the institution's administrator reviews it. |
 
 ### Who can start a conversation with whom
@@ -101,12 +103,15 @@ to your institution, have a second administrator account review reports about th
   students cannot start new messages with each other; existing student conversations stay
   readable but nobody can add to them. Messages with instructors are unaffected. The
   change is in the audit log.
+- **Chat controls** (Institution settings, Messages): a picker of every course chat and staff group, then that chat's switches (Reactions, Replies, Forwarding, Bump, Delete for everyone, and the lock for course chats).
 - **Reports** (Messages, Reports): open reports of the institution, the snapshot, and the
   decision (dismiss, mark as actioned, or remove the message where that is allowed).
 
 ## What each person can set
 
 - **Email alerts** for new messages (everyone). At most one email per conversation per hour.
+- **Blocked people** (everyone): the list of people you have blocked, with Unblock, in Settings.
+- **Chat controls** (the institution's administrator only, in **Institution settings, Messages**; not in the Messages page): a picker of every course chat and staff group of the institution (the administrator does not need to be in the chat), then that chat's switches. It has switches for **Reactions**, **Replies**, **Forwarding**, **Bump** and **Delete for everyone**, and for course chats the lock ("Only the instructor can post"). Turning one off hides it from members' menus and the server refuses it. Two things are never switches: **Delete for me** is always available, and a manager's **Remove** is always available. Turning Forwarding off does not stop someone copying the text by hand. Everyone else cannot change them; the Messages page's Settings is only "My alerts" and blocked people. Instructors keep the **Lock chat** button on their own course chat. Who manages a chat is in `roles-and-permissions.md`.
 - **Quiet hours** (instructors, chairpersons and deans): during them nothing is notified or
   emailed; the notification is made afterwards, once. Messages still arrive and the unread
   count still shows them.
@@ -116,7 +121,9 @@ to your institution, have a second administrator account review reports about th
 Per person: 30 messages a minute, 10 new conversations (direct or group) an hour, 20 reports
 a day. Over a limit the screen says so in a sentence (HTTP 429) and nothing is written.
 Messages are plain text, 1 to 4000 characters. There are no attachments, editing,
-reactions, typing indicators or search inside messages in this version.
+typing indicators or search inside messages in this version. Pins: 5 chats per person, 3
+messages per chat. Forwarding: 5 chats at a time. Delete for everyone: 15 minutes. Bump: once
+an hour per message. Reactions: 60 a minute.
 
 ## Scheduled jobs
 

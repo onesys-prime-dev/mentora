@@ -12,8 +12,9 @@ const SHELL = `
     <button data-chip="direct" aria-pressed="false"></button><button data-chip="group" aria-pressed="false"></button>
     <button data-role="unread-toggle" aria-pressed="false"></button>
     <div data-role="list">
-      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p>
+      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p><p data-state="empty-archived" hidden>No archived chats</p><p data-role="list-note" role="status" hidden></p>
       <div data-state="error" hidden><button data-role="retry-list"></button></div>
+      <button data-role="archived-open" hidden><span data-role="archived-count"></span></button><button data-role="archived-back" hidden></button>
       <div data-role="rows"></div>
     </div>
   </section>
@@ -51,6 +52,7 @@ function makeApi(over = {}) {
         page: vi.fn().mockResolvedValue(ok({ messages: [msg(10), msg(11)], has_more: false })),
         send: vi.fn().mockResolvedValue(ok({ message: msg(12, { mine: true, body: "hello" }) }, 201)),
         markRead: vi.fn().mockResolvedValue(ok({ ok: true })),
+        changes: vi.fn().mockResolvedValue(ok({ messages: [], server_time: "2026-01-01 00:00:00", more: false })),
         hide: vi.fn().mockResolvedValue(ok({ ok: true })),
         unread: vi.fn().mockResolvedValue(ok({ unread: 0 })),
         recipients: vi.fn().mockResolvedValue(ok({ recipients: [] })),
@@ -60,7 +62,14 @@ function makeApi(over = {}) {
 
 const q = (sel) => document.querySelector(sel);
 const all = (sel) => [...document.querySelectorAll(sel)];
-const texts = () => all("[data-role=messages] [data-id]").map((n) => n.textContent);
+// The words of each message, without the time it was sent.
+const texts = () => all("[data-role=messages] [data-id]").map((n) => {
+    const copy = n.cloneNode(true);
+
+    copy.querySelector("[data-role=sent-at]")?.remove();
+
+    return copy.textContent;
+});
 const flush = () => vi.advanceTimersByTimeAsync(0);
 
 async function mount(api, { open = "" } = {}) {
@@ -128,6 +137,74 @@ describe("the conversation list", () => {
 
     });
 
+    it("shows the pin limit in the list note with no chat open", async () => {
+
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ can_pin_chat: true })], unread: 0, archived_count: 0 })),
+            chatAction: vi.fn().mockResolvedValue(ok({ error: "limit", max: 5 }, 409)),
+        });
+
+        await mount(api);
+        q("[data-role=rows] button").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+        document.querySelector("[data-action=pin]").click();
+        await flush();
+
+        expect(api.chatAction).toHaveBeenCalledWith(1, "pin");
+        expect(q("[data-role=list-note]").hidden).toBe(false);
+        expect(q("[data-role=list-note]").textContent).toBe("You can pin up to 5 chats.");
+
+    });
+
+    it("says No archived chats for an empty Archived view", async () => {
+
+        const api = makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [], unread: 0, archived_count: 1 })) });
+
+        await mount(api);
+        q("[data-role=archived-open]").click();
+        await flush();
+
+        expect(q("[data-state=empty-archived]").hidden).toBe(false);
+        expect(q("[data-state=no-match]").hidden).toBe(true);
+
+    });
+
+    it("does not arm the block confirm when the chat failed to open", async () => {
+
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ can_block: true })], unread: 0, archived_count: 0 })),
+            page: vi.fn().mockResolvedValue(ok(null, 404)),
+        });
+
+        await mount(api);
+        q("[data-role=rows] button").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+        document.querySelector("[data-action=block]").click();
+        await flush();
+        await flush();
+
+        expect(api.block).toBeUndefined();
+        expect(document.body.textContent).not.toContain("Click again to block");
+
+    });
+
+    it("opens the Archived view from the count row and comes back", async () => {
+
+        const api = makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv()], unread: 0, archived_count: 2 })) });
+
+        await mount(api);
+        expect(q("[data-role=archived-open]").hidden).toBe(false);
+        expect(q("[data-role=archived-count]").textContent).toBe("2");
+
+        q("[data-role=archived-open]").click();
+        await flush();
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "all", unread: false, archived: true });
+        expect(q("[data-role=archived-back]").hidden).toBe(false);
+
+        q("[data-role=archived-back]").click();
+        await flush();
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "all", unread: false, archived: false });
+
+    });
+
     it("asks the server for the chosen kind and for unread only", async () => {
 
         const api = makeApi();
@@ -135,13 +212,13 @@ describe("the conversation list", () => {
         await mount(api);
         q("[data-chip=direct]").click();
         await flush();
-        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: false });
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: false, archived: false });
         expect(q("[data-chip=direct]").getAttribute("aria-pressed")).toBe("true");
         expect(q("[data-chip=all]").getAttribute("aria-pressed")).toBe("false");
 
         q("[data-role=unread-toggle]").click();
         await flush();
-        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: true });
+        expect(api.conversations).toHaveBeenLastCalledWith({ filter: "direct", unread: true, archived: false });
 
     });
 
@@ -207,6 +284,39 @@ describe("opening a conversation", () => {
 
         expect(api.page).toHaveBeenLastCalledWith(1, { after: 11 });
         expect(texts()[2]).toContain("m12");
+
+    });
+
+    it("puts a time above a message that comes after a pause, and not above one that follows quickly", async () => {
+
+        const api = makeApi({ page: vi.fn().mockResolvedValue(ok({ messages: [
+            msg(10, { created_at: "2026-11-03 09:00:00" }),
+            msg(11, { created_at: "2026-11-03 09:05:00" }),
+            msg(12, { created_at: "2026-11-03 09:30:00" }),
+        ], has_more: false })) });
+
+        await mount(api);
+        await openFirst();
+
+        expect(all("[data-role=time-separator]").map((el) => el.textContent)).toEqual(["Today 9:30 AM"]);
+
+    });
+
+    it("says Sent under my newest message, and Seen once the other person has read it", async () => {
+
+        const mine = [msg(10, { mine: true, sender_name: "Me" }), msg(11)];
+        const page = vi.fn().mockResolvedValue(ok({ messages: mine, has_more: false, my_last: { id: 10, seen: 0, others: 1 } }));
+        const api = makeApi({ page });
+
+        await mount(api);
+        await openFirst();
+
+        expect(all("[data-role=delivery]").map((el) => el.textContent)).toEqual(["Sent"]);
+
+        page.mockResolvedValue(ok({ messages: [], has_more: false, my_last: { id: 10, seen: 1, others: 1 } }));
+        await vi.advanceTimersByTimeAsync(5000);
+
+        expect(all("[data-role=delivery]").map((el) => el.textContent)).toEqual(["Seen"]);
 
     });
 
@@ -580,6 +690,7 @@ describe("deleting for me", () => {
         await mount(api);
         await openFirst();
         all("[data-action=hide]")[0].click();
+        document.querySelector("[data-role=menu] [data-action=delete-me]").click();
         await flush();
 
         expect(api.hide).toHaveBeenCalledWith(1, 10);

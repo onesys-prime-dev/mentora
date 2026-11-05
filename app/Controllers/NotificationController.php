@@ -21,6 +21,7 @@ class NotificationController extends BaseController
 
         return view('pages/notifications/index', [
             'title'         => 'Notifications',
+            'fullHeight'    => ! $isAdmin,
             'page'          => $isAdmin ? 'admin' : 'notifications',
             'user'          => $user,
             'noteRows'      => (new NotificationService())->listFor((int) $user->id),
@@ -32,11 +33,13 @@ class NotificationController extends BaseController
     public function feed(): ResponseInterface
     {
         $before = $this->request->getGet('before');
+        $limit  = $this->request->getGet('limit');
+        $limit  = is_string($limit) && ctype_digit($limit) ? max(1, min(10, (int) $limit)) : 7;
 
         $page = (new NotificationService())->page(
             (int) auth()->id(),
             is_string($before) && preg_match('/^\d{1,10}$/', $before) === 1 ? (int) $before : null,
-            7,
+            $limit,
         );
 
         $html = '';
@@ -51,6 +54,50 @@ class NotificationController extends BaseController
             'next_before' => $page['rows'] === [] ? null : (int) end($page['rows'])['id'],
             'has_more'    => $page['has_more'],
         ]);
+    }
+
+    /**
+     * For the toast beside the bell. Without `after`: the newest id (the baseline) and the unread count. With it:
+     * up to 3 unread notifications newer than that id. Titles and bodies are the same words the panel shows.
+     */
+    public function latest(): ResponseInterface
+    {
+        $service = new NotificationService();
+        $userId  = (int) auth()->id();
+        $after   = $this->request->getGet('after');
+        $rows    = $service->page($userId, null, 10)['rows'];
+        $lastId  = $rows === [] ? 0 : (int) $rows[0]['id'];
+
+        $items = [];
+
+        if (is_string($after) && preg_match('/^\d{1,10}$/', $after) === 1) {
+            foreach (array_reverse($rows) as $row) {
+                if ((int) $row['id'] > (int) $after && $row['read_at'] === null && count($items) < 3) {
+                    $items[] = [
+                        'id'     => (int) $row['id'],
+                        'title'  => (string) $row['title'],
+                        'body'   => (string) $row['body'],
+                        'link'   => $row['link'] === null ? null : site_url((string) $row['link']),
+                        'urgent' => (int) $row['urgent'] === 1,
+                    ];
+                }
+            }
+        }
+
+        return $this->response->setJSON(['last_id' => $lastId, 'unread' => $service->unreadCount($userId), 'items' => $items]);
+    }
+
+    /** Deletes one notification of the caller's own; anything else answers the same 404. */
+    public function delete(): ResponseInterface
+    {
+        $id = $this->request->getPost('id');
+
+        if (! (is_string($id) && preg_match('/^\d{1,10}$/', $id) === 1)
+            || ! (new NotificationService())->delete((int) auth()->id(), (int) $id)) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false]);
+        }
+
+        return $this->response->setJSON(['ok' => true]);
     }
 
     public function read(): RedirectResponse

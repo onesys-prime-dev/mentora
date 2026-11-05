@@ -70,6 +70,7 @@ function makeApi(conversation = direct(), over = {}) {
         page: vi.fn().mockResolvedValue(ok({ messages: [msg(10), msg(11, { mine: true, sender_id: 1 }), msg(12, { removed: true, body: null })], has_more: false })),
         send: vi.fn().mockResolvedValue(ok({ message: msg(13, { mine: true, body: "hello" }) }, 201)),
         markRead: vi.fn().mockResolvedValue(ok({ ok: true })),
+        changes: vi.fn().mockResolvedValue(ok({ messages: [], server_time: "2026-01-01 00:00:00", more: false })),
         hide: vi.fn().mockResolvedValue(ok({ ok: true })),
         unread: vi.fn().mockResolvedValue(ok({ unread: 0 })),
         recipients: vi.fn().mockResolvedValue(ok({ recipients: [] })),

@@ -72,9 +72,7 @@ $this->setVar('headerTitle', preg_match('/<h1[\s>]/i', $pageContent) !== 1);
 
         <?= $this->include('layouts/partials/impersonation-banner') ?>
 
-        <?= $this->include('layouts/partials/notifications-strip') ?>
-
-        <?= $this->include('layouts/partials/read-only-banner') ?>
+                <?= $this->include('layouts/partials/read-only-banner') ?>
 
         </div>
 

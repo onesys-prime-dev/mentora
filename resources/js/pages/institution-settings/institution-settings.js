@@ -4,6 +4,7 @@
  * each field says whether it is readable. The server still decides on Save.
  */
 
+import "./chat-controls.js";
 import { check, dark, tint } from "../../shared/brand-colours.js";
 import { applyBrandTokens, clearBrandTokens } from "../../shared/brand-tokens.js";
 

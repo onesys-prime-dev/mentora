@@ -53,6 +53,7 @@ function makeApi(conversation, over = {}) {
         page: vi.fn().mockResolvedValue(ok({ messages: [msg(10), msg(11), msg(12, { removed: true, body: null })], has_more: false })),
         send: vi.fn(),
         markRead: vi.fn().mockResolvedValue(ok({ ok: true })),
+        changes: vi.fn().mockResolvedValue(ok({ messages: [], server_time: "2026-01-01 00:00:00", more: false })),
         hide: vi.fn().mockResolvedValue(ok({ ok: true })),
         unread: vi.fn().mockResolvedValue(ok({ unread: 0 })),
         recipients: vi.fn().mockResolvedValue(ok({ recipients: [] })),
@@ -96,48 +97,14 @@ describe("a removed message", () => {
 
         expect(row.textContent).toContain("Message removed");
         expect(row.querySelector("small")).not.toBeNull();
-        expect(q("[data-id='12']").closest(".group\\/msg").querySelector("[data-action]")).toBeNull();
+        expect(q("[data-id='12']").parentElement.querySelector("[data-action]")).toBeNull();
     });
 });
 
 describe("removing a message as a moderator", () => {
-    it("offers Remove message only when the conversation says the viewer can moderate", async () => {
-        await mountOpen(makeApi(course({ can_moderate: false })));
-        expect(all("[data-action=remove]")).toHaveLength(0);
-
+    it("has no Remove icon beside a message, even for a moderator (Delete covers it)", async () => {
         await mountOpen(makeApi(course({ can_moderate: true })));
-        // The removed row has none; the two live ones do.
-        expect(all("[data-action=remove]")).toHaveLength(2);
-    });
-
-    it("asks for a second click, then removes and shows a tombstone", async () => {
-        const api = makeApi(course({ can_moderate: true }));
-
-        await mountOpen(api);
-
-        const button = q("[data-action=remove][data-message-id='10']");
-
-        button.click();
-        await flush();
-        expect(api.remove).not.toHaveBeenCalled();
-        expect(q("[data-action=remove][data-message-id='10']").textContent).toBe("Click again to remove");
-
-        q("[data-action=remove][data-message-id='10']").click();
-        await flush();
-
-        expect(api.remove).toHaveBeenCalledWith(5, 10);
-        expect(q("[data-id='10']").textContent).toContain("Message removed");
-    });
-
-    it("leaves the message alone when the server refuses", async () => {
-        const api = makeApi(course({ can_moderate: true }), { remove: vi.fn().mockResolvedValue(ok(null, 404)) });
-
-        await mountOpen(api);
-        q("[data-action=remove][data-message-id='10']").click();
-        q("[data-action=remove][data-message-id='10']").click();
-        await flush();
-
-        expect(q("[data-id='10']").textContent).toContain("m10");
+        expect(all("[data-action=remove]")).toHaveLength(0);
     });
 });
 
