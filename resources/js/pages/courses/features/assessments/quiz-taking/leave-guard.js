@@ -170,8 +170,16 @@ export function bindLeaveGuard({
 function isLeavingLink(link) {
 
     const href = link.getAttribute("href") ?? "";
+    const hrefNormalized = href.trim().toLowerCase();
 
-    if (link.target === "_blank" || link.hasAttribute("download") || href.startsWith("#") || href.startsWith("javascript:")) {
+    if (
+        link.target === "_blank" ||
+        link.hasAttribute("download") ||
+        hrefNormalized.startsWith("#") ||
+        hrefNormalized.startsWith("javascript:") ||
+        hrefNormalized.startsWith("data:") ||
+        hrefNormalized.startsWith("vbscript:")
+    ) {
         return false;
     }
 
