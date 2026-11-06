@@ -444,9 +444,26 @@ class Auth extends ShieldAuth
     public function loginRedirect(): string
     {
         $session = session();
-        $url     = $session->getTempdata('beforeLoginUrl') ?? setting('Auth.redirects')['login'];
+        $url     = $session->getTempdata('beforeLoginUrl');
+
+        // A page left open in another tab keeps asking for data in the background (the bell, Messages). Once
+        // the session is gone, the first of those requests is what Shield remembers as "where you were going",
+        // and the next login would land on a bare JSON answer. Only a page a person can read is returned to.
+        if (! is_string($url) || self::isBackgroundUrl($url)) {
+            $session->removeTempdata('beforeLoginUrl');
+            $url = setting('Auth.redirects')['login'];
+        }
 
         return $this->getUrl($url);
+    }
+
+    /** The data endpoints the pages call from a script; they answer JSON, never a page. */
+    public static function isBackgroundUrl(string $url): bool
+    {
+        $path = (string) parse_url($url, PHP_URL_PATH);
+
+        return preg_match('#/(?:[a-z_]+/)?api/#', $path) === 1
+            || preg_match('#/notifications/(?:latest|feed|read|delete)/?$#', $path) === 1;
     }
 
     /**

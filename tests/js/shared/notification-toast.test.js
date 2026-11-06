@@ -41,6 +41,15 @@ describe("the notification toast", () => {
         stop();
     });
 
+    it("stops asking once the session has ended and the login page comes back", async () => {
+        const fetchImpl = vi.fn(() => Promise.resolve({ status: 200, redirected: true, json: () => Promise.reject(new Error("not json")) }));
+        const stop = startNotificationToast(document, fetchImpl);
+
+        await vi.advanceTimersByTimeAsync(30000);
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+        stop();
+    });
+
     it("does not preview while the panel is open", async () => {
         document.getElementById("notifications-panel").classList.remove("hidden");
 

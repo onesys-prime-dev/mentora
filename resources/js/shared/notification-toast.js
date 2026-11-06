@@ -89,6 +89,11 @@ export function startNotificationToast(doc = document, fetchImpl = (...args) => 
         const wanted = lastId === null ? url : `${url}?after=${lastId}`;
         const response = await fetchImpl(wanted, { headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" }).catch(() => null);
 
+        // A session that has ended answers with the login page, not JSON: stop asking.
+        if (response && (response.redirected || !(response.headers?.get?.("Content-Type") ?? "application/json").includes("json"))) {
+            return;
+        }
+
         if (response?.status === 200) {
             const data = await response.json().catch(() => null);
 
