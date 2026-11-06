@@ -171,7 +171,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 <div class="p-10 flex flex-col gap-8" data-grading-scheme-editor data-scheme-status="<?= esc($scheme['status'], 'attr') ?>" data-uses-periods="<?= $usesPeriods ? '1' : '0' ?>">
 
     <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
+    <div class="sticky-bar-top flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
 
         <div class="flex items-center gap-3">
 

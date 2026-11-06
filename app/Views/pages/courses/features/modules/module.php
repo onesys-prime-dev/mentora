@@ -25,7 +25,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
     <?php $moduleIsDraft = $module['status'] !== 'published'; ?>
 
     <!-- top bar -->
-    <div class="flex items-start justify-between gap-5 pb-6 border-b border-black/10">
+    <div class="sticky-bar-top flex items-start justify-between gap-5 pb-6 border-b border-black/10">
 
         <div class="flex items-center gap-4">
 

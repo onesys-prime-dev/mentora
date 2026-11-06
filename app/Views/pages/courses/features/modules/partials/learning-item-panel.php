@@ -1,8 +1,16 @@
 <?php $panelIsStudent = \App\Services\Courses\CourseViewer::isStudentHere($user); ?>
 
-<aside class="w-80 shrink-0 flex flex-col bg-[#F9F9FC] border-r border-[#9E9E9E]">
+<?php
+// The aside runs the full height of the card (its tint and border reach the bottom however short the
+// list). From lg up the inner column stays in view beside the item and scrolls on its own: the module
+// heading and progress stay put, the list of units scrolls. --course-content-h is the height of the
+// card that scrolls (set by the course page's script).
+?>
+<aside class="w-80 shrink-0 flex flex-col bg-[#F9F9FC] border-r border-[#9E9E9E]" data-learning-item-panel>
 
-    <div class="flex flex-col gap-1 p-8 border-b border-[#9E9E9E]">
+<div class="flex flex-col lg:sticky lg:top-0 lg:max-h-(--course-content-h,100vh)">
+
+    <div class="flex shrink-0 flex-col gap-1 p-8 border-b border-[#9E9E9E]">
 
         <span class="text-xl text-brand font-bold">
             Module <?= esc($module['order_index']) ?>
@@ -29,7 +37,7 @@
 
     </div>
 
-    <div class="flex p-4">
+    <div class="flex p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
 
         <div class="w-full flex flex-col gap-4">
 
@@ -147,5 +155,7 @@
         </div>
 
     </div>
+
+</div>
 
 </aside>

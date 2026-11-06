@@ -173,6 +173,13 @@ $features = $courseFeatures ?? [
     window.addEventListener('scroll', update, { passive: true });
     if (content) content.addEventListener('scroll', update, { passive: true });
     update();
+
+    // Panels that pin themselves inside the scrolling card size to its height.
+    if (content && window.ResizeObserver) {
+        var size = function () { document.documentElement.style.setProperty('--course-content-h', content.clientHeight + 'px'); };
+        size();
+        new ResizeObserver(size).observe(content);
+    }
 })();
 </script>
 
