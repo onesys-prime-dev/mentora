@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**
- * A student cannot add to a day that has passed: in the month view the tile
- * of yesterday and earlier does nothing when clicked, and the day view of such
- * a day has no Add button. Today and later keep both.
+ * Nobody can add to a day that has passed, whatever their role: in the month view
+ * the tile of yesterday and earlier does nothing when clicked, and the day view of
+ * such a day has no Add button. Today and later keep both.
  */
 
 const mount = async (role) => {
@@ -42,9 +42,9 @@ afterEach(() => {
 
 const modalBody = () => document.querySelector("[data-calendar-modal-body]");
 
-describe("calendar days that have passed, for a student", () => {
+describe.each(["student", "instructor", "chairperson", "dean"])("calendar days that have passed, for a %s", (role) => {
     it("does nothing when the tile of yesterday or earlier is clicked", async () => {
-        await mount("student");
+        await mount(role);
 
         document.querySelector('[data-calendar-cell="2026-11-09"]').click();
         document.querySelector('[data-calendar-cell="2026-11-01"]').click();
@@ -54,19 +54,19 @@ describe("calendar days that have passed, for a student", () => {
     });
 
     it("still opens today and later days", async () => {
-        await mount("student");
+        await mount(role);
 
         document.querySelector('[data-calendar-cell="2026-11-10"]').click();
-        expect(modalBody().querySelector('[data-calendar-action="add-reminder"]')).not.toBeNull();
+        expect(modalBody().querySelector("[data-calendar-action]")).not.toBeNull();
 
         document.querySelector('[data-calendar-cell="2026-11-11"]').click();
-        expect(modalBody().querySelector('[data-calendar-action="add-reminder"]')).not.toBeNull();
+        expect(modalBody().querySelector("[data-calendar-action]")).not.toBeNull();
     });
 
     it("has no Add button in the day view of a past day, and has one today", async () => {
         vi.spyOn(window, "fetch").mockResolvedValue({ ok: true, json: async () => ({ events: [] }) });
 
-        await mount("student");
+        await mount(role);
         document.querySelector('[data-calendar-view="day"]').click();
         await vi.waitFor(() => expect(document.querySelector("[data-calendar-label]").textContent).toBe("November 10, 2026"));
 
