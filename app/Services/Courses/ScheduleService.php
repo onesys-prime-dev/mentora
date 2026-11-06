@@ -78,9 +78,44 @@ class ScheduleService
             'days'      => self::DAYS,
             'dayLabels' => self::DAY_LABELS,
             'grid'      => $grid,
+            'weekDates' => $this->weekDates(),
+            'weekLabel' => $this->weekLabel(),
+            'sessionCount' => count($classes),
+            'classHours'   => $this->classHours($classes),
+            'nowMinutes'   => (int) date('G') * 60 + (int) date('i'),
             'hasAnyCourses' => $courses !== [],
             'hasAnyClasses' => $classes !== [],
         ];
+    }
+
+    /** The current week's day-of-month per day key, Monday first: ['mon' => 2, 'tue' => 3, ...]. */
+    protected function weekDates(): array
+    {
+        $monday = strtotime('monday this week');
+        $dates = [];
+
+        foreach (self::DAYS as $i => $day) {
+            $dates[$day] = (int) date('j', strtotime("+{$i} days", $monday));
+        }
+
+        return $dates;
+    }
+
+    /** "Nov 2 – 8", or "Oct 27 – Nov 2" when the week crosses a month. */
+    protected function weekLabel(): string
+    {
+        $monday = strtotime('monday this week');
+        $sunday = strtotime('+6 days', $monday);
+
+        return date('M j', $monday) . ' – ' . (date('n', $monday) === date('n', $sunday) ? date('j', $sunday) : date('M j', $sunday));
+    }
+
+    /** Total weekly class time in hours, one decimal at most ("6", "4.5"). */
+    protected function classHours(array $classes): float
+    {
+        $minutes = array_sum(array_map(static fn (array $c) => $c['end_minutes'] - $c['start_minutes'], $classes));
+
+        return round($minutes / 60, 1);
     }
 
     /**
@@ -165,7 +200,7 @@ class ScheduleService
     protected function buildGrid(array $classes): array
     {
         if ($classes === []) {
-            return ['total_rows' => 0, 'hour_marks' => [], 'by_day' => array_fill_keys(self::DAYS, [])];
+            return ['total_rows' => 0, 'hour_marks' => [], 'by_day' => array_fill_keys(self::DAYS, []), 'start_minutes' => 0, 'end_minutes' => 0];
         }
 
         // The axis always covers the default day, and grows past it when a class starts earlier or ends later.
@@ -200,7 +235,13 @@ class ScheduleService
 
         }
 
-        return ['total_rows' => $totalRows, 'hour_marks' => $hourMarks, 'by_day' => $byDay];
+        return [
+            'total_rows'    => $totalRows,
+            'hour_marks'    => $hourMarks,
+            'by_day'        => $byDay,
+            'start_minutes' => $startMinutes,
+            'end_minutes'   => $endMinutes,
+        ];
     }
 
     /** "09:30:00" -> 570 (minutes since midnight). */
