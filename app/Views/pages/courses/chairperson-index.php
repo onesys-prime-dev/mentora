@@ -122,7 +122,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
         <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Courses in your programs">
 
             <?php foreach ($courses as $course): ?>
-                <li>
+                <li class="h-full min-w-0">
                     <?= view('pages/courses/partials/course-card', [
                         'course' => $course,
                         'userRole' => 'chairperson',
