@@ -100,7 +100,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
                     <!-- Time grid -->
                     <div
-                        class="relative grid flex-1"
+                        class="relative grid flex-1 pt-2"
                         style="grid-template-columns: <?= esc($gridTemplateColumns) ?>; grid-template-rows: repeat(<?= (int) $totalRows ?>, minmax(1.75rem, 1fr));">
 
                         <!-- Hour labels, left rail -->
