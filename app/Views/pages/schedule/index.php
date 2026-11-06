@@ -78,9 +78,9 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
         <?php else: ?>
 
-            <div class="overflow-x-auto">
+            <div class="flex flex-col overflow-x-auto lg:min-h-0 lg:flex-1">
 
-                <div class="min-w-[720px]">
+                <div class="flex min-w-180 flex-1 flex-col">
 
                     <!-- Day header row -->
                     <div class="grid" style="grid-template-columns: <?= esc($gridTemplateColumns) ?>;">
@@ -100,8 +100,8 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
                     <!-- Time grid -->
                     <div
-                        class="relative grid"
-                        style="grid-template-columns: <?= esc($gridTemplateColumns) ?>; grid-template-rows: repeat(<?= (int) $totalRows ?>, 1.75rem);">
+                        class="relative grid flex-1"
+                        style="grid-template-columns: <?= esc($gridTemplateColumns) ?>; grid-template-rows: repeat(<?= (int) $totalRows ?>, minmax(1.75rem, 1fr));">
 
                         <!-- Hour labels, left rail -->
                         <?php foreach ($grid['hour_marks'] as $mark): ?>
