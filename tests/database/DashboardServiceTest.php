@@ -193,11 +193,11 @@ final class DashboardServiceTest extends DatabaseTestCase
 
     /*
     |--------------------------------------------------------------------------
-    | Student: upcoming tasks
+    | Student: pending tasks
     |--------------------------------------------------------------------------
     */
 
-    public function testUpcomingTasksAreSortedByDueDateWithUrgencyAndStatus(): void
+    public function testPendingTasksAreSortedByDueDateWithUrgency(): void
     {
         $this->quiz($this->a, 'Later', $this->in('+20 days'));
         $this->quiz($this->a, 'This week', $this->in('+3 days'));
@@ -207,32 +207,32 @@ final class DashboardServiceTest extends DatabaseTestCase
 
         $tasks = $this->widget($this->student, 'upcoming-tasks')['tasks'];
 
-        $this->assertSame(['Missed', 'Handed in', 'This week', 'Later'], array_column($tasks, 'title'));
-        $this->assertSame(['overdue', 'soon', 'soon', 'later'], array_column($tasks, 'urgency'));
-        $this->assertSame([null, 'submitted', null, null], array_column($tasks, 'status'));
-        $this->assertSame(['BIO 200', 'BIO 200', 'ART 100', 'ART 100'], array_column($tasks, 'code'));
+        // "Handed in" is submitted, so it is not pending and does not appear.
+        $this->assertSame(['Missed', 'This week', 'Later'], array_column($tasks, 'title'));
+        $this->assertSame(['overdue', 'soon', 'later'], array_column($tasks, 'urgency'));
+        $this->assertSame(['BIO 200', 'ART 100', 'ART 100'], array_column($tasks, 'code'));
         $this->assertSame('biology-intro', $tasks[0]['slug']);
         $this->assertSame($this->b['id'], $tasks[0]['offering_id']);
         unset($overdue);
     }
 
-    public function testAnOverdueTaskThatWasHandedInIsNotOverdue(): void
+    public function testASubmittedTaskLeavesThePendingList(): void
     {
-        $id = $this->quiz($this->a, 'Late but in', $this->in('-1 day'));
-        AssessmentFactory::attempt($id, $this->student, 'Submitted');
+        $late = $this->quiz($this->a, 'Late but in', $this->in('-1 day'));
+        $soon = $this->quiz($this->a, 'On time', $this->in('+1 day'));
+        $this->quiz($this->a, 'Still to do', $this->in('+2 days'));
+        AssessmentFactory::attempt($late, $this->student, 'Submitted');
+        AssessmentFactory::attempt($soon, $this->student, 'Submitted');
 
-        $task = $this->widget($this->student, 'upcoming-tasks')['tasks'][0];
-
-        $this->assertNotSame('overdue', $task['urgency']);
-        $this->assertSame('submitted', $task['status']);
+        $this->assertSame(['Still to do'], array_column($this->widget($this->student, 'upcoming-tasks')['tasks'], 'title'));
     }
 
-    public function testAGradedTaskIsMarkedGraded(): void
+    public function testAGradedTaskLeavesThePendingList(): void
     {
         $id = $this->quiz($this->a, 'Marked', $this->in('+1 day'));
         AssessmentFactory::attempt($id, $this->student, 'Graded', 15.0);
 
-        $this->assertSame('graded', $this->widget($this->student, 'upcoming-tasks')['tasks'][0]['status']);
+        $this->assertSame([], $this->widget($this->student, 'upcoming-tasks')['tasks']);
     }
 
     public function testOnlyEightTasksAreShown(): void

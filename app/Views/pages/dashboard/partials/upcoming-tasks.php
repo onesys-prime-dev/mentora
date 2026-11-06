@@ -7,8 +7,8 @@
  * Data: DashboardService::getUpcomingTasksData(), merged across every
  * enrolled offering via AssessmentOverviewService. A row links to that
  * assessment; a task already submitted/graded keeps its due-date urgency
- * chip (still useful context) and gains a second status pill rather than
- * losing the urgency information.
+ * chip. Only tasks the student has not handed in are listed: once one is
+ * submitted it drops off.
  */
 $userRole = esc($user->getGroups()[0]);
 
@@ -21,20 +21,16 @@ $urgencyStyles = [
     'later'   => ['bubble' => 'bg-blue-800',    'chip' => 'bg-blue-500/15 text-blue-800',     'label' => 'Upcoming'],
 ];
 
-$statusStyles = [
-    'graded'    => ['chip' => 'bg-emerald-500/15 text-emerald-700', 'label' => 'Graded'],
-    'submitted' => ['chip' => 'bg-blue-500/15 text-blue-800',       'label' => 'Submitted'],
-];
 ?>
 
-<!-- upcoming tasks card -->
+<!-- pending tasks card -->
 <div class="h-full min-h-0 flex flex-col bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl overflow-clip">
 
     <div class="shrink-0 flex items-center justify-between px-6 py-3 bg-black/10">
-        <span class="text-xl font-display">Upcoming Tasks</span>
+        <span class="text-xl font-display">Pending Tasks</span>
 
         <span class="text-xs text-gray-700">
-            <?= count($tasks) ?> due
+            <?= count($tasks) ?> pending
         </span>
     </div>
 
@@ -43,7 +39,7 @@ $statusStyles = [
         <?php if ($tasks === []): ?>
 
             <div class="h-full flex flex-col justify-center items-center gap-1 text-center py-6">
-                <span class="text-sm font-medium text-gray-700">Nothing due right now</span>
+                <span class="text-sm font-medium text-gray-700">Nothing pending right now</span>
                 <span class="text-xs text-gray-600">New tasks from your courses will show up here.</span>
             </div>
 
@@ -59,7 +55,6 @@ $statusStyles = [
 
                     <?php
                     $style = $urgencyStyles[$task['urgency']] ?? $urgencyStyles['later'];
-                    $statusStyle = $statusStyles[$task['status'] ?? ''] ?? null;
                     ?>
 
                     <a
@@ -75,12 +70,6 @@ $statusStyles = [
                                 <span class="font-bold shrink-0"><?= esc($task['code']) ?></span>
                                 <span class="shrink-0">-</span>
                                 <span class="truncate"><?= esc($task['title']) ?></span>
-
-                                <?php if ($statusStyle): ?>
-                                    <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold <?= $statusStyle['chip'] ?>">
-                                        <?= esc($statusStyle['label']) ?>
-                                    </span>
-                                <?php endif; ?>
                             </div>
 
                             <div class="flex gap-1 text-xs text-gray-700">

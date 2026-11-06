@@ -9,14 +9,21 @@
 | A crumb with `attrs` is a button carrying those (already-escaped) data
 | attributes, so each feature's JS keeps its own hooks; a crumb without
 | them is plain text. The last crumb is the current page (aria-current).
+|
+| Param: sticky (default true) — from lg up the trail stays at the top of
+| the course card while the page scrolls, so it is always one click away.
+| The negative bottom margin keeps the spacing below it unchanged; the
+| padding is the white strip content scrolls under. Pass false where the
+| trail already sits in a pinned bar (the editors) or its wrapper pins.
 |--------------------------------------------------------------------------
 */
 
 $crumbs ??= [];
+$sticky ??= true;
 $last = count($crumbs) - 1;
 ?>
 
-<nav aria-label="Breadcrumb">
+<nav aria-label="Breadcrumb" <?= $sticky ? 'class="sticky-bar-top lg:-mb-4 lg:pb-4" data-sticky-breadcrumb' : '' ?>>
 
     <ol class="flex flex-wrap items-center gap-x-2 text-sm">
 

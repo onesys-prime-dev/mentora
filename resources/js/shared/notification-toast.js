@@ -2,7 +2,7 @@
 |--------------------------------------------------------------------------
 | A preview beside the bell when something new arrives
 |--------------------------------------------------------------------------
-| Every 20 s (slower while the tab is hidden) the page asks for the newest
+| Every 5 s (slower while the tab is hidden) the page asks for the newest
 | notification id. The first answer is only the baseline, so nothing that was
 | already there pops up. Anything newer shows as a small card under the bell
 | with its title, its line and an Open link, and goes away by itself after 8 s.
@@ -14,7 +14,7 @@
 import { setBellCount } from "./notifications-badge.js";
 
 const SHOW_MS = 8000;
-const POLL_MS = 20000;
+const POLL_MS = 5000;
 const POLL_HIDDEN_MS = 60000;
 
 export function startNotificationToast(doc = document, fetchImpl = (...args) => fetch(...args)) {
@@ -89,6 +89,11 @@ export function startNotificationToast(doc = document, fetchImpl = (...args) => 
         const wanted = lastId === null ? url : `${url}?after=${lastId}`;
         const response = await fetchImpl(wanted, { headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" }).catch(() => null);
 
+        // A session that has ended answers with the login page, not JSON: stop asking.
+        if (response && (response.redirected || !(response.headers?.get?.("Content-Type") ?? "application/json").includes("json"))) {
+            return;
+        }
+
         if (response?.status === 200) {
             const data = await response.json().catch(() => null);
 
@@ -116,9 +121,20 @@ export function startNotificationToast(doc = document, fetchImpl = (...args) => 
 
     tick();
 
+    // Coming back to the tab checks at once instead of waiting out a slow hidden-tab delay.
+    function onVisible() {
+        if (doc.visibilityState === "visible" && !stopped) {
+            clearTimeout(timer);
+            tick();
+        }
+    }
+
+    doc.addEventListener("visibilitychange", onVisible);
+
     return () => {
         stopped = true;
         clearTimeout(timer);
+        doc.removeEventListener("visibilitychange", onVisible);
         host.remove();
     };
 }

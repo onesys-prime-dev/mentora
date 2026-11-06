@@ -19,10 +19,13 @@ class NotificationController extends BaseController
         $user    = auth()->user();
         $isAdmin = $user->inGroup('admin');
 
+        // The same page for every role: the administrator's copy keeps their menu, but has the same
+        // background and lit bell as everyone else's.
         return view('pages/notifications/index', [
             'title'         => 'Notifications',
             'fullHeight'    => ! $isAdmin,
-            'page'          => $isAdmin ? 'admin' : 'notifications',
+            'flat'          => false,
+            'page'          => 'notifications',
             'user'          => $user,
             'noteRows'      => (new NotificationService())->listFor((int) $user->id),
             'noteIsAdmin'   => $isAdmin,
