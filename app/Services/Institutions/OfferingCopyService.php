@@ -298,6 +298,22 @@ class OfferingCopyService
             }
         }
 
+        // What a module waits on, and what a unit waits on (a link to something outside the copy cannot exist).
+        foreach ([
+            ['course_module_prerequisites', 'module_id', 'prerequisite_module_id', $modules],
+            ['learning_unit_prerequisites', 'learning_unit_id', 'prerequisite_unit_id', $units],
+        ] as [$table, $own, $other, $map]) {
+            if ($map === []) {
+                continue;
+            }
+
+            foreach ($db->table($table)->whereIn($own, array_keys($map))->get()->getResultArray() as $row) {
+                if (isset($map[(int) $row[$other]])) {
+                    $this->insert($table, [$own => $map[(int) $row[$own]], $other => $map[(int) $row[$other]], 'created_at' => $now]);
+                }
+            }
+        }
+
         // Assessments hang off modules; their dates move with the term.
         $assessments = [];
         $questions   = [];

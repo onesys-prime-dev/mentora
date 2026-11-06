@@ -390,6 +390,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
 <?php if ($isInstructor): ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-dependencies') ?>
+<?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
 <?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
     'id' => 'learning-unit-dependencies-modal',
     'closeAttr' => 'data-close-learning-unit-dependencies-modal',

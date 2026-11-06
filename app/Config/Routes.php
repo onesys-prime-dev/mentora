@@ -188,6 +188,13 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->patch('(:num)/modules/(:num)/status','Courses\ModuleController::updateModuleStatus/$1/$2');
         $routes->delete('(:num)/modules/(:num)', 'Courses\ModuleController::deleteModule/$1/$2');
         $routes->patch('(:num)/modules/reorder', 'Courses\ModuleController::reorderModules/$1');
+        // Copy and move a module, unit or item to another course (the choosing steps, then the action).
+        $routes->get('(:num)/content-transfer/offerings', 'Courses\ContentTransferController::offerings/$1');
+        $routes->get('(:num)/content-transfer/offerings/(:num)/modules', 'Courses\ContentTransferController::modules/$1/$2');
+        $routes->get('(:num)/content-transfer/modules/(:num)/units', 'Courses\ContentTransferController::units/$1/$2');
+        $routes->get('(:num)/content-transfer/(module|unit)/(:num)/tree', 'Courses\ContentTransferController::tree/$1/$2/$3');
+        $routes->post('(:num)/content-transfer/copy', 'Courses\ContentTransferController::copy/$1');
+        $routes->post('(:num)/content-transfer/move', 'Courses\ContentTransferController::move/$1');
 
         $routes->post('(:num)/modules/(:num)/learning-units', 'Courses\ModuleController::storeLearningUnit/$1/$2');
         $routes->post('(:num)/modules/(:num)/learning-units/(:num)', 'Courses\ModuleController::updateLearningUnit/$1/$2/$3');
@@ -601,6 +608,13 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->patch('(:num)/modules/(:num)/status','Courses\ModuleController::updateModuleStatus/$1/$2');
         $routes->delete('(:num)/modules/(:num)', 'Courses\ModuleController::deleteModule/$1/$2');
         $routes->patch('(:num)/modules/reorder', 'Courses\ModuleController::reorderModules/$1');
+        // Copy and move a module, unit or item to another course (the choosing steps, then the action).
+        $routes->get('(:num)/content-transfer/offerings', 'Courses\ContentTransferController::offerings/$1');
+        $routes->get('(:num)/content-transfer/offerings/(:num)/modules', 'Courses\ContentTransferController::modules/$1/$2');
+        $routes->get('(:num)/content-transfer/modules/(:num)/units', 'Courses\ContentTransferController::units/$1/$2');
+        $routes->get('(:num)/content-transfer/(module|unit)/(:num)/tree', 'Courses\ContentTransferController::tree/$1/$2/$3');
+        $routes->post('(:num)/content-transfer/copy', 'Courses\ContentTransferController::copy/$1');
+        $routes->post('(:num)/content-transfer/move', 'Courses\ContentTransferController::move/$1');
 
         $routes->post('(:num)/modules/(:num)/learning-units', 'Courses\ModuleController::storeLearningUnit/$1/$2');
         $routes->post('(:num)/modules/(:num)/learning-units/(:num)', 'Courses\ModuleController::updateLearningUnit/$1/$2/$3');

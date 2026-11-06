@@ -266,6 +266,7 @@ $formatDuration = static function (int $minutes): string {
 <!-- modals -->
 <?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
 <?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
+<?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
 <?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
     'id' => 'module-dependencies-modal',
     'closeAttr' => 'data-close-module-dependencies-modal',

@@ -59,6 +59,8 @@ $isPublished = $module['status'] === 'published';
         <?= icon('lock', 'h-5 w-5 text-current') ?>
     </button>
 
+    <?= view('pages/courses/features/modules/partials/transfer-buttons', ['kind' => 'module', 'id' => $module['id'], 'name' => $module['title'], 'variant' => 'icon'], ['saveData' => false]) ?>
+
     <button
         type="button"
         title="Delete module"

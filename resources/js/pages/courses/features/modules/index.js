@@ -39,6 +39,16 @@ import { bindModal } from "./modals/index.js";
 
 import { bindModuleModals } from "./modals/modules.js";
 import { bindContainerDependenciesModal } from "./modals/container-dependencies.js";
+import { bindContentTransfer } from "./modals/content-transfer.js";
+import {
+    copyContent,
+    fetchTransferModules,
+    fetchTransferOfferings,
+    fetchTransferTree,
+    fetchTransferUnits,
+    moveContent,
+} from "./api.js";
+import { showToast } from "../../../../shared/toast.js";
 
 import {
     initializeModuleSorting,
@@ -246,6 +256,23 @@ function initializeFeatureBindings() {
             closeButtons: "[data-close-module-dependencies-modal]",
         }),
         refresh: initialize,
+    });
+
+    bindContentTransfer({
+        modal: bindModal({
+            modal: "#content-transfer-modal",
+            closeButtons: "[data-close-transfer-modal]",
+        }),
+        api: {
+            fetchOfferings: fetchTransferOfferings,
+            fetchModules: fetchTransferModules,
+            fetchUnits: fetchTransferUnits,
+            fetchTree: fetchTransferTree,
+            copy: copyContent,
+            move: moveContent,
+        },
+        refresh: initialize,
+        notify: (message, tone) => showToast(message, { tone }),
     });
 
 }

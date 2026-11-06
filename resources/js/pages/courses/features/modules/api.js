@@ -953,3 +953,65 @@ export async function saveContainerDependencies(kind, id, payload) {
     return response.json();
 
 }
+
+/*
+|--------------------------------------------------------------------------
+| Copy and move to another course (instructor)
+|--------------------------------------------------------------------------
+*/
+
+async function transferRequest(path, options = {}) {
+
+    const response = await fetch(`${window.coursesConfig.apiBaseUrl}/content-transfer${path}`, {
+        headers: {
+            ...defaultHeaders(),
+            ...(options.body ? { "Content-Type": "application/json" } : {}),
+        },
+        ...options,
+    });
+
+    if (!response.ok) {
+        throw new Error("The request failed.");
+    }
+
+    return response.json();
+
+}
+
+/** The courses the person may copy or move content into. */
+export async function fetchTransferOfferings() {
+
+    return (await transferRequest("/offerings")).offerings;
+
+}
+
+export async function fetchTransferModules(offeringId) {
+
+    return (await transferRequest(`/offerings/${offeringId}/modules`)).modules;
+
+}
+
+export async function fetchTransferUnits(moduleId) {
+
+    return (await transferRequest(`/modules/${moduleId}/units`)).units;
+
+}
+
+/** What a module or a learning unit holds, to choose from. */
+export function fetchTransferTree(kind, id) {
+
+    return transferRequest(`/${kind}/${id}/tree`);
+
+}
+
+export function copyContent(payload) {
+
+    return transferRequest("/copy", { method: "POST", body: JSON.stringify(payload) });
+
+}
+
+export function moveContent(payload) {
+
+    return transferRequest("/move", { method: "POST", body: JSON.stringify(payload) });
+
+}
