@@ -112,7 +112,7 @@ foreach ($statuses as $status) {
 
         <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Courses in your department">
             <?php foreach ($courses as $course): ?>
-                <li>
+                <li class="h-full min-w-0">
                     <?= view('pages/courses/partials/course-card', [
                         'course'       => $course + ['slug' => url_title((string) $course['course_title'], '-', true)],
                         'userRole'     => 'dean',
