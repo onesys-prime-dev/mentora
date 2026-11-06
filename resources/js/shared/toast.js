@@ -1,5 +1,5 @@
 /**
- * Toasts: the short "what just happened" message at the bottom right.
+ * Toasts: the short "what just happened" message, a slim pill at the top centre.
  *
  *   showToast("Ann Lee was invited", { tone: "success" });
  *
@@ -13,13 +13,26 @@
  */
 
 const TONES = {
-    success: "border-[#2E7D4F]/40 bg-[#E8F5EC] text-[#1F5A38]",
-    warning: "border-[#946200]/40 bg-[#FFF1D6] text-[#6F4A00]",
-    danger: "border-[#C33939]/40 bg-[#FDEDEC] text-[#8E2424]",
-    info: "border-brand/30 bg-white text-[#1A1C1E]",
+    success: { pill: "bg-[#0f5132] text-white", chip: "text-[#0f5132]", glyph: "✓" },
+    warning: { pill: "bg-[#6f4a00] text-white", chip: "text-[#6f4a00]", glyph: "!" },
+    danger: { pill: "bg-[#7f1d1d] text-white", chip: "text-[#7f1d1d]", glyph: "!" },
+    info: { pill: "bg-[#1e3a8a] text-white", chip: "text-[#1e3a8a]", glyph: "i" },
 };
 
 const LABELS = { success: "Done", warning: "Warning", danger: "Problem", info: "Note" };
+
+// A toast eases in from just above and out the same way; the leave takes this long before it is removed.
+const LEAVE_MS = 250;
+
+function dismiss(toast) {
+    if (toast.dataset.leaving === "1") {
+        return;
+    }
+
+    toast.dataset.leaving = "1";
+    toast.classList.add("-translate-y-2", "opacity-0");
+    setTimeout(() => toast.remove(), LEAVE_MS);
+}
 
 const REGION_ATTR = "data-toast-region";
 
@@ -31,7 +44,7 @@ function region() {
         box.setAttribute(REGION_ATTR, "");
         box.setAttribute("role", "status");
         box.setAttribute("aria-live", "polite");
-        box.className = "pointer-events-none fixed bottom-6 right-6 z-[70] flex w-[min(24rem,calc(100vw-3rem))] flex-col gap-2";
+        box.className = "pointer-events-none fixed left-1/2 top-24 z-[70] flex w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 flex-col items-center gap-2";
         document.body.append(box);
     }
 
@@ -45,11 +58,16 @@ function region() {
  */
 export function showToast(message, options = {}) {
     const tone = options.tone && TONES[options.tone] ? options.tone : "info";
-    const timeout = options.timeout ?? (tone === "danger" ? 0 : 5000);
+    const timeout = options.timeout ?? (tone === "danger" ? 0 : tone === "warning" ? 6000 : 4000);
 
     const toast = document.createElement("div");
     toast.setAttribute("data-toast", tone);
-    toast.className = `pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg ${TONES[tone]}`;
+    toast.className = `pointer-events-auto flex max-w-full -translate-y-2 items-center gap-2.5 rounded-full py-2 pl-3 pr-2 text-sm opacity-0 shadow-lg transition duration-300 ease-out motion-reduce:transition-none ${TONES[tone].pill}`;
+
+    const chip = document.createElement("span");
+    chip.className = `grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-xs font-bold leading-none ${TONES[tone].chip}`;
+    chip.setAttribute("aria-hidden", "true");
+    chip.textContent = TONES[tone].glyph;
 
     const text = document.createElement("p");
     text.className = "min-w-0 flex-1";
@@ -63,15 +81,18 @@ export function showToast(message, options = {}) {
     const close = document.createElement("button");
     close.type = "button";
     close.setAttribute("aria-label", "Dismiss");
-    close.className = "shrink-0 rounded px-1 text-lg leading-none opacity-70 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+    close.className = "grid h-6 w-6 shrink-0 place-items-center rounded-full text-lg leading-none opacity-70 transition hover:bg-white/15 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70";
     close.textContent = "×";
-    close.addEventListener("click", () => toast.remove());
+    close.addEventListener("click", () => dismiss(toast));
 
-    toast.append(text, close);
+    toast.append(chip, text, close);
     region().append(toast);
 
+    // One frame after it is in the page, so the change from hidden to shown is animated.
+    requestAnimationFrame(() => toast.classList.remove("-translate-y-2", "opacity-0"));
+
     if (timeout > 0) {
-        setTimeout(() => toast.remove(), timeout);
+        setTimeout(() => dismiss(toast), timeout);
     }
 
     return toast;
@@ -92,4 +113,13 @@ export function showFlashToasts(root = document) {
 
 if (typeof document !== "undefined") {
     showFlashToasts();
+
+    // Success messages drawn into a panel after load (a swapped course page, a saved form) turn into toasts too.
+    if (typeof MutationObserver !== "undefined" && document.body) {
+        new MutationObserver(() => {
+            if (document.querySelector("[data-toast-message]")) {
+                showFlashToasts();
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    }
 }

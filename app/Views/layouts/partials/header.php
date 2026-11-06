@@ -71,29 +71,54 @@ $accountLinks = [
     </div>
 
     <div class="flex gap-4 items-center">
+        <?php // One pill for the quick-access icons: Messages, notifications, dark mode, Apps. ?>
+        <div class="flex items-center gap-0.5 rounded-full bg-white p-1 shadow" data-header-pill>
+        <?php // Messages is quick access: next to the bell and dark mode, not inside the Apps menu. Null while the flag is off or the role has no messages.use. ?>
+        <?php $messagesTile = messages_tile($userRole); ?>
+        <?php if ($messagesTile !== null): ?>
+        <a
+            href="<?= esc($messagesTile['url']) ?>"
+            aria-label="Messages"
+            title="Messages"
+            <?= ($page ?? null) === 'messages' ? 'aria-current="page"' : '' ?>
+            class="relative h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-[current=page]:bg-brand aria-[current=page]:text-white">
+            <?= icon('chat', 'h-5 w-5 text-current') ?>
+            <span data-messages-badge data-url="<?= esc(site_url('messages/api/unread-count')) ?>" <?= (int) $messagesTile['badge'] > 0 ? '' : 'hidden' ?> class="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= (int) $messagesTile['badge'] > 99 ? '99+' : (int) $messagesTile['badge'] ?></span>
+        </a>
+        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
+        <?php endif; ?>
         <div class="relative">
             <button
                 id="notifications-button"
                 type="button"
                 aria-label="Notifications"
+                <?= ($page ?? null) === 'notifications' ? 'aria-current="page"' : '' ?>
                 aria-haspopup="true"
                 aria-expanded="false"
                 aria-controls="notifications-panel"
-                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
-                <?= icon('bell', 'h-4 w-4 text-current') ?>
+                class="relative h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white aria-[current=page]:bg-brand aria-[current=page]:text-white aria-[current=page]:hover:bg-brand aria-[current=page]:hover:text-white">
+                <?= icon('bell', 'h-5 w-5 text-current') ?>
+                <?php $bellCount = (new \App\Services\Notifications\NotificationService())->unreadCount((int) $user->id); ?>
+                <span data-notifications-badge data-count="<?= $bellCount ?>" <?= $bellCount > 0 ? '' : 'hidden' ?> class="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= $bellCount > 99 ? '99+' : $bellCount ?></span>
             </button>
 
             <!-- Latest notifications, 7 at a time; more load as the list is scrolled -->
             <div
                 id="notifications-panel"
                 data-feed-url="<?= site_url('notifications/feed') ?>"
-                class="hidden z-50 absolute right-0 top-full mt-2 w-80 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                class="hidden z-50 absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1.5rem)] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
 
                 <div class="flex items-center justify-between px-5 pt-4 pb-2">
-                    <span class="text-md font-display">Notifications</span>
+                    <span class="text-lg font-display">Notifications</span>
+                    <button type="button" data-notifications-mark-all hidden class="text-[13px] font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Mark all read</button>
                 </div>
 
-                <div class="max-h-96 overflow-y-auto" data-notifications-scroll>
+                <div class="flex gap-1.5 px-5 pb-2" role="group" aria-label="Filter notifications">
+                    <button type="button" data-notifications-filter="all" aria-pressed="true" class="rounded-full border border-brand bg-brand px-3.5 py-1 text-[13px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">All</button>
+                    <button type="button" data-notifications-filter="unread" aria-pressed="false" class="rounded-full border border-transparent bg-[#eef2f8] px-3.5 py-1 text-[13px] text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Unread</button>
+                </div>
+
+                <div class="max-h-[min(24rem,60vh)] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-notifications-scroll>
                     <ul class="flex flex-col divide-y divide-gray-100" data-notifications-list></ul>
                     <p class="hidden px-5 py-8 text-center text-sm text-[#767676]" data-notifications-empty>You have no notifications yet.</p>
                     <p class="hidden px-5 py-6 text-center text-sm text-[#C33939]" data-notifications-error>
@@ -110,15 +135,17 @@ $accountLinks = [
 
             </div>
         </div>
+        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
         <button
             type="button"
             data-theme-toggle aria-pressed="false" aria-label="Dark mode is off. Switch to dark mode" title="Switch to dark mode"
-            class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
-            <?= icon('night', 'h-4 w-4 text-current') ?>
+            class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
+            <?= icon('night', 'h-5 w-5 text-current') ?>
         </button>
 
         <?php // The institutional administrator has a sidebar instead of the Apps menu. ?>
         <?php if ($userRole !== 'institutional_admin'): ?>
+        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
         <div class="relative">
             <button
                 id="app-menu-button"
@@ -127,8 +154,8 @@ $accountLinks = [
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="app-menu-panel"
-                class="h-10 w-10 flex justify-center items-center bg-white rounded-4xl shadow cursor-pointer transition duration-150 text-brand hover:-translate-y-0.5 hover:text-brand-dark hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:shadow-md aria-expanded:hover:text-white">
-                <?= icon('apps', 'h-4 w-4 text-current') ?>
+                class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white">
+                <?= icon('apps', 'h-5 w-5 text-current') ?>
             </button>
 
             <!-- Global apps — same list as the dashboard's Quick Access (global_apps()) -->
@@ -141,6 +168,7 @@ $accountLinks = [
                 <nav class="grid grid-cols-3 gap-x-3 gap-y-4" aria-label="Apps">
 
                     <?php foreach (global_apps($userRole) as $app): ?>
+                        <?php if ($app['key'] === 'messages') { continue; } ?>
 
                         <?= view('components/app-tile', [
                             'app' => $app,
@@ -155,6 +183,7 @@ $accountLinks = [
             </div>
         </div>
         <?php endif; ?>
+        </div>
 
         <div class="relative">
             <button

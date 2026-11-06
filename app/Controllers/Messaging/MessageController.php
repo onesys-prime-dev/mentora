@@ -14,7 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class MessageController extends MessagingController
 {
-    private const FAILURES = ['invalid_body' => 422, 'not_allowed' => 403, 'unavailable' => 503];
+    private const FAILURES = ['invalid_body' => 422, 'not_allowed' => 403, 'unavailable' => 503, 'switched_off' => 403, 'invalid_reply' => 422];
 
     public function page(int $conversationId): ResponseInterface
     {
@@ -29,12 +29,24 @@ class MessageController extends MessagingController
         return $page === null ? $this->notFound() : $this->response->setJSON($page);
     }
 
+    public function changes(int $conversationId): ResponseInterface
+    {
+        $changes = (new MessageService())->changedSince(auth()->user(), $conversationId, (string) $this->request->getGet('since'));
+
+        return $changes === null ? $this->notFound() : $this->response->setJSON($changes);
+    }
+
     public function send(int $conversationId): ResponseInterface
     {
-        $input  = $this->input();
+        $input   = $this->input();
+        $replyTo = $input['reply_to'] ?? null;
+
+        if ($replyTo !== null && $replyTo !== '' && (! is_numeric($replyTo) || (string) (int) $replyTo !== (string) $replyTo)) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => 'invalid_reply']);
+        }
 
         try {
-            $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''));
+            $result = (new MessageService())->send(auth()->user(), $conversationId, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''), $replyTo === null || $replyTo === '' ? null : (int) $replyTo);
         } catch (RateLimitedException $e) {
             return $this->rateLimited($e);
         }

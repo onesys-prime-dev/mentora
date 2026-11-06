@@ -305,7 +305,8 @@ function bindDialogForm(form) {
             const response = await fetch(form.action, {
                 method: (form.method || "post").toUpperCase(),
                 body: new FormData(form),
-                headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+                // A form marked data-stay is answered where it is: no redirect, no message left for the next page.
+                headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest", ...(form.hasAttribute("data-stay") ? { "X-Stay-On-Page": "1" } : {}) },
                 credentials: "same-origin",
             });
 
@@ -339,6 +340,11 @@ function bindDialogForm(form) {
             if (response.ok) {
                 if (body.message) {
                     showToast(body.message, { tone: "success" });
+                }
+
+                if (body.stay) {
+                    // What was typed is what was saved, so the page stays as it is.
+                    return;
                 }
 
                 if (body.redirect) {

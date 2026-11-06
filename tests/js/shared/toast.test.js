@@ -46,6 +46,10 @@ describe("showToast", () => {
         expect(document.querySelector('[data-toast="danger"]')).not.toBeNull();
 
         document.querySelector("[data-toast] button").click();
+
+        // It fades out first, then goes.
+        expect(document.querySelector("[data-toast]").classList.contains("opacity-0")).toBe(true);
+        vi.advanceTimersByTime(300);
         expect(document.querySelector("[data-toast]")).toBeNull();
     });
 
@@ -79,5 +83,20 @@ describe("showFlashToasts", () => {
         expect(document.querySelectorAll("[data-toast]")).toHaveLength(2);
         expect(document.querySelectorAll("[data-toast-message]")).toHaveLength(0);
         expect(document.querySelector('[data-toast="danger"]').textContent).toContain("Could not save.");
+    });
+});
+
+describe("a message added after the page loaded", () => {
+    it("becomes a toast too, once, and the slim pill carries the words", async () => {
+        document.body.insertAdjacentHTML("beforeend", `<div hidden data-toast-message data-tone="success">Students can message each other.</div>`);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const toasts = document.querySelectorAll('[data-toast="success"]');
+
+        expect(toasts).toHaveLength(1);
+        expect(toasts[0].textContent).toContain("Students can message each other.");
+        expect(toasts[0].className).toContain("rounded-full");
+        expect(document.querySelector("[data-toast-message]")).toBeNull();
     });
 });

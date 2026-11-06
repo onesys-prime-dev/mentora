@@ -58,6 +58,11 @@ trait AnswersDialogForms
         // A closure builds the message from what the change returned (a count, say).
         $message = trim(($success instanceof \Closure ? $success($result) : $success) . ' ' . implode(' ', $warnings));
 
+        // A form that stays on its page (X-Stay-On-Page): the message goes straight back, nothing is left for a next page.
+        if ($wantsJson && $this->request->getHeaderLine('X-Stay-On-Page') === '1') {
+            return $this->response->setJSON(['message' => $message, 'warnings' => $warnings, 'stay' => true]);
+        }
+
         if ($wantsJson) {
             // The dialog's script goes to the list next; the message is waiting there.
             session()->setFlashdata('message', $message);

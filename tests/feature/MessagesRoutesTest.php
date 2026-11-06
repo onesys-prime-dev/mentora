@@ -220,6 +220,19 @@ final class MessagesRoutesTest extends RouteTestCase
         $this->assertSame(0, db_connect()->table('messages')->countAllResults());
     }
 
+    public function testANonNumericReplyToIsRefused(): void
+    {
+        $this->signIn($this->student);
+
+        foreach (['abc', '1.5', '1e3'] as $bad) {
+            $res = $this->api('POST', "conversations/{$this->conversation}/messages", ['body' => 'hi', 'client_uuid' => $this->uuid(), 'reply_to' => $bad]);
+            $this->assertSame(422, $res->response()->getStatusCode());
+            $this->assertSame('invalid_reply', json_decode($res->response()->getBody(), true)['error']);
+        }
+
+        $this->assertSame(0, db_connect()->table('messages')->countAllResults());
+    }
+
     public function testRecipientsThePickerWouldNeverListAnswerLikeAnUnknownId(): void
     {
         $chair   = DeanFactory::chair((int) db_connect()->table('sub_departments')->get()->getRow('id'));

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Messaging\ChatStateService;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\CourseChatSync;
 use App\Services\Messaging\MessageNotifier;
@@ -155,6 +156,25 @@ final class MessageNotifierTest extends DatabaseTestCase
         db_connect()->table('conversation_participants')->where(['conversation_id' => $this->thread, 'user_id' => $this->instructor->id])->update(['last_read_message_id' => null]);
         db_connect()->table('users')->where('id', $this->instructor->id)->update(['active' => 0]);
         $this->assertSame(0, $this->notifier()->notifyConversation($this->thread), 'deactivated');
+    }
+
+    public function testAMutedParticipantIsNotNotified(): void
+    {
+        $state = new ChatStateService();
+
+        $this->assertTrue($state->setMuted($this->instructor, $this->thread, true)['ok']);
+        $this->plant($this->thread, $this->parent, 'while muted');
+
+        $this->assertSame(0, $this->notifier()->notifyConversation($this->thread));
+        $this->assertSame([], $this->notices($this->instructor));
+        $this->assertCount(0, $this->mail->sent);
+
+        $this->assertTrue($state->setMuted($this->instructor, $this->thread, false)['ok']);
+        $this->plant($this->thread, $this->parent, 'after unmuting');
+
+        $this->assertSame(1, $this->notifier()->notifyConversation($this->thread));
+        $this->assertCount(1, $this->notices($this->instructor));
+        $this->assertCount(1, $this->mail->sent);
     }
 
     public function testQuietHoursHoldTheNoticeAndTheMorningReleasesExactlyOne(): void

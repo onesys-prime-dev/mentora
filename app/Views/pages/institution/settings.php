@@ -73,7 +73,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
     <?php if ($settingsTab === 'profile'): ?>
 
-        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>">
+        <form method="post" action="<?= esc(site_url($base)) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>">
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -168,7 +168,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $pp = $settingsParents; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-parent-portal-form>
+        <form method="post" action="<?= esc(site_url($base . '/parents')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-parent-portal-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -207,7 +207,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
         <?php $mm = $settingsMessages; ?>
 
-        <form method="post" action="<?= esc(site_url($base . '/messages')) ?>" data-dialog-form data-panel-form class="<?= $formCls ?>" data-messages-settings-form>
+        <form method="post" action="<?= esc(site_url($base . '/messages')) ?>" data-dialog-form data-stay data-panel-form class="<?= $formCls ?>" data-messages-settings-form>
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
@@ -226,6 +226,17 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                         </label>
                     </div>
                 </fieldset>
+
+                <?php if ($settingsCanEdit): ?>
+                    <section class="<?= $section ?>" data-chat-controls data-api="<?= esc(site_url('messages/api'), 'attr') ?>">
+                        <h2 class="<?= $heading ?> w-full">Chat controls</h2>
+                        <p class="text-sm text-[#3D3D3D]">Choose a course chat or staff group, then switch Reactions, Replies, Forwarding, Bump, Delete for everyone and (for course chats) the lock on or off. Press Save to apply your changes; members' menus follow at once. Delete for me is always available.</p>
+                        <select data-role="controls-picker" hidden aria-label="Chat" class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"></select>
+                        <p data-role="controls-empty" class="text-sm text-[#646464]">There are no course chats or staff groups yet.</p>
+                        <div data-role="controls-list" class="flex flex-col"></div>
+                        <p data-role="controls-note" role="status" class="text-xs text-[#C33939]"></p>
+                    </section>
+                <?php endif; ?>
             </div>
 
             <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>

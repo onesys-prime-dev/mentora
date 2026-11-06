@@ -42,9 +42,7 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
 
             <?= $this->include('layouts/partials/announcement') ?>
 
-            <?= $this->include('layouts/partials/notifications-strip') ?>
-
-        </div>
+                    </div>
 
         <?php if ($flashToasts ?? false): ?>
             <?= $this->include('layouts/partials/flash-toasts') ?>

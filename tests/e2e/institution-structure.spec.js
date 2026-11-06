@@ -686,7 +686,7 @@ test("TC-CPY-01 Offerings are copied into a new term from a preview that says wh
     await page.getByLabel("Also assign the same instructors").check();
     await page.getByRole("button", { name: "Copy the ticked offerings" }).click();
 
-    await expect(page.getByText(/^Copied \d+ offering/)).toBeVisible();
+    await expect(page.getByText(/Copied \d+ offering/)).toBeVisible();
     await expect(page.getByText("No students, work or grades were copied.")).toBeVisible();
 });
 

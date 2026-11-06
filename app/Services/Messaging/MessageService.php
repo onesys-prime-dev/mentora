@@ -39,11 +39,11 @@ class MessageService
     }
 
     /**
-     * @return array{ok: bool, reason?: 'not_found'|'invalid_body'|'not_allowed'|'unavailable', message?: array<string, mixed>}
+     * @return array{ok: bool, reason?: 'not_found'|'invalid_body'|'not_allowed'|'unavailable'|'switched_off'|'invalid_reply', message?: array<string, mixed>}
      *
      * @throws RateLimitedException when the sender has sent too many messages in the last minute
      */
-    public function send(User $user, int $conversationId, string $body, string $clientUuid): array
+    public function send(User $user, int $conversationId, string $body, string $clientUuid, ?int $replyTo = null): array
     {
         $conversation = $this->conversations->find($user, $conversationId);
 
@@ -52,7 +52,6 @@ class MessageService
         }
 
         $userId = (int) $user->id;
-        $db     = db_connect();
 
         if (preg_match('/^[A-Za-z0-9-]{8,36}$/', $clientUuid) !== 1) {
             return ['ok' => false, 'reason' => 'invalid_body'];
@@ -62,7 +61,7 @@ class MessageService
         $existing = $this->byUuid($conversationId, $userId, $clientUuid);
 
         if ($existing !== null) {
-            return ['ok' => true, 'message' => $this->present($existing, $userId)];
+            return ['ok' => true, 'message' => $this->presentRows([$existing], $user, $conversation)[0]];
         }
 
         $clean = MessageBody::clean($body);
@@ -79,23 +78,59 @@ class MessageService
             return ['ok' => false, 'reason' => 'unavailable'];
         }
 
+        $extra = [];
+
+        if ($replyTo !== null) {
+            if (! ChatControls::allows($conversation, 'replies')) {
+                return ['ok' => false, 'reason' => 'switched_off'];
+            }
+
+            if (! $this->replyable($userId, $conversationId, $replyTo)) {
+                return ['ok' => false, 'reason' => 'invalid_reply'];
+            }
+
+            $extra['reply_to_message_id'] = $replyTo;
+        }
+
         // Only a send that is about to create a row counts; the retry above has already returned.
         (new MessageRateLimiter())->check('message', $userId);
 
-        $now = date('Y-m-d H:i:s');
+        return $this->post($user, $conversation, $clean, $clientUuid, $extra);
+    }
+
+    /**
+     * Inserts the message, advances the sender's read mark, brings the chat back for the others and notifies.
+     * The one insert path; `$extra` holds more `messages` columns (reply, forward, bump).
+     *
+     * @param array<string, mixed> $conversation a `conversations` row
+     * @param array<string, mixed> $extra
+     *
+     * @return array{ok: bool, message: array<string, mixed>}
+     */
+    public function post(User $user, array $conversation, string $clean, string $clientUuid, array $extra = []): array
+    {
+        $conversationId = (int) $conversation['id'];
+        $userId         = (int) $user->id;
+        $db             = db_connect();
+        $now            = date('Y-m-d H:i:s');
 
         $db->transStart();
         $db->table('messages')->ignore(true)->insert([
             'conversation_id' => $conversationId, 'sender_id' => $userId,
             'body_enc' => $this->cipher->encrypt($clean, $conversationId, $userId),
             'client_uuid' => $clientUuid, 'created_at' => $now,
-        ]);
+        ] + $extra);
         $inserted = $db->affectedRows() > 0;
         $row      = $this->byUuid($conversationId, $userId, $clientUuid);
 
         if ($inserted) {
             $db->table('conversations')->where('id', $conversationId)->update(['last_message_id' => $row['id'], 'last_message_at' => $now, 'updated_at' => $now]);
             $this->advanceRead($userId, $conversationId, (int) $row['id']);
+            // A new message brings an archived chat back for everyone who has not muted it.
+            $db->query(
+                'UPDATE conversation_participants SET archived_at = NULL WHERE conversation_id = ? AND user_id <> ? AND is_muted = 0',
+                [$conversationId, $userId],
+            );
         }
 
         $db->transComplete();
@@ -104,7 +139,7 @@ class MessageService
             $this->notify($conversationId);
         }
 
-        return ['ok' => true, 'message' => $this->present($row, $userId)];
+        return ['ok' => true, 'message' => $this->presentRows([$row], $user, $conversation)[0]];
     }
 
     /**
@@ -129,18 +164,19 @@ class MessageService
      * before that message; `$afterId` what came after it (for polling).
      * Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, has_more: bool}|null
+     * @return array{messages: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>, my_last: array{id: int, seen: int, others: int}|null}|null
      */
     public function page(User $user, int $conversationId, ?int $beforeId = null, ?int $afterId = null, int $limit = self::PAGE): ?array
     {
-        if ($this->conversations->find($user, $conversationId) === null) {
+        $conversation = $this->conversations->find($user, $conversationId);
+
+        if ($conversation === null) {
             return null;
         }
 
         $userId = (int) $user->id;
         $limit  = max(1, min(self::PAGE_MAX, $limit));
-        $first  = (int) db_connect()->table('conversation_participants')->select('first_visible_message_id')
-            ->where(['conversation_id' => $conversationId, 'user_id' => $userId])->get()->getRow('first_visible_message_id');
+        $first  = $this->visibleFloor($userId, $conversationId);
 
         $builder = db_connect()->table('messages m')->select('m.*')
             ->where('m.conversation_id', $conversationId)->where('m.id >=', $first)
@@ -164,7 +200,76 @@ class MessageService
             $rows = array_reverse($rows);
         }
 
-        return ['messages' => array_map(fn (array $row): array => $this->present($row, $userId), $rows), 'has_more' => $more];
+        return [
+            'messages' => $this->presentRows($rows, $user, $conversation),
+            'has_more' => $more,
+            'pinned'   => $this->pinnedPreviews($userId, $conversationId, $first),
+            'my_last'  => $this->myLastSeen($userId, $conversationId),
+        ];
+    }
+
+    /**
+     * The viewer's newest message that still stands, and how many of the others in the chat have read up to it.
+     * Counts only; never who. Null when the viewer has sent nothing here.
+     *
+     * @return array{id: int, seen: int, others: int}|null
+     */
+    private function myLastSeen(int $userId, int $conversationId): ?array
+    {
+        $db   = db_connect();
+        $last = $db->table('messages')->selectMax('id', 'id')
+            ->where(['conversation_id' => $conversationId, 'sender_id' => $userId, 'removed_at' => null, 'deleted_everyone_at' => null])->get()->getRowArray();
+        $id   = (int) ($last['id'] ?? 0);
+
+        if ($id === 0) {
+            return null;
+        }
+
+        $others = $db->table('conversation_participants')->where('conversation_id', $conversationId)->where('user_id <>', $userId)->where('left_at', null);
+        $total  = $others->countAllResults(false);
+        $seen   = $others->where('last_read_message_id >=', $id)->countAllResults();
+
+        return ['id' => $id, 'seen' => $seen, 'others' => $total];
+    }
+
+    /**
+     * Messages of a chat changed (reacted to, pinned, erased) after `$since`, for polling. The same visibility as
+     * page(). `server_time` is the next `since` to send: the database clock minus two seconds, so a change committed in
+     * the same second as that clock is delivered again rather than missed; the client merges changed messages by id
+     * (replace in place), which makes the repeat harmless. When more than PAGE_MAX changed, the oldest PAGE_MAX come
+     * back, `more` is true and `server_time` is the last returned change time, so the next call continues from there.
+     * An unreadable `$since` counts as now, so nothing comes back. Null when the conversation is not the user's.
+     *
+     * @return array{messages: list<array<string, mixed>>, server_time: string, more: bool}|null
+     */
+    public function changedSince(User $user, int $conversationId, string $since): ?array
+    {
+        $conversation = $this->conversations->find($user, $conversationId);
+
+        if ($conversation === null) {
+            return null;
+        }
+
+        $db     = db_connect();
+        $clock  = ['now' => date('Y-m-d H:i:s'), 'lagged' => date('Y-m-d H:i:s', time() - 2)];
+        $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $since);
+        $since  = $parsed !== false && $parsed->format('Y-m-d H:i:s') === $since ? $since : (string) $clock['now'];
+        $userId = (int) $user->id;
+
+        $rows = $db->table('messages m')->select('m.*')
+            ->where('m.conversation_id', $conversationId)->where('m.id >=', $this->visibleFloor($userId, $conversationId))
+            ->where('m.changed_at >', $since)
+            ->where('NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = ' . $userId . ')', null, false)
+            ->orderBy('m.changed_at', 'ASC')->orderBy('m.id', 'ASC')->limit(self::PAGE_MAX + 1)->get()->getResultArray();
+
+        $more = count($rows) > self::PAGE_MAX;
+        $rows = array_slice($rows, 0, self::PAGE_MAX);
+
+        return [
+            'messages'    => $this->presentRows($rows, $user, $conversation),
+            'server_time' => $more ? (string) $rows[array_key_last($rows)]['changed_at'] : (string) $clock['lagged'],
+            'more'        => $more,
+        ];
     }
 
     /** Moves the user's read mark forward to this message; never back. */
@@ -206,7 +311,7 @@ class MessageService
         }
 
         $db = db_connect();
-        $db->table('messages')->where(['id' => $messageId, 'removed_at' => null])->update(['removed_at' => date('Y-m-d H:i:s'), 'removed_by' => (int) $user->id]);
+        $db->table('messages')->where(['id' => $messageId, 'removed_at' => null])->update(['removed_at' => date('Y-m-d H:i:s'), 'removed_by' => (int) $user->id, 'changed_at' => date('Y-m-d H:i:s')]);
 
         if ($db->affectedRows() > 0) {
             // Ids and the action only, never the text.
@@ -229,7 +334,7 @@ class MessageService
     private function advanceRead(int $userId, int $conversationId, int $messageId): void
     {
         db_connect()->query(
-            'UPDATE conversation_participants SET last_read_message_id = GREATEST(COALESCE(last_read_message_id, 0), ?) WHERE conversation_id = ? AND user_id = ?',
+            'UPDATE conversation_participants SET last_read_message_id = GREATEST(COALESCE(last_read_message_id, 0), ?), marked_unread = 0 WHERE conversation_id = ? AND user_id = ?',
             [$messageId, $conversationId, $userId],
         );
 
@@ -246,16 +351,46 @@ class MessageService
     }
 
     /**
-     * @param array<string, mixed> $row a `messages` row
+     * Presents rows of one chat for the viewer: what they may do is worked out once for the chat, and the reactions
+     * of all the rows are loaded in one query.
+     *
+     * @param list<array<string, mixed>> $rows         `messages` rows
+     * @param array<string, mixed>       $conversation a `conversations` row
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function presentRows(array $rows, User $user, array $conversation): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+
+        $userId  = (int) $user->id;
+        $context = $this->resolver->forPost($user, $conversation);
+        $view    = [
+            'canPin'    => $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation)),
+            'canReact'  => $this->policy->canReact($context) && ChatControls::allows($conversation, 'reactions'),
+            'canReply'  => $this->policy->canPost($context) && ChatControls::allows($conversation, 'replies'),
+            'reactions' => MessageActions::summary(array_map(static fn (array $r): int => (int) $r['id'], $rows), $userId),
+        ];
+
+        return array_map(fn (array $row): array => $this->present($row, $userId, $view), $rows);
+    }
+
+    /**
+     * @param array<string, mixed>                                                                                                  $row  a `messages` row
+     * @param array{canPin?: bool, canReact?: bool, canReply?: bool, reactions?: array<int, list<array<string, mixed>>>} $view what the viewer may do and the reactions of the page
      *
      * @return array<string, mixed>
      */
-    private function present(array $row, int $userId): array
+    private function present(array $row, int $userId, array $view = []): array
     {
+        $canPin = $view['canPin'] ?? false;
         $removed = $row['removed_at'] !== null;
+        $erased  = ($row['deleted_everyone_at'] ?? null) !== null;
         $body    = null;
 
-        if (! $removed) {
+        if (! $removed && ! $erased) {
             $body = $this->cipher->decrypt((string) $row['body_enc'], (int) $row['conversation_id'], (int) $row['sender_id']);
 
             if ($body === null) {
@@ -271,7 +406,131 @@ class MessageService
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
             'sender_name' => $sender['name'], 'sender_role' => $sender['role'],
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
+            'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId),
+            'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
+            'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
+            'can_bump'            => MessageActions::canBump($row, $userId, $this->switchOn((int) $row['conversation_id'], 'bump')),
+            'can_forward'         => MessageActions::canForward($row, $this->switchOn((int) $row['conversation_id'], 'forwarding'), $this->isParentThread((int) $row['conversation_id'])),
+            'reactions'           => $view['reactions'][(int) $row['id']] ?? [],
+            'can_react'           => ($view['canReact'] ?? false) && ! $removed && ! $erased,
+            'can_reply'           => ($view['canReply'] ?? false) && ! $removed && ! $erased,
+            'pinned'              => ($row['pinned_at'] ?? null) !== null,
+            'can_pin'             => $canPin && ! $removed && ! $erased,
+            'deleted_everyone'    => $erased,
+            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone')),
         ];
+    }
+
+    /** @var array<string, bool> */
+    private array $switches = [];
+
+    /** Whether one of the chat's switches is on; looked up once per chat per switch per request. */
+    private function switchOn(int $conversationId, string $switch): bool
+    {
+        $key = $conversationId . '|' . $switch;
+
+        if (! isset($this->switches[$key])) {
+            $chat = db_connect()->table('conversations')->select('allow_' . $switch)->where('id', $conversationId)->get()->getRowArray();
+
+            $this->switches[$key] = $chat !== null && ChatControls::allows($chat, $switch);
+        }
+
+        return $this->switches[$key];
+    }
+
+    /** @var array<int, bool> */
+    private array $parentThreads = [];
+
+    /** Whether the chat is a parent-instructor thread about a student; looked up once per chat per request. */
+    private function isParentThread(int $conversationId): bool
+    {
+        if (! isset($this->parentThreads[$conversationId])) {
+            $chat = db_connect()->table('conversations')->select('subject_student_id')->where('id', $conversationId)->get()->getRowArray();
+
+            $this->parentThreads[$conversationId] = $chat !== null && $chat['subject_student_id'] !== null;
+        }
+
+        return $this->parentThreads[$conversationId];
+    }
+
+    /** Whether the sender may reply to this message: in this chat, not before their first visible one, not hidden by them. */
+    private function replyable(int $userId, int $conversationId, int $messageId): bool
+    {
+        if ($messageId < 1 || ! $this->inConversation($conversationId, $messageId)) {
+            return false;
+        }
+
+        return $this->visibleTo($userId, $conversationId, $messageId);
+    }
+
+    /** The lowest message id the user can see in a chat: after joining and after any "delete for me". */
+    private function visibleFloor(int $userId, int $conversationId): int
+    {
+        $mine = db_connect()->table('conversation_participants')->select('first_visible_message_id, cleared_before_message_id')
+            ->where(['conversation_id' => $conversationId, 'user_id' => $userId])->get()->getRowArray();
+
+        return max((int) ($mine['first_visible_message_id'] ?? 0), (int) ($mine['cleared_before_message_id'] ?? 0) + 1);
+    }
+
+    public function visibleTo(int $userId, int $conversationId, int $messageId): bool
+    {
+        return $messageId >= $this->visibleFloor($userId, $conversationId)
+            && db_connect()->table('message_hidden')->where(['message_id' => $messageId, 'user_id' => $userId])->countAllResults() === 0;
+    }
+
+    /** The first 80 characters of a text, with an ellipsis when cut. */
+    public static function preview(string $plain): string
+    {
+        return mb_strlen($plain) > 80 ? mb_substr($plain, 0, 80) . '…' : $plain;
+    }
+
+    /**
+     * The pinned messages the viewer can see, newest pin first: sender and the first 80 characters, decrypted here.
+     *
+     * @return list<array{id: int, sender_name: string, text: string}>
+     */
+    private function pinnedPreviews(int $userId, int $conversationId, int $floor): array
+    {
+        $rows = db_connect()->table('messages m')->select('m.*')
+            ->where(['m.conversation_id' => $conversationId, 'm.removed_at' => null, 'm.deleted_everyone_at' => null])
+            ->where('m.pinned_at IS NOT NULL', null, false)->where('m.id >=', $floor)
+            ->where('NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = ' . $userId . ')', null, false)
+            ->orderBy('m.pinned_at', 'DESC')->orderBy('m.id', 'DESC')->get()->getResultArray();
+        $out = [];
+
+        foreach ($rows as $row) {
+            $plain = $this->cipher->decrypt((string) $row['body_enc'], $conversationId, (int) $row['sender_id']) ?? 'Message unavailable';
+            $out[] = ['id' => (int) $row['id'], 'sender_name' => $this->sender((int) $row['sender_id'])['name'], 'text' => self::preview($plain)];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The quoted original of a reply: who wrote it and its first 80 characters, decrypted here on the server.
+     *
+     * @return array{id: int, sender_name: string, text: string}|null
+     */
+    private function quote(mixed $originalId, int $viewerId): ?array
+    {
+        if ($originalId === null) {
+            return null;
+        }
+
+        $orig = db_connect()->table('messages')->where('id', (int) $originalId)->get()->getRowArray();
+
+        if ($orig === null) {
+            return null;
+        }
+
+        $text = 'Message removed';
+
+        if ($orig['removed_at'] === null && ($orig['deleted_everyone_at'] ?? null) === null && $this->visibleTo($viewerId, (int) $orig['conversation_id'], (int) $orig['id'])) {
+            $plain = $this->cipher->decrypt((string) $orig['body_enc'], (int) $orig['conversation_id'], (int) $orig['sender_id']) ?? 'Message unavailable';
+            $text  = self::preview($plain);
+        }
+
+        return ['id' => (int) $orig['id'], 'sender_name' => $this->sender((int) $orig['sender_id'])['name'], 'text' => $text];
     }
 
     /**

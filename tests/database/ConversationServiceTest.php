@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Messaging\ChatStateService;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\DirectKey;
 use CodeIgniter\Shield\Entities\User;
@@ -246,5 +247,104 @@ final class ConversationServiceTest extends DatabaseTestCase
         $this->assertGreaterThan($early, $read);
         $this->assertSame(1, $this->service->unreadCount($student));
         $this->assertSame($counts, (int) $db->table('messages')->selectMax('id')->get()->getRow('id'));
+    }
+
+    /** @return list<int> */
+    private function ids(array $rows): array
+    {
+        return array_map(static fn (array $r): int => (int) $r['id'], $rows);
+    }
+
+    /** A student with a direct chat (instructor) and a course chat. @return array{User, User, int, int} */
+    private function directAndCourse(): array
+    {
+        [$student, $instructor, $offering] = $this->pair();
+        $direct = (int) $this->service->startDirect($student, (int) $instructor->id)['id'];
+        $db     = db_connect();
+        $db->table('conversations')->insert(['institution_id' => $this->institution, 'type' => 'course', 'offering_id' => $offering, 'created_at' => date('Y-m-d H:i:s')]);
+        $course = (int) $db->insertID();
+        $db->table('conversation_participants')->insert(['conversation_id' => $course, 'user_id' => $student->id, 'joined_at' => date('Y-m-d H:i:s')]);
+
+        return [$student, $instructor, $direct, $course];
+    }
+
+    /** Adds a message and moves the conversation's last message to it. */
+    private function post(int $conversationId, int $senderId): int
+    {
+        $id = $this->message($conversationId, $senderId);
+        db_connect()->table('conversations')->where('id', $conversationId)->update(['last_message_id' => $id, 'last_message_at' => date('Y-m-d H:i:s')]);
+
+        return $id;
+    }
+
+    public function testPinnedChatsSortAboveCourseChats(): void
+    {
+        [$student, , $direct, $course] = $this->directAndCourse();
+
+        $this->assertSame([$course, $direct], $this->ids($this->service->listFor($student)));
+        (new ChatStateService())->pin($student, $direct);
+
+        $rows = $this->service->listFor($student);
+        $this->assertSame([$direct, $course], $this->ids($rows));
+        $this->assertNotNull($rows[0]['pinned_at']);
+    }
+
+    public function testArchivedChatsLeaveTheMainListAndShowInTheArchivedView(): void
+    {
+        [$student, , $direct, $course] = $this->directAndCourse();
+        (new ChatStateService())->setArchived($student, $direct, true);
+
+        $this->assertSame([$course], $this->ids($this->service->listFor($student)));
+        $this->assertSame([$direct], $this->ids($this->service->listFor($student, 'all', false, true)));
+    }
+
+    public function testArchivedCount(): void
+    {
+        [$student, , $direct, $course] = $this->directAndCourse();
+        $this->assertSame(0, $this->service->archivedCount($student));
+
+        (new ChatStateService())->setArchived($student, $direct, true);
+        (new ChatStateService())->setArchived($student, $course, true);
+        $this->assertSame(2, $this->service->archivedCount($student));
+    }
+
+    public function testADeletedChatIsHiddenUntilANewMessage(): void
+    {
+        [$student, $instructor, $direct] = $this->directAndCourse();
+        $this->post($direct, (int) $instructor->id);
+        (new ChatStateService())->deleteForMe($student, $direct);
+
+        $this->assertNotContains($direct, $this->ids($this->service->listFor($student)));
+        $this->assertSame(0, $this->service->unreadCount($student));
+
+        $this->post($direct, (int) $instructor->id);
+        $this->assertContains($direct, $this->ids($this->service->listFor($student)));
+        $this->assertSame(1, $this->service->unreadCount($student));
+    }
+
+    public function testAMutedChatDoesNotCountInTheBadge(): void
+    {
+        [$student, $instructor, $direct] = $this->directAndCourse();
+        $this->post($direct, (int) $instructor->id);
+        (new ChatStateService())->setMuted($student, $direct, true);
+
+        $this->assertSame(0, $this->service->unreadCount($student));
+        $row = array_values(array_filter($this->service->listFor($student), static fn (array $r): bool => (int) $r['id'] === $direct))[0];
+        $this->assertSame(1, $row['unread']);
+    }
+
+    public function testMarkedUnreadShowsOneThenOpeningClearsIt(): void
+    {
+        [$student, , $direct] = $this->directAndCourse();
+        $last = $this->post($direct, (int) $student->id);
+        (new ChatStateService())->markUnread($student, $direct);
+
+        $row = array_values(array_filter($this->service->listFor($student), static fn (array $r): bool => (int) $r['id'] === $direct))[0];
+        $this->assertSame(1, $row['unread']);
+        $this->assertSame(1, $row['marked_unread']);
+
+        (new \App\Services\Messaging\MessageService())->markRead($student, $direct, $last);
+        $row = array_values(array_filter($this->service->listFor($student), static fn (array $r): bool => (int) $r['id'] === $direct))[0];
+        $this->assertSame(0, $row['unread']);
     }
 }

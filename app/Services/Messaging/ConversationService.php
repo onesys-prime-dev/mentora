@@ -170,13 +170,15 @@ class ConversationService
     }
 
     /**
-     * The user's conversations, course chats first, then newest. No message text.
+     * The user's conversations: pinned first, then course chats, then newest. The main list leaves out archived
+     * chats ($archived shows only those) and chats the user deleted for themselves until a newer message arrives.
+     * No message text.
      *
      * @param 'all'|'course'|'direct'|'group' $filter
      *
      * @return list<array<string, mixed>>
      */
-    public function listFor(User $user, string $filter = 'all', bool $unreadOnly = false): array
+    public function listFor(User $user, string $filter = 'all', bool $unreadOnly = false, bool $archived = false): array
     {
         $inst = $this->resolver->institutionOf($user);
 
@@ -184,13 +186,16 @@ class ConversationService
             return [];
         }
 
-        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.created_by, c.is_locked, c.last_message_at,
-                    p.is_muted, p.is_starred,
+        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.created_by, c.institution_id, c.is_locked, c.allow_reactions, c.allow_replies, c.allow_forwarding, c.allow_bump, c.allow_delete_everyone, c.last_message_at,
+                    p.is_muted, p.is_starred, p.pinned_at, p.archived_at, p.marked_unread,
                     (SELECT o.user_id FROM conversation_participants o WHERE o.conversation_id = c.id AND o.user_id <> p.user_id LIMIT 1) AS other_user_id,
-                    (' . $this->unreadSql() . ') AS unread
+                    GREATEST((' . $this->unreadSql() . '), p.marked_unread) AS unread,
+                    (' . $this->unreadSql() . ') AS new_messages
                 FROM conversations c
                 JOIN conversation_participants p ON p.conversation_id = c.id AND p.left_at IS NULL
-                WHERE p.user_id = ? AND c.institution_id = ?';
+                WHERE p.user_id = ? AND c.institution_id = ?
+                  AND NOT (p.cleared_before_message_id > 0 AND COALESCE(c.last_message_id, 0) <= p.cleared_before_message_id)
+                  AND p.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
         $binds = [(int) $user->id, $inst];
 
         if (in_array($filter, ['course', 'direct', 'group'], true)) {
@@ -202,15 +207,37 @@ class ConversationService
             $sql .= ' HAVING unread > 0';
         }
 
-        $sql .= " ORDER BY (c.type = 'course') DESC, c.last_message_at DESC, c.id DESC";
+        $sql .= " ORDER BY (p.pinned_at IS NOT NULL) DESC, p.pinned_at DESC, (c.type = 'course') DESC, c.last_message_at DESC, c.id DESC";
 
         $rows = db_connect()->query($sql, $binds)->getResultArray();
 
         foreach ($rows as &$row) {
-            $row['unread'] = (int) $row['unread'];
+            $row['unread']        = (int) $row['unread'];
+            $row['marked_unread'] = (int) $row['marked_unread'];
+            $row['new_messages']  = (int) $row['new_messages'];
         }
 
         return $rows;
+    }
+
+    /** How many chats the user has archived (and not deleted for themselves). */
+    public function archivedCount(User $user): int
+    {
+        $inst = $this->resolver->institutionOf($user);
+
+        if ($inst === null) {
+            return 0;
+        }
+
+        $row = db_connect()->query(
+            'SELECT COUNT(*) AS total FROM conversations c
+                JOIN conversation_participants p ON p.conversation_id = c.id AND p.left_at IS NULL
+                WHERE p.user_id = ? AND c.institution_id = ? AND p.archived_at IS NOT NULL
+                  AND NOT (p.cleared_before_message_id > 0 AND COALESCE(c.last_message_id, 0) <= p.cleared_before_message_id)',
+            [(int) $user->id, $inst],
+        )->getRowArray();
+
+        return (int) $row['total'];
     }
 
     public function unreadCount(User $user): int
@@ -223,10 +250,10 @@ class ConversationService
 
         $row = db_connect()->query(
             'SELECT COALESCE(SUM(unread), 0) AS total FROM (
-                SELECT (' . $this->unreadSql() . ') AS unread
+                SELECT GREATEST((' . $this->unreadSql() . '), p.marked_unread) AS unread
                 FROM conversations c
                 JOIN conversation_participants p ON p.conversation_id = c.id AND p.left_at IS NULL
-                WHERE p.user_id = ? AND c.institution_id = ?
+                WHERE p.user_id = ? AND c.institution_id = ? AND p.is_muted = 0
             ) t',
             [(int) $user->id, $inst],
         )->getRowArray();
@@ -240,6 +267,7 @@ class ConversationService
         return 'SELECT COUNT(*) FROM messages m
                 WHERE m.conversation_id = c.id AND m.sender_id <> p.user_id AND m.removed_at IS NULL
                   AND m.id > COALESCE(p.last_read_message_id, 0) AND m.id >= p.first_visible_message_id
+                  AND m.id > p.cleared_before_message_id
                   AND NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = p.user_id)';
     }
 }

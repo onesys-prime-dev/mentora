@@ -15,9 +15,15 @@ import { startAdminSignIn, emailedCode } from "./support/admin.js";
 import { runSql } from "./support/database.js";
 import { submitLoginForm } from "./support/sign-in.js";
 import {
+    badgeCount,
+    bubble,
+    chatMenu,
     disableMessages,
     enableMessages,
     goToMessages,
+    menuItem,
+    menuOf,
+    messageMenu,
     openMessagesAs,
     people,
     rowById,
@@ -351,7 +357,8 @@ test("TC-MSG-11 A student blocks a classmate and reports a message; the administ
         await rowFor(michael.page, people.juan.name).click();
         await expect(thread(michael.page).getByText("This is the message to report.")).toBeVisible();
 
-        // Report it.
+        // Report it (the icons appear while the pointer is over the message).
+        await thread(michael.page).getByText("This is the message to report.").hover();
         await michael.page.locator("[data-action=report]").last().click();
         await michael.page.locator("[data-role=report-reason]").selectOption("spam");
         await michael.page.locator("[data-role=report-send]").click();
@@ -466,5 +473,455 @@ test("TC-MSG-14 The system administrator has no Messages entry and the address i
     for (const path of ["/messages", "/messages/api/conversations", "/messages/reports"]) {
         const response = await page.goto(path);
         expect(response.status(), path).toBe(404);
+    }
+});
+
+// ---- chat and message actions (TC-MSG-15 to 26) ------------------------------------------------------------------
+// Michael (student5) and Juan (student1) share the direct thread from TC-MSG-03 and 11; every case writes its own
+// unique texts. TC-MSG-11 leaves Michael blocking Juan, so the first case lifts the block.
+
+const juanName = people.juan.name;
+const michaelName = people.michael.name;
+
+/** Both students signed in with their direct thread open. */
+async function openDirectPair(browser) {
+    const michael = await openMessagesAs(browser, people.michael);
+    const juan = await openMessagesAs(browser, people.juan);
+
+    await rowFor(michael.page, juanName).first().click();
+    await rowFor(juan.page, michaelName).first().click();
+    await expect(michael.page.locator("[data-role=composer]")).toBeVisible();
+    await expect(juan.page.locator("[data-role=composer]")).toBeVisible();
+
+    return {
+        michael,
+        juan,
+        close: async () => {
+            await michael.context.close();
+            await juan.context.close();
+        },
+    };
+}
+
+test("TC-MSG-15 A student pins a chat to the top and unpins it", async ({ browser }) => {
+    runSql("DELETE FROM user_blocks");
+
+    const michael = await openMessagesAs(browser, people.michael);
+
+    try {
+        const rows = michael.page.locator("[data-role=rows] > button");
+
+        await expect(rows.first()).not.toContainText(juanName);
+
+        await (await chatMenu(michael.page, juanName)).locator("[data-action=pin]").click();
+        await expect(menuOf(michael.page)).toBeHidden();
+        await expect(rows.first()).toContainText(juanName);
+
+        await chatMenu(michael.page, juanName);
+        await expect(menuItem(michael.page, "pin")).toHaveCount(0);
+        await menuItem(michael.page, "unpin").click();
+        await expect(rows.first()).not.toContainText(juanName);
+    } finally {
+        await michael.context.close();
+    }
+});
+
+test("TC-MSG-16 Muting a chat keeps its unread dot but stops notifications and the badge", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+
+    try {
+        await goToMessages(michael.page);
+        await (await chatMenu(michael.page, juanName)).locator("[data-action=mute]").click();
+        await expect(menuOf(michael.page)).toBeHidden();
+
+        const before = await badgeCount(michael.page);
+
+        await sendMessage(juan.page, "Muted chat message one");
+
+        await michael.page.reload();
+        await expect(rowFor(michael.page, juanName).locator("[data-unread]")).toBeVisible({ timeout: 15000 });
+        expect(await badgeCount(michael.page)).toBe(before);
+
+        await michael.page.locator("#notifications-button").click();
+        await expect(michael.page.locator("#notifications-panel")).toBeVisible();
+        await expect(michael.page.locator("#notifications-panel")).not.toContainText(`${juanName} sent you a message.`);
+        await michael.page.keyboard.press("Escape");
+        await expect(michael.page.locator("#notifications-panel")).toBeHidden();
+
+        await (await chatMenu(michael.page, juanName)).locator("[data-action=unmute]").click();
+        await expect(menuOf(michael.page)).toBeHidden();
+        await michael.page.reload();
+        await expect(rowFor(michael.page, juanName).locator("[data-unread]")).toBeVisible();
+        expect(await badgeCount(michael.page)).toBeGreaterThan(before);
+    } finally {
+        await pair.close();
+    }
+});
+
+test("TC-MSG-17 Archiving moves a chat to Archived chats, and a new message brings it back", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+
+    try {
+        await goToMessages(michael.page);
+        await (await chatMenu(michael.page, juanName)).locator("[data-action=archive]").click();
+        await expect(rowFor(michael.page, juanName)).toHaveCount(0);
+
+        const archived = michael.page.locator("[data-role=archived-open]");
+
+        await expect(archived).toContainText("Archived chats (1)");
+        await archived.click();
+        await expect(rowFor(michael.page, juanName)).toBeVisible();
+        await michael.page.locator("[data-role=archived-back]").click();
+        await expect(rowFor(michael.page, juanName)).toHaveCount(0);
+
+        await sendMessage(juan.page, "Back from the archive");
+        await michael.page.reload();
+        await expect(rowFor(michael.page, juanName)).toBeVisible();
+        await expect(michael.page.locator("[data-role=archived-open]")).toBeHidden();
+    } finally {
+        await pair.close();
+    }
+});
+
+test("TC-MSG-18 Deleting a chat for me hides it only from me, and a new message brings back only the new part", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+
+    try {
+        await sendMessage(juan.page, "Said before the delete");
+        await goToMessages(michael.page);
+
+        // A course chat cannot be deleted.
+        await chatMenu(michael.page, "IT101");
+        await expect(menuItem(michael.page, "delete")).toHaveCount(0);
+        await michael.page.keyboard.press("Escape");
+        await expect(menuOf(michael.page)).toBeHidden();
+
+        await (await chatMenu(michael.page, juanName)).locator("[data-action=delete]").click();
+        await expect(rowFor(michael.page, juanName)).toHaveCount(0);
+
+        await juan.page.reload();
+        await expect(rowFor(juan.page, michaelName)).toBeVisible();
+
+        await rowFor(juan.page, michaelName).click();
+        await sendMessage(juan.page, "Said after the delete");
+
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+        await expect(thread(michael.page).getByText("Said after the delete")).toBeVisible();
+        await expect(thread(michael.page).getByText("Said before the delete")).toHaveCount(0);
+    } finally {
+        await pair.close();
+    }
+});
+
+test("TC-MSG-19 A reaction shows on the other screen without a reload, and pressing it again removes it", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+
+    try {
+        await sendMessage(juan.page, "Please react to this");
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+        await expect(thread(michael.page).getByText("Please react to this")).toBeVisible();
+
+        await messageMenu(michael.page, "Please react to this");
+        await menuOf(michael.page).locator('[data-emoji="👍"]').first().click();
+        await expect(menuOf(michael.page)).toBeHidden();
+
+        await expect(bubble(michael.page, "Please react to this").locator('[data-emoji="👍"]')).toHaveCount(1);
+        await expect(bubble(juan.page, "Please react to this").locator('[data-emoji="👍"]')).toHaveCount(1, { timeout: 15000 });
+
+        await bubble(michael.page, "Please react to this").locator('[data-emoji="👍"]').click();
+        await expect(bubble(michael.page, "Please react to this").locator('[data-emoji="👍"]')).toHaveCount(0);
+        await expect(bubble(juan.page, "Please react to this").locator('[data-emoji="👍"]')).toHaveCount(0, { timeout: 15000 });
+    } finally {
+        await pair.close();
+    }
+});
+
+test("TC-MSG-20 Replying quotes the original, and the quote leads back to it", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+
+    try {
+        await sendMessage(juan.page, "Original for the reply");
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+
+        await messageMenu(michael.page, "Original for the reply");
+        await menuItem(michael.page, "reply").click();
+        await expect(michael.page.locator("[data-role=reply-strip]")).toContainText("Original for the reply");
+
+        await sendMessage(michael.page, "This is my answer");
+        await expect(michael.page.locator("[data-role=reply-strip]")).toBeHidden();
+
+        const quote = bubble(michael.page, "This is my answer").locator("[data-reply-to]");
+
+        await expect(quote).toContainText("Original for the reply");
+        await quote.click();
+        await expect(thread(michael.page).locator("[data-id]", { hasText: "Original for the reply" }).first()).toHaveClass(/ring-2/);
+    } finally {
+        await pair.close();
+    }
+});
+
+test("TC-MSG-21 Pinning a message shows the pinned bar to both; a student cannot pin in a course chat", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+    const instructor = await openMessagesAs(browser, people.instructor1);
+
+    try {
+        await sendMessage(juan.page, "Remember this one");
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+
+        await messageMenu(michael.page, "Remember this one");
+        await menuItem(michael.page, "pin").click();
+        await expect(michael.page.locator("[data-role=pinbar]")).toContainText("Remember this one");
+        await expect(juan.page.locator("[data-role=pinbar]")).toContainText("Remember this one", { timeout: 15000 });
+
+        // Put it back so the shared thread is as found.
+        await messageMenu(michael.page, "Remember this one");
+        await menuItem(michael.page, "unpin").click();
+        await expect(michael.page.locator("[data-role=pinbar]")).toBeHidden();
+
+        // A course chat: the student's menu has no Pin message, the instructor's does.
+        const chat = rowFor(michael.page, "IT101");
+        const id = await chat.getAttribute("data-id");
+
+        await chat.click();
+        await sendMessage(michael.page, "A course chat line to pin");
+        await messageMenu(michael.page, "A course chat line to pin");
+        await expect(menuItem(michael.page, "pin")).toHaveCount(0);
+        await michael.page.keyboard.press("Escape");
+
+        await rowById(instructor.page, id).click();
+        await expect(thread(instructor.page).getByText("A course chat line to pin")).toBeVisible({ timeout: 15000 });
+        await messageMenu(instructor.page, "A course chat line to pin");
+        await expect(menuItem(instructor.page, "pin")).toBeVisible();
+        await instructor.page.keyboard.press("Escape");
+    } finally {
+        await pair.close();
+        await instructor.context.close();
+    }
+});
+
+test("TC-MSG-22 Forwarding sends a copy marked Forwarded; a parent thread has no Forward", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+    const parent = await openMessagesAs(browser, people.parent);
+
+    try {
+        await sendMessage(juan.page, "Share this with the class");
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+
+        await messageMenu(michael.page, "Share this with the class");
+        await menuItem(michael.page, "forward").click();
+        await michael.page.locator("#messages-forward label", { hasText: "IT101" }).first().locator("input").check();
+        await michael.page.locator("[data-role=forward-send]").click();
+        await expect(michael.page.locator("[data-role=toast]")).toHaveText("Forwarded");
+
+        await rowFor(michael.page, "IT101").click();
+        await expect(bubble(michael.page, "Share this with the class")).toContainText("Forwarded");
+
+        // The parent's thread with the instructor (TC-MSG-06) cannot be forwarded out of.
+        await rowFor(parent.page, people.instructor1.name).first().click();
+        await thread(parent.page).locator("[data-id]").first().click({ button: "right" });
+        await expect(menuOf(parent.page)).toBeVisible();
+        await expect(menuItem(parent.page, "forward")).toHaveCount(0);
+        await parent.page.keyboard.press("Escape");
+    } finally {
+        await pair.close();
+        await parent.context.close();
+    }
+});
+
+test("TC-MSG-23 Bump resends my own message as a reminder, once an hour, and not other people's", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+
+    try {
+        await sendMessage(michael.page, "Please remember the deadline");
+        await sendMessage(juan.page, "Someone else's line");
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+
+        await messageMenu(michael.page, "Someone else's line");
+        await expect(menuItem(michael.page, "bump")).toHaveCount(0);
+        await michael.page.keyboard.press("Escape");
+
+        await messageMenu(michael.page, "Please remember the deadline");
+        await menuItem(michael.page, "bump").click();
+        await expect(thread(michael.page).getByText("Please remember the deadline")).toHaveCount(2);
+        await expect(thread(michael.page).locator("[data-id]", { hasText: "Please remember the deadline" }).last()).toContainText("Bump");
+
+        await messageMenu(michael.page, "Please remember the deadline");
+        await menuItem(michael.page, "bump").click();
+        await expect(michael.page.locator("[data-role=toast]")).not.toHaveText("");
+        await expect(thread(michael.page).getByText("Please remember the deadline")).toHaveCount(2);
+    } finally {
+        await pair.close();
+    }
+});
+
+test("TC-MSG-24 Delete for everyone leaves a tombstone, erases the text, and is limited to my own messages for 15 minutes", async ({ browser }) => {
+    const pair = await openDirectPair(browser);
+    const { michael, juan } = pair;
+
+    try {
+        const id = await rowFor(michael.page, juanName).first().getAttribute("data-id");
+
+        await sendMessage(juan.page, "Juan's line stays");
+        await sendMessage(michael.page, "Unsend this line");
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+
+        await messageMenu(michael.page, "Juan's line stays");
+        await expect(menuItem(michael.page, "delete-everyone")).toHaveCount(0);
+        await michael.page.keyboard.press("Escape");
+
+        await messageMenu(michael.page, "Unsend this line");
+        michael.page.once("dialog", (dialog) => dialog.accept());
+        await menuItem(michael.page, "delete-everyone").click();
+
+        await expect(thread(michael.page)).toContainText("You deleted a message");
+        await expect(thread(juan.page)).toContainText(`${michaelName} deleted a message`, { timeout: 15000 });
+        await expect(thread(juan.page).getByText("Unsend this line")).toHaveCount(0);
+
+        const json = await juan.page.request.get(`/messages/api/conversations/${id}/messages`);
+
+        expect(await json.text()).not.toContain("Unsend this line");
+
+        // After 15 minutes the option is gone.
+        await sendMessage(michael.page, "Too old to unsend");
+
+        const messageId = await bubble(michael.page, "Too old to unsend").getAttribute("data-id");
+
+        runSql(`UPDATE messages SET created_at = created_at - INTERVAL 20 MINUTE WHERE id = ${Number(messageId)}`);
+        await michael.page.reload();
+        await rowFor(michael.page, juanName).click();
+        await messageMenu(michael.page, "Too old to unsend");
+        await expect(menuItem(michael.page, "delete-everyone")).toHaveCount(0);
+        await michael.page.keyboard.press("Escape");
+    } finally {
+        await pair.close();
+    }
+});
+
+test("TC-MSG-25 On a phone a long press opens the menu; on a desktop the keyboard does, and the composer keeps the browser's menu", async ({ browser }) => {
+    const phone = await openMessagesAs(browser, people.michael, { viewport: { width: 390, height: 844 } });
+    const desktop = await openMessagesAs(browser, people.michael);
+
+    try {
+        await rowFor(phone.page, juanName).first().click();
+        await expect(phone.page.locator("[data-role=composer]")).toBeVisible();
+
+        const last = thread(phone.page).locator("[data-id]").last();
+
+        await last.dispatchEvent("touchstart");
+        await phone.page.waitForTimeout(700);
+        await last.dispatchEvent("touchend");
+        await expect(menuOf(phone.page)).toBeVisible();
+        await phone.page.keyboard.press("Escape");
+        await expect(menuOf(phone.page)).toBeHidden();
+
+        await rowFor(desktop.page, juanName).first().click();
+
+        const target = thread(desktop.page).locator("[data-id]").last();
+
+        await target.focus();
+        await desktop.page.keyboard.press("Shift+F10");
+        await expect(menuOf(desktop.page)).toBeVisible();
+        await desktop.page.keyboard.press("Escape");
+        await expect(menuOf(desktop.page)).toBeHidden();
+        await expect(target).toBeFocused();
+
+        await target.focus();
+        await desktop.page.keyboard.press("Shift+F10");
+        await expect(menuOf(desktop.page)).toBeVisible();
+        await desktop.page.keyboard.press("ArrowDown");
+        await desktop.page.keyboard.press("Enter");
+        await expect(menuOf(desktop.page)).toBeHidden();
+
+        // The composer keeps the browser's own menu.
+        await desktop.page.locator("[data-role=body]").click({ button: "right" });
+        await expect(menuOf(desktop.page)).toHaveCount(0);
+    } finally {
+        await phone.context.close();
+        await desktop.context.close();
+    }
+});
+
+test("TC-MSG-26 The institution's administrator turns off Forwarding, Reactions and Delete for everyone; the student's menu follows", async ({ browser }) => {
+    const student = await openMessagesAs(browser, people.michael);
+    const admin = await openMessagesAs(browser, people.institutionAdmin);
+    const names = ["forwarding", "reactions", "delete_everyone"];
+
+    try {
+        const chat = rowFor(student.page, "IT101");
+        const id = await chat.getAttribute("data-id");
+
+        await chat.click();
+        await sendMessage(student.page, "A line to test the controls");
+
+        // A student's Settings has only My alerts, and the Messages Settings has no Chat controls for anyone.
+        await student.page.locator("[data-role=prefs-open]").click();
+        await expect(student.page.locator("[data-role=settings-tabs]")).toBeHidden();
+        await expect(student.page.locator("[data-control]")).toHaveCount(0);
+        await student.page.locator("#messages-prefs [data-dialog-close]").first().click();
+
+        const setSwitches = async (on) => {
+            await admin.page.goto("/institution/settings/messages");
+            await admin.page.locator("[data-role=controls-picker]").selectOption(id);
+
+            for (const name of names) {
+                const toggle = admin.page.locator(`[data-control="${name}"]`);
+
+                if ((await toggle.getAttribute("aria-checked")) !== String(on)) {
+                    await toggle.click();
+                    await expect(toggle).toHaveAttribute("aria-checked", String(on));
+                }
+            }
+
+            // The switches are a draft until Save.
+            await admin.page.getByRole("button", { name: "Save", exact: true }).click();
+            await expect(admin.page.locator("[data-toast]").first()).toBeVisible();
+        };
+
+        await setSwitches(false);
+
+        try {
+            await student.page.reload();
+            await rowById(student.page, id).click();
+            await messageMenu(student.page, "A line to test the controls");
+            await expect(menuItem(student.page, "forward")).toHaveCount(0);
+            await expect(menuOf(student.page).locator("[data-emoji]")).toHaveCount(0);
+            await expect(menuItem(student.page, "delete-everyone")).toHaveCount(0);
+            await expect(menuItem(student.page, "delete-me")).toBeVisible();
+            await student.page.keyboard.press("Escape");
+
+            // A stale call is refused by the server too (the page's own fetch carries the CSRF header).
+            const messageId = await bubble(student.page, "A line to test the controls").getAttribute("data-id");
+            const status = await student.page.evaluate(async ([chatId, mid]) => {
+                const response = await fetch(`/messages/api/conversations/${chatId}/messages/${mid}/react`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Accept: "application/json" },
+                    body: JSON.stringify({ emoji: "👍" }),
+                });
+
+                return response.status;
+            }, [id, messageId]);
+
+            expect(status).toBe(403);
+        } finally {
+            await setSwitches(true);
+        }
+    } finally {
+        await student.context.close();
+        await admin.context.close();
     }
 });

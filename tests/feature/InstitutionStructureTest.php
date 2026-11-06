@@ -181,6 +181,43 @@ final class InstitutionStructureTest extends RouteTestCase
         $this->assertSame(1, $this->audited('structure.department_created'));
     }
 
+    public function testADeanIsAssignedToADepartmentReplacedAndRemoved(): void
+    {
+        $first  = PeopleFactory::person('dean', 'Dina', 'Dean', 'dina@struct.example', $this->institution);
+        $second = PeopleFactory::person('dean', 'Dan', 'Dale', 'dan@struct.example', $this->institution);
+
+        $this->assertStringContainsString('Assign dean', $this->page());
+
+        $this->withHeaders(['Accept' => 'application/json']);
+        $this->assertTrue($this->step('POST', $this->url('/departments/' . $this->department . '/deans'), ['user_id' => (string) $first->id])->isOK());
+
+        $page = $this->page();
+        $this->assertStringContainsString('Dina Dean', $page);
+        $this->assertStringContainsString('Replace dean', $page);
+
+        $this->assertTrue($this->step('POST', $this->url('/departments/' . $this->department . '/deans'), ['user_id' => (string) $second->id])->isOK());
+        $this->assertSame('Dan Dale', (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution)[$this->department]['name']);
+
+        $id = (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution)[$this->department]['id'];
+        $this->assertTrue($this->step('POST', $this->url('/deans/' . $id . '/remove'))->isOK());
+        $this->assertSame([], (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution));
+    }
+
+    public function testAddingADepartmentCanPickItsDeanAndRefusesSomeoneWhoIsNotOne(): void
+    {
+        $dean = PeopleFactory::person('dean', 'Dina', 'Dean', 'dina@struct.example', $this->institution);
+
+        $this->withHeaders(['Accept' => 'application/json']);
+        $this->assertTrue($this->step('POST', $this->url('/departments'), ['code' => 'ccs', 'name' => 'College of Computing', 'dean_user_id' => (string) $dean->id])->isOK());
+
+        $row = db_connect()->table('departments')->where(['institution_id' => $this->institution, 'code' => 'CCS'])->get()->getRowArray();
+        $this->assertSame((int) $dean->id, (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution)[(int) $row['id']]['user_id']);
+
+        $outsider = PeopleFactory::person('student', 'Sam', 'Student', 'sam@struct.example', $this->other);
+        $result   = $this->step('POST', $this->url('/departments'), ['code' => 'cba', 'name' => 'College of Business', 'dean_user_id' => (string) $outsider->id]);
+        $this->assertSame(422, $result->response()->getStatusCode());
+    }
+
     public function testARefusedDialogPostAnswers422WithTheFieldToHighlight(): void
     {
         $this->withHeaders(['Accept' => 'application/json']);

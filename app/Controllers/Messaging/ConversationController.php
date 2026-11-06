@@ -21,11 +21,12 @@ class ConversationController extends MessagingController
         $user    = auth()->user();
         $filter  = (string) $this->request->getGet('filter');
 
-        $rows = $service->listFor($user, in_array($filter, ['course', 'direct', 'group'], true) ? $filter : 'all', (string) $this->request->getGet('unread') === '1');
+        $rows = $service->listFor($user, in_array($filter, ['course', 'direct', 'group'], true) ? $filter : 'all', (string) $this->request->getGet('unread') === '1', (string) $this->request->getGet('archived') === '1');
 
         return $this->response->setJSON([
             'conversations' => (new ConversationPresenter())->present($user, $rows),
             'unread'        => $service->unreadCount($user),
+            'archived_count' => $service->archivedCount($user),
         ]);
     }
 

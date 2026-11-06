@@ -25,15 +25,21 @@ import { createGroupPicker, MAX_MEMBERS } from "./group.js";
 import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
-import { conversationRow, dayLabel, messageNode } from "./render.js";
+import { bindMenuTriggers } from "./gestures.js";
+import { chatMenuItems, messageMenuItems } from "./menu-items.js";
+import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
+import { createSettings } from "./settings.js";
+import { createMenu } from "./menu.js";
+import { conversationRow, dayLabel, hoverTime, messageNode, minutesBetween, separatorTime, serverStamp, setServerOffset } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
 const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
 
 const ROLE_WORDS = { instructor: "Instructor", chairperson: "Chairperson", dean: "Dean", parent: "Parent", student: "Student", institutional_admin: "Administrator" };
 
-const pad = (n) => String(n).padStart(2, "0");
-const stamp = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const stamp = (d) => serverStamp(d);
+// A message sent this long after the one before it gets a time above it.
+const GAP_MINUTES = 15;
 const visible = () => document.visibilityState !== "hidden";
 
 export function mountMessages(root, { api, now = () => new Date() }) {
@@ -50,7 +56,13 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const lockEl = $("[data-role=lock]");
     const lockNoteEl = $("[data-role=lock-note]");
     const olderEl = $("[data-role=older]");
+    const archivedOpenEl = $("[data-role=archived-open]");
+    const listNoteEl = $("[data-role=list-note]");
+    const archivedBackEl = $("[data-role=archived-back]");
     const pickerNote = $("[data-role=picker-state]");
+    const pinbarEl = $("[data-role=pinbar]");
+    const replyStripEl = $("[data-role=reply-strip]");
+    const toastEl = $("[data-role=toast]");
 
     const listGuard = createGuard();
     const threadGuard = createGuard();
@@ -58,6 +70,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const state = {
         filter: "all",
         unreadOnly: false,
+        archived: false,
+        switching: false,
+        archivedCount: 0,
         search: "",
         conversations: [],
         listLoaded: false,
@@ -73,10 +88,13 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         cursor: 0,
         token: null,
         loadingOlder: false,
-        confirmRemove: null,
         confirmBlock: null,
         reportFor: null,
         reporting: false,
+        replyTo: null,
+        since: "",
+        pinned: [],
+        pinIndex: 0,
     };
 
     // ---- small helpers -------------------------------------------------
@@ -85,7 +103,25 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const listState = (name) => only($("[data-role=list]"), name);
     const threadState = (name) => only($("[data-role=scroller]"), name);
 
+    let listNoteTimer = null;
+
+    function showListNote(text) {
+        clearTimeout(listNoteTimer);
+
+        if (!listNoteEl) {
+            return;
+        }
+
+        listNoteEl.textContent = text;
+        listNoteEl.hidden = text === "";
+
+        if (text !== "") {
+            listNoteTimer = setTimeout(() => showListNote(""), 5000);
+        }
+    }
+
     function updateBadge(count) {
+        state.badge = count;
         document.querySelectorAll("[data-messages-badge]").forEach((el) => {
             el.textContent = count > 99 ? "99+" : String(count);
             el.hidden = count <= 0;
@@ -100,7 +136,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.items = [...sent, ...state.items.filter((item) => typeof item.id !== "number")];
     };
-    const current = () => state.conversations.find((c) => c.id === state.openId) ?? null;
+    // The open chat can leave the list (archived or muted while another filter is on); its last row keeps its menu working.
+    const current = () => state.conversations.find((c) => c.id === state.openId) ?? (state.openRow?.id === state.openId ? state.openRow : null);
 
     // ---- the list ------------------------------------------------------
 
@@ -108,25 +145,67 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const needle = state.search.trim().toLowerCase();
         const shown = state.conversations.filter((c) => needle === "" || [c.name, c.subtitle].some((t) => (t ?? "").toLowerCase().includes(needle)));
 
+        if (archivedOpenEl) {
+            archivedOpenEl.hidden = state.archived || state.archivedCount <= 0;
+            archivedOpenEl.querySelector("[data-role=archived-count]").textContent = String(state.archivedCount);
+        }
+        if (archivedBackEl) {
+            archivedBackEl.hidden = !state.archived;
+        }
+
         rowsEl.replaceChildren(...shown.map((c) => conversationRow(c, { selected: c.id === state.openId })));
 
-        if (state.conversations.length === 0 && state.filter === "all" && !state.unreadOnly) {
+        if (state.conversations.length === 0 && state.filter === "all" && !state.unreadOnly && !state.archived) {
             listState("empty");
         } else {
-            listState(shown.length === 0 ? "no-match" : null);
+            listState(shown.length === 0 ? (state.archived && needle === "" ? "empty-archived" : "no-match") : null);
         }
+    }
+
+    // The last answer for each filter, shown at once while a fresh one is fetched.
+    const listCache = new Map();
+    const cacheKey = (unread = state.unreadOnly) => `${state.filter}|${unread}|${state.archived}`;
+    const isUnread = (c) => c.unread > 0 || c.marked_unread;
+
+    function showCached() {
+        const exact = listCache.get(cacheKey());
+        const wider = state.unreadOnly ? listCache.get(cacheKey(false))?.filter(isUnread) : null;
+        const known = exact ?? wider;
+
+        if (known) {
+            state.conversations = known;
+            renderList();
+        }
+    }
+
+    // Opening a chat reads it: its count goes at once, not after the next refresh.
+    function markOpenedRead(id) {
+        const row = state.conversations.find((c) => c.id === id);
+
+        if (!row || (!(row.unread > 0) && !row.marked_unread)) {
+            return;
+        }
+
+        if (!row.muted) {
+            updateBadge(Math.max(0, (state.badge ?? 0) - (row.unread > 0 ? row.unread : 0)));
+        }
+
+        row.unread = 0;
+        row.marked_unread = false;
+        renderList();
     }
 
     async function loadList() {
         const token = listGuard.next();
-        const { status, data } = await api.conversations({ filter: state.filter, unread: state.unreadOnly });
+        const { status, data } = await api.conversations({ filter: state.filter, unread: state.unreadOnly, archived: state.archived });
 
         if (!listGuard.isCurrent(token)) {
             return;
         }
 
         if (status !== 200 || !data) {
-            if (!state.listLoaded) {
+            if (!state.listLoaded || state.switching) {
+                state.switching = false;
                 listState("error");
             }
 
@@ -134,8 +213,21 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         state.listLoaded = true;
+        listCache.set(cacheKey(), data.conversations);
         state.conversations = data.conversations;
+        state.archivedCount = data.archived_count ?? state.archivedCount;
+        state.switching = false;
         updateBadge(data.unread ?? 0);
+
+        // The chat on screen is being read, whatever the server has not heard yet.
+        const openRow = state.conversations.find((c) => c.id === state.openId);
+
+        if (openRow && (openRow.unread > 0 || openRow.marked_unread)) {
+            updateBadge(Math.max(0, (data.unread ?? 0) - (openRow.muted ? 0 : openRow.unread ?? 0)));
+            openRow.unread = 0;
+            openRow.marked_unread = false;
+        }
+
         renderList();
 
         if (state.openId !== null && current() !== null) {
@@ -148,12 +240,16 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     // ---- the thread ----------------------------------------------------
 
     function applyConversation(c) {
+        if (c) {
+            state.openRow = c;
+        }
+
         const avatar = $("[data-role=head-avatar]");
 
         $("[data-role=head-name]").textContent = c?.name ?? "Conversation";
         $("[data-role=head-sub]").textContent = !c ? "" : c.subtitle ? `About ${c.subtitle}` : c.type === "course" ? "Course chat" : c.type === "group" ? "Group" : "Direct message";
         avatar.textContent = c?.initials ?? "";
-        avatar.className = `grid h-[30px] w-[30px] flex-none place-items-center text-[11px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
+        avatar.className = `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
 
         const canPost = c === null || c.can_post !== false;
         const locked = Number(c?.is_locked) === 1;
@@ -197,15 +293,35 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
-    function messageRow(item) {
+    const ICON_BUTTON = "grid h-7 w-7 flex-none place-items-center rounded-full text-gray-500 opacity-0 hover:bg-gray-200/70 hover:text-gray-800 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100 [@media(hover:none)]:opacity-100";
+    const svg = (d) => `<svg aria-hidden="true" viewBox="0 0 20 20" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+    const ICONS = {
+        trash: svg('<path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10M9 9v4M11 9v4"/>'),
+        more: svg('<circle cx="10" cy="4.5" r="1" fill="currentColor"/><circle cx="10" cy="10" r="1" fill="currentColor"/><circle cx="10" cy="15.5" r="1" fill="currentColor"/>'),
+        flag: svg('<path d="M5 17V3M5 4h9l-2 3 2 3H5"/>'),
+    };
+
+    // Under my newest message: "Sent", then "Seen" (a direct chat) or "Seen by 3" (a group, a course; a count, never names).
+    function deliveryStatus(item) {
+        const mine = state.myLast;
+        const seen = mine && mine.id === item.id ? mine.seen : 0;
+
+        if (seen <= 0) {
+            return "Sent";
+        }
+
+        return current()?.type === "direct" ? "Seen" : `Seen by ${seen}`;
+    }
+
+    function messageRow(item, status = null) {
         const row = document.createElement("div");
 
-        row.className = `group/msg flex flex-col ${item.mine ? "items-end" : "items-start"}`;
-        row.append(messageNode(item, { mine: item.mine }));
+        row.className = `flex flex-col ${item.mine ? "items-end" : "items-start"}`;
+        const bubble = messageNode(item, { mine: item.mine, onToggle: (m, emoji) => react(m, emoji), onShowWho: (m, emoji) => showWho(m, emoji) });
 
         const note = document.createElement("div");
 
-        note.className = "mt-0.5 flex gap-2 text-[10px] text-[#646464]";
+        note.className = "flex flex-none items-center gap-1 text-[12px] text-[#646464]";
 
         if (item.pending) {
             note.textContent = "Sending…";
@@ -225,9 +341,23 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             hide.type = "button";
             hide.dataset.action = "hide";
             hide.dataset.messageId = String(item.id);
-            hide.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
-            hide.textContent = "Delete for me";
+            hide.className = ICON_BUTTON;
+            hide.setAttribute("aria-label", "Delete");
+            hide.title = "Delete";
+            hide.innerHTML = ICONS.trash;
+            hide.dataset.canEveryone = item.can_delete_everyone ? "true" : "false";
             note.append(hide);
+
+            const more = document.createElement("button");
+
+            more.type = "button";
+            more.dataset.action = "more";
+            more.dataset.messageId = String(item.id);
+            more.setAttribute("aria-label", "Message actions");
+            more.className = ICON_BUTTON;
+            more.title = "More";
+            more.innerHTML = ICONS.more;
+            note.append(more);
 
             if (!item.mine) {
                 const report = document.createElement("button");
@@ -235,27 +365,58 @@ export function mountMessages(root, { api, now = () => new Date() }) {
                 report.type = "button";
                 report.dataset.action = "report";
                 report.dataset.messageId = String(item.id);
-                report.className = "opacity-0 hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 group-hover/msg:opacity-100";
-                report.textContent = "Report";
+                report.className = ICON_BUTTON;
+                report.setAttribute("aria-label", "Report");
+                report.title = "Report";
+                report.innerHTML = ICONS.flag;
                 note.append(report);
-            }
-
-            // A moderator of this chat can blank the message for everyone; it takes a second click to be sure.
-            if (current()?.can_moderate) {
-                const confirming = state.confirmRemove === item.id;
-                const remove = document.createElement("button");
-
-                remove.type = "button";
-                remove.dataset.action = "remove";
-                remove.dataset.messageId = String(item.id);
-                remove.className = `${confirming ? "font-semibold text-red-700" : "opacity-0 group-hover/msg:opacity-100"} hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50`;
-                remove.textContent = confirming ? "Click again to remove" : "Remove message";
-                note.append(remove);
             }
         }
 
-        if (note.childNodes.length > 0) {
-            row.append(note);
+        // The delivery word goes under the bubble after the time and icons are placed.
+        const statusLine = status === null ? null : document.createElement("div");
+
+        if (statusLine) {
+            statusLine.dataset.role = "delivery";
+            statusLine.className = "mr-1 mt-0.5 text-[11px] text-gray-500";
+            statusLine.textContent = status;
+        }
+
+        if (note.querySelector("[data-action=hide]") !== null) {
+            // Like Messenger: the time and icons float beside the bubble, on the side facing the middle of the
+            // chat, while the pointer is over the message. They are laid over the margin, not in the line, so the
+            // bubble is the same size and in the same place with or without them. The padding on the side next to
+            // the bubble keeps the pointer inside the message while it travels to them.
+            const line = document.createElement("div");
+
+            line.className = "group/msg relative w-fit max-w-[70%]";
+            bubble.classList.remove("max-w-[70%]");
+            bubble.classList.add("max-w-full");
+
+            const side = document.createElement("div");
+
+            side.className = `absolute top-1/2 hidden -translate-y-1/2 items-center gap-1 group-hover/msg:flex ${item.mine ? "right-full pr-2" : "left-full pl-2"}`;
+
+            // Shown only while the pointer is over the message: on the left of my messages, the right of theirs.
+            const sentAt = document.createElement("time");
+
+            sentAt.dataset.role = "sent-at";
+            sentAt.setAttribute("datetime", String(item.created_at ?? ""));
+            sentAt.className = "whitespace-nowrap px-1 text-[11px] text-gray-500";
+            sentAt.textContent = hoverTime(item.created_at, new Date());
+            side.append(...(item.mine ? [sentAt, note] : [note, sentAt]));
+            line.append(bubble, side);
+            row.append(line);
+        } else {
+            row.append(bubble);
+
+            if (note.childNodes.length > 0) {
+                row.append(note);
+            }
+        }
+
+        if (statusLine) {
+            row.append(statusLine);
         }
 
         return row;
@@ -266,6 +427,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const heightBefore = scroller.scrollHeight;
         const nodes = [];
         let day = null;
+        let previous = null;
+        const lastMine = [...state.items].reverse().find((i) => i.mine && typeof i.id === "number" && !i.removed && !i.deleted_everyone);
 
         for (const item of state.items) {
             const label = dayLabel(item.created_at, now());
@@ -273,13 +436,23 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             if (label !== day) {
                 const separator = document.createElement("div");
 
-                separator.className = "py-1 text-center text-[10px] text-[#646464]";
-                separator.textContent = label;
+                separator.className = "py-1 text-center text-[12px] text-[#646464]";
+                separator.textContent = separatorTime(item.created_at, now());
                 nodes.push(separator);
                 day = label;
+            } else if (previous !== null && minutesBetween(previous.created_at, item.created_at) >= GAP_MINUTES) {
+                // A pause inside the day: the time the conversation picked up again, like Messenger.
+                const separator = document.createElement("div");
+
+                separator.dataset.role = "time-separator";
+                separator.className = "py-1 text-center text-[12px] text-[#646464]";
+                separator.textContent = separatorTime(item.created_at, now());
+                nodes.push(separator);
             }
 
-            nodes.push(messageRow(item));
+            previous = item;
+
+            nodes.push(messageRow(item, lastMine && item.id === lastMine.id ? deliveryStatus(item) : null));
         }
 
         messagesEl.replaceChildren(...nodes);
@@ -340,6 +513,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         const known = new Set(serverItems().map((item) => item.id));
         const fresh = data.messages.filter((m) => !known.has(m.id));
+        const seenBefore = JSON.stringify(state.myLast);
+
+        state.myLast = data.my_last ?? state.myLast;
 
         if (fresh.length > 0) {
             state.items.push(...fresh);
@@ -347,9 +523,43 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             sortItems();
             renderMessages();
             readUpTo();
+        } else if (JSON.stringify(state.myLast) !== seenBefore) {
+            renderMessages();
         }
 
+        await pollChanges(id, token);
+
         return "ok";
+    }
+
+    // Messages reacted to, pinned or erased since the last tick, merged by id.
+    async function pollChanges(id, token) {
+        if (state.since === "") {
+            return;
+        }
+
+        const { status, data } = await api.changes(id, state.since);
+
+        if (!threadGuard.isCurrent(token) || status !== 200 || !data) {
+            return;
+        }
+
+        state.since = data.server_time ?? state.since;
+
+        // A change to a message older than the loaded page is left alone: merging it in would open a gap that
+        // "Load older" then skips over. It shows when that page is loaded.
+        const loaded = state.items.filter((i) => typeof i.id === "number").map((i) => i.id);
+        const newest = loaded.length > 0 ? Math.max(...loaded) : 0;
+        const known = new Set(loaded);
+        // A message whose reaction is still on its way keeps what the person just picked.
+        const busy = new Set(state.items.filter((i) => i.reacting).map((i) => i.id));
+        const relevant = data.messages.filter((m) => !busy.has(m.id) && (known.has(m.id) || m.id > newest));
+
+        if (relevant.length > 0) {
+            state.items = mergeById(state.items, relevant);
+            renderMessages();
+            refreshThread();
+        }
     }
 
     async function open(id) {
@@ -359,16 +569,21 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.openId = id;
         state.token = token;
+        markOpenedRead(id);
         state.cursor = 0;
         state.loadingOlder = false;
-        state.confirmRemove = null;
         state.confirmBlock = null;
+        state.pinned = [];
+        state.myLast = null;
+        state.pinIndex = 0;
+        setReply(null);
+        renderPinbar();
         showSafetyNote("");
         state.items = [];
         state.hasMore = false;
         state.sending = null;
         state.composer = createComposer({
-            send: (text, uuid) => api.send(id, text, uuid),
+            send: (text, uuid) => api.send(id, text, uuid, state.sending?.replyTo ?? undefined),
             onSent: (message) => sent(id, message),
             onFailed: (reason, data) => failed(id, reason, data),
         });
@@ -383,6 +598,14 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         applyConversation(current());
         threadState("thread-loading");
         renderList();
+
+        // The changes clock starts before the first page so nothing changed in between is missed.
+        state.since = "";
+        api.changes(id, "").then((clock) => {
+            if (threadGuard.isCurrent(token) && clock.status === 200 && clock.data?.server_time && state.since === "") {
+                state.since = clock.data.server_time;
+            }
+        });
 
         const { status, data } = await api.page(id, {});
 
@@ -405,6 +628,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.items = data.messages;
         state.cursor = Math.max(0, ...data.messages.map((m) => m.id));
         state.hasMore = data.has_more;
+        state.pinned = data.pinned ?? [];
+        state.myLast = data.my_last ?? null;
+        renderPinbar();
         renderMessages({ stick: true });
         readUpTo();
 
@@ -488,6 +714,12 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             item.pending = false;
             item.failed = true;
             item.failNote = reason === "rate_limited" ? data?.message ?? null : null;
+
+            if (reason === "invalid_reply") {
+                // The message being answered is gone. Retry sends it as a plain message instead of failing again.
+                item.replyTo = null;
+                item.failNote = "The message you replied to is no longer there. Retry sends this without the reply.";
+            }
         }
 
         renderMessages();
@@ -499,7 +731,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         // The id stays with the message, so Retry of an older one can never post it twice.
-        const draft = item ?? { id: `local-${++state.localSeq}`, uuid: crypto.randomUUID(), mine: true, body: text.trim(), raw: text, removed: false, created_at: stamp(now()) };
+        const draft = item ?? { id: `local-${++state.localSeq}`, uuid: crypto.randomUUID(), mine: true, body: text.trim(), raw: text, removed: false, created_at: stamp(now()), replyTo: state.replyTo?.id ?? null };
+
+        if (item === null) {
+            setReply(null);
+        }
 
         draft.pending = true;
         draft.failed = false;
@@ -545,13 +781,25 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     });
 
     messagesEl.addEventListener("click", async (event) => {
+        const quote = event.target.closest("[data-reply-to]");
+
+        if (quote) {
+            scrollToMessage(Number(quote.dataset.replyTo));
+
+            return;
+        }
+
         const button = event.target.closest("[data-action]");
 
         if (!button) {
             return;
         }
 
-        if (button.dataset.action === "retry") {
+        if (button.dataset.action === "more") {
+            const rect = button.getBoundingClientRect();
+
+            openMessageMenu(messagesEl.querySelector(`[data-id="${button.dataset.messageId}"]`), { x: rect.left, y: rect.bottom, trigger: button });
+        } else if (button.dataset.action === "retry") {
             const item = state.items.find((i) => String(i.id) === button.dataset.key);
 
             if (item) {
@@ -559,35 +807,17 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         } else if (button.dataset.action === "report") {
             openReport(Number(button.dataset.messageId));
-        } else if (button.dataset.action === "remove") {
-            const id = Number(button.dataset.messageId);
-
-            if (state.confirmRemove !== id) {
-                state.confirmRemove = id;
-                renderMessages();
-
-                return;
-            }
-
-            state.confirmRemove = null;
-
-            const { status } = await api.remove(state.openId, id);
-            const item = state.items.find((i) => i.id === id);
-
-            if (status === 200 && item) {
-                item.removed = true;
-                item.body = null;
-            }
-
-            renderMessages();
         } else if (button.dataset.action === "hide") {
             const id = Number(button.dataset.messageId);
-            const { status } = await api.hide(state.openId, id);
+            const rect = button.getBoundingClientRect();
+            const items = [{ id: "delete-me", label: "Delete for me", onSelect: () => hideMessage(id) }];
 
-            if (status === 200) {
-                state.items = state.items.filter((i) => i.id !== id);
-                renderMessages();
+            // "For everyone" is offered only where the server says it is allowed (own message, inside the window, switch on).
+            if (button.dataset.canEveryone === "true") {
+                items.push({ id: "delete-everyone", label: "Delete for everyone", danger: true, onSelect: () => deleteEveryone(id) });
             }
+
+            menu.open(items, { x: rect.left, y: rect.bottom, trigger: button });
         }
     });
 
@@ -755,7 +985,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const prefsEnd = $("[data-role=prefs-end]");
     const prefsNote = $("[data-role=prefs-note]");
 
+    const settings = createSettings({ root, api });
+
     $("[data-role=prefs-open]")?.addEventListener("click", async () => {
+        settings.sync();
         prefsNote.textContent = "";
 
         const { status, data } = await api.preferences();
@@ -878,7 +1111,445 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         renderGroup();
     });
 
+    // ---- the message menu ----------------------------------------------
+
+    let toastTimer = null;
+
+    function toast(text) {
+        clearTimeout(toastTimer);
+
+        if (!toastEl) {
+            return;
+        }
+
+        toastEl.textContent = text;
+        toastEl.hidden = text === "";
+
+        if (text !== "") {
+            toastTimer = setTimeout(() => toast(""), 4000);
+        }
+    }
+
+    const messageById = (id) => state.items.find((i) => i.id === id) ?? null;
+
+    function renderPinbar() {
+        if (!pinbarEl) {
+            return;
+        }
+
+        const total = state.pinned.length;
+
+        pinbarEl.hidden = total === 0;
+
+        if (total === 0) {
+            return;
+        }
+
+        state.pinIndex = Math.min(state.pinIndex, total - 1);
+
+        const pin = state.pinned[state.pinIndex];
+        const next = $("[data-role=pinbar-next]");
+
+        $("[data-role=pinbar-text]").textContent = `\u{1F4CC} Pinned · ${pin.sender_name ? `${pin.sender_name}: ` : ""}${pin.text}`;
+        next.textContent = `${state.pinIndex + 1} of ${total} ▾`;
+        next.hidden = total < 2;
+    }
+
+    // Re-read the latest page and merge it, so flags and the pinned bar are what the server says now.
+    async function refreshThread() {
+        const id = state.openId;
+        const token = state.token;
+
+        if (id === null) {
+            return;
+        }
+
+        const { status, data } = await api.page(id, {});
+
+        if (!threadGuard.isCurrent(token) || status !== 200 || !data) {
+            return;
+        }
+
+        state.items = mergeById(state.items, data.messages);
+        state.pinned = data.pinned ?? [];
+        state.cursor = Math.max(state.cursor, ...data.messages.map((m) => m.id));
+        renderPinbar();
+        renderMessages();
+    }
+
+    function scrollToMessage(id) {
+        const node = messagesEl.querySelector(`[data-id="${id}"]`);
+
+        if (!node) {
+            return;
+        }
+
+        node.scrollIntoView?.({ block: "center" });
+        node.classList.add("ring-2", "ring-brand");
+        setTimeout(() => node.classList.remove("ring-2", "ring-brand"), 1500);
+    }
+
+    // Says why an action was refused; a stale menu also refreshes the flags. Returns true when it was a refusal.
+    function refused(result) {
+        if (result.status === 200) {
+            return false;
+        }
+
+        const error = result.data?.error;
+
+        if (result.status === 429) {
+            toast("Slow down a little.");
+        } else if (error === "too_late") {
+            toast("It's too late to delete that for everyone.");
+        } else if (error === "limit") {
+            toast(result.data?.max ? `You can pin up to ${result.data.max} messages.` : "You've reached the limit for that.");
+        } else if (result.status === 403) {
+            toast("That's turned off in this chat.");
+        } else {
+            toast("That didn't work. Try again.");
+        }
+
+        if (result.status === 403 || result.status === 404) {
+            loadList();
+            refreshThread();
+        }
+
+        return true;
+    }
+
+    function setReply(message) {
+        state.replyTo = message;
+
+        if (replyStripEl) {
+            replyStripEl.hidden = message === null;
+            $("[data-role=reply-text]").textContent = message === null ? "" : `Replying to ${message.mine ? "yourself" : message.sender_name ?? "message"}: ${(message.body ?? "").slice(0, 80)}`;
+        }
+
+        if (message !== null) {
+            bodyEl.focus();
+        }
+    }
+
+    async function react(m, emoji) {
+        if (m.reacting || state.openId === null) {
+            return;
+        }
+
+        const before = m.reactions ?? [];
+        const picked = before.find((r) => r.mine)?.emoji === emoji ? null : emoji;
+
+        m.reacting = true;
+        m.reactions = toggleReaction(before, emoji);
+        renderMessages();
+
+        const result = await api.react(state.openId, m.id, picked);
+
+        m.reacting = false;
+
+        // A poll may have swapped this message for a fresh copy while the request was in flight.
+        const live = messageById(m.id) ?? m;
+
+        live.reacting = false;
+
+        if (result.status === 200 && Array.isArray(result.data?.reactions)) {
+            live.reactions = result.data.reactions;
+        } else {
+            live.reactions = before;
+            refused(result);
+        }
+
+        renderMessages();
+    }
+
+    async function showWho(m, emoji) {
+        const { status, data } = await api.reactors(state.openId, m.id);
+
+        if (status !== 200 || !data) {
+            toast("Couldn't load who reacted.");
+
+            return;
+        }
+
+        const entries = Object.entries(data.reactors ?? {}).filter(([e]) => !emoji || e === emoji);
+
+        $("[data-role=who-list]").replaceChildren(...entries.flatMap(([e, names]) => names.map((name) => {
+            const item = document.createElement("li");
+
+            item.textContent = `${e} ${name}`;
+
+            return item;
+        })));
+        $("[data-role=who-open]")?.click();
+    }
+
+    async function copyText(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            const area = document.createElement("textarea");
+
+            area.value = text;
+            area.style.position = "fixed";
+            area.style.opacity = "0";
+            document.body.append(area);
+            area.select();
+            document.execCommand?.("copy");
+            area.remove();
+        }
+
+        toast("Copied");
+    }
+
+    async function hideMessage(id) {
+        const { status } = await api.hide(state.openId, id);
+
+        if (status === 200) {
+            state.items = state.items.filter((i) => i.id !== id);
+            renderMessages();
+        }
+    }
+
+    async function openForward(m) {
+        const list = $("[data-role=forward-list]");
+        const send = $("[data-role=forward-send]");
+        const note = $("[data-role=forward-state]");
+        // Every active chat, whatever filter the list is showing.
+        const all = await api.conversations({ filter: "all", unread: false, archived: false });
+        const source = all.status === 200 && Array.isArray(all.data?.conversations) ? all.data.conversations : state.conversations;
+        const targets = source.filter((c) => c.id !== state.openId && !c.archived && !c.closed && c.can_post !== false);
+        const chosen = new Set();
+        const boxes = new Map();
+
+        const sync = () => {
+            send.disabled = chosen.size === 0;
+            list.querySelectorAll("input").forEach((box) => { box.disabled = box.dataset.sent === "true" || (!box.checked && chosen.size >= 5); });
+        };
+
+        note.textContent = targets.length === 0 ? "You have no other chats to forward to." : "";
+        list.replaceChildren(...targets.map((c) => {
+            const item = document.createElement("li");
+            const label = document.createElement("label");
+            const box = document.createElement("input");
+
+            label.className = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-brand-tint";
+            box.type = "checkbox";
+            box.className = "h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40";
+            box.addEventListener("change", () => {
+                if (box.checked) {
+                    chosen.add(c.id);
+                } else {
+                    chosen.delete(c.id);
+                }
+
+                sync();
+            });
+            boxes.set(c.id, box);
+            label.append(box, document.createTextNode(c.name));
+            item.append(label);
+
+            return item;
+        }));
+        sync();
+
+        send.onclick = async () => {
+            send.disabled = true;
+
+            const result = await api.forward(state.openId, m.id, [...chosen]);
+
+            if (result.status !== 200) {
+                note.textContent = result.data?.error === "switched_off" ? "Forwarding is turned off in this chat." : "Couldn't forward that. Try again.";
+                sync();
+
+                return;
+            }
+
+            const failed = (result.data?.results ?? []).filter((r) => !r.ok);
+
+            if (failed.length > 0) {
+                const names = failed.map((r) => targets.find((c) => c.id === r.conversation_id)?.name ?? "a chat");
+
+                // Chats that did get it stay done, so a retry does not send it to them twice.
+                (result.data?.results ?? []).filter((r) => r.ok).forEach((r) => {
+                    chosen.delete(r.conversation_id);
+
+                    const box = boxes.get(r.conversation_id);
+
+                    if (box) {
+                        box.checked = false;
+                        box.dataset.sent = "true";
+                        box.disabled = true;
+                        box.parentElement.append(document.createTextNode(" (sent)"));
+                    }
+                });
+
+                note.textContent = `Couldn't forward to: ${names.join(", ")}`;
+                sync();
+                send.disabled = chosen.size === 0;
+
+                return;
+            }
+
+            $("#messages-forward [data-dialog-close]")?.click();
+            toast("Forwarded");
+            listPoller.nudge();
+        };
+
+        $("[data-role=forward-open]")?.click();
+    }
+
+    async function deleteEveryone(id) {
+        if (!window.confirm("Delete this message for everyone? This can't be undone.")) {
+            return;
+        }
+
+        if (!refused(await api.deleteEveryone(state.openId, id))) {
+            await refreshThread();
+        }
+    }
+
+    function openMessageMenu(node, at) {
+        const m = node ? messageById(Number(node.dataset.id)) : null;
+        const c = current();
+
+        if (!m || !c) {
+            return;
+        }
+
+        const handlers = {
+            react: (emoji) => react(m, emoji),
+            reply: () => setReply(m),
+            copy: () => copyText(m.body ?? ""),
+            forward: () => openForward(m),
+            pin: async () => { if (!refused(await api.pinMessage(state.openId, m.id, true))) { await refreshThread(); } },
+            unpin: async () => { if (!refused(await api.pinMessage(state.openId, m.id, false))) { await refreshThread(); } },
+            bump: async () => { if (!refused(await api.bump(state.openId, m.id))) { await refreshThread(); readUpTo(); } },
+            "delete-me": () => hideMessage(m.id),
+            "delete-everyone": () => deleteEveryone(m.id),
+            report: () => openReport(m.id),
+        };
+
+        menu.open(messageMenuItems(m, c, handlers), at);
+    }
+
+    bindMenuTriggers(messagesEl, { selector: "[data-id]", onOpen: openMessageMenu });
+
+    $("[data-role=reply-cancel]")?.addEventListener("click", () => setReply(null));
+    $("[data-role=pinbar-next]")?.addEventListener("click", () => {
+        state.pinIndex = stepIndex(state.pinIndex, state.pinned.length, 1);
+        renderPinbar();
+    });
+    $("[data-role=pinbar-text]")?.addEventListener("click", () => {
+        const pin = state.pinned[state.pinIndex];
+
+        if (pin) {
+            scrollToMessage(pin.id);
+        }
+    });
+
     // ---- the list controls ---------------------------------------------
+
+    // ---- the chat menu -------------------------------------------------
+
+    const menu = createMenu(document);
+
+    async function chatAction(c, action) {
+        showListNote("");
+
+        // A list answer already on its way was asked for before this click; it would put the old state back.
+        if (action === "unread" || action === "read") {
+            listGuard.next();
+        }
+
+        // Marking unread shows at once (the dot and the badge); the server answer below confirms or puts it back.
+        if (action === "unread" && !c.marked_unread && !(c.unread > 0)) {
+            c.marked_unread = true;
+
+            if (!c.muted) {
+                updateBadge((state.badge ?? 0) + 1);
+            }
+
+            renderList();
+        }
+
+        // Marking read clears the dot or count at once.
+        if (action === "read" && (c.marked_unread || c.unread > 0)) {
+            if (!c.muted) {
+                updateBadge(Math.max(0, (state.badge ?? 0) - Math.max(c.unread > 0 ? c.unread : 0, c.marked_unread ? 1 : 0)));
+            }
+
+            c.unread = 0;
+            c.new_messages = 0;
+            c.marked_unread = false;
+            renderList();
+        }
+
+        const result = await api.chatAction(c.id, action);
+
+        if (result.status !== 200 && (action === "unread" || action === "read")) {
+            await loadList();
+        }
+
+        if (result.status === 409 && result.data?.error === "limit") {
+            showListNote(`You can pin up to ${result.data.max ?? 5} chats.`);
+        } else if (result.status === 403) {
+            showListNote("You can't do that in this chat.");
+        } else if (result.status !== 200) {
+            showListNote("That didn't work. Try again.");
+        } else {
+            if (action === "delete" && state.openId === c.id) {
+                closeThread();
+            }
+            await loadList();
+        }
+    }
+
+    function openChatMenu(row, at) {
+        const c = state.conversations.find((x) => x.id === Number(row.dataset.id));
+
+        if (!c) {
+            return;
+        }
+
+        const act = (name) => () => chatAction(c, name);
+        const handlers = {
+            pin: act("pin"),
+            unpin: act("unpin"),
+            unread: act("unread"),
+            read: act("read"),
+            mute: act("mute"),
+            unmute: act("unmute"),
+            archive: act("archive"),
+            unarchive: act("unarchive"),
+            delete: act("delete"),
+            // The existing block flow: open the chat and ask for the second click there.
+            block: async () => {
+                await open(c.id);
+
+                if (state.openId === c.id && current() !== null) {
+                    state.confirmBlock = c.id;
+                    applyConversation(current());
+                }
+            },
+        };
+
+        menu.open(chatMenuItems(c, handlers), at);
+    }
+
+    bindMenuTriggers(rowsEl, { selector: "button[data-id]", onOpen: openChatMenu });
+
+    const switchView = (archived) => {
+        state.archived = archived;
+        state.switching = true;
+        state.conversations = [];
+        rowsEl.replaceChildren();
+        showListNote("");
+        closeThread();
+        listState("loading");
+        loadList();
+    };
+
+    archivedOpenEl?.addEventListener("click", () => switchView(true));
+    archivedBackEl?.addEventListener("click", () => switchView(false));
 
     rowsEl.addEventListener("click", (event) => {
         const row = event.target.closest("button[data-id]");
@@ -897,6 +1568,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             other.classList.remove(...(on ? CHIP_OFF : CHIP_ON));
             other.classList.add(...(on ? CHIP_ON : CHIP_OFF));
         });
+        showCached();
         loadList();
     }));
 
@@ -907,6 +1579,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         unreadToggle.setAttribute("aria-pressed", String(state.unreadOnly));
         unreadToggle.classList.toggle("bg-brand", state.unreadOnly);
         unreadToggle.classList.toggle("text-white", state.unreadOnly);
+        showCached();
         loadList();
     });
 
@@ -948,5 +1621,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 const root = document.getElementById("messages-app");
 
 if (root) {
+    setServerOffset(root.dataset.tzOffset === undefined ? Number.NaN : Number(root.dataset.tzOffset));
     mountMessages(root, { api: createApi(root.dataset.api) });
 }

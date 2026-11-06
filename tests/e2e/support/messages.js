@@ -108,6 +108,9 @@ export async function sendMessage(page, text) {
     await page.locator("[data-role=body]").fill(text);
     await page.locator("[data-role=send]").click();
     await expect(thread(page).getByText(text)).toBeVisible();
+
+    // The bubble shows at once under a local id; its menu only opens once the server has given it a real one.
+    await expect(thread(page).locator("[data-id]", { hasText: text }).last()).toHaveAttribute("data-id", /^\d+$/);
 }
 
 /** "+ New", search by name, pick the person whose result mentions `role`; leaves their thread open. */
@@ -129,4 +132,46 @@ export async function searchFindsNobody(page, search) {
     await expect(page.locator("[data-role=picker-state]")).toHaveText("No one found.");
     await expect(page.locator("[data-role=picker-results] button")).toHaveCount(0);
     await page.locator("#messages-new [data-dialog-close]").first().click();
+}
+
+/** The open context menu (chat or message). */
+export function menuOf(page) {
+    return page.locator("[data-role=menu]");
+}
+
+/** One item of the open menu, by its action id. */
+export function menuItem(page, action) {
+    return menuOf(page).locator(`[data-action="${action}"]`);
+}
+
+/** Right-clicks a conversation row and returns the menu. Never forced: a click that lands on something else should fail. */
+export async function chatMenu(page, rowText) {
+    await rowFor(page, rowText).first().click({ button: "right" });
+    await expect(menuOf(page)).toBeVisible();
+
+    return menuOf(page);
+}
+
+/** A bubble of the open thread, by its text. */
+export function bubble(page, text) {
+    return thread(page).locator("[data-id]", { hasText: text }).first();
+}
+
+/** Right-clicks the bubble that holds `text` and returns the menu. */
+export async function messageMenu(page, text) {
+    await bubble(page, text).click({ button: "right" });
+    await expect(menuOf(page)).toBeVisible();
+
+    return menuOf(page);
+}
+
+/** The number in the Messages badge of the page's navigation (0 when it is hidden or missing). */
+export async function badgeCount(page) {
+    const badge = page.locator("[data-messages-badge]");
+
+    if ((await badge.count()) === 0) {
+        return 0;
+    }
+
+    return Number((await badge.first().textContent()) ?? "0") || 0;
 }
