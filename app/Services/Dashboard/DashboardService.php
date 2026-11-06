@@ -216,7 +216,7 @@ class DashboardService
     /**
      * Every assessment across every offering the student is enrolled in,
      * each already carrying its own 'student' state/label/score — resolved
-     * once and reused by Key Metrics and Upcoming Tasks so they never
+     * once and reused by Key Metrics and Pending Tasks so they never
      * disagree on what "pending" means.
      */
     protected function studentAssessments(User $user): array
@@ -260,8 +260,13 @@ class DashboardService
             $isGraded = ($row['student']['result']['counted'] ?? null) !== null;
             $isSubmitted = $isGraded || !empty($row['student']['submitted']);
 
+            // Pending means not handed in yet: a submitted or graded task leaves the list.
+            if ($isSubmitted) {
+                continue;
+            }
+
             $urgency = match (true) {
-                $row['due_ts'] < $now && !$isSubmitted => 'overdue',
+                $row['due_ts'] < $now => 'overdue',
                 $row['due_ts'] <= strtotime('today 23:59:59', $now) => 'today',
                 $row['due_ts'] <= $now + AssessmentOverviewService::SOON_DAYS * 86400 => 'soon',
                 default => 'later',
@@ -275,7 +280,6 @@ class DashboardService
                 'title' => $row['title'],
                 'due' => $overviewService->dueLabel($row['due_ts'], $now),
                 'urgency' => $urgency,
-                'status' => $isGraded ? 'graded' : ($isSubmitted ? 'submitted' : null),
                 'due_ts' => $row['due_ts'],
             ];
 
