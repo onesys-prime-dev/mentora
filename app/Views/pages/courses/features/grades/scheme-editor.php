@@ -70,7 +70,7 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
             <input type="text" value="<?= esc($item['name'], 'attr') ?>" data-grade-item-name
                 class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-sm font-semibold text-[#646464] outline-none transition hover:border-gray-200 focus:border-brand">
             <label class="flex items-center gap-1 text-xs text-gray-500">
-                <input type="number" min="0.01" step="0.5" value="<?= $points($item['max_points']) ?>" data-grade-item-max
+                <input type="number" min="0.01" step="0.01" value="<?= $points($item['max_points']) ?>" data-grade-item-max
                     class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-brand">
                 pts
             </label>
