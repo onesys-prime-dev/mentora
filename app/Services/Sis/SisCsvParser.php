@@ -32,10 +32,10 @@ final class SisCsvParser
     public const ENROLLMENT_STATUSES = ['enrolled', 'dropped', 'withdrawn', 'completed'];
 
     /** What a staff assignment can be, and the column that says what they lead or teach. */
-    public const STAFF_TARGET_COLUMN = ['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_external_id'];
+    public const STAFF_TARGET_COLUMN = ['dean' => 'college_code', 'chairperson' => 'department_code', 'instructor' => 'course_external_id'];
 
     /** The same in an upload, where an instructor's section is named by its course code. */
-    public const UPLOAD_STAFF_TARGET_COLUMN = ['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_code'];
+    public const UPLOAD_STAFF_TARGET_COLUMN = ['dean' => 'college_code', 'chairperson' => 'department_code', 'instructor' => 'course_code'];
 
     /**
      * required columns, optional columns, and which columns make a row unique.
@@ -48,9 +48,9 @@ final class SisCsvParser
         'courses'     => ['required' => ['external_id', 'course_code', 'course_title'], 'optional' => ['units', 'program_code'], 'unique' => ['external_id']],
         'enrollments' => ['required' => ['course_external_id', 'student_external_id'], 'optional' => ['section', 'status'], 'unique' => ['course_external_id', 'student_external_id', 'section']],
 
-        // Who leads a department, who chairs a sub-department, who teaches which section. Which of the three
+        // Who leads a college, who chairs a department, who teaches which section. Which of the three
         // target columns a row needs depends on its role (see problem()).
-        'staff_assignments' => ['required' => ['role', 'person_external_id'], 'optional' => ['department_code', 'sub_department_code', 'course_external_id', 'section'], 'unique' => ['role', 'person_external_id', 'department_code', 'sub_department_code', 'course_external_id', 'section']],
+        'staff_assignments' => ['required' => ['role', 'person_external_id'], 'optional' => ['college_code', 'department_code', 'course_external_id', 'section'], 'unique' => ['role', 'person_external_id', 'college_code', 'department_code', 'course_external_id', 'section']],
 
         // A section's weekly class times (D8, D9): the rows the file lists for a section are its whole week.
         'class_schedules' => ['required' => ['course_external_id', 'day_of_week', 'start_time', 'end_time'], 'optional' => ['section', 'room', 'delivery_mode'], 'unique' => ['course_external_id', 'section', 'day_of_week', 'start_time']],
@@ -71,7 +71,7 @@ final class SisCsvParser
         // when the code is used in more than one.
         'enrollments' => ['required' => ['course_code'], 'optional' => ['student_number', 'email', 'program_code', 'section', 'status'], 'one_of' => ['student_number', 'email'], 'unique' => ['student_number', 'email', 'program_code', 'course_code', 'section'], 'template' => ['student_number', 'email', 'program_code', 'course_code', 'section', 'status']],
 
-        'staff_assignments' => ['required' => ['role', 'email'], 'optional' => ['department_code', 'sub_department_code', 'program_code', 'course_code', 'section'], 'unique' => ['role', 'email', 'department_code', 'sub_department_code', 'program_code', 'course_code', 'section'], 'template' => ['role', 'email', 'department_code', 'sub_department_code', 'program_code', 'course_code', 'section']],
+        'staff_assignments' => ['required' => ['role', 'email'], 'optional' => ['college_code', 'department_code', 'program_code', 'course_code', 'section'], 'unique' => ['role', 'email', 'college_code', 'department_code', 'program_code', 'course_code', 'section'], 'template' => ['role', 'email', 'college_code', 'department_code', 'program_code', 'course_code', 'section']],
 
         'class_schedules' => ['required' => ['course_code', 'day_of_week', 'start_time', 'end_time'], 'optional' => ['program_code', 'section', 'room', 'delivery_mode'], 'unique' => ['program_code', 'course_code', 'section', 'day_of_week', 'start_time'], 'template' => ['program_code', 'course_code', 'section', 'day_of_week', 'start_time', 'end_time', 'room', 'delivery_mode']],
     ];

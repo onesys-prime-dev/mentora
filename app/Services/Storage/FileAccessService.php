@@ -78,7 +78,7 @@ class FileAccessService
         }
 
         // Staff: the people who teach the section and the chairperson of its
-        // sub-department (full instructor rights on it). Everyone else is
+        // department (full instructor rights on it). Everyone else is
         // treated as a student of the section. A dean acting as dean is not
         // staff here: they look at what the course shares (above), never at a
         // student's work. A dean who also teaches has an instructor's access
@@ -235,7 +235,7 @@ class FileAccessService
         return false;
     }
 
-    /** Does this staff member reach the section: teaches it, or chairs its sub-department? */
+    /** Does this staff member reach the section: teaches it, or chairs its department? */
     private function teachesOffering(User $staff, int $offeringId): bool
     {
         if (db_connect()->table('instructor_assignments')

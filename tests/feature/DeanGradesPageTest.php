@@ -17,16 +17,16 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The dean's Grades page end to end (spec §9, "Phase 5 layout"): one Department view with a program picker, the
+ * The dean's Grades page end to end (spec §9, "Phase 5 layout"): one College view with a program picker, the
  * strip whose counts link to Sign-off and Approvals when the dean may open them, the chairperson's section table
- * with a Signed off column, the selected section's grid always read-only, the department's at-risk list, the
- * 404 for a section outside the department, and that looking writes nothing.
+ * with a Signed off column, the selected section's grid always read-only, the college's at-risk list, the
+ * 404 for a section outside the college, and that looking writes nothing.
  *
  * @internal
  */
 final class DeanGradesPageTest extends RouteTestCase
 {
-    /** @var array{institution: int, department: int} */
+    /** @var array{institution: int, college: int} */
     private array $unit;
 
     private int $programA;
@@ -44,11 +44,11 @@ final class DeanGradesPageTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         PermissionMatrix::flush();
 
-        $this->unit     = DeanFactory::department('DGP');
-        $this->programA = DeanFactory::program(DeanFactory::subDepartment($this->unit['department'], 'DGA'), 'DGA');
-        $this->programB = DeanFactory::program(DeanFactory::subDepartment($this->unit['department'], 'DGB'), 'DGB');
+        $this->unit     = DeanFactory::college('DGP');
+        $this->programA = DeanFactory::program(DeanFactory::department($this->unit['college'], 'DGA'), 'DGA');
+        $this->programB = DeanFactory::program(DeanFactory::department($this->unit['college'], 'DGB'), 'DGB');
         $this->term     = DeanFactory::term($this->unit['institution']); // 2026-08-01 to 2026-12-20
-        $this->dean     = DeanFactory::dean($this->unit['institution'], $this->unit['department']);
+        $this->dean     = DeanFactory::dean($this->unit['institution'], $this->unit['college']);
     }
 
     protected function tearDown(): void
@@ -63,7 +63,7 @@ final class DeanGradesPageTest extends RouteTestCase
         return PeopleFactory::person('instructor', $first, $last, null, $this->unit['institution']);
     }
 
-    /** A section of the department in the test's term (program A unless named), taught by $teachers. */
+    /** A section of the college in the test's term (program A unless named), taught by $teachers. */
     private function section(string $code, ?int $program = null, User ...$teachers): int
     {
         $offering = DeanFactory::offering($program ?? $this->programA, $this->term, $code);
@@ -75,11 +75,11 @@ final class DeanGradesPageTest extends RouteTestCase
         return $offering;
     }
 
-    /** A section of another department of the institution: not the dean's. */
+    /** A section of another college of the institution: not the dean's. */
     private function outsideSection(string $code = 'XX101'): int
     {
-        $other   = DeanFactory::department('DGO', $this->unit['institution']);
-        $program = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'DGO'), 'DGO');
+        $other   = DeanFactory::college('DGO', $this->unit['institution']);
+        $program = DeanFactory::program(DeanFactory::department($other['college'], 'DGO'), 'DGO');
 
         return DeanFactory::offering($program, $this->term, $code);
     }
@@ -244,10 +244,10 @@ final class DeanGradesPageTest extends RouteTestCase
     {
         helper('navigation');
 
-        $this->open()->assertSee('Every section in your department.');
+        $this->open()->assertSee('Every section in your college.');
         $this->assertSame(site_url('dean/grades'), array_column(global_apps('dean'), 'url', 'key')['grades'] ?? null);
 
-        $this->clear('department.monitor');
+        $this->clear('college.monitor');
         $this->loggedInAs($this->dean);
 
         $this->assertArrayNotHasKey('grades', array_column(global_apps('dean'), 'url', 'key'), 'no page, no tile');
@@ -257,7 +257,7 @@ final class DeanGradesPageTest extends RouteTestCase
         $this->assertSame(lang('Auth.notEnoughPrivilege'), session('error'));
     }
 
-    public function testTheDepartmentViewShowsStripTableAndReadOnlyGrid(): void
+    public function testTheCollegeViewShowsStripTableAndReadOnlyGrid(): void
     {
         $santos = $this->instructor('Mara', 'Santos');
         $garcia = $this->instructor('Jose', 'Garcia');
@@ -282,16 +282,16 @@ final class DeanGradesPageTest extends RouteTestCase
         $result = $this->open();
         $x      = $this->xpath($result);
 
-        $result->assertSee('Every section in your department.');
+        $result->assertSee('Every section in your college.');
         $this->assertSame(0, $x->query('//*[@data-grades-tab]')->length, 'one view, so no tab bar');
-        $this->assertSame('Department', $this->text($x->query('//*[@data-grades-tab-label]')->item(0)));
-        $this->assertSame(['Sections', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-sub-label]'));
+        $this->assertSame('College', $this->text($x->query('//*[@data-grades-tab-label]')->item(0)));
+        $this->assertSame(['Sections', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-department-label]'));
 
         // The program picker: "All programs" first and chosen.
         $this->assertSame(['All programs', 'Program DGA', 'Program DGB'], $this->texts($x, '//select[@data-program-select]/option'));
         $this->assertSame('All programs', $this->text($x->query('//select[@data-program-select]/option[@selected]')->item(0)));
 
-        // The strip, over the whole department; not the chairperson's tracker.
+        // The strip, over the whole college; not the chairperson's tracker.
         $this->assertSame('Finalized 2 of 3 · Signed off 1 · Override requests waiting: 1', $this->strip($x));
         $this->assertSame(0, $x->query('//*[@data-tracker-line]')->length);
         $this->assertSame(1, $x->query('//a[@data-not-finalized]')->length);
@@ -311,9 +311,9 @@ final class DeanGradesPageTest extends RouteTestCase
         $this->assertSame('Nudge', $this->text($x->query('//button[@data-nudge]')->item(0)));
         $this->assertSame(site_url('dean/follow-ups'), $x->query('//form[@data-nudge-form]')->item(0)->getAttribute('action'));
 
-        $download = $x->query('//a[@data-download-department]')->item(0);
-        $this->assertSame('Download department', $this->text($download));
-        $this->assertSame(site_url('dean/grades/download-department') . '?term=' . $this->term, $download->getAttribute('href'));
+        $download = $x->query('//a[@data-download-college]')->item(0);
+        $this->assertSame('Download college', $this->text($download));
+        $this->assertSame(site_url('dean/grades/download-college') . '?term=' . $this->term, $download->getAttribute('href'));
         $this->assertSame(0, $x->query('//*[@data-download-program]')->length);
 
         // The first row's grid, below the table, through the dean's read-only course API.
@@ -378,7 +378,7 @@ final class DeanGradesPageTest extends RouteTestCase
         $this->clear('followups.manage');
         $x = $this->xpath($this->open());
         $this->assertSame(0, $x->query('//*[@data-nudge] | //*[@data-nudge-dialog]')->length);
-        $this->assertSame(1, $x->query('//*[@data-download-department]')->length, 'department.monitor is what Download department needs');
+        $this->assertSame(1, $x->query('//*[@data-download-college]')->length, 'college.monitor is what Download college needs');
     }
 
     public function testProgramPickerAndAllPrograms(): void
@@ -401,7 +401,7 @@ final class DeanGradesPageTest extends RouteTestCase
         $x = $this->xpath($this->open());
         $this->assertSame([(string) $b1, (string) $a1, (string) $a2], $this->attributes($x, '//a[@data-program-row]', 'data-section-id'));
         $this->assertSame('Finalized 2 of 3 · Signed off 1 · Override requests waiting: 2', $this->strip($x));
-        $this->assertSame('3', $this->text($x->query("//*[@data-sub-count='sections']")->item(0)));
+        $this->assertSame('3', $this->text($x->query("//*[@data-department-count='sections']")->item(0)));
 
         // Each picker option opens the page on that program, keeping the term.
         $options = $this->attributes($x, '//select[@data-program-select]/option', 'value');
@@ -412,7 +412,7 @@ final class DeanGradesPageTest extends RouteTestCase
         $x = $this->xpath($this->open('program=' . $this->programA));
         $this->assertSame([(string) $a1, (string) $a2], $this->attributes($x, '//a[@data-program-row]', 'data-section-id'));
         $this->assertSame('Finalized 1 of 2 · Signed off 1 · Override requests waiting: 1', $this->strip($x));
-        $this->assertSame('2', $this->text($x->query("//*[@data-sub-count='sections']")->item(0)));
+        $this->assertSame('2', $this->text($x->query("//*[@data-department-count='sections']")->item(0)));
         $this->assertSame('Program DGA', $this->text($x->query('//select[@data-program-select]/option[@selected]')->item(0)));
         $this->assertSame(['term' => (string) $this->term, 'program' => (string) $this->programA, 'section' => (string) $a2], $this->queryOf($this->row($x, $a2)->getAttribute('href')));
         $this->assertSame(['term' => (string) $this->term, 'program' => (string) $this->programA, 'sort' => 'signed_off', 'dir' => 'asc'], $this->queryOf($x->query("//th[@data-column='signed_off']//a")->item(0)->getAttribute('href')));
@@ -435,35 +435,35 @@ final class DeanGradesPageTest extends RouteTestCase
         $this->assertSame((string) $a1, $this->attributes($x, '//a[@data-program-row]', 'data-section-id')[0]);
         $this->assertSame('descending', $x->query("//th[@data-column='signed_off']")->item(0)->getAttribute('aria-sort'));
 
-        // A program of another department, or not a number, is no page.
-        $other = DeanFactory::department('DGX', $this->unit['institution']);
-        $this->assert404('program=' . DeanFactory::program(DeanFactory::subDepartment($other['department'], 'DGX'), 'DGX'));
+        // A program of another college, or not a number, is no page.
+        $other = DeanFactory::college('DGX', $this->unit['institution']);
+        $this->assert404('program=' . DeanFactory::program(DeanFactory::department($other['college'], 'DGX'), 'DGX'));
         $this->assert404('program=abc');
     }
 
-    public function testAnEmptyDepartmentSaysSo(): void
+    public function testAnEmptyCollegeSaysSo(): void
     {
         $this->publish($this->outsideSection());
 
         $result = $this->open();
         $x      = $this->xpath($result);
 
-        $result->assertSee('No sections in your department this term');
-        $this->assertSame(0, $x->query('//*[@data-grades-grid] | //*[@data-nudge] | //*[@data-download-department] | //*[@data-load-error]')->length);
+        $result->assertSee('No sections in your college this term');
+        $this->assertSame(0, $x->query('//*[@data-grades-grid] | //*[@data-nudge] | //*[@data-download-college] | //*[@data-load-error]')->length);
         $this->assertSame(['All programs', 'Program DGA', 'Program DGB'], $this->texts($x, '//select[@data-program-select]/option'));
 
         $this->section('IT101');
         $this->open('program=' . $this->programB)->assertSee('No sections in this program this term');
     }
 
-    public function testASectionOutsideTheDepartmentIs404(): void
+    public function testASectionOutsideTheCollegeIs404(): void
     {
         $a = $this->section('IT101', null, $this->instructor());
         $b = $this->section('CS101', $this->programB, $this->instructor());
         $this->publish($a);
 
         $this->assert404('section=' . $this->outsideSection());
-        $this->assert404('program=' . $this->programA . '&section=' . $b); // the department's, but not the program chosen
+        $this->assert404('program=' . $this->programA . '&section=' . $b); // the college's, but not the program chosen
         $this->assert404('section=abc');
 
         $x = $this->xpath($this->open('section=' . $b));
@@ -503,7 +503,7 @@ final class DeanGradesPageTest extends RouteTestCase
 
         $x = $this->xpath($this->open());
 
-        // The table and the strip are the dean's (department.monitor); the gradebook is a course page (courses.view).
+        // The table and the strip are the dean's (college.monitor); the gradebook is a course page (courses.view).
         $this->assertSame([(string) $offering], $this->attributes($x, '//a[@data-program-row]', 'data-section-id'));
         $this->assertSame(0, $x->query('//*[@data-grades-grid] | //*[@data-open-in-course]')->length);
         $this->assertSame(1, $x->query('//*[@data-program-actions]')->length, 'the action bar stays, for Nudge');
@@ -523,7 +523,7 @@ final class DeanGradesPageTest extends RouteTestCase
         $this->assertSame(0, $x->query('//*[@data-risk-row]//a')->length, 'the course page would refuse them');
     }
 
-    public function testDepartmentAtRisk(): void
+    public function testCollegeAtRisk(): void
     {
         $a = $this->section('IT101', null, $this->instructor());
         $this->publish($a);
@@ -541,7 +541,7 @@ final class DeanGradesPageTest extends RouteTestCase
         $x = $this->xpath($this->open('sub=at-risk'));
 
         $this->assertSame('at-risk', $x->query("//*[@data-grades-sub][@aria-current='page']")->item(0)->getAttribute('data-grades-sub'));
-        $this->assertStringContainsString('your department', $this->text($x->query('//*[@data-program-at-risk]/p')->item(0)));
+        $this->assertStringContainsString('your college', $this->text($x->query('//*[@data-program-at-risk]/p')->item(0)));
         $names = $this->texts($x, '//*[@data-risk-row]/th');
         $this->assertContains('Faye Failing', $names);
         $this->assertContains('Bea Behind', $names);

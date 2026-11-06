@@ -37,7 +37,7 @@ final class GradeAuthorityTest extends DatabaseTestCase
 
     public function testADeanWithThePermissionDecides(): void
     {
-        ['institution' => $i, 'department' => $d] = DeanFactory::department('GA1');
+        ['institution' => $i, 'college' => $d] = DeanFactory::college('GA1');
         $dean = DeanFactory::dean($i, $d);
 
         $this->assertSame((int) $dean->id, GradeAuthority::deanFor($d, 'grades.approve'));
@@ -45,7 +45,7 @@ final class GradeAuthorityTest extends DatabaseTestCase
 
     public function testADeanWithoutThePermissionCountsAsNoDean(): void
     {
-        ['institution' => $i, 'department' => $d] = DeanFactory::department('GA2');
+        ['institution' => $i, 'college' => $d] = DeanFactory::college('GA2');
         $dean = DeanFactory::dean($i, $d);
         db_connect()->table('role_permissions')->insert(['institution_id' => $i, 'role' => 'dean', 'permission' => 'grades.approve', 'granted' => 0]);
         PermissionMatrix::flush();
@@ -54,9 +54,9 @@ final class GradeAuthorityTest extends DatabaseTestCase
         $this->assertSame((int) $dean->id, GradeAuthority::deanFor($d, 'grades.signoff'));
     }
 
-    public function testADepartmentWithNoDeanHasNone(): void
+    public function testACollegeWithNoDeanHasNone(): void
     {
-        ['department' => $d] = DeanFactory::department('GA3');
+        ['college' => $d] = DeanFactory::college('GA3');
 
         $this->assertNull(GradeAuthority::deanFor($d, 'grades.approve'));
     }
@@ -75,9 +75,9 @@ final class GradeAuthorityTest extends DatabaseTestCase
 
     public function testApprovalIsUsedWhenTheInstitutionHasAnyDean(): void
     {
-        ['institution' => $with, 'department' => $d] = DeanFactory::department('GA5');
+        ['institution' => $with, 'college' => $d] = DeanFactory::college('GA5');
         DeanFactory::dean($with, $d);
-        ['institution' => $without] = DeanFactory::department('GA6');
+        ['institution' => $without] = DeanFactory::college('GA6');
 
         $this->assertTrue(GradeAuthority::usesApproval($with));
         $this->assertFalse(GradeAuthority::usesApproval($without));

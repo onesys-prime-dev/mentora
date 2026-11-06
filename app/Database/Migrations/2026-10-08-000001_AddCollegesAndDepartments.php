@@ -2,26 +2,42 @@
 
 namespace App\Database\Migrations;
 
+use App\Database\LegacyHierarchyRename;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
 use Config\Database;
 
 /**
- * institutions -> programs becomes institutions -> departments ->
- * sub_departments -> programs.
+ * institutions -> programs becomes institutions -> colleges ->
+ * departments -> programs.
  *
  * Programs that already exist keep working: each institution that has any gets
- * one "General" department with one "General" sub-department, and its programs
+ * one "General" college with one "General" department, and its programs
  * are moved under it (rename or split them from the admin tools afterwards).
+ *
+ * A database built before the SIS naming is upgraded in place instead, and one
+ * that already has the colleges is left alone, so this is safe wherever it is run.
  */
-class AddDepartmentsAndSubDepartments extends Migration
+class AddCollegesAndDepartments extends Migration
 {
     public function up()
     {
-        $this->createDepartments();
-        $this->createSubDepartments();
+        $legacy = new LegacyHierarchyRename($this->connection());
 
-        $this->connection()->query('ALTER TABLE programs ADD COLUMN sub_department_id INT(20) UNSIGNED NULL AFTER id');
+        if ($legacy->isNeeded()) {
+            $legacy->upgrade();
+
+            return;
+        }
+
+        if ($this->connection()->tableExists('colleges')) {
+            return;
+        }
+
+        $this->createColleges();
+        $this->createDepartments();
+
+        $this->connection()->query('ALTER TABLE programs ADD COLUMN department_id INT(20) UNSIGNED NULL AFTER id');
 
         $now = date('Y-m-d H:i:s');
 
@@ -30,17 +46,17 @@ class AddDepartmentsAndSubDepartments extends Migration
         foreach ($institutions as $row) {
             $institutionId = (int) $row['institution_id'];
 
-            $this->connection()->table('departments')->insert([
+            $this->connection()->table('colleges')->insert([
                 'institution_id' => $institutionId,
                 'code'           => 'GEN',
                 'name'           => 'General',
                 'created_at'     => $now,
                 'updated_at'     => $now,
             ]);
-            $departmentId = (int) $this->connection()->insertID();
+            $collegeId = (int) $this->connection()->insertID();
 
-            $this->connection()->table('sub_departments')->insert([
-                'department_id' => $departmentId,
+            $this->connection()->table('departments')->insert([
+                'college_id' => $collegeId,
                 'code'          => 'GEN',
                 'name'          => 'General',
                 'is_active'     => 1,
@@ -50,17 +66,17 @@ class AddDepartmentsAndSubDepartments extends Migration
 
             $this->connection()->table('programs')
                 ->where('institution_id', $institutionId)
-                ->update(['sub_department_id' => (int) $this->connection()->insertID()]);
+                ->update(['department_id' => (int) $this->connection()->insertID()]);
         }
 
         $this->dropInstitutionLink();
 
-        $this->connection()->query('ALTER TABLE programs MODIFY sub_department_id INT(20) UNSIGNED NOT NULL');
-        $this->connection()->query('ALTER TABLE programs ADD KEY programs_sub_department_id (sub_department_id)');
-        $this->connection()->query('ALTER TABLE programs ADD UNIQUE KEY programs_sub_department_id_code (sub_department_id, code)');
+        $this->connection()->query('ALTER TABLE programs MODIFY department_id INT(20) UNSIGNED NOT NULL');
+        $this->connection()->query('ALTER TABLE programs ADD KEY programs_department_id (department_id)');
+        $this->connection()->query('ALTER TABLE programs ADD UNIQUE KEY programs_department_id_code (department_id, code)');
         $this->connection()->query(
-            'ALTER TABLE programs ADD CONSTRAINT programs_sub_department_id_foreign
-             FOREIGN KEY (sub_department_id) REFERENCES sub_departments (id) ON DELETE CASCADE ON UPDATE CASCADE'
+            'ALTER TABLE programs ADD CONSTRAINT programs_department_id_foreign
+             FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE CASCADE ON UPDATE CASCADE'
         );
     }
 
@@ -70,15 +86,15 @@ class AddDepartmentsAndSubDepartments extends Migration
 
         $this->connection()->query(
             'UPDATE programs
-             JOIN sub_departments ON sub_departments.id = programs.sub_department_id
-             JOIN departments ON departments.id = sub_departments.department_id
-             SET programs.institution_id = departments.institution_id'
+             JOIN departments ON departments.id = programs.department_id
+             JOIN colleges ON colleges.id = departments.college_id
+             SET programs.institution_id = colleges.institution_id'
         );
 
-        $this->connection()->query('ALTER TABLE programs DROP FOREIGN KEY programs_sub_department_id_foreign');
-        $this->connection()->query('ALTER TABLE programs DROP INDEX programs_sub_department_id_code');
-        $this->connection()->query('ALTER TABLE programs DROP INDEX programs_sub_department_id');
-        $this->connection()->query('ALTER TABLE programs DROP COLUMN sub_department_id');
+        $this->connection()->query('ALTER TABLE programs DROP FOREIGN KEY programs_department_id_foreign');
+        $this->connection()->query('ALTER TABLE programs DROP INDEX programs_department_id_code');
+        $this->connection()->query('ALTER TABLE programs DROP INDEX programs_department_id');
+        $this->connection()->query('ALTER TABLE programs DROP COLUMN department_id');
 
         $this->connection()->query('ALTER TABLE programs MODIFY institution_id INT(20) UNSIGNED NOT NULL');
         $this->connection()->query('ALTER TABLE programs ADD KEY institution_id (institution_id)');
@@ -88,8 +104,8 @@ class AddDepartmentsAndSubDepartments extends Migration
              FOREIGN KEY (institution_id) REFERENCES institutions (id) ON DELETE CASCADE ON UPDATE CASCADE'
         );
 
-        $this->forge->dropTable('sub_departments');
         $this->forge->dropTable('departments');
+        $this->forge->dropTable('colleges');
     }
 
     private function connection(): BaseConnection
@@ -120,7 +136,7 @@ class AddDepartmentsAndSubDepartments extends Migration
         $this->connection()->query('ALTER TABLE programs DROP COLUMN institution_id');
     }
 
-    private function createDepartments(): void
+    private function createColleges(): void
     {
         $this->forge->addField([
             'id'               => ['type' => 'INT', 'constraint' => 20, 'unsigned' => true, 'auto_increment' => true],
@@ -138,14 +154,14 @@ class AddDepartmentsAndSubDepartments extends Migration
         $this->forge->addUniqueKey(['institution_id', 'code']);
         $this->forge->addForeignKey('institution_id', 'institutions', 'id', 'CASCADE', 'CASCADE');
 
-        $this->forge->createTable('departments');
+        $this->forge->createTable('colleges');
     }
 
-    private function createSubDepartments(): void
+    private function createDepartments(): void
     {
         $this->forge->addField([
             'id'            => ['type' => 'INT', 'constraint' => 20, 'unsigned' => true, 'auto_increment' => true],
-            'department_id' => ['type' => 'INT', 'constraint' => 20, 'unsigned' => true],
+            'college_id' => ['type' => 'INT', 'constraint' => 20, 'unsigned' => true],
             'code'          => ['type' => 'VARCHAR', 'constraint' => 50],
             'name'          => ['type' => 'VARCHAR', 'constraint' => 255],
             'is_active'     => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 1],
@@ -154,10 +170,10 @@ class AddDepartmentsAndSubDepartments extends Migration
         ]);
 
         $this->forge->addKey('id', true);
-        $this->forge->addKey('department_id');
-        $this->forge->addUniqueKey(['department_id', 'code']);
-        $this->forge->addForeignKey('department_id', 'departments', 'id', 'CASCADE', 'CASCADE');
+        $this->forge->addKey('college_id');
+        $this->forge->addUniqueKey(['college_id', 'code']);
+        $this->forge->addForeignKey('college_id', 'colleges', 'id', 'CASCADE', 'CASCADE');
 
-        $this->forge->createTable('sub_departments');
+        $this->forge->createTable('departments');
     }
 }

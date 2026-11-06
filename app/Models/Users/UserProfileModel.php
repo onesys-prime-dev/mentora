@@ -95,10 +95,10 @@ class UserProfileModel extends Model
                 'programs.name AS program_name',
                 'programs.code AS program_code',
 
-                'sub_departments.name AS sub_department_name',
-                'sub_departments.code AS sub_department_code',
                 'departments.name AS department_name',
                 'departments.code AS department_code',
+                'colleges.name AS college_name',
+                'colleges.code AS college_code',
             ])
             ->select(self::teachingHomeColumns(), false)
             ->join(
@@ -119,13 +119,13 @@ class UserProfileModel extends Model
                 'left'
             )
             ->join(
-                'sub_departments',
-                'sub_departments.id = programs.sub_department_id',
+                'departments',
+                'departments.id = programs.department_id',
                 'left'
             )
             ->join(
-                'departments',
-                'departments.id = sub_departments.department_id',
+                'colleges',
+                'colleges.id = departments.college_id',
                 'left'
             )
             ->where('user_profiles.user_id', $user->id)
@@ -134,7 +134,7 @@ class UserProfileModel extends Model
     }
 
     /**
-     * An instructor has no program of their own: the department they belong to
+     * An instructor has no program of their own: the college they belong to
      * is the one that owns the program of the first course they were assigned
      * to teach. Returned as extra columns (null for someone who teaches
      * nothing yet) so the profile still costs a single query.
@@ -146,17 +146,17 @@ class UserProfileModel extends Model
                 JOIN course_offerings ON course_offerings.id = instructor_assignments.offering_id
                 JOIN courses ON courses.id = course_offerings.course_id
                 JOIN programs AS taught_programs ON taught_programs.id = courses.program_id
-                JOIN sub_departments AS taught_sub_departments ON taught_sub_departments.id = taught_programs.sub_department_id
-                JOIN departments AS taught_departments ON taught_departments.id = taught_sub_departments.department_id
+                JOIN departments AS taught_departments ON taught_departments.id = taught_programs.department_id
+                JOIN colleges AS taught_colleges ON taught_colleges.id = taught_departments.college_id
                WHERE instructor_assignments.instructor_user_id = users.id
                ORDER BY instructor_assignments.assigned_at, instructor_assignments.id
                LIMIT 1)";
 
         return implode(', ', [
-            $firstTaught('taught_sub_departments.name') . ' AS teaching_sub_department_name',
-            $firstTaught('taught_sub_departments.code') . ' AS teaching_sub_department_code',
             $firstTaught('taught_departments.name') . ' AS teaching_department_name',
             $firstTaught('taught_departments.code') . ' AS teaching_department_code',
+            $firstTaught('taught_colleges.name') . ' AS teaching_college_name',
+            $firstTaught('taught_colleges.code') . ' AS teaching_college_code',
         ]);
     }
 }

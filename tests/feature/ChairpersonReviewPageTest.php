@@ -9,16 +9,16 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The dean's Chairperson review page: what chairpersons changed in the department's courses, its tabs and
+ * The dean's Chairperson review page: what chairpersons changed in the college's courses, its tabs and
  * filters, the "reviewed" marks, that the course opens read-only from a row, and that nothing of another
- * department, role or read-only institution gets through.
+ * college, role or read-only institution gets through.
  *
  * @internal
  */
 final class ChairpersonReviewPageTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
+    private int $college;
     private int $offering;
     private User $dean;
     private User $chair;
@@ -27,13 +27,13 @@ final class ChairpersonReviewPageTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('R');
+        $home              = DeanFactory::college('R');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $sub               = DeanFactory::subDepartment($this->department, 'A');
-        $this->offering    = DeanFactory::offering(DeanFactory::program($sub, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
-        $this->chair       = DeanFactory::chair($sub, 'Ana');
+        $this->college  = $home['college'];
+        $department               = DeanFactory::department($this->college, 'A');
+        $this->offering    = DeanFactory::offering(DeanFactory::program($department, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
+        $this->chair       = DeanFactory::chair($department, 'Ana');
     }
 
     private function action(int $offering, string $at = '2026-10-10 09:00:00'): int
@@ -76,7 +76,7 @@ final class ChairpersonReviewPageTest extends RouteTestCase
 
         $this->assertStringContainsString('Created an announcement', $body);
         $this->assertStringContainsString('IT101 A', $body);
-        $this->assertStringContainsString('Sub A', $body);
+        $this->assertStringContainsString('Department A', $body);
         $this->assertStringContainsString('ana.chair', $body);
         $this->assertStringContainsString('dean/courses/' . $this->offering . '/intro-to-computing', $body);
         $this->assertStringContainsString('data-mark-reviewed', $body);
@@ -119,10 +119,10 @@ final class ChairpersonReviewPageTest extends RouteTestCase
         $this->assertStringContainsString('2 marked as reviewed', $response->getBody());
     }
 
-    public function testAnotherDepartmentsEntryCannotBeMarkedAndIsNeverListed(): void
+    public function testAnotherCollegesEntryCannotBeMarkedAndIsNeverListed(): void
     {
-        $elsewhere = DeanFactory::department('X', $this->institution);
-        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X'), DeanFactory::term($this->institution, 'Other'), 'LAW900', 'A', 'active', 'Foreign Law');
+        $elsewhere = DeanFactory::college('X', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X'), DeanFactory::term($this->institution, 'Other'), 'LAW900', 'A', 'active', 'Foreign Law');
         $id        = $this->action($foreign);
 
         $this->assertStringNotContainsString('LAW900', $this->page());
@@ -151,9 +151,9 @@ final class ChairpersonReviewPageTest extends RouteTestCase
         $this->assertSame(0, db_connect()->table('chairperson_action_reviews')->countAllResults());
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanation(): void
+    public function testADeanWithoutACollegeSeesTheExplanation(): void
     {
-        $this->assertStringContainsString('not assigned to a department yet', $this->page('', PeopleFactory::person('dean', 'No', 'Department', null, $this->institution)));
+        $this->assertStringContainsString('not assigned to a college yet', $this->page('', PeopleFactory::person('dean', 'No', 'College', null, $this->institution)));
     }
 
     public function testAReadOnlyInstitutionLetsTheDeanLookButNotMark(): void

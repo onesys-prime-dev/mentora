@@ -7,7 +7,7 @@ How its screens are built (tokens, components, patterns and the acceptance list)
 ## Scope
 
 - The institution is **decided on the server** from the signed-in person (`InstitutionScope`, built on `PlanLimits::institutionOf`), never from an id in the address or a form.
-- Every id a page is handed (department, sub-department, program, course, offering, term, person) is checked with `InstitutionScope::require()` before anything is read or written. A foreign or missing id answers **404**, not 403, so the page does not confirm it exists elsewhere.
+- Every id a page is handed (college, department, program, course, offering, term, person) is checked with `InstitutionScope::require()` before anything is read or written. A foreign or missing id answers **404**, not 403, so the page does not confirm it exists elsewhere.
 - A person removed from the platform (soft-deleted) is not owned.
 - **Read-only** follows the institution's effective status (`EffectiveStatus`): the subscription dates count even before the nightly `subscriptions:sync` has moved the stored status. A person's own things stay open in a read-only or past institution: their calendar reminders, and a parent's email choices and password link (`ReadOnlyFilter::OWN_ACCOUNT`).
 
@@ -49,10 +49,10 @@ To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', '
 
 `/institution/structure` (permission `structure.manage`; the page is read-only while the institution is read-only).
 
-- **Levels:** departments -> sub-departments -> programs. Created, renamed, switched off and back on; nothing is deleted.
-- **Codes:** capital letters, numbers, dots, dashes, underscores (up to 50). Unique where the database says: departments within the institution, sub-departments within their department, programs within their sub-department.
-- **Switching off:** a node cannot be switched off while it has active children (sub-departments, programs, courses) or offerings in an active term; the message says which. Nothing is created under an inactive parent, and nothing is reactivated under one. Programs can also be archived.
-- **Departments** gained an `is_active` flag for this (existing ones stay active).
+- **Levels:** colleges -> departments -> programs. Created, renamed, switched off and back on; nothing is deleted.
+- **Codes:** capital letters, numbers, dots, dashes, underscores (up to 50). Unique where the database says: colleges within the institution, departments within their college, programs within their department.
+- **Switching off:** a node cannot be switched off while it has active children (departments, programs, courses) or offerings in an active term; the message says which. Nothing is created under an inactive parent, and nothing is reactivated under one. Programs can also be archived.
+- **Colleges** gained an `is_active` flag for this (existing ones stay active).
 - **Audit:** `structure.<level>_created|updated|deactivated|reactivated` (programs also `archived`), with old and new values.
 - **Forms:** short forms are one shared dialog per level, filled from the row's button (`data-dialog-*` attributes, see `resources/js/shared/dialog.js`). The server answers a dialog form with JSON (`422 {errors}` shown beside the field, or `{message, redirect}`) and a plain post with a redirect and a message, so it also works without JavaScript.
 
@@ -71,12 +71,12 @@ To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', '
 
 ## Chairpersons
 
-On the Structure page, each sub-department shows its chairperson with **Assign chairperson** (when it has none), **Replace chairperson** and **Remove** (`ChairAssignmentService`).
+On the Structure page, each department shows its chairperson with **Assign chairperson** (when it has none), **Replace chairperson** and **Remove** (`ChairAssignmentService`).
 
-- **One chairperson per sub-department** (audit 16.0); a person can chair several sub-departments. The database keeps it so: `active_marker` is 1 on the one active row and a unique key covers `(sub_department_id, active_marker)`. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active sub-department.
-- **Replacing:** assigning someone to a sub-department that has a chairperson is refused ("… chairs …. Confirm to replace them.") unless the administrator confirms (`replace=1`, the Replace chairperson dialog). The old assignment then ends (`revoked`, history kept) and the old chair is told; override requests waiting for a chairperson's endorsement pass to the new chair, who is told. A request the new chair made themselves moves on to the dean (or the administrators), since nobody else could endorse it. If another administrator changed the chair at the same moment, the second is told to reload.
-- **The SIS:** a chairperson the SIS supplies is replaced or removed there, not by hand (no Replace button; a request anyway gets the SIS message). The SIS sync replaces the chair it lists, and a file listing two chairpersons for one sub-department fails the second row.
-- **Existing data:** the migration `OneChairpersonPerSubDepartment` keeps each sub-department's most recently assigned chair and ends the others.
+- **One chairperson per department** (audit 16.0); a person can chair several departments. The database keeps it so: `active_marker` is 1 on the one active row and a unique key covers `(department_id, active_marker)`. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active department.
+- **Replacing:** assigning someone to a department that has a chairperson is refused ("… chairs …. Confirm to replace them.") unless the administrator confirms (`replace=1`, the Replace chairperson dialog). The old assignment then ends (`revoked`, history kept) and the old chair is told; override requests waiting for a chairperson's endorsement pass to the new chair, who is told. A request the new chair made themselves moves on to the dean (or the administrators), since nobody else could endorse it. If another administrator changed the chair at the same moment, the second is told to reload.
+- **The SIS:** a chairperson the SIS supplies is replaced or removed there, not by hand (no Replace button; a request anyway gets the SIS message). The SIS sync replaces the chair it lists, and a file listing two chairpersons for one department fails the second row.
+- **Existing data:** the migration `OneChairpersonPerDepartment` keeps each department's most recently assigned chair and ends the others.
 - Removing keeps the row (`revoked`); assigning again reuses it. Requests that were waiting for the removed chair move on to the dean (or the administrators) instead of waiting for nobody (`grade.override_rerouted`). A chairperson's reach is derived live from these rows, so it follows on their next request.
 - Audit: `structure.chairperson_assigned|revoked` (a replacement records both, the revoked one with `replaced_by`).
 - Giving someone the chairperson role is done on the People page (a later branch).
@@ -154,14 +154,14 @@ A **section** is a cohort of students for one term, such as **BSIT 1-A**: it bel
 - **Not here:** the institutional administrator and system administrator roles, and any platform or institution-administration permission.
 - **Rules:** a role keeps at least one permission; a permission a role is not offered cannot be set.
 - **Audit:** `roles.permission_changed` with the institution. More in `roles-and-permissions.md`.
-- **Warnings:** where nobody can approve grade overrides or sign off grades in a department ("Nobody can … in …"), the page says so; the system administrator's Roles page lists the same for every institution (`GradeAuthority::gaps`).
+- **Warnings:** where nobody can approve grade overrides or sign off grades in a college ("Nobody can … in …"), the page says so; the system administrator's Roles page lists the same for every institution (`GradeAuthority::gaps`).
 
 ## Who decides grade overrides and sign-off
 
 `GradeAuthority` answers it for the override chain, sign-off and the SIS grade export.
 
-- **Whether approval is used:** an institution uses approval and sign-off once it has any active dean assignment. With none, overrides stay direct and finalized grades go straight to the SIS, as before. When the first dean is assigned, the finalized sections whose grades were not sent yet are announced to whoever now signs them off: the new dean for their department, the administrators for the rest.
-- **Who:** in a department, its dean if they hold the permission as dean (`grades.approve`, `grades.signoff`); otherwise the institution's active administrators who hold it. Both permissions are institutional administrator defaults.
+- **Whether approval is used:** an institution uses approval and sign-off once it has any active dean assignment. With none, overrides stay direct and finalized grades go straight to the SIS, as before. When the first dean is assigned, the finalized sections whose grades were not sent yet are announced to whoever now signs them off: the new dean for their college, the administrators for the rest.
+- **Who:** in a college, its dean if they hold the permission as dean (`grades.approve`, `grades.signoff`); otherwise the institution's active administrators who hold it. Both permissions are institutional administrator defaults.
 - **Nobody decides their own request**, and an administrator never signs off a section they teach (another administrator does). A dean may sign off a section they teach.
 - **Changing the permission** (either Roles page) moves waiting requests to whoever now decides them.
 
@@ -175,7 +175,7 @@ A **section** is a cohort of students for one term, such as **BSIT 1-A**: it bel
 
 ## Sign-off
 
-`/institution/signoff` (permission `grades.signoff`; signing off a section or a program also needs the password). The dean's Sign-off board, for the programs of departments with no dean who signs off.
+`/institution/signoff` (permission `grades.signoff`; signing off a section or a program also needs the password). The dean's Sign-off board, for the programs of colleges with no dean who signs off.
 
 - **Board:** term filter, programs with their ready sections; signing off one section or a whole program, and reopening.
 - **Own sections:** a section the administrator teaches is marked and can't be signed off by them ("You teach this section, so another administrator signs it off."). "Sign off all N ready" leaves them out of N and says how many were left for another administrator.
@@ -237,7 +237,7 @@ Institution settings has a **Parents** tab (`institution/settings/parents`, `ins
   | instructors.csv | **email**, **first_name**, middle_name, **last_name**, suffix | by email |
   | courses.csv | **program_code**, **course_code**, **course_title**, units | by program and course code |
   | enrollments.csv | student_number or email (one is required), program_code, **course_code**, section, status | student by number or email; course by code (program_code only when the code is in more than one program) |
-  | staff_assignments.csv | **role**, **email**, department_code, sub_department_code, program_code, course_code, section | person by email; an instructor's section by course code and section |
+  | staff_assignments.csv | **role**, **email**, college_code, department_code, program_code, course_code, section | person by email; an instructor's section by course code and section |
   | class_schedules.csv | program_code, **course_code**, section, **day_of_week**, **start_time**, **end_time**, room, delivery_mode | course by code; section by its code |
 
   A person found must already be of this institution with the file's role; a course code in more than one program without program_code is refused with the programs it is in. A student or instructor not here yet is created (with middle name and suffix when given).
@@ -339,18 +339,18 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 `MonitorProgramService` no longer assumes one chairperson. Its metrics already took plain lists of offering ids; what tied it to a chairperson was how the offerings were found and the audit viewer. Both now take a scope.
 
 - **`offeringRowsForPrograms(programIds, filters)`** returns every offering in a set of programs (any status, optionally one term) in the shared row shape (`App\Models\Courses\OfferingDetail`, also what the chairperson's Courses page reads). An empty set is no offerings, never all of them.
-- **`chairedProgramIds(user)`** is the chairperson's scope: the programs under the sub-departments they actively chair, read live (a program added later is covered at once, an ended assignment stops at once). `offeringRows(user, filters)` is now exactly `offeringRowsForPrograms(chairedProgramIds(user), filters)`, so the chairperson's page is unchanged.
+- **`chairedProgramIds(user)`** is the chairperson's scope: the programs under the departments they actively chair, read live (a program added later is covered at once, an ended assignment stops at once). `offeringRows(user, filters)` is now exactly `offeringRowsForPrograms(chairedProgramIds(user), filters)`, so the chairperson's page is unchanged.
 - **`termsForPrograms(programIds)`** feeds the term filter for any scope.
 - **`auditEntries(actor|null, offeringRows, filters)`** is the audit viewer for a scope: with an actor it is that person's own chairperson actions (the chairperson page, via `auditLog()`), with none it is every chairperson action on the offerings in scope.
-- **Every metric** (snapshot, enrolment and completion, grades, instructor activity, at risk, the comparison table) is the same code for one program or many, so a department's or an institution's numbers are the union of the single programs' and always agree with the chairperson's. The thresholds they use are the institution's academic defaults.
-- **Used next by** the institution reports (and, later, the dean's Monitor Department).
+- **Every metric** (snapshot, enrolment and completion, grades, instructor activity, at risk, the comparison table) is the same code for one program or many, so a college's or an institution's numbers are the union of the single programs' and always agree with the chairperson's. The thresholds they use are the institution's academic defaults.
+- **Used next by** the institution reports (and, later, the dean's Monitor College).
 
 ## Reports
 
 `/institution/reports` (permission `reports.view`; reading and exporting still work in a read-only institution). The Apps tile "Reports".
 
 - **It is Monitor Program over the institution.** Nothing is calculated again: `InstitutionReports` takes the programs in scope and hands them to `MonitorProgramService`, so the institutional administrator, the chairperson and the dashboards read the same numbers, with the same thresholds (the institution's academic defaults).
-- **Filters** (in the address, so a view can be shared): term, department, program, and an activity date range. Choosing a department narrows the program list. A department or program that is not the institution's answers 404; a term that is not its own matches nothing.
+- **Filters** (in the address, so a view can be shared): term, college, program, and an activity date range. Choosing a college narrows the program list. A college or program that is not the institution's answers 404; a term that is not its own matches nothing.
 - **The page:** totals (courses, instructors, students, who needs attention, how much is graded and how fast), the grade distribution, a sortable comparison of courses (enrolment, completion, average grade, grading time) and the students who need attention (the 25 silent longest; the export has everyone).
 - **A course:** each course links to its own page: enrolment, completion, grades and distribution, grading time, instructor activity and its students who need attention. (The read-only view of its content is a later branch.)
 - **CSV, one per report:** course comparison, at-risk students, grades and grading, instructor activity. Each is for the same filters as the page, with a name or title that could be read as a spreadsheet formula defused, and each export is itself audited as `institution.report_exported` with the filters and the row count.

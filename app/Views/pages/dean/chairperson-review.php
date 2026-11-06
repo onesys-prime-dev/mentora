@@ -1,6 +1,6 @@
 <?php
 /**
- * The dean's review of what chairpersons changed in the department's courses. Each row says who changed
+ * The dean's review of what chairpersons changed in the college's courses. Each row says who changed
  * what in which course and when, links into the course (read-only for the dean) and can be marked as
  * reviewed. Nothing here blocks or reverts a change.
  *
@@ -8,7 +8,7 @@
  * @var list<array<string, mixed>> $entries
  * @var array{unreviewed: int, reviewed: int} $counts
  * @var list<array{id: int, name: string}> $chairpersons
- * @var list<array<string, mixed>> $subDepartments
+ * @var list<array<string, mixed>> $departments
  */
 $base = site_url('dean/chairperson-review');
 
@@ -39,7 +39,7 @@ foreach ($entries as $e) {
         ? ($e['slug'] !== null
             ? '<a class="font-semibold text-brand hover:underline" href="' . esc(site_url('dean/courses/' . (int) $e['offering_id'] . '/' . $e['slug'])) . '">' . esc(trim($e['course_code'] . ' ' . $e['section_code'])) . '</a>'
             : esc(trim($e['course_code'] . ' ' . $e['section_code'])))
-        . ($e['sub_department'] ? '<span class="block text-xs text-[#646464]">' . esc((string) $e['sub_department']) . '</span>' : '')
+        . ($e['department'] ? '<span class="block text-xs text-[#646464]">' . esc((string) $e['department']) . '</span>' : '')
         : '—';
 
     $rows[] = [
@@ -82,7 +82,7 @@ $unreviewedOnPage = array_filter($entries, static fn (array $e): bool => $e['rev
     <?= view('components/page-head', [
         'title'       => 'Chairperson review',
         'icon'        => 'tasks',
-        'description' => 'What chairpersons changed in courses they do not teach, in your department. You can look and mark what you have reviewed; nothing here blocks or reverts a change.',
+        'description' => 'What chairpersons changed in courses they do not teach, in your college. You can look and mark what you have reviewed; nothing here blocks or reverts a change.',
         'actions'     => $unreviewedOnPage === [] ? '' : '<form method="post" action="' . esc(site_url('dean/chairperson-review/reviewed'), 'attr') . '">' . csrf_field()
             . implode('', array_map(static fn (array $e): string => '<input type="hidden" name="ids[]" value="' . (int) $e['id'] . '">', $unreviewedOnPage))
             . '<input type="hidden" name="back" value="' . esc($back, 'attr') . '"><button type="submit" class="' . esc($primary, 'attr') . '" data-mark-page>Mark these ' . count($unreviewedOnPage) . ' reviewed</button></form>',
@@ -98,7 +98,7 @@ $unreviewedOnPage = array_filter($entries, static fn (array $e): bool => $e['rev
         'hidden'   => $filters->view === 'unreviewed' ? [] : ['view' => $filters->view],
         'fields'   => [
             ['type' => 'select', 'name' => 'chairperson', 'label' => 'Chairperson', 'options' => $options($chairpersons, 'Any chairperson'), 'value' => (string) ($filters->chairpersonId ?? '')],
-            ['type' => 'select', 'name' => 'sub_department', 'label' => 'Sub-department', 'options' => $options($subDepartments, 'Any sub-department'), 'value' => (string) ($filters->subDepartmentId ?? '')],
+            ['type' => 'select', 'name' => 'department', 'label' => 'Department', 'options' => $options($departments, 'Any department'), 'value' => (string) ($filters->departmentId ?? '')],
             ['type' => 'date', 'name' => 'from', 'label' => 'From', 'value' => $filters->from ?? ''],
             ['type' => 'date', 'name' => 'to', 'label' => 'To', 'value' => $filters->to ?? ''],
         ],
@@ -116,12 +116,12 @@ $unreviewedOnPage = array_filter($entries, static fn (array $e): bool => $e['rev
     <?php else: ?>
 
         <?= view('components/data-table', [
-            'caption'    => 'Changes chairpersons made in the department\'s courses, newest first',
+            'caption'    => 'Changes chairpersons made in the college\'s courses, newest first',
             'columns'    => $columns,
             'rows'       => $rows,
             'emptyTitle' => $filters->isFiltered() ? 'No changes match these filters' : ($filters->view === 'reviewed' ? 'Nothing reviewed yet' : ($filters->view === 'all' ? 'No changes yet' : 'Nothing to review')),
             'emptyText'  => $filters->isFiltered()
-                ? 'Try a different chairperson, sub-department or dates.'
+                ? 'Try a different chairperson, department or dates.'
                 : 'When a chairperson changes a course they do not teach, it appears here.',
             'emptyIcon'  => 'tasks',
         ], ['saveData' => false]) ?>

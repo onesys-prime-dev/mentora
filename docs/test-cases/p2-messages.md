@@ -21,9 +21,9 @@ The demo data they use (`app/Database/Seeds/DemoUsersSeeder.php` and friends):
 | Juan Dela Cruz | `student1@mentora.test` | IT101-A and IT102-A |
 | Pedro Reyes | `student2@mentora.test` | used by TC-MSG-05 (enrolled in IT101-A and dropped again) |
 | Maria Santos (instructor) | `instructor1@mentora.test` | teaches IT101-A |
-| Joseph Garcia | `instructor2@mentora.test` | IT sub-department |
-| Antonio Fernandez | `chairperson1@mentora.test` | chairs the IT sub-department |
-| Daniel Reyes | `dean1@mentora.test` | dean of the General department, which has no courses |
+| Joseph Garcia | `instructor2@mentora.test` | IT department |
+| Antonio Fernandez | `chairperson1@mentora.test` | chairs the IT department |
+| Daniel Reyes | `dean1@mentora.test` | dean of the General college, which has no courses |
 | Roberto Cruz | `parent1@mentora.test` | follows Juan and Michael |
 | Ines Administrador | `institution.admin@mentora.test` | institutional administrator |
 
@@ -225,7 +225,7 @@ and without the key, and rotating the key with `messages:reencrypt`.
   3. The dean presses "+ New group" and searches "Villanueva".
 - **Expected:**
   - The group opens for the chairperson; the instructor sees it with the post.
-  - The dean, whose department has no courses, finds no one: a student cannot be added.
+  - The dean, whose college has no courses, finds no one: a student cannot be added.
 - **Already automated:** `tests/database/GroupServiceTest.php`, `tests/feature/MessagesGroupRoutesTest.php`,
   `tests/js/pages/messages-group.test.js`
 - **Playwright:** `tests/e2e/messages.spec.js`

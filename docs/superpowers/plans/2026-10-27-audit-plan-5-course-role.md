@@ -23,19 +23,19 @@
 - **Line endings:** CRLF files (`app/Config/Routes.php`, several services and tests) are edited with the Edit tool, or with a Python script written to a file with the Write tool (shell heredocs collapse backslashes). Never `sed -i` on them.
 - **Role in a course (9.1):**
   - `instructor`: assigned to teach that offering.
-  - `chairperson`: actively chairs the sub-department of the offering's program.
+  - `chairperson`: actively chairs the department of the offering's program.
   - `student`: enrolled in that offering (`enrolled` or `completed`).
   - If more than one applies, the order is instructor, then chairperson, then student. Only chair-and-instructor can still overlap once the guard is in.
 - **The conflicts (9.2–9.5, D7, D10).** "Course" means `courses.id`: all its sections in all terms. Enrolling someone is refused when they:
   - have an instructor assignment on any offering of the course, in any term ("ever taught");
-  - have any chairperson assignment, active or ended, on the course's sub-department ("ever chaired");
-  - have any dean assignment, active or ended, on the course's department ("ever led", D10);
+  - have any chairperson assignment, active or ended, on the course's department ("ever chaired");
+  - have any dean assignment, active or ended, on the course's college ("ever led", D10);
   - hold the `institutional_admin` role in the course's institution.
 
   Granting a staff role is refused when the person:
   - **teaching an offering:** is enrolled (`enrolled` or `completed`) in an offering of the same course in the same term (D7);
-  - **chairing a sub-department:** has an `enrolled` enrolment in a course of that sub-department;
-  - **dean of a department:** has an `enrolled` enrolment in a course of that department;
+  - **chairing a department:** has an `enrolled` enrolment in a course of that department;
+  - **dean of a college:** has an `enrolled` enrolment in a course of that college;
   - **administrator of an institution:** has an `enrolled` enrolment in a course of that institution.
 
   A `completed`, `dropped` or `withdrawn` enrolment never blocks a staff role in a later term (D10). A former student may later teach or chair the course.
@@ -45,12 +45,12 @@
   - Both cases are recorded as rulings. If the user wants stronger rules, instructor assignments get a soft end in a later plan.
 - **Exact copy.** The guard returns a predicate. Lists put it after the person's name ("Ann Lee teaches or has taught this course"); a single refusal is "{name} {predicate}."
   - **enrol, taught:** "teaches or has taught this course"
-  - **enrol, chaired:** "chairs or has chaired the sub-department of this course"
-  - **enrol, dean:** "is or was the dean of this course's department"
+  - **enrol, chaired:** "chairs or has chaired the department of this course"
+  - **enrol, dean:** "is or was the dean of this course's college"
   - **enrol, admin:** "is an administrator of this institution"
   - **teach:** "is enrolled in this course this term"
-  - **chair:** "is enrolled in a course of this sub-department"
-  - **dean:** "is enrolled in a course of this department"
+  - **chair:** "is enrolled in a course of this department"
+  - **dean:** "is enrolled in a course of this college"
   - **admin:** "is enrolled in a course of this institution"
 - **Existing conflicts (9.6, 9.7):** a migration ends the enrolment (status `dropped`, the work kept, as `EnrolmentService` never deletes) and keeps the staff role. It writes an `enrolment.status_changed` audit entry with the reason "course role conflict".
 - **View-as rule (3.2):** while `Impersonation::current() !== null`, nothing is saved on the viewed person's behalf, even on a GET.
@@ -70,7 +70,7 @@
 - **Every entry point refuses:** the enrolment page, the CSV upload, the SIS import, instructor assignment, chair assignment, dean assignment and the role grant each refuse a conflict with the exact predicate. A SIS row fails alone and the run continues.
 - **D10 edges:**
   - a former student (a `completed` enrolment in a past term) may teach the course;
-  - a former dean may never enrol in their old department's courses;
+  - a former dean may never enrol in their old college's courses;
   - an enrolment ended in a past term never blocks a staff role.
 - **View-as crawl:** every GET of the student, parent, instructor, chairperson and dean areas, while viewing as them, leaves every table unchanged except `audit_logs`. Opening a quiz creates no submission and shows no unseen question.
 - **Two tabs:** two starts give one attempt, two saves give one row with the last value, and a save after submit is refused.
@@ -163,7 +163,7 @@ Message: `fix: in a course, the quiz rules follow the person's role there`
   - `CourseController.php:76` (URL prefix)
   - `CalendarEventService.php:147`
   - `ScheduleService.php:54`
-  - `DepartmentAnnouncementService.php:398`
+  - `CollegeAnnouncementService.php:398`
 - **`CourseViewer.php:50` (`isInstitutionViewer`):** it stays a group check. It asks "is this the administrator", not a course role, and an administrator who teaches can't be enrolled anyway (Task 5).
 - Test: `tests/database/CourseRoleChecksTest.php` and the existing course suites.
 
@@ -194,8 +194,8 @@ Message: `fix: every course check asks the person's role in that course`
 - Create: `app/Services/Courses/CourseRoleConflicts.php`, with:
   - `forEnrolment(int $userId, int $offeringId): ?string`
   - `forTeaching(int $userId, int $offeringId): ?string`
-  - `forChairing(int $userId, int $subDepartmentId): ?string`
-  - `forDean(int $userId, int $departmentId): ?string`
+  - `forChairing(int $userId, int $departmentId): ?string`
+  - `forDean(int $userId, int $collegeId): ?string`
   - `forAdministrator(int $userId, int $institutionId): ?string`
 
   Each returns the predicate from the Global Constraints, or null. Queries only, with no writes.
@@ -204,8 +204,8 @@ Message: `fix: every course check asks the person's role in that course`
 - [ ] **Step 1: Write the failing tests**, one per rule and one per D10 edge:
   - `testSomeoneWhoTeachesASectionCannotEnrolInAnother`
   - `testSomeoneWhoTaughtTheCourseInAnEarlierTermCannotEnrol`
-  - `testAChairOrFormerChairCannotEnrolInTheSubDepartmentsCourses`
-  - `testADeanOrFormerDeanCannotEnrolInTheDepartmentsCourses`
+  - `testAChairOrFormerChairCannotEnrolInTheDepartmentsCourses`
+  - `testADeanOrFormerDeanCannotEnrolInTheCollegesCourses`
   - `testAnAdministratorCannotEnrolInTheInstitutionsCourses`
   - `testAStudentCannotTeachTheCourseInTheSameTerm`
   - `testAFormerStudentMayTeachTheCourseInALaterTerm`

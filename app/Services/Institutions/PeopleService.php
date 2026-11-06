@@ -476,8 +476,8 @@ class PeopleService
     {
         $ids = db_connect()->table('chairperson_assignments ca')
             ->select('ca.id')
-            ->join('sub_departments sd', 'sd.id = ca.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = ca.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('ca.chairperson_user_id', $userId)
             ->where('ca.status', 'active')
             ->where('d.institution_id', $institutionId)

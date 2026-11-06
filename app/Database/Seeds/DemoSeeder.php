@@ -57,9 +57,9 @@ abstract class DemoSeeder extends Seeder
     {
         return self::$cache["program:{$institutionId}:{$programCode}"] ??= (int) ($this->db->table('programs')
             ->select('programs.id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where(['departments.institution_id' => $institutionId, 'programs.code' => $programCode])
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where(['colleges.institution_id' => $institutionId, 'programs.code' => $programCode])
             ->get()->getRowArray()['id'] ?? $this->missing("program {$programCode}"));
     }
 

@@ -102,7 +102,7 @@ final class MessagesChatControlsRoutesTest extends RouteTestCase
         CourseFactory::assignInstructor($offering, $b);
         $foreign = (int) (new ConversationService())->startDirect($a, (int) $b->id)['id'];
 
-        $chair = DeanFactory::chair((int) db_connect()->table('programs')->where('id', $this->program)->get()->getRow()->sub_department_id);
+        $chair = DeanFactory::chair((int) db_connect()->table('programs')->where('id', $this->program)->get()->getRow()->department_id);
         $this->join($this->courseChat, $chair);
 
         $this->signIn($this->admin());

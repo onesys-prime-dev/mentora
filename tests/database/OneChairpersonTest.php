@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Database\Migrations\OneChairpersonPerSubDepartment;
+use App\Database\Migrations\OneChairpersonPerDepartment;
 use App\Services\Courses\Grades\GradeOverrideRequestService;
 use App\Services\Institutions\ChairAssignmentService;
 use App\Services\Institutions\StructureException;
@@ -15,10 +15,10 @@ use Tests\Support\DeanFactory;
 use Tests\Support\GradeFactory;
 use Tests\Support\PeopleFactory;
 
-require_once APPPATH . 'Database/Migrations/2026-11-15-000001_OneChairpersonPerSubDepartment.php';
+require_once APPPATH . 'Database/Migrations/2026-11-15-000001_OneChairpersonPerDepartment.php';
 
 /**
- * Exactly one chairperson per sub-department (audit decisions 16.0, 16.0b–d, U5).
+ * Exactly one chairperson per department (audit decisions 16.0, 16.0b–d, U5).
  *
  * @internal
  */
@@ -28,7 +28,7 @@ final class OneChairpersonTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $sub;
+    private int $department;
 
     private User $old;
 
@@ -41,10 +41,10 @@ final class OneChairpersonTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home              = DeanFactory::department('CH');
+        $home              = DeanFactory::college('CH');
         $this->institution = $home['institution'];
-        $this->sub         = DeanFactory::subDepartment($home['department'], 'CH');
-        $this->old         = DeanFactory::chair($this->sub, 'Olga');
+        $this->department         = DeanFactory::department($home['college'], 'CH');
+        $this->old         = DeanFactory::chair($this->department, 'Olga');
         $this->admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
     }
 
@@ -55,7 +55,7 @@ final class OneChairpersonTest extends DatabaseTestCase
 
     private function statusOf(User $chair): ?string
     {
-        return db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $this->sub, 'chairperson_user_id' => $chair->id])->get()->getRowArray()['status'] ?? null;
+        return db_connect()->table('chairperson_assignments')->where(['department_id' => $this->department, 'chairperson_user_id' => $chair->id])->get()->getRowArray()['status'] ?? null;
     }
 
     public function testASecondChairIsRefusedWithoutConfirmation(): void
@@ -63,10 +63,10 @@ final class OneChairpersonTest extends DatabaseTestCase
         $new = $this->newChair();
 
         try {
-            (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $new->id, $this->admin);
+            (new ChairAssignmentService())->assign($this->institution, $this->department, (int) $new->id, $this->admin);
             $this->fail('a second chair needs confirmation');
         } catch (StructureException $e) {
-            $this->assertStringContainsString('Olga Chair chairs Sub CH', $e->getMessage());
+            $this->assertStringContainsString('Olga Chair chairs Department CH', $e->getMessage());
             $this->assertStringContainsString('Nina New', $e->getMessage());
         }
 
@@ -78,7 +78,7 @@ final class OneChairpersonTest extends DatabaseTestCase
     {
         $new = $this->newChair();
 
-        (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $new->id, $this->admin, true);
+        (new ChairAssignmentService())->assign($this->institution, $this->department, (int) $new->id, $this->admin, true);
 
         $this->assertSame('revoked', $this->statusOf($this->old));
         $this->assertSame('active', $this->statusOf($new));
@@ -91,9 +91,9 @@ final class OneChairpersonTest extends DatabaseTestCase
 
     public function testWaitingRequestsPassToTheNewChair(): void
     {
-        $program  = DeanFactory::program($this->sub, 'CH');
+        $program  = DeanFactory::program($this->department, 'CH');
         $offering = DeanFactory::offering($program, DeanFactory::term($this->institution), 'IT601');
-        DeanFactory::dean($this->institution, (int) db_connect()->table('sub_departments')->where('id', $this->sub)->get()->getRow('department_id'));
+        DeanFactory::dean($this->institution, (int) db_connect()->table('departments')->where('id', $this->department)->get()->getRow('college_id'));
         $teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
         $student = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
         CourseFactory::assignInstructor($offering, $teacher);
@@ -104,7 +104,7 @@ final class OneChairpersonTest extends DatabaseTestCase
         $id      = (int) $service->request($teacher, $offering, (int) $student->id, 85.0, 'Excused.')['request']['id'];
         $new     = $this->newChair();
 
-        (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $new->id, $this->admin, true);
+        (new ChairAssignmentService())->assign($this->institution, $this->department, (int) $new->id, $this->admin, true);
 
         $this->assertSame([$id], array_map('intval', array_column($service->listForChair($new), 'id')));
         $this->assertSame([], $service->listForChair($this->old));
@@ -112,12 +112,12 @@ final class OneChairpersonTest extends DatabaseTestCase
         $this->assertFalse($service->endorse($this->old, $id, 'ok')['success']);
     }
 
-    /** A request by $teacher in a course of this sub-department, in a department with a dean. @return int request id */
+    /** A request by $teacher in a course of this department, in a college with a dean. @return int request id */
     private function requestBy(User $teacher): int
     {
-        $program  = DeanFactory::program($this->sub, 'CH');
+        $program  = DeanFactory::program($this->department, 'CH');
         $offering = DeanFactory::offering($program, DeanFactory::term($this->institution), 'IT602');
-        DeanFactory::dean($this->institution, (int) db_connect()->table('sub_departments')->where('id', $this->sub)->get()->getRow('department_id'));
+        DeanFactory::dean($this->institution, (int) db_connect()->table('departments')->where('id', $this->department)->get()->getRow('college_id'));
         $student = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
         CourseFactory::assignInstructor($offering, $teacher);
         CourseFactory::enroll($offering, $student);
@@ -142,7 +142,7 @@ final class OneChairpersonTest extends DatabaseTestCase
         $id = $this->requestBy($new);
         $this->assertSame('awaiting_chair', $this->requestStatus($id));
 
-        (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $new->id, $this->admin, true);
+        (new ChairAssignmentService())->assign($this->institution, $this->department, (int) $new->id, $this->admin, true);
 
         $this->assertSame('awaiting_dean', $this->requestStatus($id), 'nobody else could endorse it');
         $this->assertContains('grade.override_rerouted', array_column(db_connect()->table('audit_logs')->get()->getResultArray(), 'action'));
@@ -151,7 +151,7 @@ final class OneChairpersonTest extends DatabaseTestCase
     public function testRemovingTheOnlyChairMovesTheirWaitingRequestsOn(): void
     {
         $id         = $this->requestBy(PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution));
-        $assignment = (int) db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $this->sub, 'status' => 'active'])->get()->getRow('id');
+        $assignment = (int) db_connect()->table('chairperson_assignments')->where(['department_id' => $this->department, 'status' => 'active'])->get()->getRow('id');
 
         (new ChairAssignmentService())->revoke($this->institution, $assignment, $this->admin);
 
@@ -160,12 +160,12 @@ final class OneChairpersonTest extends DatabaseTestCase
 
     public function testAChairTheSisManagesIsRefusedBeforeAskingToConfirm(): void
     {
-        $assignment = (int) db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $this->sub, 'status' => 'active'])->get()->getRow('id');
-        db_connect()->table('sis_staff_assignments')->insert(['institution_id' => $this->institution, 'role' => 'chairperson', 'person_user_id' => $this->old->id, 'target_id' => $this->sub, 'local_id' => $assignment, 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')]);
+        $assignment = (int) db_connect()->table('chairperson_assignments')->where(['department_id' => $this->department, 'status' => 'active'])->get()->getRow('id');
+        db_connect()->table('sis_staff_assignments')->insert(['institution_id' => $this->institution, 'role' => 'chairperson', 'person_user_id' => $this->old->id, 'target_id' => $this->department, 'local_id' => $assignment, 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')]);
         \Tests\Support\SisFixture::connect($this->institution, PeopleFactory::person('admin', 'Root', 'Admin', 'root@ch.test'));
 
         try {
-            (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $this->newChair()->id, $this->admin);
+            (new ChairAssignmentService())->assign($this->institution, $this->department, (int) $this->newChair()->id, $this->admin);
             $this->fail('the SIS owns this chairperson');
         } catch (StructureException $e) {
             $this->assertSame(ChairAssignmentService::SIS_LOCK, $e->getMessage(), 'said first, not "confirm to replace"');
@@ -176,13 +176,13 @@ final class OneChairpersonTest extends DatabaseTestCase
     {
         // What the other administrator's save leaves for a moment: the active place is taken (active_marker),
         // while the read of who chairs it no longer sees an active chair.
-        db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $this->sub, 'chairperson_user_id' => $this->old->id])->update(['status' => 'revoked']);
+        db_connect()->table('chairperson_assignments')->where(['department_id' => $this->department, 'chairperson_user_id' => $this->old->id])->update(['status' => 'revoked']);
         $notifications = db_connect()->table('notifications')->countAllResults();
         $new           = $this->newChair();
-        $name          = (string) db_connect()->table('sub_departments')->where('id', $this->sub)->get()->getRow('name');
+        $name          = (string) db_connect()->table('departments')->where('id', $this->department)->get()->getRow('name');
 
         try {
-            (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $new->id, $this->admin);
+            (new ChairAssignmentService())->assign($this->institution, $this->department, (int) $new->id, $this->admin);
             $this->fail('expected the race to be told');
         } catch (StructureException $e) {
             $this->assertSame("Someone else just changed the chairperson of {$name}. Reload the page to see who chairs it now.", $e->getMessage());
@@ -197,7 +197,7 @@ final class OneChairpersonTest extends DatabaseTestCase
         $new = $this->newChair();
 
         try {
-            $added = db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $this->sub, 'chairperson_user_id' => $new->id, 'status' => 'active', 'active_marker' => 1, 'assigned_at' => date('Y-m-d H:i:s')]);
+            $added = db_connect()->table('chairperson_assignments')->insert(['department_id' => $this->department, 'chairperson_user_id' => $new->id, 'status' => 'active', 'active_marker' => 1, 'assigned_at' => date('Y-m-d H:i:s')]);
         } catch (DatabaseException) {
             $added = false;
         }
@@ -207,11 +207,11 @@ final class OneChairpersonTest extends DatabaseTestCase
 
     public function testTheMigrationKeepsTheMostRecentlyAssigned(): void
     {
-        $this->assertSame([3, 5], OneChairpersonPerSubDepartment::assignmentsToRevoke([
-            ['id' => 3, 'sub_department_id' => 1, 'assigned_at' => '2026-01-01 08:00:00'],
-            ['id' => 4, 'sub_department_id' => 1, 'assigned_at' => '2026-03-01 08:00:00'],
-            ['id' => 5, 'sub_department_id' => 2, 'assigned_at' => '2026-01-01 08:00:00'],
-            ['id' => 6, 'sub_department_id' => 2, 'assigned_at' => '2026-01-01 08:00:00'],
+        $this->assertSame([3, 5], OneChairpersonPerDepartment::assignmentsToRevoke([
+            ['id' => 3, 'department_id' => 1, 'assigned_at' => '2026-01-01 08:00:00'],
+            ['id' => 4, 'department_id' => 1, 'assigned_at' => '2026-03-01 08:00:00'],
+            ['id' => 5, 'department_id' => 2, 'assigned_at' => '2026-01-01 08:00:00'],
+            ['id' => 6, 'department_id' => 2, 'assigned_at' => '2026-01-01 08:00:00'],
         ]));
     }
 }

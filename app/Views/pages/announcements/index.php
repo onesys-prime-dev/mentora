@@ -1,15 +1,15 @@
 <?php
 /**
  * Everything that reaches this person, at four levels and always in this order: the platform's, the
- * institution's, their department's and their courses'. A level with nothing to say still has its place.
+ * institution's, their college's and their courses'. A level with nothing to say still has its place.
  *
  * @var string $area
  * @var string $query   what was searched for, or an empty string
- * @var string $level   the level being shown: platform, institution, department or course
+ * @var string $level   the level being shown: platform, institution, college or course
  * @var array<string, int> $counts   how many announcements each level has
  * @var string $platform
  * @var string|null $institution
- * @var list<array<string, mixed>> $department
+ * @var list<array<string, mixed>> $college
  * @var list<array<string, mixed>> $courses
  */
 $when = static fn (string $at): string => date('M j, Y', strtotime($at));
@@ -48,7 +48,7 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
     <?php if (! $loadError): ?>
         <div class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-3 sm:flex-row sm:items-center sm:justify-between">
         <nav aria-label="Filter announcements" class="flex flex-wrap items-center gap-2" data-level-filter>
-            <?php foreach (['platform' => 'Platform', 'institution' => 'Institution', 'department' => 'Department', 'course' => 'Courses'] as $key => $label): ?>
+            <?php foreach (['platform' => 'Platform', 'institution' => 'Institution', 'college' => 'College', 'course' => 'Courses'] as $key => $label): ?>
                 <a href="<?= esc($link($key)) ?>"
                    class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $level === $key ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
                    <?= $level === $key ? 'aria-current="page"' : '' ?>><?= esc($label) ?> <span class="ml-1 rounded-full px-2 py-0.5 text-xs font-bold <?= $level === $key ? 'bg-white/25 text-white' : 'bg-brand-tint text-brand-dark' ?>" data-level-count="<?= esc($key) ?>"><?= (int) ($counts[$key] ?? 0) ?></span></a>
@@ -93,16 +93,16 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
 
         <?php endif; ?>
 
-        <?php if ($show('department')): ?>
-        <section class="flex flex-col gap-3" aria-labelledby="level-department" data-level="department">
-            <?= $section('level-department', 'Your department', 'From the dean, for the department, sub-department or program you belong to.') ?>
+        <?php if ($show('college')): ?>
+        <section class="flex flex-col gap-3" aria-labelledby="level-college" data-level="college">
+            <?= $section('level-college', 'Your college', 'From the dean, for the college, department or program you belong to.') ?>
 
-            <?php if ($department === []): ?>
-                <?= $quiet('Nothing from your department right now.') ?>
+            <?php if ($college === []): ?>
+                <?= $quiet('Nothing from your college right now.') ?>
             <?php else: ?>
                 <ul class="flex flex-col gap-3">
-                    <?php foreach ($department as $a): ?>
-                        <li class="flex flex-col gap-1 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] px-5 py-4 shadow-md" data-department-announcement>
+                    <?php foreach ($college as $a): ?>
+                        <li class="flex flex-col gap-1 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] px-5 py-4 shadow-md" data-college-announcement>
                             <span class="text-sm font-bold text-[#1A1C1E]"><?= esc($a['title']) ?></span>
                             <p class="whitespace-pre-line text-sm text-[#3D3D3D]"><?= esc($a['message']) ?></p>
                             <span class="text-xs text-[#646464]">

@@ -19,7 +19,7 @@ use Throwable;
  *  - chairperson: the same over My sections (ChairpersonProgramOverview::mySections);
  *  - student: published courses whose grade changed since their last look (GradesSeen, viewer = student);
  *  - parent: the same summed over their linked children (viewer = parent), only while the portal is on;
- *  - dean: sections finalized and not signed off (DeanDepartmentOverview, every program).
+ *  - dean: sections finalized and not signed off (DeanCollegeOverview, every program).
  *
  * The tile renders on every page, so the count is cached for TTL seconds per role and user (a badge may lag
  * by up to a minute, spec §10) and kept for the rest of the request, so the menu and Quick Access on one page
@@ -205,7 +205,7 @@ final class GradesBadge
     /** Sections of the dean's page (default term, every program) finalized and not yet signed off. */
     private function readyToSignOff(User $dean): int
     {
-        $overview = new DeanDepartmentOverview();
+        $overview = new DeanCollegeOverview();
         $termId   = $overview->defaultTermId($overview->terms($dean), null);
 
         if ($termId === null) {

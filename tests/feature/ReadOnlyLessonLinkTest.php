@@ -42,18 +42,18 @@ final class ReadOnlyLessonLinkTest extends RouteTestCase
         Services::resetSingle('settings');
         Services::resetSingle('auditLogger');
 
-        $home           = DeanFactory::department('RL');
+        $home           = DeanFactory::college('RL');
         $term           = DeanFactory::term($home['institution']);
-        $this->offering = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($home['department'], 'RL'), 'RL'), $term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->offering = DeanFactory::offering(DeanFactory::program(DeanFactory::department($home['college'], 'RL'), 'RL'), $term, 'IT101', 'A', 'active', 'Intro to Computing');
 
-        $elsewhere     = DeanFactory::department('RM');
-        $this->foreign = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'RM'), 'RM'), DeanFactory::term($elsewhere['institution']), 'ZZ900', 'A', 'active', 'Foreign Course');
+        $elsewhere     = DeanFactory::college('RM');
+        $this->foreign = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'RM'), 'RM'), DeanFactory::term($elsewhere['institution']), 'ZZ900', 'A', 'active', 'Foreign Course');
 
         [$this->lesson, $this->draft] = CourseFactory::items(CourseFactory::unit(CourseFactory::module($this->offering)), [['title' => 'Variables'], ['title' => 'Loops', 'status' => 'draft']]);
         [$this->foreignLesson]        = CourseFactory::items(CourseFactory::unit(CourseFactory::module($this->foreign)), [['title' => 'Elsewhere']]);
 
         $this->viewers = [
-            'dean'        => DeanFactory::dean($home['institution'], $home['department']),
+            'dean'        => DeanFactory::dean($home['institution'], $home['college']),
             'institution' => PeopleFactory::person('institutional_admin', 'Ada', 'Admin', 'ada@rl.example', $home['institution']),
         ];
         $this->student = PeopleFactory::person('student', 'Stu', 'Dent', 'stu@rl.example', $home['institution']);

@@ -53,7 +53,7 @@ $routes->post('notifications/read', 'NotificationController::read', ['filter' =>
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
 
 $routes->group('student', ['filter' => ['role:student', 'readonly']], function ($routes) {
-    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    // Everything that reaches this person: platform, institution, college, courses (in that order).
     $routes->get('announcements', 'Announcements\AnnouncementsController::index');
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
@@ -133,7 +133,7 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
 });
 
 $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], function ($routes) {
-    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    // Everything that reaches this person: platform, institution, college, courses (in that order).
     $routes->get('announcements', 'Announcements\AnnouncementsController::index');
 
     // Follow-up requests: the list, a new request, the reply thread and closing.
@@ -352,18 +352,18 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
     });
 });
 
-// The dean oversees one department. Every route in this group is read-only
+// The dean oversees one college. Every route in this group is read-only
 // oversight; role:dean also checks the dean's active assignment (ActiveRoleService).
 $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($routes) {
     $routes->get('/', 'Dean\DeanDashboardController::index');
     $routes->get('dashboard', 'Dean\DeanDashboardController::index');
     $routes->get('courses', 'Dean\DeanCoursesController::index', ['filter' => 'permission:courses.view@dean']);
 
-    // Grades: every section of the department, read-only, and its gradebooks in one workbook (department.monitor).
-    $routes->get('grades', 'Grades\GradesController::index', ['filter' => 'permission:department.monitor@dean']);
-    $routes->get('grades/download-department', 'Grades\GradesBulkController::downloadDepartment', ['filter' => 'permission:department.monitor@dean']);
+    // Grades: every section of the college, read-only, and its gradebooks in one workbook (college.monitor).
+    $routes->get('grades', 'Grades\GradesController::index', ['filter' => 'permission:college.monitor@dean']);
+    $routes->get('grades/download-college', 'Grades\GradesBulkController::downloadCollege', ['filter' => 'permission:college.monitor@dean']);
 
-    // Grade-override requests of the department that wait for the dean: approve (the grade is
+    // Grade-override requests of the college that wait for the dean: approve (the grade is
     // changed) or reject (with a reason). The only writes in this group besides the dean's own pages.
     $routes->get('approvals', 'Dean\ApprovalsController::index', ['filter' => 'permission:grades.approve@dean']);
     $routes->post('approvals/(:num)/approve', 'Dean\ApprovalsController::approve/$1', ['filter' => 'permission:grades.approve@dean']);
@@ -383,34 +383,34 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->post('follow-ups/(:num)/done', 'FollowUps\FollowUpsController::done/$1');
     $routes->post('follow-ups', 'FollowUps\FollowUpsController::store', ['filter' => 'permission:followups.manage']);
 
-    // The dean's announcements to the department, a sub-department or a program (department.announce).
-    $routes->get('announcements', 'Dean\DepartmentAnnouncementsController::index', ['filter' => 'permission:department.announce']);
-    $routes->post('announcements', 'Dean\DepartmentAnnouncementsController::store', ['filter' => 'permission:department.announce']);
-    $routes->post('announcements/(:num)', 'Dean\DepartmentAnnouncementsController::update/$1', ['filter' => 'permission:department.announce']);
-    $routes->post('announcements/(:num)/end', 'Dean\DepartmentAnnouncementsController::end/$1', ['filter' => 'permission:department.announce']);
+    // The dean's announcements to the college, a department or a program (college.announce).
+    $routes->get('announcements', 'Dean\CollegeAnnouncementsController::index', ['filter' => 'permission:college.announce']);
+    $routes->post('announcements', 'Dean\CollegeAnnouncementsController::store', ['filter' => 'permission:college.announce']);
+    $routes->post('announcements/(:num)', 'Dean\CollegeAnnouncementsController::update/$1', ['filter' => 'permission:college.announce']);
+    $routes->post('announcements/(:num)/end', 'Dean\CollegeAnnouncementsController::end/$1', ['filter' => 'permission:college.announce']);
 
-    // The department report taken out of the app: a CSV of each part and one print-friendly page (department.monitor).
-    $routes->get('reports/export/(:segment)', 'Dean\DepartmentReportController::export/$1', ['filter' => 'permission:department.monitor']);
-    $routes->get('reports/print', 'Dean\DepartmentReportController::print', ['filter' => 'permission:department.monitor']);
+    // The college report taken out of the app: a CSV of each part and one print-friendly page (college.monitor).
+    $routes->get('reports/export/(:segment)', 'Dean\CollegeReportController::export/$1', ['filter' => 'permission:college.monitor']);
+    $routes->get('reports/print', 'Dean\CollegeReportController::print', ['filter' => 'permission:college.monitor']);
 
-    // What each instructor of the department carries in a term (view only), and one instructor's sections.
+    // What each instructor of the college carries in a term (view only), and one instructor's sections.
     $routes->get('teaching-load', 'Dean\TeachingLoadController::index');
     $routes->get('teaching-load/(:num)', 'Dean\TeachingLoadController::show/$1');
 
-    // What chairpersons changed in the department's courses, for the dean to look over and mark as reviewed.
+    // What chairpersons changed in the college's courses, for the dean to look over and mark as reviewed.
     $routes->get('chairperson-review', 'Dean\ChairpersonReviewController::index');
     $routes->post('chairperson-review/reviewed', 'Dean\ChairpersonReviewController::reviewed');
 
-    $routes->get('monitor-department', 'Dean\MonitorDepartmentController::index', ['filter' => 'permission:department.monitor']);
-    $routes->get('monitor-department/programs/(:num)', 'Dean\MonitorDepartmentController::program/$1', ['filter' => 'permission:department.monitor']);
-    $routes->get('api/monitor-department/(:segment)', 'Dean\MonitorDepartmentController::data/$1', ['filter' => 'permission:department.monitor']);
+    $routes->get('monitor-college', 'Dean\MonitorCollegeController::index', ['filter' => 'permission:college.monitor']);
+    $routes->get('monitor-college/programs/(:num)', 'Dean\MonitorCollegeController::program/$1', ['filter' => 'permission:college.monitor']);
+    $routes->get('api/monitor-college/(:segment)', 'Dean\MonitorCollegeController::data/$1', ['filter' => 'permission:college.monitor']);
 
-    // A read-only view of every course of the department (courses.view), exactly what its
+    // A read-only view of every course of the college (courses.view), exactly what its
     // instructor sees: the same controllers as the instructor's, but only the reading routes.
     // There is no route to post, patch or delete anything in a course here, so nothing can be
     // changed from this view; the editors, the grading screens and the question-generation
     // tools are left out, as in the institution's view. The offering must be in the dean's
-    // department, else 404 (deancourse).
+    // college, else 404 (deancourse).
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view@dean', 'deancourse']]);
     $routes->get('courses/(:num)/(:segment)/modules/items/(:num)', 'Courses\CourseController::view/$1/$2/modules/$3', ['filter' => ['permission:courses.view@dean', 'deancourse']]);
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view@dean', 'deancourse']]);
@@ -550,11 +550,11 @@ $routes->get('messages/(:num)', 'Messaging\MessagesPageController::index/$1', ['
 // instead of InstructorAssignmentModel. Calendar and schedule are the
 // chairperson's own too, over the program's courses (getCourseOfferings).
 $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], function ($routes) {
-    // Everything that reaches this person: platform, institution, department, courses (in that order).
+    // Everything that reaches this person: platform, institution, college, courses (in that order).
     $routes->get('announcements', 'Announcements\AnnouncementsController::index');
     $routes->get('/', 'Dashboard\DashboardController::index');
 
-    // Grade-override requests of the sub-departments they chair: endorse, or send back with a comment.
+    // Grade-override requests of the departments they chair: endorse, or send back with a comment.
 
     // Follow-up requests: the list, a new request, the reply thread and closing.
     $routes->get('follow-ups', 'FollowUps\FollowUpsController::index');
@@ -820,29 +820,29 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
         $routes->get('/', 'Institution\HomeController::index');
         $routes->get('dashboard', 'Institution\HomeController::index');
 
-        // Academic structure: departments, sub-departments, programs (structure.manage).
+        // Academic structure: colleges, departments, programs (structure.manage).
         $routes->group('structure', ['filter' => 'permission:structure.manage'], function ($routes) {
             $routes->get('/', 'Institution\StructureController::index');
 
-            $routes->post('departments', 'Institution\StructureController::createDepartment');
+            $routes->post('colleges', 'Institution\StructureController::createCollege');
+            $routes->post('colleges/(:num)', 'Institution\StructureController::updateCollege/$1');
+            $routes->post('colleges/(:num)/deactivate', 'Institution\StructureController::deactivateCollege/$1');
+            $routes->post('colleges/(:num)/reactivate', 'Institution\StructureController::reactivateCollege/$1');
+            $routes->post('colleges/(:num)/departments', 'Institution\StructureController::createDepartment/$1');
+
             $routes->post('departments/(:num)', 'Institution\StructureController::updateDepartment/$1');
             $routes->post('departments/(:num)/deactivate', 'Institution\StructureController::deactivateDepartment/$1');
             $routes->post('departments/(:num)/reactivate', 'Institution\StructureController::reactivateDepartment/$1');
-            $routes->post('departments/(:num)/sub-departments', 'Institution\StructureController::createSubDepartment/$1');
-
-            $routes->post('sub-departments/(:num)', 'Institution\StructureController::updateSubDepartment/$1');
-            $routes->post('sub-departments/(:num)/deactivate', 'Institution\StructureController::deactivateSubDepartment/$1');
-            $routes->post('sub-departments/(:num)/reactivate', 'Institution\StructureController::reactivateSubDepartment/$1');
-            $routes->post('sub-departments/(:num)/programs', 'Institution\StructureController::createProgram/$1');
+            $routes->post('departments/(:num)/programs', 'Institution\StructureController::createProgram/$1');
 
             $routes->post('programs/(:num)', 'Institution\StructureController::updateProgram/$1');
             $routes->post('programs/(:num)/deactivate', 'Institution\StructureController::deactivateProgram/$1');
             $routes->post('programs/(:num)/archive', 'Institution\StructureController::archiveProgram/$1');
             $routes->post('programs/(:num)/reactivate', 'Institution\StructureController::reactivateProgram/$1');
 
-            $routes->post('sub-departments/(:num)/chairpersons', 'Institution\StructureController::assignChairperson/$1');
+            $routes->post('departments/(:num)/chairpersons', 'Institution\StructureController::assignChairperson/$1');
             $routes->post('chairpersons/(:num)/remove', 'Institution\StructureController::revokeChairperson/$1');
-            $routes->post('departments/(:num)/deans', 'Institution\StructureController::assignDean/$1');
+            $routes->post('colleges/(:num)/deans', 'Institution\StructureController::assignDean/$1');
             $routes->post('deans/(:num)/remove', 'Institution\StructureController::revokeDean/$1');
         });
 
@@ -987,12 +987,12 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('security/reset', 'Institution\InstitutionSettingsController::resetSecurity', ['filter' => 'reauth']);
         });
 
-        // Grade-override requests of departments with no dean who may approve them (grades.approve).
+        // Grade-override requests of colleges with no dean who may approve them (grades.approve).
         $routes->get('approvals', 'Institution\ApprovalsController::index', ['filter' => 'permission:grades.approve']);
         $routes->post('approvals/(:num)/approve', 'Institution\ApprovalsController::approve/$1', ['filter' => 'permission:grades.approve']);
         $routes->post('approvals/(:num)/reject', 'Institution\ApprovalsController::reject/$1', ['filter' => 'permission:grades.approve']);
 
-        // Sign-off of departments with no dean who may sign off (grades.signoff); signing off asks for the password.
+        // Sign-off of colleges with no dean who may sign off (grades.signoff); signing off asks for the password.
         $routes->get('signoff', 'Institution\SignoffController::index', ['filter' => 'permission:grades.signoff']);
         $routes->post('signoff/program/(:num)/(:num)', 'Institution\SignoffController::signOffProgram/$1/$2', ['filter' => ['permission:grades.signoff', 'reauth']]);
         $routes->post('signoff/(:num)', 'Institution\SignoffController::signOff/$1', ['filter' => ['permission:grades.signoff', 'reauth']]);

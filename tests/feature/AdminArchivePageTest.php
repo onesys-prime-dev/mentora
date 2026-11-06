@@ -302,7 +302,7 @@ final class AdminArchivePageTest extends RouteTestCase
     public function testPurgingARealInstitutionRemovesItsCourses(): void
     {
         $offering = CourseFactory::offering();
-        $id       = (int) db_connect()->table('departments')->select('institution_id')->orderBy('id', 'desc')->get()->getRowArray()['institution_id'];
+        $id       = (int) db_connect()->table('colleges')->select('institution_id')->orderBy('id', 'desc')->get()->getRowArray()['institution_id'];
         db_connect()->table('institutions')->where('id', $id)->update(['status' => 'past', 'deleted_at' => date('Y-m-d H:i:s')]);
         $name = db_connect()->table('institutions')->where('id', $id)->get()->getRowArray()['name'];
         $this->confirmedPassword();

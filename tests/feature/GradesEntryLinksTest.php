@@ -13,7 +13,7 @@ use Tests\Support\RouteTestCase;
 
 /**
  * The ways into the Grades page (spec §10, phase 5 decisions) and back: each course's Grades tab, the parent's
- * course tab, the dashboard's grading-queue and at-risk cards, and Monitor Program / Monitor Department with
+ * course tab, the dashboard's grading-queue and at-risk cards, and Monitor Program / Monitor College with
  * their back links. Each link carries the term the page it leaves shows, and none is drawn for someone whose
  * Grades page would not open for them.
  *
@@ -23,9 +23,9 @@ final class GradesEntryLinksTest extends RouteTestCase
 {
     private int $institution;
 
-    private int $department;
+    private int $college;
 
-    private int $sub;
+    private int $department;
 
     private int $program;
 
@@ -41,9 +41,9 @@ final class GradesEntryLinksTest extends RouteTestCase
         Services::resetSingle('settings');
         PermissionMatrix::flush();
 
-        ['institution' => $this->institution, 'department' => $this->department] = DeanFactory::department('GEL');
-        $this->sub      = DeanFactory::subDepartment($this->department, 'GEL');
-        $this->program  = DeanFactory::program($this->sub, 'GEL');
+        ['institution' => $this->institution, 'college' => $this->college] = DeanFactory::college('GEL');
+        $this->department      = DeanFactory::department($this->college, 'GEL');
+        $this->program  = DeanFactory::program($this->department, 'GEL');
         $this->term     = DeanFactory::term($this->institution);
         $this->offering = DeanFactory::offering($this->program, $this->term, 'GEL101');
     }
@@ -159,7 +159,7 @@ final class GradesEntryLinksTest extends RouteTestCase
 
     public function testAChairpersonActingInACourseTheyDoNotTeachGetsNoLink(): void
     {
-        $chair = DeanFactory::chair($this->sub);
+        $chair = DeanFactory::chair($this->department);
         $this->loggedInAs($chair);
 
         $this->assertSame([], $this->hrefs($this->tab('chairperson'), 'data-all-grades'));
@@ -167,7 +167,7 @@ final class GradesEntryLinksTest extends RouteTestCase
 
     public function testAChairpersonWhoTeachesTheCourseButActsAsChairpersonGetsNoLink(): void
     {
-        $chair = DeanFactory::chair($this->sub);
+        $chair = DeanFactory::chair($this->department);
         $chair->addGroup('instructor');
         CourseFactory::assignInstructor($this->offering, $chair);
         $this->loggedInAs($chair);
@@ -178,7 +178,7 @@ final class GradesEntryLinksTest extends RouteTestCase
 
     public function testADeanReadingACourseGetsNoLink(): void
     {
-        $dean = DeanFactory::dean($this->institution, $this->department);
+        $dean = DeanFactory::dean($this->institution, $this->college);
         $this->loggedInAs($dean);
 
         $this->assertSame([], $this->hrefs($this->tab('dean'), 'data-all-grades'));
@@ -251,7 +251,7 @@ final class GradesEntryLinksTest extends RouteTestCase
     public function testNoSeeAllWhereTheInstructorsGradesPageIsNotTheirs(): void
     {
         // A chairperson acting as chairperson would be sent to a page that is not the instructor's.
-        $chair = DeanFactory::chair($this->sub);
+        $chair = DeanFactory::chair($this->department);
 
         $this->assertSame([], $this->hrefs($this->card('grading-queue', $chair, ['queue' => $this->queue()]), 'data-see-all'));
         $this->assertSame([], $this->hrefs($this->card('at-risk-students', $chair, ['students' => $this->atRisk()]), 'data-see-all'));
@@ -265,11 +265,11 @@ final class GradesEntryLinksTest extends RouteTestCase
         $this->assertSame([], $this->hrefs($this->card('grading-queue', $teacher, ['queue' => $this->queue()]), 'data-see-all'));
     }
 
-    // ---- Monitor Program, Monitor Department and back ----
+    // ---- Monitor Program, Monitor College and back ----
 
     public function testMonitorProgramLinksToTheProgramTabOfTheSameTerm(): void
     {
-        $chair = DeanFactory::chair($this->sub);
+        $chair = DeanFactory::chair($this->department);
         $this->loggedInAs($chair);
 
         $this->assertSame([site_url('chairperson/grades?tab=program&term=' . $this->term)], $this->hrefs($this->page('chairperson/monitor-program?term=' . $this->term), 'data-grade-records'));
@@ -279,7 +279,7 @@ final class GradesEntryLinksTest extends RouteTestCase
 
     public function testMonitorProgramDrawsNoGradeRecordsLinkWithoutCoursesViewAsChairperson(): void
     {
-        $chair = DeanFactory::chair($this->sub);
+        $chair = DeanFactory::chair($this->department);
         $this->clear('chairperson', 'courses.view');
         $this->loggedInAs($chair);
 
@@ -288,44 +288,44 @@ final class GradesEntryLinksTest extends RouteTestCase
         $this->assertSame([], $this->hrefs($x, 'data-grade-records'), 'the Grades page would refuse them');
     }
 
-    public function testMonitorDepartmentLinksToTheDepartmentViewOfTheSameTerm(): void
+    public function testMonitorCollegeLinksToTheCollegeViewOfTheSameTerm(): void
     {
-        $dean = DeanFactory::dean($this->institution, $this->department);
+        $dean = DeanFactory::dean($this->institution, $this->college);
         $this->loggedInAs($dean);
 
-        $x = $this->page('dean/monitor-department?term=' . $this->term);
+        $x = $this->page('dean/monitor-college?term=' . $this->term);
 
         $this->assertSame([site_url('dean/grades?term=' . $this->term)], $this->hrefs($x, 'data-grade-records'));
         $this->assertSame('View grade records →', $this->text($x, 'data-grade-records'));
-        $this->assertSame([site_url('dean/grades')], $this->hrefs($this->page('dean/monitor-department'), 'data-grade-records'));
+        $this->assertSame([site_url('dean/grades')], $this->hrefs($this->page('dean/monitor-college'), 'data-grade-records'));
     }
 
     public function testTheDeansDrillDownIntoOneProgramLinksToTheDeansGradesNotTheChairpersons(): void
     {
-        $dean = DeanFactory::dean($this->institution, $this->department);
+        $dean = DeanFactory::dean($this->institution, $this->college);
         $this->loggedInAs($dean);
 
-        $x = $this->page("dean/monitor-department/programs/{$this->program}?term=" . $this->term);
+        $x = $this->page("dean/monitor-college/programs/{$this->program}?term=" . $this->term);
 
         $this->assertSame([site_url("dean/grades?program={$this->program}&term=" . $this->term)], $this->hrefs($x, 'data-grade-records'));
     }
 
     public function testTheProgramTabLinksBackToMonitorProgramWithItsTerm(): void
     {
-        $chair = DeanFactory::chair($this->sub);
+        $chair = DeanFactory::chair($this->department);
         $this->loggedInAs($chair);
 
-        foreach (['', '&sub=at-risk'] as $sub) {
-            $x = $this->page('chairperson/grades?tab=program&term=' . $this->term . $sub);
+        foreach (['', '&sub=at-risk'] as $department) {
+            $x = $this->page('chairperson/grades?tab=program&term=' . $this->term . $department);
 
-            $this->assertSame([site_url('chairperson/monitor-program?term=' . $this->term)], $this->hrefs($x, 'data-view-analytics'), $sub);
+            $this->assertSame([site_url('chairperson/monitor-program?term=' . $this->term)], $this->hrefs($x, 'data-view-analytics'), $department);
             $this->assertSame('View analytics →', $this->text($x, 'data-view-analytics'));
         }
     }
 
     public function testMyTeachingSectionsHaveNoAnalyticsLinkAndNeitherDoesAChairpersonWithoutMonitorProgram(): void
     {
-        $chair = DeanFactory::chair($this->sub);
+        $chair = DeanFactory::chair($this->department);
         $chair->addGroup('instructor');
         CourseFactory::assignInstructor($this->offering, $chair);
         $this->loggedInAs($chair);
@@ -337,17 +337,17 @@ final class GradesEntryLinksTest extends RouteTestCase
         $this->assertSame([], $this->hrefs($this->page('chairperson/grades?term=' . $this->term), 'data-view-analytics'));
     }
 
-    public function testTheDeansPageLinksBackToMonitorDepartmentWithItsTermAndKeepsItThere(): void
+    public function testTheDeansPageLinksBackToMonitorCollegeWithItsTermAndKeepsItThere(): void
     {
-        $dean = DeanFactory::dean($this->institution, $this->department);
+        $dean = DeanFactory::dean($this->institution, $this->college);
         $this->loggedInAs($dean);
 
         $back = $this->hrefs($this->page('dean/grades?term=' . $this->term), 'data-view-analytics');
 
-        $this->assertSame([site_url('dean/monitor-department?term=' . $this->term)], $back);
+        $this->assertSame([site_url('dean/monitor-college?term=' . $this->term)], $back);
 
         // And from there the way forward carries the same term: the round trip keeps it.
-        $forward = $this->hrefs($this->page('dean/monitor-department?term=' . $this->term), 'data-grade-records');
+        $forward = $this->hrefs($this->page('dean/monitor-college?term=' . $this->term), 'data-grade-records');
 
         $this->assertSame([site_url('dean/grades?term=' . $this->term)], $forward);
     }

@@ -7,7 +7,7 @@ namespace App\Services\Courses;
 /**
  * Sorts the rows of a comparison table by one column. A missing value (no data yet) always goes last
  * whatever the direction, and equal values keep name order, so the order never jumps between reloads.
- * Shared by the dean's tables (Monitor Department, teaching load) so they order the same way.
+ * Shared by the dean's tables (Monitor College, teaching load) so they order the same way.
  */
 final class RowSort
 {

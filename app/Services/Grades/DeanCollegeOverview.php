@@ -8,16 +8,16 @@ use App\Models\Assignments\DeanAssignmentModel;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * The programs, terms and section table of the dean's Department tab.
+ * The programs, terms and section table of the dean's College tab.
  *
- * A dean reaches the sections of the department(s) they are actively assigned to (every sub-department and
+ * A dean reaches the sections of the college(s) they are actively assigned to (every department and
  * program under them), active or completed. The table is the chairperson's (ChairpersonProgramOverview's
- * query over the department's sub-departments) with the section's program and a Signed off column, and a
+ * query over the college's departments) with the section's program and a Signed off column, and a
  * strip in place of the tracker: finalized, signed off and the open grade-override requests waiting, over the
  * whole program choice. Every number is read from stored rows; nothing is created, and the query count does
  * not grow with the number of sections.
  */
-final class DeanDepartmentOverview
+final class DeanCollegeOverview
 {
     public const SORTS = [...ChairpersonProgramOverview::SORTS, 'signed_off'];
 
@@ -29,22 +29,22 @@ final class DeanDepartmentOverview
     }
 
     /**
-     * The programs of the dean's department(s), by name: the picker after "All programs".
+     * The programs of the dean's college(s), by name: the picker after "All programs".
      *
      * @return list<array{id: int, name: string}>
      */
     public function programs(User $dean): array
     {
-        $departments = $this->departments($dean);
+        $colleges = $this->colleges($dean);
 
-        if ($departments === []) {
+        if ($colleges === []) {
             return [];
         }
 
         $rows = db_connect()->table('programs p')
             ->select(['p.id', 'p.name'])
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->whereIn('sd.department_id', $departments)
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->whereIn('sd.college_id', $colleges)
             ->orderBy('p.name', 'ASC')
             ->orderBy('p.id', 'ASC')
             ->get()
@@ -60,7 +60,7 @@ final class DeanDepartmentOverview
      */
     public function terms(User $dean): array
     {
-        return $this->program->termsIn($this->subDepartments($dean));
+        return $this->program->termsIn($this->departments($dean));
     }
 
     /**
@@ -116,7 +116,7 @@ final class DeanDepartmentOverview
      */
     public function all(User $dean, int $termId, ?int $programId): array
     {
-        $rows = $this->program->rowsIn($this->subDepartments($dean), $termId, $programId);
+        $rows = $this->program->rowsIn($this->departments($dean), $termId, $programId);
 
         if ($rows === []) {
             return [];
@@ -163,23 +163,23 @@ final class DeanDepartmentOverview
             ->countAllResults();
     }
 
-    /** @return list<int> the departments the dean is actively assigned to */
-    private function departments(User $dean): array
+    /** @return list<int> the colleges the dean is actively assigned to */
+    private function colleges(User $dean): array
     {
-        return (new DeanAssignmentModel())->departmentIdsOfDean((int) $dean->id);
+        return (new DeanAssignmentModel())->collegeIdsOfDean((int) $dean->id);
     }
 
-    /** @return list<int> every sub-department of the dean's department(s) */
-    private function subDepartments(User $dean): array
+    /** @return list<int> every department of the dean's college(s) */
+    private function departments(User $dean): array
     {
-        $departments = $this->departments($dean);
+        $colleges = $this->colleges($dean);
 
-        if ($departments === []) {
+        if ($colleges === []) {
             return [];
         }
 
         return array_map('intval', array_column(
-            db_connect()->table('sub_departments')->select('id')->whereIn('department_id', $departments)->get()->getResultArray(),
+            db_connect()->table('departments')->select('id')->whereIn('college_id', $colleges)->get()->getResultArray(),
             'id'
         ));
     }

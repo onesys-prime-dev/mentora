@@ -10,10 +10,10 @@ use CodeIgniter\Shield\Entities\User;
 
 /**
  * The chairperson Courses page: every course offering across every
- * sub-department the signed-in chairperson actively chairs, searchable,
+ * department the signed-in chairperson actively chairs, searchable,
  * filterable and sortable. Built on
  * ChairpersonAssignmentModel::chairedOfferingsBuilder(), so a program or
- * course added to their sub-department later shows up here with no
+ * course added to their department later shows up here with no
  * further wiring.
  */
 class ChairpersonCourseSearch
@@ -109,8 +109,8 @@ class ChairpersonCourseSearch
     private function programScopedOfferings(int $userId): BaseBuilder
     {
         return db_connect()->table('chairperson_assignments')
-            ->join('sub_departments', 'sub_departments.id = chairperson_assignments.sub_department_id')
-            ->join('programs', 'programs.sub_department_id = sub_departments.id')
+            ->join('departments', 'departments.id = chairperson_assignments.department_id')
+            ->join('programs', 'programs.department_id = departments.id')
             ->join('courses', 'courses.program_id = programs.id')
             ->join('course_offerings', 'course_offerings.course_id = courses.id')
             ->where('chairperson_assignments.chairperson_user_id', $userId)

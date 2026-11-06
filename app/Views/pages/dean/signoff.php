@@ -1,6 +1,6 @@
 <?php
 /**
- * The dean's term-end sign-off: the department's sections for a term, grouped by program. A section is
+ * The dean's term-end sign-off: the college's sections for a term, grouped by program. A section is
  * Ready (the instructor finalized the grades, no override request open), Blocked (and the page says
  * why) or Signed off. Signing off asks for the password again; "Sign off all ready" does a program's
  * ready sections at once and says how many first. Reopening a sign-off needs a reason.
@@ -15,7 +15,7 @@ $termId = $board['term'];
 
 // The administrators share the page: any of them may reopen what another signed off.
 $reopener = $area === 'dean' ? 'only you can' : 'only an administrator can';
-$scope    = $area === 'dean' ? "your department's sections" : 'the sections of departments with no dean who signs off';
+$scope    = $area === 'dean' ? "your college's sections" : 'the sections of colleges with no dean who signs off';
 
 $termOptions = [];
 

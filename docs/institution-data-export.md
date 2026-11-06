@@ -13,9 +13,9 @@ When a subscription ends, the institution's administrator can take a full copy o
 
 One CSV per dataset (UTF-8, header row), plus a `README.txt` with row counts:
 
-`institution`, `terms`, `departments`, `sub_departments`, `programs`, `courses`, `offerings`, `people`, `enrollments`, `final_grades`, `assessments`, `submissions`, `announcements`.
+`institution`, `terms`, `colleges`, `departments`, `programs`, `courses`, `offerings`, `people`, `enrollments`, `final_grades`, `assessments`, `submissions`, `announcements`.
 
-Everything is scoped through the institution's departments. Not included: uploaded files (documents, videos, submitted files) and passwords. People are listed with email, username, name, roles and active flag. Cells that would run as a spreadsheet formula are prefixed with an apostrophe (the same defusing as the user export).
+Everything is scoped through the institution's colleges. Not included: uploaded files (documents, videos, submitted files) and passwords. People are listed with email, username, name, roles and active flag. Cells that would run as a spreadsheet formula are prefixed with an apostrophe (the same defusing as the user export).
 
 ## Prepared in the background (audit 12)
 

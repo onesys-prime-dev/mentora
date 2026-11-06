@@ -91,11 +91,11 @@ final class PlanLimitsTest extends DatabaseTestCase
     private function institutionOf(int $offering): int
     {
         return (int) db_connect()->table('course_offerings')
-            ->select('departments.institution_id')
+            ->select('colleges.institution_id')
             ->join('courses', 'courses.id = course_offerings.course_id')
             ->join('programs', 'programs.id = courses.program_id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->where('course_offerings.id', $offering)
             ->get()->getRowArray()['institution_id'];
     }

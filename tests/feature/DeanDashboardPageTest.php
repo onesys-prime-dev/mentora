@@ -10,7 +10,7 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The dean's home page: the department in numbers, what needs attention (each item opening a screen that
+ * The dean's home page: the college in numbers, what needs attention (each item opening a screen that
  * works), what chairpersons changed, the dean's announcements, and its empty, error and no-assignment states.
  * The chairperson's own dashboard, which shares some of its cards, is left as it was.
  *
@@ -19,8 +19,8 @@ use Tests\Support\RouteTestCase;
 final class DeanDashboardPageTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
-    private int $subA;
+    private int $college;
+    private int $departmentA;
     private int $offering;
     private User $dean;
     private User $chair;
@@ -30,15 +30,15 @@ final class DeanDashboardPageTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('D');
+        $home              = DeanFactory::college('D');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
-        $this->chair       = DeanFactory::chair($this->subA, 'Maria');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
+        $this->chair       = DeanFactory::chair($this->departmentA, 'Maria');
         $this->teacher     = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
 
-        $this->offering = DeanFactory::offering(DeanFactory::program($this->subA, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->offering = DeanFactory::offering(DeanFactory::program($this->departmentA, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
         CourseFactory::assignInstructor($this->offering, $this->teacher);
 
         // Quiet for a month, with a request waiting and nothing finalized.
@@ -88,7 +88,7 @@ final class DeanDashboardPageTest extends RouteTestCase
     public function testNoIconOnTheDashboardIsDrawnInWhite(): void
     {
         // Nothing in the page's body sits on a dark background, so a white icon there cannot be seen. The tiles of the
-        // strip, the department's rows and the rows of Needs Attention (this department has an override, a section and
+        // strip, the college's rows and the rows of Needs Attention (this college has an override, a section and
         // a quiet course waiting) all have icons, and the white ones among those registered must have been given a colour.
         $body = $this->page();
 
@@ -103,7 +103,7 @@ final class DeanDashboardPageTest extends RouteTestCase
         }
     }
 
-    public function testTheDeanSeesTheirDepartmentAndTheirCard(): void
+    public function testTheDeanSeesTheirCollegeAndTheirCard(): void
     {
         $body = $this->page();
 
@@ -113,14 +113,14 @@ final class DeanDashboardPageTest extends RouteTestCase
         $this->assertStringNotContainsString('CHAIRPERSON', $body);
         $this->assertStringContainsString('data-widget="snapshot"', $body);
         $this->assertStringContainsString('Courses running', $body);
-        $this->assertStringContainsString('Sub-departments', $body);
+        $this->assertStringContainsString('Departments', $body);
     }
 
-    public function testTheSnapshotCountsMatchTheDepartment(): void
+    public function testTheSnapshotCountsMatchTheCollege(): void
     {
         $body = preg_replace('/\s+/', ' ', $this->page());
 
-        $this->assertMatchesRegularExpression('/Sub-departments\s*<\/dt>\s*<dd[^>]*>\s*1\s*<\/dd>/', $body);
+        $this->assertMatchesRegularExpression('/Departments\s*<\/dt>\s*<dd[^>]*>\s*1\s*<\/dd>/', $body);
         $this->assertMatchesRegularExpression('/Courses running\s*<\/dt>\s*<dd[^>]*>\s*1\s*<\/dd>/', $body);
         $this->assertMatchesRegularExpression('/Instructors\s*<\/dt>\s*<dd[^>]*>\s*1\s*<\/dd>/', $body);
         $this->assertMatchesRegularExpression('/Students\s*<\/dt>\s*<dd[^>]*>\s*1\s*<\/dd>/', $body);
@@ -151,7 +151,7 @@ final class DeanDashboardPageTest extends RouteTestCase
 
     public function testWhatTheChairpersonChangedAndTheAnnouncementsAreShown(): void
     {
-        (new \App\Services\Courses\DepartmentAnnouncementService())->post($this->dean, ['scope' => 'department', 'audience' => 'everyone', 'title' => 'Enrolment week', 'message' => 'See the registrar.']);
+        (new \App\Services\Courses\CollegeAnnouncementService())->post($this->dean, ['scope' => 'college', 'audience' => 'everyone', 'title' => 'Enrolment week', 'message' => 'See the registrar.']);
 
         $body = $this->page();
 
@@ -160,7 +160,7 @@ final class DeanDashboardPageTest extends RouteTestCase
         $this->assertStringContainsString('IT101 A', $body);
         $this->assertStringContainsString('1 to review', $body);
         $this->assertStringContainsString('dean/courses/' . $this->offering . '/intro-to-computing', $body);
-        $this->assertStringContainsString('Department announcements', $body);
+        $this->assertStringContainsString('College announcements', $body);
         $this->assertStringContainsString('Enrolment week', $body);
         $this->assertStringContainsString('College D', $body);
     }
@@ -169,15 +169,15 @@ final class DeanDashboardPageTest extends RouteTestCase
     {
         $body = $this->page();
 
-        foreach (['dean/courses', 'dean/approvals', 'dean/signoff', 'dean/monitor-department', 'dean/follow-ups', 'dean/announcements', 'dean/teaching-load', 'dean/chairperson-review'] as $tool) {
+        foreach (['dean/courses', 'dean/approvals', 'dean/signoff', 'dean/monitor-college', 'dean/follow-ups', 'dean/announcements', 'dean/teaching-load', 'dean/chairperson-review'] as $tool) {
             $this->assertStringContainsString($tool, $body, $tool);
         }
     }
 
-    public function testAQuietDepartmentSaysSoInEachCard(): void
+    public function testAQuietCollegeSaysSoInEachCard(): void
     {
-        $quiet = DeanFactory::department('Q', $this->institution);
-        $body  = $this->page(DeanFactory::dean($this->institution, $quiet['department'], 'Quin'));
+        $quiet = DeanFactory::college('Q', $this->institution);
+        $body  = $this->page(DeanFactory::dean($this->institution, $quiet['college'], 'Quin'));
 
         $this->assertStringContainsString("You're all caught up", $body);
         $this->assertStringContainsString('data-activity-empty', $body);
@@ -185,11 +185,11 @@ final class DeanDashboardPageTest extends RouteTestCase
         $this->assertStringContainsString('New announcement', $body);
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanationNotTheDashboard(): void
+    public function testADeanWithoutACollegeSeesTheExplanationNotTheDashboard(): void
     {
-        $body = $this->page(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution));
+        $body = $this->page(PeopleFactory::person('dean', 'No', 'College', null, $this->institution));
 
-        $this->assertStringContainsString('not assigned to a department yet', $body);
+        $this->assertStringContainsString('not assigned to a college yet', $body);
         $this->assertStringNotContainsString('data-widget="snapshot"', $body);
     }
 
@@ -201,19 +201,19 @@ final class DeanDashboardPageTest extends RouteTestCase
             'title' => 'Dashboard', 'page' => 'dashboard', 'user' => $this->dean, 'overview' => null, 'profile' => ['first_name' => 'Dana', 'last_name' => 'Dean'], 'loadError' => true,
         ]));
 
-        $this->assertStringContainsString('We could not load your department\'s numbers', $body);
+        $this->assertStringContainsString('We could not load your college\'s numbers', $body);
         $this->assertStringContainsString('Try again', $body);
         $this->assertStringContainsString('data-load-error', $body);
         $this->assertStringContainsString('Dana Dean', $body, 'the dean\'s card and the quick access are still there');
         $this->assertStringNotContainsString('data-widget="needs-attention"', $body);
     }
 
-    public function testAnotherDeansDepartmentIsNotShown(): void
+    public function testAnotherDeansCollegeIsNotShown(): void
     {
-        $elsewhere = DeanFactory::department('E', $this->institution);
-        DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
+        $elsewhere = DeanFactory::college('E', $this->institution);
+        DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
 
-        $body = $this->page(DeanFactory::dean($this->institution, $elsewhere['department'], 'Eve'));
+        $body = $this->page(DeanFactory::dean($this->institution, $elsewhere['college'], 'Eve'));
 
         $this->assertStringContainsString('College E', $body);
         $this->assertStringNotContainsString('IT101', $body);

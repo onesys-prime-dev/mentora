@@ -313,7 +313,7 @@ class UserAdminService
             $entity = model(UserModel::class)->findById($userId);
             $entity->syncGroups(...$roles);
 
-            // A dean who is no longer a dean is no longer in charge of a department; their requests move up.
+            // A dean who is no longer a dean is no longer in charge of a college; their requests move up.
             if (in_array('dean', $before, true) && ! in_array('dean', $roles, true)) {
                 (new DeanAssignmentService())->endForPerson($userId, $actor);
             }

@@ -6,27 +6,27 @@ namespace App\Controllers\Dean;
 
 use App\Controllers\BaseController;
 use App\Services\Courses\DeanAccessService;
-use App\Services\Courses\DepartmentAnnouncementService;
+use App\Services\Courses\CollegeAnnouncementService;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * The dean's announcements to their department: the ones showing and the ones that ended, a form to post a
- * new one (to the department, a sub-department or a program, for everyone, staff or students) and to edit
+ * The dean's announcements to their college: the ones showing and the ones that ended, a form to post a
+ * new one (to the college, a department or a program, for everyone, staff or students) and to edit
  * or end one. The actions answer JSON for the dialog that sends them (an error beside its field), and
  * redirect with a message without JavaScript. Who may do what is the service's check.
  */
-class DepartmentAnnouncementsController extends BaseController
+class CollegeAnnouncementsController extends BaseController
 {
     public function index(): string
     {
         $user = auth()->user();
 
-        if ((new DeanAccessService())->departmentFor($user) === null) {
+        if ((new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Announcements', 'page' => 'announcements', 'user' => $user]);
         }
 
-        $service = new DepartmentAnnouncementService();
+        $service = new CollegeAnnouncementService();
         $tab     = $this->request->getGet('tab') === 'ended' ? 'ended' : 'active';
 
         $loadError = false;
@@ -37,7 +37,7 @@ class DepartmentAnnouncementsController extends BaseController
             $list   = $service->listForDean($user, $tab);
             $scopes = $service->scopeOptions($user);
         } catch (\Throwable $e) {
-            log_message('error', 'Department announcements failed to load: ' . $e->getMessage());
+            log_message('error', 'College announcements failed to load: ' . $e->getMessage());
             $loadError = true;
         }
 
@@ -56,17 +56,17 @@ class DepartmentAnnouncementsController extends BaseController
 
     public function store(): ResponseInterface|RedirectResponse
     {
-        return $this->answer((new DepartmentAnnouncementService())->post(auth()->user(), (array) $this->request->getPost()));
+        return $this->answer((new CollegeAnnouncementService())->post(auth()->user(), (array) $this->request->getPost()));
     }
 
     public function update(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->answer((new DepartmentAnnouncementService())->edit(auth()->user(), $id, (array) $this->request->getPost()));
+        return $this->answer((new CollegeAnnouncementService())->edit(auth()->user(), $id, (array) $this->request->getPost()));
     }
 
     public function end(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->answer((new DepartmentAnnouncementService())->end(auth()->user(), $id));
+        return $this->answer((new CollegeAnnouncementService())->end(auth()->user(), $id));
     }
 
     /**

@@ -10,7 +10,7 @@ namespace App\Services\Messaging;
  * services; the policy itself never touches the database.
  *
  * sharedCourse: both are active in one non-closed offering.
- * inScope: the sender's sub-department (chairperson) or department (dean)
+ * inScope: the sender's department (chairperson) or college (dean)
  *   covers the recipient.
  * linkedChild: the parent's linked child is taught by that instructor or
  *   chaired by that chairperson.
@@ -26,7 +26,7 @@ final class StartContext
         public readonly bool $senderActive = true,
         public readonly bool $recipientActive = true,
         public readonly bool $sharedCourse = false,
-        public readonly bool $sameDepartment = false,
+        public readonly bool $sameCollege = false,
         public readonly bool $inScope = false,
         public readonly bool $linkedChild = false,
         public readonly bool $studentDmEnabled = true,

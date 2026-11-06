@@ -40,9 +40,9 @@ final class ClassScheduleServiceTest extends DatabaseTestCase
 
         Services::resetSingle('auditLogger');
 
-        $home              = DeanFactory::department('CS');
+        $home              = DeanFactory::college('CS');
         $this->institution = $home['institution'];
-        $this->program     = DeanFactory::program(DeanFactory::subDepartment($home['department'], 'CS'), 'CS');
+        $this->program     = DeanFactory::program(DeanFactory::department($home['college'], 'CS'), 'CS');
         $this->term        = DeanFactory::term($this->institution);
         $this->offering    = DeanFactory::offering($this->program, $this->term, 'IT201', 'A', 'active', 'Data Structures');
         $this->admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
@@ -170,8 +170,8 @@ final class ClassScheduleServiceTest extends DatabaseTestCase
 
     public function testAnotherInstitutionsOfferingIsNotFound(): void
     {
-        $elsewhere = DeanFactory::department('CT');
-        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'CT'), 'CT'), DeanFactory::term($elsewhere['institution']), 'ZZ100');
+        $elsewhere = DeanFactory::college('CT');
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'CT'), 'CT'), DeanFactory::term($elsewhere['institution']), 'ZZ100');
 
         $this->expectException(PageNotFoundException::class);
 

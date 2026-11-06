@@ -9,7 +9,7 @@ use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * The dean Courses page: every course offering under the dean's department,
+ * The dean Courses page: every course offering under the dean's college,
  * searchable, filterable and sortable. The programs in scope come from
  * DeanAccessService on every call, so a program added later shows up here at
  * once and an ended assignment shows nothing. Read-only: this class only
@@ -59,7 +59,7 @@ class DeanCourseSearch
     }
 
     /**
-     * The terms the department's courses actually run in, newest first.
+     * The terms the college's courses actually run in, newest first.
      *
      * @return list<array{id: int, name: string, academic_year: string}>
      */
@@ -75,30 +75,30 @@ class DeanCourseSearch
     }
 
     /**
-     * The department's sub-departments, for the filter.
+     * The college's departments, for the filter.
      *
      * @return list<array{id: int, name: string}>
      */
-    public function subDepartments(User $user): array
+    public function departments(User $user): array
     {
-        $department = $this->access->departmentFor($user);
+        $college = $this->access->collegeFor($user);
 
-        if ($department === null) {
+        if ($college === null) {
             return [];
         }
 
-        return db_connect()->table('sub_departments')
+        return db_connect()->table('departments')
             ->select(['id', 'name'])
-            ->where('department_id', (int) $department['department_id'])
+            ->where('college_id', (int) $college['college_id'])
             ->orderBy('name', 'ASC')
             ->get()
             ->getResultArray();
     }
 
     /**
-     * The department's programs, for the filter.
+     * The college's programs, for the filter.
      *
-     * @return list<array{id: int, name: string, sub_department_id: int}>
+     * @return list<array{id: int, name: string, department_id: int}>
      */
     public function programs(User $user): array
     {
@@ -109,7 +109,7 @@ class DeanCourseSearch
         }
 
         return db_connect()->table('programs')
-            ->select(['id', 'name', 'sub_department_id'])
+            ->select(['id', 'name', 'department_id'])
             ->whereIn('id', $ids)
             ->orderBy('name', 'ASC')
             ->get()
@@ -117,7 +117,7 @@ class DeanCourseSearch
     }
 
     /**
-     * The instructors teaching the department's courses, for the filter.
+     * The instructors teaching the college's courses, for the filter.
      *
      * @return list<array{id: int, name: string}>
      */
@@ -135,7 +135,7 @@ class DeanCourseSearch
             ->getResultArray();
     }
 
-    /** The bare join from the department's programs down to course_offerings, with no select of its own. */
+    /** The bare join from the college's programs down to course_offerings, with no select of its own. */
     private function scoped(User $user): BaseBuilder
     {
         $programIds = $this->access->programIds($user);
@@ -161,7 +161,7 @@ class DeanCourseSearch
                 "(SELECT CONCAT(chair_profiles.first_name, ' ', chair_profiles.last_name)
                     FROM chairperson_assignments
                     JOIN user_profiles AS chair_profiles ON chair_profiles.user_id = chairperson_assignments.chairperson_user_id
-                   WHERE chairperson_assignments.sub_department_id = sub_departments.id
+                   WHERE chairperson_assignments.department_id = departments.id
                      AND chairperson_assignments.status = 'active'
                    ORDER BY chairperson_assignments.id
                    LIMIT 1) AS chairperson_name",
@@ -176,8 +176,8 @@ class DeanCourseSearch
             $builder->where('academic_terms.id', $filters->termId);
         }
 
-        if ($filters->subDepartmentId !== null) {
-            $builder->where('sub_departments.id', $filters->subDepartmentId);
+        if ($filters->departmentId !== null) {
+            $builder->where('departments.id', $filters->departmentId);
         }
 
         if ($filters->programId !== null) {

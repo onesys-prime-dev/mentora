@@ -255,7 +255,7 @@ describe("bindProgram", () => {
     });
 });
 
-// The dean's Department view draws the same table with no Edit as chairperson and a grid through dean/api/courses.
+// The dean's College view draws the same table with no Edit as chairperson and a grid through dean/api/courses.
 function deanPage({ grid = true } = {}) {
     const deanRow = (id, slug) => row(id, slug).replace(`/chairperson/grades?tab=program&section=${id}`, `/dean/grades?section=${id}`);
 
@@ -272,7 +272,7 @@ function deanPage({ grid = true } = {}) {
     return document.getElementById("root");
 }
 
-describe("bindProgram on the dean's Department view", () => {
+describe("bindProgram on the dean's College view", () => {
     it("loads and switches grids through the dean's API, read-only, and never offers an unlock", async () => {
         window.history.replaceState(null, "", "/dean/grades?term=4&section=1");
 

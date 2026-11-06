@@ -20,7 +20,7 @@ final class CourseRoleInTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $sub;
+    private int $department;
 
     private int $courseA;
 
@@ -32,10 +32,10 @@ final class CourseRoleInTest extends DatabaseTestCase
 
         session()->destroy();
 
-        $home              = DeanFactory::department('RI');
+        $home              = DeanFactory::college('RI');
         $this->institution = $home['institution'];
-        $this->sub         = DeanFactory::subDepartment($home['department'], 'RI');
-        $program           = DeanFactory::program($this->sub, 'RI');
+        $this->department         = DeanFactory::department($home['college'], 'RI');
+        $program           = DeanFactory::program($this->department, 'RI');
         $term              = DeanFactory::term($this->institution);
         $this->courseA     = DeanFactory::offering($program, $term, 'IT801');
         $this->courseB     = DeanFactory::offering($program, $term, 'IT802');
@@ -66,14 +66,14 @@ final class CourseRoleInTest extends DatabaseTestCase
 
     public function testTheChairOfTheProgramIsItsChairperson(): void
     {
-        $chair = DeanFactory::chair($this->sub, 'Maria');
+        $chair = DeanFactory::chair($this->department, 'Maria');
 
         $this->assertSame('chairperson', (new CourseMembership())->roleIn($chair, $this->courseA));
     }
 
     public function testAChairWhoTeachesTheOfferingIsItsInstructor(): void
     {
-        $chair = DeanFactory::chair($this->sub, 'Maria');
+        $chair = DeanFactory::chair($this->department, 'Maria');
         $chair->addGroup('instructor');
         CourseFactory::assignInstructor($this->courseA, $chair);
 

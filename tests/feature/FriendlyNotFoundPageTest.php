@@ -59,12 +59,12 @@ final class FriendlyNotFoundPageTest extends RouteTestCase
 
     public function testEverySignedInRoleIsOfferedItsDashboardThroughTheSiteRoot(): void
     {
-        $home = DeanFactory::department('N');
+        $home = DeanFactory::college('N');
 
         foreach ([
             PeopleFactory::person('student', 'Sam', 'Student', null, $home['institution']),
             PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $home['institution']),
-            DeanFactory::dean($home['institution'], $home['department']),
+            DeanFactory::dean($home['institution'], $home['college']),
         ] as $user) {
             $this->loggedInAs($user);
 

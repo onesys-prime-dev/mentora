@@ -9,18 +9,18 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The dean's department report taken out of the app: each CSV and the print page, their headers and
+ * The dean's college report taken out of the app: each CSV and the print page, their headers and
  * contents, that each is recorded, that the links on the pages carry the filters on screen, and that no
- * other role, department or missing assignment gets anything. A read-only institution can still export.
+ * other role, college or missing assignment gets anything. A read-only institution can still export.
  *
  * @internal
  */
-final class DepartmentReportPageTest extends RouteTestCase
+final class CollegeReportPageTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
-    private int $subA;
-    private int $subB;
+    private int $college;
+    private int $departmentA;
+    private int $departmentB;
     private int $term;
     private User $dean;
     private User $chair;
@@ -30,24 +30,24 @@ final class DepartmentReportPageTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('R');
+        $home              = DeanFactory::college('R');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->departmentB        = DeanFactory::department($this->college, 'B');
         $this->term        = DeanFactory::term($this->institution);
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
-        $this->chair       = DeanFactory::chair($this->subA, 'Maria');
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
+        $this->chair       = DeanFactory::chair($this->departmentA, 'Maria');
         $this->teacher     = PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution);
 
-        $it = DeanFactory::offering(DeanFactory::program($this->subA, 'A'), $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
-        $lw = DeanFactory::offering(DeanFactory::program($this->subB, 'B'), $this->term, 'LW100', 'A', 'active', 'Intro to Law');
+        $it = DeanFactory::offering(DeanFactory::program($this->departmentA, 'A'), $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $lw = DeanFactory::offering(DeanFactory::program($this->departmentB, 'B'), $this->term, 'LW100', 'A', 'active', 'Intro to Law');
         CourseFactory::assignInstructor($it, $this->teacher);
         CourseFactory::assignInstructor($lw, PeopleFactory::person('instructor', 'Leo', 'Law', null, $this->institution));
         CourseFactory::enroll($it, PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution));
 
-        $other = DeanFactory::department('N', $this->institution);
-        $nx    = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($other['department'], 'N'), 'N'), $this->term, 'NX100', 'A', 'active', 'Foreign Course');
+        $other = DeanFactory::college('N', $this->institution);
+        $nx    = DeanFactory::offering(DeanFactory::program(DeanFactory::department($other['college'], 'N'), 'N'), $this->term, 'NX100', 'A', 'active', 'Foreign Course');
         CourseFactory::assignInstructor($nx, PeopleFactory::person('instructor', 'Zed', 'Zee', null, $this->institution));
     }
 
@@ -85,14 +85,14 @@ final class DepartmentReportPageTest extends RouteTestCase
         }
     }
 
-    public function testTheMonitorCsvHoldsTheDepartmentAndNothingFromAnotherOne(): void
+    public function testTheMonitorCsvHoldsTheCollegeAndNothingFromAnotherOne(): void
     {
         $body = $this->fetch('dean/reports/export/monitor')->response()->getBody();
 
-        $this->assertStringContainsString('Sub-department,Sub-department,Courses', $body);
-        $this->assertStringContainsString('Department total', $body);
-        $this->assertStringContainsString('Sub A', $body);
-        $this->assertStringContainsString('Sub B', $body);
+        $this->assertStringContainsString('Department,Department,Courses', $body);
+        $this->assertStringContainsString('College total', $body);
+        $this->assertStringContainsString('Department A', $body);
+        $this->assertStringContainsString('Department B', $body);
         $this->assertStringNotContainsString('NX100', $body);
     }
 
@@ -111,7 +111,7 @@ final class DepartmentReportPageTest extends RouteTestCase
 
     public function testTheFiltersInTheAddressNarrowTheDownload(): void
     {
-        $body = $this->fetch('dean/reports/export/teaching-load?sub_department=' . $this->subB)->response()->getBody();
+        $body = $this->fetch('dean/reports/export/teaching-load?department=' . $this->departmentB)->response()->getBody();
 
         $this->assertStringContainsString('Leo Law', $body);
         $this->assertStringNotContainsString('Tess Tan', $body);
@@ -130,32 +130,32 @@ final class DepartmentReportPageTest extends RouteTestCase
             }
         }
 
-        $this->assertSame([], $this->audits('department_report.exported'));
+        $this->assertSame([], $this->audits('college_report.exported'));
     }
 
     public function testEveryDownloadIsRecordedWithTheActingRoleThePartTheRowsAndTheFilters(): void
     {
-        $this->fetch('dean/reports/export/teaching-load?sub_department=' . $this->subA);
+        $this->fetch('dean/reports/export/teaching-load?department=' . $this->departmentA);
 
-        $audit = $this->audits('department_report.exported');
+        $audit = $this->audits('college_report.exported');
 
         $this->assertCount(1, $audit);
         $this->assertSame('dean', $audit[0]['acting_role']);
-        $this->assertSame('department', $audit[0]['target_type']);
-        $this->assertSame((string) $this->department, $audit[0]['target_id']);
+        $this->assertSame('college', $audit[0]['target_type']);
+        $this->assertSame((string) $this->college, $audit[0]['target_id']);
 
         $new = json_decode((string) $audit[0]['new_values'], true);
 
         $this->assertSame('teaching-load', $new['section']);
         $this->assertSame(1, $new['rows']);
-        $this->assertSame((string) $this->subA, (string) $new['filters']['sub_department']);
+        $this->assertSame((string) $this->departmentA, (string) $new['filters']['department']);
     }
 
     public function testThePrintPageHoldsAllThreePartsAndIsRecorded(): void
     {
         $body = $this->page('dean/reports/print');
 
-        $this->assertStringContainsString('College R: department report', $body);
+        $this->assertStringContainsString('College R: college report', $body);
         $this->assertStringContainsString('Print or save as PDF', $body);
 
         foreach (['monitor', 'teaching-load', 'signoff'] as $part) {
@@ -163,32 +163,32 @@ final class DepartmentReportPageTest extends RouteTestCase
         }
 
         $this->assertStringContainsString('Tess Tan', $body);
-        $this->assertStringContainsString('Sub A', $body);
+        $this->assertStringContainsString('Department A', $body);
         $this->assertStringNotContainsString('Zed', $body);
         $this->assertStringNotContainsString('NX100', $body);
-        $this->assertCount(1, $this->audits('department_report.printed'));
-        $this->assertSame('dean', $this->audits('department_report.printed')[0]['acting_role']);
+        $this->assertCount(1, $this->audits('college_report.printed'));
+        $this->assertSame('dean', $this->audits('college_report.printed')[0]['acting_role']);
     }
 
     public function testThePrintPageSaysWhatItIsFilteredBy(): void
     {
-        $body = $this->page('dean/reports/print?term=' . $this->term . '&sub_department=' . $this->subB);
+        $body = $this->page('dean/reports/print?term=' . $this->term . '&department=' . $this->departmentB);
 
         $this->assertStringContainsString('Term: First (2026-2027)', $body);
-        $this->assertStringContainsString('Sub-department: Sub B', $body);
+        $this->assertStringContainsString('Department: Department B', $body);
         $this->assertStringNotContainsString('Tess Tan', $body);
     }
 
     public function testTheThreePagesLinkTheirExportWithTheFiltersOnScreen(): void
     {
-        $monitor = $this->page('dean/monitor-department?sub_department=' . $this->subA . '&compare=program');
+        $monitor = $this->page('dean/monitor-college?department=' . $this->departmentA . '&compare=program');
 
-        $this->assertMatchesRegularExpression('#data-export="csv" href="[^"]*dean/reports/export/monitor\?[^"]*sub_department=' . $this->subA . '[^"]*compare=program#', $monitor);
-        $this->assertMatchesRegularExpression('#data-export="print" href="[^"]*dean/reports/print\?[^"]*sub_department=' . $this->subA . '#', $monitor);
+        $this->assertMatchesRegularExpression('#data-export="csv" href="[^"]*dean/reports/export/monitor\?[^"]*department=' . $this->departmentA . '[^"]*compare=program#', $monitor);
+        $this->assertMatchesRegularExpression('#data-export="print" href="[^"]*dean/reports/print\?[^"]*department=' . $this->departmentA . '#', $monitor);
         $this->assertStringContainsString('Download CSV', $monitor);
         $this->assertStringContainsString('Print view', $monitor);
 
-        $load = $this->page('dean/teaching-load?sub_department=' . $this->subA . '&sort=name');
+        $load = $this->page('dean/teaching-load?department=' . $this->departmentA . '&sort=name');
 
         $this->assertMatchesRegularExpression('#data-export="csv" href="[^"]*dean/reports/export/teaching-load\?[^"]*term=' . $this->term . '#', $load);
         $this->assertMatchesRegularExpression('#data-export="csv" href="[^"]*export/teaching-load\?[^"]*sort=name#', $load);
@@ -206,13 +206,13 @@ final class DepartmentReportPageTest extends RouteTestCase
             }
         }
 
-        $this->assertSame([], $this->audits('department_report.exported'));
-        $this->assertSame([], $this->audits('department_report.printed'));
+        $this->assertSame([], $this->audits('college_report.exported'));
+        $this->assertSame([], $this->audits('college_report.printed'));
     }
 
-    public function testADeanWithoutADepartmentHasNothingToExport(): void
+    public function testADeanWithoutACollegeHasNothingToExport(): void
     {
-        $stray = PeopleFactory::person('dean', 'No', 'Department', null, $this->institution);
+        $stray = PeopleFactory::person('dean', 'No', 'College', null, $this->institution);
         $this->loggedInAs($stray);
 
         foreach (['dean/reports/export/monitor', 'dean/reports/print'] as $uri) {
@@ -224,7 +224,7 @@ final class DepartmentReportPageTest extends RouteTestCase
             }
         }
 
-        $this->assertSame([], $this->audits('department_report.exported'));
+        $this->assertSame([], $this->audits('college_report.exported'));
     }
 
     public function testAReadOnlyInstitutionsDeanCanStillExport(): void

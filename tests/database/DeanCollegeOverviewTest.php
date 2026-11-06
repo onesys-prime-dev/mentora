@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Services\Grades\DeanDepartmentOverview;
+use App\Services\Grades\DeanCollegeOverview;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
@@ -11,22 +11,22 @@ use Tests\Support\DeanFactory;
 use Tests\Support\GradeFactory;
 
 /**
- * The sections behind the dean's Department tab: every section of the dean's department(s), through the
+ * The sections behind the dean's College tab: every section of the dean's college(s), through the
  * chairperson's program query, with a Signed off column, a program filter and the strip's counts.
  *
  * @internal
  */
-final class DeanDepartmentOverviewTest extends DatabaseTestCase
+final class DeanCollegeOverviewTest extends DatabaseTestCase
 {
     protected bool $isolateTests = true;
 
-    private DeanDepartmentOverview $overview;
+    private DeanCollegeOverview $overview;
 
     private User $dean;
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
     private int $programA;
 
@@ -40,18 +40,18 @@ final class DeanDepartmentOverviewTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $this->overview = new DeanDepartmentOverview();
+        $this->overview = new DeanCollegeOverview();
 
-        ['institution' => $this->institution, 'department' => $this->department] = DeanFactory::department('DG');
+        ['institution' => $this->institution, 'college' => $this->college] = DeanFactory::college('DG');
 
-        // Two sub-departments of the dean's department; B's program sorts before A's by name.
-        $this->programA = DeanFactory::program(DeanFactory::subDepartment($this->department, 'A'), 'Zoology');
+        // Two departments of the dean's college; B's program sorts before A's by name.
+        $this->programA = DeanFactory::program(DeanFactory::department($this->college, 'A'), 'Zoology');
         db_connect()->table('programs')->where('id', $this->programA)->update(['name' => 'Zoology']);
-        $this->programB = DeanFactory::program(DeanFactory::subDepartment($this->department, 'B'), 'Biology');
+        $this->programB = DeanFactory::program(DeanFactory::department($this->college, 'B'), 'Biology');
         db_connect()->table('programs')->where('id', $this->programB)->update(['name' => 'Biology']);
 
         $this->term = DeanFactory::term($this->institution);
-        $this->dean = DeanFactory::dean($this->institution, $this->department);
+        $this->dean = DeanFactory::dean($this->institution, $this->college);
     }
 
     private function section(string $code, ?int $program = null, string $status = 'active', ?int $term = null): int
@@ -91,16 +91,16 @@ final class DeanDepartmentOverviewTest extends DatabaseTestCase
         return array_column($this->overview->sections($this->dean, $this->term, $program, $opts)['rows'], 'offering_id');
     }
 
-    public function testOnlyTheDepartmentsSectionsAreListed(): void
+    public function testOnlyTheCollegesSectionsAreListed(): void
     {
         $a1        = $this->section('A101');
         $completed = $this->section('A102', null, 'completed');
         $this->section('A103', null, 'archived');
         $b1 = $this->section('B101', $this->programB);
 
-        // Another department of the same institution, and another institution.
-        $other    = DeanFactory::department('OT', $this->institution);
-        $otherPrg = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'O'), 'Other');
+        // Another college of the same institution, and another institution.
+        $other    = DeanFactory::college('OT', $this->institution);
+        $otherPrg = DeanFactory::program(DeanFactory::department($other['college'], 'O'), 'Other');
         $this->section('O101', $otherPrg);
 
         $older = DeanFactory::term($this->institution, 'Older', '2025-08-01');
@@ -122,7 +122,7 @@ final class DeanDepartmentOverviewTest extends DatabaseTestCase
         $this->assertSame(
             [['id' => $this->programB, 'name' => 'Biology'], ['id' => $this->programA, 'name' => 'Zoology']],
             $this->overview->programs($this->dean),
-            'programs of the department, by name'
+            'programs of the college, by name'
         );
 
         $terms = $this->overview->terms($this->dean);
@@ -152,15 +152,15 @@ final class DeanDepartmentOverviewTest extends DatabaseTestCase
         $a2 = $this->section('A102');
         $b1 = $this->section('B101', $this->programB);
 
-        $other    = DeanFactory::department('OT', $this->institution);
-        $otherPrg = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'O'), 'Other');
+        $other    = DeanFactory::college('OT', $this->institution);
+        $otherPrg = DeanFactory::program(DeanFactory::department($other['college'], 'O'), 'Other');
         $this->section('O101', $otherPrg);
 
         $this->assertSame([$a1, $a2, $b1], $this->ids(null));
         $this->assertSame([$a1, $a2], $this->ids($this->programA));
         $this->assertSame([$b1], $this->ids($this->programB));
         $this->assertSame([$b1], array_column($this->overview->all($this->dean, $this->term, $this->programB), 'offering_id'));
-        $this->assertSame([], $this->ids($otherPrg), "another department's program reaches nothing");
+        $this->assertSame([], $this->ids($otherPrg), "another college's program reaches nothing");
 
         $this->assertSame(3, $this->overview->sections($this->dean, $this->term, null, [])['strip']['total']);
         $this->assertSame(2, $this->overview->sections($this->dean, $this->term, $this->programA, [])['strip']['total']);

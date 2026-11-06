@@ -30,7 +30,7 @@ Every finding carries one of these.
 
 ### 0.3 Things that make this a snapshot, not a fixed truth
 
-1. **Uncommitted work is in the tree.** 42 files are staged for "audit plan 4" (approvals, sign-off, one chairperson per sub-department). They are on disk, so this inventory describes them, but they are not committed. Plan 4's own checkboxes are all unticked even though the code and tests exist, and its documentation task (task 9) is not done. **[A]**
+1. **Uncommitted work is in the tree.** 42 files are staged for "audit plan 4" (approvals, sign-off, one chairperson per department). They are on disk, so this inventory describes them, but they are not committed. Plan 4's own checkboxes are all unticked even though the code and tests exist, and its documentation task (task 9) is not done. **[A]**
 2. **The 2026-10-23 audit (`docs/audit-2026-10-23.md`) is older than the code.** Findings 1–4, 7–9 and 16 have commits or staged work. Findings 5, 10–13 and 15 and the cron install (decision D5) appear still open. Do not copy the audit's "what exists" statements without checking.
 3. **Several `docs/` files are stale** (see section 13). Where docs and code disagree, this inventory states the code and notes the doc.
 4. **`docs/test-cases/` already holds about 98 draft cases.** A new catalog must extend it, not duplicate or contradict it (section 10).
@@ -66,7 +66,7 @@ Seven Shield groups: `student`, `instructor`, `chairperson`, `dean`, `parent`, `
 
 ### 1.3 Tenancy **[A]**
 
-Institution is the tenant. A real `institution_id` column exists on departments, academic terms, institution users, subscriptions, invitations, exports, SIS tables, parent links, AI jobs and a few more. Everything below (programs, courses, offerings, enrolments, assessments, grades) inherits its tenant by joining up the chain. **Nothing in the database forces those chains to agree** (e.g. an offering whose course is in institution A and term in institution B). Tenant checks are PHP-side.
+Institution is the tenant. A real `institution_id` column exists on colleges, academic terms, institution users, subscriptions, invitations, exports, SIS tables, parent links, AI jobs and a few more. Everything below (programs, courses, offerings, enrolments, assessments, grades) inherits its tenant by joining up the chain. **Nothing in the database forces those chains to agree** (e.g. an offering whose course is in institution A and term in institution B). Tenant checks are PHP-side.
 
 ### 1.4 Institution access states **[A]**
 
@@ -112,10 +112,10 @@ These were re-checked directly in the second pass. They are the firmest facts in
 | **V7** | Security headers are off: `secureheaders` is commented out in `app/Config/Filters.php:125`; `CSPEnabled = false` in `app/Config/App.php:201`. | grep |
 | **V8** | `QuizAttemptService::startAttempt` counts attempts and then `insert`s an `In Progress` attempt with **no transaction and no duplicate-key handling**. The visibility and availability checks are skipped for `inGroup('instructor')`. A page open is a GET that creates the attempt. | read of the code |
 | **V9** | `AssessmentController` / `AssessmentService` have `publish`, `unpublish`, `archive`, `restore`, `duplicate` and `statistics` methods with **no route** referencing them. | grep of `Routes.php` |
-| **V10** | **Foreign-key argument order is reversed** in 7 columns across 6 migrations: `addForeignKey(..., 'SET NULL', 'CASCADE')`. CodeIgniter's signature is `($onUpdate, $onDelete)`, so this reads ON UPDATE SET NULL / **ON DELETE CASCADE**. Columns: `dean_assignments.assigned_by`, `grade_override_requests.endorsed_by` / `returned_by` / `decided_by`, `grade_signoffs.reopened_by`, `department_announcements.ended_by` (and `learning_resources.file_id` per the schema agent). **Effect to confirm on a copy database:** deleting the actor user deletes those rows. | grep of migrations; effect not run |
+| **V10** | **Foreign-key argument order is reversed** in 7 columns across 6 migrations: `addForeignKey(..., 'SET NULL', 'CASCADE')`. CodeIgniter's signature is `($onUpdate, $onDelete)`, so this reads ON UPDATE SET NULL / **ON DELETE CASCADE**. Columns: `dean_assignments.assigned_by`, `grade_override_requests.endorsed_by` / `returned_by` / `decided_by`, `grade_signoffs.reopened_by`, `college_announcements.ended_by` (and `learning_resources.file_id` per the schema agent). **Effect to confirm on a copy database:** deleting the actor user deletes those rows. | grep of migrations; effect not run |
 | **V11** | Six pairs of migrations **share a timestamp**: `2026-07-17-000009`, `2026-10-24-000001`, `2026-11-05-000001`, `2026-11-08-000001`, `2026-11-09-000001`, `2026-11-10-000001`. Order within a tie is by class name. | `ls` |
 | **V12** | No seeder sets `active_marker` for the chairperson. After the staged migration the seeded chair has marker NULL, so the database uniqueness does not cover that row. | grep of `app/Database/Seeds` |
-| **V13** | The newest migration is `2026-11-15-000001_OneChairpersonPerSubDepartment`, staged, not committed. Whether it has run anywhere is unknown. | `ls`, git |
+| **V13** | The newest migration is `2026-11-15-000001_OneChairpersonPerDepartment`, staged, not committed. Whether it has run anywhere is unknown. | `ls`, git |
 | **V14** | Roles: the seven groups exist. | agent + config read |
 
 Not re-checked, but the single most important to confirm at runtime: **A1**, whether successful logins are written to `auth_logins` when Shield's attempt recording is "failures only" (lockout resets on a success row). Tests assert it works; the config suggests it may not (see AMB-AUTH-01).
@@ -132,7 +132,7 @@ Source: `AuthGroups::DEFAULT_MATRIX`, overlaid by the `role_permissions` table (
 |---|---|
 | admin | institutions, subscriptions, users, roles, flags, settings, audit (each `.view` / `.manage`), `monitoring.view`, backup / integrations (`.view` / `.manage`), `impersonation.start`. Locked: cannot be edited, has no academic permission |
 | institutional_admin | `courses.view`, `grades.approve`, `grades.signoff`, `structure.manage`, `terms.manage`, `offerings.manage`, `enrolments.manage`, `people.view`, `people.manage`, `reports.view`, `institution.settings`, `institution.audit`, `institution.impersonate`, `sis.run`, `institution.roles` |
-| dean | `courses.view`, `department.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `department.announce` |
+| dean | `courses.view`, `college.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `college.announce` |
 | chairperson | `courses.view`, `courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage`, `program.monitor`, `followups.manage` |
 | instructor | `courses.view`, `courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage` |
 | student | `courses.view` |
@@ -145,7 +145,7 @@ Rules **[A]**:
 - The system administrator edits platform defaults (`/admin/roles`, `roles.manage` + password check). The institution administrator edits only the **academic** permissions of dean / chairperson / instructor / student / parent (`/institution/roles`, `institution.roles` + password check; refused while read-only).
 - Every change is audited as `roles.permission_changed`, and a change that cannot be audited is undone.
 - Changing `grades.approve` for dean or institutional_admin re-targets waiting override requests.
-- The Roles pages warn where **no one** can approve or sign off for a department (`GradeAuthority::gaps`).
+- The Roles pages warn where **no one** can approve or sign off for a college (`GradeAuthority::gaps`).
 
 ### 3.2 Filters (what enforces what) **[A]**
 
@@ -244,9 +244,9 @@ Group filter `role:institutional_admin`; writes sit in a `readonly` subgroup wit
 
 | Feature | Rules | Status |
 |---|---|---|
-| **Structure** (departments, sub-departments, programs) | Code required, ≤ 50, starts alphanumeric, letters / digits / `.` `-` `_`; name 3–255; code unique within its parent; established year 1800 → current year; **cannot switch off a node with active children, courses, or offerings in an active term**; nothing created under an inactive parent; programs may be archived | IMPLEMENTED |
-| **Chairperson assignment** (staged) | **Exactly one active chair per sub-department.** A second needs `replace=1` confirmation; replacement runs in one transaction, keeps history, notifies the old chair, audits revoke then assign. A SIS-managed chair cannot be replaced by hand. A person may chair several sub-departments. Waiting `awaiting_chair` requests pass to the new chair implicitly (the list reads live) | IMPLEMENTED (staged) |
-| **Dean assignment** | One dean per department and per dean (DB-enforced via `active_marker`); a chairperson cannot be made dean; SIS lock; the first dean in an institution triggers `announceNowNeeded`. **There is no institution-area screen to assign or end a dean**: only the SIS import, a seeder, and role removal / deactivation touch deanships | service IMPLEMENTED; **screen MISSING (MISS-INST-01)** |
+| **Structure** (colleges, departments, programs) | Code required, ≤ 50, starts alphanumeric, letters / digits / `.` `-` `_`; name 3–255; code unique within its parent; established year 1800 → current year; **cannot switch off a node with active children, courses, or offerings in an active term**; nothing created under an inactive parent; programs may be archived | IMPLEMENTED |
+| **Chairperson assignment** (staged) | **Exactly one active chair per department.** A second needs `replace=1` confirmation; replacement runs in one transaction, keeps history, notifies the old chair, audits revoke then assign. A SIS-managed chair cannot be replaced by hand. A person may chair several departments. Waiting `awaiting_chair` requests pass to the new chair implicitly (the list reads live) | IMPLEMENTED (staged) |
+| **Dean assignment** | One dean per college and per dean (DB-enforced via `active_marker`); a chairperson cannot be made dean; SIS lock; the first dean in an institution triggers `announceNowNeeded`. **There is no institution-area screen to assign or end a dean**: only the SIS import, a seeder, and role removal / deactivation touch deanships | service IMPLEMENTED; **screen MISSING (MISS-INST-01)** |
 | **Courses catalog** | Code unique per program; title 3–255; units > 0 and ≤ 99.9; never deleted; cannot be switched off with offerings in an active term; SIS lock on code / title / units while a connection is enabled | PARTIAL (rules from docs + tests) |
 | **Terms** | Name 2–100; year `YYYY-YYYY` (second = first + 1) or `YYYY`; end after start; length ≤ 800 days; name + year unique per institution; overlaps allowed with a **warning**; completed / archived cannot be edited; active → upcoming refused if enrolments exist | IMPLEMENTED |
 | **Term close / reopen** (password required) | Close: active offerings → `completed`, `enrolled` places → `completed`, term → `completed`, snapshot of ids stored, audited in the transaction. Reopen: needs a snapshot, **blocked if any offering was copied from the term**; restores only rows still `completed`; term becomes `active` regardless of dates. **Close checks no sign-off** (docs: "Not yet") | IMPLEMENTED |
@@ -261,7 +261,7 @@ Group filter `role:institutional_admin`; writes sit in a `readonly` subgroup wit
 | **Announcement banner & security** | Banner ≤ 300 chars, plain text, no `<` `>`, optional end date. Security overrides accept **only stricter** values; a value equal to the platform's is not stored | IMPLEMENTED |
 | **Reports / audit / export / home / read-only course view** | Reports reuse Monitor Program numbers, CSV defused and audited; audit scoped to the institution, no source addresses; export allowed when read-only / past, kept 7 days, a failed audit discards it | PARTIAL for export and reports |
 | **Approvals** (staged) | `/institution/approvals` lists `awaiting_institution` override requests; approve / reject need `grades.approve` | IMPLEMENTED (staged) |
-| **Sign-off** (staged) | `/institution/signoff`; password required to sign off (not to reopen); an admin signs off only where the department has no dean with `grades.signoff`, holds the permission, and is **not an instructor of that section** | IMPLEMENTED (staged) |
+| **Sign-off** (staged) | `/institution/signoff`; password required to sign off (not to reopen); an admin signs off only where the college has no dean with `grades.signoff`, holds the permission, and is **not an instructor of that section** | IMPLEMENTED (staged) |
 
 Tests **[A]**: `StructureServiceTest` (18), `InstitutionStructureTest` (16), `OneChairpersonTest`, `StructureChairReplaceTest`, `ChairAssignmentServiceTest`, `DeanAssignmentServiceTest` (12), `TermServiceTest` (14), `TermCloseServiceTest` (8), `OfferingServiceTest` (19), `OfferingCopyServiceTest` (14), `EnrolmentServiceTest` (13), `CsvUploadServiceTest` (12), `InstitutionReauthTest` (16), `InstitutionApprovalsPageTest` (4), `InstitutionSignoffPageTest` (3), plus a "read-only institution can look but not change" test per page; e2e `institution-structure.spec.js` (37 tests: TC-STR / CRS / TRM / OFF / ENR / PPL / PAR / UPL / CPY / BRD / ACD / SEC / RPT / VCV / SUB / AUD / VAS / HOM) and `institutional-admin.spec.js` (IAA-01..07).
 
@@ -272,7 +272,7 @@ Tests **[A]**: `StructureServiceTest` (18), `InstitutionStructureTest` (16), `On
 | Connector | Only a **file connector** is registered. Inbound: `<sis.path>/<institution id>/inbound/{students,instructors,courses,enrollments,staff_assignments}.csv`, optional `.sig` (HMAC-SHA256). Outbound: `outbound/grades-<key>.csv` with `course_external_id, student_external_id, percentage, remarks`. No HTTP SIS. Credentials sealed with `encryption.key` | IMPLEMENTED |
 | Inbound gates | institution exists → flag `sis.sync` on → connection saved → (real run) connection enabled + effective status `active` + an earlier successful non-test inbound run (a preview counts). An unreadable file fails the run before any write; bad rows are counted and skipped; an unexpected exception rolls back the whole run | IMPLEMENTED |
 | Import order | people → courses → enrolments → staff assignments, one transaction; a dry run rolls back; the audit row is written inside the transaction | IMPLEMENTED |
-| Staff assignments | go through the dean / chair / offering services; what the SIS stops listing is ended **only if it was SIS-supplied**; nothing is ended if rows were unreadable; instructors ended only in the active term. Staged: the SIS now **replaces** a hand-made chair; a second chair for one sub-department in one file is refused | IMPLEMENTED (staged) |
+| Staff assignments | go through the dean / chair / offering services; what the SIS stops listing is ended **only if it was SIS-supplied**; nothing is ended if rows were unreadable; instructors ended only in the active term. Staged: the SIS now **replaces** a hand-made chair; a second chair for one department in one file is refused | IMPLEMENTED (staged) |
 | Per-row validation | required column empty, value > 255 chars, bad email, units outside 0–99.99, status not enrolled / dropped / withdrawn / completed, bad staff role, repeated key | IMPLEMENTED |
 | Grade export | final grades only, new / changed since `sis_grade_exports`; batch key `g<institution>-<24 hex>`; 3 attempts; on failure nothing is marked sent and admins are notified. **Where the institution uses approval, only signed-off sections are sent**; with no dean a finalized grade is enough | IMPLEMENTED (staged) |
 | Ownership locks | While a connection is enabled, SIS-owned courses, enrolments, people names / emails, chair / dean assignments and instructor unassign are read-only | IMPLEMENTED |
@@ -342,7 +342,7 @@ Tests **[A]**: `QuestionGenerationServiceTest`, `QuestionGenerationSafetyTest`, 
 | **Final-grade override** | If the institution has any active dean (`GradeAuthority::usesApproval`), the call **creates a request**; otherwise it applies at once (0–100, reason required, writes `grade_history`). `request()` does not check finalization | IMPLEMENTED |
 | **Override request chain** (see 5.1) | States `awaiting_chair`, `awaiting_dean`, `awaiting_institution`, `returned`, `approved`, `rejected`, `withdrawn`. Nobody decides their own request. Claim / move are conditional UPDATEs, so only one actor wins. Approve is claimed first and restored if the engine fails | IMPLEMENTED (staged) |
 | Finalization | Blockers: scheme not Published, publish problem, ungraded handed-in work, open override requests. A transaction freezes each student, inserts `grade_finalizations`, audits, announces ready, tells parents. **Reopen is refused while a sign-off is current**; the message says "dean" even when an administrator signed off. Only the instructor can finalize; instructor and chairperson can reopen; no dean / admin route finalizes | IMPLEMENTED |
-| **Sign-off** | States `blocked`, `ready`, `signed_off`. Dean: access to the offering and `grades.signoff` as dean (a dean **may** sign off a section they teach, D3). Institution admin: only where the department's dean is absent or lacks `grades.signoff`, holds the permission, and is **not an instructor of the section** (D4). Single and whole-program sign-off (signs the ready ones, reports the rest). Sign-off needs the password; reopen needs a reason, not a password. Sign-offs stay valid when the signer changes | IMPLEMENTED (staged) |
+| **Sign-off** | States `blocked`, `ready`, `signed_off`. Dean: access to the offering and `grades.signoff` as dean (a dean **may** sign off a section they teach, D3). Institution admin: only where the college's dean is absent or lacks `grades.signoff`, holds the permission, and is **not an instructor of the section** (D4). Single and whole-program sign-off (signs the ready ones, reports the rest). Sign-off needs the password; reopen needs a reason, not a password. Sign-offs stay valid when the signer changes | IMPLEMENTED (staged) |
 | SIS gate | `usesApproval` institutions send only signed-off sections | IMPLEMENTED (staged) |
 | Offline grade sheet | Row 1 meta prefix + signature; row 2 column keys; row 3 headers; data from row 4. Only manual-item columns are editable. Preview writes nothing; refuses a missing prefix, a signature that no longer matches (scheme / curve / other section), reordered columns; row errors are skipped (not enrolled, listed twice, locked cell changed, score out of range); `EX` = excused (refused for quiz / assignment items). **Apply is refused when grades are finalized.** CSV has a BOM and plain values; XLSX has live formulas | IMPLEMENTED |
 | Curves | preview / apply / undo; locked when finalized; one live adjustment per target | PARTIAL (service not read) |
@@ -359,13 +359,13 @@ Tests **[A]**: `DiscussionServiceTest` (~40), `DiscussionRoutesTest` (~26). No e
 ### 4.K Dean and chairperson areas
 
 **Dean** (`/dean`, `role:dean`, `readonly`) **[A]**:
-- Dashboard attention items in priority order: overrides to decide, sign-off ready, sign-off blocked, overdue follow-ups, overdue grading per sub-department, inactive courses, at-risk students.
-- Access is derived live from the active department assignment; no assignment shows a "no assignment" page.
-- Approvals (approve / reject, with a required reason on reject), sign-off, follow-ups, department announcements, teaching load, department report (CSV + print), Monitor Department, chairperson review (read-only audit of chair writes in courses the chair does not teach; the "reviewed" mark is the dean's), read-only course views (GET only).
-- **Department announcements**: `active | ended`, optional `ends_on`, audience everyone / staff / students, scope department / sub-department / program, in-app only (never emailed).
+- Dashboard attention items in priority order: overrides to decide, sign-off ready, sign-off blocked, overdue follow-ups, overdue grading per department, inactive courses, at-risk students.
+- Access is derived live from the active college assignment; no assignment shows a "no assignment" page.
+- Approvals (approve / reject, with a required reason on reject), sign-off, follow-ups, college announcements, teaching load, college report (CSV + print), Monitor College, chairperson review (read-only audit of chair writes in courses the chair does not teach; the "reviewed" mark is the dean's), read-only course views (GET only).
+- **College announcements**: `active | ended`, optional `ends_on`, audience everyone / staff / students, scope college / department / program, in-app only (never emailed).
 
 **Chairperson** (`/chairperson`) **[A]**:
-- Reach is every offering under the sub-departments the person actively chairs, derived live.
+- Reach is every offering under the departments the person actively chairs, derived live.
 - Same course write routes as the instructor, plus `chairpersoncourseaudit`; finalization is **not** routed (only show and reopen).
 - Override requests: `GET chairperson/override-requests`, `POST N/endorse`, `POST N/send-back` (comment required for send-back).
 - Follow-ups (create and pass down need `followups.manage`), Monitor Program (`program.monitor`).
@@ -373,13 +373,13 @@ Tests **[A]**: `DiscussionServiceTest` (~40), `DiscussionRoutesTest` (~26). No e
 
 **Follow-ups** **[A]**: a dean may ask chairpersons and instructors; a chairperson may ask instructors; subject 1–200, message ≤ 2000, reply ≤ 2000, due date today or later; a student reference must be in the course; one open request per sender / recipient / subject; overdue = open past the due date, or 7 days after creation if no date; a chair may pass a dean's request down; done by either side, once.
 
-Tests **[A]**: `DeanDashboardServiceTest`, `DeanAttentionRulesTest`, `DeanAccessServiceTest`, `DeanApprovalsPageTest`, `DeanSignoffPageTest`, `DeanCourseViewTest`, `ChairpersonAccessServiceTest`, `ChairpersonReviewServiceTest`, `FollowUpServiceTest`, `MonitorDepartmentServiceTest`, `TeachingLoadServiceTest`, `DepartmentAnnouncementServiceTest`; e2e `dean.spec.js` (TC-DEAN-01..11), `chairperson.spec.js` (5, no TC ids), `monitor-program.spec.js` (3, no TC ids).
+Tests **[A]**: `DeanDashboardServiceTest`, `DeanAttentionRulesTest`, `DeanAccessServiceTest`, `DeanApprovalsPageTest`, `DeanSignoffPageTest`, `DeanCourseViewTest`, `ChairpersonAccessServiceTest`, `ChairpersonReviewServiceTest`, `FollowUpServiceTest`, `MonitorCollegeServiceTest`, `TeachingLoadServiceTest`, `CollegeAnnouncementServiceTest`; e2e `dean.spec.js` (TC-DEAN-01..11), `chairperson.spec.js` (5, no TC ids), `monitor-program.spec.js` (3, no TC ids).
 
 ### 4.L Student, parent portal and communications
 
 **Student** **[A]**: dashboard widgets profile-card, key-metrics, upcoming-tasks (cap 8), my-courses (progress = completed / total items), announcements (newest 8), reminders (6 soonest pending), quick-access; profile page (read-only: name, email, student number, names — never emails — of parents who currently have access; "No parent can see your progress." when none); courses; calendar; schedule; grades; Announcements app.
 
-**Announcements app** (`GET {area}/announcements`) **[A]**: four levels in fixed order — platform, institution (plain text ≤ 300), department (dean's posts), course (newest 30); `?q=` (≤ 100 chars, every word must match, case-insensitive), `?level=` validated with a fallback; counts taken before the search; a load failure shows an error, not a 500. **No page test.**
+**Announcements app** (`GET {area}/announcements`) **[A]**: four levels in fixed order — platform, institution (plain text ≤ 300), college (dean's posts), course (newest 30); `?q=` (≤ 100 chars, every word must match, case-insensitive), `?level=` validated with a fallback; counts taken before the search; a load failure shows an error, not a 500. **No page test.**
 
 **Course announcements** **[A]**: create by instructor / chairperson only, subject required, message free text; update / delete by the author who is still an instructor of the offering; pin by any instructor; attachments ≤ 25 MB each, ≤ 10 each, png jpeg gif webp pdf doc docx xls xlsx ppt pptx; replies (non-empty, no length cap) and reactions (one per user, emoji ≤ 32 chars) for any viewer except a student who dropped the course; feed pinned first then newest, page size 10. **There are no draft / scheduled / published states**: a post is live the moment it is saved (AMB-COM-01). The calendar form can set `created_at` to today or later; that post is visible in the feed immediately and appears on the calendar on that date.
 
@@ -412,14 +412,14 @@ States: `awaiting_chair`, `awaiting_dean`, `awaiting_institution` (the three **o
 
 | Action | By | From | To | Rules |
 |---|---|---|---|---|
-| endorse | the active chair of the section's sub-department, acting as chairperson, not the requester | `awaiting_chair` | `awaiting_dean` or `awaiting_institution` | optional comment |
+| endorse | the active chair of the section's department, acting as chairperson, not the requester | `awaiting_chair` | `awaiting_dean` or `awaiting_institution` | optional comment |
 | send back | same chair | `awaiting_chair` | `returned` | comment **required** |
 | resubmit | the requester | `returned` | chain restarts | |
 | withdraw | the requester | any open state | `withdrawn` | |
-| approve | dean with `grades.approve` (department) for `awaiting_dean`; institution admin (same institution, `grades.approve`) for `awaiting_institution` | those states | `approved` | never your own; applies the grade through the engine; records `after_signoff` if signed off |
+| approve | dean with `grades.approve` (college) for `awaiting_dean`; institution admin (same institution, `grades.approve`) for `awaiting_institution` | those states | `approved` | never your own; applies the grade through the engine; records `after_signoff` if signed off |
 | reject | same deciders | same states | `rejected` | reason **required** |
 
-Other behaviour: first decision wins and all eligible admins are notified; admins cannot send back; a dean who loses `grades.approve` (or arrives / leaves) causes `retargetDepartment` / `retargetInstitution` and an audit `grade.override_rerouted`; "why it waits" text for a stuck request (one admin who is the requester, or nobody holding the permission). Chair replacement works because the chair list reads live.
+Other behaviour: first decision wins and all eligible admins are notified; admins cannot send back; a dean who loses `grades.approve` (or arrives / leaves) causes `retargetCollege` / `retargetInstitution` and an audit `grade.override_rerouted`; "why it waits" text for a stuck request (one admin who is the requester, or nobody holding the permission). Chair replacement works because the chair list reads live.
 
 ### 5.2 Other state machines
 
@@ -436,7 +436,7 @@ Other behaviour: first decision wins and all eligible admins are notified; admin
 | Finalization / sign-off | finalize (open `grade_finalizations` row) → sign-off (open `grade_signoffs` row). Reopen records `reopened_*` and clears `open_marker`, keeping history |
 | Grade adjustment (curve) | `live → undone` (one live per target) |
 | Follow-up | `open → done`; overdue derived |
-| Department announcement | `active → ended`; also derived by `ends_on` |
+| College announcement | `active → ended`; also derived by `ends_on` |
 | AI batch / job | batch `pending → generating → completed \| failed`; job `queued → running → completed \| failed \| cancelled` with re-queue on stale heartbeat. The two cancel paths differ: `AiJobGeneration` writes `failed` + "Cancelled." while `AiJobService::CANCELLED` exists |
 | Backup | `requested → running → succeeded \| failed`. A crashed `running` row has no timeout and **blocks** further backups |
 | SIS run | `running → succeeded \| failed` (trigger manual / scheduled / test) |
@@ -446,15 +446,15 @@ Other behaviour: first decision wins and all eligible admins are notified; admin
 
 ### 5.3 Data model and integrity **[A]** unless marked
 
-Hierarchy: `institutions` → `departments` → `sub_departments` → `programs` → `courses` → `course_offerings` (+ `academic_terms`) → `enrollments`, `instructor_assignments`, `course_schedules`, announcements, discussions, `course_modules → learning_units → learning_items → learning_resources(files)`, `grading_schemes → periods / categories / items`, `gradebook_records`, `grade_finalizations`, `grade_signoffs`, `grade_override_requests`, `grade_adjustments`, `sis_grade_exports`, `follow_ups`, `reminders`. `assessments` hang off **`courses`** (shared by every section) and tie to a section only through `module_id → course_modules.offering_id`.
+Hierarchy: `institutions` → `colleges` → `departments` → `programs` → `courses` → `course_offerings` (+ `academic_terms`) → `enrollments`, `instructor_assignments`, `course_schedules`, announcements, discussions, `course_modules → learning_units → learning_items → learning_resources(files)`, `grading_schemes → periods / categories / items`, `gradebook_records`, `grade_finalizations`, `grade_signoffs`, `grade_override_requests`, `grade_adjustments`, `sis_grade_exports`, `follow_ups`, `reminders`. `assessments` hang off **`courses`** (shared by every section) and tie to a section only through `module_id → course_modules.offering_id`.
 
-Enforced **in the database**: one institution per account; one active dean per department and per dean; one active chair per sub-department (after the staged migration, for rows carrying the marker); one open override request per student per offering; one open sign-off and finalization per offering; one live adjustment per target; one open follow-up per combination; one submission per (assessment, student, attempt); one enrolment per (offering, student); one score per (grade item, student); one gradebook record per (offering, student); one reaction per (announcement, user); one subscription per institution; unique institution code, program code per sub-department, course code per program, section per (course, term); notification dedupe per (user, key); parent-child FK cascades.
+Enforced **in the database**: one institution per account; one active dean per college and per dean; one active chair per department (after the staged migration, for rows carrying the marker); one open override request per student per offering; one open sign-off and finalization per offering; one live adjustment per target; one open follow-up per combination; one submission per (assessment, student, attempt); one enrolment per (offering, student); one score per (grade item, student); one gradebook record per (offering, student); one reaction per (announcement, user); one subscription per institution; unique institution code, program code per department, course code per program, section per (course, term); notification dedupe per (user, key); parent-child FK cascades.
 
 **PHP-only, no database backing** (probe each): capacity (two enrolments can race past it); attempt limits; offering tenant consistency (course in institution A, term in B); enrolment before submission; grade weights sum to 100; grade-band overlap / gaps; date ordering on terms, assessments and schedules (`end_time > start_time`); percentage ranges (`progress_percent` 0–255, `passing_percentage` > 100); `student_number` uniqueness; prerequisite cycles and cross-offering prerequisites; parent-link role / institution validity; chair and dean holding the role in the same institution; JSON column shapes; audit append-only (model only; a raw query or cascade can alter it).
 
-**Schema oddities worth testing**: foreign-key argument order (V10); `strictOn` is **false** in `Config/Database.php` (MySQL silently truncates long strings and coerces invalid ENUMs to `''`); duplicate migration timestamps (V11); destructive migrations (`2026-09-28-000002` drops `gradebook_records`; `2026-09-30-000002` moves then drops `assessment_submissions.feedback`; `2026-11-13` deletes extra institution memberships; `2026-11-14-000002` deletes inapplicable permission rows; `2026-09-24-000006` copies seed files into `writable/uploads`); `AssessmentSubmissionModel::$allowedFields` still lists the dropped `feedback`; `ChairpersonAssignmentModel::$allowedFields` lacks `active_marker`; the staged migration's `down()` then re-`up()` fails with a duplicate-column error; enum casing is inconsistent (assessments / submissions / grade scheme capitalised, terms / offerings / enrolments lowercase); free-text status columns (no enum): dean assignments, override requests, follow-ups, department announcements, `ai_jobs.kind` / `.status`.
+**Schema oddities worth testing**: foreign-key argument order (V10); `strictOn` is **false** in `Config/Database.php` (MySQL silently truncates long strings and coerces invalid ENUMs to `''`); duplicate migration timestamps (V11); destructive migrations (`2026-09-28-000002` drops `gradebook_records`; `2026-09-30-000002` moves then drops `assessment_submissions.feedback`; `2026-11-13` deletes extra institution memberships; `2026-11-14-000002` deletes inapplicable permission rows; `2026-09-24-000006` copies seed files into `writable/uploads`); `AssessmentSubmissionModel::$allowedFields` still lists the dropped `feedback`; `ChairpersonAssignmentModel::$allowedFields` lacks `active_marker`; the staged migration's `down()` then re-`up()` fails with a duplicate-column error; enum casing is inconsistent (assessments / submissions / grade scheme capitalised, terms / offerings / enrolments lowercase); free-text status columns (no enum): dean assignments, override requests, follow-ups, college announcements, `ai_jobs.kind` / `.status`.
 
-Tables with **no model** (so model validation does not protect them): notifications, password_resets, user_account_controls, backups, institution_exports, sis_connections / runs / links / staff_assignments / grade_exports, follow_ups (+ replies), parent_child_preferences, parent_alerted_items, department_announcements, chairperson_action_reviews, grade_finalizations, institution_academic_defaults, learning_item_prerequisites, plus Shield's `auth_*`. Only 12 models declare validation rules.
+Tables with **no model** (so model validation does not protect them): notifications, password_resets, user_account_controls, backups, institution_exports, sis_connections / runs / links / staff_assignments / grade_exports, follow_ups (+ replies), parent_child_preferences, parent_alerted_items, college_announcements, chairperson_action_reviews, grade_finalizations, institution_academic_defaults, learning_item_prerequisites, plus Shield's `auth_*`. Only 12 models declare validation rules.
 
 ---
 
@@ -636,7 +636,7 @@ A new catalog must extend this one. **[A]**
 - **ID scheme**: `TC-<AREA>-<NN>`, never reused. Fields: ID, Role, Data, Steps, Expected, Already automated (PHPUnit refs), Playwright (`planned` / `no` / file), Basis, Review (`Draft` or `Confirmed by <name>, <date>`). Priorities P1 (release blockers) / P2 / P3.
 - **Counts of IDs**: P1 17 (AUTH-01..05, ANN-01..02, MOD-01..02, QUIZ-01..03, ASG-01..02, GRD-01..03, mostly confirmed on 6–7 Oct 2026); dean 11; gradebook 5; institutional administrator 43 (STR 6, CRS 3, TRM 3, OFF 3, ENR 3, PPL 4, PAR 1, UPL 2, CPY 1, BRD 3, ACD 1, SEC 1, RPT 1, VCV 1, SUB 1, AUD 1, VAS 1, HOM 1, IAA 6; IAA-07 is in the spec, not the doc); parent 10; system administrator 12. About **98** in all.
 - **Documented areas**: auth, announcements, module progress, quizzes, assignments, grading, dean, gradebook, institution admin (broad), parent, system admin.
-- **Not documented**: chairperson (end-to-end tests exist with no TC ids), discussions, calendar and reminders, resources and files, notifications, student profile, instructor authoring beyond MOD (assessment editor, question import / export, rubrics, AI generation), SIS, backups, feature flags, plans, the roles matrix (platform and institution), password reset and invitation acceptance (beyond SA-05), impersonation of a quiz, subscription lifecycle, read-only mode, plan limits, privacy and security (CSRF, XSS), accessibility beyond the dean / IAA / SA axe checks, dark mode (only IAA-07), responsive layouts, and everything added by plan 4 (administrator approvals and sign-off, one chair per sub-department).
+- **Not documented**: chairperson (end-to-end tests exist with no TC ids), discussions, calendar and reminders, resources and files, notifications, student profile, instructor authoring beyond MOD (assessment editor, question import / export, rubrics, AI generation), SIS, backups, feature flags, plans, the roles matrix (platform and institution), password reset and invitation acceptance (beyond SA-05), impersonation of a quiz, subscription lifecycle, read-only mode, plan limits, privacy and security (CSRF, XSS), accessibility beyond the dean / IAA / SA axe checks, dark mode (only IAA-07), responsive layouts, and everything added by plan 4 (administrator approvals and sign-off, one chair per department).
 - **Known inconsistencies in the catalog itself**: the README lists only eight area codes though the files use many more; its status text says only P1 cases exist; `p2-dean.md` predates plan 4 (it says the dean decides every request and the chain is chair → dean); SA-05 / SA-06 appear in the institution file only as cross-references; TC-DEAN-09's title was cut off in the agent's grep (verify); the parent doc says student5 is linked to "Roberto Diaz Cruz" while the seeder names only parent1 / parent2 by email (confirm they are the same account).
 - **Tests without TC ids**: `assessment-editor.spec.js`, `chairperson.spec.js`, `monitor-program.spec.js`.
 
@@ -713,7 +713,7 @@ These are cases where the code does *something* but the intended result is not s
 | AMB-INST-02 | Reopening a term while another is active: no warning (starting one warns) |
 | AMB-INST-03 | What happens to `awaiting_chair` requests when a chair is **removed** (not replaced)? Plain removal sends no notice |
 | AMB-INST-04 | Does re-enrolling through the Add dialog refresh the gradebook "Withdrawn" tag like the status change does? (`add()` does not call `syncEnrolment`) |
-| AMB-INST-05 | A dean role granted on the People page with no department assignment: role without authority |
+| AMB-INST-05 | A dean role granted on the People page with no college assignment: role without authority |
 | AMB-INST-06 | CSV upload previews that are never applied are cleaned only at the next preview |
 | AMB-INST-07 | Concurrent chair assigns: friendly error or a raw database error? |
 
@@ -763,7 +763,7 @@ These are cases where the code does *something* but the intended result is not s
 | AMB-DB-04 | `notifications.institution_id` NULL meaning; `follow_ups.student_id=0` meaning "no student" without a FK |
 | AMB-DB-05 | `grading_schemes.institution_id` versus `institution_academic_defaults`: which wins over the platform default |
 | AMB-DB-06 | Instructors and chairs carry a `program_id` in `user_profiles`, meaningless for them; `active_role` is free text |
-| AMB-DB-07 | `departments.established_year` validated only by `exact_length[4]` (0000 / 9999 pass) |
+| AMB-DB-07 | `colleges.established_year` validated only by `exact_length[4]` (0000 / 9999 pass) |
 
 ---
 
@@ -773,7 +773,7 @@ The code is the stated truth where they differ.
 
 | ID | Document | Says | Code |
 |---|---|---|---|
-| DOC-01 | `docs/institutional-admin-area.md` (Chairpersons) | several chairs per sub-department | exactly one (staged), confirmed replacement |
+| DOC-01 | `docs/institutional-admin-area.md` (Chairpersons) | several chairs per department | exactly one (staged), confirmed replacement |
 | DOC-02 | same (whole doc) | no Approvals or Sign-off sections; no gap warning | pages and warning exist (staged) |
 | DOC-03 | same (People) | deans "not yet"; role list omits dean | `dean` is assignable |
 | DOC-04 | same (Enrolment) | omits "has already completed this course" skip | present |
@@ -782,7 +782,7 @@ The code is the stated truth where they differ.
 | DOC-07 | `docs/institution-onboarding.md` "Not built yet" | no institutional-administrator area; seat limit not enforced | both exist |
 | DOC-08 | `docs/security-settings.md` | per-institution overrides "not covered"; lockout / timeout platform-wide | implemented per user and per institution |
 | DOC-09 | `docs/course-access.md` | omits the dean's course read access; says delete-others / mark-answer need `discussions.manage` | `deancourse` exists; the filter gates only pin / lock |
-| DOC-10 | `docs/notifications.md` | lists only subscription / limit events; says backup and sync-failed "arrive later"; no bell panel | backup, term, SIS, AI, follow-up, override, sign-off, chair, department notifications exist; bell feed exists |
+| DOC-10 | `docs/notifications.md` | lists only subscription / limit events; says backup and sync-failed "arrive later"; no bell panel | backup, term, SIS, AI, follow-up, override, sign-off, chair, college notifications exist; bell feed exists |
 | DOC-11 | `docs/demo-script.md` | profile, notifications, announcements tile, parent and chair pages "not built yet" | all exist |
 | DOC-12 | `docs/testing.md` | "1,735 tests", "twenty" Playwright tests, a Playwright checklist item; retired `staging` branch | much larger suite; main is the trunk |
 | DOC-13 | `docs/test-cases/README.md` | P1 only; eight area codes | six files, many more codes |
@@ -807,7 +807,7 @@ The code is the stated truth where they differ.
 | ID | Area | What to probe |
 |---|---|---|
 | GAP-DB-01 | Schema | **[V]** Seeded chairperson has `active_marker` NULL, so the unique key does not cover it. A second active chair can be inserted by any path that bypasses `ChairAssignmentService`. Also `ChairpersonAssignmentModel::$allowedFields` lacks `active_marker`, the status enum value `expired` has no writer, and reactivating overwrites `assigned_at` |
-| GAP-DB-02 | Schema | **[V]** Deleting a user cascades to dean assignments, override requests, sign-offs and department announcements; deleting a file deletes its learning resource (V10). Confirm on a copy database |
+| GAP-DB-02 | Schema | **[V]** Deleting a user cascades to dean assignments, override requests, sign-offs and college announcements; deleting a file deletes its learning resource (V10). Confirm on a copy database |
 | GAP-DB-03 | Schema | Non-strict MySQL: over-long strings are truncated and invalid enums become `''` when written through the query builder |
 | GAP-DB-04 | Schema | Migration order within six duplicate timestamps; destructive migrations on a copy with data; `down()` / re-run of the staged migration |
 | GAP-AUTH-01 | Auth | Uppercase / whitespace email variants versus the lockout identifier; failed 2FA codes are not counted anywhere |
@@ -858,7 +858,7 @@ The code is the stated truth where they differ.
 
 ### 14.3 Areas no agent read in depth (treat as UNVERIFIABLE until read)
 
-`PeopleService`, `InvitationService`, `ParentLinkService`, `AcademicDefaults`, `InstitutionExport`, `InstitutionReports`, `InstitutionSecurity` / `SecuritySettings` bodies, `CourseCatalogService`, `OfferingCopyService::copyOne` / `copyScheme`, `GradeReportService`, `GradeAdjustmentService`, `GradeItemSyncService`, the dean monitor / teaching-load / department-report calculations, `GradeOverrideRequestService` and `GradeSignoffService` bodies, `ModuleService` (2,546 lines, partly skimmed), `FileAccessService` internals, `DiscussionService` moderation rules, the Python pipeline and provider code, the Views and most `resources/js` page modules, `docs/CONTRIBUTING.md`, `docs/deploy.md`, `docs/server-setup.md`, `docs/ci-cd.md`, `docs/mail.md`, `docs/admin-home.md`, `docs/monitoring.md`.
+`PeopleService`, `InvitationService`, `ParentLinkService`, `AcademicDefaults`, `InstitutionExport`, `InstitutionReports`, `InstitutionSecurity` / `SecuritySettings` bodies, `CourseCatalogService`, `OfferingCopyService::copyOne` / `copyScheme`, `GradeReportService`, `GradeAdjustmentService`, `GradeItemSyncService`, the dean monitor / teaching-load / college-report calculations, `GradeOverrideRequestService` and `GradeSignoffService` bodies, `ModuleService` (2,546 lines, partly skimmed), `FileAccessService` internals, `DiscussionService` moderation rules, the Python pipeline and provider code, the Views and most `resources/js` page modules, `docs/CONTRIBUTING.md`, `docs/deploy.md`, `docs/server-setup.md`, `docs/ci-cd.md`, `docs/mail.md`, `docs/admin-home.md`, `docs/monitoring.md`.
 
 ### 14.4 Cannot be established from code alone
 

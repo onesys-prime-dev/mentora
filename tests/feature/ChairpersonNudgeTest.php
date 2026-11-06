@@ -29,14 +29,14 @@ final class ChairpersonNudgeTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home = DeanFactory::department('NDG');
-        $sub  = DeanFactory::subDepartment($home['department'], 'NDG');
+        $home = DeanFactory::college('NDG');
+        $department  = DeanFactory::department($home['college'], 'NDG');
 
-        $this->chair    = DeanFactory::chair($sub, 'Cara');
+        $this->chair    = DeanFactory::chair($department, 'Cara');
         $this->teacher  = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $home['institution']);
         $this->outsider = PeopleFactory::person('instructor', 'Olga', 'Outside', null, $home['institution']);
 
-        $this->offering = DeanFactory::offering(DeanFactory::program($sub, 'NDG'), DeanFactory::term($home['institution']), 'IT101', 'B');
+        $this->offering = DeanFactory::offering(DeanFactory::program($department, 'NDG'), DeanFactory::term($home['institution']), 'IT101', 'B');
         CourseFactory::assignInstructor($this->offering, $this->teacher);
     }
 

@@ -9,19 +9,19 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The dean's Monitor Department page: the department's figures, the
- * comparison per sub-department and per program, filters and sorting in the
+ * The dean's Monitor College page: the college's figures, the
+ * comparison per department and per program, filters and sorting in the
  * address, the empty and no-assignment states, and nothing from another
- * department.
+ * college.
  *
  * @internal
  */
-final class MonitorDepartmentPageTest extends RouteTestCase
+final class MonitorCollegePageTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
-    private int $subA;
-    private int $subB;
+    private int $college;
+    private int $departmentA;
+    private int $departmentB;
     private int $programA;
     private int $programB;
     private int $term;
@@ -31,22 +31,22 @@ final class MonitorDepartmentPageTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('H');
+        $home              = DeanFactory::college('H');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'B');
-        $this->programA    = DeanFactory::program($this->subA, 'A');
-        $this->programB    = DeanFactory::program($this->subB, 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->departmentB        = DeanFactory::department($this->college, 'B');
+        $this->programA    = DeanFactory::program($this->departmentA, 'A');
+        $this->programB    = DeanFactory::program($this->departmentB, 'B');
         $this->term        = DeanFactory::term($this->institution);
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
     }
 
     private function page(string $query = ''): string
     {
         $this->loggedInAs($this->dean);
 
-        $response = $this->call('GET', '/dean/monitor-department' . $query)->response();
+        $response = $this->call('GET', '/dean/monitor-college' . $query)->response();
 
         $this->assertSame(200, $response->getStatusCode());
 
@@ -65,7 +65,7 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         }
     }
 
-    public function testTheDeanSeesTheDepartmentsTotalsComparisonAndAtRiskStudents(): void
+    public function testTheDeanSeesTheCollegesTotalsComparisonAndAtRiskStudents(): void
     {
         $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
         $lw = DeanFactory::offering($this->programB, $this->term, 'LW100', 'A', 'active', 'Intro to Law');
@@ -77,27 +77,27 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->assertStringContainsString('College H', $body);
         $this->assertStringContainsString('data-section="totals"', $body);
         $this->assertStringContainsString('2 courses', $body);
-        $this->assertStringContainsString('Sub A', $body);
-        $this->assertStringContainsString('Sub B', $body);
+        $this->assertStringContainsString('Department A', $body);
+        $this->assertStringContainsString('Department B', $body);
         $this->assertStringContainsString('data-section="at-risk"', $body);
         $this->assertStringContainsString('never active', strtolower($body), 'enrolled students with no activity are at risk');
         $this->assertStringContainsString('href="' . site_url("dean/courses/{$it}/intro-to-computing") . '"', $body, 'at-risk students link to the read-only course');
         $this->assertStringContainsString('id="monitor-program-charts"', $body);
     }
 
-    public function testNothingFromAnotherDepartmentIsShown(): void
+    public function testNothingFromAnotherCollegeIsShown(): void
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
 
-        $other = DeanFactory::department('N', $this->institution);
-        $offer = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($other['department'], 'N'), 'N'), $this->term, 'LAW900', 'A', 'active', 'Foreign Law');
+        $other = DeanFactory::college('N', $this->institution);
+        $offer = DeanFactory::offering(DeanFactory::program(DeanFactory::department($other['college'], 'N'), 'N'), $this->term, 'LAW900', 'A', 'active', 'Foreign Law');
         $this->enrolled($offer, 4);
 
         $body = $this->page();
 
         $this->assertStringNotContainsString('Foreign Law', $body);
         $this->assertStringNotContainsString('College N', $body);
-        $this->assertStringNotContainsString('Sub N', $body);
+        $this->assertStringNotContainsString('Department N', $body);
     }
 
     public function testComparingByProgramAndSortingKeepTheFilters(): void
@@ -105,13 +105,13 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         DeanFactory::offering($this->programA, $this->term, 'IT101');
         DeanFactory::offering($this->programB, $this->term, 'LW100');
 
-        $body = html_entity_decode($this->page('?compare=program&sort=students&dir=desc&sub_department=' . $this->subA));
+        $body = html_entity_decode($this->page('?compare=program&sort=students&dir=desc&department=' . $this->departmentA));
 
         $this->assertStringContainsString('data-group="' . $this->programA . '"', $body);
-        $this->assertStringNotContainsString('data-group="' . $this->programB . '"', $body, 'the table is narrowed to sub-department A (the filter list still offers every program)');
-        preg_match_all('/href="([^"]*monitor-department\?[^"]*)"/', $body, $links);
-        $keeping = array_filter($links[1], fn (string $href): bool => str_contains($href, 'compare=program') && str_contains($href, 'sub_department=' . $this->subA));
-        $this->assertNotEmpty($keeping, 'sort links keep the grouping and the sub-department filter');
+        $this->assertStringNotContainsString('data-group="' . $this->programB . '"', $body, 'the table is narrowed to department A (the filter list still offers every program)');
+        preg_match_all('/href="([^"]*monitor-college\?[^"]*)"/', $body, $links);
+        $keeping = array_filter($links[1], fn (string $href): bool => str_contains($href, 'compare=program') && str_contains($href, 'department=' . $this->departmentA));
+        $this->assertNotEmpty($keeping, 'sort links keep the grouping and the department filter');
         $this->assertStringContainsString('aria-sort="descending"', $body);
         $this->assertStringContainsString('aria-current="true"', $body);
     }
@@ -129,16 +129,16 @@ final class MonitorDepartmentPageTest extends RouteTestCase
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
 
-        $body = $this->page('?term=abc&from=never&to=-1&sub_department=0&program=x&compare=all&sort=password&dir=up');
+        $body = $this->page('?term=abc&from=never&to=-1&department=0&program=x&compare=all&sort=password&dir=up');
 
         $this->assertStringContainsString('data-section="totals"', $body);
     }
 
-    public function testAnotherDepartmentsProgramInTheAddressShowsNothingOfIt(): void
+    public function testAnotherCollegesProgramInTheAddressShowsNothingOfIt(): void
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
-        $other   = DeanFactory::department('N', $this->institution);
-        $foreign = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'N'), 'N');
+        $other   = DeanFactory::college('N', $this->institution);
+        $foreign = DeanFactory::program(DeanFactory::department($other['college'], 'N'), 'N');
         $offer   = DeanFactory::offering($foreign, $this->term, 'LAW900', 'A', 'active', 'Foreign Law');
         $this->enrolled($offer, 2);
 
@@ -148,14 +148,14 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->assertStringNotContainsString('Foreign Law', $body);
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanation(): void
+    public function testADeanWithoutACollegeSeesTheExplanation(): void
     {
-        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution));
+        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'College', null, $this->institution));
 
-        $response = $this->call('GET', '/dean/monitor-department')->response();
+        $response = $this->call('GET', '/dean/monitor-college')->response();
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
+        $this->assertStringContainsString('not assigned to a college yet', $response->getBody());
     }
 
     private function chairAction(string $label, int $offering, string $method, string $at): void
@@ -175,8 +175,8 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
         $this->chairAction('maria@dept.example', $it, 'PATCH', '2026-09-02 09:00:00');
 
-        $elsewhere = DeanFactory::department('N', $this->institution);
-        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'N'), 'N'), $this->term, 'LAW900', 'A', 'active', 'Foreign Law');
+        $elsewhere = DeanFactory::college('N', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'N'), 'N'), $this->term, 'LAW900', 'A', 'active', 'Foreign Law');
         $this->chairAction('ines@elsewhere.example', $foreign, 'DELETE', '2026-09-03 09:00:00');
 
         $body = html_entity_decode($this->page());
@@ -187,7 +187,7 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->assertStringContainsString('Chairperson', $body);
         $this->assertStringContainsString('2026-09-02 09:00:00', $body);
         $this->assertStringContainsString('href="' . site_url("dean/courses/{$it}/intro-to-computing") . '"', $body);
-        $this->assertStringNotContainsString('ines@elsewhere.example', $body, 'another department is not in this log');
+        $this->assertStringNotContainsString('ines@elsewhere.example', $body, 'another college is not in this log');
         $this->assertSame(1, substr_count($body, 'data-audit-entry'));
     }
 
@@ -199,12 +199,12 @@ final class MonitorDepartmentPageTest extends RouteTestCase
             $this->chairAction("chair{$i}@dept.example", $it, 'POST', sprintf('2026-09-%02d 09:00:00', $i));
         }
 
-        $first  = html_entity_decode($this->page('?sub_department=' . $this->subA));
-        $second = html_entity_decode($this->page('?sub_department=' . $this->subA . '&audit_page=2'));
+        $first  = html_entity_decode($this->page('?department=' . $this->departmentA));
+        $second = html_entity_decode($this->page('?department=' . $this->departmentA . '&audit_page=2'));
 
         $this->assertSame(10, substr_count($first, 'data-audit-entry'));
         $this->assertStringContainsString('Page 1 of 2', $first);
-        $this->assertMatchesRegularExpression('/href="[^"]*sub_department=' . $this->subA . '[^"]*audit_page=2[^"]*"/', $first);
+        $this->assertMatchesRegularExpression('/href="[^"]*department=' . $this->departmentA . '[^"]*audit_page=2[^"]*"/', $first);
         $this->assertSame(2, substr_count($second, 'data-audit-entry'));
         $this->assertStringContainsString('Previous', $second);
     }
@@ -223,10 +223,10 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $body = html_entity_decode($this->page('?compare=program&term=' . $this->term));
 
         $this->assertStringContainsString('data-program-link', $body);
-        $this->assertStringContainsString("dean/monitor-department/programs/{$this->programA}?term={$this->term}", $body);
+        $this->assertStringContainsString("dean/monitor-college/programs/{$this->programA}?term={$this->term}", $body);
 
-        $subs = html_entity_decode($this->page());
-        $this->assertStringNotContainsString('data-program-link', $subs, 'a sub-department row has no drill-down');
+        $departments = html_entity_decode($this->page());
+        $this->assertStringNotContainsString('data-program-link', $departments, 'a department row has no drill-down');
     }
 
     public function testAProgramPageShowsThatProgramReadOnlyForTheDean(): void
@@ -237,19 +237,19 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->chairAction('maria@dept.example', $it, 'POST', '2026-09-02 09:00:00');
 
         $this->loggedInAs($this->dean);
-        $response = $this->call('GET', "/dean/monitor-department/programs/{$this->programA}")->response();
+        $response = $this->call('GET', "/dean/monitor-college/programs/{$this->programA}")->response();
         $body     = html_entity_decode($response->getBody());
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertStringContainsString('Program A', $body);
-        $this->assertStringContainsString('College H · Sub A', $body);
+        $this->assertStringContainsString('College H · Department A', $body);
         $this->assertStringContainsString('IT101', $body);
         $this->assertStringNotContainsString('LW100', $body, 'only this program');
         $this->assertStringContainsString('href="' . site_url("dean/courses/{$it}/intro-to-computing") . '"', $body, 'courses open in the dean read-only view');
         $this->assertStringNotContainsString('chairperson/courses', $body);
         $this->assertStringContainsString('Recent chairperson actions in this program', $body);
         $this->assertStringContainsString('maria@dept.example', $body, 'the dean sees who');
-        $this->assertStringContainsString(site_url('dean/monitor-department?compare=program'), $body);
+        $this->assertStringContainsString(site_url('dean/monitor-college?compare=program'), $body);
         $this->assertStringContainsString('id="monitor-program-charts"', $body);
     }
 
@@ -258,22 +258,22 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         DeanFactory::offering($this->programA, $this->term, 'IT101');
 
         $this->loggedInAs($this->dean);
-        $body = html_entity_decode($this->call('GET', "/dean/monitor-department/programs/{$this->programA}?term={$this->term}")->response()->getBody());
+        $body = html_entity_decode($this->call('GET', "/dean/monitor-college/programs/{$this->programA}?term={$this->term}")->response()->getBody());
 
-        $this->assertMatchesRegularExpression('#dean/monitor-department/programs/' . $this->programA . '\?[^"]*sort=#', $body, 'sort links stay on the program page');
+        $this->assertMatchesRegularExpression('#dean/monitor-college/programs/' . $this->programA . '\?[^"]*sort=#', $body, 'sort links stay on the program page');
         $this->assertStringContainsString('name="term"', $body);
     }
 
-    public function testAnotherDepartmentsProgramIsNotFound(): void
+    public function testAnotherCollegesProgramIsNotFound(): void
     {
-        $other   = DeanFactory::department('N', $this->institution);
-        $foreign = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'N'), 'N');
+        $other   = DeanFactory::college('N', $this->institution);
+        $foreign = DeanFactory::program(DeanFactory::department($other['college'], 'N'), 'N');
         DeanFactory::offering($foreign, $this->term, 'LAW900');
         $this->loggedInAs($this->dean);
 
         foreach ([$foreign, 999999] as $id) {
             try {
-                $status = $this->call('GET', "/dean/monitor-department/programs/{$id}")->response()->getStatusCode();
+                $status = $this->call('GET', "/dean/monitor-college/programs/{$id}")->response()->getStatusCode();
                 $this->fail("program {$id} must be a 404 (got {$status})");
             } catch (\CodeIgniter\Exceptions\PageNotFoundException) {
                 $this->addToAssertionCount(1);
@@ -281,14 +281,14 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         }
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanationOnAProgramPageToo(): void
+    public function testADeanWithoutACollegeSeesTheExplanationOnAProgramPageToo(): void
     {
-        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution));
+        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'College', null, $this->institution));
 
-        $response = $this->call('GET', "/dean/monitor-department/programs/{$this->programA}")->response();
+        $response = $this->call('GET', "/dean/monitor-college/programs/{$this->programA}")->response();
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
+        $this->assertStringContainsString('not assigned to a college yet', $response->getBody());
     }
 
     public function testTheChairpersonsOwnMonitorProgramPageIsUnchanged(): void
@@ -308,9 +308,9 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->assertStringNotContainsString('dean/', $body);
     }
 
-    public function testTheAppsMenuHasAMonitorDepartmentTile(): void
+    public function testTheAppsMenuHasAMonitorCollegeTile(): void
     {
-        $this->assertStringContainsString('dean/monitor-department', $this->page());
+        $this->assertStringContainsString('dean/monitor-college', $this->page());
     }
 
     public function testTheDataEndpointsGiveTheSameNumbersAsThePage(): void
@@ -320,13 +320,13 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->loggedInAs($this->dean);
 
         foreach (['totals', 'groups', 'grade-distribution', 'instructor-activity', 'at-risk'] as $section) {
-            $response = $this->call('GET', '/dean/api/monitor-department/' . $section)->response();
+            $response = $this->call('GET', '/dean/api/monitor-college/' . $section)->response();
 
             $this->assertSame(200, $response->getStatusCode(), $section);
             $this->assertIsArray(json_decode($response->getBody(), true), $section);
         }
 
-        $totals = json_decode($this->call('GET', '/dean/api/monitor-department/totals')->response()->getBody(), true);
+        $totals = json_decode($this->call('GET', '/dean/api/monitor-college/totals')->response()->getBody(), true);
 
         $this->assertSame(2, $totals['students']);
         $this->assertSame(1, $totals['courses']);
@@ -337,14 +337,14 @@ final class MonitorDepartmentPageTest extends RouteTestCase
         $this->loggedInAs($this->dean);
 
         try {
-            $this->call('GET', '/dean/api/monitor-department/secrets');
+            $this->call('GET', '/dean/api/monitor-college/secrets');
             $this->fail('an unknown section must be a 404');
         } catch (\CodeIgniter\Exceptions\PageNotFoundException) {
             $this->addToAssertionCount(1);
         }
 
         $this->loggedInAs(CourseFactory::user('student'));
-        $this->assertNotSame(200, $this->call('GET', '/dean/api/monitor-department/totals')->response()->getStatusCode());
+        $this->assertNotSame(200, $this->call('GET', '/dean/api/monitor-college/totals')->response()->getStatusCode());
     }
 
     public function testTheInstructorActivityChartIsOnThePage(): void

@@ -26,17 +26,16 @@ class DepartmentModel extends Model
 
     protected $allowedFields = [
 
-        'institution_id',
+        'college_id',
         'code',
         'name',
-        'location',
-        'established_year',
+        'is_active',
 
     ];
 
     protected $validationRules = [
 
-        'institution_id' => [
+        'college_id' => [
             'rules' => 'required|is_natural_no_zero',
         ],
 
@@ -48,20 +47,16 @@ class DepartmentModel extends Model
             'rules' => 'required|min_length[3]|max_length[255]',
         ],
 
-        'location' => [
-            'rules' => 'permit_empty|max_length[255]',
-        ],
-
-        'established_year' => [
-            'rules' => 'permit_empty|is_natural_no_zero|exact_length[4]',
+        'is_active' => [
+            'rules' => 'permit_empty|in_list[0,1]',
         ],
 
     ];
 
     protected $validationMessages = [
 
-        'institution_id' => [
-            'required' => 'Institution is required.',
+        'college_id' => [
+            'required' => 'College is required.',
         ],
 
         'code' => [
@@ -74,11 +69,15 @@ class DepartmentModel extends Model
 
     ];
 
-    /** An institution's departments, by name. */
-    public function forInstitution(int $institutionId): array
+    /** A college's departments, by name; inactive ones only when asked for. */
+    public function forCollege(int $collegeId, bool $includeInactive = false): array
     {
-        return $this->where('institution_id', $institutionId)
-            ->orderBy('name')
-            ->findAll();
+        $builder = $this->where('college_id', $collegeId);
+
+        if (! $includeInactive) {
+            $builder->where('is_active', 1);
+        }
+
+        return $builder->orderBy('name')->findAll();
     }
 }

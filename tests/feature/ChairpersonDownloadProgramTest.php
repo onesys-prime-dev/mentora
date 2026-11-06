@@ -15,17 +15,17 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * Download program: one workbook with the class gradebook of every section of the chaired sub-departments, an
+ * Download program: one workbook with the class gradebook of every section of the chaired departments, an
  * audit entry for each, nothing from another program, and a polite refusal when no section has grading.
  *
  * @internal
  */
 final class ChairpersonDownloadProgramTest extends RouteTestCase
 {
-    /** @var array{institution: int, department: int} */
+    /** @var array{institution: int, college: int} */
     private array $unit;
 
-    private int $sub;
+    private int $department;
 
     private int $program;
 
@@ -40,11 +40,11 @@ final class ChairpersonDownloadProgramTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         PermissionMatrix::flush();
 
-        $this->unit    = DeanFactory::department('CDP');
-        $this->sub     = DeanFactory::subDepartment($this->unit['department'], 'CDP');
-        $this->program = DeanFactory::program($this->sub, 'CDP');
+        $this->unit    = DeanFactory::college('CDP');
+        $this->department     = DeanFactory::department($this->unit['college'], 'CDP');
+        $this->program = DeanFactory::program($this->department, 'CDP');
         $this->term    = DeanFactory::term($this->unit['institution']);
-        $this->chair   = DeanFactory::chair($this->sub, 'Cara');
+        $this->chair   = DeanFactory::chair($this->department, 'Cara');
     }
 
     protected function tearDown(): void
@@ -133,8 +133,8 @@ final class ChairpersonDownloadProgramTest extends RouteTestCase
     {
         $mine = $this->section('IT101');
 
-        $otherSub = DeanFactory::subDepartment($this->unit['department'], 'OTH');
-        $theirs   = $this->section('CS101', DeanFactory::program($otherSub, 'OTH'));
+        $otherDepartment = DeanFactory::department($this->unit['college'], 'OTH');
+        $theirs   = $this->section('CS101', DeanFactory::program($otherDepartment, 'OTH'));
         $this->graded($mine);
         $this->graded($theirs);
 

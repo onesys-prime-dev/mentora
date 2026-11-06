@@ -12,13 +12,13 @@ use App\Services\Institutions\AcademicDefaults;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * What the dean's home page shows, for their department: a snapshot, what needs attention, what the
+ * What the dean's home page shows, for their college: a snapshot, what needs attention, what the
  * chairpersons have been changing and the announcements they made.
  *
  * The numbers use the same definitions as the screens they link to and the same institution thresholds
  * the chairperson's and instructor's dashboards use (days of silence, days before ungraded work is
- * overdue), but are worked out for the whole department in a few queries per fact: the chairperson's
- * widgets build a full assessment overview for every section, which cannot be done for a department. Only
+ * overdue), but are worked out for the whole college in a few queries per fact: the chairperson's
+ * widgets build a full assessment overview for every section, which cannot be done for a college. Only
  * sections that are running now (active offerings) count toward what is slipping.
  */
 class DeanDashboardService
@@ -36,18 +36,18 @@ class DeanDashboardService
      * Everything the page needs.
      *
      * @return array{
-     *     department: array{id: int, name: string},
-     *     snapshot: array{sub_departments: int, programs: int, courses: int, instructors: int, students: int},
+     *     college: array{id: int, name: string},
+     *     snapshot: array{departments: int, programs: int, courses: int, instructors: int, students: int},
      *     attention: list<array{key: string, tone: string, count: int, title: string, detail: string, url: string}>,
      *     chairperson_activity: array{to_review: int, entries: list<array<string, mixed>>},
      *     announcements: list<array<string, mixed>>,
-     * }|null null for a dean with no department
+     * }|null null for a dean with no college
      */
     public function overview(User $dean, ?\DateTimeImmutable $now = null): ?array
     {
-        $department = $this->access->departmentFor($dean);
+        $college = $this->access->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return null;
         }
 
@@ -56,21 +56,21 @@ class DeanDashboardService
         $rows       = $this->monitor->offeringRowsForPrograms($programIds, new MonitorProgramFilters());
         $running    = array_values(array_filter($rows, static fn (array $r): bool => $r['offering_status'] === 'active'));
 
-        $name = db_connect()->table('departments')->select('name')->where('id', (int) $department['department_id'])->get()->getRow('name');
+        $name = db_connect()->table('colleges')->select('name')->where('id', (int) $college['college_id'])->get()->getRow('name');
 
         return [
-            'department'           => ['id' => (int) $department['department_id'], 'name' => (string) ($name ?? 'Your department')],
-            'snapshot'             => $this->snapshot((int) $department['department_id'], $programIds, $running),
+            'college'           => ['id' => (int) $college['college_id'], 'name' => (string) ($name ?? 'Your college')],
+            'snapshot'             => $this->snapshot((int) $college['college_id'], $programIds, $running),
             'attention'            => DeanAttentionRules::items($this->facts($dean, $running, $now)),
             'chairperson_activity' => $this->chairpersonActivity($dean),
-            'announcements'        => array_slice((new DepartmentAnnouncementService())->listForDean($dean)['rows'], 0, 3),
+            'announcements'        => array_slice((new CollegeAnnouncementService())->listForDean($dean)['rows'], 0, 3),
         ];
     }
 
     /**
      * The numbers each attention rule is made from.
      *
-     * @param list<array<string, mixed>> $running the department's active sections
+     * @param list<array<string, mixed>> $running the college's active sections
      *
      * @return array{overrides: int, signoff_ready: int, signoff_blocked: int, followups_overdue: int, overdue_grading: list<array{id: int, name: string, count: int}>, inactive_courses: list<array{id: int, name: string, count: int}>, at_risk: int}
      */
@@ -93,10 +93,10 @@ class DeanDashboardService
 
         foreach ($running as $row) {
             $id  = (int) $row['offering_id'];
-            $sub = (int) $row['sub_department_id'];
+            $department = (int) $row['department_id'];
 
-            $overdueBySub[$sub]  = ($overdueBySub[$sub] ?? 0) + ($overdue[$id] ?? 0);
-            $inactiveBySub[$sub] = ($inactiveBySub[$sub] ?? 0) + (($last[$id] ?? null) === null || $last[$id] < $silentBefore ? 1 : 0);
+            $overdueBySub[$department]  = ($overdueBySub[$department] ?? 0) + ($overdue[$id] ?? 0);
+            $inactiveBySub[$department] = ($inactiveBySub[$department] ?? 0) + (($last[$id] ?? null) === null || $last[$id] < $silentBefore ? 1 : 0);
         }
 
         return [
@@ -104,27 +104,27 @@ class DeanDashboardService
             'signoff_ready'     => $signoff['ready'],
             'signoff_blocked'   => $signoff['blocked'],
             'followups_overdue' => (new FollowUpService())->openCounts($dean, $now->format('Y-m-d'))['sent_overdue'],
-            'overdue_grading'   => $this->bySubDepartment($dean, $overdueBySub),
-            'inactive_courses'  => $this->bySubDepartment($dean, $inactiveBySub),
+            'overdue_grading'   => $this->byDepartment($dean, $overdueBySub),
+            'inactive_courses'  => $this->byDepartment($dean, $inactiveBySub),
             'at_risk'           => count($this->monitor->atRisk($ids)),
         ];
     }
 
     /**
-     * The department in numbers.
+     * The college in numbers.
      *
      * @param list<int>                  $programIds
      * @param list<array<string, mixed>> $running
      *
-     * @return array{sub_departments: int, programs: int, courses: int, instructors: int, students: int}
+     * @return array{departments: int, programs: int, courses: int, instructors: int, students: int}
      */
-    private function snapshot(int $departmentId, array $programIds, array $running): array
+    private function snapshot(int $collegeId, array $programIds, array $running): array
     {
         $db  = db_connect();
         $ids = array_map(static fn (array $r): int => (int) $r['offering_id'], $running);
 
         return [
-            'sub_departments' => $db->table('sub_departments')->where('department_id', $departmentId)->countAllResults(),
+            'departments' => $db->table('departments')->where('college_id', $collegeId)->countAllResults(),
             'programs'        => count($programIds),
             'courses'         => count($running),
             'instructors'     => $ids === [] ? 0 : $db->table('instructor_assignments')->select('instructor_user_id')->whereIn('offering_id', $ids)->distinct()->countAllResults(),
@@ -148,17 +148,17 @@ class DeanDashboardService
     }
 
     /**
-     * Counts per sub-department as rows with the sub-department's name, for the department's own
-     * sub-departments only.
+     * Counts per department as rows with the department's name, for the college's own
+     * departments only.
      *
-     * @param array<int, int> $counts sub-department id => count
+     * @param array<int, int> $counts department id => count
      *
      * @return list<array{id: int, name: string, count: int}>
      */
-    private function bySubDepartment(User $dean, array $counts): array
+    private function byDepartment(User $dean, array $counts): array
     {
-        $department = $this->access->departmentFor($dean);
-        $names      = $department === null ? [] : array_column(db_connect()->table('sub_departments')->select(['id', 'name'])->where('department_id', (int) $department['department_id'])->get()->getResultArray(), 'name', 'id');
+        $college = $this->access->collegeFor($dean);
+        $names      = $college === null ? [] : array_column(db_connect()->table('departments')->select(['id', 'name'])->where('college_id', (int) $college['college_id'])->get()->getResultArray(), 'name', 'id');
 
         $rows = [];
 

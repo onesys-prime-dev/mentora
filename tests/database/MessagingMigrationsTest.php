@@ -102,7 +102,7 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         // The factory makes an institution of its own; remove it in tearDown (the offering goes with it).
         $row = db_connect()->query(
             'SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id
-             JOIN sub_departments s ON s.id = p.sub_department_id JOIN departments d ON d.id = s.department_id WHERE o.id = ?',
+             JOIN departments s ON s.id = p.department_id JOIN colleges d ON d.id = s.college_id WHERE o.id = ?',
             [$id]
         )->getRowArray();
         $this->institutionIds[] = (int) $row['institution_id'];

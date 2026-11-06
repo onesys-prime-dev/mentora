@@ -31,7 +31,7 @@
   | parent | `children.view` |
   | instructor | `courses.view`, `courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage` |
   | chairperson | the instructor's five + `program.monitor`, `followups.manage` |
-  | dean | `courses.view`, `department.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `department.announce` |
+  | dean | `courses.view`, `college.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `college.announce` |
   | institutional_admin | its current institution-admin permissions + `courses.view`, `grades.approve`, `grades.signoff`, `institution.roles` |
   | admin | locked (its defaults) |
 
@@ -449,10 +449,10 @@ Message: `feat: a course tab without its permission shows what is there, without
 - Modify: `app/Config/Routes.php` (Edit tool):
   - `permission:courses.view` on the course page and course API routes of the student, instructor and chairperson groups (the dean and institution groups have it already);
   - `permission:program.monitor` on `monitor-program` and the `api/monitor-program` group (`:472-479`);
-  - `permission:department.monitor` on `monitor-department` and its `api` (`:360-362`);
+  - `permission:college.monitor` on `monitor-college` and its `api` (`:360-362`);
   - `permission:followups.manage` on `POST follow-ups` (dean `:340`, chairperson `:449`) and `follow-ups/(:num)/pass-down` (`:450`);
   - `permission:audit.view` on `admin/audit-log` and its export (`:877-878`), and `permission:audit.manage` on `admin/audit-log/settings` (`:879`, keeping `reauth`).
-- Modify: the views that offer those actions. Hide the follow-up "New" and "Pass down" buttons without `followups.manage`; hide the Monitor Program/Department entries in `app/Helpers/navigation_helper.php` without their permission; hide the audit settings form without `audit.manage`.
+- Modify: the views that offer those actions. Hide the follow-up "New" and "Pass down" buttons without `followups.manage`; hide the Monitor Program/College entries in `app/Helpers/navigation_helper.php` without their permission; hide the audit settings form without `audit.manage`.
 - Test: `tests/feature/PermissionsTakeEffectTest.php`
 
 **Interfaces:**
@@ -465,7 +465,7 @@ One test per row. Clear the permission in the person's institution (or on the pl
 | Who | Permission cleared | Route refused | Gone from the page |
 |---|---|---|---|
 | chairperson | `program.monitor` | `GET chairperson/monitor-program` | nav entry |
-| dean | `department.monitor` | `GET dean/monitor-department` | nav entry |
+| dean | `college.monitor` | `GET dean/monitor-college` | nav entry |
 | chairperson | `followups.manage` | `POST chairperson/follow-ups` | "New follow-up" button |
 
 Then the cases that don't fit the table:
@@ -482,7 +482,7 @@ Expected: FAIL, because the routes don't check.
 
 - [ ] **Step 4: Run them, and the affected suites**
 
-Run: `vendor/bin/phpunit --no-coverage tests/feature/PermissionsTakeEffectTest.php`, plus the follow-up, monitor, audit-log and navigation tests (`grep -rl "follow-ups\|monitor-program\|monitor-department\|audit-log\|navigation" tests --include=*.php`)
+Run: `vendor/bin/phpunit --no-coverage tests/feature/PermissionsTakeEffectTest.php`, plus the follow-up, monitor, audit-log and navigation tests (`grep -rl "follow-ups\|monitor-program\|monitor-college\|audit-log\|navigation" tests --include=*.php`)
 Expected: PASS.
 
 - [ ] **Step 5: Stage**

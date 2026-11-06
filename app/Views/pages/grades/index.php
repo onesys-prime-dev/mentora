@@ -19,9 +19,9 @@
  * without finalizing (partials/instructor, finalizing false); Program is partials/chairperson (program, state,
  * termEnd, canNudge).
  *
- * The dean's page is the chairperson's Program in the same bar, one view named Department (chairTabs
- * ['department']): the program picker (programs, programId; "All programs" first) beside the term, the same lists,
- * and partials/chairperson in its department form (the strip with stripLinks, a Signed off column, canOpen). Its
+ * The dean's page is the chairperson's Program in the same bar, one view named College (chairTabs
+ * ['college']): the program picker (programs, programId; "All programs" first) beside the term, the same lists,
+ * and partials/chairperson in its college form (the strip with stripLinks, a Signed off column, canOpen). Its
  * links carry the program instead of a tab.
  *
  * @var string                     $area
@@ -77,7 +77,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
             'student'     => 'Your grades in every course, as they stand now.',
             'parent'      => "Your child's grades in every course.",
             'chairperson' => "Your sections and your program's.",
-            'dean'        => 'Every section in your department.',
+            'dean'        => 'Every section in your college.',
             default       => 'Every section you teach.',
         },
         'actions'     => $actions,
@@ -152,19 +152,19 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
             return $base . '?' . http_build_query(array_filter($ordered, static fn ($value): bool => $value !== null && $value !== '' && $value !== false));
         };
 
-        $tabLabels = ['mine' => 'My sections', 'program' => 'Program', 'department' => 'Department'];
+        $tabLabels = ['mine' => 'My sections', 'program' => 'Program', 'college' => 'College'];
         $subLabels = [
             'mine'       => ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At risk'],
             'program'    => ['sections' => 'Sections', 'at-risk' => 'At risk'],
-            'department' => ['sections' => 'Sections', 'at-risk' => 'At risk'],
+            'college' => ['sections' => 'Sections', 'at-risk' => 'At risk'],
         ];
         $firstSub = array_key_first($subLabels[$tab]);
 
         // The open list's own links (a section card, a table row, a page, a sort): its tab and list, then the rest.
         $listLink = static fn (array $params = []): string => $chairLink(['tab' => $tab, 'sub' => $sub === $firstSub ? null : $sub] + $params);
 
-        // Program (chairperson) and Department (dean) are the same table: the program's sections, or the department's.
-        $isTable   = $tab === 'program' || $tab === 'department';
+        // Program (chairperson) and College (dean) are the same table: the program's sections, or the college's.
+        $isTable   = $tab === 'program' || $tab === 'college';
         $searching = $isTable && $sub === 'sections' && $termId !== null;
         $listTotal = $isTable ? ($program['tracker'] ?? $program['strip'])['total'] : 0;
 
@@ -193,7 +193,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
             <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
 
                 <?php if ($isDean && ($programs ?? []) !== []): ?>
-                    <?php // The dean's program picker: every program of the department first; the list, the term and the search stay. ?>
+                    <?php // The dean's program picker: every program of the college first; the list, the term and the search stay. ?>
                     <label class="sr-only" for="grades-program">Program</label>
                     <select id="grades-program" data-select-link data-program-select class="<?= $select ?> sm:max-w-64">
                         <option value="<?= esc($chairLink(['sub' => $sub === $firstSub ? null : $sub, 'program' => null])) ?>" <?= $programId === null ? 'selected' : '' ?>>All programs</option>
@@ -214,8 +214,8 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
                 <?php if ($isTable): ?>
                     <?php // Back to the analytics page of the same term. The Program tab exists only with program.monitor and the
-                          // dean's page only with department.monitor, the permissions of the pages this goes to. ?>
-                    <a href="<?= esc(site_url($isDean ? 'dean/monitor-department' : 'chairperson/monitor-program') . ($termId === null ? '' : '?term=' . (int) $termId)) ?>"
+                          // dean's page only with college.monitor, the permissions of the pages this goes to. ?>
+                    <a href="<?= esc(site_url($isDean ? 'dean/monitor-college' : 'chairperson/monitor-program') . ($termId === null ? '' : '?term=' . (int) $termId)) ?>"
                        class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-sm font-semibold text-brand transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55" data-view-analytics>View analytics →</a>
                 <?php endif; ?>
 
@@ -250,7 +250,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
                     <a href="<?= esc($chairLink(['tab' => $tab, 'sub' => $key === $firstSub ? null : $key, 'section' => $tab === 'mine' && $key === 'gradebook' ? ($selected['offering_id'] ?? null) : null])) ?>"
                        class="inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 py-1 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'border-brand bg-white text-brand-dark ring-1 ring-brand' : 'border-[#E3E6EE] bg-white text-[#646464] hover:border-brand/40 hover:text-brand-dark' ?>"
                        data-grades-sub="<?= esc($key) ?>"
-                       <?= $on ? 'aria-current="page"' : '' ?>><span data-sub-label><?= esc($label) ?></span><?php if (isset($counts[$key])): ?><span class="rounded-full px-2 py-0.5 text-xs font-bold <?= $on ? 'bg-brand-tint text-brand-dark' : 'bg-[#F1F3F7] text-[#646464]' ?>" data-sub-count="<?= esc($key) ?>"><?= (int) $counts[$key] ?></span><?php endif; ?></a>
+                       <?= $on ? 'aria-current="page"' : '' ?>><span data-department-label><?= esc($label) ?></span><?php if (isset($counts[$key])): ?><span class="rounded-full px-2 py-0.5 text-xs font-bold <?= $on ? 'bg-brand-tint text-brand-dark' : 'bg-[#F1F3F7] text-[#646464]' ?>" data-department-count="<?= esc($key) ?>"><?= (int) $counts[$key] ?></span><?php endif; ?></a>
                 <?php endforeach; ?>
             </nav>
 

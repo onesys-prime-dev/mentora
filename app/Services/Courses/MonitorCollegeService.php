@@ -7,20 +7,20 @@ namespace App\Services\Courses;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * Monitor Department: the chairperson's Monitor Program numbers for a whole
- * department, compared per sub-department and per program.
+ * Monitor College: the chairperson's Monitor Program numbers for a whole
+ * college, compared per department and per program.
  *
  * Nothing here recalculates a metric: the offerings, completion, grades,
  * grading turnaround and at-risk list come from MonitorProgramService (the same
  * calculations the chairperson's page and the institution's reports use), over
- * the programs under the dean's department. This class only groups them. Every
+ * the programs under the dean's college. This class only groups them. Every
  * average is weighted by what it averages (students, graded submissions), so a
  * group's figure is the figure over all its people and work, not an average of
  * averages. Two columns are new here: grading progress (work graded out of work
  * submitted) and last activity (the latest content update, announcement or
  * grading).
  */
-class MonitorDepartmentService
+class MonitorCollegeService
 {
     public function __construct(
         private readonly MonitorProgramService $monitor = new MonitorProgramService(),
@@ -29,13 +29,13 @@ class MonitorDepartmentService
     }
 
     /**
-     * The programs in scope: the dean's department, narrowed by the sub-department and
-     * program filters. A program or sub-department outside the department narrows to
+     * The programs in scope: the dean's college, narrowed by the department and
+     * program filters. A program or department outside the college narrows to
      * nothing, never to someone else's data.
      *
      * @return list<int>
      */
-    public function programIds(User $user, MonitorDepartmentFilters $filters): array
+    public function programIds(User $user, MonitorCollegeFilters $filters): array
     {
         $ids = $this->access->programIds($user);
 
@@ -43,9 +43,9 @@ class MonitorDepartmentService
             $ids = in_array($filters->programId, $ids, true) ? [$filters->programId] : [];
         }
 
-        if ($filters->subDepartmentId !== null && $ids !== []) {
+        if ($filters->departmentId !== null && $ids !== []) {
             $ids = array_map('intval', array_column(
-                db_connect()->table('programs')->select('id')->where('sub_department_id', $filters->subDepartmentId)->whereIn('id', $ids)->get()->getResultArray(),
+                db_connect()->table('programs')->select('id')->where('department_id', $filters->departmentId)->whereIn('id', $ids)->get()->getResultArray(),
                 'id'
             ));
         }
@@ -54,13 +54,13 @@ class MonitorDepartmentService
     }
 
     /**
-     * The department's audit log: what chairpersons changed in the department's courses, newest
+     * The college's audit log: what chairpersons changed in the college's courses, newest
      * first, within the filters: who did it, what, when and as which role. Whoever took the
-     * action; the department's offerings are the boundary.
+     * action; the college's offerings are the boundary.
      *
      * @return array{rows: list<array<string, mixed>>, total: int}
      */
-    public function auditLog(User $user, MonitorDepartmentFilters $filters, int $page = 1, int $perPage = 10): array
+    public function auditLog(User $user, MonitorCollegeFilters $filters, int $page = 1, int $perPage = 10): array
     {
         $offeringRows = $this->monitor->offeringRowsForPrograms($this->programIds($user, $filters), $filters->base);
 
@@ -68,14 +68,14 @@ class MonitorDepartmentService
     }
 
     /**
-     * What each instructor of the department did in the filtered scope: sections, content updates,
+     * What each instructor of the college did in the filtered scope: sections, content updates,
      * announcements and grading turnaround (weighted by work graded). An instructor teaching in
-     * two departments only counts the sections of the dean's own. Sections without an instructor
+     * two colleges only counts the sections of the dean's own. Sections without an instructor
      * are left out; most active first, then by name so the order is stable.
      *
      * @return list<array{instructor_id: int, name: string, sections: int, content_updates: int, announcements: int, graded_count: int, avg_grading_turnaround_hours: ?float}>
      */
-    public function instructorActivity(User $user, MonitorDepartmentFilters $filters): array
+    public function instructorActivity(User $user, MonitorCollegeFilters $filters): array
     {
         $offeringRows = $this->monitor->offeringRowsForPrograms($this->programIds($user, $filters), $filters->base);
         $activity     = $this->monitor->instructorActivity(
@@ -126,7 +126,7 @@ class MonitorDepartmentService
     }
 
     /**
-     * The terms the department's courses run in, for the term filter.
+     * The terms the college's courses run in, for the term filter.
      *
      * @return list<array<string, mixed>>
      */
@@ -145,7 +145,7 @@ class MonitorDepartmentService
      *     atRisk: list<array<string, mixed>>,
      * }
      */
-    public function overview(User $user, MonitorDepartmentFilters $filters): array
+    public function overview(User $user, MonitorCollegeFilters $filters): array
     {
         $programIds   = $this->programIds($user, $filters);
         $offeringRows = $this->monitor->offeringRowsForPrograms($programIds, $filters->base);
@@ -190,7 +190,7 @@ class MonitorDepartmentService
         unset($student);
 
         return [
-            'totals'            => ['name' => 'Department'] + $this->metrics($offeringRows, $facts),
+            'totals'            => ['name' => 'College'] + $this->metrics($offeringRows, $facts),
             'groups'            => $this->groups($user, $filters, $programIds, $offeringRows, $facts),
             'gradeDistribution' => $distribution,
             'atRisk'            => $atRisk,
@@ -198,7 +198,7 @@ class MonitorDepartmentService
     }
 
     /**
-     * The comparison rows for the chosen grouping, sorted. Every sub-department or program in
+     * The comparison rows for the chosen grouping, sorted. Every department or program in
      * scope is a row, including one with no courses yet (zeros and dashes, not a missing row).
      *
      * @param list<int>                $programIds
@@ -207,33 +207,33 @@ class MonitorDepartmentService
      *
      * @return list<array<string, mixed>>
      */
-    private function groups(User $user, MonitorDepartmentFilters $filters, array $programIds, array $offeringRows, array $facts): array
+    private function groups(User $user, MonitorCollegeFilters $filters, array $programIds, array $offeringRows, array $facts): array
     {
         $db = db_connect();
 
         if ($filters->compare === 'program') {
             $definitions = $programIds === [] ? [] : $db->table('programs p')
                 ->select(['p.id', 'p.name', 'sd.name AS context'])
-                ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+                ->join('departments sd', 'sd.id = p.department_id')
                 ->whereIn('p.id', $programIds)->get()->getResultArray();
             $key = 'program_id';
         } else {
-            $department  = $this->access->departmentFor($user);
-            $definitions = $department === null ? [] : $db->table('sub_departments')
+            $college  = $this->access->collegeFor($user);
+            $definitions = $college === null ? [] : $db->table('departments')
                 ->select(['id', 'name'])
-                ->where('department_id', (int) $department['department_id'])
+                ->where('college_id', (int) $college['college_id'])
                 ->get()->getResultArray();
 
-            // Narrowed by a sub-department or a program: only the sub-departments that hold what is in scope.
-            if ($filters->subDepartmentId !== null) {
-                $definitions = array_filter($definitions, static fn (array $d): bool => (int) $d['id'] === $filters->subDepartmentId);
+            // Narrowed by a department or a program: only the departments that hold what is in scope.
+            if ($filters->departmentId !== null) {
+                $definitions = array_filter($definitions, static fn (array $d): bool => (int) $d['id'] === $filters->departmentId);
             } elseif ($filters->programId !== null) {
-                $holding     = array_unique(array_map('intval', array_column($offeringRows, 'sub_department_id')));
-                $inProgram   = $programIds === [] ? [] : array_map('intval', array_column($db->table('programs')->select('sub_department_id')->whereIn('id', $programIds)->get()->getResultArray(), 'sub_department_id'));
+                $holding     = array_unique(array_map('intval', array_column($offeringRows, 'department_id')));
+                $inProgram   = $programIds === [] ? [] : array_map('intval', array_column($db->table('programs')->select('department_id')->whereIn('id', $programIds)->get()->getResultArray(), 'department_id'));
                 $definitions = array_filter($definitions, static fn (array $d): bool => in_array((int) $d['id'], array_merge($holding, $inProgram), true));
             }
 
-            $key = 'sub_department_id';
+            $key = 'department_id';
         }
 
         $rows = [];

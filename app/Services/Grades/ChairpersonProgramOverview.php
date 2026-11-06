@@ -11,8 +11,8 @@ use CodeIgniter\Shield\Entities\User;
 /**
  * The terms and section table of the chairperson's Program tab, and the sections of their My sections tab.
  *
- * A chairperson reaches the sections of the sub-departments they actively chair (ChairpersonAccessService's
- * rule: course → program → sub-department), active or completed. Every number is read from stored rows: the
+ * A chairperson reaches the sections of the departments they actively chair (ChairpersonAccessService's
+ * rule: course → program → department), active or completed. Every number is read from stored rows: the
  * state from SectionStates (the instructor's rules), the average and the at-risk count from the gradebook
  * records. Nothing is created, and the query count does not grow with the number of sections; search,
  * filter, sort and pages are applied in PHP over the term's rows.
@@ -36,20 +36,20 @@ final class ChairpersonProgramOverview
      */
     public function terms(User $chair): array
     {
-        return $this->termsIn($this->subDepartments($chair));
+        return $this->termsIn($this->departments($chair));
     }
 
     /**
-     * Terms of the active or completed sections in these sub-departments, newest first: what terms() reads for
-     * the chairperson, and the dean's Department tab for the sub-departments of their department(s).
+     * Terms of the active or completed sections in these departments, newest first: what terms() reads for
+     * the chairperson, and the dean's College tab for the departments of their college(s).
      *
-     * @param list<int> $subDepartments
+     * @param list<int> $departments
      *
      * @return list<array{id: int, name: string, academic_year: string, status: string}>
      */
-    public function termsIn(array $subDepartments): array
+    public function termsIn(array $departments): array
     {
-        if ($subDepartments === []) {
+        if ($departments === []) {
             return [];
         }
 
@@ -60,7 +60,7 @@ final class ChairpersonProgramOverview
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
             ->join('academic_terms t', 't.id = co.term_id')
-            ->whereIn('p.sub_department_id', $subDepartments)
+            ->whereIn('p.department_id', $departments)
             ->whereIn('co.status', self::OPEN)
             ->orderBy('t.start_date', 'DESC')
             ->orderBy('t.id', 'DESC')
@@ -172,9 +172,9 @@ final class ChairpersonProgramOverview
     public function mySections(User $chair, int $termId): array
     {
         $taught = (new InstructorGradesOverview())->sections($chair, $termId);
-        $subDepartments = $this->subDepartments($chair);
+        $departments = $this->departments($chair);
 
-        if ($taught === [] || $subDepartments === []) {
+        if ($taught === [] || $departments === []) {
             return [];
         }
 
@@ -184,7 +184,7 @@ final class ChairpersonProgramOverview
                 ->join('courses c', 'c.id = co.course_id')
                 ->join('programs p', 'p.id = c.program_id')
                 ->whereIn('co.id', array_column($taught, 'offering_id'))
-                ->whereIn('p.sub_department_id', $subDepartments)
+                ->whereIn('p.department_id', $departments)
                 ->get()->getResultArray(),
             'id'
         )));
@@ -193,9 +193,9 @@ final class ChairpersonProgramOverview
     }
 
     /** @return list<int> */
-    private function subDepartments(User $chair): array
+    private function departments(User $chair): array
     {
-        return (new ChairpersonAssignmentModel())->subDepartmentIdsFor((int) $chair->id);
+        return (new ChairpersonAssignmentModel())->departmentIdsFor((int) $chair->id);
     }
 
     /**
@@ -205,27 +205,27 @@ final class ChairpersonProgramOverview
      */
     private function termRows(User $chair, int $termId): array
     {
-        // The chairperson's rows have no program column: they chair the programs of their sub-departments.
+        // The chairperson's rows have no program column: they chair the programs of their departments.
         return array_map(static function (array $row): array {
             unset($row['program_id']);
 
             return $row;
-        }, $this->rowsIn($this->subDepartments($chair), $termId));
+        }, $this->rowsIn($this->departments($chair), $termId));
     }
 
     /**
-     * Every active or completed section of the term in these sub-departments (and only this program, when one
+     * Every active or completed section of the term in these departments (and only this program, when one
      * is given), in section order, with all the table's columns and the section's program_id: the chairperson's
-     * Program tab reads it for the sub-departments they chair, the dean's Department tab for those of their
-     * department(s). The query count does not grow with the number of sections.
+     * Program tab reads it for the departments they chair, the dean's College tab for those of their
+     * college(s). The query count does not grow with the number of sections.
      *
-     * @param list<int> $subDepartments
+     * @param list<int> $departments
      *
      * @return list<array<string, mixed>>
      */
-    public function rowsIn(array $subDepartments, int $termId, ?int $programId = null): array
+    public function rowsIn(array $departments, int $termId, ?int $programId = null): array
     {
-        if ($subDepartments === []) {
+        if ($departments === []) {
             return [];
         }
 
@@ -235,7 +235,7 @@ final class ChairpersonProgramOverview
             ->select(['co.id AS offering_id', 'co.section_code', 'co.status AS offering_status', 'c.course_code', 'c.course_title', 'p.id AS program_id'])
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->whereIn('p.sub_department_id', $subDepartments)
+            ->whereIn('p.department_id', $departments)
             ->where('co.term_id', $termId)
             ->whereIn('co.status', self::OPEN);
 

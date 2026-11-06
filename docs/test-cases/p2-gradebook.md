@@ -190,7 +190,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 ### TC-GBK-07 A signed-off gradebook names who signed it off
 
 - **Role:** Instructor. **Priority:** P2
-- **Data:** two sections whose grades are finalized and signed off. One was signed off by the dean (`dean2`, CBM). The other is in a department with no eligible dean, signed off by the institution's administrator (see TC-DEAN-13 for the setup).
+- **Data:** two sections whose grades are finalized and signed off. One was signed off by the dean (`dean2`, CBM). The other is in a college with no eligible dean, signed off by the institution's administrator (see TC-DEAN-13 for the setup).
 - **Steps:**
   1. As each section's instructor, open Grades.
   2. Press Reopen on the finalization (or send the reopen request directly).
@@ -363,7 +363,7 @@ P2 scenarios. QA status as in the README; none has been run.
 ### TC-GBK-16 Finalizing tells the signer and the parents, and reopening says what happens to grades already sent
 
 - **Role:** Instructor. **Priority:** P2
-- **Data:** IT101-B (CBM has a dean); a section in a department with no eligible dean; parents linked to its students; an SIS connection; the parent notifier made to fail once
+- **Data:** IT101-B (CBM has a dean); a section in a college with no eligible dean; parents linked to its students; an SIS connection; the parent notifier made to fail once
 - **Steps:** finalize each section; finalize with the parent notifier failing; send the grades to the SIS (`sis:grades`), then reopen; reopen a section never sent; read the chairperson's notifications.
 - **Expected:** finalizing tells the dean once (or the administrators where there is no eligible dean) and the students' parents at once; a failure telling parents never blocks finalizing; reopening grades already sent tells the instructor what happens next with the SIS; reopening grades never sent says nothing about the SIS; the chairperson is told of a reopen.
 - **Already automated:** `GradeFinalizationServiceTest` (`testFinalizingTellsTheStudentsParentsAtOnce`, `testAParentNotifierThatFailsNeverBlocksFinalizing`, `testReopeningGradesAlreadySentTellsTheInstructorWhatHappensNext`, `testReopeningGradesNeverSentSaysNothingAboutTheSis`), `GradeSignoffServiceTest::testTheDeanIsToldOnceTheGradesAreFinalized`

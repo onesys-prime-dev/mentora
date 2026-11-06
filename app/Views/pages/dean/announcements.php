@@ -1,15 +1,15 @@
 <?php
 /**
- * The dean's announcements to the department. "Showing" are the ones people can read now; "Ended" are the
+ * The dean's announcements to the college. "Showing" are the ones people can read now; "Ended" are the
  * ones the dean ended or whose last day has passed, kept as history. A new one is aimed at the whole
- * department, a sub-department or a program, and at everyone, staff or students; editing changes the
+ * college, a department or a program, and at everyone, staff or students; editing changes the
  * wording and the last day but never who it is for.
  *
  * @var string $tab
  * @var array{rows: list<array<string, mixed>>, counts: array{active: int, ended: int}} $list
  * @var array<string, string> $scopes
  */
-use App\Services\Courses\DepartmentAnnouncementService;
+use App\Services\Courses\CollegeAnnouncementService;
 
 $base = site_url('dean/announcements');
 
@@ -61,7 +61,7 @@ $columns = [
     ['key' => 'until', 'label' => 'Shown'],
 ];
 
-$audiences = DepartmentAnnouncementService::AUDIENCES;
+$audiences = CollegeAnnouncementService::AUDIENCES;
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -78,7 +78,7 @@ $audiences = DepartmentAnnouncementService::AUDIENCES;
     <?= view('components/page-head', [
         'title'       => 'Announcements',
         'icon'        => 'announcement',
-        'description' => 'Tell your department, a sub-department or a program something. The people it is for see it in their Announcements and are notified.',
+        'description' => 'Tell your college, a department or a program something. The people it is for see it in their Announcements and are notified.',
         'actions'     => $loadError ? '' : '<button type="button" data-dialog-open="announcement-new" class="' . esc($primary, 'attr') . '">New announcement</button>',
     ], ['saveData' => false]) ?>
 
@@ -100,16 +100,16 @@ $audiences = DepartmentAnnouncementService::AUDIENCES;
             'columns'    => $columns,
             'rows'       => $rows,
             'emptyTitle' => $tab === 'ended' ? 'Nothing has ended yet' : 'No announcements showing',
-            'emptyText'  => $tab === 'ended' ? 'Announcements you end, or whose last day has passed, are kept here.' : 'Use “New announcement” to tell your department something.',
+            'emptyText'  => $tab === 'ended' ? 'Announcements you end, or whose last day has passed, are kept here.' : 'Use “New announcement” to tell your college something.',
             'emptyIcon'  => 'announcement',
         ], ['saveData' => false]) ?>
 
         <?php
         $new = '<form method="post" action="' . esc($base, 'attr') . '" data-dialog-form class="flex flex-col gap-3">' . csrf_field()
-            . $field(['name' => 'scope', 'label' => 'Who is it for', 'type' => 'select', 'options' => $scopes, 'required' => true, 'help' => 'The whole department, one sub-department or one program.'])
+            . $field(['name' => 'scope', 'label' => 'Who is it for', 'type' => 'select', 'options' => $scopes, 'required' => true, 'help' => 'The whole college, one department or one program.'])
             . $field(['name' => 'audience', 'label' => 'Who should read it', 'type' => 'select', 'options' => $audiences, 'value' => 'everyone'])
-            . $field(['name' => 'title', 'label' => 'Title', 'maxlength' => DepartmentAnnouncementService::MAX_TITLE, 'required' => true])
-            . $field(['name' => 'message', 'label' => 'Message', 'type' => 'textarea', 'maxlength' => DepartmentAnnouncementService::MAX_MESSAGE, 'required' => true, 'help' => 'Plain text.'])
+            . $field(['name' => 'title', 'label' => 'Title', 'maxlength' => CollegeAnnouncementService::MAX_TITLE, 'required' => true])
+            . $field(['name' => 'message', 'label' => 'Message', 'type' => 'textarea', 'maxlength' => CollegeAnnouncementService::MAX_MESSAGE, 'required' => true, 'help' => 'Plain text.'])
             . $field(['name' => 'ends_on', 'label' => 'Last day it is shown (optional)', 'type' => 'date', 'help' => 'Without one it stays until you end it.'])
             . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
             . '<div class="flex justify-end gap-3"><button type="button" data-dialog-close class="' . esc($ghost, 'attr') . '">Cancel</button><button type="submit" data-dialog-label class="' . esc($primary, 'attr') . '">Post announcement</button></div></form>';
@@ -123,8 +123,8 @@ $audiences = DepartmentAnnouncementService::AUDIENCES;
 
             $edit = '<form method="post" action="' . esc("{$base}/{$id}", 'attr') . '" data-dialog-form class="flex flex-col gap-3">' . csrf_field()
                 . '<p class="rounded-xl bg-gray-50 px-3 py-2 text-xs text-[#646464]">For ' . esc($a['scope_label']) . ' · ' . esc($a['audience_label']) . '. Who it is for cannot change; end it and post a new one for someone else.</p>'
-                . $field(['name' => 'title', 'label' => 'Title', 'value' => $a['title'], 'maxlength' => DepartmentAnnouncementService::MAX_TITLE, 'required' => true])
-                . $field(['name' => 'message', 'label' => 'Message', 'type' => 'textarea', 'value' => $a['message'], 'maxlength' => DepartmentAnnouncementService::MAX_MESSAGE, 'required' => true])
+                . $field(['name' => 'title', 'label' => 'Title', 'value' => $a['title'], 'maxlength' => CollegeAnnouncementService::MAX_TITLE, 'required' => true])
+                . $field(['name' => 'message', 'label' => 'Message', 'type' => 'textarea', 'value' => $a['message'], 'maxlength' => CollegeAnnouncementService::MAX_MESSAGE, 'required' => true])
                 . $field(['name' => 'ends_on', 'label' => 'Last day it is shown (optional)', 'type' => 'date', 'value' => (string) ($a['ends_on'] ?? '')])
                 . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
                 . '<div class="flex justify-end gap-3"><button type="button" data-dialog-close class="' . esc($ghost, 'attr') . '">Cancel</button><button type="submit" data-dialog-label class="' . esc($primary, 'attr') . '">Save changes</button></div></form>';

@@ -235,7 +235,7 @@ final class MessagesRoutesTest extends RouteTestCase
 
     public function testRecipientsThePickerWouldNeverListAnswerLikeAnUnknownId(): void
     {
-        $chair   = DeanFactory::chair((int) db_connect()->table('sub_departments')->get()->getRow('id'));
+        $chair   = DeanFactory::chair((int) db_connect()->table('departments')->get()->getRow('id'));
         $admin   = CourseFactory::user('admin');
         $far     = PeopleFactory::person('instructor', 'Far', 'Away', null, PeopleFactory::institution('FAR3'));
         $this->signIn($this->student);

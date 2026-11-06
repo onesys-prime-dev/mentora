@@ -215,7 +215,7 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         $files   = [
             'instructors'       => "email,first_name,last_name\nivy@example.com,Ivy,Tan\n",
             'courses'           => self::COURSES,
-            'staff_assignments' => "role,email,department_code,sub_department_code,program_code,course_code,section\ninstructor,ivy@example.com,,,BSIT,IT101,B\n",
+            'staff_assignments' => "role,email,college_code,department_code,program_code,course_code,section\ninstructor,ivy@example.com,,,BSIT,IT101,B\n",
         ];
 
         $service->apply($this->institution, $service->preview($this->institution, $files, $this->admin)['token'], $this->admin);
@@ -243,14 +243,14 @@ final class InstitutionCsvUploadTest extends RouteTestCase
         $db      = db_connect();
 
         $people = "email,first_name,last_name\nian@example.com,Ian,Ong\n";
-        $header = "role,email,department_code,sub_department_code,program_code,course_code,section\n";
-        $sub    = (string) $db->table('sub_departments sd')->select('sd.code')->join('departments d', 'd.id = sd.department_id')->where('d.institution_id', $this->institution)->get()->getRow('code');
+        $header = "role,email,college_code,department_code,program_code,course_code,section\n";
+        $department    = (string) $db->table('departments sd')->select('sd.code')->join('colleges d', 'd.id = sd.college_id')->where('d.institution_id', $this->institution)->get()->getRow('code');
 
         // First upload: the person, then the chairperson, applied for real.
         $service->apply($this->institution, $service->preview($this->institution, ['instructors' => $people], $this->admin)['token'], $this->admin);
         $ian = (int) $db->table('auth_identities')->where('secret', 'ian@example.com')->get()->getRow('user_id');
         $db->table('auth_groups_users')->insert(['user_id' => $ian, 'group' => 'chairperson', 'created_at' => date('Y-m-d H:i:s')]);
-        $service->apply($this->institution, $service->preview($this->institution, ['staff_assignments' => $header . "chairperson,ian@example.com,,{$sub},,,\n"], $this->admin)['token'], $this->admin);
+        $service->apply($this->institution, $service->preview($this->institution, ['staff_assignments' => $header . "chairperson,ian@example.com,,{$department},,,\n"], $this->admin)['token'], $this->admin);
 
         $this->assertSame(1, $db->table('chairperson_assignments')->where('status', 'active')->countAllResults(), 'assigned by the first upload');
 

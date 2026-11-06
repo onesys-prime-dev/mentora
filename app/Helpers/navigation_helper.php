@@ -128,7 +128,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => site_url('dean/announcements')],
                 ['key' => 'teaching-load', 'label' => 'Teaching load', 'icon' => 'modules', 'url' => site_url('dean/teaching-load')],
                 ['key' => 'chairperson-review', 'label' => 'Chairperson review', 'icon' => 'tasks', 'url' => site_url('dean/chairperson-review')],
-                ['key' => 'monitor-department', 'label' => 'Monitor Department', 'icon' => 'score', 'url' => site_url('dean/monitor-department')],
+                ['key' => 'monitor-college', 'label' => 'Monitor College', 'icon' => 'score', 'url' => site_url('dean/monitor-college')],
             ];
 
             // Only what their institution lets them open (QA AMB-AUTH-08): each tile's page refuses without its
@@ -137,11 +137,11 @@ if (! function_exists('global_apps')) {
                 $permissions = new \App\Services\Auth\RolePermissions();
                 $gates       = [
                     'courses'            => 'courses.view',
-                    'grades'             => 'department.monitor',
+                    'grades'             => 'college.monitor',
                     'approvals'          => 'grades.approve',
                     'signoff'            => 'grades.signoff',
-                    'announcements'      => 'department.announce',
-                    'monitor-department' => 'department.monitor',
+                    'announcements'      => 'college.announce',
+                    'monitor-college' => 'college.monitor',
                 ];
                 // Asked of the dean role only: what another role of theirs has does not open the dean's pages.
                 $hidden      = array_keys(array_filter($gates, static fn (string $p): bool => ! $permissions->allows($user, $p, 'dean')));

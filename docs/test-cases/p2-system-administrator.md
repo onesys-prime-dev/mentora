@@ -621,7 +621,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 ## TC-SA-40 Deleting a user keeps the history they created
 
 - **Role:** System administrator (database level). **Priority:** P1
-- **Data:** the test database; a user who created a dean assignment, an override request, a sign-off and a department announcement; a learning resource that uses a file
+- **Data:** the test database; a user who created a dean assignment, an override request, a sign-off and a college announcement; a learning resource that uses a file
 - **Steps:** delete the user row; read those four records. Delete the resource's file row.
 - **Expected:** the records stay, with the creator reference cleared (SET NULL) and their other details kept; deleting a file that a learning resource uses is refused (RESTRICT). Routine removal stays deactivation; a purge follows its own rules (TC-SA-13).
 - **Already automated:** none
@@ -884,7 +884,7 @@ P3 scenarios. QA status as in the README; none has been run.
 ## TC-SA-61 What empty values mean, and which grading scheme applies
 
 - **Role:** (database level, read through the app). **Priority:** P3
-- **Steps:** make a notification with no institution (a platform notice) and a follow-up with student 0; list an institution's notifications and a student's follow-ups; run a report. Open a new section's grades in an institution with its own defaults and one without; switch a person's `active_role` on the database to a role they do not hold and sign in. Save a department with established year 1799 and the current year.
+- **Steps:** make a notification with no institution (a platform notice) and a follow-up with student 0; list an institution's notifications and a student's follow-ups; run a report. Open a new section's grades in an institution with its own defaults and one without; switch a person's `active_role` on the database to a role they do not hold and sign in. Save a college with established year 1799 and the current year.
 - **Expected:** a notification with no institution is platform-wide and never appears in an institution's list as theirs; a follow-up with student 0 is about no student and never in a student's results; the scheme is the section's own, else a copy of the institution's defaults, else the platform's, never another institution's; an unheld active role falls back to the default; `program_id` is used for students only; the year must be 1800 to the current year, in the form and the service.
 - **Already automated:** `AcademicDefaultsTest`, `ActiveRoleServiceTest::testAStaleSessionRoleNoLongerHeldIsIgnored`, `StructureServiceTest`
 - **Playwright:** no

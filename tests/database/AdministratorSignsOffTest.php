@@ -13,7 +13,7 @@ use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * With no dean in the department, the institution's administrator signs off
+ * With no dean in the college, the institution's administrator signs off
  * the finalized grades (audit decisions 2.1–2.5, D3, D4).
  *
  * @internal
@@ -24,7 +24,7 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
     private int $program;
 
@@ -48,14 +48,14 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
         PermissionMatrix::flush();
         session()->destroy();
 
-        $home              = DeanFactory::department('SO');
+        $home              = DeanFactory::college('SO');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
+        $this->college  = $home['college'];
 
-        $other = DeanFactory::department('SP', $this->institution);
-        DeanFactory::dean($this->institution, $other['department'], 'Otto');
+        $other = DeanFactory::college('SP', $this->institution);
+        DeanFactory::dean($this->institution, $other['college'], 'Otto');
 
-        $this->program  = DeanFactory::program(DeanFactory::subDepartment($this->department, 'SO'), 'SO');
+        $this->program  = DeanFactory::program(DeanFactory::department($this->college, 'SO'), 'SO');
         $this->term     = DeanFactory::term($this->institution);
         $this->offering = $this->finalizedSection('IT401');
 
@@ -106,7 +106,7 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
 
     public function testWhereThereIsADeanTheAdministratorCannot(): void
     {
-        DeanFactory::dean($this->institution, $this->department, 'Dana');
+        DeanFactory::dean($this->institution, $this->college, 'Dana');
 
         $result = $this->service->signOff($this->adminA, $this->offering);
 
@@ -116,7 +116,7 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
 
     public function testADeanMaySignOffASectionTheyTeach(): void
     {
-        $dean = DeanFactory::dean($this->institution, $this->department, 'Dana');
+        $dean = DeanFactory::dean($this->institution, $this->college, 'Dana');
         $dean->addGroup('instructor');
         CourseFactory::assignInstructor($this->offering, $dean);
 
@@ -179,11 +179,11 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
     public function testTheFirstDeanTellsEachSignerWhatNowNeedsSignOff(): void
     {
         // A second institution, with no dean yet: its finalized grades go straight to the SIS today.
-        ['institution' => $fresh, 'department' => $dept] = DeanFactory::department('SQ');
-        ['department' => $other]                         = DeanFactory::department('SR', $fresh);
+        ['institution' => $fresh, 'college' => $college] = DeanFactory::college('SQ');
+        ['college' => $other]                         = DeanFactory::college('SR', $fresh);
         $term     = DeanFactory::term($fresh);
-        $mine     = DeanFactory::program(DeanFactory::subDepartment($dept, 'SQ'), 'SQ');
-        $theirs   = DeanFactory::program(DeanFactory::subDepartment($other, 'SR'), 'SR');
+        $mine     = DeanFactory::program(DeanFactory::department($college, 'SQ'), 'SQ');
+        $theirs   = DeanFactory::program(DeanFactory::department($other, 'SR'), 'SR');
         $finalize = static function (int $program, string $code) use ($term): int {
             $offering = DeanFactory::offering($program, $term, $code);
             db_connect()->table('grade_finalizations')->insert(['course_offering_id' => $offering, 'finalized_by' => 1, 'finalized_at' => date('Y-m-d H:i:s'), 'open_marker' => 1]);
@@ -197,10 +197,10 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
         $admin = PeopleFactory::person('institutional_admin', 'Ivy', 'Admin', null, $fresh);
         $dean  = PeopleFactory::person('dean', 'Dora', 'Dean', null, $fresh);
 
-        (new DeanAssignmentService())->assign($fresh, $dept, (int) $dean->id, $admin);
+        (new DeanAssignmentService())->assign($fresh, $college, (int) $dean->id, $admin);
 
         $toDean = $this->notified($dean, 'grade_signoff');
-        $this->assertCount(1, $toDean, 'the new dean signs off their own department');
+        $this->assertCount(1, $toDean, 'the new dean signs off their own college');
         $this->assertStringContainsString('1 section', (string) $toDean[0]['body']);
         $this->assertStringContainsString('LW100', (string) $toDean[0]['body']);
 
@@ -216,12 +216,12 @@ final class AdministratorSignsOffTest extends DatabaseTestCase
     {
         $this->service->signOff($this->adminA, $this->offering);
 
-        DeanFactory::dean($this->institution, $this->department, 'Dana');
+        DeanFactory::dean($this->institution, $this->college, 'Dana');
 
         $this->assertTrue($this->service->isSignedOff($this->offering));
     }
 
-    public function testTheAdministratorsBoardIsTheDepartmentsWithNoDean(): void
+    public function testTheAdministratorsBoardIsTheCollegesWithNoDean(): void
     {
         $this->assertSame([$this->program], $this->service->adminProgramIds($this->adminA));
 

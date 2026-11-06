@@ -1,10 +1,10 @@
 <?php
 /**
- * A slim strip above the dashboard for what the dean has announced to this person's department, sub-department
+ * A slim strip above the dashboard for what the dean has announced to this person's college, department
  * or program: up to three, newest first, each opening the Announcements page. Nothing is printed when there is
  * nothing to say, so a dashboard without any looks exactly as before. (The dean's own dashboard is its own page.)
  */
-$deanPosts = (new App\Services\Courses\DepartmentAnnouncementService())->forUser(auth()->user(), 3);
+$deanPosts = (new App\Services\Courses\CollegeAnnouncementService())->forUser(auth()->user(), 3);
 
 if ($deanPosts === []) {
     return;
@@ -13,9 +13,9 @@ if ($deanPosts === []) {
 $area = esc(active_role() ?: (auth()->user()->getGroups()[0] ?? ''));
 ?>
 
-<section class="shrink-0 flex flex-col gap-1 rounded-2xl border border-brand/20 bg-brand-tint px-5 py-3" aria-label="From your department" data-department-strip>
+<section class="shrink-0 flex flex-col gap-1 rounded-2xl border border-brand/20 bg-brand-tint px-5 py-3" aria-label="From your college" data-college-strip>
     <div class="flex items-center justify-between gap-3">
-        <span class="text-xs font-bold uppercase tracking-wide text-brand-dark">From your department</span>
+        <span class="text-xs font-bold uppercase tracking-wide text-brand-dark">From your college</span>
         <a href="<?= esc(site_url($area . '/announcements')) ?>" class="text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">All announcements</a>
     </div>
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Models\Academic\DepartmentModel;
+use App\Models\Academic\CollegeModel;
 use App\Models\Academic\InstitutionModel;
 use App\Models\Academic\ProgramModel;
-use App\Models\Academic\SubDepartmentModel;
+use App\Models\Academic\DepartmentModel;
 use App\Models\Assignments\ChairpersonAssignmentModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Courses\EnrollmentModel;
@@ -14,8 +14,8 @@ use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * institutions -> departments -> sub-departments -> programs: the model helpers that walk it, and
- * where the rest of the app shows it (the profile card's department line, the course queries).
+ * institutions -> colleges -> departments -> programs: the model helpers that walk it, and
+ * where the rest of the app shows it (the profile card's college line, the course queries).
  *
  * @internal
  */
@@ -23,7 +23,7 @@ final class AcademicHierarchyTest extends DatabaseTestCase
 {
     protected bool $isolateTests = true;
 
-    /** @return array{institution: int, department: int, sub: int, program: int} */
+    /** @return array{institution: int, college: int, sub: int, program: int} */
     private function chain(string $tag, string $programCode = 'BSIT'): array
     {
         $db = db_connect();
@@ -31,15 +31,15 @@ final class AcademicHierarchyTest extends DatabaseTestCase
         $db->table('institutions')->insert(['name' => "Inst {$tag}", 'code' => "I{$tag}"]);
         $institution = (int) $db->insertID();
 
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+        $college = (int) $db->insertID();
+
+        $db->table('departments')->insert(['college_id' => $college, 'code' => "S{$tag}", 'name' => "College {$tag}"]);
         $department = (int) $db->insertID();
 
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => "S{$tag}", 'name' => "Department {$tag}"]);
-        $sub = (int) $db->insertID();
+        $db->table('programs')->insert(['department_id' => $department, 'code' => $programCode, 'name' => "Program {$tag}"]);
 
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'code' => $programCode, 'name' => "Program {$tag}"]);
-
-        return ['institution' => $institution, 'department' => $department, 'sub' => $sub, 'program' => (int) $db->insertID()];
+        return ['institution' => $institution, 'college' => $college, 'department' => $department, 'program' => (int) $db->insertID()];
     }
 
     private function programOf(int $offeringId): int
@@ -64,43 +64,43 @@ final class AcademicHierarchyTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testAnInstitutionsDepartmentsAreListedByName(): void
+    public function testAnInstitutionsCollegesAreListedByName(): void
     {
         $a = $this->chain('1');
-        db_connect()->table('departments')->insert(['institution_id' => $a['institution'], 'code' => 'AAA', 'name' => 'Aardvark College']);
+        db_connect()->table('colleges')->insert(['institution_id' => $a['institution'], 'code' => 'AAA', 'name' => 'Aardvark College']);
         $this->chain('2');
 
-        $names = array_column((new DepartmentModel())->forInstitution($a['institution']), 'name');
+        $names = array_column((new CollegeModel())->forInstitution($a['institution']), 'name');
 
         $this->assertSame(['Aardvark College', 'College 1'], $names);
     }
 
-    public function testSubDepartmentsHideInactiveOnesUnlessAsked(): void
+    public function testDepartmentsHideInactiveOnesUnlessAsked(): void
     {
         $a = $this->chain('1');
-        db_connect()->table('sub_departments')->insert(['department_id' => $a['department'], 'code' => 'OLD', 'name' => 'Closed Department', 'is_active' => 0]);
-        $model = new SubDepartmentModel();
+        db_connect()->table('departments')->insert(['college_id' => $a['college'], 'code' => 'OLD', 'name' => 'Closed College', 'is_active' => 0]);
+        $model = new DepartmentModel();
 
-        $this->assertSame(['Department 1'], array_column($model->forDepartment($a['department']), 'name'));
-        $this->assertSame(['Closed Department', 'Department 1'], array_column($model->forDepartment($a['department'], true), 'name'));
+        $this->assertSame(['College 1'], array_column($model->forCollege($a['college']), 'name'));
+        $this->assertSame(['Closed College', 'College 1'], array_column($model->forCollege($a['college'], true), 'name'));
     }
 
-    public function testProgramsAreListedPerSubDepartmentAndPerInstitution(): void
+    public function testProgramsAreListedPerDepartmentAndPerInstitution(): void
     {
         $a = $this->chain('1');
         $db = db_connect();
-        $db->table('departments')->insert(['institution_id' => $a['institution'], 'code' => 'GEN', 'name' => 'General']);
+        $db->table('colleges')->insert(['institution_id' => $a['institution'], 'code' => 'GEN', 'name' => 'General']);
+        $otherCollege = (int) $db->insertID();
+        $db->table('departments')->insert(['college_id' => $otherCollege, 'code' => 'GE', 'name' => 'General Subjects']);
         $otherDepartment = (int) $db->insertID();
-        $db->table('sub_departments')->insert(['department_id' => $otherDepartment, 'code' => 'GE', 'name' => 'General Subjects']);
-        $otherSub = (int) $db->insertID();
-        $db->table('programs')->insert(['sub_department_id' => $otherSub, 'code' => 'BSGE', 'name' => 'Zeta Program']);
+        $db->table('programs')->insert(['department_id' => $otherDepartment, 'code' => 'BSGE', 'name' => 'Zeta Program']);
         $this->chain('2');
 
-        $this->assertSame(['Program 1'], array_column((new ProgramModel())->forSubDepartment($a['sub']), 'name'));
+        $this->assertSame(['Program 1'], array_column((new ProgramModel())->forDepartment($a['department']), 'name'));
         $this->assertSame(
             ['Program 1', 'Zeta Program'],
             array_column((new InstitutionModel())->programs($a['institution']), 'name'),
-            "an institution's programs include every department's"
+            "an institution's programs include every college's"
         );
     }
 
@@ -111,20 +111,20 @@ final class AcademicHierarchyTest extends DatabaseTestCase
         $row = (new ProgramModel())->withHierarchy($a['program']);
 
         $this->assertSame('Program 1', $row['name']);
-        $this->assertSame('Department 1', $row['sub_department_name']);
-        $this->assertSame('S1', $row['sub_department_code']);
         $this->assertSame('College 1', $row['department_name']);
+        $this->assertSame('S1', $row['department_code']);
+        $this->assertSame('College 1', $row['college_name']);
         $this->assertSame('Inst 1', $row['institution_name']);
         $this->assertSame($a['institution'], (int) $row['institution_id']);
         $this->assertNull((new ProgramModel())->withHierarchy(999999));
     }
 
-    public function testProgramsNeedASubDepartment(): void
+    public function testProgramsNeedADepartment(): void
     {
         $model = new ProgramModel();
 
         $this->assertFalse($model->insert(['name' => 'Orphan', 'code' => 'ORP', 'status' => 'active']));
-        $this->assertArrayHasKey('sub_department_id', $model->errors());
+        $this->assertArrayHasKey('department_id', $model->errors());
     }
 
     /*
@@ -133,7 +133,7 @@ final class AcademicHierarchyTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testAStudentsProfileNamesTheDepartmentOfTheirProgram(): void
+    public function testAStudentsProfileNamesTheCollegeOfTheirProgram(): void
     {
         $a = $this->chain('1');
         $student = CourseFactory::user('student');
@@ -142,12 +142,12 @@ final class AcademicHierarchyTest extends DatabaseTestCase
         $profile = (new UserProfileModel())->retrieveUserProfile($student);
 
         $this->assertSame('Program 1', $profile['program_name']);
-        $this->assertSame('Department 1', $profile['sub_department_name']);
         $this->assertSame('College 1', $profile['department_name']);
-        $this->assertSame('D1', $profile['department_code']);
+        $this->assertSame('College 1', $profile['college_name']);
+        $this->assertSame('D1', $profile['college_code']);
     }
 
-    public function testAnInstructorsDepartmentIsThatOfTheFirstCourseTheyWereGiven(): void
+    public function testAnInstructorsCollegeIsThatOfTheFirstCourseTheyWereGiven(): void
     {
         $instructor = CourseFactory::user('instructor');
         $this->profile($instructor->id);
@@ -160,23 +160,23 @@ final class AcademicHierarchyTest extends DatabaseTestCase
 
         $profile = (new UserProfileModel())->retrieveUserProfile($instructor);
 
-        $this->assertSame($firstHome['sub_department_name'], $profile['teaching_sub_department_name']);
         $this->assertSame($firstHome['department_name'], $profile['teaching_department_name']);
-        $this->assertSame($firstHome['department_code'], $profile['teaching_department_code']);
+        $this->assertSame($firstHome['college_name'], $profile['teaching_college_name']);
+        $this->assertSame($firstHome['college_code'], $profile['teaching_college_code']);
     }
 
-    public function testAnInstructorWhoTeachesNothingHasNoDepartment(): void
+    public function testAnInstructorWhoTeachesNothingHasNoCollege(): void
     {
         $instructor = CourseFactory::user('instructor');
         $this->profile($instructor->id);
 
         $profile = (new UserProfileModel())->retrieveUserProfile($instructor);
 
-        $this->assertNull($profile['teaching_sub_department_name']);
         $this->assertNull($profile['teaching_department_name']);
+        $this->assertNull($profile['teaching_college_name']);
     }
 
-    public function testTheProfileCardShowsTheInstructorsDepartmentAndNotAMadeUpOne(): void
+    public function testTheProfileCardShowsTheInstructorsCollegeAndNotAMadeUpOne(): void
     {
         $instructor = CourseFactory::user('instructor');
         $this->profile($instructor->id);
@@ -190,7 +190,7 @@ final class AcademicHierarchyTest extends DatabaseTestCase
 
         CourseFactory::assignInstructor($offering, $instructor);
         $withCourse = $render((new UserProfileModel())->retrieveUserProfile($instructor));
-        $this->assertStringContainsString(esc($home['sub_department_name']), $withCourse);
+        $this->assertStringContainsString(esc($home['department_name']), $withCourse);
     }
 
     /*
@@ -199,7 +199,7 @@ final class AcademicHierarchyTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testCourseListsCarryTheDepartmentAboveTheProgram(): void
+    public function testCourseListsCarryTheCollegeAboveTheProgram(): void
     {
         $offering = CourseFactory::offering();
         db_connect()->table('course_offerings')->where('id', $offering)->update(['status' => 'active']);
@@ -218,8 +218,8 @@ final class AcademicHierarchyTest extends DatabaseTestCase
         ];
 
         foreach ($rows as $index => $row) {
+            $this->assertSame($home['college_name'], $row['college_name'], "query #{$index}");
             $this->assertSame($home['department_name'], $row['department_name'], "query #{$index}");
-            $this->assertSame($home['sub_department_name'], $row['sub_department_name'], "query #{$index}");
             $this->assertSame($home['institution_name'], $row['institution_name'], "query #{$index}");
         }
     }
@@ -230,45 +230,45 @@ final class AcademicHierarchyTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testASubDepartmentsActiveChairIsRecognisedAndOthersAreNot(): void
+    public function testADepartmentsActiveChairIsRecognisedAndOthersAreNot(): void
     {
-        $sub = $this->chain('1')['sub'];
-        $otherSub = $this->chain('2')['sub'];
+        $department = $this->chain('1')['department'];
+        $otherDepartment = $this->chain('2')['department'];
         $chair = CourseFactory::user('chairperson');
         $notChair = CourseFactory::user('chairperson');
         $model = new ChairpersonAssignmentModel();
 
-        $model->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
+        $model->insert(['department_id' => $department, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
 
-        $this->assertTrue($model->isChairOf($chair->id, $sub));
-        $this->assertFalse($model->isChairOf($chair->id, $otherSub), 'holds no assignment to the other sub-department');
-        $this->assertFalse($model->isChairOf($notChair->id, $sub), 'was never assigned at all');
+        $this->assertTrue($model->isChairOf($chair->id, $department));
+        $this->assertFalse($model->isChairOf($chair->id, $otherDepartment), 'holds no assignment to the other department');
+        $this->assertFalse($model->isChairOf($notChair->id, $department), 'was never assigned at all');
     }
 
     public function testARevokedChairNoLongerCounts(): void
     {
-        $sub = $this->chain('1')['sub'];
+        $department = $this->chain('1')['department'];
         $chair = CourseFactory::user('chairperson');
         $model = new ChairpersonAssignmentModel();
 
-        $model->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'revoked']);
+        $model->insert(['department_id' => $department, 'chairperson_user_id' => $chair->id, 'status' => 'revoked']);
 
-        $this->assertFalse($model->isChairOf($chair->id, $sub));
-        $this->assertSame([], $model->subDepartmentIdsFor($chair->id));
+        $this->assertFalse($model->isChairOf($chair->id, $department));
+        $this->assertSame([], $model->departmentIdsFor($chair->id));
     }
 
-    public function testASubDepartmentIdsForListsOnlyActiveAssignments(): void
+    public function testADepartmentIdsForListsOnlyActiveAssignments(): void
     {
-        $a = $this->chain('1')['sub'];
-        $b = $this->chain('2')['sub'];
-        $c = $this->chain('3')['sub'];
+        $a = $this->chain('1')['department'];
+        $b = $this->chain('2')['department'];
+        $c = $this->chain('3')['department'];
         $chair = CourseFactory::user('chairperson');
         $model = new ChairpersonAssignmentModel();
 
-        $model->insert(['sub_department_id' => $a, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
-        $model->insert(['sub_department_id' => $b, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
-        $model->insert(['sub_department_id' => $c, 'chairperson_user_id' => $chair->id, 'status' => 'expired']);
+        $model->insert(['department_id' => $a, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
+        $model->insert(['department_id' => $b, 'chairperson_user_id' => $chair->id, 'status' => 'active']);
+        $model->insert(['department_id' => $c, 'chairperson_user_id' => $chair->id, 'status' => 'expired']);
 
-        $this->assertSame([$a, $b], $model->subDepartmentIdsFor($chair->id));
+        $this->assertSame([$a, $b], $model->departmentIdsFor($chair->id));
     }
 }

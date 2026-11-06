@@ -68,11 +68,11 @@ final class InstitutionRolesPageTest extends RouteTestCase
         $this->assertStringContainsString('A box you have not changed follows the platform', $body);
     }
 
-    public function testThePageWarnsWhenNobodyCanApproveInADepartment(): void
+    public function testThePageWarnsWhenNobodyCanApproveInACollege(): void
     {
-        $withDean = \Tests\Support\DeanFactory::department('IRW', $this->institution);
-        \Tests\Support\DeanFactory::dean($this->institution, $withDean['department']);
-        \Tests\Support\DeanFactory::department('IRX', $this->institution);
+        $withDean = \Tests\Support\DeanFactory::college('IRW', $this->institution);
+        \Tests\Support\DeanFactory::dean($this->institution, $withDean['college']);
+        \Tests\Support\DeanFactory::college('IRX', $this->institution);
         db_connect()->table('role_permissions')->insert(['institution_id' => $this->institution, 'role' => 'institutional_admin', 'permission' => 'grades.approve', 'granted' => 0]);
         PermissionMatrix::flush();
 

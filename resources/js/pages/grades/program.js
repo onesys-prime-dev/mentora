@@ -1,6 +1,6 @@
 /*
 |--------------------------------------------------------------------------
-| The chairperson's Program tab (and the dean's Department view): a row opens that section's grid, read-only
+| The chairperson's Program tab (and the dean's College view): a row opens that section's grid, read-only
 |--------------------------------------------------------------------------
 |
 | The dean's page draws no Edit as chairperson, so nothing there ever unlocks; its grid base is dean/api/courses.

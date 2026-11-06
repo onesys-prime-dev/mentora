@@ -100,7 +100,7 @@ final class CsvCallsNameTheirEscapeTest extends CIUnitTestCase
             return [null, false];
         }
 
-        $depth = 0;
+        $collegeh = 0;
         $args  = 0;
         $named = false;
         $any   = false;
@@ -109,20 +109,20 @@ final class CsvCallsNameTheirEscapeTest extends CIUnitTestCase
             $t = $tokens[$i];
 
             if (in_array($t, ['(', '[', '{'], true) || (is_array($t) && in_array($t[0], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true))) {
-                $depth++;
+                $collegeh++;
 
                 continue;
             }
 
             if (in_array($t, [')', ']', '}'], true)) {
-                if (--$depth === 0) {
+                if (--$collegeh === 0) {
                     break;
                 }
 
                 continue;
             }
 
-            if ($depth !== 1) {
+            if ($collegeh !== 1) {
                 continue;
             }
 

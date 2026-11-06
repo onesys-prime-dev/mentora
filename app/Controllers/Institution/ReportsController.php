@@ -47,7 +47,7 @@ class ReportsController extends BaseController
     private function show(string $tab): string
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
-        [$filters, $department, $program] = $this->filters();
+        [$filters, $college, $program] = $this->filters();
 
         $sort = (string) ($this->request->getGet('sort') ?? 'course_code');
         $dir  = (string) ($this->request->getGet('dir') ?? 'asc');
@@ -57,10 +57,10 @@ class ReportsController extends BaseController
             'page'           => 'institution-reports',
             'pageTitle'      => 'Reports',
             'user'           => auth()->user(),
-            'reportData'     => $this->reports->report($institutionId, $filters, $department, $program, $sort, $dir),
+            'reportData'     => $this->reports->report($institutionId, $filters, $college, $program, $sort, $dir),
             'reportOptions'  => $this->reports->options($institutionId),
             'reportFilters'  => $filters,
-            'reportDepartment' => $department,
+            'reportCollege' => $college,
             'reportProgram'  => $program,
             'reportSort'     => $sort,
             'reportDir'      => $dir === 'desc' ? 'desc' : 'asc',
@@ -93,9 +93,9 @@ class ReportsController extends BaseController
         }
 
         $institutionId = (new InstitutionScope())->requireInstitutionId();
-        [$filters, $department, $program] = $this->filters();
+        [$filters, $college, $program] = $this->filters();
 
-        $report = $this->reports->report($institutionId, $filters, $department, $program);
+        $report = $this->reports->report($institutionId, $filters, $college, $program);
         $export = $this->reports->csv($kind, $report, $filters);
 
         // Taking data out is itself recorded.
@@ -103,7 +103,7 @@ class ReportsController extends BaseController
             'target_type'    => 'institution',
             'target_id'      => $institutionId,
             'institution_id' => $institutionId,
-            'new'            => ['report' => $kind, 'rows' => $export['rows'], 'filters' => $filters->toQuery(['department' => $department, 'program' => $program])],
+            'new'            => ['report' => $kind, 'rows' => $export['rows'], 'filters' => $filters->toQuery(['college' => $college, 'program' => $program])],
         ]);
 
         return $this->response
@@ -122,6 +122,6 @@ class ReportsController extends BaseController
 
         $int = static fn (mixed $v): ?int => is_string($v) && preg_match('/^\d{1,9}$/', $v) === 1 && (int) $v > 0 ? (int) $v : null;
 
-        return [MonitorProgramFilters::fromInput($get), $int($get['department'] ?? null), $int($get['program'] ?? null)];
+        return [MonitorProgramFilters::fromInput($get), $int($get['college'] ?? null), $int($get['program'] ?? null)];
     }
 }

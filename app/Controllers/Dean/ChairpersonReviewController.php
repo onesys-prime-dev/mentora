@@ -13,7 +13,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * The dean's review of what chairpersons changed in the department's courses: who, which course, what and
+ * The dean's review of what chairpersons changed in the college's courses: who, which course, what and
  * when, with filters, a link into the course (read-only) and a "reviewed" mark per entry. Review only:
  * nothing here blocks or reverts a change. Marking answers JSON for a script and redirects with a message
  * without one. Which entries are the dean's to mark is the service's check.
@@ -26,7 +26,7 @@ class ChairpersonReviewController extends BaseController
     {
         $user = auth()->user();
 
-        if ((new DeanAccessService())->departmentFor($user) === null) {
+        if ((new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Chairperson review', 'page' => 'chairperson-review', 'user' => $user]);
         }
 
@@ -37,12 +37,12 @@ class ChairpersonReviewController extends BaseController
         $loadError      = false;
         $result         = ['rows' => [], 'total' => 0, 'counts' => ['unreviewed' => 0, 'reviewed' => 0]];
         $chairpersons   = [];
-        $subDepartments = [];
+        $departments = [];
 
         try {
             $result         = $service->entries($user, $filters, $page, self::PER_PAGE);
             $chairpersons   = $service->chairpersons($user);
-            $subDepartments = (new DeanCourseSearch())->subDepartments($user);
+            $departments = (new DeanCourseSearch())->departments($user);
         } catch (\Throwable $e) {
             log_message('error', 'Chairperson review failed to load: ' . $e->getMessage());
             $loadError = true;
@@ -59,7 +59,7 @@ class ChairpersonReviewController extends BaseController
             'pageNumber'     => $page,
             'pages'          => max(1, (int) ceil($result['total'] / self::PER_PAGE)),
             'chairpersons'   => $chairpersons,
-            'subDepartments' => $subDepartments,
+            'departments' => $departments,
             'loadError'      => $loadError,
             'flashToasts'    => true,
             'previousPage'   => 'dashboard',

@@ -36,7 +36,7 @@ final class AdminMessagingTest extends DatabaseTestCase
 
         $this->buildParentScenario('AD');
         $this->admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
-        $this->dean  = DeanFactory::dean($this->institution, $this->department);
+        $this->dean  = DeanFactory::dean($this->institution, $this->college);
     }
 
     private function messages(): MessageService
@@ -71,7 +71,7 @@ final class AdminMessagingTest extends DatabaseTestCase
 
     public function testTheAdminFindsPeopleOfTheirInstitutionOnly(): void
     {
-        $far = PeopleFactory::person('instructor', 'Far', 'Tructor', null, DeanFactory::department('AD2')['institution']);
+        $far = PeopleFactory::person('instructor', 'Far', 'Tructor', null, DeanFactory::college('AD2')['institution']);
 
         $found = (new RecipientSearch())->search($this->admin, 'Tructor');
 

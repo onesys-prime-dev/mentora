@@ -14,7 +14,7 @@
 
 - Branch `feat/global-grades-chairperson`, stacked on phase 3 (created, checked out). **No commits by the executor.** Never migrate, write, start, stop or kill the owner's database.
 - Keep line endings; `app/Config/Routes.php` is CRLF (Edit tool only). New files LF.
-- A chairperson reaches only sections of the sub-departments they chair (`ChairpersonAccessService`), offerings `active` or `completed`.
+- A chairperson reaches only sections of the departments they chair (`ChairpersonAccessService`), offerings `active` or `completed`.
 - **Finalizing is the instructor's:** the chairperson area has no finalize route and none is added; the chairperson page shows no Finalize or Finalize ready sections controls (reopen stays where it is today).
 - Program tab needs `program.monitor`; Edit as chairperson needs `grading.manage` (as chairperson); Nudge needs `followups.manage`; Download program needs `program.monitor`. A missing permission hides its control; the tab without `program.monitor` is not shown.
 - Every number from stored rows; never `GradingSchemeService::forOffering` in lists; viewing as someone writes nothing; query count does not grow with sections (test 3 vs 15).
@@ -23,10 +23,10 @@
 
 ## Review Focus
 
-1. A chairperson guessing a section id outside their sub-departments (`?section=`, a row click forged in the URL, the download): 404 / left out, never another program's grid (Tasks 2, 5).
+1. A chairperson guessing a section id outside their departments (`?section=`, a row click forged in the URL, the download): 404 / left out, never another program's grid (Tasks 2, 5).
 2. Edit as chairperson, then switching to another row: the new grid opens read-only again, and a score typed just before switching is saved to the right section (Task 3).
 3. A section with two instructors: Nudge lets the chairperson pick the recipient, never sends to someone not teaching it (Task 4).
-4. A chairperson who teaches nothing in their sub-departments, or lacks `program.monitor`: the page shows only the tab they have, never an empty tab bar or an error (Task 2).
+4. A chairperson who teaches nothing in their departments, or lacks `program.monitor`: the page shows only the tab they have, never an empty tab bar or an error (Task 2).
 5. A program with 60 sections: pagination, search and sort keep the page fast and the query count flat (Task 1, Task 2).
 
 ---
@@ -45,7 +45,7 @@
   - `ChairpersonProgramOverview::sections(User $chair, int $termId, array $opts = []): array{rows: list<Row>, total: int, tracker: array{finalized: int, ready: int, blocked: int, total: int}}` — `$opts` = `{q?: string, notFinalized?: bool, sort?: 'section'|'instructor'|'average'|'at_risk'|'waiting'|'status', dir?: 'asc'|'desc', page?: int}`, 25 per page; tracker counts all sections of the term regardless of filters. `Row` = `{offering_id, course_code, course_title, section_code, slug, instructors: list<array{id: int, name: string}>, average: ?float, at_risk: int, waiting: int, state, note, has_scheme, offering_status}`. `average` = mean effective percentage of enrolled/completed students with a record (null when none). `at_risk` = students with grade standing At risk/Failed/INC (published schemes only; grade reasons only — the activity rule stays on the At risk sub-pill).
   - `ChairpersonProgramOverview::mySections(User $chair, int $termId): list<array>` — `InstructorGradesOverview::sections()` rows for sections the chairperson teaches **and** may reach as chairperson.
 
-- [ ] **Step 1: Failing tests:** `testOnlySectionsOfChairedSubDepartmentsAreListed` (another sub-department's section absent; archived absent); `testColumnsAverageAtRiskWaitingAndStatus`; `testTheTrackerCountsTheWholeTermWhateverTheFilter`; `testSearchMatchesCodeTitleOrInstructor`; `testNotFinalizedOnly`; `testSortByEachColumnBothWays`; `testPagesOf25`; `testMySectionsAreTaughtAndChaired` (a taught section outside the chaired sub-department is left out); `testNoSchemeIsNotCreated`; `testTheQueryCountDoesNotGrowWithSections` (3 vs 15, 50 students each). InstructorGradesOverviewTest stays green unchanged.
+- [ ] **Step 1: Failing tests:** `testOnlySectionsOfChairedDepartmentsAreListed` (another department's section absent; archived absent); `testColumnsAverageAtRiskWaitingAndStatus`; `testTheTrackerCountsTheWholeTermWhateverTheFilter`; `testSearchMatchesCodeTitleOrInstructor`; `testNotFinalizedOnly`; `testSortByEachColumnBothWays`; `testPagesOf25`; `testMySectionsAreTaughtAndChaired` (a taught section outside the chaired department is left out); `testNoSchemeIsNotCreated`; `testTheQueryCountDoesNotGrowWithSections` (3 vs 15, 50 students each). InstructorGradesOverviewTest stays green unchanged.
 - [ ] **Step 2: Run** `vendor/bin/phpunit --no-coverage tests/database/ChairpersonProgramOverviewTest.php tests/database/InstructorGradesOverviewTest.php` — Expected: new FAIL, old PASS.
 - [ ] **Step 3: Implement** (search/sort/paginate in PHP over the term's rows is fine — a program term is at most a few hundred sections — as long as the queries stay batched).
 - [ ] **Step 4: Run** it plus `tests/database/GlobalGradesQueryBudgetTest.php` — Expected: PASS.

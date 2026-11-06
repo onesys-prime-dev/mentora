@@ -49,7 +49,7 @@ final class InstitutionPurgeTest extends DatabaseTestCase
         parent::tearDown();
     }
 
-    /** A complete institution (department down to an enrolled student), already deleted $daysAgo days before NOW. */
+    /** A complete institution (college down to an enrolled student), already deleted $daysAgo days before NOW. */
     private function deletedInstitution(int $daysAgo, int &$offering = 0): int
     {
         $offering = CourseFactory::offering();
@@ -70,11 +70,11 @@ final class InstitutionPurgeTest extends DatabaseTestCase
     private function institutionOf(int $offering): int
     {
         return (int) db_connect()->table('course_offerings')
-            ->select('departments.institution_id')
+            ->select('colleges.institution_id')
             ->join('courses', 'courses.id = course_offerings.course_id')
             ->join('programs', 'programs.id = courses.program_id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->where('course_offerings.id', $offering)
             ->get()->getRowArray()['institution_id'];
     }
@@ -122,7 +122,7 @@ final class InstitutionPurgeTest extends DatabaseTestCase
         $this->service->purge($institution, null, $this->admin);
 
         $this->assertFalse($this->exists('institutions', 'id', $institution));
-        $this->assertSame(0, db_connect()->table('departments')->where('institution_id', $institution)->countAllResults());
+        $this->assertSame(0, db_connect()->table('colleges')->where('institution_id', $institution)->countAllResults());
         $this->assertFalse($this->exists('course_offerings', 'id', $offering));
         $this->assertFalse($this->exists('course_modules', 'id', $module));
         $this->assertSame(0, db_connect()->table('enrollments')->where('offering_id', $offering)->countAllResults());
@@ -271,7 +271,7 @@ final class InstitutionPurgeTest extends DatabaseTestCase
         $this->assertSame($row['name'], $old['name']);
         $this->assertSame($row['code'], $old['code']);
         $this->assertSame('past', $old['status']);
-        $this->assertSame(1, $old['departments']);
+        $this->assertSame(1, $old['colleges']);
         $this->assertSame(1, $old['programs']);
         $this->assertSame(1, $old['courses']);
         $this->assertSame(2, $old['members']);

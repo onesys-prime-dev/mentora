@@ -13,7 +13,7 @@ use CodeIgniter\Test\CIUnitTestCase;
  *
  * "Named in a test" is a floor, not proof of good tests: it forces the
  * conversation, and the coverage floor and the changed-lines check judge the
- * depth.
+ * collegeh.
  *
  * @internal
  */

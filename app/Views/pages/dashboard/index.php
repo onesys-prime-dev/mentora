@@ -135,7 +135,7 @@ $cells = $layout['cells'];
     </div>
 
     <?php if (in_array($userRole, ['student', 'instructor', 'chairperson'], true)): ?>
-        <?= $this->include('pages/dashboard/partials/department-announcements') ?>
+        <?= $this->include('pages/dashboard/partials/college-announcements') ?>
     <?php endif; ?>
 
     <!--

@@ -25,10 +25,10 @@ use Tests\Support\RouteTestCase;
  */
 final class ChairpersonGradesPageTest extends RouteTestCase
 {
-    /** @var array{institution: int, department: int} */
+    /** @var array{institution: int, college: int} */
     private array $unit;
 
-    private int $sub;
+    private int $department;
 
     private int $program;
 
@@ -43,11 +43,11 @@ final class ChairpersonGradesPageTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         PermissionMatrix::flush();
 
-        $this->unit    = DeanFactory::department('CGP');
-        $this->sub     = DeanFactory::subDepartment($this->unit['department'], 'CGP');
-        $this->program = DeanFactory::program($this->sub, 'CGP');
+        $this->unit    = DeanFactory::college('CGP');
+        $this->department     = DeanFactory::department($this->unit['college'], 'CGP');
+        $this->program = DeanFactory::program($this->department, 'CGP');
         $this->term    = DeanFactory::term($this->unit['institution']); // 2026-08-01 to 2026-12-20
-        $this->chair   = DeanFactory::chair($this->sub, 'Cara');
+        $this->chair   = DeanFactory::chair($this->department, 'Cara');
     }
 
     protected function tearDown(): void
@@ -82,11 +82,11 @@ final class ChairpersonGradesPageTest extends RouteTestCase
         return $offering;
     }
 
-    /** A section of another sub-department of the same department: not the chairperson's. */
+    /** A section of another department of the same college: not the chairperson's. */
     private function outsideSection(string $code = 'CS101'): int
     {
-        $sub     = DeanFactory::subDepartment($this->unit['department'], 'OUT' . $code);
-        $program = DeanFactory::program($sub, 'OUT' . $code);
+        $department     = DeanFactory::department($this->unit['college'], 'OUT' . $code);
+        $program = DeanFactory::program($department, 'OUT' . $code);
 
         return DeanFactory::offering($program, $this->term, $code);
     }
@@ -256,7 +256,7 @@ final class ChairpersonGradesPageTest extends RouteTestCase
         $this->assertSame(['My sections', 'Program'], $this->texts($x, "//*[@data-grades-tab]"));
         $this->assertSame('mine', $x->query("//*[@data-grades-tab][@aria-current='page']")->item(0)->getAttribute('data-grades-tab'), 'teaching a chaired section opens on My sections');
         $this->assertSame(['gradebook', 'to-grade', 'at-risk'], $this->attributes($x, '//*[@data-grades-sub]', 'data-grades-sub'));
-        $this->assertSame(['Gradebook', 'To grade', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-sub-label]'));
+        $this->assertSame(['Gradebook', 'To grade', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-department-label]'));
 
         // The instructor's cards, for the sections they teach in the program, opening on the busiest.
         $this->assertSame([(string) $ready, (string) $busy], $this->attributes($x, '//*[@data-section-card]', 'data-section-card'));
@@ -292,7 +292,7 @@ final class ChairpersonGradesPageTest extends RouteTestCase
 
             $this->assertSame(0, $x->query('//*[@data-grades-tab]')->length, "only one tab, so no tab bar ({$query})");
             $this->assertSame('Program', $this->text($x->query('//*[@data-grades-tab-label]')->item(0)));
-            $this->assertSame(['Sections', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-sub-label]'));
+            $this->assertSame(['Sections', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-department-label]'));
             $this->assertSame([(string) $offering], $this->attributes($x, '//a[@data-program-row]', 'data-section-id'));
             $this->assertSame(0, $x->query('//*[@data-section-card]')->length);
         }
@@ -317,7 +317,7 @@ final class ChairpersonGradesPageTest extends RouteTestCase
         $x = $this->xpath($this->open('tab=program'));
         $this->assertSame([(string) $mine], $this->attributes($x, '//*[@data-section-card]', 'data-section-card'));
         $this->assertSame(0, $x->query('//*[@data-grades-tab] | //*[@data-program-row] | //*[@data-nudge] | //*[@data-download-program]')->length);
-        $this->assertSame(['Gradebook', 'To grade', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-sub-label]'));
+        $this->assertSame(['Gradebook', 'To grade', 'At risk'], $this->texts($x, '//*[@data-grades-sub]/*[@data-department-label]'));
     }
 
     public function testTheProgramTabShowsTrackerTableAndTheSelectedGridReadOnly(): void

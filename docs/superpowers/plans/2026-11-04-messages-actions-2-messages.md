@@ -29,7 +29,7 @@
 - Forwarding out of a parent thread (`subject_student_id` set) is refused, even for the instructor.
 - Reply with a `reply_to` id from another conversation or one the person cannot see is refused without leaking that it exists.
 - A switch turned off refuses the action server-side even when the client still shows the button (stale page).
-- A chairperson outside the course's sub-department, and a dean outside its department, cannot change that chat's controls and get the shared 404 (not 403).
+- A chairperson outside the course's department, and a dean outside its college, cannot change that chat's controls and get the shared 404 (not 403).
 
 ---
 

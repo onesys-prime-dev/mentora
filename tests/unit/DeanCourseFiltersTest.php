@@ -28,16 +28,16 @@ final class DeanCourseFiltersTest extends CIUnitTestCase
 
     public function testValidValuesAreKeptAndRoundTripThroughTheQuery(): void
     {
-        $input = ['q' => ' networks ', 'term' => '3', 'sub_department' => '4', 'program' => '5', 'instructor' => '6', 'status' => 'completed', 'sort' => 'enrollment', 'dir' => 'DESC', 'page' => '2', 'per_page' => '24'];
+        $input = ['q' => ' networks ', 'term' => '3', 'department' => '4', 'program' => '5', 'instructor' => '6', 'status' => 'completed', 'sort' => 'enrollment', 'dir' => 'DESC', 'page' => '2', 'per_page' => '24'];
 
         $filters = DeanCourseFilters::fromInput($input);
 
         $this->assertSame('networks', $filters->q);
-        $this->assertSame([3, 4, 5, 6], [$filters->termId, $filters->subDepartmentId, $filters->programId, $filters->instructorId]);
+        $this->assertSame([3, 4, 5, 6], [$filters->termId, $filters->departmentId, $filters->programId, $filters->instructorId]);
         $this->assertSame('completed', $filters->status);
         $this->assertTrue($filters->isFiltered());
         $this->assertSame(
-            ['q' => 'networks', 'term' => 3, 'sub_department' => 4, 'program' => 5, 'instructor' => 6, 'status' => 'completed', 'sort' => 'enrollment', 'dir' => 'desc', 'page' => 2, 'per_page' => 24],
+            ['q' => 'networks', 'term' => 3, 'department' => 4, 'program' => 5, 'instructor' => 6, 'status' => 'completed', 'sort' => 'enrollment', 'dir' => 'desc', 'page' => 2, 'per_page' => 24],
             $filters->toQuery()
         );
     }
@@ -45,13 +45,13 @@ final class DeanCourseFiltersTest extends CIUnitTestCase
     public function testInvalidValuesAreDroppedOrDefaulted(): void
     {
         $filters = DeanCourseFilters::fromInput([
-            'q' => ['array'], 'term' => '-3', 'sub_department' => 'abc', 'program' => '0', 'instructor' => '1.5',
+            'q' => ['array'], 'term' => '-3', 'department' => 'abc', 'program' => '0', 'instructor' => '1.5',
             'status' => 'deleted', 'sort' => 'password', 'dir' => 'sideways', 'page' => '-3', 'per_page' => '9999',
         ]);
 
         $this->assertNull($filters->q);
         $this->assertNull($filters->termId);
-        $this->assertNull($filters->subDepartmentId);
+        $this->assertNull($filters->departmentId);
         $this->assertNull($filters->programId);
         $this->assertNull($filters->instructorId);
         $this->assertNull($filters->status);

@@ -35,8 +35,8 @@ final class MonitorProgramPageBuilderTest extends DatabaseTestCase
         $this->monitor = new MonitorProgramService();
         $this->builder = new MonitorProgramPage($this->monitor);
 
-        $home           = DeanFactory::department('B');
-        $this->program  = DeanFactory::program(DeanFactory::subDepartment($home['department'], 'B'), 'B');
+        $home           = DeanFactory::college('B');
+        $this->program  = DeanFactory::program(DeanFactory::department($home['college'], 'B'), 'B');
         $term           = DeanFactory::term($home['institution']);
         $this->offering = DeanFactory::offering($this->program, $term, 'IT101', 'A', 'active', 'Intro to Computing');
 

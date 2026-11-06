@@ -124,8 +124,8 @@ class OfferingService
         $courses = $db->table('courses c')
             ->select('c.id, c.course_code, c.course_title')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->where('c.status', 'active')
             ->orderBy('c.course_code')
@@ -167,8 +167,8 @@ class OfferingService
         return [
             'terms'    => $db->table('academic_terms')->select('id, name, academic_year, status')->where('institution_id', $institutionId)->orderBy('start_date', 'DESC')->get()->getResultArray(),
             'programs' => $db->table('programs p')->select('p.id, p.code, p.name')
-                ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-                ->join('departments d', 'd.id = sd.department_id')
+                ->join('departments sd', 'sd.id = p.department_id')
+                ->join('colleges d', 'd.id = sd.college_id')
                 ->where('d.institution_id', $institutionId)->orderBy('p.code')->get()->getResultArray(),
         ];
     }
@@ -478,8 +478,8 @@ class OfferingService
         return db_connect()->table('course_offerings o')
             ->join('courses c', 'c.id = o.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->join('academic_terms t', 't.id = o.term_id')
             ->where('d.institution_id', $institutionId);
     }

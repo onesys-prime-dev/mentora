@@ -290,8 +290,8 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $theirMessage = (int) (new MessageService())->send($other, $theirs, 'private', $this->uuid())['message']['id'];
 
         $farInstitution = PeopleFactory::institution('FARY');
-        $farDept        = DeanFactory::department('FY', $farInstitution);
-        $farProgram     = DeanFactory::program(DeanFactory::subDepartment($farDept['department'], 'FY'), 'FY');
+        $farCollege        = DeanFactory::college('FY', $farInstitution);
+        $farProgram     = DeanFactory::program(DeanFactory::department($farCollege['college'], 'FY'), 'FY');
         $farStudent     = PeopleFactory::person('student', 'Far', 'S', null, $farInstitution);
         $farInstructor  = PeopleFactory::person('instructor', 'Far', 'I', null, $farInstitution);
         $farOffering    = DeanFactory::offering($farProgram, DeanFactory::term($farInstitution), 'FY1');

@@ -55,10 +55,10 @@ final class ViewAsWritesNothingTest extends RouteTestCase
         Services::resetSingle('settings');
         FakeEmail::install();
 
-        $home              = DeanFactory::department('VW');
+        $home              = DeanFactory::college('VW');
         $this->institution = $home['institution'];
-        $sub               = DeanFactory::subDepartment($home['department'], 'VW');
-        $offering          = DeanFactory::offering(DeanFactory::program($sub, 'VW'), DeanFactory::term($this->institution), 'IT140');
+        $department               = DeanFactory::department($home['college'], 'VW');
+        $offering          = DeanFactory::offering(DeanFactory::program($department, 'VW'), DeanFactory::term($this->institution), 'IT140');
 
         $this->admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', 'ada@vw.test', $this->institution);
 
@@ -86,8 +86,8 @@ final class ViewAsWritesNothingTest extends RouteTestCase
             'student'     => $student,
             'parent'      => $parent,
             'instructor'  => $instructor,
-            'chairperson' => DeanFactory::chair($sub, 'Maria'),
-            'dean'        => DeanFactory::dean($this->institution, $home['department']),
+            'chairperson' => DeanFactory::chair($department, 'Maria'),
+            'dean'        => DeanFactory::dean($this->institution, $home['college']),
         ];
         $this->ids = [
             'children' => (int) $student->id, 'courses' => $offering, 'offering' => $offering, 'modules' => $module, 'units' => $unit,

@@ -15,10 +15,10 @@
  * Every state is said in a word beside its dot; a not-published section shows no average (its numbers are not
  * final enough to compare).
  *
- * The dean's Department view (area "dean", spec §9 "Phase 5 layout") is this list over the department's sections:
+ * The dean's College view (area "dean", spec §9 "Phase 5 layout") is this list over the college's sections:
  * the strip in place of the tracker ("Finalized {f} of {n} · Signed off {s} · Override requests waiting: {o}", the
  * last two linking to Sign-off and Approvals only where stripLinks gives an address), a Signed off column, Download
- * department, and never Edit as chairperson: the grid is always read-only. Without courses.view (canOpen false) the
+ * college, and never Edit as chairperson: the grid is always read-only. Without courses.view (canOpen false) the
  * dean's course API would refuse the grid, so neither the grid nor Open in course is drawn.
  *
  * @var string                                                                $area
@@ -148,14 +148,14 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
     <?php elseif ($dean): ?>
         <?= view('components/empty-state', [
             'icon'  => 'grades',
-            'title' => $programId === null ? 'No sections in your department this term' : 'No sections in this program this term',
-            'text'  => $programId === null ? 'Sections of your department show here once they are offered this term.' : 'Pick "All programs" to see every section of your department.',
+            'title' => $programId === null ? 'No sections in your college this term' : 'No sections in this program this term',
+            'text'  => $programId === null ? 'Sections of your college show here once they are offered this term.' : 'Pick "All programs" to see every section of your college.',
         ], ['saveData' => false]) ?>
     <?php else: ?>
         <?= view('components/empty-state', [
             'icon'  => 'grades',
             'title' => 'No sections in your program this term',
-            'text'  => 'Sections of the sub-departments you chair show here once they are offered this term.',
+            'text'  => 'Sections of the departments you chair show here once they are offered this term.',
         ], ['saveData' => false]) ?>
     <?php endif; ?>
 
@@ -169,7 +169,7 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
               // page itself never scrolls sideways on a phone. ?>
         <div class="relative overflow-x-auto rounded-2xl border border-[#E3E6EE]">
             <table class="w-full <?= $dean ? 'min-w-[52rem]' : 'min-w-[46rem]' ?> text-left text-sm" data-program-table>
-                <caption class="sr-only"><?= $dean ? "The department's sections this term." : "The program's sections this term." ?><?= $canOpen ? ' Pick a section to open its gradebook below.' : '' ?></caption>
+                <caption class="sr-only"><?= $dean ? "The college's sections this term." : "The program's sections this term." ?><?= $canOpen ? ' Pick a section to open its gradebook below.' : '' ?></caption>
                 <thead class="bg-[#F6F7FA] text-xs font-semibold uppercase tracking-wide text-[#646464]">
                     <tr>
                         <?php foreach ($columns as $key => $name): ?>
@@ -261,7 +261,7 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
                     <button type="button" class="<?= $secondary ?>" data-nudge <?= $selected === null || $selectedFinalized ? 'hidden' : '' ?>>Nudge</button>
                 <?php endif; ?>
                 <?php if ($dean): ?>
-                    <a href="<?= site_url('dean/grades/download-department') . ($termId === null ? '' : '?term=' . (int) $termId) ?>" class="<?= $secondary ?>" data-download-department>Download department</a>
+                    <a href="<?= site_url('dean/grades/download-college') . ($termId === null ? '' : '?term=' . (int) $termId) ?>" class="<?= $secondary ?>" data-download-college>Download college</a>
                 <?php else: ?>
                     <a href="<?= site_url('chairperson/grades/download-program') . ($termId === null ? '' : '?term=' . (int) $termId) ?>" class="<?= $secondary ?>" data-download-program>Download program</a>
                 <?php endif; ?>
@@ -319,7 +319,7 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
             <?php // The dean's course API asks courses.view: without it the grid cannot be fetched, so the page says why. ?>
             <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center" data-grid-unavailable>
                 <?= icon('lock', 'h-10 w-10 text-gray-300') ?>
-                <span class="text-sm font-semibold text-[#646464]"><?= esc("Opening a section's gradebook needs access to the department's courses.") ?></span>
+                <span class="text-sm font-semibold text-[#646464]"><?= esc("Opening a section's gradebook needs access to the college's courses.") ?></span>
                 <span class="text-xs text-[#646464]">Ask your institution's administrator if you need it.</span>
             </div>
 

@@ -12,14 +12,14 @@ use CodeIgniter\Shield\Entities\User;
 
 /**
  * The institution's reports: how its courses are doing, across everything or
- * narrowed to a term, a department or a program, and down to one course.
+ * narrowed to a term, a college or a program, and down to one course.
  *
  * Nothing here is calculated again: it is Monitor Program (the chairperson's
  * analytics) over the set of programs in scope, so the institutional
  * administrator, the chairperson and the dashboards always read the same
  * numbers, with the same thresholds (the institution's academic defaults).
  *
- * Scope is the institution's own and decided here: a department or program
+ * Scope is the institution's own and decided here: a college or program
  * that is not the institution's is a 404, never an empty page, and a term that
  * is not its own simply matches nothing.
  */
@@ -41,10 +41,10 @@ class InstitutionReports
     }
 
     /**
-     * What the filters can offer: the institution's terms, departments and
+     * What the filters can offer: the institution's terms, colleges and
      * programs.
      *
-     * @return array{terms: list<array<string, mixed>>, departments: list<array<string, mixed>>, programs: list<array<string, mixed>>}
+     * @return array{terms: list<array<string, mixed>>, colleges: list<array<string, mixed>>, programs: list<array<string, mixed>>}
      */
     public function options(int $institutionId): array
     {
@@ -52,11 +52,11 @@ class InstitutionReports
 
         return [
             'terms' => $db->table('academic_terms')->select('id, name, academic_year, start_date')->where('institution_id', $institutionId)->orderBy('start_date', 'DESC')->get()->getResultArray(),
-            'departments' => $db->table('departments')->select('id, name, code')->where('institution_id', $institutionId)->orderBy('name')->get()->getResultArray(),
+            'colleges' => $db->table('colleges')->select('id, name, code')->where('institution_id', $institutionId)->orderBy('name')->get()->getResultArray(),
             'programs' => $db->table('programs p')
-                ->select('p.id, p.name, p.code, d.id AS department_id')
-                ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-                ->join('departments d', 'd.id = sd.department_id')
+                ->select('p.id, p.name, p.code, d.id AS college_id')
+                ->join('departments sd', 'sd.id = p.department_id')
+                ->join('colleges d', 'd.id = sd.college_id')
                 ->where('d.institution_id', $institutionId)
                 ->orderBy('p.name')
                 ->get()->getResultArray(),
@@ -68,14 +68,14 @@ class InstitutionReports
      *
      * @return list<int>
      *
-     * @throws PageNotFoundException when the department or program is not the institution's
+     * @throws PageNotFoundException when the college or program is not the institution's
      */
-    public function programIds(int $institutionId, ?int $departmentId = null, ?int $programId = null): array
+    public function programIds(int $institutionId, ?int $collegeId = null, ?int $programId = null): array
     {
         $scope = InstitutionScope::forInstitution($institutionId);
 
-        if ($departmentId !== null) {
-            $scope->require('department', $departmentId);
+        if ($collegeId !== null) {
+            $scope->require('college', $collegeId);
         }
 
         if ($programId !== null) {
@@ -84,12 +84,12 @@ class InstitutionReports
 
         $builder = db_connect()->table('programs p')
             ->select('p.id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId);
 
-        if ($departmentId !== null) {
-            $builder->where('d.id', $departmentId);
+        if ($collegeId !== null) {
+            $builder->where('d.id', $collegeId);
         }
 
         if ($programId !== null) {
@@ -104,9 +104,9 @@ class InstitutionReports
      *
      * @return array<string, mixed>
      */
-    public function report(int $institutionId, MonitorProgramFilters $filters, ?int $departmentId = null, ?int $programId = null, string $sort = 'course_code', string $dir = 'asc'): array
+    public function report(int $institutionId, MonitorProgramFilters $filters, ?int $collegeId = null, ?int $programId = null, string $sort = 'course_code', string $dir = 'asc'): array
     {
-        $programs = $this->programIds($institutionId, $departmentId, $programId);
+        $programs = $this->programIds($institutionId, $collegeId, $programId);
         $rows     = $this->monitor->offeringRowsForPrograms($programs, $filters);
         $ids      = $this->offeringIds($rows);
 
@@ -122,7 +122,7 @@ class InstitutionReports
             $source                  = $byId[$course['offering_id']];
             $course['program_name']  = (string) $source['program_name'];
             $course['term_name']     = (string) $source['term_name'] . ' ' . (string) $source['academic_year'];
-            $course['department_name'] = (string) $source['department_name'];
+            $course['college_name'] = (string) $source['college_name'];
             $course['status']        = (string) $source['offering_status'];
         }
 

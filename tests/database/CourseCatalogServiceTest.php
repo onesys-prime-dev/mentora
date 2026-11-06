@@ -53,7 +53,7 @@ final class CourseCatalogServiceTest extends DatabaseTestCase
 
     private function programOf(int $institutionId): int
     {
-        return (int) db_connect()->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$institutionId])->getRow()->id;
+        return (int) db_connect()->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$institutionId])->getRow()->id;
     }
 
     private function create(string $code = 'IT101', string $title = 'Introduction to Computing', array $more = []): int

@@ -64,7 +64,7 @@ class Format extends BaseConfig
 
     /**
      * --------------------------------------------------------------------------
-     * Maximum depth for JSON encoding.
+     * Maximum collegeh for JSON encoding.
      * --------------------------------------------------------------------------
      *
      * This value determines how deep the JSON encoder will traverse nested structures.

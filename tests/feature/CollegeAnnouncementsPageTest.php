@@ -13,16 +13,16 @@ use Tests\Support\RouteTestCase;
 /**
  * The dean's Announcements page and the Announcements app everyone else reads: posting, editing and ending
  * from the dean's dialogs, who sees what (and who does not), the four levels in their fixed order, the
- * strip on recipients' dashboards, and that another role, department or read-only institution gets nothing.
+ * strip on recipients' dashboards, and that another role, college or read-only institution gets nothing.
  *
  * @internal
  */
-final class DepartmentAnnouncementsPageTest extends RouteTestCase
+final class CollegeAnnouncementsPageTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
-    private int $subA;
-    private int $subB;
+    private int $college;
+    private int $departmentA;
+    private int $departmentB;
     private int $offering;
     private User $dean;
     private User $chair;
@@ -37,23 +37,23 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         InstitutionAnnouncement::forget();
         (new PlatformSettings())->forget('announcement');   // the settings store is not rolled back between tests
 
-        $home              = DeanFactory::department('A');
+        $home              = DeanFactory::college('A');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'B');
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
-        $this->chair       = DeanFactory::chair($this->subA, 'Maria');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->departmentB        = DeanFactory::department($this->college, 'B');
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
+        $this->chair       = DeanFactory::chair($this->departmentA, 'Maria');
 
-        $this->offering = DeanFactory::offering(DeanFactory::program($this->subA, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->offering = DeanFactory::offering(DeanFactory::program($this->departmentA, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
         $this->teacher  = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
         $this->student  = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
         CourseFactory::assignInstructor($this->offering, $this->teacher);
         CourseFactory::enroll($this->offering, $this->student);
 
-        $elsewhere      = DeanFactory::department('E', $this->institution);
+        $elsewhere      = DeanFactory::college('E', $this->institution);
         $this->outsider = PeopleFactory::person('student', 'Out', 'Sider', null, $this->institution);
-        CourseFactory::enroll(DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900'), $this->outsider);
+        CourseFactory::enroll(DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900'), $this->outsider);
     }
 
     protected function tearDown(): void
@@ -84,16 +84,16 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
 
     private function announce(array $over = []): int
     {
-        $response = $this->send('dean/announcements', $over + ['scope' => 'department', 'audience' => 'everyone', 'title' => 'Enrolment week', 'message' => 'Please see the registrar.'])->response();
+        $response = $this->send('dean/announcements', $over + ['scope' => 'college', 'audience' => 'everyone', 'title' => 'Enrolment week', 'message' => 'Please see the registrar.'])->response();
 
         $this->assertSame(200, $response->getStatusCode(), $response->getBody());
 
-        return (int) db_connect()->table('department_announcements')->selectMax('id')->get()->getRow('id');
+        return (int) db_connect()->table('college_announcements')->selectMax('id')->get()->getRow('id');
     }
 
     public function testTheDeanPostsFromTheFormAndSeesItListedWithWhoItReaches(): void
     {
-        $response = $this->send('dean/announcements', ['scope' => 'sub_department:' . $this->subA, 'audience' => 'students', 'title' => 'Enrolment week', 'message' => 'Please see the registrar.'])->response();
+        $response = $this->send('dean/announcements', ['scope' => 'department:' . $this->departmentA, 'audience' => 'students', 'title' => 'Enrolment week', 'message' => 'Please see the registrar.'])->response();
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertStringContainsString('Posted to 1 person', $response->getBody());
@@ -101,21 +101,21 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $body = $this->page('dean/announcements', $this->dean);
 
         $this->assertStringContainsString('Enrolment week', $body);
-        $this->assertStringContainsString('Sub A', $body);
+        $this->assertStringContainsString('Department A', $body);
         $this->assertStringContainsString('Students', $body);
         $this->assertStringContainsString('1 person', $body);
         $this->assertStringContainsString('No end date', $body);
         $this->assertStringContainsString('New announcement', $body);
-        $this->assertStringContainsString('Whole College A', $body, 'the form offers the whole department');
+        $this->assertStringContainsString('Whole College A', $body, 'the form offers the whole college');
     }
 
     public function testABadPostIsRefusedWithTheMessageBesideTheField(): void
     {
-        $response = $this->send('dean/announcements', ['scope' => 'department', 'audience' => 'everyone', 'title' => '', 'message' => 'Hello'])->response();
+        $response = $this->send('dean/announcements', ['scope' => 'college', 'audience' => 'everyone', 'title' => '', 'message' => 'Hello'])->response();
 
         $this->assertSame(422, $response->getStatusCode());
         $this->assertArrayHasKey('title', json_decode($response->getBody(), true)['errors']);
-        $this->assertSame(0, db_connect()->table('department_announcements')->countAllResults());
+        $this->assertSame(0, db_connect()->table('college_announcements')->countAllResults());
     }
 
     public function testEditingAndEndingWorkFromTheirDialogs(): void
@@ -132,10 +132,10 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $this->assertSame(422, $this->send("dean/announcements/{$id}/end")->response()->getStatusCode(), 'not twice');
     }
 
-    public function testAnotherDepartmentsDeanCannotEditOrEndOrSeeIt(): void
+    public function testAnotherCollegesDeanCannotEditOrEndOrSeeIt(): void
     {
         $id    = $this->announce();
-        $other = DeanFactory::dean($this->institution, (int) db_connect()->table('departments')->where('id !=', $this->department)->get()->getRow('id'), 'Eve');
+        $other = DeanFactory::dean($this->institution, (int) db_connect()->table('colleges')->where('id !=', $this->college)->get()->getRow('id'), 'Eve');
 
         $this->assertSame(422, $this->send("dean/announcements/{$id}", ['title' => 'Hijack', 'message' => 'x'], $other)->response()->getStatusCode());
         $this->assertSame(422, $this->send("dean/announcements/{$id}/end", [], $other)->response()->getStatusCode());
@@ -149,16 +149,16 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         foreach ([$this->chair, $this->teacher, $this->student] as $user) {
             $this->loggedInAs($user);
             $this->assertNotSame(200, $this->call('get', 'dean/announcements')->response()->getStatusCode());
-            $this->assertNotSame(200, $this->send('dean/announcements', ['scope' => 'department', 'audience' => 'everyone', 'title' => 'Mine', 'message' => 'x'], $user)->response()->getStatusCode());
+            $this->assertNotSame(200, $this->send('dean/announcements', ['scope' => 'college', 'audience' => 'everyone', 'title' => 'Mine', 'message' => 'x'], $user)->response()->getStatusCode());
             $this->assertNotSame(200, $this->send("dean/announcements/{$id}/end", [], $user)->response()->getStatusCode());
         }
 
-        $this->assertSame(1, db_connect()->table('department_announcements')->countAllResults());
+        $this->assertSame(1, db_connect()->table('college_announcements')->countAllResults());
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanation(): void
+    public function testADeanWithoutACollegeSeesTheExplanation(): void
     {
-        $this->assertStringContainsString('not assigned to a department yet', $this->page('dean/announcements', PeopleFactory::person('dean', 'No', 'Department', null, $this->institution)));
+        $this->assertStringContainsString('not assigned to a college yet', $this->page('dean/announcements', PeopleFactory::person('dean', 'No', 'College', null, $this->institution)));
     }
 
     public function testAReadOnlyInstitutionLetsTheDeanLookButNotPostEditOrEnd(): void
@@ -167,26 +167,26 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
 
         $this->assertStringContainsString('Enrolment week', $this->page('dean/announcements', $this->dean));
-        $this->assertSame(403, $this->send('dean/announcements', ['scope' => 'department', 'audience' => 'everyone', 'title' => 'T', 'message' => 'M'])->response()->getStatusCode());
+        $this->assertSame(403, $this->send('dean/announcements', ['scope' => 'college', 'audience' => 'everyone', 'title' => 'T', 'message' => 'M'])->response()->getStatusCode());
         $this->assertSame(403, $this->send("dean/announcements/{$id}", ['title' => 'T', 'message' => 'M'])->response()->getStatusCode());
         $this->assertSame(403, $this->send("dean/announcements/{$id}/end")->response()->getStatusCode());
-        $this->assertSame('active', db_connect()->table('department_announcements')->where('id', $id)->get()->getRow('status'));
+        $this->assertSame('active', db_connect()->table('college_announcements')->where('id', $id)->get()->getRow('status'));
     }
 
     public function testEachRecipientReadsItInTheirOwnAnnouncementsAndOthersDoNot(): void
     {
-        $this->announce(['scope' => 'sub_department:' . $this->subA]);
+        $this->announce(['scope' => 'department:' . $this->departmentA]);
 
         foreach ([[$this->student, 'student'], [$this->teacher, 'instructor'], [$this->chair, 'chairperson']] as [$user, $area]) {
-            $body = $this->page("{$area}/announcements?level=department", $user);
+            $body = $this->page("{$area}/announcements?level=college", $user);
 
             $this->assertStringContainsString('Enrolment week', $body, $area);
             $this->assertStringContainsString('Please see the registrar.', $body, $area);
-            $this->assertStringContainsString('Sub A', $body, $area);
+            $this->assertStringContainsString('Department A', $body, $area);
         }
 
-        $this->assertStringNotContainsString('Enrolment week', $this->page('student/announcements?level=department', $this->outsider), 'another department');
-        $this->assertStringContainsString('Nothing from your department right now', $this->page('student/announcements?level=department', $this->outsider));
+        $this->assertStringNotContainsString('Enrolment week', $this->page('student/announcements?level=college', $this->outsider), 'another college');
+        $this->assertStringContainsString('Nothing from your college right now', $this->page('student/announcements?level=college', $this->outsider));
     }
 
     public function testTheRoleFilterKeepsStaffPostsFromStudentsAndTheOtherWayRound(): void
@@ -209,10 +209,10 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $this->send("dean/announcements/{$id}/end");
 
         $this->assertStringNotContainsString('Enrolment week', $this->page('student/announcements', $this->student));
-        $this->assertStringNotContainsString('data-department-strip', $this->page('student/dashboard', $this->student));
+        $this->assertStringNotContainsString('data-college-strip', $this->page('student/dashboard', $this->student));
     }
 
-    public function testTheFourLevelsAreAlwaysInOrderPlatformInstitutionDepartmentCourses(): void
+    public function testTheFourLevelsAreAlwaysInOrderPlatformInstitutionCollegeCourses(): void
     {
         (new PlatformSettings())->set('announcement', 'Platform maintenance tonight');
         (new InstitutionAnnouncement())->save($this->institution, 'Institution closed on Friday', '');
@@ -233,10 +233,10 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
             $filter[$key] = (int) $count;
         }
 
-        $this->assertSame(['platform' => 1, 'institution' => 1, 'department' => 1, 'course' => 1], $filter, 'each filter counts its level');
+        $this->assertSame(['platform' => 1, 'institution' => 1, 'college' => 1, 'course' => 1], $filter, 'each filter counts its level');
         $this->assertStringNotContainsString('data-level-count="all"', $default);
 
-        foreach (['institution' => 'Institution closed on Friday', 'department' => 'Enrolment week', 'course' => 'Quiz moved'] as $level => $text) {
+        foreach (['institution' => 'Institution closed on Friday', 'college' => 'Enrolment week', 'course' => 'Quiz moved'] as $level => $text) {
             $this->assertStringContainsString($text, $this->page('student/announcements?level=' . $level, $this->student), $level);
         }
 
@@ -245,7 +245,7 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
 
     public function testALevelWithNothingToSayStillHasItsPlaceInTheSameOrder(): void
     {
-        foreach (['platform' => 'Nothing from the platform right now', 'institution' => 'Nothing from your institution right now', 'department' => 'Nothing from your department right now', 'course' => 'No posts in your courses yet'] as $level => $text) {
+        foreach (['platform' => 'Nothing from the platform right now', 'institution' => 'Nothing from your institution right now', 'college' => 'Nothing from your college right now', 'course' => 'No posts in your courses yet'] as $level => $text) {
             $this->assertStringContainsString($text, $this->page('student/announcements?level=' . $level, $this->student), $level);
         }
     }
@@ -254,7 +254,7 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
     {
         $this->assertStringContainsString('data-level-filter', $this->page('student/announcements', $this->student));
 
-        foreach (['platform', 'institution', 'department', 'course'] as $level) {
+        foreach (['platform', 'institution', 'college', 'course'] as $level) {
             $body = $this->page('student/announcements?level=' . $level, $this->student);
 
             $this->assertSame(1, substr_count($body, 'data-level="'), $level . ' alone');
@@ -280,12 +280,12 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         $miss = $this->page('student/announcements?level=course&q=zzzqqq', $this->student);
         $this->assertMatchesRegularExpression('#data-level-count="course">1<#', $miss, 'a search does not change the counts');
         $this->assertStringNotContainsString('data-course-announcement', $miss);
-        $this->assertStringNotContainsString('data-department-announcement', $miss);
+        $this->assertStringNotContainsString('data-college-announcement', $miss);
         $this->assertStringContainsString('Nothing here matches', $miss);
 
         $kept = $this->page('student/announcements?level=course&q=quiz', $this->student);
         $this->assertStringContainsString('name="level" value="course"', $kept);
-        $this->assertStringContainsString('level=department&q=quiz', $kept);
+        $this->assertStringContainsString('level=college&q=quiz', $kept);
     }
 
     public function testRecipientsSeeAStripOnTheirDashboardAndOthersDoNot(): void
@@ -295,12 +295,12 @@ final class DepartmentAnnouncementsPageTest extends RouteTestCase
         foreach ([[$this->student, 'student'], [$this->teacher, 'instructor'], [$this->chair, 'chairperson']] as [$user, $area]) {
             $body = $this->page("{$area}/dashboard", $user);
 
-            $this->assertStringContainsString('data-department-strip', $body, $area);
+            $this->assertStringContainsString('data-college-strip', $body, $area);
             $this->assertStringContainsString('Enrolment week', $body, $area);
             $this->assertStringContainsString("{$area}/announcements", $body, $area);
         }
 
-        $this->assertStringNotContainsString('data-department-strip', $this->page('student/dashboard', $this->outsider));
+        $this->assertStringNotContainsString('data-college-strip', $this->page('student/dashboard', $this->outsider));
     }
 
     public function testTheStripShowsAtMostTheThreeNewest(): void

@@ -33,10 +33,10 @@ final class TeachingLoadFiltersTest extends TestCase
 
     public function testBadValuesAreDropped(): void
     {
-        $f = TeachingLoadFilters::fromInput(['term' => '-3', 'sub_department' => 'x', 'sort' => 'password', 'dir' => 'sideways']);
+        $f = TeachingLoadFilters::fromInput(['term' => '-3', 'department' => 'x', 'sort' => 'password', 'dir' => 'sideways']);
 
         $this->assertNull($f->termId);
-        $this->assertNull($f->subDepartmentId);
+        $this->assertNull($f->departmentId);
         $this->assertSame('units', $f->sort);
         $this->assertSame('desc', $f->dir);
 
@@ -48,11 +48,11 @@ final class TeachingLoadFiltersTest extends TestCase
 
     public function testTheQueryKeepsOnlyWhatIsNotTheDefault(): void
     {
-        $f = TeachingLoadFilters::fromInput(['term' => '4', 'sub_department' => '7', 'sort' => 'name', 'dir' => 'desc']);
+        $f = TeachingLoadFilters::fromInput(['term' => '4', 'department' => '7', 'sort' => 'name', 'dir' => 'desc']);
 
         $this->assertTrue($f->isFiltered());
-        $this->assertSame(['term' => 4, 'sub_department' => 7, 'sort' => 'name', 'dir' => 'desc'], $f->toQuery());
-        $this->assertSame(['term' => 4, 'sub_department' => 7], $f->toQuery(['sort' => null, 'dir' => null]));
+        $this->assertSame(['term' => 4, 'department' => 7, 'sort' => 'name', 'dir' => 'desc'], $f->toQuery());
+        $this->assertSame(['term' => 4, 'department' => 7], $f->toQuery(['sort' => null, 'dir' => null]));
         $this->assertSame(['sort' => 'name'], TeachingLoadFilters::fromInput(['sort' => 'name'])->toQuery());
         $this->assertSame(['sort' => 'ungraded', 'dir' => 'asc'], TeachingLoadFilters::fromInput(['sort' => 'ungraded', 'dir' => 'asc'])->toQuery());
     }

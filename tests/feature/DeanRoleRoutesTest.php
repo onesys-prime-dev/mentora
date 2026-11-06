@@ -10,28 +10,28 @@ use Tests\Support\RouteTestCase;
 
 /**
  * The dean's area: who lands there, who is turned away, and what a dean
- * with no department sees.
+ * with no college sees.
  *
  * @internal
  */
 final class DeanRoleRoutesTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
+    private int $college;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->institution = PeopleFactory::institution('DRR');
-        db_connect()->table('departments')->insert(['institution_id' => $this->institution, 'code' => 'CC', 'name' => 'College of Computing']);
-        $this->department = (int) db_connect()->insertID();
+        db_connect()->table('colleges')->insert(['institution_id' => $this->institution, 'code' => 'CC', 'name' => 'College of Computing']);
+        $this->college = (int) db_connect()->insertID();
     }
 
     private function assignedDean(string $role = 'instructor'): User
     {
         $person = PeopleFactory::person($role, 'Dana', 'Dean', null, $this->institution);
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $person->id);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $person->id);
 
         return model(CodeIgniter\Shield\Models\UserModel::class)->findById($person->id);
     }
@@ -48,7 +48,7 @@ final class DeanRoleRoutesTest extends RouteTestCase
         $this->assertStringEndsWith('/dean/dashboard', $response->getHeaderLine('Location'));
     }
 
-    public function testADeanSeesTheirDepartmentOnTheDashboard(): void
+    public function testADeanSeesTheirCollegeOnTheDashboard(): void
     {
         $dean = $this->assignedDean();
         $dean->removeGroup('instructor');
@@ -68,7 +68,7 @@ final class DeanRoleRoutesTest extends RouteTestCase
         $response = $this->call('GET', '/dean/dashboard')->response();
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
+        $this->assertStringContainsString('not assigned to a college yet', $response->getBody());
         $this->assertStringNotContainsString('College of Computing', $response->getBody());
     }
 

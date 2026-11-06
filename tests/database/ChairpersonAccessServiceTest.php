@@ -9,7 +9,7 @@ use Tests\Support\DatabaseTestCase;
 /**
  * A chairperson's reach: derived live from chairperson_assignments and the
  * program hierarchy, never a stored snapshot — so a program added to their
- * sub-department, or a course added to that program, is covered without any
+ * department, or a course added to that program, is covered without any
  * assignment ever being touched again.
  *
  * @internal
@@ -28,29 +28,29 @@ final class ChairpersonAccessServiceTest extends DatabaseTestCase
     }
 
     /** @return array{sub: int, program: int} */
-    private function subDepartment(string $tag): array
+    private function department(string $tag): array
     {
         $db = db_connect();
 
         $db->table('institutions')->insert(['name' => "Inst {$tag}", 'code' => "I{$tag}"]);
         $institution = (int) $db->insertID();
 
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+        $college = (int) $db->insertID();
+
+        $db->table('departments')->insert(['college_id' => $college, 'code' => "S{$tag}", 'name' => "College {$tag}"]);
         $department = (int) $db->insertID();
 
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => "S{$tag}", 'name' => "Department {$tag}"]);
-        $sub = (int) $db->insertID();
+        $db->table('programs')->insert(['department_id' => $department, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
 
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
-
-        return ['sub' => $sub, 'program' => (int) $db->insertID()];
+        return ['sub' => $department, 'program' => (int) $db->insertID()];
     }
 
-    private function program(int $subDepartmentId, string $code): int
+    private function program(int $departmentId, string $code): int
     {
         $db = db_connect();
 
-        $db->table('programs')->insert(['sub_department_id' => $subDepartmentId, 'code' => $code, 'name' => "Program {$code}"]);
+        $db->table('programs')->insert(['department_id' => $departmentId, 'code' => $code, 'name' => "Program {$code}"]);
 
         return (int) $db->insertID();
     }
@@ -79,27 +79,27 @@ final class ChairpersonAccessServiceTest extends DatabaseTestCase
     private function institutionOf(int $programId): int
     {
         return (int) db_connect()->table('programs p')
-            ->select('departments.institution_id')
-            ->join('sub_departments', 'sub_departments.id = p.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->select('colleges.institution_id')
+            ->join('departments', 'departments.id = p.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->where('p.id', $programId)
             ->get()->getRowArray()['institution_id'];
     }
 
-    private function assign(int $userId, int $subDepartmentId, string $status = 'active'): void
+    private function assign(int $userId, int $departmentId, string $status = 'active'): void
     {
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id'    => $subDepartmentId,
+            'department_id'    => $departmentId,
             'chairperson_user_id'  => $userId,
             'status'               => $status,
             'assigned_at'          => date('Y-m-d H:i:s'),
         ]);
     }
 
-    public function testACourseInTheChairsSubDepartmentIsReachable(): void
+    public function testACourseInTheChairsDepartmentIsReachable(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('1');
+        $home = $this->department('1');
         $this->assign($chair->id, $home['sub']);
 
         $offering = $this->offering($home['program'], 'IT101');
@@ -107,11 +107,11 @@ final class ChairpersonAccessServiceTest extends DatabaseTestCase
         $this->assertTrue($this->service->canAccess($chair, $offering));
     }
 
-    public function testACourseInAnotherSubDepartmentIsNotReachable(): void
+    public function testACourseInAnotherDepartmentIsNotReachable(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('1');
-        $elsewhere = $this->subDepartment('2');
+        $home = $this->department('1');
+        $elsewhere = $this->department('2');
         $this->assign($chair->id, $home['sub']);
 
         $offering = $this->offering($elsewhere['program'], 'CS101');
@@ -119,13 +119,13 @@ final class ChairpersonAccessServiceTest extends DatabaseTestCase
         $this->assertFalse($this->service->canAccess($chair, $offering));
     }
 
-    public function testAProgramAddedToTheSubDepartmentLaterIsCoveredWithoutTouchingTheAssignment(): void
+    public function testAProgramAddedToTheDepartmentLaterIsCoveredWithoutTouchingTheAssignment(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('1');
+        $home = $this->department('1');
         $this->assign($chair->id, $home['sub']);
 
-        // A second program, under the same sub-department, added after the
+        // A second program, under the same department, added after the
         // chairperson was already assigned.
         $newProgram = $this->program($home['sub'], 'NEWP');
         $offering = $this->offering($newProgram, 'CS202');
@@ -136,7 +136,7 @@ final class ChairpersonAccessServiceTest extends DatabaseTestCase
     public function testARevokedAssignmentLosesAccessImmediately(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('1');
+        $home = $this->department('1');
         $this->assign($chair->id, $home['sub'], 'revoked');
 
         $offering = $this->offering($home['program'], 'IT101');
@@ -147,18 +147,18 @@ final class ChairpersonAccessServiceTest extends DatabaseTestCase
     public function testAChairWithNoAssignmentReachesNothing(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('1');
+        $home = $this->department('1');
         $offering = $this->offering($home['program'], 'IT101');
 
         $this->assertFalse($this->service->canAccess($chair, $offering));
     }
 
-    public function testOfferingsForListsEveryOfferingAcrossEverySubDepartmentChaired(): void
+    public function testOfferingsForListsEveryOfferingAcrossEveryDepartmentChaired(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $a = $this->subDepartment('1');
-        $b = $this->subDepartment('2');
-        $elsewhere = $this->subDepartment('3');
+        $a = $this->department('1');
+        $b = $this->department('2');
+        $elsewhere = $this->department('3');
 
         $this->assign($chair->id, $a['sub']);
         $this->assign($chair->id, $b['sub']);

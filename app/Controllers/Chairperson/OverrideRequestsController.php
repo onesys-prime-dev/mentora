@@ -10,9 +10,9 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * The chairperson's grade-override requests: the ones from the sub-departments
+ * The chairperson's grade-override requests: the ones from the departments
  * they chair, to endorse or send back (with a comment). The list is what waits
- * for them, or everything in their sub-departments to read. The actions answer
+ * for them, or everything in their departments to read. The actions answer
  * JSON for the dialog that sends them, and redirect with a message without
  * JavaScript. Who may act on which request is the service's check.
  */

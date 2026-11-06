@@ -12,7 +12,7 @@ use Tests\Support\RouteTestCase;
 
 /**
  * The institution's reports: access, the numbers and what scopes them
- * (term, department, program, never another institution), the course opened
+ * (term, college, program, never another institution), the course opened
  * from the report, the CSV of each report (scoped, safe, and logged) and the
  * empty state.
  *
@@ -24,10 +24,10 @@ final class InstitutionReportsTest extends RouteTestCase
 
     private int $other;
 
-    /** @var array{department: int, program: int} */
+    /** @var array{college: int, program: int} */
     private array $it;
 
-    /** @var array{department: int, program: int} */
+    /** @var array{college: int, program: int} */
     private array $cs;
 
     private int $itOffering;
@@ -67,20 +67,20 @@ final class InstitutionReportsTest extends RouteTestCase
         $this->signIn($this->admin);
     }
 
-    /** @return array{department: int, program: int} */
+    /** @return array{college: int, program: int} */
     private function unit(int $institution, string $tag): array
     {
         $db = db_connect();
 
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => "D{$tag}{$institution}", 'name' => "College of {$tag}"]);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => "D{$tag}{$institution}", 'name' => "College of {$tag}"]);
+        $college = (int) $db->insertID();
+
+        $db->table('departments')->insert(['college_id' => $college, 'code' => "S{$tag}{$institution}", 'name' => "College {$tag}"]);
         $department = (int) $db->insertID();
 
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => "S{$tag}{$institution}", 'name' => "Dept {$tag}"]);
-        $sub = (int) $db->insertID();
+        $db->table('programs')->insert(['department_id' => $department, 'code' => "P{$tag}{$institution}", 'name' => "Program {$tag}"]);
 
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'code' => "P{$tag}{$institution}", 'name' => "Program {$tag}"]);
-
-        return ['department' => $department, 'program' => (int) $db->insertID()];
+        return ['college' => $college, 'program' => (int) $db->insertID()];
     }
 
     private function term(int $institution, string $name = 'First Term'): int
@@ -195,15 +195,15 @@ final class InstitutionReportsTest extends RouteTestCase
 
     public function testEachPageHasTheTabsAndTheFiltersTravelInThem(): void
     {
-        $department = $this->it['department'];
+        $college = $this->it['college'];
 
         foreach (['', '/courses', '/at-risk'] as $path) {
-            $body = html_entity_decode($this->page("?department={$department}", $path));
+            $body = html_entity_decode($this->page("?college={$college}", $path));
 
             $this->assertStringContainsString('data-tabs', $body, $path);
-            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports\?department=' . $department . '"#', $body, $path);
-            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports/courses\?department=' . $department . '"#', $body, $path);
-            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports/at-risk\?department=' . $department . '"#', $body, $path);
+            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports\?college=' . $college . '"#', $body, $path);
+            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports/courses\?college=' . $college . '"#', $body, $path);
+            $this->assertMatchesRegularExpression('#href="[^"]*institution/reports/at-risk\?college=' . $college . '"#', $body, $path);
         }
     }
 
@@ -215,9 +215,9 @@ final class InstitutionReportsTest extends RouteTestCase
         $this->assertStringNotContainsString('ZZ999', $this->page('', '/courses'));
     }
 
-    public function testADepartmentAndAProgramNarrowTheReport(): void
+    public function testACollegeAndAProgramNarrowTheReport(): void
     {
-        $it = $this->page("?department={$this->it['department']}", '/courses');
+        $it = $this->page("?college={$this->it['college']}", '/courses');
         $this->assertStringContainsString('IT101', $it);
         $this->assertStringNotContainsString('CS101', $it);
 
@@ -237,11 +237,11 @@ final class InstitutionReportsTest extends RouteTestCase
         $this->assertStringNotContainsString('IT101', $body);
     }
 
-    public function testAnotherInstitutionsDepartmentOrProgramIsNotFound(): void
+    public function testAnotherInstitutionsCollegeOrProgramIsNotFound(): void
     {
         $theirs = $this->unit($this->other, 'ZZ');
 
-        foreach (["?department={$theirs['department']}", "?program={$theirs['program']}"] as $query) {
+        foreach (["?college={$theirs['college']}", "?program={$theirs['program']}"] as $query) {
             try {
                 $this->call('GET', 'institution/reports' . $query);
                 $this->fail("{$query} must be a 404");
@@ -295,7 +295,7 @@ final class InstitutionReportsTest extends RouteTestCase
         $this->assertStringContainsString('IT101', $all);
         $this->assertStringContainsString('CS101', $all);
 
-        $it = $this->step('GET', "institution/reports/export/courses?department={$this->it['department']}")->response()->getBody();
+        $it = $this->step('GET', "institution/reports/export/courses?college={$this->it['college']}")->response()->getBody();
         $this->assertStringContainsString('IT101', $it);
         $this->assertStringNotContainsString('CS101', $it);
     }

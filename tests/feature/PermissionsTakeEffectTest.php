@@ -66,7 +66,7 @@ final class PermissionsTakeEffectTest extends RouteTestCase
     public static function provideGuardedRoutes(): iterable
     {
         yield 'program monitor'     => ['chairperson', 'program.monitor', 'GET', 'chairperson/monitor-program'];
-        yield 'department monitor'  => ['dean', 'department.monitor', 'GET', 'dean/monitor-department'];
+        yield 'college monitor'  => ['dean', 'college.monitor', 'GET', 'dean/monitor-college'];
         yield 'chair follow-up'     => ['chairperson', 'followups.manage', 'POST', 'chairperson/follow-ups'];
         yield 'chair pass down'     => ['chairperson', 'followups.manage', 'POST', 'chairperson/follow-ups/1/pass-down'];
         yield 'dean follow-up'      => ['dean', 'followups.manage', 'POST', 'dean/follow-ups'];
@@ -75,9 +75,9 @@ final class PermissionsTakeEffectTest extends RouteTestCase
         yield 'dean courses'        => ['dean', 'courses.view', 'GET', 'dean/courses'];
         yield 'dean approvals'      => ['dean', 'grades.approve', 'GET', 'dean/approvals'];
         yield 'dean sign-off'       => ['dean', 'grades.signoff', 'GET', 'dean/signoff'];
-        yield 'dean announcements'  => ['dean', 'department.announce', 'GET', 'dean/announcements'];
-        yield 'dean grades'         => ['dean', 'department.monitor', 'GET', 'dean/grades'];
-        yield 'dean grades download' => ['dean', 'department.monitor', 'GET', 'dean/grades/download-department'];
+        yield 'dean announcements'  => ['dean', 'college.announce', 'GET', 'dean/announcements'];
+        yield 'dean grades'         => ['dean', 'college.monitor', 'GET', 'dean/grades'];
+        yield 'dean grades download' => ['dean', 'college.monitor', 'GET', 'dean/grades/download-college'];
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -85,10 +85,10 @@ final class PermissionsTakeEffectTest extends RouteTestCase
     {
         yield 'Approvals'     => ['approvals', 'grades.approve'];
         yield 'Sign-off'      => ['signoff', 'grades.signoff'];
-        yield 'Announcements' => ['announcements', 'department.announce'];
+        yield 'Announcements' => ['announcements', 'college.announce'];
         yield 'Courses'       => ['courses', 'courses.view'];
-        yield 'Monitor'       => ['monitor-department', 'department.monitor'];
-        yield 'Grades'        => ['grades', 'department.monitor'];
+        yield 'Monitor'       => ['monitor-college', 'college.monitor'];
+        yield 'Grades'        => ['grades', 'college.monitor'];
     }
 
     /** A dean's menu shows only the pages they can open (QA AMB-AUTH-08); the rest of it stays. */
@@ -190,8 +190,8 @@ final class PermissionsTakeEffectTest extends RouteTestCase
 
     public function testADeanWhoAlsoTeachesLosesTheDeansCoursesWithTheDeansPermission(): void
     {
-        $home = \Tests\Support\DeanFactory::department('TKD', $this->institution);
-        $dean = \Tests\Support\DeanFactory::dean($this->institution, $home['department']);
+        $home = \Tests\Support\DeanFactory::college('TKD', $this->institution);
+        $dean = \Tests\Support\DeanFactory::dean($this->institution, $home['college']);
         db_connect()->table('auth_groups_users')->insert(['user_id' => $dean->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
         $dean = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
 

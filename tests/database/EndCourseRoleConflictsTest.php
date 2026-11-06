@@ -32,9 +32,9 @@ final class EndCourseRoleConflictsTest extends DatabaseTestCase
 
         Services::resetSingle('auditLogger');
 
-        $home              = DeanFactory::department('EC');
+        $home              = DeanFactory::college('EC');
         $this->institution = $home['institution'];
-        $this->offering    = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($home['department'], 'EC'), 'EC'), DeanFactory::term($this->institution), 'IT130');
+        $this->offering    = DeanFactory::offering(DeanFactory::program(DeanFactory::department($home['college'], 'EC'), 'EC'), DeanFactory::term($this->institution), 'IT130');
     }
 
     private function person(string ...$groups): User

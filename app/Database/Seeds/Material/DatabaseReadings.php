@@ -223,7 +223,7 @@ final class DatabaseReadings
             ['h', 'One-to-one'],
             ['p', 'Less common. Each row in one table matches at most one row in the other, for example a user and their detailed profile. It is often used to separate rarely used or private columns from the main table.'],
             ['h', 'Worked example: linking courses and instructors'],
-            ['p', 'A department wants to record which instructor teaches each course. One instructor can teach several courses, but each course has exactly one instructor.'],
+            ['p', 'A college wants to record which instructor teaches each course. One instructor can teach several courses, but each course has exactly one instructor.'],
             ['ol', [
                 'Identify the relationship: one instructor to many courses, so it is one-to-many.',
                 'Give each table a primary key: instructors(instructor_id) and courses(course_id).',
@@ -232,7 +232,7 @@ final class DatabaseReadings
                 'Test it: inserting a course with instructor_id 9999 must fail if no such instructor exists.',
             ]],
             ['h', 'Choosing between a natural key and a surrogate key'],
-            ['p', 'A **natural key** uses real data that is already unique, such as a course code like IT201. A **surrogate key** is an artificial value created only to identify the row. Natural keys feel convenient but can change or turn out not to be unique after all; a department may rename its codes. Surrogate keys never change, which is why they are the usual choice, sometimes with a unique constraint on the natural value so that duplicates are still prevented.'],
+            ['p', 'A **natural key** uses real data that is already unique, such as a course code like IT201. A **surrogate key** is an artificial value created only to identify the row. Natural keys feel convenient but can change or turn out not to be unique after all; a college may rename its codes. Surrogate keys never change, which is why they are the usual choice, sometimes with a unique constraint on the natural value so that duplicates are still prevented.'],
             ['h', 'Common mistakes'],
             ['ul', [
                 '**Using a name or email as the primary key**, which later changes or repeats.',

@@ -73,8 +73,8 @@ final class QuestionGenerationSafetyTest extends DatabaseTestCase
             ->select('d.institution_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('co.id', $this->offering)->get()->getRowArray()['institution_id'];
 
         db_connect()->table('institution_users')->insert(['institution_id' => $institution, 'user_id' => $this->owner->id]);

@@ -12,7 +12,7 @@
 $loadError = $loadError ?? false;
 
 // The chairperson's page by default. The dean's drill-down into one program (Monitor
-// Department) renders this same page and sets these to its own address, course links and words.
+// College) renders this same page and sets these to its own address, course links and words.
 $monitorBase = $monitorBase ?? site_url('chairperson/monitor-program');
 $monitorCourseBase  = $monitorCourseBase ?? 'chairperson';
 $monitorHeading     = $monitorHeading ?? 'Monitor Program';

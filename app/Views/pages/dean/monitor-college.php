@@ -1,17 +1,17 @@
 <?php
 /**
- * Monitor Department: how the dean's department is performing, compared per
- * sub-department and per program. Filters, grouping and sort live in the
+ * Monitor College: how the dean's college is performing, compared per
+ * department and per program. Filters, grouping and sort live in the
  * address (GET), so a view can be bookmarked or shared. Every number is
- * computed server-side (MonitorDepartmentService); the page's script only
+ * computed server-side (MonitorCollegeService); the page's script only
  * draws the two charts from data already embedded on #monitor-program-charts.
  *
- * @var App\Services\Courses\MonitorDepartmentFilters $filters
+ * @var App\Services\Courses\MonitorCollegeFilters $filters
  * @var array<string, mixed> $totals
  * @var list<array<string, mixed>> $groups
  * @var list<array<string, mixed>> $atRisk
  */
-$base = site_url('dean/monitor-department');
+$base = site_url('dean/monitor-college');
 
 $link = static function (array $override = []) use ($filters, $base): string {
     $query = http_build_query($filters->toQuery($override));
@@ -54,7 +54,7 @@ foreach ($terms as $term) {
 }
 
 $columns = [
-    'name'             => $filters->compare === 'program' ? 'Program' : 'Sub-department',
+    'name'             => $filters->compare === 'program' ? 'Program' : 'Department',
     'students'         => 'Students',
     'completion'       => 'Completion',
     'average_grade'    => 'Avg. grade',
@@ -92,9 +92,9 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
 <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel>
 
     <?= view('components/page-head', [
-        'title'       => 'Monitor Department',
+        'title'       => 'Monitor College',
         'icon'        => 'score',
-        'description' => $departmentName . ': how its sub-departments and programs are doing.',
+        'description' => $collegeName . ': how its departments and programs are doing.',
         'actions'     => $loadError ? '<div class="flex flex-wrap items-center gap-2">' . $gradesLinks . '</div>' : $exportLinks,
     ], ['saveData' => false]) ?>
 
@@ -106,7 +106,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             ['type' => 'select', 'name' => 'term', 'label' => 'Term', 'options' => $termOptions, 'value' => (string) ($filters->base->termId ?? '')],
             ['type' => 'date', 'name' => 'from', 'label' => 'From', 'value' => $filters->base->from ?? ''],
             ['type' => 'date', 'name' => 'to', 'label' => 'To', 'value' => $filters->base->to ?? ''],
-            ['type' => 'select', 'name' => 'sub_department', 'label' => 'Sub-department', 'options' => $options($subDepartments, 'Any sub-department'), 'value' => (string) ($filters->subDepartmentId ?? '')],
+            ['type' => 'select', 'name' => 'department', 'label' => 'Department', 'options' => $options($departments, 'Any department'), 'value' => (string) ($filters->departmentId ?? '')],
             ['type' => 'select', 'name' => 'program', 'label' => 'Program', 'options' => $options($programs, 'Any program'), 'value' => (string) ($filters->programId ?? '')],
         ],
     ], ['saveData' => false]) ?>
@@ -115,7 +115,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
 
         <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#C33939]/30 bg-white px-8 py-14 text-center" role="alert" data-load-error>
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
-            <span class="text-sm font-semibold text-[#1A1C1E]">We could not load the department's numbers</span>
+            <span class="text-sm font-semibold text-[#1A1C1E]">We could not load the college's numbers</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
             <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
@@ -126,8 +126,8 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             'icon'  => 'score',
             'title' => $filters->isFiltered() ? 'No courses match these filters' : 'Nothing to monitor yet',
             'text'  => $filters->isFiltered()
-                ? 'Try a different term, date range, sub-department or program.'
-                : 'Courses in your department will appear here.',
+                ? 'Try a different term, date range, department or program.'
+                : 'Courses in your college will appear here.',
         ], ['saveData' => false]) ?>
 
     <?php else: ?>
@@ -146,13 +146,13 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             data-grade-distribution="<?= esc(json_encode($gradeDistribution), 'attr') ?>"
             data-instructor-activity="<?= esc(json_encode(array_map(static fn (array $i) => ['label' => $i['name'], 'content' => $i['content_updates'], 'announcements' => $i['announcements']], $instructorActivity)), 'attr') ?>">
             <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
-                <p class="text-sm font-semibold text-[#1A1C1E]">Completion per <?= $filters->compare === 'program' ? 'program' : 'sub-department' ?></p>
+                <p class="text-sm font-semibold text-[#1A1C1E]">Completion per <?= $filters->compare === 'program' ? 'program' : 'department' ?></p>
                 <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
                 <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
             </div>
             <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
-                <p class="mb-3 text-xs text-[#646464]">Students per grade band across the department.</p>
+                <p class="mb-3 text-xs text-[#646464]">Students per grade band across the college.</p>
                 <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
             </div>
             <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm lg:col-span-2">
@@ -170,7 +170,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 id="compare-heading" class="text-sm font-semibold text-[#1A1C1E]">Compare</h2>
                 <div class="flex items-center gap-1 text-xs" role="group" aria-label="Compare by">
-                    <?php foreach (['sub_department' => 'Sub-departments', 'program' => 'Programs'] as $mode => $label): ?>
+                    <?php foreach (['department' => 'Departments', 'program' => 'Programs'] as $mode => $label): ?>
                         <a href="<?= esc($link(['compare' => $mode, 'sort' => null, 'dir' => null])) ?>"
                            <?= $filters->compare === $mode ? 'aria-current="true"' : '' ?>
                            class="rounded-full px-3 py-1.5 font-semibold <?= $filters->compare === $mode ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">
@@ -182,7 +182,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
-                    <caption class="sr-only">Department figures per <?= $filters->compare === 'program' ? 'program' : 'sub-department' ?></caption>
+                    <caption class="sr-only">College figures per <?= $filters->compare === 'program' ? 'program' : 'department' ?></caption>
                     <thead>
                         <tr class="border-b border-gray-100 text-xs text-[#646464]">
                             <?php foreach ($columns as $column => $label): ?>
@@ -199,7 +199,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
                             <tr class="border-b border-gray-50 hover:bg-gray-50" data-group="<?= (int) $group['id'] ?>">
                                 <th scope="row" class="px-3 py-2 font-semibold text-[#1A1C1E]">
                                     <?php if ($filters->compare === 'program'): ?>
-                                        <a data-program-link class="text-brand hover:underline" href="<?= esc(site_url('dean/monitor-department/programs/' . (int) $group['id']) . (($carry = http_build_query($filters->base->toQuery())) === '' ? '' : '?' . $carry)) ?>"><?= esc($group['name']) ?></a>
+                                        <a data-program-link class="text-brand hover:underline" href="<?= esc(site_url('dean/monitor-college/programs/' . (int) $group['id']) . (($carry = http_build_query($filters->base->toQuery())) === '' ? '' : '?' . $carry)) ?>"><?= esc($group['name']) ?></a>
                                     <?php else: ?>
                                         <?= esc($group['name']) ?>
                                     <?php endif; ?>
@@ -250,7 +250,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
         <section class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm" aria-labelledby="audit-heading" data-section="audit">
             <div class="flex flex-col gap-0.5">
                 <h2 id="audit-heading" class="text-sm font-semibold text-[#1A1C1E]">Audit log</h2>
-                <p class="text-xs text-[#646464]">What chairpersons changed in your department's courses: who, what, when and as which role.</p>
+                <p class="text-xs text-[#646464]">What chairpersons changed in your college's courses: who, what, when and as which role.</p>
             </div>
 
             <?php if ($audit['rows'] === []): ?>
@@ -258,7 +258,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
-                        <caption class="sr-only">Changes chairpersons made in the department's courses, newest first</caption>
+                        <caption class="sr-only">Changes chairpersons made in the college's courses, newest first</caption>
                         <thead>
                             <tr class="border-b border-gray-100 text-xs text-[#646464]">
                                 <th scope="col" class="px-3 py-2 font-semibold">Who</th>

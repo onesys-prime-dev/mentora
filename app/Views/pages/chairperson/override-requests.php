@@ -1,7 +1,7 @@
 <?php
 /**
  * The chairperson's grade-override requests: what waits for them to endorse or send back, or
- * every request in the sub-departments they chair to read. A student's work and grades are not
+ * every request in the departments they chair to read. A student's work and grades are not
  * shown, only the numbers asked for and the reason.
  *
  * @var string $view 'pending' or 'all'
@@ -75,7 +75,7 @@ foreach ($requests as $r) {
     <?= view('components/page-head', [
         'title'       => 'Override requests',
         'icon'        => 'tasks',
-        'description' => 'Requests to change a final grade in the sub-departments you chair. Endorse one to send it on to the dean, or send it back with what needs to change.',
+        'description' => 'Requests to change a final grade in the departments you chair. Endorse one to send it on to the dean, or send it back with what needs to change.',
     ], ['saveData' => false]) ?>
 
     <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
@@ -89,7 +89,7 @@ foreach ($requests as $r) {
     </div>
 
     <?= view('components/data-table', [
-        'caption'    => $view === 'all' ? 'Every grade-override request in your sub-departments' : 'Grade-override requests waiting for you',
+        'caption'    => $view === 'all' ? 'Every grade-override request in your departments' : 'Grade-override requests waiting for you',
         'columns'    => [
             ['key' => 'student', 'label' => 'Student'],
             ['key' => 'course', 'label' => 'Course'],
@@ -100,7 +100,7 @@ foreach ($requests as $r) {
         ],
         'rows'       => $rows,
         'emptyTitle' => $view === 'all' ? 'No requests yet' : 'Nothing waiting for you',
-        'emptyText'  => $view === 'all' ? 'Requests from instructors in your sub-departments will appear here.' : 'When an instructor asks to change a final grade, it appears here.',
+        'emptyText'  => $view === 'all' ? 'Requests from instructors in your departments will appear here.' : 'When an instructor asks to change a final grade, it appears here.',
         'emptyIcon'  => 'tasks',
     ], ['saveData' => false]) ?>
 

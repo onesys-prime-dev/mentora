@@ -9,7 +9,7 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The dean's Courses page as a dean sees it: their department's courses,
+ * The dean's Courses page as a dean sees it: their college's courses,
  * filters and paging in the address, the empty and no-assignment states, and
  * no way into a course yet.
  *
@@ -18,8 +18,8 @@ use Tests\Support\RouteTestCase;
 final class DeanCoursesPageTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
-    private int $subA;
+    private int $college;
+    private int $departmentA;
     private int $programA;
     private int $programB;
     private int $term;
@@ -29,14 +29,14 @@ final class DeanCoursesPageTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('H');
+        $home              = DeanFactory::college('H');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->programA    = DeanFactory::program($this->subA, 'A');
-        $this->programB    = DeanFactory::program(DeanFactory::subDepartment($this->department, 'B'), 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->programA    = DeanFactory::program($this->departmentA, 'A');
+        $this->programB    = DeanFactory::program(DeanFactory::department($this->college, 'B'), 'B');
         $this->term        = DeanFactory::term($this->institution);
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
     }
 
     private function page(string $query = ''): string
@@ -50,13 +50,13 @@ final class DeanCoursesPageTest extends RouteTestCase
         return $response->getBody();
     }
 
-    public function testTheDeanSeesTheirDepartmentsCoursesAndNoOthers(): void
+    public function testTheDeanSeesTheirCollegesCoursesAndNoOthers(): void
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
         DeanFactory::offering($this->programB, $this->term, 'CS201', 'A', 'active', 'Algorithms');
 
-        $elsewhere = DeanFactory::department('X');
-        DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X'), DeanFactory::term($elsewhere['institution']), 'ZZ999', 'A', 'active', 'Foreign Course');
+        $elsewhere = DeanFactory::college('X');
+        DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X'), DeanFactory::term($elsewhere['institution']), 'ZZ999', 'A', 'active', 'Foreign Course');
 
         $body = $this->page();
 
@@ -70,7 +70,7 @@ final class DeanCoursesPageTest extends RouteTestCase
     {
         $offering = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
         CourseFactory::assignInstructor($offering, PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution));
-        DeanFactory::chair($this->subA, 'Maria');
+        DeanFactory::chair($this->departmentA, 'Maria');
 
         $body = html_entity_decode($this->page());
 
@@ -123,11 +123,11 @@ final class DeanCoursesPageTest extends RouteTestCase
         $this->assertStringContainsString('Intro to Computing', $body);
     }
 
-    public function testAnotherDepartmentsProgramInTheAddressShowsNothing(): void
+    public function testAnotherCollegesProgramInTheAddressShowsNothing(): void
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
-        $elsewhere = DeanFactory::department('X');
-        $foreign   = DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X');
+        $elsewhere = DeanFactory::college('X');
+        $foreign   = DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X');
         DeanFactory::offering($foreign, DeanFactory::term($elsewhere['institution']), 'ZZ999', 'A', 'active', 'Foreign Course');
 
         $body = $this->page('?program=' . $foreign);
@@ -136,14 +136,14 @@ final class DeanCoursesPageTest extends RouteTestCase
         $this->assertStringNotContainsString('Intro to Computing', $body);
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanationNotTheList(): void
+    public function testADeanWithoutACollegeSeesTheExplanationNotTheList(): void
     {
         $this->loggedInAs(CourseFactory::user('dean'));
 
         $response = $this->call('GET', '/dean/courses')->response();
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
+        $this->assertStringContainsString('not assigned to a college yet', $response->getBody());
     }
 
     public function testTheAppsMenuHasACoursesTileForTheDean(): void

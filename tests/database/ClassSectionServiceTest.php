@@ -52,7 +52,7 @@ final class ClassSectionServiceTest extends DatabaseTestCase
 
         $db = db_connect();
 
-        $this->program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $this->program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
         $this->term    = (int) $db->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
 
         $db->table('courses')->insert(['program_id' => $this->program, 'course_code' => 'IT101', 'course_title' => 'Intro to Computing', 'units' => 3]);
@@ -117,7 +117,7 @@ final class ClassSectionServiceTest extends DatabaseTestCase
         $e = $this->refused(fn () => $this->section(['code' => 'BSIT 1-A']));
         $this->assertArrayHasKey('code', $e->errors());
 
-        $otherProgram = (int) db_connect()->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->other])->getRow()->id;
+        $otherProgram = (int) db_connect()->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->other])->getRow()->id;
         $otherTerm    = (int) db_connect()->table('academic_terms')->where('institution_id', $this->other)->get()->getRowArray()['id'];
 
         $id = $this->service->create($this->other, ['term_id' => (string) $otherTerm, 'program_id' => (string) $otherProgram, 'year_level' => '1', 'code' => 'BSIT 1-A', 'capacity' => '5']);

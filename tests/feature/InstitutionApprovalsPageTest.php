@@ -34,12 +34,12 @@ final class InstitutionApprovalsPageTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         PermissionMatrix::flush();
 
-        $home              = DeanFactory::department('AP');
+        $home              = DeanFactory::college('AP');
         $this->institution = $home['institution'];
-        $other             = DeanFactory::department('AQ', $this->institution);
-        DeanFactory::dean($this->institution, $other['department'], 'Otto');
+        $other             = DeanFactory::college('AQ', $this->institution);
+        DeanFactory::dean($this->institution, $other['college'], 'Otto');
 
-        $program  = DeanFactory::program(DeanFactory::subDepartment($home['department'], 'AP'), 'AP');
+        $program  = DeanFactory::program(DeanFactory::department($home['college'], 'AP'), 'AP');
         $offering = DeanFactory::offering($program, DeanFactory::term($this->institution), 'IT301', 'A', 'active', 'Networks');
         $teacher  = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
         $student  = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
@@ -75,7 +75,7 @@ final class InstitutionApprovalsPageTest extends RouteTestCase
         $this->assertStringContainsString(site_url("institution/approvals/{$this->request}/approve"), $html);
         // No link to the dean's page (the view's file path, pages/dean/..., can appear in debug comments).
         $this->assertStringNotContainsString(site_url('dean/approvals'), $html);
-        $this->assertStringNotContainsString('in your department', $html, 'worded for an administrator');
+        $this->assertStringNotContainsString('in your college', $html, 'worded for an administrator');
     }
 
     public function testTheAdministratorApprovesThroughThePage(): void

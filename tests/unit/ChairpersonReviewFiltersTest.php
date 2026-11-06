@@ -14,10 +14,10 @@ final class ChairpersonReviewFiltersTest extends TestCase
 {
     public function testGoodValuesAreKept(): void
     {
-        $f = ChairpersonReviewFilters::fromInput(['chairperson' => '4', 'sub_department' => '7', 'from' => '2026-10-01', 'to' => '2026-10-31', 'view' => 'reviewed']);
+        $f = ChairpersonReviewFilters::fromInput(['chairperson' => '4', 'department' => '7', 'from' => '2026-10-01', 'to' => '2026-10-31', 'view' => 'reviewed']);
 
         $this->assertSame(4, $f->chairpersonId);
-        $this->assertSame(7, $f->subDepartmentId);
+        $this->assertSame(7, $f->departmentId);
         $this->assertSame('2026-10-01 00:00:00', $f->fromTimestamp());
         $this->assertSame('2026-11-01 00:00:00', $f->untilTimestamp(), 'the whole last day counts');
         $this->assertSame('reviewed', $f->view);
@@ -26,10 +26,10 @@ final class ChairpersonReviewFiltersTest extends TestCase
 
     public function testBadValuesAreDroppedAndTheViewFallsBackToWhatIsLeftToReview(): void
     {
-        $f = ChairpersonReviewFilters::fromInput(['chairperson' => '-1', 'sub_department' => 'abc', 'from' => '2026-02-31', 'to' => 'tomorrow', 'view' => 'everything']);
+        $f = ChairpersonReviewFilters::fromInput(['chairperson' => '-1', 'department' => 'abc', 'from' => '2026-02-31', 'to' => 'tomorrow', 'view' => 'everything']);
 
         $this->assertNull($f->chairpersonId);
-        $this->assertNull($f->subDepartmentId);
+        $this->assertNull($f->departmentId);
         $this->assertNull($f->fromTimestamp());
         $this->assertNull($f->untilTimestamp());
         $this->assertSame('unreviewed', $f->view);

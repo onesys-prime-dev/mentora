@@ -92,7 +92,7 @@ final class NavigationHelperTest extends CIUnitTestCase
 
         $this->assertSame(['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('dean/grades')], $tile);
 
-        // Beside Courses: the dean's lists of the department's sections sit together.
+        // Beside Courses: the dean's lists of the college's sections sit together.
         $keys = array_column(global_apps('dean'), 'key');
         $this->assertSame(array_search('courses', $keys, true) + 1, array_search('grades', $keys, true));
 

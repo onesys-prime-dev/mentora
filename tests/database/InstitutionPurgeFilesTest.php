@@ -59,7 +59,7 @@ final class InstitutionPurgeFilesTest extends DatabaseTestCase
     private function deletedInstitution(): int
     {
         $offering = CourseFactory::offering();
-        $id       = (int) db_connect()->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
+        $id       = (int) db_connect()->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
         db_connect()->table('institutions')->where('id', $id)->update(['status' => 'past', 'deleted_at' => '2026-01-01 08:00:00']);
 
         return $id;

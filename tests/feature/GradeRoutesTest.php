@@ -366,11 +366,11 @@ final class GradeRoutesTest extends RouteTestCase
         $this->assertStringNotContainsString('data-manual-score-input', $this->send('GET', "{$base}?readonly=1")['json']['html']);
 
         // Someone who may only look stays view-only; readonly=0 does not grant the controls.
-        $home = DeanFactory::department('RO');
-        $sub = DeanFactory::subDepartment($home['department'], 'A');
-        $deansSection = DeanFactory::offering(DeanFactory::program($sub, 'A'), DeanFactory::term($home['institution']), 'IT101');
+        $home = DeanFactory::college('RO');
+        $department = DeanFactory::department($home['college'], 'A');
+        $deansSection = DeanFactory::offering(DeanFactory::program($department, 'A'), DeanFactory::term($home['institution']), 'IT101');
         CourseFactory::enroll($deansSection, CourseFactory::user('student'));
-        $this->as(DeanFactory::dean($home['institution'], $home['department']));
+        $this->as(DeanFactory::dean($home['institution'], $home['college']));
 
         $viewed = $this->send('GET', "dean/api/courses/{$deansSection}/grades/roster?readonly=0");
 

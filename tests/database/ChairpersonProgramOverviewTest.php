@@ -12,7 +12,7 @@ use Tests\Support\GradeFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * The sections behind the chairperson's Program tab: the sections of the sub-departments they chair, with
+ * The sections behind the chairperson's Program tab: the sections of the departments they chair, with
  * average, at risk, waiting and status, a finalization tracker, search, filter, sort and pages.
  *
  * @internal
@@ -25,7 +25,7 @@ final class ChairpersonProgramOverviewTest extends DatabaseTestCase
 
     private ChairpersonProgramOverview $overview;
 
-    /** @var array{sub: int, program: int, institution: int, department: int} */
+    /** @var array{sub: int, program: int, institution: int, college: int} */
     private array $home;
 
     private int $term;
@@ -42,13 +42,13 @@ final class ChairpersonProgramOverviewTest extends DatabaseTestCase
         $this->term     = $this->term($this->home['institution']);
 
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id' => $this->home['sub'], 'chairperson_user_id' => $this->chair->id,
+            'department_id' => $this->home['sub'], 'chairperson_user_id' => $this->chair->id,
             'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
         ]);
     }
 
-    /** @return array{sub: int, program: int, institution: int, department: int} */
-    private function unit(string $tag, ?int $institution = null, ?int $department = null): array
+    /** @return array{sub: int, program: int, institution: int, college: int} */
+    private function unit(string $tag, ?int $institution = null, ?int $college = null): array
     {
         $db = db_connect();
 
@@ -57,17 +57,17 @@ final class ChairpersonProgramOverviewTest extends DatabaseTestCase
             $institution = (int) $db->insertID();
         }
 
-        if ($department === null) {
-            $db->table('departments')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
-            $department = (int) $db->insertID();
+        if ($college === null) {
+            $db->table('colleges')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+            $college = (int) $db->insertID();
         }
 
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => "S{$tag}", 'name' => "Department {$tag}"]);
-        $sub = (int) $db->insertID();
+        $db->table('departments')->insert(['college_id' => $college, 'code' => "S{$tag}", 'name' => "College {$tag}"]);
+        $department = (int) $db->insertID();
 
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
+        $db->table('programs')->insert(['department_id' => $department, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
 
-        return ['sub' => $sub, 'program' => (int) $db->insertID(), 'institution' => $institution, 'department' => $department];
+        return ['sub' => $department, 'program' => (int) $db->insertID(), 'institution' => $institution, 'college' => $college];
     }
 
     private function term(int $institution, string $start = '2026-08-01'): int
@@ -174,14 +174,14 @@ final class ChairpersonProgramOverviewTest extends DatabaseTestCase
         return $out;
     }
 
-    public function testOnlySectionsOfChairedSubDepartmentsAreListed(): void
+    public function testOnlySectionsOfChairedDepartmentsAreListed(): void
     {
         $active    = $this->section('IT101');
         $completed = $this->section('IT102', 'A', 'completed');
         $this->section('IT103', 'A', 'archived');
 
-        $sibling = $this->unit('S', $this->home['institution'], $this->home['department']);
-        $this->section('IT201', 'A', 'active', $sibling); // same department, another sub-department
+        $sibling = $this->unit('S', $this->home['institution'], $this->home['college']);
+        $this->section('IT201', 'A', 'active', $sibling); // same college, another department
 
         $elsewhere = $this->unit('O');
         $this->section('CS101', 'A', 'active', $elsewhere, $this->term($elsewhere['institution']));
@@ -441,7 +441,7 @@ final class ChairpersonProgramOverviewTest extends DatabaseTestCase
 
         $this->section('IT102'); // chaired, not taught
 
-        $sibling = $this->unit('S', $this->home['institution'], $this->home['department']);
+        $sibling = $this->unit('S', $this->home['institution'], $this->home['college']);
         $outside = $this->section('IT201', 'A', 'active', $sibling); // taught, not chaired
         CourseFactory::assignInstructor($outside, $this->chair);
 

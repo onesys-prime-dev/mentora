@@ -30,8 +30,8 @@ final class InstitutionRoles
     /** The permissions an institution sets: never platform or institution-administration ones (U1d). */
     public const ACADEMIC = [
         'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage',
-        'program.monitor', 'department.monitor', 'grades.approve', 'grades.signoff',
-        'children.view', 'followups.manage', 'department.announce', 'messages.use',
+        'program.monitor', 'college.monitor', 'grades.approve', 'grades.signoff',
+        'children.view', 'followups.manage', 'college.announce', 'messages.use',
     ];
 
     /**

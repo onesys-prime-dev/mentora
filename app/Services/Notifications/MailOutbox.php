@@ -14,7 +14,7 @@ use Throwable;
 /**
  * Tells people by email what an upload, an import, an enrolment or an assignment did to them: that they have an
  * account and how to choose a password, that they were enrolled, that they teach a section, that they lead a
- * department.
+ * college.
  *
  * It works in two halves, so that nothing is sent for a change that did not happen:
  *
@@ -316,12 +316,12 @@ class MailOutbox
         $out .= $this->list('You are enrolled in', $by[self::ENROLLED] ?? []);
         $out .= $this->list('You are assigned to teach', $by[self::TEACHING] ?? []);
 
-        foreach ($by[self::DEAN] ?? [] as $department) {
-            $out .= "You are now the dean of {$department}.\n\n";
+        foreach ($by[self::DEAN] ?? [] as $college) {
+            $out .= "You are now the dean of {$college}.\n\n";
         }
 
-        foreach ($by[self::CHAIRPERSON] ?? [] as $sub) {
-            $out .= "You are now the chairperson of {$sub}.\n\n";
+        foreach ($by[self::CHAIRPERSON] ?? [] as $department) {
+            $out .= "You are now the chairperson of {$department}.\n\n";
         }
 
         $out .= isset($by[self::WELCOME])

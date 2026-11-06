@@ -30,7 +30,7 @@ final class OverrideRequestRaceTest extends DatabaseTestCase
 
     private int $requestId;
 
-    private int $department;
+    private int $college;
 
     protected function setUp(): void
     {
@@ -39,12 +39,12 @@ final class OverrideRequestRaceTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home             = DeanFactory::department('RC');
-        $this->department = $home['department'];
-        $sub            = DeanFactory::subDepartment($home['department'], 'RC');
-        $this->offering = DeanFactory::offering(DeanFactory::program($sub, 'RC'), DeanFactory::term($home['institution']), 'IT701');
-        DeanFactory::dean($home['institution'], $home['department']);
-        $this->chair   = DeanFactory::chair($sub, 'Maria');
+        $home             = DeanFactory::college('RC');
+        $this->college = $home['college'];
+        $department            = DeanFactory::department($home['college'], 'RC');
+        $this->offering = DeanFactory::offering(DeanFactory::program($department, 'RC'), DeanFactory::term($home['institution']), 'IT701');
+        DeanFactory::dean($home['institution'], $home['college']);
+        $this->chair   = DeanFactory::chair($department, 'Maria');
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $home['institution']);
         $student       = PeopleFactory::person('student', 'Ann', 'Lee', null, $home['institution']);
 
@@ -125,16 +125,16 @@ final class OverrideRequestRaceTest extends DatabaseTestCase
 
         // The re-route reads the request as waiting for the dean; the dean decides it before the re-route writes.
         $service = new class () extends GradeOverrideRequestService {
-            protected function pastTheChair(int $departmentId): array
+            protected function pastTheChair(int $collegeId): array
             {
-                $rows = parent::pastTheChair($departmentId);
+                $rows = parent::pastTheChair($collegeId);
                 db_connect()->table('grade_override_requests')->whereIn('id', array_column($rows, 'id'))->update(['status' => Chain::APPROVED, 'open_marker' => null]);
 
                 return $rows;
             }
         };
 
-        $this->assertSame(0, $service->retargetDepartment($this->department));
+        $this->assertSame(0, $service->retargetCollege($this->college));
         $this->assertSame(Chain::APPROVED, $this->statusOf(), 'a decided request is never reopened');
     }
 

@@ -15,14 +15,14 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * Download department: one workbook with the class gradebook of every section of the dean's department (every
- * program), an audit entry for each, nothing from another department, and department.monitor behind it.
+ * Download college: one workbook with the class gradebook of every section of the dean's college (every
+ * program), an audit entry for each, nothing from another college, and college.monitor behind it.
  *
  * @internal
  */
-final class DeanDownloadDepartmentTest extends RouteTestCase
+final class DeanDownloadCollegeTest extends RouteTestCase
 {
-    /** @var array{institution: int, department: int} */
+    /** @var array{institution: int, college: int} */
     private array $unit;
 
     private int $programA;
@@ -40,11 +40,11 @@ final class DeanDownloadDepartmentTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         PermissionMatrix::flush();
 
-        $this->unit     = DeanFactory::department('DDD');
-        $this->programA = DeanFactory::program(DeanFactory::subDepartment($this->unit['department'], 'DDA'), 'DDA');
-        $this->programB = DeanFactory::program(DeanFactory::subDepartment($this->unit['department'], 'DDB'), 'DDB');
+        $this->unit     = DeanFactory::college('DDD');
+        $this->programA = DeanFactory::program(DeanFactory::department($this->unit['college'], 'DDA'), 'DDA');
+        $this->programB = DeanFactory::program(DeanFactory::department($this->unit['college'], 'DDB'), 'DDB');
         $this->term     = DeanFactory::term($this->unit['institution']);
-        $this->dean     = DeanFactory::dean($this->unit['institution'], $this->unit['department']);
+        $this->dean     = DeanFactory::dean($this->unit['institution'], $this->unit['college']);
     }
 
     protected function tearDown(): void
@@ -84,7 +84,7 @@ final class DeanDownloadDepartmentTest extends RouteTestCase
     {
         $this->loggedInAs($this->dean);
 
-        return $this->get('dean/grades/download-department?term=' . $this->term);
+        return $this->get('dean/grades/download-college?term=' . $this->term);
     }
 
     /** @return list<string> the sheet names of the workbook the response carries */
@@ -110,7 +110,7 @@ final class DeanDownloadDepartmentTest extends RouteTestCase
         );
     }
 
-    public function testASheetPerDepartmentSectionAndAnAuditEach(): void
+    public function testASheetPerCollegeSectionAndAnAuditEach(): void
     {
         $a    = $this->section('IT101', $this->programA);
         $b    = $this->section('CS101', $this->programB);
@@ -122,19 +122,19 @@ final class DeanDownloadDepartmentTest extends RouteTestCase
 
         $this->assertInstanceOf(DownloadResponse::class, $response);
         $response->buildHeaders();
-        $this->assertStringContainsString('department-gradebooks-', $response->getHeaderLine('Content-Disposition'));
+        $this->assertStringContainsString('college-gradebooks-', $response->getHeaderLine('Content-Disposition'));
         $this->assertSame([$this->label($b), $this->label($a)], $this->sheets($response), 'every program, no sheet for ' . $this->label($bare));
 
         $this->assertSame([$b, $a], $this->exported());
         $this->assertSame((int) $this->dean->id, (int) db_connect()->table('audit_logs')->where('action', 'grades.report_exported')->get()->getRow()->actor_user_id);
     }
 
-    public function testOtherDepartmentsLeftOut(): void
+    public function testOtherCollegesLeftOut(): void
     {
         $mine = $this->section('IT101', $this->programA);
 
-        $other  = DeanFactory::department('DDO', $this->unit['institution']);
-        $theirs = $this->section('XX101', DeanFactory::program(DeanFactory::subDepartment($other['department'], 'DDO'), 'DDO'));
+        $other  = DeanFactory::college('DDO', $this->unit['institution']);
+        $theirs = $this->section('XX101', DeanFactory::program(DeanFactory::department($other['college'], 'DDO'), 'DDO'));
         $this->graded($mine);
         $this->graded($theirs);
 
@@ -145,11 +145,11 @@ final class DeanDownloadDepartmentTest extends RouteTestCase
         $this->assertSame([$mine], $this->exported());
     }
 
-    public function testWithoutDepartmentMonitorRefused(): void
+    public function testWithoutCollegeMonitorRefused(): void
     {
         $this->graded($this->section('IT101', $this->programA));
 
-        db_connect()->table('role_permissions')->insert(['institution_id' => $this->unit['institution'], 'role' => 'dean', 'permission' => 'department.monitor', 'granted' => 0]);
+        db_connect()->table('role_permissions')->insert(['institution_id' => $this->unit['institution'], 'role' => 'dean', 'permission' => 'college.monitor', 'granted' => 0]);
         PermissionMatrix::flush();
         $this->dean = model(UserModel::class)->findById($this->dean->id);
 
@@ -165,7 +165,7 @@ final class DeanDownloadDepartmentTest extends RouteTestCase
         $this->section('IT101', $this->programA);
 
         $this->download()->assertRedirect();
-        $this->assertSame("None of the department's sections this term has grading yet, so there is nothing to download.", session('error'));
+        $this->assertSame("None of the college's sections this term has grading yet, so there is nothing to download.", session('error'));
         $this->assertSame([], $this->exported());
     }
 }

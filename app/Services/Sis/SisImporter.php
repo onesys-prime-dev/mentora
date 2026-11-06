@@ -62,7 +62,7 @@ use App\Services\Subscriptions\EffectiveStatus;
  * people, courses and the active term. They go through the same services
  * the screens use (DeanAssignmentService, ChairAssignmentService,
  * OfferingService), so every rule of those holds. The SIS wins: what it
- * lists replaces what is there (a dean it names replaces the department's
+ * lists replaces what is there (a dean it names replaces the college's
  * current one). What it stops listing is ended, but only what the SIS itself
  * supplied (sis_staff_assignments), counted as "ended" and not as an update:
  * an assignment made by hand is never touched, and nothing is ended when the file had rows that could not be
@@ -702,12 +702,12 @@ class SisImporter
 
         /** @var array<string, true> $listed every row the SIS lists whose person and target were found */
         $listed = [];
-        /** @var array<int, int> $deanOfDepartment department => the person this file made its dean */
-        $deanOfDepartment = [];
-        /** @var array<int, int> $deanedBy person => the department this file made them dean of */
+        /** @var array<int, int> $deanOfCollege college => the person this file made its dean */
+        $deanOfCollege = [];
+        /** @var array<int, int> $deanedBy person => the college this file made them dean of */
         $deanedBy = [];
-        /** @var array<int, int> $chairOfSub sub-department => the person this file made its chairperson */
-        $chairOfSub = [];
+        /** @var array<int, int> $chairOfDepartment department => the person this file made its chairperson */
+        $chairOfDepartment = [];
 
         foreach ($batch->records as $i => $record) {
             $m    = SisMapper::staffAssignment($record);
@@ -748,30 +748,30 @@ class SisImporter
                 $listed[$key] = true;
 
                 if ($m['role'] === SisStaffAssignments::DEAN) {
-                    if (isset($deanOfDepartment[$targetId]) && $deanOfDepartment[$targetId] !== $personId) {
-                        $this->fail($dataset, $item, 'The department already has a dean in this file; a department has one dean.');
+                    if (isset($deanOfCollege[$targetId]) && $deanOfCollege[$targetId] !== $personId) {
+                        $this->fail($dataset, $item, 'The college already has a dean in this file; a college has one dean.');
 
                         continue;
                     }
 
                     if (isset($deanedBy[$personId]) && $deanedBy[$personId] !== $targetId) {
-                        $this->fail($dataset, $item, 'The person is already the dean of another department in this file; a person is dean of one department.');
+                        $this->fail($dataset, $item, 'The person is already the dean of another college in this file; a person is dean of one college.');
 
                         continue;
                     }
 
-                    $deanOfDepartment[$targetId] = $personId;
+                    $deanOfCollege[$targetId] = $personId;
                     $deanedBy[$personId]         = $targetId;
                 }
 
                 if ($m['role'] === SisStaffAssignments::CHAIRPERSON) {
-                    if (isset($chairOfSub[$targetId]) && $chairOfSub[$targetId] !== $personId) {
-                        $this->fail($dataset, $item, 'The sub-department already has a chairperson in this file; a sub-department has one chairperson.');
+                    if (isset($chairOfDepartment[$targetId]) && $chairOfDepartment[$targetId] !== $personId) {
+                        $this->fail($dataset, $item, 'The department already has a chairperson in this file; a department has one chairperson.');
 
                         continue;
                     }
 
-                    $chairOfSub[$targetId] = $personId;
+                    $chairOfDepartment[$targetId] = $personId;
                 }
 
                 $this->applyStaff($tracker, $dataset, $item, $m['role'], $personId, $targetId);
@@ -937,7 +937,7 @@ class SisImporter
     }
 
     /**
-     * The department, sub-department or offering the row names (the offering is created when it is not there yet),
+     * The college, department or offering the row names (the offering is created when it is not there yet),
      * or null after failing the row with the reason.
      *
      * @param array{role: string, person_external_id: string, target: string, section: string, program_code: ?string} $m
@@ -948,10 +948,10 @@ class SisImporter
         $db      = db_connect();
 
         if ($m['role'] === SisStaffAssignments::DEAN) {
-            $row = $db->table('departments')->select('id')->where(['institution_id' => $this->institutionId, 'code' => $m['target']])->get()->getRowArray();
+            $row = $db->table('colleges')->select('id')->where(['institution_id' => $this->institutionId, 'code' => $m['target']])->get()->getRowArray();
 
             if ($row === null) {
-                $this->fail($dataset, $item, "department_code \"{$m['target']}\" is not a department of this institution.");
+                $this->fail($dataset, $item, "college_code \"{$m['target']}\" is not a college of this institution.");
 
                 return null;
             }
@@ -960,20 +960,20 @@ class SisImporter
         }
 
         if ($m['role'] === SisStaffAssignments::CHAIRPERSON) {
-            $rows = $db->table('sub_departments sd')
+            $rows = $db->table('departments sd')
                 ->select('sd.id')
-                ->join('departments d', 'd.id = sd.department_id')
+                ->join('colleges d', 'd.id = sd.college_id')
                 ->where(['d.institution_id' => $this->institutionId, 'sd.code' => $m['target']])
                 ->get()->getResultArray();
 
             if ($rows === []) {
-                $this->fail($dataset, $item, "sub_department_code \"{$m['target']}\" is not a sub-department of this institution.");
+                $this->fail($dataset, $item, "department_code \"{$m['target']}\" is not a department of this institution.");
 
                 return null;
             }
 
             if (count($rows) > 1) {
-                $this->fail($dataset, $item, "sub_department_code \"{$m['target']}\" matches more than one sub-department of this institution, so it cannot say which one.");
+                $this->fail($dataset, $item, "department_code \"{$m['target']}\" matches more than one department of this institution, so it cannot say which one.");
 
                 return null;
             }
@@ -1027,7 +1027,7 @@ class SisImporter
 
         if ($role === SisStaffAssignments::DEAN) {
             $service  = new DeanAssignmentService();
-            $replaces = $service->currentDeanOfDepartment($targetId) !== null || $service->departmentOfDean($personId) !== null;
+            $replaces = $service->currentDeanOfCollege($targetId) !== null || $service->collegeOfDean($personId) !== null;
             $localId  = $service->assign($this->institutionId, $targetId, $personId, $this->actor, true);
         } elseif ($role === SisStaffAssignments::CHAIRPERSON) {
             if (! $this->hasRole($personId, 'chairperson')) {
@@ -1094,16 +1094,16 @@ class SisImporter
         }
     }
 
-    private function activeDeanAssignment(int $personId, int $departmentId): ?int
+    private function activeDeanAssignment(int $personId, int $collegeId): ?int
     {
-        $row = db_connect()->table('dean_assignments')->select('id')->where(['dean_user_id' => $personId, 'department_id' => $departmentId, 'status' => 'active'])->get()->getRowArray();
+        $row = db_connect()->table('dean_assignments')->select('id')->where(['dean_user_id' => $personId, 'college_id' => $collegeId, 'status' => 'active'])->get()->getRowArray();
 
         return $row === null ? null : (int) $row['id'];
     }
 
-    private function activeChairAssignment(int $personId, int $subDepartmentId): ?int
+    private function activeChairAssignment(int $personId, int $departmentId): ?int
     {
-        $row = db_connect()->table('chairperson_assignments')->select('id')->where(['chairperson_user_id' => $personId, 'sub_department_id' => $subDepartmentId, 'status' => 'active'])->get()->getRowArray();
+        $row = db_connect()->table('chairperson_assignments')->select('id')->where(['chairperson_user_id' => $personId, 'department_id' => $departmentId, 'status' => 'active'])->get()->getRowArray();
 
         return $row === null ? null : (int) $row['id'];
     }
@@ -1173,9 +1173,9 @@ class SisImporter
         return db_connect()->table('courses')
             ->select('courses.*')
             ->join('programs', 'programs.id = courses.program_id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where('departments.institution_id', $this->institutionId)
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where('colleges.institution_id', $this->institutionId)
             ->where('courses.id', $courseId)
             ->get()->getRowArray();
     }
@@ -1228,9 +1228,9 @@ class SisImporter
         $query = db_connect()->table('courses')
             ->select('courses.id, programs.code AS program_code')
             ->join('programs', 'programs.id = courses.program_id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where('departments.institution_id', $this->institutionId)
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where('colleges.institution_id', $this->institutionId)
             ->where('courses.course_code', $ref);
 
         if ($programCode !== null) {
@@ -1298,9 +1298,9 @@ class SisImporter
 
         $row = db_connect()->table('programs')
             ->select('programs.id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where('departments.institution_id', $this->institutionId)
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where('colleges.institution_id', $this->institutionId)
             ->where('programs.code', $code)
             ->get()->getRowArray();
 

@@ -27,7 +27,7 @@ final class InstitutionCoursesTest extends RouteTestCase
 
     private int $program;
 
-    private int $sub;
+    private int $department;
 
     private User $admin;
 
@@ -44,8 +44,8 @@ final class InstitutionCoursesTest extends RouteTestCase
 
         $db = db_connect();
 
-        $this->sub     = (int) $db->query('SELECT sd.id FROM sub_departments sd JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
-        $this->program = (int) $db->table('programs')->where('sub_department_id', $this->sub)->get()->getRowArray()['id'];
+        $this->department     = (int) $db->query('SELECT sd.id FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $this->program = (int) $db->table('programs')->where('department_id', $this->department)->get()->getRowArray()['id'];
 
         $db->table('audit_logs')->emptyTable();
 
@@ -201,7 +201,7 @@ final class InstitutionCoursesTest extends RouteTestCase
     public function testAnotherInstitutionsCoursesAreNeverShownOrChanged(): void
     {
         $db = db_connect();
-        $db->table('courses')->insert(['program_id' => (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->other])->getRow()->id, 'course_code' => 'THEIRS1', 'course_title' => 'Their private course', 'units' => 3]);
+        $db->table('courses')->insert(['program_id' => (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->other])->getRow()->id, 'course_code' => 'THEIRS1', 'course_title' => 'Their private course', 'units' => 3]);
         $foreign = (int) $db->insertID();
 
         $this->assertStringNotContainsString('Their private course', $this->page());
@@ -247,7 +247,7 @@ final class InstitutionCoursesTest extends RouteTestCase
         $this->assertStringContainsString('Cho Chair (cho@courses.example)', $this->step('GET', 'institution/structure')->response()->getBody(), 'offered in the dialog');
 
         $this->withHeaders(['Accept' => 'application/json']);
-        $result = $this->step('POST', "institution/structure/sub-departments/{$this->sub}/chairpersons", ['user_id' => (string) $chair->id]);
+        $result = $this->step('POST', "institution/structure/departments/{$this->department}/chairpersons", ['user_id' => (string) $chair->id]);
         $this->assertSame('The chairperson was assigned.', json_decode($result->getJSON(), true)['message']);
         $this->withHeaders(['Accept' => 'text/html']);
 
@@ -266,7 +266,7 @@ final class InstitutionCoursesTest extends RouteTestCase
         $teacher = PeopleFactory::person('instructor', 'Ivy', 'Teacher', null, $this->institution);
 
         $this->withHeaders(['Accept' => 'application/json']);
-        $result = $this->step('POST', "institution/structure/sub-departments/{$this->sub}/chairpersons", ['user_id' => (string) $teacher->id]);
+        $result = $this->step('POST', "institution/structure/departments/{$this->department}/chairpersons", ['user_id' => (string) $teacher->id]);
 
         $this->assertSame(422, $result->response()->getStatusCode());
         $this->assertArrayHasKey('user_id', json_decode($result->getJSON(), true)['errors']);

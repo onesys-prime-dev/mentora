@@ -42,9 +42,9 @@ final class CourseChatLockTest extends DatabaseTestCase
 
         Services::resetSingle('auditLogger');
 
-        $d                 = DeanFactory::department('L1');
+        $d                 = DeanFactory::college('L1');
         $this->institution = $d['institution'];
-        $program           = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'LA'), 'LA');
+        $program           = DeanFactory::program(DeanFactory::department($d['college'], 'LA'), 'LA');
         $term              = DeanFactory::term($this->institution);
         $this->offering    = DeanFactory::offering($program, $term, 'LK1');
         $this->student     = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);

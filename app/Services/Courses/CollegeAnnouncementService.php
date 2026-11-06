@@ -10,11 +10,11 @@ use App\Services\Notifications\NotificationService;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * A dean's announcements to their department, a sub-department or one program.
+ * A dean's announcements to their college, a department or one program.
  *
  * Who receives one is never stored: it is worked out from the hierarchy every time. Students receive it
  * through their program and their current enrolments, instructors through the sections they teach and
- * chairpersons through the sub-departments they chair, so a person who teaches in two departments gets the
+ * chairpersons through the departments they chair, so a person who teaches in two colleges gets the
  * announcements of each, each for the sections they have there, and a student who moves program stops
  * receiving the old program's. The audience can be narrowed to everyone, staff only (instructors and
  * chairpersons) or students only.
@@ -22,9 +22,9 @@ use CodeIgniter\Shield\Entities\User;
  * recipients() (an announcement to its people) and forUser() (a person to their announcements) are two
  * routes through the same rules; a test holds them to agreeing.
  */
-class DepartmentAnnouncementService
+class CollegeAnnouncementService
 {
-    public const SCOPES = ['department', 'sub_department', 'program'];
+    public const SCOPES = ['college', 'department', 'program'];
 
     public const AUDIENCES = [
         'everyone' => 'Everyone',
@@ -50,7 +50,7 @@ class DepartmentAnnouncementService
     /**
      * Posts an announcement and tells the people it is for.
      *
-     * @param array{scope?: mixed, audience?: mixed, title?: mixed, message?: mixed, ends_on?: mixed} $input scope is "department", "sub_department:ID" or "program:ID"
+     * @param array{scope?: mixed, audience?: mixed, title?: mixed, message?: mixed, ends_on?: mixed} $input scope is "college", "department:ID" or "program:ID"
      *
      * @return array{success: bool, message: string, id?: int, errors?: array<string, string>}
      */
@@ -62,13 +62,13 @@ class DepartmentAnnouncementService
             return $this->refused($refusal);
         }
 
-        $department = (int) $this->access->departmentFor($dean)['department_id'];
+        $college = (int) $this->access->collegeFor($dean)['college_id'];
         $errors     = [];
 
-        [$type, $scopeId] = $this->parseScope((string) ($input['scope'] ?? ''), $dean, $department);
+        [$type, $scopeId] = $this->parseScope((string) ($input['scope'] ?? ''), $dean, $college);
 
         if ($type === null) {
-            $errors['scope'] = 'Choose who it is for: your department, a sub-department or a program of it.';
+            $errors['scope'] = 'Choose who it is for: your college, a department or a program of it.';
         }
 
         $audience = (string) ($input['audience'] ?? 'everyone');
@@ -89,9 +89,9 @@ class DepartmentAnnouncementService
         $now     = date('Y-m-d H:i:s');
         $db      = db_connect();
 
-        $db->table('department_announcements')->insert([
-            'institution_id' => $this->institutionOf($department),
-            'department_id'  => $department,
+        $db->table('college_announcements')->insert([
+            'institution_id' => $this->institutionOf($college),
+            'college_id'  => $college,
             'created_by'     => (int) $dean->id,
             'scope_type'     => $type,
             'scope_id'       => $scopeId,
@@ -107,7 +107,7 @@ class DepartmentAnnouncementService
         $id  = (int) $db->insertID();
         $row = $this->find($id);
 
-        $this->audit('department_announcement.posted', $dean, $id, null, ['scope' => "{$type}:{$scopeId}", 'audience' => $audience, 'title' => $title, 'ends_on' => $endsOn]);
+        $this->audit('college_announcement.posted', $dean, $id, null, ['scope' => "{$type}:{$scopeId}", 'audience' => $audience, 'title' => $title, 'ends_on' => $endsOn]);
 
         $reached = $this->tell($row, $dean);
 
@@ -142,9 +142,9 @@ class DepartmentAnnouncementService
 
         $new = ['title' => trim((string) $input['title']), 'message' => trim((string) $input['message']), 'ends_on' => $this->date($input['ends_on'] ?? null)];
 
-        db_connect()->table('department_announcements')->where('id', $id)->update($new + ['updated_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('college_announcements')->where('id', $id)->update($new + ['updated_at' => date('Y-m-d H:i:s')]);
 
-        $this->audit('department_announcement.edited', $dean, $id, ['title' => $row['title'], 'message' => $row['message'], 'ends_on' => $row['ends_on']], $new);
+        $this->audit('college_announcement.edited', $dean, $id, ['title' => $row['title'], 'message' => $row['message'], 'ends_on' => $row['ends_on']], $new);
 
         return ['success' => true, 'message' => 'Announcement updated.'];
     }
@@ -164,15 +164,15 @@ class DepartmentAnnouncementService
 
         $now = date('Y-m-d H:i:s');
 
-        db_connect()->table('department_announcements')->where(['id' => $id, 'status' => 'active'])->update(['status' => 'ended', 'ended_by' => (int) $dean->id, 'ended_at' => $now, 'updated_at' => $now]);
+        db_connect()->table('college_announcements')->where(['id' => $id, 'status' => 'active'])->update(['status' => 'ended', 'ended_by' => (int) $dean->id, 'ended_at' => $now, 'updated_at' => $now]);
 
-        $this->audit('department_announcement.ended', $dean, $id, null, ['title' => $row['title']]);
+        $this->audit('college_announcement.ended', $dean, $id, null, ['title' => $row['title']]);
 
         return ['success' => true, 'message' => 'Announcement ended.'];
     }
 
     /**
-     * The department's announcements for the dean's list: the ones still showing, or the ones that ended
+     * The college's announcements for the dean's list: the ones still showing, or the ones that ended
      * (by the dean or by their last day).
      *
      * @param 'active'|'ended' $tab
@@ -181,15 +181,15 @@ class DepartmentAnnouncementService
      */
     public function listForDean(User $dean, string $tab = 'active', ?string $today = null): array
     {
-        $department = $this->access->departmentFor($dean);
+        $college = $this->access->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return ['rows' => [], 'counts' => ['active' => 0, 'ended' => 0]];
         }
 
         $today ??= date('Y-m-d');
-        $all     = db_connect()->table('department_announcements')->where('department_id', (int) $department['department_id'])->orderBy('id', 'DESC')->get()->getResultArray();
-        $labels  = $this->scopeLabels((int) $department['department_id']);
+        $all     = db_connect()->table('college_announcements')->where('college_id', (int) $college['college_id'])->orderBy('id', 'DESC')->get()->getResultArray();
+        $labels  = $this->scopeLabels((int) $college['college_id']);
         $names   = $this->names(array_map('intval', array_column($all, 'created_by')));
 
         $counts = ['active' => 0, 'ended' => 0];
@@ -216,24 +216,24 @@ class DepartmentAnnouncementService
     }
 
     /**
-     * Where an announcement can be aimed, for the dean's form: the department, then its sub-departments and
+     * Where an announcement can be aimed, for the dean's form: the college, then its departments and
      * programs.
      *
-     * @return array<string, string> "department", "sub_department:ID" or "program:ID" => label
+     * @return array<string, string> "college", "department:ID" or "program:ID" => label
      */
     public function scopeOptions(User $dean): array
     {
-        $department = $this->access->departmentFor($dean);
+        $college = $this->access->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return [];
         }
 
-        $labels = $this->scopeLabels((int) $department['department_id']);
-        $out    = ['department' => $labels['department:' . $department['department_id']] ?? 'My department'];
+        $labels = $this->scopeLabels((int) $college['college_id']);
+        $out    = ['college' => $labels['college:' . $college['college_id']] ?? 'My college'];
 
         foreach ($labels as $key => $label) {
-            if (! str_starts_with($key, 'department:')) {
+            if (! str_starts_with($key, 'college:')) {
                 $out[$key] = $label;
             }
         }
@@ -263,7 +263,7 @@ class DepartmentAnnouncementService
     public function recipients(array $row): array
     {
         $programs = $this->programsInScope((string) $row['scope_type'], (int) $row['scope_id']);
-        $subs     = $this->subDepartmentsInScope((string) $row['scope_type'], (int) $row['scope_id']);
+        $departments     = $this->departmentsInScope((string) $row['scope_type'], (int) $row['scope_id']);
         $db       = db_connect();
         $audience = (string) $row['audience'];
 
@@ -300,12 +300,12 @@ class DepartmentAnnouncementService
                 ->get()->getResultArray());
         }
 
-        if ($subs !== [] && in_array($audience, ['everyone', 'staff'], true)) {
+        if ($departments !== [] && in_array($audience, ['everyone', 'staff'], true)) {
             $chairpersons = $this->ids($db->table('chairperson_assignments ca')
                 ->select('ca.chairperson_user_id AS id')
                 ->join('users u', 'u.id = ca.chairperson_user_id')
                 ->where('ca.status', 'active')->where('u.active', 1)
-                ->whereIn('ca.sub_department_id', $subs)
+                ->whereIn('ca.department_id', $departments)
                 ->get()->getResultArray());
         }
 
@@ -315,7 +315,7 @@ class DepartmentAnnouncementService
     /**
      * The announcements that are showing and reach this person, newest first. A student is reached through
      * their program and enrolments, an instructor through the sections they teach and a chairperson through
-     * the sub-departments they chair.
+     * the departments they chair.
      *
      * @return list<array<string, mixed>>
      */
@@ -333,7 +333,7 @@ class DepartmentAnnouncementService
             return [];
         }
 
-        $rows = db_connect()->table('department_announcements')
+        $rows = db_connect()->table('college_announcements')
             ->where('status', 'active')
             ->groupStart()->where('ends_on IS NULL', null, false)->orWhere('ends_on >=', $today)->groupEnd()
             ->orderBy('id', 'DESC')
@@ -358,12 +358,12 @@ class DepartmentAnnouncementService
         $names  = $this->names(array_map('intval', array_column($out, 'created_by')));
 
         foreach ($out as &$row) {
-            foreach (['id', 'institution_id', 'department_id', 'created_by', 'scope_id'] as $column) {
+            foreach (['id', 'institution_id', 'college_id', 'created_by', 'scope_id'] as $column) {
                 $row[$column] = (int) $row[$column];
             }
 
-            $labels[$row['department_id']] ??= $this->scopeLabels((int) $row['department_id']);
-            $row['scope_label'] = $labels[$row['department_id']][$row['scope_type'] . ':' . $row['scope_id']] ?? 'Your department';
+            $labels[$row['college_id']] ??= $this->scopeLabels((int) $row['college_id']);
+            $row['scope_label'] = $labels[$row['college_id']][$row['scope_type'] . ':' . $row['scope_id']] ?? 'Your college';
             $row['author']      = $names[(int) $row['created_by']] ?? '';
         }
         unset($row);
@@ -374,7 +374,7 @@ class DepartmentAnnouncementService
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        return db_connect()->table('department_announcements')->where('id', $id)->get()->getRowArray() ?: null;
+        return db_connect()->table('college_announcements')->where('id', $id)->get()->getRowArray() ?: null;
     }
 
     /*
@@ -384,9 +384,9 @@ class DepartmentAnnouncementService
     */
 
     /**
-     * The programs (students, instructors) and sub-departments (chairpersons) a person is reached through.
+     * The programs (students, instructors) and departments (chairpersons) a person is reached through.
      *
-     * @return array{students: list<int>, staff: list<int>, chairs: list<int>} program ids for the first two, sub-department ids for the third
+     * @return array{students: list<int>, staff: list<int>, chairs: list<int>} program ids for the first two, department ids for the third
      */
     private function reachOf(User $user): array
     {
@@ -400,32 +400,32 @@ class DepartmentAnnouncementService
 
         $staff = array_column($db->table('instructor_assignments ia')->select('c.program_id')->join('course_offerings co', 'co.id = ia.offering_id')->join('courses c', 'c.id = co.course_id')->where(['ia.instructor_user_id' => $id, 'co.status' => 'active'])->get()->getResultArray(), 'program_id');
 
-        $chairs = array_column($db->table('chairperson_assignments')->select('sub_department_id')->where(['chairperson_user_id' => $id, 'status' => 'active'])->get()->getResultArray(), 'sub_department_id');
+        $chairs = array_column($db->table('chairperson_assignments')->select('department_id')->where(['chairperson_user_id' => $id, 'status' => 'active'])->get()->getResultArray(), 'department_id');
 
-        return ['students' => $this->ids($students, 'program_id'), 'staff' => $this->ids($staff, 'program_id'), 'chairs' => $this->ids($chairs, 'sub_department_id')];
+        return ['students' => $this->ids($students, 'program_id'), 'staff' => $this->ids($staff, 'program_id'), 'chairs' => $this->ids($chairs, 'department_id')];
     }
 
     /**
-     * Is an announcement's scope among these programs or sub-departments?
+     * Is an announcement's scope among these programs or departments?
      *
      * @param array<string, mixed> $row
      * @param list<int>|null       $programIds
-     * @param list<int>|null       $subDepartmentIds
+     * @param list<int>|null       $departmentIds
      */
-    private function inScope(array $row, ?array $programIds, ?array $subDepartmentIds): bool
+    private function inScope(array $row, ?array $programIds, ?array $departmentIds): bool
     {
         $type = (string) $row['scope_type'];
         $id   = (int) $row['scope_id'];
 
-        if ($subDepartmentIds !== null) {
-            if ($subDepartmentIds === []) {
+        if ($departmentIds !== null) {
+            if ($departmentIds === []) {
                 return false;
             }
 
             return match ($type) {
-                'sub_department' => in_array($id, $subDepartmentIds, true),
-                'department'     => db_connect()->table('sub_departments')->where('department_id', $id)->whereIn('id', $subDepartmentIds)->countAllResults() > 0,
-                'program'        => db_connect()->table('programs')->where('id', $id)->whereIn('sub_department_id', $subDepartmentIds)->countAllResults() > 0,
+                'department' => in_array($id, $departmentIds, true),
+                'college'     => db_connect()->table('departments')->where('college_id', $id)->whereIn('id', $departmentIds)->countAllResults() > 0,
+                'program'        => db_connect()->table('programs')->where('id', $id)->whereIn('department_id', $departmentIds)->countAllResults() > 0,
                 default          => false,
             };
         }
@@ -436,8 +436,8 @@ class DepartmentAnnouncementService
 
         return match ($type) {
             'program'        => in_array($id, $programIds, true),
-            'sub_department' => db_connect()->table('programs')->where('sub_department_id', $id)->whereIn('id', $programIds)->countAllResults() > 0,
-            'department'     => db_connect()->table('programs p')->join('sub_departments sd', 'sd.id = p.sub_department_id')->where('sd.department_id', $id)->whereIn('p.id', $programIds)->countAllResults() > 0,
+            'department' => db_connect()->table('programs')->where('department_id', $id)->whereIn('id', $programIds)->countAllResults() > 0,
+            'college'     => db_connect()->table('programs p')->join('departments sd', 'sd.id = p.department_id')->where('sd.college_id', $id)->whereIn('p.id', $programIds)->countAllResults() > 0,
             default          => false,
         };
     }
@@ -445,26 +445,26 @@ class DepartmentAnnouncementService
     /** @return list<int> */
     private function programsInScope(string $type, int $id): array
     {
-        $builder = db_connect()->table('programs p')->select('p.id')->join('sub_departments sd', 'sd.id = p.sub_department_id');
+        $builder = db_connect()->table('programs p')->select('p.id')->join('departments sd', 'sd.id = p.department_id');
 
         match ($type) {
             'program'        => $builder->where('p.id', $id),
-            'sub_department' => $builder->where('sd.id', $id),
-            default          => $builder->where('sd.department_id', $id),
+            'department' => $builder->where('sd.id', $id),
+            default          => $builder->where('sd.college_id', $id),
         };
 
         return $this->ids($builder->get()->getResultArray());
     }
 
     /** @return list<int> */
-    private function subDepartmentsInScope(string $type, int $id): array
+    private function departmentsInScope(string $type, int $id): array
     {
-        $builder = db_connect()->table('sub_departments sd')->select('sd.id');
+        $builder = db_connect()->table('departments sd')->select('sd.id');
 
         match ($type) {
-            'program'        => $builder->join('programs p', 'p.sub_department_id = sd.id')->where('p.id', $id),
-            'sub_department' => $builder->where('sd.id', $id),
-            default          => $builder->where('sd.department_id', $id),
+            'program'        => $builder->join('programs p', 'p.department_id = sd.id')->where('p.id', $id),
+            'department' => $builder->where('sd.id', $id),
+            default          => $builder->where('sd.college_id', $id),
         };
 
         return $this->ids($builder->get()->getResultArray());
@@ -488,7 +488,7 @@ class DepartmentAnnouncementService
             $users = array_values(array_diff($users, $told, [(int) $dean->id]));
             $told  = array_merge($told, $users);
 
-            $count += $this->notifications->sendToMany($users, 'department_announcement', $row['title'], mb_strimwidth((string) $row['message'], 0, 140, '…'), "department-announcement:{$row['id']}", (int) $row['institution_id'], site_url($area . '/announcements'));
+            $count += $this->notifications->sendToMany($users, 'college_announcement', $row['title'], mb_strimwidth((string) $row['message'], 0, 140, '…'), "college-announcement:{$row['id']}", (int) $row['institution_id'], site_url($area . '/announcements'));
         }
 
         return $count;
@@ -502,18 +502,18 @@ class DepartmentAnnouncementService
     }
 
     /**
-     * "department", "sub_department:ID" or "program:ID" of this dean's department; type null when it is
+     * "college", "department:ID" or "program:ID" of this dean's college; type null when it is
      * not one of theirs.
      *
      * @return array{0: ?string, 1: int}
      */
-    private function parseScope(string $scope, User $dean, int $departmentId): array
+    private function parseScope(string $scope, User $dean, int $collegeId): array
     {
-        if ($scope === 'department') {
-            return ['department', $departmentId];
+        if ($scope === 'college') {
+            return ['college', $collegeId];
         }
 
-        if (preg_match('/^(sub_department|program):(\d{1,9})$/', $scope, $m) !== 1) {
+        if (preg_match('/^(department|program):(\d{1,9})$/', $scope, $m) !== 1) {
             return [null, 0];
         }
 
@@ -523,9 +523,9 @@ class DepartmentAnnouncementService
             return $this->access->canAccessProgram($dean, $id) ? ['program', $id] : [null, 0];
         }
 
-        $ok = db_connect()->table('sub_departments')->where(['id' => $id, 'department_id' => $departmentId])->countAllResults() > 0;
+        $ok = db_connect()->table('departments')->where(['id' => $id, 'college_id' => $collegeId])->countAllResults() > 0;
 
-        return $ok ? ['sub_department', $id] : [null, 0];
+        return $ok ? ['department', $id] : [null, 0];
     }
 
     /**
@@ -568,17 +568,17 @@ class DepartmentAnnouncementService
         return $date !== false && $date->format('Y-m-d') === $value ? $value : null;
     }
 
-    /** Why this person may not post or change announcements, or null when they may: the dean of a department, acting as dean. */
+    /** Why this person may not post or change announcements, or null when they may: the dean of a college, acting as dean. */
     private function mayAnnounce(User $dean): ?string
     {
-        if ((new ActiveRoleService())->resolve($dean) !== 'dean' || $this->access->departmentFor($dean) === null) {
-            return 'Only the dean of a department posts these.';
+        if ((new ActiveRoleService())->resolve($dean) !== 'dean' || $this->access->collegeFor($dean) === null) {
+            return 'Only the dean of a college posts these.';
         }
 
         return null;
     }
 
-    /** @return array<string, mixed>|string the dean's own department's row, or why not */
+    /** @return array<string, mixed>|string the dean's own college's row, or why not */
     private function ownRow(User $dean, int $id): array|string
     {
         $refusal = $this->mayAnnounce($dean);
@@ -589,22 +589,22 @@ class DepartmentAnnouncementService
 
         $row = $this->find($id);
 
-        return $row !== null && (int) $row['department_id'] === (int) $this->access->departmentFor($dean)['department_id'] ? $row : 'That announcement is not in your department.';
+        return $row !== null && (int) $row['college_id'] === (int) $this->access->collegeFor($dean)['college_id'] ? $row : 'That announcement is not in your college.';
     }
 
-    /** @return array<string, string> "department:ID", "sub_department:ID" and "program:ID" => name */
-    private function scopeLabels(int $departmentId): array
+    /** @return array<string, string> "college:ID", "department:ID" and "program:ID" => name */
+    private function scopeLabels(int $collegeId): array
     {
         $db     = db_connect();
         $labels = [];
 
-        $name = $db->table('departments')->select('name')->where('id', $departmentId)->get()->getRow('name');
-        $labels['department:' . $departmentId] = 'Whole ' . ($name ?? 'department');
+        $name = $db->table('colleges')->select('name')->where('id', $collegeId)->get()->getRow('name');
+        $labels['college:' . $collegeId] = 'Whole ' . ($name ?? 'college');
 
-        foreach ($db->table('sub_departments')->select(['id', 'name'])->where('department_id', $departmentId)->orderBy('name', 'ASC')->get()->getResultArray() as $sd) {
-            $labels['sub_department:' . $sd['id']] = (string) $sd['name'];
+        foreach ($db->table('departments')->select(['id', 'name'])->where('college_id', $collegeId)->orderBy('name', 'ASC')->get()->getResultArray() as $sd) {
+            $labels['department:' . $sd['id']] = (string) $sd['name'];
 
-            foreach ($db->table('programs')->select(['id', 'name'])->where('sub_department_id', (int) $sd['id'])->orderBy('name', 'ASC')->get()->getResultArray() as $p) {
+            foreach ($db->table('programs')->select(['id', 'name'])->where('department_id', (int) $sd['id'])->orderBy('name', 'ASC')->get()->getResultArray() as $p) {
                 $labels['program:' . $p['id']] = $sd['name'] . ' · ' . $p['name'];
             }
         }
@@ -612,9 +612,9 @@ class DepartmentAnnouncementService
         return $labels;
     }
 
-    private function institutionOf(int $departmentId): int
+    private function institutionOf(int $collegeId): int
     {
-        return (int) db_connect()->table('departments')->select('institution_id')->where('id', $departmentId)->get()->getRow('institution_id');
+        return (int) db_connect()->table('colleges')->select('institution_id')->where('id', $collegeId)->get()->getRow('institution_id');
     }
 
     /**
@@ -658,7 +658,7 @@ class DepartmentAnnouncementService
     private function audit(string $action, User $dean, int $id, ?array $old, ?array $new): void
     {
         (new AuditLogger())->log($action, $dean, [
-            'target_type' => 'department_announcement',
+            'target_type' => 'college_announcement',
             'target_id'   => $id,
             'acting_role' => 'dean',
             'old'         => $old,

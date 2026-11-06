@@ -20,7 +20,7 @@ Marked **[decided]** = the user decided it in this design session. **[my call]**
 | D6 | New permission `discussions.manage` ("Moderate course discussions": pin, lock, delete others' posts, mark the answer). Default: instructor, chairperson. Academic, so institutions can change it. | 7.1, 7.4, U1 |
 | D7 | Student + staff in the same course: refused within the same term; and a person may never enrol as a student in a course they have ever taught or chaired. A former student may teach it later. | 9.2, 9.3 |
 | D8 | A sixth SIS dataset, class times, per offering. | 13.2 |
-| D10 | Past roles: a former student may later become chairperson of that program; a former dean or institution admin may never enrol as a student in a course of the department/institution they led (they could open its quizzes); someone whose enrolment ended in a past term may later be made instructor, chair or dean. | 9.4, 9.5, D7 |
+| D10 | Past roles: a former student may later become chairperson of that program; a former dean or institution admin may never enrol as a student in a course of the college/institution they led (they could open its quizzes); someone whose enrolment ended in a past term may later be made instructor, chair or dean. | 9.4, 9.5, D7 |
 | D11 | Missed-job email: one email when a job goes quiet, one when it recovers; the admin home warning stays in between. | 6.2, U2 |
 | D9 | The class-times file is the whole timetable (like staff assignments): a section in it gets exactly its rows and is locked; a SIS-owned section missing from a present file loses its SIS times (stays SIS-owned, locked, zero meetings); a never-SIS section is untouched; no file at all changes nothing. | 13.2 |
 
@@ -53,7 +53,7 @@ These are used by several findings. Build order matters: F1 → F2 → F3 before
 | parent | `children.view` | same |
 | instructor | `courses.view`, `courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage` | platform + institution |
 | chairperson | instructor's five + `program.monitor`, `followups.manage` | platform + institution |
-| dean | `courses.view`, `department.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `department.announce` | platform + institution |
+| dean | `courses.view`, `college.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `college.announce` | platform + institution |
 | institutional_admin | its institution-admin permissions + `courses.view`, `grades.approve`, `grades.signoff` (7.3); `program.monitor` removed (7.5) | platform only (U1a) |
 | admin | locked | nobody |
 
@@ -63,12 +63,12 @@ Encoded once as an `APPLICABLE` map beside `AuthGroups::DEFAULT_MATRIX`. `Permis
 
 **Institution admin page (U1a–U1f):** `institution/roles`, same grid component and look as the system admin's Roles page, limited to the five roles and their applicable permissions. Each box shows whether it follows the platform default or is the institution's own, with "reset to default". Safeguards (U1c): `reauth` filter (password re-check), audit entry `roles.permission_changed` with `institution_id`, and the "at least one permission" rule evaluated on the institution's effective set. Also covered by `readonly` (a read-only institution can't change it).
 
-**Warning (U1f, 7.3):** "No one can approve overrides / sign off grades in <department>", worked out per department of an institution that uses approval (has any dean assignment): the department has no dean holding the permission (no dean, or deans lack it) and no institutional admin holds it. Per department, because deans holding it while admins don't still strands every dean-less department. Shown on the institution page (for that institution) and on the system admin's Roles page (listing affected institutions, and when the platform defaults alone would cause it).
+**Warning (U1f, 7.3):** "No one can approve overrides / sign off grades in <college>", worked out per college of an institution that uses approval (has any dean assignment): the college has no dean holding the permission (no dean, or deans lack it) and no institutional admin holds it. Per college, because deans holding it while admins don't still strands every dean-less college. Shown on the institution page (for that institution) and on the system admin's Roles page (listing affected institutions, and when the platform defaults alone would cause it).
 
 ### F3. Who decides: one resolver (findings 1, 2, 7.2, 7.3, U1e, U5)
 
 A small service **[my call]** `GradeAuthority` answering, for an offering:
-- `deanFor(departmentId, permission)`: the active dean if they hold the permission in that institution, else null (7.2, U1e: a dean without it counts as "no dean").
+- `deanFor(collegeId, permission)`: the active dean if they hold the permission in that institution, else null (7.2, U1e: a dean without it counts as "no dean").
 - `institutionAdmins(institutionId, permission)`: active institutional admins holding the permission (7.3).
 - `usesApproval(institutionId)`: true when the institution has any active dean assignment, regardless of permission (2.2 keeps its meaning; U1e).
 
@@ -84,7 +84,7 @@ See finding 4. Every new form and fetch call in this design depends on it, so it
 
 ### Finding 1: override requests with no dean
 
-**Now:** the chain already routes to `awaiting_institution` when there is no dean or the dean asked (`OverrideRequestChain.php:37-52`), and `retargetDepartment` already moves requests when a dean is assigned or leaves (`GradeOverrideRequestService.php:490-530`, called from `DeanAssignmentService.php:102, 143`). What is missing is anyone who can act on `awaiting_institution`.
+**Now:** the chain already routes to `awaiting_institution` when there is no dean or the dean asked (`OverrideRequestChain.php:37-52`), and `retargetCollege` already moves requests when a dean is assigned or leaves (`GradeOverrideRequestService.php:490-530`, called from `DeanAssignmentService.php:102, 143`). What is missing is anyone who can act on `awaiting_institution`.
 
 **Approach:**
 - `approve`/`reject` accept an institutional admin for `awaiting_institution` requests in their institution. `decidable()` gains the admin branch: active role `institutional_admin`, same institution, `can('grades.approve')`, not the requester (1.5). `claim()` takes the expected status (`awaiting_dean` or `awaiting_institution`) so "first decision wins" (1.4) is the same conditional update it is today (`:677-692`). On grade-change failure the request goes back to the status it came from, not hard-coded `awaiting_dean` (`:418-420`).
@@ -92,24 +92,24 @@ See finding 4. Every new form and fetch call in this design depends on it, so it
 - Notify all institutional admins with `grades.approve`, except the requester, when a request arrives at `awaiting_institution` (`tellDeanIfWaiting` generalised).
 - 1.6: when no admin other than the requester holds `grades.approve`, the request still waits and the requester's message and `routeText` (`:335-357`) say it needs a second administrator. Same when no role holds the permission at all (7.3).
 - **Screen:** `institution/approvals`, reusing the dean's Approvals list/filters/decision dialog (`OverrideApprovalFilters`, dean views) scoped to the institution's `awaiting_institution` requests, plus the grade breakdown (`breakdown()`). Matches the existing design language.
-- `deanFor` (F3) replaces `deanId`, so a dean who loses `grades.approve` routes to the admin. Re-routing runs `retargetDepartment` for every department of the institution when that institution's dean or admin `grades.approve` changes, and for every institution when the platform default for either role changes (it is idempotent, `:490`), as it runs today on dean changes.
+- `deanFor` (F3) replaces `deanId`, so a dean who loses `grades.approve` routes to the admin. Re-routing runs `retargetCollege` for every college of the institution when that institution's dean or admin `grades.approve` changes, and for every institution when the platform default for either role changes (it is idempotent, `:490`), as it runs today on dean changes.
 - Wording: approve/reject/reopen messages name the role that acted ("the dean" / "the administrator"), replacing the fixed "the dean" (`GradeOverrideRequestService.php:433-441, 470-478`; `GradeSignoffService.php:205`).
 
 **Risks:** approval writes the grade through `GradingEngineService::overrideFinalGrade` with the admin as actor; check that service accepts a non-dean actor (and the audit `after_signoff` flag still works).
 **Tests:** admin approves/rejects `awaiting_institution`; admin can't decide own request; two admins race → one wins; dean assigned → request moves to dean; dean loses permission → moves to admin; one-admin requester → waits with message.
 
-### Finding 2: no-dean departments never reach the SIS
+### Finding 2: no-dean colleges never reach the SIS
 
 **Approach:**
-- `GradeSignoffService::mayDecide` (`:341-352`): a dean with `grades.signoff` for their department (may sign their own section, D3); or an institutional admin with `grades.signoff`, when the section's department has no dean holding it (`deanFor`), and not a section they teach (D4).
-- `signOffProgram` (`:144`) and `board`/`counts` (`:248, 293`) get the admin variant: the admin's board lists sections of departments without an effective dean. Screen: `institution/signoffs`, reusing the dean's sign-off board views. Reopen with reason and `reauth` as for the dean (2.4).
+- `GradeSignoffService::mayDecide` (`:341-352`): a dean with `grades.signoff` for their college (may sign their own section, D3); or an institutional admin with `grades.signoff`, when the section's college has no dean holding it (`deanFor`), and not a section they teach (D4).
+- `signOffProgram` (`:144`) and `board`/`counts` (`:248, 293`) get the admin variant: the admin's board lists sections of colleges without an effective dean. Screen: `institution/signoffs`, reusing the dean's sign-off board views. Reopen with reason and `reauth` as for the dean (2.4).
 - 2.2 unchanged: `usesApproval` false → no sign-off needed, finalized grades go out (`SisGradeExporter.php:199-213`).
-- "Ready for sign-off" notice: `announceReady` (`GradeSignoffService.php:211-227`) today stops when the department has no dean; it notifies the institutional admins holding `grades.signoff` instead (except one who teaches the section, D4).
+- "Ready for sign-off" notice: `announceReady` (`GradeSignoffService.php:211-227`) today stops when the college has no dean; it notifies the institutional admins holding `grades.signoff` instead (except one who teaches the section, D4).
 - 2.3: when the first dean of an institution is assigned (`DeanAssignmentService`), notify institutional admins with the list of finalized-but-unsent sections that now need sign-off. The exporter already checks at send time.
 - 2.5: existing sign-offs untouched on any change of signer.
 - D4 one-admin case: the section shows "needs a second administrator to sign off".
 
-**Tests:** admin signs off in no-dean department; refused own section; dean signs own section; SIS export includes admin-signed sections; first dean assigned → notification lists unsent sections.
+**Tests:** admin signs off in no-dean college; refused own section; dean signs own section; SIS export includes admin-signed sections; first dean assigned → notification lists unsent sections.
 
 ### Finding 3: view-as uses up an attempt
 
@@ -176,8 +176,8 @@ Built on F2.
 
 ### Finding 9: course role decides
 
-- **9.1:** `roleIn(User, offeringId): ?string` added to the existing `CourseMembership` (beside `canAccess`, `canAccessAs`, `CourseMembership.php:31, 39`), returning ('student' | 'instructor' | 'chairperson' | null), and the 26 `inGroup('instructor'|'student')` checks in 19 files (list: `CourseController`, `CalendarEventService`, `AnnouncementService`, `AssessmentFeedbackService`, `AssignmentSubmissionService`, `QuizAttemptService`, `CourseService`, `CourseViewer`, `DepartmentAnnouncementService`, `DiscussionService`, `LearningProgressService`, `ModuleService`, `ResourceService`, `ScheduleService`, `DashboardService`, `FileAccessService`, three module views) use it.
-- **9.2–9.5 + D7:** one guard `CourseRoleConflicts` called by every writer of enrolments and staff roles: enrolment service and CSV upload, instructor assignment, chair assignment, dean assignment, institutional-admin role grant, and the SIS importer (enrolments, staff assignments). Refuses: student + instructor/chair of the same course in the same term; enrolment in a course the person has ever taught or chaired; enrolment by a chair in their program's courses, a dean in their department's courses, an institution admin in their institution's courses; and the reverse grants. Past roles follow D10: a past dean/admin role over the course blocks enrolment forever; a finished enrolment from a past term does not block a staff role. SIS rows that conflict fail with the reason (single bad rows don't stop the run).
+- **9.1:** `roleIn(User, offeringId): ?string` added to the existing `CourseMembership` (beside `canAccess`, `canAccessAs`, `CourseMembership.php:31, 39`), returning ('student' | 'instructor' | 'chairperson' | null), and the 26 `inGroup('instructor'|'student')` checks in 19 files (list: `CourseController`, `CalendarEventService`, `AnnouncementService`, `AssessmentFeedbackService`, `AssignmentSubmissionService`, `QuizAttemptService`, `CourseService`, `CourseViewer`, `CollegeAnnouncementService`, `DiscussionService`, `LearningProgressService`, `ModuleService`, `ResourceService`, `ScheduleService`, `DashboardService`, `FileAccessService`, three module views) use it.
+- **9.2–9.5 + D7:** one guard `CourseRoleConflicts` called by every writer of enrolments and staff roles: enrolment service and CSV upload, instructor assignment, chair assignment, dean assignment, institutional-admin role grant, and the SIS importer (enrolments, staff assignments). Refuses: student + instructor/chair of the same course in the same term; enrolment in a course the person has ever taught or chaired; enrolment by a chair in their program's courses, a dean in their college's courses, an institution admin in their institution's courses; and the reverse grants. Past roles follow D10: a past dean/admin role over the course blocks enrolment forever; a finished enrolment from a past term does not block a staff role. SIS rows that conflict fail with the reason (single bad rows don't stop the run).
 - **9.6/9.7:** migration removes conflicting enrolments, keeps the staff role.
 **Test:** each refusal from each entry point; migration removes the enrolment.
 
@@ -227,10 +227,10 @@ With F1 every account in the institution belongs only to it.
 
 ### Finding 16: one chair, atomic actions
 
-- **16.0:** `chairperson_assignments` gets `active_marker` with unique `(sub_department_id, active_marker)` (the dean pattern, `CreateDeanAssignmentsTable.php:18, 30`); the old unique `(sub_department_id, chairperson_user_id)` (`RescopeChairpersonAssignmentsToSubDepartment.php:30`) is dropped so history rows can repeat. Update the rule at `ChairAssignmentService.php:18-19` (the decisions file cites `:11-12`).
-- **16.0b:** assigning a chair to a filled sub-department asks for confirmation, ends the old assignment (history kept), notifies the old chair.
-- **16.0c / U5:** waiting `awaiting_chair` requests stay with the sub-department and simply notify the new chair (they are addressed by sub-department, not person, `listForChair`). Requests already past the chair don't move.
-- **16.0d:** migration keeps the most recently assigned active chair per sub-department, ends the rest.
+- **16.0:** `chairperson_assignments` gets `active_marker` with unique `(department_id, active_marker)` (the dean pattern, `CreateDeanAssignmentsTable.php:18, 30`); the old unique `(department_id, chairperson_user_id)` (`RescopeChairpersonAssignmentsToDepartment.php:30`) is dropped so history rows can repeat. Update the rule at `ChairAssignmentService.php:18-19` (the decisions file cites `:11-12`).
+- **16.0b:** assigning a chair to a filled department asks for confirmation, ends the old assignment (history kept), notifies the old chair.
+- **16.0c / U5:** waiting `awaiting_chair` requests stay with the department and simply notify the new chair (they are addressed by department, not person, `listForChair`). Requests already past the chair don't move.
+- **16.0d:** migration keeps the most recently assigned active chair per department, ends the rest.
 - **16.1:** `endorse`, `sendBack` (`GradeOverrideRequestService.php:210-282`) and `withdraw` (`:186-203`) become conditional updates on the expected status (as `claim()`), checking affected rows; the loser is told "That request was just acted on", one notification only.
 - **U5:** notify the one chair; no chair or chair is requester → skipped (already, `OverrideRequestChain.php:37-52`), and the requester's message says the endorsement step was skipped.
 **Test:** second chair assignment ends the first; race between endorse and withdraw → one wins, one notification.

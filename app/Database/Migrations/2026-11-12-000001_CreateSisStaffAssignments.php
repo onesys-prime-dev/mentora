@@ -7,8 +7,8 @@ use CodeIgniter\Database\Migration;
 /**
  * Which deans, chairpersons and instructors an institution's SIS supplied (`sis_staff_assignments`).
  *
- * One row per assignment the SIS listed: who (the person), what they lead or teach (the department,
- * sub-department or offering) and which assignment row it became (a dean assignment, a chairperson
+ * One row per assignment the SIS listed: who (the person), what they lead or teach (the college,
+ * department or offering) and which assignment row it became (a dean assignment, a chairperson
  * assignment or an instructor assignment). Two things depend on it: the sync ends only what the SIS
  * itself supplied once the SIS stops listing it (an assignment an administrator made by hand is never
  * touched), and, while the connection is enabled, the assignments it supplied are not editable by hand.

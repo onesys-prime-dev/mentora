@@ -15,15 +15,15 @@ use Tests\Support\RouteTestCase;
  * The dean's Approvals as the dean uses them: what waits for them with how the
  * grade is made up, approving (the grade changes) and rejecting (a reason), the
  * history, the filters, and the doors: nobody else decides, nothing from another
- * department, and a read-only institution decides nothing.
+ * college, and a read-only institution decides nothing.
  *
  * @internal
  */
 final class DeanApprovalsPageTest extends RouteTestCase
 {
     private int $institution;
+    private int $college;
     private int $department;
-    private int $sub;
     private int $offering;
     private int $scheme;
     private User $teacher;
@@ -39,15 +39,15 @@ final class DeanApprovalsPageTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         Services::resetSingle('renderer');
 
-        $home              = DeanFactory::department('A');
+        $home              = DeanFactory::college('A');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'A');
-        $this->offering    = DeanFactory::offering(DeanFactory::program($this->sub, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'A');
+        $this->offering    = DeanFactory::offering(DeanFactory::program($this->department, 'A'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
 
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
-        $this->chair   = DeanFactory::chair($this->sub, 'Maria');
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
+        $this->chair   = DeanFactory::chair($this->department, 'Maria');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
         $this->student = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
 
         CourseFactory::assignInstructor($this->offering, $this->teacher);
@@ -225,7 +225,7 @@ final class DeanApprovalsPageTest extends RouteTestCase
     public function testTheFiltersNarrowTheListAndTheTabSurvivesThem(): void
     {
         $this->waiting();
-        $program = (int) db_connect()->table('programs')->where('sub_department_id', $this->sub)->get()->getRowArray()['id'];
+        $program = (int) db_connect()->table('programs')->where('department_id', $this->department)->get()->getRowArray()['id'];
 
         $this->assertStringContainsString('Ann Lee', $this->page('?q=ann'));
         $this->assertStringNotContainsString('data-dialog-open', $this->page('?q=nobody'));
@@ -242,7 +242,7 @@ final class DeanApprovalsPageTest extends RouteTestCase
     public function testTheColumnHeadersSortTheListKeepTheFiltersAndShowTheDirection(): void
     {
         $this->waiting();
-        $program = (int) db_connect()->table('programs')->where('sub_department_id', $this->sub)->get()->getRowArray()['id'];
+        $program = (int) db_connect()->table('programs')->where('department_id', $this->department)->get()->getRowArray()['id'];
 
         $body = $this->page('?program=' . $program . '&sort=requested&dir=desc');
 
@@ -274,12 +274,12 @@ final class DeanApprovalsPageTest extends RouteTestCase
         $this->assertSame(0, (int) $this->grade()['is_override']);
     }
 
-    public function testAnotherDepartmentsDeanSeesAndDecidesNothing(): void
+    public function testAnotherCollegesDeanSeesAndDecidesNothing(): void
     {
         $id = $this->waiting();
 
-        $other = DeanFactory::department('B', $this->institution);
-        $this->dean = DeanFactory::dean($this->institution, $other['department'], 'Olga');
+        $other = DeanFactory::college('B', $this->institution);
+        $this->dean = DeanFactory::dean($this->institution, $other['college'], 'Olga');
 
         $this->assertStringNotContainsString('Ann Lee', $this->page());
 
@@ -294,7 +294,7 @@ final class DeanApprovalsPageTest extends RouteTestCase
         $id = $this->waiting();
 
         $person = PeopleFactory::person('instructor', 'Dora', 'Dean', null, $this->institution);
-        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->department, (int) $person->id);
+        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->college, (int) $person->id);
         $dora = model(CodeIgniter\Shield\Models\UserModel::class)->findById($person->id);
         $this->loggedInAs($dora);
 
@@ -307,14 +307,14 @@ final class DeanApprovalsPageTest extends RouteTestCase
         $this->assertSame('awaiting_dean', $this->requestStatus($id));
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanation(): void
+    public function testADeanWithoutACollegeSeesTheExplanation(): void
     {
-        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution));
+        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'College', null, $this->institution));
 
         $response = $this->call('GET', '/dean/approvals')->response();
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
+        $this->assertStringContainsString('not assigned to a college yet', $response->getBody());
     }
 
     public function testAReadOnlyInstitutionDecidesNothing(): void

@@ -1,28 +1,28 @@
 /**
- * The report filters' state: choosing a department narrows the programs that
+ * The report filters' state: choosing a college narrows the programs that
  * can be chosen, and a program that no longer fits is dropped. Pure, so the
  * rules are testable without a page.
  */
 
 /**
- * @typedef {{id: number | string, name: string, department_id: number | string}} Program
+ * @typedef {{id: number | string, name: string, college_id: number | string}} Program
  */
 
 /**
- * The programs that belong to a department (all of them for none).
+ * The programs that belong to a college (all of them for none).
  *
- * @param {string | number | null | undefined} departmentId
+ * @param {string | number | null | undefined} collegeId
  * @param {Program[]} programs
  * @returns {Program[]}
  */
-export function programsFor(departmentId, programs) {
-    const wanted = String(departmentId ?? "");
+export function programsFor(collegeId, programs) {
+    const wanted = String(collegeId ?? "");
 
     if (wanted === "") {
         return programs;
     }
 
-    return programs.filter((program) => String(program.department_id) === wanted);
+    return programs.filter((program) => String(program.college_id) === wanted);
 }
 
 /**

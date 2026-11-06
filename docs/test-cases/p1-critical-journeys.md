@@ -1069,7 +1069,7 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
 ### TC-FIL-01 Who may download each kind of file
 
 - **Role:** every role. **Priority:** P1
-- **Data:** in IT101-A: a published PDF, a draft PDF, a PDF behind an unfinished prerequisite, student1's assignment file, an announcement attachment, a discussion attachment, a generation source file. Accounts: student1 (owner), student5 (enrolled), a student who dropped IT101-A, `instructor1`, `instructor2` (another section), `chairperson1` (IT), `chairperson2` (unassigned), `dean2` (CBM), `dean1` (another department), `parent1`, the institution's administrator, a person of another institution. Get each file's download address as `instructor1`.
+- **Data:** in IT101-A: a published PDF, a draft PDF, a PDF behind an unfinished prerequisite, student1's assignment file, an announcement attachment, a discussion attachment, a generation source file. Accounts: student1 (owner), student5 (enrolled), a student who dropped IT101-A, `instructor1`, `instructor2` (another section), `chairperson1` (IT), `chairperson2` (unassigned), `dean2` (CBM), `dean1` (another college), `parent1`, the institution's administrator, a person of another institution. Get each file's download address as `instructor1`.
 - **Steps:** as each account, open each address.
 - **Expected:**
 
@@ -1082,7 +1082,7 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
   | Generation source | the course's instructors | students |
   | Any file | the owner always | a parent, always; anyone for a missing, inactive or deleted file |
 
-  `dean2` acting as the instructor of a section they teach opens its student work; as dean they gain no department-wide reach to student work. The institution's administrator opens course files read-only (wording of their view to confirm).
+  `dean2` acting as the instructor of a section they teach opens its student work; as dean they gain no college-wide reach to student work. The institution's administrator opens course files read-only (wording of their view to confirm).
 - **Already automated:** `tests/database/FileAccessServiceTest.php` (all); `tests/feature/ParentAuthorizationMatrixTest.php` (indirectly, for parents)
 - **Playwright:** no
 - **Basis:** `FileAccessService::canAccess`
@@ -1107,8 +1107,8 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
 
 - **Role:** Chairperson. **Priority:** P1
 - **Data:** `chairperson1` (IT; does not teach IT101-A); student1's graded assignment in IT101-A
-- **Steps:** open the submission's feedback as the chairperson and post a comment. As student1, read it and reply. As `chairperson2` (another sub-department), try to post on it.
-- **Expected:** the chairperson posts as staff of the course (not refused as "You can only reply to your own submission."); the student sees it as from staff; a chairperson of another sub-department cannot reach the submission.
+- **Steps:** open the submission's feedback as the chairperson and post a comment. As student1, read it and reply. As `chairperson2` (another department), try to post on it.
+- **Expected:** the chairperson posts as staff of the course (not refused as "You can only reply to your own submission."); the student sees it as from staff; a chairperson of another department cannot reach the submission.
 - **Already automated:** `tests/database/CourseRoleChecksTest.php`, `CourseRoleInTest.php`
 - **Playwright:** no
 - **Basis:** `AssessmentFeedbackService` (staff by `roleIn`: instructor or chairperson); decisions 9.1, 9.4; commit `5140068`
@@ -1189,7 +1189,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 
 - **Role:** a test account in no group. **Priority:** P2
 - **Steps:** create an account with no role on the test database; sign in.
-- **Expected:** a 403 page explains there is no area to open; no error page. A dean with no department and no other role reaches the dean explanation page instead (TC-AUTH-10).
+- **Expected:** a 403 page explains there is no area to open; no error page. A dean with no college and no other role reaches the dean explanation page instead (TC-AUTH-10).
 - **Already automated:** `AuthFlowTest::testSomeoneWithoutAnyRoleGetsAForbiddenPageNotACrash`
 - **Playwright:** no
 - **Basis:** `RedirectController`
@@ -1498,7 +1498,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 ### TC-ANN-07 Who may change a course announcement, and the Announcements app
 
 - **Role:** Instructor, student. **Priority:** P1
-- **Data:** IT101-A with a second instructor (`instructor2`, added for the test); posts by each; the Announcements app with department, institution and platform announcements
+- **Data:** IT101-A with a second instructor (`instructor2`, added for the test); posts by each; the Announcements app with college, institution and platform announcements
 - **Steps:** as `instructor2`, edit and delete `instructor1`'s post, then pin it. As a student, use the instructor's post route; open another section's announcement. Open the Announcements app; search with two words; use `?level=` with a known and an unknown level; make the feed fail to load.
 - **Expected:** only the author edits and deletes; any instructor of the section pins; a student cannot post; another section's announcement is not found; the app shows four levels in order; a search matches only posts containing all the words; an unknown level falls back to all; counts are shown before searching; a load failure shows an error, not an empty list.
 - **Already automated:** `tests/database/AnnouncementServiceTest.php`, `tests/feature/AnnouncementRoutesTest.php`, `AnnouncementHelperTest.php`

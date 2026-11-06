@@ -4,9 +4,9 @@ namespace App\Models\Academic;
 
 use CodeIgniter\Model;
 
-class SubDepartmentModel extends Model
+class CollegeModel extends Model
 {
-    protected $table = 'sub_departments';
+    protected $table = 'colleges';
 
     protected $primaryKey = 'id';
 
@@ -26,16 +26,17 @@ class SubDepartmentModel extends Model
 
     protected $allowedFields = [
 
-        'department_id',
+        'institution_id',
         'code',
         'name',
-        'is_active',
+        'location',
+        'established_year',
 
     ];
 
     protected $validationRules = [
 
-        'department_id' => [
+        'institution_id' => [
             'rules' => 'required|is_natural_no_zero',
         ],
 
@@ -47,37 +48,37 @@ class SubDepartmentModel extends Model
             'rules' => 'required|min_length[3]|max_length[255]',
         ],
 
-        'is_active' => [
-            'rules' => 'permit_empty|in_list[0,1]',
+        'location' => [
+            'rules' => 'permit_empty|max_length[255]',
+        ],
+
+        'established_year' => [
+            'rules' => 'permit_empty|is_natural_no_zero|exact_length[4]',
         ],
 
     ];
 
     protected $validationMessages = [
 
-        'department_id' => [
-            'required' => 'Department is required.',
+        'institution_id' => [
+            'required' => 'Institution is required.',
         ],
 
         'code' => [
-            'required' => 'Sub-department code is required.',
+            'required' => 'College code is required.',
         ],
 
         'name' => [
-            'required' => 'Sub-department name is required.',
+            'required' => 'College name is required.',
         ],
 
     ];
 
-    /** A department's sub-departments, by name; inactive ones only when asked for. */
-    public function forDepartment(int $departmentId, bool $includeInactive = false): array
+    /** An institution's colleges, by name. */
+    public function forInstitution(int $institutionId): array
     {
-        $builder = $this->where('department_id', $departmentId);
-
-        if (! $includeInactive) {
-            $builder->where('is_active', 1);
-        }
-
-        return $builder->orderBy('name')->findAll();
+        return $this->where('institution_id', $institutionId)
+            ->orderBy('name')
+            ->findAll();
     }
 }

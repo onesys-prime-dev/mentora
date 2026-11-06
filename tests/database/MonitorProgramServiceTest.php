@@ -32,30 +32,30 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
     }
 
     /** @return array{sub: int, program: int, institution: int} */
-    private function subDepartment(string $tag): array
+    private function department(string $tag): array
     {
         $db = db_connect();
 
         $db->table('institutions')->insert(['name' => "Inst {$tag}", 'code' => "I{$tag}"]);
         $institution = (int) $db->insertID();
 
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+        $college = (int) $db->insertID();
+
+        $db->table('departments')->insert(['college_id' => $college, 'code' => "S{$tag}", 'name' => "College {$tag}"]);
         $department = (int) $db->insertID();
 
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => "S{$tag}", 'name' => "Department {$tag}"]);
-        $sub = (int) $db->insertID();
+        $db->table('programs')->insert(['department_id' => $department, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
 
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
-
-        return ['sub' => $sub, 'program' => (int) $db->insertID(), 'institution' => $institution];
+        return ['sub' => $department, 'program' => (int) $db->insertID(), 'institution' => $institution];
     }
 
-    private function offering(array $subDepartment, string $courseCode, string $sectionCode = 'A'): int
+    private function offering(array $department, string $courseCode, string $sectionCode = 'A'): int
     {
         $db = db_connect();
 
         $db->table('academic_terms')->insert([
-            'institution_id' => $subDepartment['institution'],
+            'institution_id' => $department['institution'],
             'name' => 'Term ' . $courseCode,
             'academic_year' => '2026-2027',
             'start_date' => '2026-08-01',
@@ -64,7 +64,7 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
         $term = (int) $db->insertID();
 
         $db->table('courses')->insert([
-            'program_id' => $subDepartment['program'],
+            'program_id' => $department['program'],
             'course_code' => $courseCode,
             'course_title' => "Course {$courseCode}",
             'units' => 3,
@@ -96,10 +96,10 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
         return $student;
     }
 
-    private function assign(int $userId, int $subDepartmentId): void
+    private function assign(int $userId, int $departmentId): void
     {
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id' => $subDepartmentId,
+            'department_id' => $departmentId,
             'chairperson_user_id' => $userId,
             'status' => 'active',
             'assigned_at' => date('Y-m-d H:i:s'),
@@ -115,8 +115,8 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
     public function testOfferingRowsOnlyIncludesOfferingsInTheChairsProgram(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('H');
-        $elsewhere = $this->subDepartment('E');
+        $home = $this->department('H');
+        $elsewhere = $this->department('E');
         $this->assign((int) $chair->id, $home['sub']);
 
         $this->offering($home, 'IT101');
@@ -130,7 +130,7 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
     public function testOfferingRowsNarrowedByTerm(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('H');
+        $home = $this->department('H');
         $this->assign((int) $chair->id, $home['sub']);
 
         $a = $this->offering($home, 'IT101');
@@ -408,7 +408,7 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
     public function testCourseComparisonSortsByEnrollmentDescending(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('H');
+        $home = $this->department('H');
         $this->assign((int) $chair->id, $home['sub']);
 
         $small = $this->offering($home, 'IT101');
@@ -432,7 +432,7 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
     public function testCourseComparisonPutsOfferingsWithNoGradeDataLastRegardlessOfDirection(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('H');
+        $home = $this->department('H');
         $this->assign((int) $chair->id, $home['sub']);
 
         $this->offering($home, 'IT101');
@@ -592,7 +592,7 @@ final class MonitorProgramServiceTest extends DatabaseTestCase
     public function testCourseComparisonFallsBackToCourseCodeForAnUnknownSortColumn(): void
     {
         $chair = CourseFactory::user('chairperson');
-        $home = $this->subDepartment('H');
+        $home = $this->department('H');
         $this->assign((int) $chair->id, $home['sub']);
 
         $this->offering($home, 'IT102');

@@ -29,7 +29,7 @@ final class DeanDepartureTest extends DatabaseTestCase
     protected bool $isolateTests = true;
 
     private int $institution;
-    private int $department;
+    private int $college;
     private int $offering;
     private int $scheme;
     private User $teacher;
@@ -47,15 +47,15 @@ final class DeanDepartureTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         FakeEmail::install();
 
-        $home              = DeanFactory::department('D');
+        $home              = DeanFactory::college('D');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $sub               = DeanFactory::subDepartment($this->department, 'D');
-        $this->offering    = DeanFactory::offering(DeanFactory::program($sub, 'D'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->college  = $home['college'];
+        $department               = DeanFactory::department($this->college, 'D');
+        $this->offering    = DeanFactory::offering(DeanFactory::program($department, 'D'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
 
         $this->teacher          = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
-        $this->chair            = DeanFactory::chair($sub, 'Maria');
-        $this->dean             = DeanFactory::dean($this->institution, $this->department);
+        $this->chair            = DeanFactory::chair($department, 'Maria');
+        $this->dean             = DeanFactory::dean($this->institution, $this->college);
         $this->student          = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
         $this->sysadmin         = PeopleFactory::person('admin', 'Root', 'Admin', 'root@dd.test');
         $this->institutionAdmin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', 'ada@dd.test', $this->institution);
@@ -203,7 +203,7 @@ final class DeanDepartureTest extends DatabaseTestCase
         $this->assertSame(Chain::AWAITING_INSTITUTION, $this->requestStatus($waiting));
 
         $new = PeopleFactory::person('instructor', 'Nora', 'Dean', 'nora@dd.test', $this->institution);
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $new->id);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $new->id);
 
         $this->assertSame(Chain::AWAITING_DEAN, $this->requestStatus($waiting), 'a dean is there to decide it again');
 
@@ -223,7 +223,7 @@ final class DeanDepartureTest extends DatabaseTestCase
         $this->requests->endorse($this->chair, $own, '');
         $this->assertSame(Chain::AWAITING_INSTITUTION, $this->requestStatus($own), 'no dean at the moment');
 
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $nora->id);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $nora->id);
 
         $this->assertSame(Chain::AWAITING_INSTITUTION, $this->requestStatus($own), 'she cannot decide her own request');
     }
@@ -233,7 +233,7 @@ final class DeanDepartureTest extends DatabaseTestCase
         $waiting = $this->waitingForDean();
 
         $new = PeopleFactory::person('instructor', 'Nora', 'Dean', 'nora@dd.test', $this->institution);
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $new->id);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $new->id);
 
         $this->assertSame(Chain::AWAITING_DEAN, $this->requestStatus($waiting), 'no bounce to the administrator and back');
         $this->assertSame(0, db_connect()->table('audit_logs')->where('action', 'grade.override_rerouted')->countAllResults());
@@ -244,7 +244,7 @@ final class DeanDepartureTest extends DatabaseTestCase
         $this->waitingForDean();
         (new UserAdminService())->deactivate((int) $this->dean->id, $this->sysadmin);
 
-        $this->assertSame(0, $this->requests->retargetDepartment($this->department));
+        $this->assertSame(0, $this->requests->retargetCollege($this->college));
     }
 
     public function testTheDepartedDeanCanNoLongerDecideAndTheListIsEmptyForThem(): void

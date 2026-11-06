@@ -8,8 +8,8 @@ use CodeIgniter\Database\Migration;
 
 /**
  * Follow-up requests (FollowUpService): a dean asks a chairperson or instructor of the
- * department to act on something, or a chairperson asks an instructor of their
- * sub-departments, and the two talk it through in a small reply thread.
+ * college to act on something, or a chairperson asks an instructor of their
+ * departments, and the two talk it through in a small reply thread.
  *
  * `open_marker` is 1 while a request is open and NULL once it is done. The unique key over
  * (sender, recipient, subject, marker) is how the same subject cannot be asked twice of the

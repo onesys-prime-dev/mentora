@@ -45,7 +45,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
     /** Touched by these tests; emptied with foreign keys off. */
     private const TABLES = [
         'mail_outbox', 'password_resets', 'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'class_section_students', 'course_offerings', 'class_sections', 'courses',
-        'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
+        'academic_terms', 'programs', 'departments', 'colleges', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs', 'notifications',
     ];
 
@@ -347,7 +347,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
         $this->assertSame("email,first_name,middle_name,last_name,suffix\r\n", CsvUploadService::template('instructors'));
         $this->assertSame("program_code,course_code,course_title,units\r\n", CsvUploadService::template('courses'));
         $this->assertSame("student_number,email,program_code,course_code,section,status\r\n", CsvUploadService::template('enrollments'));
-        $this->assertSame("role,email,department_code,sub_department_code,program_code,course_code,section\r\n", CsvUploadService::template('staff_assignments'));
+        $this->assertSame("role,email,college_code,department_code,program_code,course_code,section\r\n", CsvUploadService::template('staff_assignments'));
         $this->assertSame("program_code,course_code,section,day_of_week,start_time,end_time,room,delivery_mode\r\n", CsvUploadService::template('class_schedules'));
 
         foreach (CsvUploadService::datasets() as $dataset) {
@@ -450,8 +450,8 @@ final class CsvUploadServiceTest extends DatabaseTestCase
     public function testACourseCodeInMoreThanOneProgramNeedsTheProgram(): void
     {
         $db  = db_connect();
-        $sub = (int) $db->query('SELECT sd.id FROM sub_departments sd JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'name' => 'BS Computer Science', 'code' => 'BSCS']);
+        $department = (int) $db->query('SELECT sd.id FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $db->table('programs')->insert(['department_id' => $department, 'name' => 'BS Computer Science', 'code' => 'BSCS']);
 
         $courses = "program_code,course_code,course_title,units\nBSIT,IT101,Intro to Computing,3\nBSCS,IT101,Intro to Computing (CS),3\n";
         $preview = $this->service->preview($this->institution, ['courses' => $courses], $this->actor);

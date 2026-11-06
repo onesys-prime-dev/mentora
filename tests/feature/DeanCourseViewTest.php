@@ -14,7 +14,7 @@ use Tests\Support\RouteTestCase;
 
 /**
  * The dean's read-only view of a course: reachable for every offering of
- * their own department and no other (not another department of the same
+ * their own college and no other (not another college of the same
  * institution either), shown as its instructor sees it, marked "view only",
  * and with no route anywhere that changes anything in a course. A dean who
  * also teaches sees the courses they teach normally while acting as an
@@ -26,7 +26,7 @@ final class DeanCourseViewTest extends RouteTestCase
 {
     private int $institution;
 
-    private int $department;
+    private int $college;
 
     private int $program;
 
@@ -49,23 +49,23 @@ final class DeanCourseViewTest extends RouteTestCase
         Services::resetSingle('settings');
         Services::resetSingle('auditLogger');
 
-        $home              = DeanFactory::department('H');
+        $home              = DeanFactory::college('H');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->program     = DeanFactory::program(DeanFactory::subDepartment($this->department, 'H'), 'H');
+        $this->college  = $home['college'];
+        $this->program     = DeanFactory::program(DeanFactory::department($this->college, 'H'), 'H');
         $term              = DeanFactory::term($this->institution);
 
-        // Another department of the same institution, and a department of another institution.
-        $next          = DeanFactory::department('N', $this->institution);
-        $nextProgram   = DeanFactory::program(DeanFactory::subDepartment($next['department'], 'N'), 'N');
-        $elsewhere     = DeanFactory::department('X');
-        $foreignProgram = DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X');
+        // Another college of the same institution, and a college of another institution.
+        $next          = DeanFactory::college('N', $this->institution);
+        $nextProgram   = DeanFactory::program(DeanFactory::department($next['college'], 'N'), 'N');
+        $elsewhere     = DeanFactory::college('X');
+        $foreignProgram = DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X');
 
         $this->offering = DeanFactory::offering($this->program, $term, 'IT101', 'A', 'active', 'Intro to Computing');
         $this->sibling  = DeanFactory::offering($nextProgram, $term, 'LW100', 'A', 'active', 'Intro to Law');
         $this->foreign  = DeanFactory::offering($foreignProgram, DeanFactory::term($elsewhere['institution']), 'ZZ900', 'A', 'active', 'Foreign Course');
 
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
         $this->teacher = PeopleFactory::person('instructor', 'Tom', 'Teacher', 'tom@dcv.example', $this->institution);
         $this->student = PeopleFactory::person('student', 'Stu', 'Dent', 'stu@dcv.example', $this->institution);
 
@@ -137,11 +137,11 @@ final class DeanCourseViewTest extends RouteTestCase
         $this->assertStringEndsWith("dean/courses/{$this->offering}/intro-to-computing/overview", $location);
     }
 
-    public function testAnotherDepartmentsCourseIsNotFoundOnEveryReadingRouteInTheSameInstitutionOrAnother(): void
+    public function testAnotherCollegesCourseIsNotFoundOnEveryReadingRouteInTheSameInstitutionOrAnother(): void
     {
         $paths = ['overview', 'announcements', 'announcements/more', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster', 'grades/export', 'grades/report/class', 'grades/report/summary'];
 
-        foreach (['another department' => $this->sibling, 'another institution' => $this->foreign] as $where => $offering) {
+        foreach (['another college' => $this->sibling, 'another institution' => $this->foreign] as $where => $offering) {
             foreach ($paths as $path) {
                 $this->assertNotFound(fn () => $this->api($path, $offering), "{$path} of a course in {$where}");
             }
@@ -151,7 +151,7 @@ final class DeanCourseViewTest extends RouteTestCase
         }
     }
 
-    public function testEveryReadingRouteAnswersForTheDepartmentsOwnCourse(): void
+    public function testEveryReadingRouteAnswersForTheCollegesOwnCourse(): void
     {
         $paths = ['overview', 'announcements', 'modules', 'resources', 'discussions', 'assessments', 'grades', 'grades/scheme', 'grades/roster'];
 
@@ -260,20 +260,20 @@ final class DeanCourseViewTest extends RouteTestCase
         $this->assertNotFound(fn () => $this->call('GET', 'files/' . $workFile['id']), "a student's submission");
     }
 
-    public function testTheDeanOfAnotherDepartmentCannotOpenTheCourseFile(): void
+    public function testTheDeanOfAnotherCollegeCannotOpenTheCourseFile(): void
     {
         $file = CourseFactory::file($this->teacher, 'lecture notes');
         db_connect()->table('files')->where('id', $file['id'])->update(['status' => 'active']);
         [$item] = CourseFactory::items(CourseFactory::unit(CourseFactory::module($this->offering)), [['title' => 'Notes']]);
         CourseFactory::resource($item, 'pdf', null, $file['id']);
 
-        $next = DeanFactory::department('M', $this->institution);
-        $this->signIn(DeanFactory::dean($this->institution, $next['department'], 'Neil'));
+        $next = DeanFactory::college('M', $this->institution);
+        $this->signIn(DeanFactory::dean($this->institution, $next['college'], 'Neil'));
 
-        $this->assertNotFound(fn () => $this->call('GET', 'files/' . $file['id']), "another department's course file");
+        $this->assertNotFound(fn () => $this->call('GET', 'files/' . $file['id']), "another college's course file");
     }
 
-    public function testADeanWithoutADepartmentFindsNoCourse(): void
+    public function testADeanWithoutACollegeFindsNoCourse(): void
     {
         $this->signIn(CourseFactory::user('dean'));
 
@@ -318,9 +318,9 @@ final class DeanCourseViewTest extends RouteTestCase
 
     public function testADeanWhoAlsoTeachesSeesTheirOwnCourseViewOnlyAsDeanAndNormallyAsInstructor(): void
     {
-        // Dora teaches and is made dean through the real service (which replaces the department's earlier dean).
+        // Dora teaches and is made dean through the real service (which replaces the college's earlier dean).
         $dean = PeopleFactory::person('instructor', 'Dora', 'Dean', 'dora@dcv.example', $this->institution);
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $dean->id);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $dean->id);
         $dean = model(CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
         CourseFactory::assignInstructor($this->offering, $dean);
         $this->signIn($dean);

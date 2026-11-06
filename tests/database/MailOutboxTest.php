@@ -78,7 +78,7 @@ final class MailOutboxTest extends DatabaseTestCase
     private function offering(string $code = 'IT101', string $section = 'A'): array
     {
         $db      = db_connect();
-        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
         $term    = (int) $db->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
 
         $db->table('courses')->insert(['program_id' => $program, 'course_code' => $code, 'course_title' => 'Intro to Computing', 'units' => 3]);
@@ -337,22 +337,22 @@ final class MailOutboxTest extends DatabaseTestCase
     public function testMakingSomeoneDeanOrChairpersonNotesIt(): void
     {
         $db   = db_connect();
-        $dept = $db->table('departments')->where('institution_id', $this->institution)->get()->getRowArray();
-        $sub  = $db->query('SELECT sd.* FROM sub_departments sd JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRowArray();
+        $college = $db->table('colleges')->where('institution_id', $this->institution)->get()->getRowArray();
+        $department  = $db->query('SELECT sd.* FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRowArray();
         $dean = $this->person('dean', 'Dee');
         $chair = $this->person('chairperson', 'Cho');
 
-        (new DeanAssignmentService())->assign($this->institution, (int) $dept['id'], (int) $dean->id, $this->admin);
-        (new ChairAssignmentService())->assign($this->institution, (int) $sub['id'], (int) $chair->id, $this->admin);
+        (new DeanAssignmentService())->assign($this->institution, (int) $college['id'], (int) $dean->id, $this->admin);
+        (new ChairAssignmentService())->assign($this->institution, (int) $department['id'], (int) $chair->id, $this->admin);
 
         $rows = $db->table('mail_outbox')->orderBy('id')->get()->getResultArray();
 
-        $this->assertSame(['dean', $dept['name']], [$rows[0]['kind'], $rows[0]['detail']]);
-        $this->assertSame(['chairperson', $sub['name']], [$rows[1]['kind'], $rows[1]['detail']]);
+        $this->assertSame(['dean', $college['name']], [$rows[0]['kind'], $rows[0]['detail']]);
+        $this->assertSame(['chairperson', $department['name']], [$rows[1]['kind'], $rows[1]['detail']]);
 
         // The assignment services note it by the real clock, so the wait is over by the real clock too (not the fixed one).
         $this->outbox->sendDue((new DateTimeImmutable())->modify('+' . MailOutbox::MERGE_SECONDS . ' seconds'), 10);
-        $this->assertStringContainsString("You are now the dean of {$dept['name']}.", $this->mail->sent[0]['message']);
+        $this->assertStringContainsString("You are now the dean of {$college['name']}.", $this->mail->sent[0]['message']);
     }
 
     public function testWhenMutedNoServiceNotesAnything(): void

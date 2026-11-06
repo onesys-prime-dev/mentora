@@ -110,7 +110,7 @@ class ActiveRoleService
 
         $others = array_values(array_diff($groups, ['dean']));
 
-        if ($others === [] || (new DeanAssignmentModel())->departmentOfDean((int) $user->id) !== null) {
+        if ($others === [] || (new DeanAssignmentModel())->collegeOfDean((int) $user->id) !== null) {
             return $groups;
         }
 

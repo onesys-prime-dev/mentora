@@ -1,14 +1,14 @@
 <?php
 /**
- * The academic structure: departments, their sub-departments and programs.
+ * The academic structure: colleges, their departments and programs.
  *
  * @var list<array<string, mixed>> $structureTree
  * @var array<string, int>         $structureCounts
  * @var bool                       $structureCanEdit
- * @var array<int, list<array<string, mixed>>> $structureChairs     active chairpersons by sub-department id
+ * @var array<int, list<array<string, mixed>>> $structureChairs     active chairpersons by department id
  * @var array<int, true>                        $structureSisChairs  chairperson assignments the SIS supplies (not editable here)
  * @var list<array<string, mixed>> $structureCandidates people who can be assigned
- * @var array<int, array<string, mixed>> $structureDeans    active dean by department id
+ * @var array<int, array<string, mixed>> $structureDeans    active dean by college id
  * @var array<int, true>                 $structureSisDeans  dean assignments the SIS supplies (not editable here)
  * @var list<array<string, mixed>> $structureDeanCandidates people who hold the dean role
  */
@@ -42,9 +42,9 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     <?= view('components/page-head', [
         'title'       => 'Structure',
         'icon'        => 'hat',
-        'description' => 'Departments, their sub-departments and the programs under them.',
+        'description' => 'Colleges, their departments and the programs under them.',
         'actions'     => $structureCanEdit
-            ? '<button type="button" class="' . $primary . '" data-dialog-open="structure-department-new" data-dialog-title="Add a department" data-dialog-action="' . esc(site_url($base . '/departments')) . '" data-dialog-label="Add department">Add a department</button>'
+            ? '<button type="button" class="' . $primary . '" data-dialog-open="structure-college-new" data-dialog-title="Add a college" data-dialog-action="' . esc(site_url($base . '/colleges')) . '" data-dialog-label="Add college">Add a college</button>'
             : '',
     ], ['saveData' => false]) ?>
 
@@ -61,8 +61,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
     <p class="flex flex-wrap gap-2 text-sm text-[#646464]" aria-live="polite" data-structure-counts>
         <?php foreach ([
+            ['colleges', 'college', 'colleges'],
             ['departments', 'department', 'departments'],
-            ['subDepartments', 'sub-department', 'sub-departments'],
             ['programs', 'program', 'programs'],
         ] as [$countKey, $one, $many]): ?>
             <span class="rounded-xl bg-brand/5 px-3 py-1.5"><strong class="text-base text-brand"><?= esc((string) $structureCounts[$countKey]) ?></strong> <?= $structureCounts[$countKey] === 1 ? $one : $many ?></span>
@@ -74,8 +74,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         <div class="rounded-2xl border border-gray-200 bg-gray-50" data-structure-empty>
             <?= view('components/empty-state', [
                 'icon'  => 'hat',
-                'title' => 'No departments yet',
-                'text'  => $structureCanEdit ? 'Add the first department to start building your structure.' : 'Departments will be listed here.',
+                'title' => 'No colleges yet',
+                'text'  => $structureCanEdit ? 'Add the first college to start building your structure.' : 'Colleges will be listed here.',
             ], ['saveData' => false]) ?>
         </div>
 
@@ -84,36 +84,36 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     <?php // From lg up the tree and the details each scroll on their own; the heading and the counts stay put. ?>
     <div class="grid gap-6 lg:grid-cols-[19rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]" data-panel-scroll="inner" data-structure-split>
 
-        <aside class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-gray-100 lg:pr-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Departments and programs">
+        <aside class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-gray-100 lg:pr-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Colleges and programs">
 
-            <label class="sr-only" for="structure-search">Search departments and programs</label>
+            <label class="sr-only" for="structure-search">Search colleges and programs</label>
             <input id="structure-search" type="search" placeholder="Search structure" autocomplete="off" spellcheck="false"
                 class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm placeholder:text-[#767676] focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20" data-structure-search>
 
             <ul class="flex flex-col gap-1" data-structure-tree>
-                <?php foreach ($structureTree as $department): ?>
-                    <?php $deptActive = (int) $department['is_active'] === 1; ?>
-                    <li data-tree-dept="<?= esc((string) $department['id']) ?>">
-                        <button type="button" data-select="dept-<?= esc((string) $department['id']) ?>" data-search-text="<?= esc(strtolower($department['code'] . ' ' . $department['name']), 'attr') ?>"
-                            class="group/dept flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:text-brand">
-                            <span class="rounded bg-brand-tint px-1.5 py-0.5 font-mono text-[11px] text-brand-dark"><?= esc($department['code']) ?></span>
-                            <span class="min-w-0 flex-1 break-words leading-snug <?= $deptActive ? '' : 'text-[#646464]' ?>"><?= esc($department['name']) ?></span>
-                            <span class="text-xs font-normal text-[#646464]"><?= esc((string) count($department['subDepartments'])) ?></span>
-                            <?php if ($department['subDepartments'] !== []): ?>
-                                <svg class="h-4 w-4 shrink-0 text-[#646464] transition-transform group-data-[open=true]/dept:rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                <?php foreach ($structureTree as $college): ?>
+                    <?php $collegeActive = (int) $college['is_active'] === 1; ?>
+                    <li data-tree-college="<?= esc((string) $college['id']) ?>">
+                        <button type="button" data-select="college-<?= esc((string) $college['id']) ?>" data-search-text="<?= esc(strtolower($college['code'] . ' ' . $college['name']), 'attr') ?>"
+                            class="group/college flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:text-brand">
+                            <span class="rounded bg-brand-tint px-1.5 py-0.5 font-mono text-[11px] text-brand-dark"><?= esc($college['code']) ?></span>
+                            <span class="min-w-0 flex-1 break-words leading-snug <?= $collegeActive ? '' : 'text-[#646464]' ?>"><?= esc($college['name']) ?></span>
+                            <span class="text-xs font-normal text-[#646464]"><?= esc((string) count($college['departments'])) ?></span>
+                            <?php if ($college['departments'] !== []): ?>
+                                <svg class="h-4 w-4 shrink-0 text-[#646464] transition-transform group-data-[open=true]/college:rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
                             <?php endif; ?>
                         </button>
 
-                        <?php if ($department['subDepartments'] !== []): ?>
+                        <?php if ($college['departments'] !== []): ?>
                             <ul class="ml-5 mt-1 flex flex-col gap-1 border-l border-gray-100 pl-2" data-tree-children hidden>
-                                <?php foreach ($department['subDepartments'] as $sub): ?>
-                                    <?php $subActive = (int) $sub['is_active'] === 1; ?>
+                                <?php foreach ($college['departments'] as $department): ?>
+                                    <?php $departmentActive = (int) $department['is_active'] === 1; ?>
                                     <li>
-                                        <button type="button" data-select="sub-<?= esc((string) $sub['id']) ?>" data-search-text="<?= esc(strtolower($sub['code'] . ' ' . $sub['name'] . ' ' . implode(' ', array_map(static fn (array $p): string => $p['code'] . ' ' . $p['name'], $sub['programs']))), 'attr') ?>"
+                                        <button type="button" data-select="department-<?= esc((string) $department['id']) ?>" data-search-text="<?= esc(strtolower($department['code'] . ' ' . $department['name'] . ' ' . implode(' ', array_map(static fn (array $p): string => $p['code'] . ' ' . $p['name'], $department['programs']))), 'attr') ?>"
                                             class="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:font-semibold data-[active=true]:text-brand">
-                                            <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-[#646464]"><?= esc($sub['code']) ?></span>
-                                            <span class="min-w-0 flex-1 break-words leading-snug <?= $subActive ? '' : 'text-[#646464]' ?>"><?= esc($sub['name']) ?></span>
-                                            <span class="text-xs text-[#646464]"><?= esc((string) count($sub['programs'])) ?></span>
+                                            <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-[#646464]"><?= esc($department['code']) ?></span>
+                                            <span class="min-w-0 flex-1 break-words leading-snug <?= $departmentActive ? '' : 'text-[#646464]' ?>"><?= esc($department['name']) ?></span>
+                                            <span class="text-xs text-[#646464]"><?= esc((string) count($department['programs'])) ?></span>
                                         </button>
                                     </li>
                                 <?php endforeach; ?>
@@ -128,49 +128,49 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
         <div class="flex min-w-0 flex-col lg:min-h-0 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-structure-detail tabindex="-1">
 
-        <?php foreach ($structureTree as $department): ?>
-            <?php $deptActive = (int) $department['is_active'] === 1; ?>
+        <?php foreach ($structureTree as $college): ?>
+            <?php $collegeActive = (int) $college['is_active'] === 1; ?>
 
-            <section class="flex flex-col gap-6" data-department="<?= esc((string) $department['id']) ?>" aria-labelledby="dept-<?= esc((string) $department['id']) ?>" hidden>
+            <section class="flex flex-col gap-6" data-college="<?= esc((string) $college['id']) ?>" aria-labelledby="college-<?= esc((string) $college['id']) ?>" hidden>
 
-                <?php // The department itself ?>
-                <div class="flex flex-col gap-5" data-view="dept-<?= esc((string) $department['id']) ?>" hidden>
+                <?php // The college itself ?>
+                <div class="flex flex-col gap-5" data-view="college-<?= esc((string) $college['id']) ?>" hidden>
 
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="flex min-w-0 flex-col gap-1">
-                            <h2 id="dept-<?= esc((string) $department['id']) ?>" class="flex flex-wrap items-center gap-3 text-lg font-bold text-brand">
-                                <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs text-brand-dark"><?= esc($department['code']) ?></span>
-                                <?= esc($department['name']) ?>
-                                <?= $badge($deptActive) ?>
+                            <h2 id="college-<?= esc((string) $college['id']) ?>" class="flex flex-wrap items-center gap-3 text-lg font-bold text-brand">
+                                <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs text-brand-dark"><?= esc($college['code']) ?></span>
+                                <?= esc($college['name']) ?>
+                                <?= $badge($collegeActive) ?>
                             </h2>
                             <p class="text-xs text-[#646464]">
-                                Department<?= (($department['location'] ?? '') !== '' || ($department['established_year'] ?? null) !== null) ? ' · ' . esc(implode(' · ', array_filter([(string) ($department['location'] ?? ''), $department['established_year'] !== null ? 'Established ' . $department['established_year'] : '']))) : '' ?>
+                                College<?= (($college['location'] ?? '') !== '' || ($college['established_year'] ?? null) !== null) ? ' · ' . esc(implode(' · ', array_filter([(string) ($college['location'] ?? ''), $college['established_year'] !== null ? 'Established ' . $college['established_year'] : '']))) : '' ?>
                             </p>
                         </div>
 
                         <?php if ($structureCanEdit): ?>
                             <div class="flex flex-wrap items-center gap-3">
                                 <button type="button" class="<?= $second ?>"
-                                    data-dialog-open="structure-department"
-                                    data-dialog-title="Edit department"
+                                    data-dialog-open="structure-college"
+                                    data-dialog-title="Edit college"
                                     data-dialog-label="Save"
-                                    data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'])) ?>"
-                                    data-dialog-values="<?= $json(['code' => $department['code'], 'name' => $department['name'], 'location' => (string) ($department['location'] ?? ''), 'established_year' => (string) ($department['established_year'] ?? '')]) ?>">Edit</button>
+                                    data-dialog-action="<?= esc(site_url($base . '/colleges/' . $college['id'])) ?>"
+                                    data-dialog-values="<?= $json(['code' => $college['code'], 'name' => $college['name'], 'location' => (string) ($college['location'] ?? ''), 'established_year' => (string) ($college['established_year'] ?? '')]) ?>">Edit</button>
 
-                                <?php if ($deptActive): ?>
+                                <?php if ($collegeActive): ?>
                                     <button type="button" class="<?= $second ?>"
                                         data-dialog-open="structure-sub"
-                                        data-dialog-title="Add a sub-department to <?= esc($department['name']) ?>"
-                                        data-dialog-label="Add sub-department"
-                                        data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/sub-departments')) ?>">Add sub-department</button>
+                                        data-dialog-title="Add a department to <?= esc($college['name']) ?>"
+                                        data-dialog-label="Add department"
+                                        data-dialog-action="<?= esc(site_url($base . '/colleges/' . $college['id'] . '/departments')) ?>">Add department</button>
                                     <button type="button" class="<?= $warn ?>"
                                         data-dialog-open="structure-confirm"
-                                        data-dialog-title="Deactivate <?= esc($department['name']) ?>?"
-                                        data-dialog-text="It stays in your records and its history is kept, but nothing new can be added under it. It must have no active sub-departments and no offerings in an active term."
+                                        data-dialog-title="Deactivate <?= esc($college['name']) ?>?"
+                                        data-dialog-text="It stays in your records and its history is kept, but nothing new can be added under it. It must have no active departments and no offerings in an active term."
                                         data-dialog-label="Deactivate"
-                                        data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/deactivate')) ?>">Deactivate</button>
+                                        data-dialog-action="<?= esc(site_url($base . '/colleges/' . $college['id'] . '/deactivate')) ?>">Deactivate</button>
                                 <?php else: ?>
-                                    <form method="post" action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/reactivate')) ?>">
+                                    <form method="post" action="<?= esc(site_url($base . '/colleges/' . $college['id'] . '/reactivate')) ?>">
                                         <?= csrf_field() ?>
                                         <button type="submit" class="<?= $link ?>">Reactivate</button>
                                     </form>
@@ -179,16 +179,16 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                         <?php endif; ?>
                     </div>
 
-                    <?php $dean = $structureDeans[(int) $department['id']] ?? null; ?>
+                    <?php $dean = $structureDeans[(int) $college['id']] ?? null; ?>
                     <div class="flex flex-col gap-2" data-dean>
                         <h3 class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-[#646464]">
                             Dean
-                            <?php if ($structureCanEdit && $deptActive && ($dean === null || ! isset($structureSisDeans[(int) $dean['id']]))): ?>
+                            <?php if ($structureCanEdit && $collegeActive && ($dean === null || ! isset($structureSisDeans[(int) $dean['id']]))): ?>
                                 <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                     data-dialog-open="structure-dean"
-                                    data-dialog-title="<?= $dean === null ? 'Assign a dean to ' . esc($department['name']) : 'Replace ' . esc($dean['name']) . ' as dean of ' . esc($department['name']) . '? Their assignment ends.' ?>"
+                                    data-dialog-title="<?= $dean === null ? 'Assign a dean to ' . esc($college['name']) : 'Replace ' . esc($dean['name']) . ' as dean of ' . esc($college['name']) . '? Their assignment ends.' ?>"
                                     data-dialog-label="<?= $dean === null ? 'Assign' : 'Replace' ?>"
-                                    data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/deans')) ?>"><?= $dean === null ? 'Assign dean' : 'Replace dean' ?></button>
+                                    data-dialog-action="<?= esc(site_url($base . '/colleges/' . $college['id'] . '/deans')) ?>"><?= $dean === null ? 'Assign dean' : 'Replace dean' ?></button>
                             <?php endif; ?>
                         </h3>
                         <div class="flex flex-wrap items-center gap-2 text-sm">
@@ -204,7 +204,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                             aria-label="Remove <?= esc($dean['name']) ?> as dean"
                                             data-dialog-open="structure-confirm"
                                             data-dialog-title="Remove <?= esc($dean['name']) ?> as dean?"
-                                            data-dialog-text="They keep their account and their other roles. Approvals and sign-off for this department go to the institution's administrators until another dean is assigned."
+                                            data-dialog-text="They keep their account and their other roles. Approvals and sign-off for this college go to the institution's administrators until another dean is assigned."
                                             data-dialog-label="Remove"
                                             data-dialog-action="<?= esc(site_url($base . '/deans/' . $dean['id'] . '/remove')) ?>">Remove</button>
                                     <?php endif; ?>
@@ -214,23 +214,23 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-[#646464]">Sub-departments</h3>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-[#646464]">Departments</h3>
 
-                        <?php if ($department['subDepartments'] === []): ?>
-                            <p class="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-[#646464]" data-sub-empty>No sub-departments yet.</p>
+                        <?php if ($college['departments'] === []): ?>
+                            <p class="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-[#646464]" data-department-empty>No departments yet.</p>
                         <?php else: ?>
                             <ul class="flex flex-col divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 text-sm">
-                                <?php foreach ($department['subDepartments'] as $sub): ?>
-                                    <?php $subActive = (int) $sub['is_active'] === 1; ?>
-                                    <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3" data-sub-row="<?= esc((string) $sub['id']) ?>">
+                                <?php foreach ($college['departments'] as $department): ?>
+                                    <?php $departmentActive = (int) $department['is_active'] === 1; ?>
+                                    <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3" data-department-row="<?= esc((string) $department['id']) ?>">
                                         <span class="flex flex-wrap items-center gap-3 font-medium text-[#1A1C1E]">
-                                            <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs font-semibold text-brand-dark"><?= esc($sub['code']) ?></span>
-                                            <?= esc($sub['name']) ?>
-                                            <?= $badge($subActive) ?>
+                                            <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs font-semibold text-brand-dark"><?= esc($department['code']) ?></span>
+                                            <?= esc($department['name']) ?>
+                                            <?= $badge($departmentActive) ?>
                                         </span>
                                         <span class="flex items-center gap-4">
-                                            <span class="text-xs text-[#646464]"><?= esc((string) count($sub['programs'])) ?> <?= count($sub['programs']) === 1 ? 'program' : 'programs' ?></span>
-                                            <button type="button" class="<?= $link ?>" data-select="sub-<?= esc((string) $sub['id']) ?>">Open</button>
+                                            <span class="text-xs text-[#646464]"><?= esc((string) count($department['programs'])) ?> <?= count($department['programs']) === 1 ? 'program' : 'programs' ?></span>
+                                            <button type="button" class="<?= $link ?>" data-select="department-<?= esc((string) $department['id']) ?>">Open</button>
                                         </span>
                                     </li>
                                 <?php endforeach; ?>
@@ -239,49 +239,49 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                     </div>
                 </div>
 
-                <?php foreach ($department['subDepartments'] as $sub): ?>
-                    <?php $subActive = (int) $sub['is_active'] === 1; ?>
+                <?php foreach ($college['departments'] as $department): ?>
+                    <?php $departmentActive = (int) $department['is_active'] === 1; ?>
 
-                    <?php // One sub-department ?>
-                    <div class="flex flex-col gap-5" data-sub-department="<?= esc((string) $sub['id']) ?>" data-view="sub-<?= esc((string) $sub['id']) ?>" hidden>
+                    <?php // One department ?>
+                    <div class="flex flex-col gap-5" data-department="<?= esc((string) $department['id']) ?>" data-view="department-<?= esc((string) $department['id']) ?>" hidden>
 
-                        <button type="button" class="flex w-fit items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#646464] hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded" data-select="dept-<?= esc((string) $department['id']) ?>">
-                            <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg><?= esc($department['name']) ?>
+                        <button type="button" class="flex w-fit items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#646464] hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded" data-select="college-<?= esc((string) $college['id']) ?>">
+                            <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg><?= esc($college['name']) ?>
                         </button>
 
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div class="flex min-w-0 flex-col gap-1">
                                 <h2 class="flex flex-wrap items-center gap-3 text-lg font-bold text-[#1A1C1E]">
-                                    <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs font-semibold text-brand-dark"><?= esc($sub['code']) ?></span>
-                                    <?= esc($sub['name']) ?>
-                                    <?= $badge($subActive) ?>
+                                    <span class="rounded bg-brand-tint px-2 py-0.5 font-mono text-xs font-semibold text-brand-dark"><?= esc($department['code']) ?></span>
+                                    <?= esc($department['name']) ?>
+                                    <?= $badge($departmentActive) ?>
                                 </h2>
-                                <p class="text-xs text-[#646464]">Sub-department of <?= esc($department['name']) ?> · <?= esc((string) count($sub['programs'])) ?> <?= count($sub['programs']) === 1 ? 'program' : 'programs' ?></p>
+                                <p class="text-xs text-[#646464]">Department of <?= esc($college['name']) ?> · <?= esc((string) count($department['programs'])) ?> <?= count($department['programs']) === 1 ? 'program' : 'programs' ?></p>
                             </div>
 
                             <?php if ($structureCanEdit): ?>
                                 <div class="flex flex-wrap items-center gap-3">
                                     <button type="button" class="<?= $second ?>"
                                         data-dialog-open="structure-sub"
-                                        data-dialog-title="Edit sub-department"
+                                        data-dialog-title="Edit department"
                                         data-dialog-label="Save"
-                                        data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'])) ?>"
-                                        data-dialog-values="<?= $json(['code' => $sub['code'], 'name' => $sub['name']]) ?>">Edit</button>
+                                        data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'])) ?>"
+                                        data-dialog-values="<?= $json(['code' => $department['code'], 'name' => $department['name']]) ?>">Edit</button>
 
-                                    <?php if ($subActive): ?>
+                                    <?php if ($departmentActive): ?>
                                         <button type="button" class="<?= $second ?>"
                                             data-dialog-open="structure-program"
-                                            data-dialog-title="Add a program to <?= esc($sub['name']) ?>"
+                                            data-dialog-title="Add a program to <?= esc($department['name']) ?>"
                                             data-dialog-label="Add program"
-                                            data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/programs')) ?>">Add program</button>
+                                            data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/programs')) ?>">Add program</button>
                                         <button type="button" class="<?= $warn ?>"
                                             data-dialog-open="structure-confirm"
-                                            data-dialog-title="Deactivate <?= esc($sub['name']) ?>?"
+                                            data-dialog-title="Deactivate <?= esc($department['name']) ?>?"
                                             data-dialog-text="It stays in your records and its history is kept, but nothing new can be added under it. It must have no active programs and no offerings in an active term."
                                             data-dialog-label="Deactivate"
-                                            data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/deactivate')) ?>">Deactivate</button>
-                                    <?php elseif ($deptActive): ?>
-                                        <form method="post" action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/reactivate')) ?>">
+                                            data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/deactivate')) ?>">Deactivate</button>
+                                    <?php elseif ($collegeActive): ?>
+                                        <form method="post" action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/reactivate')) ?>">
                                             <?= csrf_field() ?>
                                             <button type="submit" class="<?= $link ?>">Reactivate</button>
                                         </form>
@@ -290,24 +290,24 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                             <?php endif; ?>
                         </div>
 
-                        <?php $chairs = $structureChairs[(int) $sub['id']] ?? []; ?>
+                        <?php $chairs = $structureChairs[(int) $department['id']] ?? []; ?>
                         <div class="flex flex-col gap-2" data-chairs>
                             <h3 class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-[#646464]">
                                 Chairperson
-                                <?php if ($structureCanEdit && $subActive && $chairs === []): ?>
+                                <?php if ($structureCanEdit && $departmentActive && $chairs === []): ?>
                                     <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                         data-dialog-open="structure-chair"
-                                        data-dialog-title="Assign a chairperson to <?= esc($sub['name']) ?>"
+                                        data-dialog-title="Assign a chairperson to <?= esc($department['name']) ?>"
                                         data-dialog-label="Assign"
-                                        data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/chairpersons')) ?>">Assign chairperson</button>
-                                <?php elseif ($structureCanEdit && $subActive && ! isset($structureSisChairs[(int) $chairs[0]['id']])): ?>
-                                    <?php // One chairperson per sub-department (16.0): choosing someone else replaces them, once confirmed here. ?>
+                                        data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/chairpersons')) ?>">Assign chairperson</button>
+                                <?php elseif ($structureCanEdit && $departmentActive && ! isset($structureSisChairs[(int) $chairs[0]['id']])): ?>
+                                    <?php // One chairperson per department (16.0): choosing someone else replaces them, once confirmed here. ?>
                                     <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                         data-dialog-open="structure-chair"
-                                        data-dialog-title="Replace <?= esc($chairs[0]['name']) ?> as chairperson of <?= esc($sub['name']) ?>? Their assignment ends and they are told."
+                                        data-dialog-title="Replace <?= esc($chairs[0]['name']) ?> as chairperson of <?= esc($department['name']) ?>? Their assignment ends and they are told."
                                         data-dialog-label="Replace"
                                         data-dialog-values="<?= esc(json_encode(['replace' => '1']), 'attr') ?>"
-                                        data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/chairpersons')) ?>">Replace chairperson</button>
+                                        data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/chairpersons')) ?>">Replace chairperson</button>
                                 <?php endif; ?>
                             </h3>
                             <div class="flex flex-wrap items-center gap-2 text-sm">
@@ -324,7 +324,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                                 aria-label="Remove <?= esc($chair['name']) ?> as chairperson"
                                                 data-dialog-open="structure-confirm"
                                                 data-dialog-title="Remove <?= esc($chair['name']) ?> as chairperson?"
-                                                data-dialog-text="They keep their account and their other roles. They lose access to this sub-department's courses on their next request."
+                                                data-dialog-text="They keep their account and their other roles. They lose access to this department's courses on their next request."
                                                 data-dialog-label="Remove"
                                                 data-dialog-action="<?= esc(site_url($base . '/chairpersons/' . $chair['id'] . '/remove')) ?>">Remove</button>
                                         <?php endif; ?>
@@ -336,20 +336,20 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                         <div class="flex flex-col gap-2">
                             <h3 class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-[#646464]">
                                 Programs
-                                <?php if ($structureCanEdit && $subActive): ?>
+                                <?php if ($structureCanEdit && $departmentActive): ?>
                                     <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                         data-dialog-open="structure-program"
-                                        data-dialog-title="Add a program to <?= esc($sub['name']) ?>"
+                                        data-dialog-title="Add a program to <?= esc($department['name']) ?>"
                                         data-dialog-label="Add program"
-                                        data-dialog-action="<?= esc(site_url($base . '/sub-departments/' . $sub['id'] . '/programs')) ?>">Add program</button>
+                                        data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/programs')) ?>">Add program</button>
                                 <?php endif; ?>
                             </h3>
 
-                            <?php if ($sub['programs'] === []): ?>
+                            <?php if ($department['programs'] === []): ?>
                                 <p class="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-[#646464]" data-program-empty>No programs yet.</p>
                             <?php else: ?>
-                                <ul class="flex flex-col divide-y divide-gray-100 rounded-xl border border-gray-200 text-sm" aria-label="Programs of <?= esc($sub['name']) ?>">
-                                    <?php foreach ($sub['programs'] as $program): ?>
+                                <ul class="flex flex-col divide-y divide-gray-100 rounded-xl border border-gray-200 text-sm" aria-label="Programs of <?= esc($department['name']) ?>">
+                                    <?php foreach ($department['programs'] as $program): ?>
                                         <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3" data-program="<?= esc((string) $program['id']) ?>">
                                             <span class="flex flex-wrap items-center gap-3">
                                                 <span class="rounded bg-[#E6F4EC] px-2 py-0.5 font-mono text-xs font-semibold text-[#1E7A44]"><?= esc($program['code']) ?></span>
@@ -378,7 +378,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                                                     data-dialog-text="Students and instructors keep their history, but no new courses or offerings can be added. It must have no active courses and no offerings in an active term."
                                                                     data-dialog-label="Deactivate"
                                                                     data-dialog-action="<?= esc(site_url($base . '/programs/' . $program['id'] . '/deactivate')) ?>">Deactivate</button>
-                                                            <?php elseif ($subActive): ?>
+                                                            <?php elseif ($departmentActive): ?>
                                                                 <form method="post" action="<?= esc(site_url($base . '/programs/' . $program['id'] . '/reactivate')) ?>">
                                                                     <?= csrf_field() ?>
                                                                     <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50">Reactivate</button>
@@ -437,7 +437,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     $code = static fn (): string => view('components/form-field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'maxlength' => 50, 'help' => 'Letters, numbers, dots, dashes or underscores. Shown in capitals.', 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
     $name = static fn (): string => view('components/form-field', ['name' => 'name', 'label' => 'Name', 'required' => true, 'maxlength' => 255, 'attrs' => 'autocomplete="off"'], ['saveData' => false]);
 
-    [$deptBody, $deptFooter] = $form('structure-department', $code() . $name()
+    [$collegeBody, $collegeFooter] = $form('structure-college', $code() . $name()
         . view('components/form-field', ['name' => 'location', 'label' => 'Location', 'maxlength' => 255, 'help' => 'Optional. A building or campus.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'established_year', 'label' => 'Year established', 'type' => 'number', 'attrs' => 'min="1800" inputmode="numeric"', 'help' => 'Optional.'], ['saveData' => false]));
 
@@ -450,7 +450,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     $deanHelp = 'People who hold the dean role in your institution. Give someone the role on the People page.';
 
     // Adding a college also picks its dean, so grades and requests there have someone to decide them.
-    [$deptNewBody, $deptNewFooter] = $form('structure-department-new', $code() . $name()
+    [$collegeNewBody, $collegeNewFooter] = $form('structure-college-new', $code() . $name()
         . view('components/form-field', ['name' => 'location', 'label' => 'Location', 'maxlength' => 255, 'help' => 'Optional. A building or campus.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'established_year', 'label' => 'Year established', 'type' => 'number', 'attrs' => 'min="1800" inputmode="numeric"', 'help' => 'Optional.'], ['saveData' => false])
         . view('components/form-field', ['name' => 'dean_user_id', 'label' => 'Dean', 'type' => 'select', 'options' => $deanOptions, 'help' => $deanHelp . ' You can also assign one later.'], ['saveData' => false]));
@@ -470,14 +470,14 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         'help' => 'People who hold the chairperson role in your institution. Give someone the role on the People page.',
     ], ['saveData' => false]) . '<input type="hidden" name="replace" value="">');
 
-    [$subBody, $subFooter]   = $form('structure-sub', $code() . $name());
+    [$departmentBody, $departmentFooter]   = $form('structure-sub', $code() . $name());
     [$progBody, $progFooter] = $form('structure-program', $code() . $name());
     ?>
 
-    <?= view('components/dialog', ['id' => 'structure-department', 'title' => 'Department', 'body' => $deptBody, 'footer' => $deptFooter], ['saveData' => false]) ?>
-    <?= view('components/dialog', ['id' => 'structure-department-new', 'title' => 'Add a department', 'body' => $deptNewBody, 'footer' => $deptNewFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-college', 'title' => 'College', 'body' => $collegeBody, 'footer' => $collegeFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-college-new', 'title' => 'Add a college', 'body' => $collegeNewBody, 'footer' => $collegeNewFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-dean', 'title' => 'Assign a dean', 'body' => $deanBody, 'footer' => $deanFooter], ['saveData' => false]) ?>
-    <?= view('components/dialog', ['id' => 'structure-sub', 'title' => 'Sub-department', 'body' => $subBody, 'footer' => $subFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-sub', 'title' => 'Department', 'body' => $departmentBody, 'footer' => $departmentFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-chair', 'title' => 'Assign a chairperson', 'body' => $chairBody, 'footer' => $chairFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-program', 'title' => 'Program', 'body' => $progBody, 'footer' => $progFooter], ['saveData' => false]) ?>
 
@@ -497,7 +497,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
 <script>
 // The tree on the left chooses what the right-hand side shows. Nothing is fetched: every
-// department and sub-department is already in the page, only one of them is visible.
+// college and department is already in the page, only one of them is visible.
 (function () {
     var detail = document.querySelector('[data-structure-detail]');
     if (!detail) return;
@@ -505,14 +505,14 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     var KEY = 'structure.selected';
     var buttons = document.querySelectorAll('[data-structure-tree] [data-select]');
     var views = detail.querySelectorAll('[data-view]');
-    var departments = detail.querySelectorAll('[data-department]');
+    var colleges = detail.querySelectorAll('[data-college]');
 
     function remember(id) {
         try { sessionStorage.setItem(KEY, id); } catch (e) { /* private window */ }
         if (history.replaceState) history.replaceState(null, '', '#' + id);
     }
 
-    // A department's row opens and closes the sub-departments under it.
+    // A college's row opens and closes the departments under it.
     function setExpanded(item, open) {
         var list = item.querySelector(':scope > [data-tree-children]');
         var head = item.querySelector(':scope > [data-select]');
@@ -523,7 +523,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     }
 
     function expandOnlyActive() {
-        document.querySelectorAll('[data-tree-dept]').forEach(function (item) {
+        document.querySelectorAll('[data-tree-college]').forEach(function (item) {
             setExpanded(item, item.querySelector('[data-active="true"]') !== null);
         });
     }
@@ -532,7 +532,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         var view = detail.querySelector('[data-view="' + id + '"]');
         if (!view) return false;
 
-        departments.forEach(function (d) { d.hidden = !d.contains(view); });
+        colleges.forEach(function (d) { d.hidden = !d.contains(view); });
         views.forEach(function (v) { v.hidden = v !== view; });
         buttons.forEach(function (b) { b.dataset.active = String(b.dataset.select === id); });
         expandOnlyActive();
@@ -545,14 +545,14 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
         var target = event.target.closest('[data-select]');
 
         if (target) {
-            var row = target.closest('[data-tree-dept]');
-            var isDeptRow = row !== null && target.parentElement === row;
-            var list = isDeptRow ? row.querySelector(':scope > [data-tree-children]') : null;
+            var row = target.closest('[data-tree-college]');
+            var isCollegeRow = row !== null && target.parentElement === row;
+            var list = isCollegeRow ? row.querySelector(':scope > [data-tree-children]') : null;
             var wasOpen = list !== null && !list.hidden && target.dataset.active === 'true';
 
             if (select(target.dataset.select)) {
-                // Clicking the department that is already showing folds it; any other click opens it.
-                if (isDeptRow && wasOpen) setExpanded(row, false);
+                // Clicking the college that is already showing folds it; any other click opens it.
+                if (isCollegeRow && wasOpen) setExpanded(row, false);
                 return;
             }
         }
@@ -566,7 +566,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
     var saved = null;
     try { saved = sessionStorage.getItem(KEY); } catch (e) { saved = null; }
 
-    var first = detail.querySelector('[data-view^="dept-"]');
+    var first = detail.querySelector('[data-view^="college-"]');
     var start = location.hash.slice(1);
 
     if (!select(start, true) && !select(saved, true) && first) select(first.dataset.view, true);
@@ -581,23 +581,23 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
             if (q === '') expandOnlyActive();
 
-            document.querySelectorAll('[data-tree-dept]').forEach(function (dept) {
-                var own = dept.querySelector(':scope > [data-select]');
-                var children = dept.querySelectorAll('ul [data-select]');
-                var deptHit = q === '' || own.dataset.searchText.indexOf(q) !== -1;
-                var any = deptHit;
+            document.querySelectorAll('[data-tree-college]').forEach(function (college) {
+                var own = college.querySelector(':scope > [data-select]');
+                var children = college.querySelectorAll('ul [data-select]');
+                var collegeHit = q === '' || own.dataset.searchText.indexOf(q) !== -1;
+                var any = collegeHit;
 
                 children.forEach(function (c) {
-                    var hit = q === '' || deptHit || c.dataset.searchText.indexOf(q) !== -1;
+                    var hit = q === '' || collegeHit || c.dataset.searchText.indexOf(q) !== -1;
                     c.parentElement.hidden = !hit;
                     any = any || hit;
                 });
 
-                dept.hidden = !any;
+                college.hidden = !any;
                 if (any) shown++;
 
-                // While searching, a department with a match shows what matched.
-                if (q !== '') setExpanded(dept, any);
+                // While searching, a college with a match shows what matched.
+                if (q !== '') setExpanded(college, any);
             });
 
             if (none) none.classList.toggle('hidden', shown > 0);

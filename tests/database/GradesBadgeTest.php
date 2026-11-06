@@ -185,12 +185,12 @@ final class GradesBadgeTest extends DatabaseTestCase
 
     public function testTheChairpersonBadgeIsWorkWaitingInTheSectionsTheyTeachOfWhatTheyChair(): void
     {
-        ['institution' => $institution, 'department' => $department] = DeanFactory::department('GB');
-        $sub     = DeanFactory::subDepartment($department, 'GB');
-        $program = DeanFactory::program($sub, 'GB');
+        ['institution' => $institution, 'college' => $college] = DeanFactory::college('GB');
+        $department     = DeanFactory::department($college, 'GB');
+        $program = DeanFactory::program($department, 'GB');
         $term    = DeanFactory::term($institution);
         db_connect()->table('academic_terms')->where('id', $term)->update(['status' => 'active']);
-        $chair = DeanFactory::chair($sub);
+        $chair = DeanFactory::chair($department);
 
         $mine = DeanFactory::offering($program, $term, 'CB101');
         CourseFactory::assignInstructor($mine, $chair);
@@ -257,11 +257,11 @@ final class GradesBadgeTest extends DatabaseTestCase
 
     public function testTheDeanBadgeIsSectionsFinalizedAndNotSignedOffInTheDefaultTerm(): void
     {
-        ['institution' => $institution, 'department' => $department] = DeanFactory::department('GD');
-        $program = DeanFactory::program(DeanFactory::subDepartment($department, 'GD'), 'GD');
+        ['institution' => $institution, 'college' => $college] = DeanFactory::college('GD');
+        $program = DeanFactory::program(DeanFactory::department($college, 'GD'), 'GD');
         $term    = DeanFactory::term($institution);
         db_connect()->table('academic_terms')->where('id', $term)->update(['status' => 'active']);
-        $dean = DeanFactory::dean($institution, $department);
+        $dean = DeanFactory::dean($institution, $college);
 
         $ready = DeanFactory::offering($program, $term, 'GD101');
         $this->finalize($ready, $dean);

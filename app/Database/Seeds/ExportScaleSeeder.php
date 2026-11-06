@@ -39,9 +39,9 @@ class ExportScaleSeeder extends Seeder
 
         $db->table('institutions')->insert(['name' => 'Scale Test University', 'code' => 'SCALE' . random_int(100, 999), 'status' => 'read_only', 'created_at' => $now]);
         $institution = (int) $db->insertID();
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => 'DSC', 'name' => 'College of Scale']);
-        $db->table('sub_departments')->insert(['department_id' => (int) $db->insertID(), 'code' => 'SSC', 'name' => 'Scale Studies', 'is_active' => 1]);
-        $db->table('programs')->insert(['sub_department_id' => (int) $db->insertID(), 'code' => 'PSC' . $institution, 'name' => 'BS Scale']);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => 'DSC', 'name' => 'College of Scale']);
+        $db->table('departments')->insert(['college_id' => (int) $db->insertID(), 'code' => 'SSC', 'name' => 'Scale Studies', 'is_active' => 1]);
+        $db->table('programs')->insert(['department_id' => (int) $db->insertID(), 'code' => 'PSC' . $institution, 'name' => 'BS Scale']);
         $program = (int) $db->insertID();
 
         // 0..99999, for numbering rows in one statement.

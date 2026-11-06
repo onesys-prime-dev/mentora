@@ -249,7 +249,7 @@ class InstitutionService
 
     /**
      * Permanently removes a deleted institution and everything under it
-     * (terms, departments, programs, courses, offerings, enrolments, work and
+     * (terms, colleges, programs, courses, offerings, enrolments, work and
      * grades: the database cascades from the institution row), with its
      * accounts and their files (audit decisions 10.1–10.4).
      *
@@ -304,7 +304,7 @@ class InstitutionService
         $audit->log('institution.purged', $who, $details);
 
         $db    = db_connect();
-        $depth = $db->transDepth;
+        $collegeh = $db->transDepth;
 
         try {
             $db->transException(true)->transStart();
@@ -323,7 +323,7 @@ class InstitutionService
             $db->transComplete();
         } catch (Throwable $e) {
             // A failed query was rolled back already; anything else thrown in between was not.
-            if ($db->transDepth > $depth) {
+            if ($db->transDepth > $collegeh) {
                 $db->transRollback();
             }
 
@@ -483,25 +483,25 @@ class InstitutionService
     /**
      * What a purge removes, and what it leaves behind.
      *
-     * @return array{departments: int, programs: int, courses: int, members: int, members_left_without_an_institution: int}
+     * @return array{colleges: int, programs: int, courses: int, members: int, members_left_without_an_institution: int}
      */
     public function contents(int $institutionId): array
     {
         $db = db_connect();
 
-        $departments = $db->table('departments')->where('institution_id', $institutionId)->countAllResults();
+        $colleges = $db->table('colleges')->where('institution_id', $institutionId)->countAllResults();
 
         $programs = $db->table('programs')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where('departments.institution_id', $institutionId)
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where('colleges.institution_id', $institutionId)
             ->countAllResults();
 
         $courses = $db->table('courses')
             ->join('programs', 'programs.id = courses.program_id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where('departments.institution_id', $institutionId)
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where('colleges.institution_id', $institutionId)
             ->countAllResults();
 
         $members = $db->table('institution_users')->where('institution_id', $institutionId)->countAllResults();
@@ -513,7 +513,7 @@ class InstitutionService
             ->countAllResults();
 
         return [
-            'departments'                         => $departments,
+            'colleges'                         => $colleges,
             'programs'                            => $programs,
             'courses'                             => $courses,
             'members'                             => $members,

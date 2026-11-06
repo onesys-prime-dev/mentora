@@ -10,7 +10,7 @@ use App\Services\Courses\ChairpersonCourseSearch;
 
 /**
  * The chairperson-only Courses page (R6 of the chairperson plan): every
- * course offering across every sub-department they chair, searchable,
+ * course offering across every department they chair, searchable,
  * filterable and sortable — separate from CourseController::index()
  * because the search/filter/pagination this page needs doesn't exist for
  * the instructor/student list and shouldn't complicate it.

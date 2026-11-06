@@ -161,11 +161,11 @@ final class GlobalGradesQueryBudgetTest extends RouteTestCase
 
     public function testTheChairpersonPageCostsTheSameForThreeOrFifteenSections(): void
     {
-        $unit    = DeanFactory::department('QCH');
-        $sub     = DeanFactory::subDepartment($unit['department'], 'QCH');
-        $program = DeanFactory::program($sub, 'QCH');
+        $unit    = DeanFactory::college('QCH');
+        $department     = DeanFactory::department($unit['college'], 'QCH');
+        $program = DeanFactory::program($department, 'QCH');
         $term    = DeanFactory::term($unit['institution']);
-        $chair   = DeanFactory::chair($sub);
+        $chair   = DeanFactory::chair($department);
 
         $views = ['tab=mine', 'tab=mine&sub=to-grade', 'tab=mine&sub=at-risk', 'tab=program', 'tab=program&sub=at-risk', 'tab=program&sort=average&dir=desc&q=IT'];
 
@@ -203,12 +203,12 @@ final class GlobalGradesQueryBudgetTest extends RouteTestCase
 
     public function testTheDeanPageCostsTheSameForThreeOrFifteenSections(): void
     {
-        $unit     = DeanFactory::department('QDN');
-        $programA = DeanFactory::program(DeanFactory::subDepartment($unit['department'], 'QDA'), 'QDA');
-        $programB = DeanFactory::program(DeanFactory::subDepartment($unit['department'], 'QDB'), 'QDB');
+        $unit     = DeanFactory::college('QDN');
+        $programA = DeanFactory::program(DeanFactory::department($unit['college'], 'QDA'), 'QDA');
+        $programB = DeanFactory::program(DeanFactory::department($unit['college'], 'QDB'), 'QDB');
         $term     = DeanFactory::term($unit['institution']);
-        $chair    = DeanFactory::chair((int) db_connect()->table('programs')->where('id', $programA)->get()->getRow()->sub_department_id);
-        $dean     = DeanFactory::dean($unit['institution'], $unit['department']);
+        $chair    = DeanFactory::chair((int) db_connect()->table('programs')->where('id', $programA)->get()->getRow()->department_id);
+        $dean     = DeanFactory::dean($unit['institution'], $unit['college']);
 
         $views = ['', 'sub=at-risk', 'program=' . $programA, 'sort=signed_off&dir=desc&q=IT&nf=1'];
 

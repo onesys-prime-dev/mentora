@@ -10,15 +10,15 @@ use App\Models\Courses\AnnouncementModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Services\Admin\PlatformSettings;
 use App\Services\Courses\ChairpersonAccessService;
-use App\Services\Courses\DepartmentAnnouncementService;
+use App\Services\Courses\CollegeAnnouncementService;
 use App\Services\Institutions\InstitutionAnnouncement;
 
 /**
  * The Announcements app: every announcement that reaches this person, at four levels and in this order:
- * the platform's, the institution's, their department's and their courses'. A student, an instructor and a
+ * the platform's, the institution's, their college's and their courses'. A student, an instructor and a
  * chairperson each have it under their own area. The first two are one line each (the same text the banner
- * above every page carries); the department's are the dean's posts that reach the person through their
- * program, sections or sub-departments; the course's are the latest posts in the courses they are in. A
+ * above every page carries); the college's are the dean's posts that reach the person through their
+ * program, sections or departments; the course's are the latest posts in the courses they are in. A
  * level with nothing to say is shown as such rather than left out, so the order is always the same.
  */
 class AnnouncementsController extends BaseController
@@ -33,13 +33,13 @@ class AnnouncementsController extends BaseController
         $loadError  = false;
         $platform   = '';
         $institution = null;
-        $department = [];
+        $college = [];
         $courses    = [];
 
         try {
             $platform    = trim((string) (new PlatformSettings())->get('announcement'));
             $institution = (new InstitutionAnnouncement())->forUser($user);
-            $department  = (new DepartmentAnnouncementService())->forUser($user);
+            $college  = (new CollegeAnnouncementService())->forUser($user);
             $courses     = $this->courseAnnouncements($user, $area);
         } catch (\Throwable $e) {
             log_message('error', 'Announcements failed to load: ' . $e->getMessage());
@@ -50,7 +50,7 @@ class AnnouncementsController extends BaseController
         $counts = [
             'platform'    => $platform !== '' ? 1 : 0,
             'institution' => $institution !== null ? 1 : 0,
-            'department'  => count($department),
+            'college'  => count($college),
             'course'      => count($courses),
         ];
 
@@ -71,7 +71,7 @@ class AnnouncementsController extends BaseController
             };
             $platform    = $has([$platform]) ? $platform : '';
             $institution = $institution !== null && $has([$institution]) ? $institution : null;
-            $department  = array_values(array_filter($department, static fn (array $a): bool => $has([$a['title'], $a['message'], $a['author'], $a['scope_label']])));
+            $college  = array_values(array_filter($college, static fn (array $a): bool => $has([$a['title'], $a['message'], $a['author'], $a['scope_label']])));
             $courses     = array_values(array_filter($courses, static fn (array $c): bool => $has([$c['subject'], $c['code'], $c['author']])));
         }
 
@@ -92,7 +92,7 @@ class AnnouncementsController extends BaseController
             'area'         => $area,
             'platform'     => $platform,
             'institution'  => $institution,
-            'department'   => $department,
+            'college'   => $college,
             'courses'      => $courses,
             'loadError'    => $loadError,
             'previousPage' => 'dashboard',

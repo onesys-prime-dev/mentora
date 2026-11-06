@@ -123,8 +123,8 @@ class ClassSectionService
             'terms'     => $terms,
             'openTerms' => array_values(array_filter($terms, static fn (array $t): bool => in_array($t['status'], ['upcoming', 'active'], true))),
             'programs'  => $db->table('programs p')->select('p.id, p.code, p.name')
-                ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-                ->join('departments d', 'd.id = sd.department_id')
+                ->join('departments sd', 'sd.id = p.department_id')
+                ->join('colleges d', 'd.id = sd.college_id')
                 ->where('d.institution_id', $institutionId)->orderBy('p.code')->get()->getResultArray(),
         ];
     }
@@ -216,8 +216,8 @@ class ClassSectionService
         $available = $db->table('courses c')
             ->select('c.id, c.course_code, c.course_title')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->where('c.status', 'active')
             ->orderBy('c.course_code')

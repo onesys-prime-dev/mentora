@@ -7,7 +7,7 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 /**
  * Who a grade-override request waits for next, for every combination of who
- * asked, who chairs the sub-department and who is dean. The rule: nobody acts
+ * asked, who chairs the department and who is dean. The rule: nobody acts
  * on their own request, and a missing level is skipped upward.
  *
  * @internal

@@ -29,7 +29,7 @@ final class SisGradeExporterRollbackTest extends DatabaseTestCase
 
     private const TABLES = [
         'sis_grade_exports', 'gradebook_records', 'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides',
-        'course_offerings', 'courses', 'academic_terms', 'programs', 'sub_departments', 'departments',
+        'course_offerings', 'courses', 'academic_terms', 'programs', 'departments', 'colleges',
         'institution_users', 'user_profiles', 'auth_groups_users', 'auth_identities', 'users', 'institutions',
         'audit_logs', 'notifications',
     ];

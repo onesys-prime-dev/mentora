@@ -60,7 +60,7 @@ class NotificationService
     }
 
     /**
-     * Tells many people the same thing at once (an announcement to a whole department): one in-app
+     * Tells many people the same thing at once (an announcement to a whole college): one in-app
      * notification each, never an email, and idempotent like send(): someone who already has this
      * dedupe key is skipped. Done in a few queries however many people there are.
      *

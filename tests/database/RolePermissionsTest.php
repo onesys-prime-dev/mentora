@@ -85,7 +85,7 @@ final class RolePermissionsTest extends DatabaseTestCase
     {
         $a = PeopleFactory::institution('PERMG');
 
-        foreach (['courses.view', 'department.monitor', 'grades.approve', 'grades.signoff', 'department.announce', 'messages.use'] as $permission) {
+        foreach (['courses.view', 'college.monitor', 'grades.approve', 'grades.signoff', 'college.announce', 'messages.use'] as $permission) {
             db_connect()->table('role_permissions')->insert(['institution_id' => $a, 'role' => 'dean', 'permission' => $permission, 'granted' => 0]);
         }
 

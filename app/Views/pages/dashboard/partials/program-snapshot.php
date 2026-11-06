@@ -1,7 +1,7 @@
 <?php
 /**
  * R3's "program snapshot": how many courses, instructors and students sit
- * under every sub-department this chairperson chairs, right now. Same
+ * under every department this chairperson chairs, right now. Same
  * full-width-tile shape as the student dashboard's Key Metrics, since both
  * sit in the identity column next to a fixed-height widget and need to grow
  * to match it.

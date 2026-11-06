@@ -44,19 +44,19 @@ final class OneInstitutionPerAccountTest extends DatabaseTestCase
     {
         $db          = db_connect();
         $offering    = CourseFactory::offering('A');
-        $institution = (int) $db->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
-        $sub         = (int) $db->query('SELECT p.sub_department_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id WHERE o.id = ?', [$offering])->getRow()->sub_department_id;
+        $institution = (int) $db->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
+        $department         = (int) $db->query('SELECT p.department_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id WHERE o.id = ?', [$offering])->getRow()->department_id;
         $person      = PeopleFactory::person('instructor', institutionId: PeopleFactory::institution('KEEP'));
 
         CourseFactory::enroll($offering, $person);
         CourseFactory::assignInstructor($offering, $person);
-        $db->table('chairperson_assignments')->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $person->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        $db->table('chairperson_assignments')->insert(['department_id' => $department, 'chairperson_user_id' => $person->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
 
         OneInstitutionPerAccount::endRolesIn($db, (int) $person->id, $institution);
 
         $this->assertSame('dropped', $db->table('enrollments')->where(['offering_id' => $offering, 'student_user_id' => $person->id])->get()->getRowArray()['status']);
         $this->assertSame(0, $db->table('instructor_assignments')->where(['offering_id' => $offering, 'instructor_user_id' => $person->id])->countAllResults());
-        $this->assertSame('revoked', $db->table('chairperson_assignments')->where(['sub_department_id' => $sub, 'chairperson_user_id' => $person->id])->get()->getRowArray()['status']);
+        $this->assertSame('revoked', $db->table('chairperson_assignments')->where(['department_id' => $department, 'chairperson_user_id' => $person->id])->get()->getRowArray()['status']);
     }
 
     public function testASecondMembershipIsRefusedByTheDatabase(): void

@@ -58,7 +58,7 @@ Each case has a main path and its alternates. The main paths that matter most, m
 
 | Condition | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|
-| Department has a dean holding `grades.signoff` | Y | Y | N | N |
+| College has a dean holding `grades.signoff` | Y | Y | N | N |
 | Actor is that dean | Y | N | – | – |
 | Actor is an administrator of the institution holding `grades.signoff` | – | Y | Y | N |
 | **May sign off or reopen** | **Yes** | **No** | **Yes** (own section excluded for sign-off) | **No** |
@@ -93,7 +93,7 @@ stateDiagram-v2
     Submitted --> [*]
 ```
 
-Chairperson assignment: none → active (assign) → revoked (replace, with confirmation; or remove). Only one `active` per sub-department (TC-CRS-03 to 05).
+Chairperson assignment: none → active (assign) → revoked (replace, with confirmation; or remove). Only one `active` per department (TC-CRS-03 to 05).
 
 ## 10. Error guessing
 

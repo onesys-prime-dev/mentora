@@ -25,16 +25,16 @@ final class MessagingPolicy
         ],
         'instructor' => [
             'student'     => 'sharedCourse',
-            'instructor'  => 'sameDepartment',
-            'chairperson' => 'sameDepartment',
-            'dean'        => 'sameDepartment',
+            'instructor'  => 'sameCollege',
+            'chairperson' => 'sameCollege',
+            'dean'        => 'sameCollege',
             'parent'      => 'linkedChild',
         ],
         'chairperson' => [
             'student'     => 'inScope',
             'instructor'  => 'inScope',
-            'chairperson' => 'sameDepartment',
-            'dean'        => 'sameDepartment',
+            'chairperson' => 'sameCollege',
+            'dean'        => 'sameCollege',
         ],
         'dean' => [
             'student'     => 'inScope',
@@ -90,7 +90,7 @@ final class MessagingPolicy
 
         $facts = [
             'sharedCourse'   => $c->sharedCourse,
-            'sameDepartment' => $c->sameDepartment,
+            'sameCollege' => $c->sameCollege,
             'inScope'        => $c->inScope,
             'linkedChild'    => $c->linkedChild,
         ];

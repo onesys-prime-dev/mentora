@@ -63,7 +63,7 @@ Copied from the global Announcements page (`app/Views/pages/announcements/index.
 | Parent | none | Child, Term | Your child's grades in every course. |
 | Instructor | Gradebook · To grade · At risk | Term | Every section you teach. |
 | Chairperson | My sections (Gradebook · To grade · At risk) and Program (Sections · At risk) | Term | Your sections and your program's. |
-| Dean | Sections · At risk | Program, Term | Every section in your department. |
+| Dean | Sections · At risk | Program, Term | Every section in your college. |
 
 ## 3. Data and speed (Q19)
 
@@ -78,7 +78,7 @@ Copied from the global Announcements page (`app/Views/pages/announcements/index.
   two pages must not do.
 - A grade shows only when the course's scheme is **Published**, as on the course tab. Otherwise the row
   says "Not published yet".
-- Section, program and department lists are paginated, 25 per page, and searchable.
+- Section, program and college lists are paginated, 25 per page, and searchable.
 - A course's breakdown (periods, categories, standing) is built by the engine for that one course only,
   when its row is opened (`GradeService::buildStudentGrades`, the same code the course tab uses).
 - Parity test: for the same student and course, the global page and the course tab show the same
@@ -98,7 +98,7 @@ permission is missing is not shown, and a role left with no tab has no Grades ti
 | Chairperson Program tab | `program.monitor` |
 | Edit as chairperson | `program.monitor` + `grading.manage` |
 | Nudges | `followups.manage` |
-| Dean page | `department.monitor` (as dean) |
+| Dean page | `college.monitor` (as dean) |
 | Dean strip links | `grades.signoff` / `grades.approve` (as dean) |
 
 Closed terms stay read-only through the existing `closedoffering` filter. Viewing as someone writes
@@ -225,7 +225,7 @@ adds **Download report**. A child who is also staff shows nothing, as on the par
 ## 8. Chairperson (Q10, Q11)
 
 - **My sections:** the instructor workbench for the sections they teach.
-- **Program:** the sections of the sub-departments they chair, as a table (instructor, average, at risk,
+- **Program:** the sections of the departments they chair, as a table (instructor, average, at risk,
   ungraded, finalize status). A row opens that section's grid **read-only**; **Edit as chairperson**
   unlocks it, says the edits are audited (`course.chairperson_action`, as today), and asks a reason for an
   override.
@@ -253,24 +253,24 @@ Phase 4 layout (agreed 2026-11-04):
   a reason and an optional due date; Send posts to the existing Follow-ups and the chairperson stays on
   the Program tab.
 - **My sections** = the instructor workbench over the sections the chairperson teaches **inside the
-  sub-departments they chair** (the chairperson area reaches only those); without any, the tab is not
+  departments they chair** (the chairperson area reaches only those); without any, the tab is not
   shown and the page opens on Program. Edits there go through the chairperson area like every other
   chairperson edit and are audited the same way.
 - **Download program** needs `program.monitor` (reading program gradebooks), not `grading.manage`.
 
 ## 9. Dean (Q12)
 
-One **Department** view: a program picker over the same section table with a **Signed off** column. Grids
+One **College** view: a program picker over the same section table with a **Signed off** column. Grids
 are always read-only. A strip, "Finalized 40/52 · Signed off 31 · Override requests waiting: 3", whose
 counts link to the existing **Sign-off** and **Approvals** pages (decisions, re-authentication and the
-audit stay there). Also nudges, the department at-risk list and the department download.
+audit stay there). Also nudges, the college at-risk list and the college download.
 
 Phase 5 layout (decided 2026-11-04, reusing the approved chairperson Program layout): a program picker
 ("All programs" first), the strip with its links, sub-pills **Sections · At risk**, the section table
 with an added **Signed off** column (same sort, search, filter, paging), and the selected section's grid
 below, always read-only (no Edit button). Nudge (the chairperson's dialog, dean as sender; needs
-`followups.manage`) and **Download department** (one workbook, audited per section; needs
-`department.monitor`) sit under the table.
+`followups.manage`) and **Download college** (one workbook, audited per section; needs
+`college.monitor`) sit under the table.
 
 ## 10. Entry points (Q17)
 
@@ -288,7 +288,7 @@ risk view of the same role.
   queries as the page's summary strip.
 - "All my grades →" (student, parent) and "All my sections →" (instructor) on each course's Grades tab.
 - "See all" on the dashboard cards about grades or at-risk students, to the matching tab.
-- Monitor Program and Monitor Department link to the Program / Department tab and back.
+- Monitor Program and Monitor College link to the Program / College tab and back.
 - Notifications keep their current links.
 
 ## 11. Phases (Q20)
@@ -305,7 +305,7 @@ instructor goes first (§0).
 3. **Parent** (`feat/global-grades-parent`): child picker, parent boundary, Download report, parent tile.
 4. **Chairperson** (`feat/global-grades-chairperson`): My sections and Program tabs, Edit as chairperson,
   nudges, tracker, program download.
-5. **Dean and entry points** (`feat/global-grades-dean`): Department view and strip, dean tile, tile
+5. **Dean and entry points** (`feat/global-grades-dean`): College view and strip, dean tile, tile
   badges, the course-tab, dashboard and Monitor links, Playwright cases for every role.
 
 A separate small change made during the design and kept as its own commit on the phase 1 branch: the

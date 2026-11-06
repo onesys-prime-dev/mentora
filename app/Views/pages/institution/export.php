@@ -58,7 +58,7 @@ foreach ($exportRows as $row) {
     <?= view('components/page-head', [
         'title'       => 'Data export',
         'icon'        => 'folder',
-        'description' => 'A copy of everything ' . $exportName . ' holds in Mentora, as CSV files in one ZIP: terms, departments, programs, courses, people, enrolments, final grades, assessments, submissions and announcements. Uploaded files and passwords are not included.',
+        'description' => 'A copy of everything ' . $exportName . ' holds in Mentora, as CSV files in one ZIP: terms, colleges, programs, courses, people, enrolments, final grades, assessments, submissions and announcements. Uploaded files and passwords are not included.',
     ], ['saveData' => false]) ?>
 
     <?php if (session()->has('message')): ?>

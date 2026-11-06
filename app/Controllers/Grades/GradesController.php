@@ -10,7 +10,7 @@ use App\Services\Auth\RolePermissions;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Grades\PendingGrading;
 use App\Services\Grades\ChairpersonProgramOverview;
-use App\Services\Grades\DeanDepartmentOverview;
+use App\Services\Grades\DeanCollegeOverview;
 use App\Services\Grades\GradesAtRisk;
 use App\Services\Grades\GradesBadge;
 use App\Services\Grades\GradesSeen;
@@ -42,12 +42,12 @@ use CodeIgniter\Shield\Entities\User;
  * section that never had its Grades tab opened reads as "not published yet" (spec §13).
  *
  * The chairperson's has two tabs (spec §8): My sections, the instructor's workbench over the sections they teach
- * in the sub-departments they chair, without its finalize controls (finalizing is the instructor's); and Program,
+ * in the departments they chair, without its finalize controls (finalizing is the instructor's); and Program,
  * the program's sections as a table with the finalization tracker, the chosen section's grid below it (read-only
  * until Edit as chairperson) and the program's at-risk list. A tab the chairperson cannot use is not shown.
  *
- * The dean's is one Department view (spec §9): the chairperson's Program table over every section of their
- * department, narrowed by a program picker, with a Signed off column and, in place of the tracker, a strip whose
+ * The dean's is one College view (spec §9): the chairperson's Program table over every section of their
+ * college, narrowed by a program picker, with a Signed off column and, in place of the tracker, a strip whose
  * counts link to Sign-off and Approvals; the chosen section's grid is always read-only.
  */
 class GradesController extends BaseController
@@ -349,11 +349,11 @@ class GradesController extends BaseController
     }
 
     /**
-     * The dean's page: the sections of their department(s) in a term, of every program or the one picked (?program=,
-     * one of the department's, else a 404). The table is one page, searched, filtered and sorted from the address;
+     * The dean's page: the sections of their college(s) in a term, of every program or the one picked (?program=,
+     * one of the college's, else a 404). The table is one page, searched, filtered and sorted from the address;
      * the strip counts every section of the choice. The grid below is the chosen section's (?section=, else the
      * page's first row), through the dean's read-only course API and only with courses.view, which that API asks;
-     * it is never editable here. A section outside the choice is a 404. department.monitor is the route's filter.
+     * it is never editable here. A section outside the choice is a 404. college.monitor is the route's filter.
      */
     private function dean(User $user, string $base): string
     {
@@ -372,21 +372,21 @@ class GradesController extends BaseController
         $sub = (string) $this->request->getGet('sub');
         $sub = in_array($sub, self::DEAN_SUBS, true) ? $sub : self::DEAN_SUBS[0];
 
-        $overview   = new DeanDepartmentOverview();
+        $overview   = new DeanCollegeOverview();
         $loadError  = false;
         $programs   = [];
         $terms      = [];
         $termId     = null;
         $sections   = []; // every section of the term and the program choice
         $risk       = [];
-        $department = ['rows' => [], 'total' => 0, 'strip' => ['finalized' => 0, 'signed_off' => 0, 'total' => 0, 'requests_waiting' => 0]];
+        $college = ['rows' => [], 'total' => 0, 'strip' => ['finalized' => 0, 'signed_off' => 0, 'total' => 0, 'requests_waiting' => 0]];
         $termEnd    = null;
-        $state      = $this->tableState(DeanDepartmentOverview::SORTS);
+        $state      = $this->tableState(DeanCollegeOverview::SORTS);
 
         try {
             $programs = $overview->programs($user);
 
-            // A program that is not the department's is no page (thrown below, outside this catch).
+            // A program that is not the college's is no page (thrown below, outside this catch).
             if ($requestedProgram === null || in_array($requestedProgram, array_column($programs, 'id'), true)) {
                 $terms  = $overview->terms($user);
                 $termId = $overview->defaultTermId($terms, $this->number('term') ?: null);
@@ -395,7 +395,7 @@ class GradesController extends BaseController
             if ($termId !== null) {
                 $sections   = $overview->all($user, $termId, $requestedProgram);
                 $risk       = (new GradesAtRisk())->forSections($sections, null);
-                $department = $overview->pageOf($sections, [
+                $college = $overview->pageOf($sections, [
                     'q'            => $state['q'],
                     'notFinalized' => $state['nf'],
                     'sort'         => $state['sort'],
@@ -404,9 +404,9 @@ class GradesController extends BaseController
                 ]);
 
                 // A page past the end shows the last one (the service's rule); the links follow what is shown.
-                $state['page'] = min($state['page'], max(1, (int) ceil($department['total'] / ChairpersonProgramOverview::PER_PAGE)));
+                $state['page'] = min($state['page'], max(1, (int) ceil($college['total'] / ChairpersonProgramOverview::PER_PAGE)));
 
-                $department['rows'] = $this->forNudge($department['rows'], (int) $user->id);
+                $college['rows'] = $this->forNudge($college['rows'], (int) $user->id);
                 $termEnd            = $overview->termEnd($termId);
             }
         } catch (\Throwable $e) {
@@ -416,7 +416,7 @@ class GradesController extends BaseController
 
         $byId = array_column($sections, null, 'offering_id');
 
-        // Another department's program, or a section outside the choice, is a 404.
+        // Another college's program, or a section outside the choice, is a 404.
         if (! $loadError && (
             ($requestedProgram !== null && ! in_array($requestedProgram, array_column($programs, 'id'), true))
             || ($requestedSection !== null && ! isset($byId[$requestedSection]))
@@ -424,11 +424,11 @@ class GradesController extends BaseController
             throw PageNotFoundException::forPageNotFound();
         }
 
-        $selected = $requestedSection !== null ? ($byId[$requestedSection] ?? null) : ($department['rows'][0] ?? null);
+        $selected = $requestedSection !== null ? ($byId[$requestedSection] ?? null) : ($college['rows'][0] ?? null);
 
         // As on the chairperson's Program tab: the action bar carries what Nudge needs, wherever the row is.
         if ($selected !== null) {
-            $onPage   = array_column($department['rows'], null, 'offering_id');
+            $onPage   = array_column($college['rows'], null, 'offering_id');
             $selected = $onPage[$selected['offering_id']] ?? $this->forNudge([$selected], (int) $user->id)[0];
         }
 
@@ -450,20 +450,20 @@ class GradesController extends BaseController
             'user'         => $user,
             'area'         => 'dean',
             'base'         => $base,
-            'chairTabs'    => ['department'],
-            'tab'          => 'department',
+            'chairTabs'    => ['college'],
+            'tab'          => 'college',
             'sub'          => $sub,
             'terms'        => $terms,
             'termId'       => $termId,
             'programs'     => $programs,
             'programId'    => $requestedProgram,
             'sections'     => [],
-            'program'      => $department,
+            'program'      => $college,
             'state'        => $state,
             'termEnd'      => $termEnd,
             'selected'     => $selected,
             'summary'      => null,
-            'counts'       => ['sections' => $department['strip']['total'], 'at-risk' => count($risk)],
+            'counts'       => ['sections' => $college['strip']['total'], 'at-risk' => count($risk)],
             'atRisk'       => $atRisk,
             'reason'       => $reason,
             'queue'        => [],

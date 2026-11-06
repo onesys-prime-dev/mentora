@@ -1,5 +1,5 @@
 // Cases: docs/test-cases/p2-global-grades.md (TC-GGR-10 to TC-GGR-12).
-// Data: chairperson1 chairs the sub-department of IT101 (IT101-A has students, a Participation item graded by hand
+// Data: chairperson1 chairs the department of IT101 (IT101-A has students, a Participation item graded by hand
 // and work waiting to be graded). The cases leave the data as they found it: the score is put back and the
 // follow-up the nudge sends is deleted.
 import { expect, test } from "@playwright/test";

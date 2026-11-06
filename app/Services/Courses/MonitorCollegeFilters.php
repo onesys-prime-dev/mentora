@@ -5,24 +5,24 @@ declare(strict_types=1);
 namespace App\Services\Courses;
 
 /**
- * Monitor Department's filters, sort and comparison choice, read safely from
+ * Monitor College's filters, sort and comparison choice, read safely from
  * a query string. The term and date range are Monitor Program's own
- * (MonitorProgramFilters); the department page adds a sub-department, a
+ * (MonitorProgramFilters); the college page adds a department, a
  * program, which grouping the comparison table shows, and its sort. Anything
  * not valid is dropped or replaced by its default, so a hand-edited address
  * can never produce an error or an unexpected query.
  */
-final class MonitorDepartmentFilters
+final class MonitorCollegeFilters
 {
-    public const COMPARE = ['sub_department', 'program'];
+    public const COMPARE = ['department', 'program'];
 
     public const SORTABLE = ['name', 'students', 'completion', 'average_grade', 'grading_progress', 'turnaround', 'at_risk', 'last_activity'];
 
     public function __construct(
         public readonly MonitorProgramFilters $base = new MonitorProgramFilters(),
-        public readonly ?int $subDepartmentId = null,
+        public readonly ?int $departmentId = null,
         public readonly ?int $programId = null,
-        public readonly string $compare = 'sub_department',
+        public readonly string $compare = 'department',
         public readonly string $sort = 'name',
         public readonly string $dir = 'asc',
     ) {
@@ -37,9 +37,9 @@ final class MonitorDepartmentFilters
 
         return new self(
             base: MonitorProgramFilters::fromInput($input),
-            subDepartmentId: self::positiveInt($input['sub_department'] ?? null),
+            departmentId: self::positiveInt($input['department'] ?? null),
             programId: self::positiveInt($input['program'] ?? null),
-            compare: in_array($compare, self::COMPARE, true) ? $compare : 'sub_department',
+            compare: in_array($compare, self::COMPARE, true) ? $compare : 'department',
             sort: in_array($sort, self::SORTABLE, true) ? $sort : 'name',
             dir: $dir === 'desc' ? 'desc' : 'asc',
         );
@@ -56,9 +56,9 @@ final class MonitorDepartmentFilters
     public function toQuery(array $override = []): array
     {
         $query = $this->base->toQuery() + [
-            'sub_department' => $this->subDepartmentId,
+            'department' => $this->departmentId,
             'program'        => $this->programId,
-            'compare'        => $this->compare !== 'sub_department' ? $this->compare : null,
+            'compare'        => $this->compare !== 'department' ? $this->compare : null,
             'sort'           => $this->sort !== 'name' ? $this->sort : null,
             'dir'            => $this->dir !== 'asc' ? $this->dir : null,
         ];
@@ -69,7 +69,7 @@ final class MonitorDepartmentFilters
     /** True when any filter (not the comparison or sort) narrows the result. */
     public function isFiltered(): bool
     {
-        return $this->base->isFiltered() || $this->subDepartmentId !== null || $this->programId !== null;
+        return $this->base->isFiltered() || $this->departmentId !== null || $this->programId !== null;
     }
 
     /** @param mixed $value */

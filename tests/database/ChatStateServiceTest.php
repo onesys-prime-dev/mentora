@@ -33,10 +33,10 @@ final class ChatStateServiceTest extends DatabaseTestCase
         parent::setUp();
 
         $this->service     = new ChatStateService();
-        $d                 = DeanFactory::department('C1');
+        $d                 = DeanFactory::college('C1');
         $this->institution = $d['institution'];
-        $sub               = DeanFactory::subDepartment($d['department'], 'CA');
-        $this->program     = DeanFactory::program($sub, 'CA');
+        $department               = DeanFactory::department($d['college'], 'CA');
+        $this->program     = DeanFactory::program($department, 'CA');
         $this->term        = DeanFactory::term($this->institution);
     }
 

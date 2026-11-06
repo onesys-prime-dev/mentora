@@ -1,21 +1,21 @@
 // Cases: docs/test-cases/p2-dean.md (TC-DEAN-01 to TC-DEAN-11).
 // The dean's whole area, end to end: signing in and the dashboard, the role switch of a dean who also
 // teaches, a course opened read-only, the override chain and the dean's decision, term-end sign-off,
-// follow-ups, department announcements, nothing outside the department, the keyboard, the accessibility
-// and width checks on every screen, and the states a dean can be in (no department, a read-only
+// follow-ups, college announcements, nothing outside the college, the keyboard, the accessibility
+// and width checks on every screen, and the states a dean can be in (no college, a read-only
 // institution).
 //
 // Data (DemoUsersSeeder, the academic seeders):
-//   dean1@mentora.test   dean of the General department, which has no courses: the "outside" and the
+//   dean1@mentora.test   dean of the General college, which has no courses: the "outside" and the
 //                        empty-state dean.
 //   dean2@mentora.test   dean of the College of Business and Management (CBM) who also teaches (no
 //                        courses of their own). CBM holds IT101-A and -B (instructor1), IT102-A and
-//                        IT201-A (instructor2), all in the IT sub-department that chairperson1 chairs.
+//                        IT201-A (instructor2), all in the IT department that chairperson1 chairs.
 // Sections the cases use: IT201-A for the override chain (three graded students), IT101-B for sign-off
 // (no students, so its grades can be finalized in two clicks), IT101-A as the blocked one.
 //
 // Everything a person can do is done through the screens. runSql is used only for the two states the
-// app has no screen for yet (a dean who has lost the department, an institution made read-only), and
+// app has no screen for yet (a dean who has lost the college, an institution made read-only), and
 // both are put back.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -71,16 +71,16 @@ async function deanCourseAddress(page, code, section) {
     return page.locator("a", { hasText: `${code} · ${section}` }).first().getAttribute("href");
 }
 
-test("TC-DEAN-01 A dean signs in and lands on the department dashboard", async ({ browser }, testInfo) => {
+test("TC-DEAN-01 A dean signs in and lands on the college dashboard", async ({ browser }, testInfo) => {
     const page = await signedIn(browser, DEAN_WHO_TEACHES);
 
-    // The department in numbers, and the one place that says what needs attention.
+    // The college in numbers, and the one place that says what needs attention.
     await expect(page.getByRole("heading", { name: /^Dean dashboard, / })).toHaveCount(1);
-    await expect(page.locator('[data-widget="snapshot"]')).toContainText("Your department");
+    await expect(page.locator('[data-widget="snapshot"]')).toContainText("Your college");
     await expect(page.locator('[data-widget="needs-attention"]')).toContainText("Needs Attention");
 
     // Every tool a dean has is one click from here.
-    for (const tool of ["Courses", "Approvals", "Sign-off", "Follow-ups", "Announcements", "Teaching load", "Chairperson review", "Monitor Department"]) {
+    for (const tool of ["Courses", "Approvals", "Sign-off", "Follow-ups", "Announcements", "Teaching load", "Chairperson review", "Monitor College"]) {
         await expect(page.getByRole("link", { name: tool, exact: true }).first(), `the ${tool} tile`).toBeVisible();
     }
 
@@ -222,7 +222,7 @@ test("TC-DEAN-04 An override is a request: the chairperson endorses it, the dean
     await expect(dean.getByText("Nothing waiting for you")).toBeVisible();
     await shot(dean, testInfo, "approvals-empty-before-endorsement");
 
-    // 3. The chairperson of the sub-department endorses both.
+    // 3. The chairperson of the department endorses both.
     const chair = await signedIn(browser, CHAIRPERSON, "chairperson");
     await chair.goto("/chairperson/override-requests");
     await expect(listRow(chair, "Pedro Reyes")).toBeVisible();
@@ -399,7 +399,7 @@ test("TC-DEAN-06 A dean sends a follow-up and the instructor answers it and clos
     await expect(dean.locator("[data-dialog]:not([hidden])")).toContainText("Grading it tomorrow morning.");
 });
 
-test("TC-DEAN-07 A dean posts a department announcement that its people read, and ends it", async ({ browser }, testInfo) => {
+test("TC-DEAN-07 A dean posts a college announcement that its people read, and ends it", async ({ browser }, testInfo) => {
     const dean = await signedIn(browser, DEAN_WHO_TEACHES);
     await dean.goto("/dean/announcements");
     await expect(dean.getByText("No announcements showing")).toBeVisible();
@@ -418,14 +418,14 @@ test("TC-DEAN-07 A dean posts a department announcement that its people read, an
     await expect(row).toContainText("Everyone");
     await shot(dean, testInfo, "announcement-posted");
 
-    // A student of the department reads it, in the Announcements app, under its own level.
+    // A student of the college reads it, in the Announcements app, under its own level.
     const student = await signedIn(browser, accounts.student1, "student");
-    await student.goto("/student/announcements?level=department");
-    const level = student.locator('[data-level="department"]');
+    await student.goto("/student/announcements?level=college");
+    const level = student.locator('[data-level="college"]');
     await expect(level).toContainText("Enrolment week schedule");
     await expect(level).toContainText("enrolment questions");
 
-    // The other department's dean has no sign of it.
+    // The other college's dean has no sign of it.
     const outsider = await signedIn(browser, DEAN);
     await outsider.goto("/dean/announcements");
     await expect(outsider.getByText("Enrolment week schedule")).toHaveCount(0);
@@ -436,27 +436,27 @@ test("TC-DEAN-07 A dean posts a department announcement that its people read, an
     await expect(dean.getByText("No announcements showing")).toBeVisible();
 
     await student.reload();
-    await expect(student.locator('[data-level="department"]')).not.toContainText("Enrolment week schedule");
-    await expect(student.locator('[data-level="department"]')).toContainText("Nothing from your department right now");
+    await expect(student.locator('[data-level="college"]')).not.toContainText("Enrolment week schedule");
+    await expect(student.locator('[data-level="college"]')).toContainText("Nothing from your college right now");
 
     await dean.getByRole("link", { name: /^Ended/ }).click();
     await expect(listRow(dean, "Enrolment week schedule")).toBeVisible();
 });
 
-test("TC-DEAN-08 Nothing outside the dean's department can be reached", async ({ browser }, testInfo) => {
+test("TC-DEAN-08 Nothing outside the dean's college can be reached", async ({ browser }, testInfo) => {
     // The addresses of things inside CBM, found the way a dean of CBM would find them.
     const inside = await signedIn(browser, DEAN_WHO_TEACHES);
     const course = await deanCourseAddress(inside, "IT201", "A");
     await inside.goto("/dean/teaching-load");
     const instructor = await inside.locator('a[href*="/dean/teaching-load/"]').first().getAttribute("href");
-    await inside.goto("/dean/monitor-department?compare=program");
+    await inside.goto("/dean/monitor-college?compare=program");
     const program = await inside.locator("[data-program-link]").first().getAttribute("href");
 
     expect(course, "a CBM course address").toMatch(/\/dean\/courses\/\d+\//);
     expect(instructor, "a CBM instructor address").toMatch(/\/dean\/teaching-load\/\d+/);
-    expect(program, "a CBM program address").toMatch(/\/dean\/monitor-department\/programs\/\d+/);
+    expect(program, "a CBM program address").toMatch(/\/dean\/monitor-college\/programs\/\d+/);
 
-    // The dean of the General department asks for each of them: not found, the same page as for
+    // The dean of the General college asks for each of them: not found, the same page as for
     // an address that was never there, so nothing says that it exists elsewhere.
     const outside = await signedIn(browser, DEAN);
 
@@ -488,7 +488,7 @@ const DEAN_SCREENS = [
     ["/dean/announcements", /Announcements/],
     ["/dean/chairperson-review", /Chairperson review/],
     ["/dean/teaching-load", /Teaching load/],
-    ["/dean/monitor-department", /Monitor Department/],
+    ["/dean/monitor-college", /Monitor College/],
 ];
 
 const WIDTHS = [360, 768, 1440];
@@ -576,10 +576,10 @@ test("TC-DEAN-10 Every screen of the dean fits 360, 768 and 1440 pixels and pass
     }
 });
 
-test("TC-DEAN-11 The states of a dean with nothing to show, no department, or a read-only institution", async ({ browser }, testInfo) => {
+test("TC-DEAN-11 The states of a dean with nothing to show, no college, or a read-only institution", async ({ browser }, testInfo) => {
     test.slow();
 
-    // 1. A department with no courses: every list says what it is for and what will appear in it.
+    // 1. A college with no courses: every list says what it is for and what will appear in it.
     const empty = await signedIn(browser, DEAN);
 
     for (const [path, text] of [
@@ -589,8 +589,8 @@ test("TC-DEAN-11 The states of a dean with nothing to show, no department, or a 
         ["/dean/announcements", "No announcements showing"],
         ["/dean/chairperson-review", "Nothing to review"],
         ["/dean/courses", "No courses"],
-        ["/dean/teaching-load", "When your department has courses running in a term"],
-        ["/dean/monitor-department", "Nothing to monitor yet"],
+        ["/dean/teaching-load", "When your college has courses running in a term"],
+        ["/dean/monitor-college", "Nothing to monitor yet"],
     ]) {
         await empty.goto(path);
         await expect(empty.getByText(text).first(), path).toBeVisible();
@@ -604,7 +604,7 @@ test("TC-DEAN-11 The states of a dean with nothing to show, no department, or a 
     expect(await seriousProblems(empty), "empty dashboard").toEqual([]);
     await shot(empty, testInfo, "empty-dashboard");
 
-    // 2. A dean who has lost the department gets an explanation, not an error and not any data.
+    // 2. A dean who has lost the college gets an explanation, not an error and not any data.
     const deanOne = "ai.secret = 'dean1@mentora.test'";
     const endDeanship = "UPDATE dean_assignments da JOIN auth_identities ai ON ai.user_id = da.dean_user_id AND ai.type = 'email_password' SET da.status = 'ended', da.active_marker = NULL, da.ended_at = NOW() WHERE " + deanOne;
     const restoreDeanship = "UPDATE dean_assignments da JOIN auth_identities ai ON ai.user_id = da.dean_user_id AND ai.type = 'email_password' SET da.status = 'active', da.active_marker = 1, da.ended_at = NULL WHERE " + deanOne;
@@ -618,11 +618,11 @@ test("TC-DEAN-11 The states of a dean with nothing to show, no department, or a 
         for (const [path] of DEAN_SCREENS) {
             const response = await lost.goto(path);
             expect(response?.status(), path).toBe(200);
-            await expect(lost.getByText("You are not assigned to a department yet"), path).toBeVisible();
+            await expect(lost.getByText("You are not assigned to a college yet"), path).toBeVisible();
         }
 
-        expect(await seriousProblems(lost), "no department").toEqual([]);
-        await shot(lost, testInfo, "no-department");
+        expect(await seriousProblems(lost), "no college").toEqual([]);
+        await shot(lost, testInfo, "no-college");
     } finally {
         runSql(restoreDeanship);
     }

@@ -41,7 +41,7 @@ final class InstitutionStudentSuggestTest extends RouteTestCase
         $this->admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', 'ada@suggest.example', $this->institution);
 
         $db      = db_connect();
-        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
         $term    = (int) $db->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
 
         $db->table('courses')->insert(['program_id' => $program, 'course_code' => 'IT101', 'course_title' => 'Intro', 'units' => 3]);
@@ -169,7 +169,7 @@ final class InstitutionStudentSuggestTest extends RouteTestCase
     private function foreign(): array
     {
         $db      = db_connect();
-        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->other])->getRow()->id;
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->other])->getRow()->id;
         $term    = (int) $db->table('academic_terms')->where('institution_id', $this->other)->get()->getRowArray()['id'];
         $admin   = PeopleFactory::person('institutional_admin', 'Olga', 'Other', 'olga@suggest.example', $this->other);
 

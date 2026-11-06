@@ -10,7 +10,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Auth\RolePermissions;
 use App\Services\Courses\Grades\GradeReportService;
 use App\Services\Grades\ChairpersonProgramOverview;
-use App\Services\Grades\DeanDepartmentOverview;
+use App\Services\Grades\DeanCollegeOverview;
 use App\Services\Grades\InstructorGradesOverview;
 use App\Services\Grades\ReadySectionFinalizer;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -18,7 +18,7 @@ use CodeIgniter\Shield\Entities\User;
 
 /**
  * The actions of the Grades page that span every section of a term: Finalize ready sections and Download all
- * (instructor), Download program (chairperson) and Download department (dean).
+ * (instructor), Download program (chairperson) and Download college (dean).
  *
  * They sit outside api/courses, so the course filters (coursemember, closedoffering, coursepermission) do
  * not run; the checks are made here instead (spec §13). The sections are only those the person teaches in
@@ -74,7 +74,7 @@ class GradesBulkController extends BaseController
 
     /**
      * GET chairperson/grades/download-program?term=: the class gradebook of every section of the chaired
-     * sub-departments in one Excel file. The sections are the ones the Program tab lists (so a section of
+     * departments in one Excel file. The sections are the ones the Program tab lists (so a section of
      * another program is never in it); program.monitor is the route's filter.
      */
     public function downloadProgram(): ResponseInterface
@@ -93,22 +93,22 @@ class GradesBulkController extends BaseController
     }
 
     /**
-     * GET dean/grades/download-department?term=: the class gradebook of every section of the dean's department(s),
+     * GET dean/grades/download-college?term=: the class gradebook of every section of the dean's college(s),
      * every program, in one Excel file. The sections are the ones the dean's Grades page lists with "All programs"
-     * (so another department's are never in it); department.monitor (as dean) is the route's filter.
+     * (so another college's are never in it); college.monitor (as dean) is the route's filter.
      */
-    public function downloadDepartment(): ResponseInterface
+    public function downloadCollege(): ResponseInterface
     {
         $user   = auth()->user();
         $termId = $this->termId($this->request->getGet('term'));
 
         return $this->workbook(
             $user,
-            $termId === null ? [] : (new DeanDepartmentOverview())->all($user, $termId, null),
+            $termId === null ? [] : (new DeanCollegeOverview())->all($user, $termId, null),
             $termId,
             'dean',
-            "None of the department's sections this term has grading yet, so there is nothing to download.",
-            'department-gradebooks',
+            "None of the college's sections this term has grading yet, so there is nothing to download.",
+            'college-gradebooks',
         );
     }
 

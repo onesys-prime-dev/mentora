@@ -77,7 +77,7 @@ final class SisMapper
      * @param array<string, string> $record a staff_assignments.csv record
      *
      * @return array{role: string, person_external_id: string, target: string, section: string, program_code: ?string}
-     *         `target` is the department code, sub-department code or course id (from an upload, course code) the
+     *         `target` is the college code, department code or course id (from an upload, course code) the
      *         role's column names; `section` and `program_code` only mean something for an instructor (the default
      *         section when none is named). From an upload, `person_external_id` is the email.
      */

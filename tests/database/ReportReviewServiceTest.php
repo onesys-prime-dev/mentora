@@ -97,8 +97,8 @@ final class ReportReviewServiceTest extends DatabaseTestCase
     public function testNobodyElseCanReadOrReview(): void
     {
         $report   = $this->report($this->child, $this->chat, $this->say($this->instructor, self::SECRET));
-        $farAdmin = PeopleFactory::person('institutional_admin', 'Far', 'Admin', null, DeanFactory::department('RV2')['institution']);
-        $dean     = DeanFactory::dean($this->institution, $this->department);
+        $farAdmin = PeopleFactory::person('institutional_admin', 'Far', 'Admin', null, DeanFactory::college('RV2')['institution']);
+        $dean     = DeanFactory::dean($this->institution, $this->college);
 
         foreach ([$this->child, $this->instructor, $this->parent, $this->chair, $dean, $farAdmin, CourseFactory::user('admin')] as $user) {
             $this->assertNull($this->review()->view($user, $report), (string) $user->first_name);

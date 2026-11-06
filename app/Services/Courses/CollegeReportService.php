@@ -9,26 +9,26 @@ use App\Services\Users\UserExport;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * The dean's department report: Monitor Department's totals and comparison, the teaching load and where
+ * The dean's college report: Monitor College's totals and comparison, the teaching load and where
  * sign-off stands, as one print-friendly page or as a CSV of each part.
  *
  * Nothing here works anything out for itself: every part comes from the service behind the page it mirrors
- * (MonitorDepartmentService, TeachingLoadService, GradeSignoffService), given the same filters from the
+ * (MonitorCollegeService, TeachingLoadService, GradeSignoffService), given the same filters from the
  * same address, so an export holds exactly what the dean can see and never more, and cannot drift from it.
  * Cells people typed (names, titles) are made safe for a spreadsheet.
  */
-class DepartmentReportService
+class CollegeReportService
 {
     /** The parts that can be downloaded, and what each is called. */
     public const SECTIONS = [
-        'monitor'       => 'Monitor Department',
+        'monitor'       => 'Monitor College',
         'teaching-load' => 'Teaching load',
         'signoff'       => 'Sign-off status',
     ];
 
     public function __construct(
         private readonly DeanAccessService $access = new DeanAccessService(),
-        private readonly MonitorDepartmentService $monitor = new MonitorDepartmentService(),
+        private readonly MonitorCollegeService $monitor = new MonitorCollegeService(),
         private readonly TeachingLoadService $teaching = new TeachingLoadService(),
         private readonly GradeSignoffService $signoff = new GradeSignoffService(),
     ) {
@@ -40,7 +40,7 @@ class DepartmentReportService
     }
 
     /**
-     * Everything the print view shows, for the filters in the address; null for a dean with no department.
+     * Everything the print view shows, for the filters in the address; null for a dean with no college.
      * A download needs only its own part, so $only can name the parts to work out (the others are left empty).
      *
      * @param array<string, mixed> $get  usually $request->getGet()
@@ -50,13 +50,13 @@ class DepartmentReportService
      */
     public function build(User $dean, array $get, ?\DateTimeImmutable $now = null, ?array $only = null): ?array
     {
-        $department = $this->access->departmentFor($dean);
+        $college = $this->access->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return null;
         }
 
-        $monitorFilters = MonitorDepartmentFilters::fromInput($get);
+        $monitorFilters = MonitorCollegeFilters::fromInput($get);
         $loadFilters    = TeachingLoadFilters::fromInput($get);
 
         $wants = static fn (string $part): bool => $only === null || in_array($part, $only, true);
@@ -65,9 +65,9 @@ class DepartmentReportService
         $load     = $wants('teaching-load') ? $this->teaching->load($dean, $loadFilters) : ['term' => null, 'highLoadUnits' => 0, 'rows' => []];
         $board    = $wants('signoff') ? $this->signoff->board($dean, $monitorFilters->base->termId ?? $loadFilters->termId) : ['term' => null, 'programs' => []];
 
-        // The sign-off page has only a term filter, but a report narrowed to a sub-department or a program is
+        // The sign-off page has only a term filter, but a report narrowed to a department or a program is
         // narrowed all the way down, so what it says at the top is true of every part.
-        if ($wants('signoff') && ($monitorFilters->subDepartmentId !== null || $monitorFilters->programId !== null)) {
+        if ($wants('signoff') && ($monitorFilters->departmentId !== null || $monitorFilters->programId !== null)) {
             $inScope           = $this->monitor->programIds($dean, $monitorFilters);
             $board['programs'] = array_values(array_filter($board['programs'], static fn (array $p): bool => in_array((int) $p['id'], $inScope, true)));
         }
@@ -78,10 +78,10 @@ class DepartmentReportService
             $terms[(int) $term['id']] = $term['name'] . ' (' . $term['academic_year'] . ')';
         }
 
-        $name = db_connect()->table('departments')->select('name')->where('id', (int) $department['department_id'])->get()->getRow('name');
+        $name = db_connect()->table('colleges')->select('name')->where('id', (int) $college['college_id'])->get()->getRow('name');
 
         return [
-            'department'   => (string) ($name ?? 'Department'),
+            'college'   => (string) ($name ?? 'College'),
             'generated_at' => ($now ?? new \DateTimeImmutable())->format('Y-m-d H:i:s'),
             'filters'      => $this->describeFilters($monitorFilters, $terms),
             'monitor'      => [
@@ -133,11 +133,11 @@ class DepartmentReportService
     }
 
     /** The file name (without extension) of a download. */
-    public function fileStem(string $section, string $department, ?\DateTimeImmutable $now = null): string
+    public function fileStem(string $section, string $college, ?\DateTimeImmutable $now = null): string
     {
-        $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($department)), '-');
+        $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($college)), '-');
 
-        return ($slug === '' ? 'department' : $slug) . '-' . $section . '-' . ($now ?? new \DateTimeImmutable())->format('Y-m-d');
+        return ($slug === '' ? 'college' : $slug) . '-' . $section . '-' . ($now ?? new \DateTimeImmutable())->format('Y-m-d');
     }
 
     /**
@@ -148,14 +148,14 @@ class DepartmentReportService
     private function monitorLines(array $monitor): array
     {
         $byProgram = $monitor['compare'] === 'program';
-        $header    = [$byProgram ? 'Program' : 'Sub-department', 'Sub-department', 'Courses', 'Instructors', 'Students', 'Completion %', 'Average grade %', 'Graded %', 'Grading turnaround (hours)', 'At risk', 'Last activity'];
+        $header    = [$byProgram ? 'Program' : 'Department', 'Department', 'Courses', 'Instructors', 'Students', 'Completion %', 'Average grade %', 'Graded %', 'Grading turnaround (hours)', 'At risk', 'Last activity'];
         $lines     = [];
 
         $row = static fn (string $name, string $context, array $m): array => [
             $name, $context, $m['courses'], $m['instructors'], $m['students'], $m['completion'] ?? '', $m['average_grade'] ?? '', $m['grading_progress'] ?? '', $m['turnaround'] ?? '', $m['at_risk'], $m['last_activity'] === null ? '' : substr((string) $m['last_activity'], 0, 10),
         ];
 
-        $lines[] = $row('Department total', '', $monitor['totals']);
+        $lines[] = $row('College total', '', $monitor['totals']);
 
         foreach ($monitor['groups'] as $group) {
             $lines[] = $row((string) $group['name'], $byProgram ? (string) ($group['context'] ?? '') : '', $group);
@@ -211,7 +211,7 @@ class DepartmentReportService
      *
      * @return list<string>
      */
-    private function describeFilters(MonitorDepartmentFilters $f, array $terms): array
+    private function describeFilters(MonitorCollegeFilters $f, array $terms): array
     {
         $out = [];
 
@@ -223,9 +223,9 @@ class DepartmentReportService
             $out[] = 'Dates: ' . ($f->base->from ?? 'the start') . ' to ' . ($f->base->to ?? 'today');
         }
 
-        if ($f->subDepartmentId !== null) {
-            $name = db_connect()->table('sub_departments')->select('name')->where('id', $f->subDepartmentId)->get()->getRow('name');
-            $out[] = 'Sub-department: ' . ($name ?? 'unknown');
+        if ($f->departmentId !== null) {
+            $name = db_connect()->table('departments')->select('name')->where('id', $f->departmentId)->get()->getRow('name');
+            $out[] = 'Department: ' . ($name ?? 'unknown');
         }
 
         if ($f->programId !== null) {

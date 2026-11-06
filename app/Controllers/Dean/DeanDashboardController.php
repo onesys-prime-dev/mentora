@@ -9,7 +9,7 @@ use App\Models\Users\UserProfileModel;
 use App\Services\Courses\DeanDashboardService;
 
 /**
- * The dean's home page: the department in numbers, what needs their attention (each item opening the
+ * The dean's home page: the college in numbers, what needs their attention (each item opening the
  * screen where it is dealt with), what chairpersons have been changing and the announcements they made.
  * A dean with no active assignment gets an explanation, not an error and not any data. If the numbers
  * cannot be worked out the page says so and offers to try again, rather than showing nothing.

@@ -44,7 +44,7 @@ class GradeSignoffService
 
     /**
      * @return array<string, mixed>|null the current sign-off with who signed, or null. `signed_by_dean` is 1 when the
-     *                                   signer is (or was) a dean of the section's department, else an administrator
+     *                                   signer is (or was) a dean of the section's college, else an administrator
      *                                   signed it off (QA AMB-ASG-04).
      */
     public function current(int $offeringId): ?array
@@ -52,8 +52,8 @@ class GradeSignoffService
         $row = db_connect()->table('grade_signoffs s')
             ->select("s.*, CONCAT_WS(' ', up.first_name, up.last_name) AS signed_by_name", false)
             ->select('EXISTS (SELECT 1 FROM dean_assignments da'
-                . ' JOIN sub_departments sd ON sd.department_id = da.department_id'
-                . ' JOIN programs p ON p.sub_department_id = sd.id'
+                . ' JOIN departments sd ON sd.college_id = da.college_id'
+                . ' JOIN programs p ON p.department_id = sd.id'
                 . ' JOIN courses c ON c.program_id = p.id'
                 . ' JOIN course_offerings co ON co.course_id = c.id'
                 . ' WHERE co.id = s.offering_id AND da.dean_user_id = s.signed_by) AS signed_by_dean', false)
@@ -248,7 +248,7 @@ class GradeSignoffService
             return;
         }
 
-        $dean = GradeAuthority::deanFor((int) $section['department_id'], 'grades.signoff');
+        $dean = GradeAuthority::deanFor((int) $section['college_id'], 'grades.signoff');
 
         // With no dean who may sign off, the administrators who may (2.1), never one who teaches it (D4).
         $people = $dean !== null
@@ -270,7 +270,7 @@ class GradeSignoffService
     }
 
     /**
-     * How many sections of the dean's department are ready, blocked and signed off in a term (the newest unless
+     * How many sections of the dean's college are ready, blocked and signed off in a term (the newest unless
      * one is asked for). The same answer as the sign-off board gives, worked out in a handful of queries for
      * the dashboard instead of one status check per section.
      *
@@ -316,7 +316,7 @@ class GradeSignoffService
     }
 
     /**
-     * What the dean's sign-off page shows for a term: the department's programs, each with its sections and
+     * What the dean's sign-off page shows for a term: the college's programs, each with its sections and
      * where each stands.
      *
      * @return array{terms: list<array<string, mixed>>, term: ?int, programs: list<array<string, mixed>>}
@@ -327,7 +327,7 @@ class GradeSignoffService
     }
 
     /**
-     * The sign-off board for a set of programs: the dean's department, or the administrator's departments with
+     * The sign-off board for a set of programs: the dean's college, or the administrator's colleges with
      * no dean who may sign off (adminProgramIds). Its course links point into the area ('dean', 'institution').
      *
      * @param list<int> $programIds
@@ -338,7 +338,7 @@ class GradeSignoffService
     {
         $terms = (new MonitorProgramService())->termsForPrograms($programIds);
 
-        // A term that is not one of the department's falls back to the newest.
+        // A term that is not one of the college's falls back to the newest.
         $known  = array_map(static fn (array $t): int => (int) $t['id'], $terms);
         $termId = $termId !== null && in_array($termId, $known, true) ? $termId : ($known[0] ?? null);
 
@@ -387,7 +387,7 @@ class GradeSignoffService
         return ['terms' => $terms, 'term' => $termId, 'programs' => array_values($programs)];
     }
 
-    /** Why this person may not decide on this offering, or null when they may: the dean of its department, acting as dean. */
+    /** Why this person may not decide on this offering, or null when they may: the dean of its college, acting as dean. */
     private function mayDecide(User $user, int $offeringId): ?string
     {
         if (! $this->appliesTo($offeringId)) {
@@ -397,19 +397,19 @@ class GradeSignoffService
         $role        = (new ActiveRoleService())->resolve($user);
         $permissions = new RolePermissions();
 
-        // The dean of the department, who may sign off a section they teach (D3).
+        // The dean of the college, who may sign off a section they teach (D3).
         if ($role === 'dean') {
             return (new DeanAccessService())->canAccessOffering($user, $offeringId) && $permissions->allows($user, 'grades.signoff', 'dean')
                 ? null
-                : 'That section is not in your department.';
+                : 'That section is not in your college.';
         }
 
-        // An administrator of the institution, where the department has no dean who may sign off (2.1, U1e).
+        // An administrator of the institution, where the college has no dean who may sign off (2.1, U1e).
         $section = $this->section($offeringId);
 
         if ($role !== 'institutional_admin' || $section === null
             || (new PlanLimits())->institutionOf((int) $user->id) !== (int) $section['institution_id']
-            || GradeAuthority::deanFor((int) $section['department_id'], 'grades.signoff') !== null
+            || GradeAuthority::deanFor((int) $section['college_id'], 'grades.signoff') !== null
             || ! $permissions->allows($user, 'grades.signoff', 'institutional_admin')) {
             return 'That section is not one you sign off.';
         }
@@ -429,12 +429,12 @@ class GradeSignoffService
     public function announceNowNeeded(int $institutionId): void
     {
         $rows = db_connect()->table('grade_finalizations f')
-            ->select('co.id, c.course_code, co.section_code, d.id AS department_id')
+            ->select('co.id, c.course_code, co.section_code, d.id AS college_id')
             ->join('course_offerings co', 'co.id = f.course_offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->where('f.open_marker', 1)
             ->where('NOT EXISTS (SELECT 1 FROM grade_signoffs s WHERE s.offering_id = co.id AND s.open_marker = 1)', null, false)
@@ -443,12 +443,12 @@ class GradeSignoffService
             ->orderBy('c.course_code')->orderBy('co.section_code')
             ->get()->getResultArray();
 
-        // Each section goes to whoever signs it off: its department's dean, or else the administrators.
+        // Each section goes to whoever signs it off: its college's dean, or else the administrators.
         $forDean   = [];
         $forAdmins = [];
 
         foreach ($rows as $row) {
-            $deanId = GradeAuthority::deanFor((int) $row['department_id'], 'grades.signoff');
+            $deanId = GradeAuthority::deanFor((int) $row['college_id'], 'grades.signoff');
 
             if ($deanId === null) {
                 $forAdmins[] = $row;
@@ -481,7 +481,7 @@ class GradeSignoffService
     }
 
     /**
-     * The programs of the administrator's institution whose department has no dean who may sign off: what the
+     * The programs of the administrator's institution whose college has no dean who may sign off: what the
      * administrator signs off (2.1).
      *
      * @return list<int>
@@ -495,9 +495,9 @@ class GradeSignoffService
         }
 
         $rows = db_connect()->table('programs p')
-            ->select('p.id, sd.department_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->select('p.id, sd.college_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institution)
             ->orderBy('p.id')
             ->get()->getResultArray();
@@ -507,9 +507,9 @@ class GradeSignoffService
         return array_values(array_map(
             static fn (array $r): int => (int) $r['id'],
             array_filter($rows, static function (array $r) use (&$noDean): bool {
-                $department = (int) $r['department_id'];
+                $college = (int) $r['college_id'];
 
-                return $noDean[$department] ??= GradeAuthority::deanFor($department, 'grades.signoff') === null;
+                return $noDean[$college] ??= GradeAuthority::deanFor($college, 'grades.signoff') === null;
             })
         ));
     }
@@ -530,11 +530,11 @@ class GradeSignoffService
     private function section(int $offeringId): ?array
     {
         return db_connect()->table('course_offerings co')
-            ->select(['d.institution_id', 'd.id AS department_id', 'sd.id AS sub_department_id', 'c.course_code', 'c.course_title', 'co.section_code'])
+            ->select(['d.institution_id', 'd.id AS college_id', 'sd.id AS department_id', 'c.course_code', 'c.course_title', 'co.section_code'])
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('co.id', $offeringId)
             ->get()->getRowArray();
     }
@@ -558,7 +558,7 @@ class GradeSignoffService
             $audience[(int) $row['instructor_user_id']] = 'instructor';
         }
 
-        foreach ($db->table('chairperson_assignments')->select('chairperson_user_id')->where(['sub_department_id' => $section['sub_department_id'], 'status' => 'active'])->get()->getResultArray() as $row) {
+        foreach ($db->table('chairperson_assignments')->select('chairperson_user_id')->where(['department_id' => $section['department_id'], 'status' => 'active'])->get()->getResultArray() as $row) {
             // A person who is both is told once, as the chairperson.
             $audience[(int) $row['chairperson_user_id']] = 'chairperson';
         }

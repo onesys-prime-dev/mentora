@@ -21,7 +21,7 @@ class GradeFinalizationService
 {
     public const LOCKED_MESSAGE = 'The grades are finalized. Reopen them to make changes.';
 
-    /** Whoever signed off, the dean or an administrator where the department has none (QA AMB-ASG-04). */
+    /** Whoever signed off, the dean or an administrator where the college has none (QA AMB-ASG-04). */
     public const SIGNED_OFF_MESSAGE = 'These grades are signed off. The sign-off must be reopened before the grades can be.';
 
     /** @return array<string, mixed>|null the section's current finalization, who and when */
@@ -305,7 +305,7 @@ class GradeFinalizationService
     /**
      * Final grades that were reopened are news to the people responsible for
      * them: the section's instructors and the chairperson of its
-     * sub-department, except whoever did it. Each is told once per
+     * department, except whoever did it. Each is told once per
      * finalization, in the app (not by email: it is not urgent).
      */
     private function tellReopened(User $actor, int $offeringId, int $finalizationId, string $reason, bool $alreadySent): void
@@ -313,11 +313,11 @@ class GradeFinalizationService
         $db = db_connect();
 
         $section = $db->table('course_offerings o')
-            ->select('c.course_code, c.course_title, o.section_code, sd.id AS sub_department_id, d.institution_id')
+            ->select('c.course_code, c.course_title, o.section_code, sd.id AS department_id, d.institution_id')
             ->join('courses c', 'c.id = o.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('o.id', $offeringId)
             ->get()->getRowArray();
 
@@ -340,7 +340,7 @@ class GradeFinalizationService
             $audience[(int) $row['instructor_user_id']] = 'instructor';
         }
 
-        foreach ($db->table('chairperson_assignments')->select('chairperson_user_id')->where(['sub_department_id' => $section['sub_department_id'], 'status' => 'active'])->get()->getResultArray() as $row) {
+        foreach ($db->table('chairperson_assignments')->select('chairperson_user_id')->where(['department_id' => $section['department_id'], 'status' => 'active'])->get()->getResultArray() as $row) {
             // A person who is both is told once, as the chairperson.
             $audience[(int) $row['chairperson_user_id']] = 'chairperson';
         }

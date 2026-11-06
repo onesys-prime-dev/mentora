@@ -34,15 +34,15 @@ final class InstitutionSignoffPageTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         PermissionMatrix::flush();
 
-        $home              = DeanFactory::department('SG');
+        $home              = DeanFactory::college('SG');
         $this->institution = $home['institution'];
         $term              = DeanFactory::term($this->institution);
 
-        $other = DeanFactory::department('SH', $this->institution);
-        DeanFactory::dean($this->institution, $other['department'], 'Otto');
+        $other = DeanFactory::college('SH', $this->institution);
+        DeanFactory::dean($this->institution, $other['college'], 'Otto');
 
-        $this->offering     = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($home['department'], 'SG'), 'SG'), $term, 'IT501');
-        $this->deanOffering = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($other['department'], 'SH'), 'SH'), $term, 'LW501');
+        $this->offering     = DeanFactory::offering(DeanFactory::program(DeanFactory::department($home['college'], 'SG'), 'SG'), $term, 'IT501');
+        $this->deanOffering = DeanFactory::offering(DeanFactory::program(DeanFactory::department($other['college'], 'SH'), 'SH'), $term, 'LW501');
 
         foreach ([$this->offering, $this->deanOffering] as $id) {
             db_connect()->table('grade_finalizations')->insert(['course_offering_id' => $id, 'finalized_by' => 1, 'finalized_at' => date('Y-m-d H:i:s'), 'open_marker' => 1]);
@@ -69,7 +69,7 @@ final class InstitutionSignoffPageTest extends RouteTestCase
         }
     }
 
-    public function testTheAdministratorSeesOnlyTheDepartmentsWithNoDean(): void
+    public function testTheAdministratorSeesOnlyTheCollegesWithNoDean(): void
     {
         $this->asAdmin();
 
@@ -80,7 +80,7 @@ final class InstitutionSignoffPageTest extends RouteTestCase
         $this->assertStringContainsString(site_url('institution/signoff/' . $this->offering), $html);
         // No link to the dean's pages (the view's file path, pages/dean/..., can appear in debug comments).
         $this->assertStringNotContainsString(site_url('dean/'), $html);
-        $this->assertStringNotContainsString("your department's sections", $html, 'worded for an administrator');
+        $this->assertStringNotContainsString("your college's sections", $html, 'worded for an administrator');
         $this->assertStringNotContainsString('only you can', $html, 'another administrator may reopen');
         $this->assertStringContainsString('only an administrator can', $html);
     }

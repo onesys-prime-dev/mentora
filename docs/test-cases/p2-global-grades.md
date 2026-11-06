@@ -224,7 +224,7 @@ it are tested without a browser (see "Already automated").
 ### TC-GGR-10 Chairperson opens Program, sees the tracker and table, and opens a section read-only
 
 - **Role:** Chairperson. **Priority:** P2
-- **Data:** chairperson1, whose sub-department offers IT101-A (graded by hand, work waiting), IT101-B, IT102-A and IT201-A.
+- **Data:** chairperson1, whose department offers IT101-A (graded by hand, work waiting), IT101-B, IT102-A and IT201-A.
 - **Steps:**
   1. Open `chairperson/grades`, tab Program.
   2. Read the tracker and the table; click the IT101-A row.
@@ -289,15 +289,15 @@ it are tested without a browser (see "Already automated").
   3. Choose "Bachelor of Science in Information Technology", then "All programs" again.
   4. Choose the IT101-A row.
 - **Expected:**
-  - The page says "Every section in your department."; the strip reads "Finalized {f} of {n} · Signed off {s} ·
-    Override requests waiting: {o}"; the table has a Signed off column; "Download department" is offered.
+  - The page says "Every section in your college."; the strip reads "Finalized {f} of {n} · Signed off {s} ·
+    Override requests waiting: {o}"; the table has a Signed off column; "Download college" is offered.
   - The picker's first option is "All programs".
   - Choosing a program keeps the strip; choosing the IT101-A row shows its grid read-only, with no score fields, no
     "Edit as chairperson" and no Finalize.
-- **Already automated:** `tests/feature/DeanGradesPageTest.php`, `tests/feature/DeanDownloadDepartmentTest.php`,
-  `tests/database/DeanDepartmentOverviewTest.php`
+- **Already automated:** `tests/feature/DeanGradesPageTest.php`, `tests/feature/DeanDownloadCollegeTest.php`,
+  `tests/database/DeanCollegeOverviewTest.php`
 - **Playwright:** `tests/e2e/global-grades-dean.spec.js`
-- **Basis:** `app/Services/Grades/DeanDepartmentOverview.php`, `app/Views/pages/grades/index.php`
+- **Basis:** `app/Services/Grades/DeanCollegeOverview.php`, `app/Views/pages/grades/index.php`
 - **Review:** Draft
 
 ### TC-GGR-14 The strip's Sign-off link opens Sign-off

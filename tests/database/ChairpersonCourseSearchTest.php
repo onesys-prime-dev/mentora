@@ -23,7 +23,7 @@ final class ChairpersonCourseSearchTest extends DatabaseTestCase
 
     private ChairpersonCourseSearch $search;
     private User $chair;
-    private int $sub;
+    private int $department;
     private int $program;
 
     protected function setUp(): void
@@ -36,15 +36,15 @@ final class ChairpersonCourseSearchTest extends DatabaseTestCase
         $db = db_connect();
         $db->table('institutions')->insert(['name' => 'Inst', 'code' => 'INS']);
         $institution = (int) $db->insertID();
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => 'DEP', 'name' => 'Dept']);
-        $department = (int) $db->insertID();
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => 'SUB', 'name' => 'Sub']);
-        $this->sub = (int) $db->insertID();
-        $db->table('programs')->insert(['sub_department_id' => $this->sub, 'code' => 'PRG', 'name' => 'Program']);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => 'DEP', 'name' => 'College']);
+        $college = (int) $db->insertID();
+        $db->table('departments')->insert(['college_id' => $college, 'code' => 'SUB', 'name' => 'Department']);
+        $this->department = (int) $db->insertID();
+        $db->table('programs')->insert(['department_id' => $this->department, 'code' => 'PRG', 'name' => 'Program']);
         $this->program = (int) $db->insertID();
 
         $db->table('chairperson_assignments')->insert([
-            'sub_department_id'   => $this->sub,
+            'department_id'   => $this->department,
             'chairperson_user_id' => $this->chair->id,
             'status'              => 'active',
             'assigned_at'         => date('Y-m-d H:i:s'),
@@ -70,7 +70,7 @@ final class ChairpersonCourseSearchTest extends DatabaseTestCase
 
         if ($term === null) {
             $db->table('academic_terms')->insert([
-                'institution_id' => (int) $db->table('departments')->get()->getRowArray()['institution_id'],
+                'institution_id' => (int) $db->table('colleges')->get()->getRowArray()['institution_id'],
                 'name' => $termName,
                 'academic_year' => '2026-2027',
                 'start_date' => '2026-08-01',

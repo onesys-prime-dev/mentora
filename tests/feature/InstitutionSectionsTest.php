@@ -45,7 +45,7 @@ final class InstitutionSectionsTest extends RouteTestCase
 
         $db = db_connect();
 
-        $this->program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $this->program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
         $this->term    = (int) $db->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
         $db->table('courses')->insert(['program_id' => $this->program, 'course_code' => 'IT101', 'course_title' => 'Intro to Computing', 'units' => 3]);
         $this->it101 = (int) $db->insertID();

@@ -28,17 +28,17 @@ final class ConversationServiceTest extends DatabaseTestCase
 
     private int $term;
 
-    private int $sub;
+    private int $department;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->service     = new ConversationService();
-        $d                 = DeanFactory::department('C1');
+        $d                 = DeanFactory::college('C1');
         $this->institution = $d['institution'];
-        $this->sub         = DeanFactory::subDepartment($d['department'], 'CA');
-        $this->program     = DeanFactory::program($this->sub, 'CA');
+        $this->department         = DeanFactory::department($d['college'], 'CA');
+        $this->program     = DeanFactory::program($this->department, 'CA');
         $this->term        = DeanFactory::term($this->institution);
     }
 
@@ -109,7 +109,7 @@ final class ConversationServiceTest extends DatabaseTestCase
     public function testRefusedStartsAnswerNullWithoutRevealingWhy(): void
     {
         [$student, $instructor] = $this->pair();
-        $chair   = DeanFactory::chair($this->sub);
+        $chair   = DeanFactory::chair($this->department);
         $admin   = CourseFactory::user('admin');
         $far     = $this->person('instructor', true, PeopleFactory::institution('FAR'));
         $off     = $this->person('instructor', false);

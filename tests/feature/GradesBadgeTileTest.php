@@ -28,7 +28,7 @@ final class GradesBadgeTileTest extends RouteTestCase
 
     private int $program;
 
-    private int $sub;
+    private int $department;
 
     private int $term;
 
@@ -53,9 +53,9 @@ final class GradesBadgeTileTest extends RouteTestCase
             }
         });
 
-        ['institution' => $this->institution, 'department' => $department] = DeanFactory::department('GT');
-        $this->sub     = DeanFactory::subDepartment($department, 'GT');
-        $this->program = DeanFactory::program($this->sub, 'GT');
+        ['institution' => $this->institution, 'college' => $college] = DeanFactory::college('GT');
+        $this->department     = DeanFactory::department($college, 'GT');
+        $this->program = DeanFactory::program($this->department, 'GT');
         $this->term    = DeanFactory::term($this->institution);
         db_connect()->table('academic_terms')->where('id', $this->term)->update(['status' => 'active']);
     }
@@ -120,7 +120,7 @@ final class GradesBadgeTileTest extends RouteTestCase
 
     public function testTheChairpersonsQuickAccessStripCarriesTheCountToo(): void
     {
-        $chair    = DeanFactory::chair($this->sub);
+        $chair    = DeanFactory::chair($this->department);
         $offering = DeanFactory::offering($this->program, $this->term, 'GT111');
         CourseFactory::assignInstructor($offering, $chair);
         $this->waiting($offering, $chair, 1);
@@ -132,7 +132,7 @@ final class GradesBadgeTileTest extends RouteTestCase
 
     public function testTheDeanSeesSectionsReadyToSignOff(): void
     {
-        $dean = DeanFactory::dean($this->institution, (int) db_connect()->table('sub_departments')->where('id', db_connect()->table('programs')->where('id', $this->program)->get()->getRow()->sub_department_id)->get()->getRow()->department_id);
+        $dean = DeanFactory::dean($this->institution, (int) db_connect()->table('departments')->where('id', db_connect()->table('programs')->where('id', $this->program)->get()->getRow()->department_id)->get()->getRow()->college_id);
 
         foreach (['GT201', 'GT202'] as $code) {
             db_connect()->table('grade_finalizations')->insert(['course_offering_id' => DeanFactory::offering($this->program, $this->term, $code), 'finalized_by' => $dean->id, 'finalized_at' => date('Y-m-d H:i:s'), 'open_marker' => 1]);

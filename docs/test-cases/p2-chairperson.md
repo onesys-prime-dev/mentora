@@ -9,7 +9,7 @@ decision register (MISS-DOC-01).
 instructor regression). When it is next changed, its tests should name these
 cases.
 
-**Data:** `chairperson1@mentora.test` chairs the IT sub-department of CBM, whose
+**Data:** `chairperson1@mentora.test` chairs the IT department of CBM, whose
 program holds IT101-A, IT101-B, IT102-A and IT201-A, and teaches none of them.
 `chairperson2@mentora.test` holds the chairperson and instructor roles and
 chairs nothing. The override chain the chairperson takes part in is in
@@ -19,19 +19,19 @@ QA status as in the README; none has been run.
 
 | ID | Case | Role | Priority | QA status |
 |---|---|---|---|---|
-| TC-CHA-01 | A chairperson reaches the courses of the sub-departments they chair, and nothing else | Chairperson | P1 | VCI |
+| TC-CHA-01 | A chairperson reaches the courses of the departments they chair, and nothing else | Chairperson | P1 | VCI |
 | TC-CHA-02 | What a chairperson changes in a course is recorded | Chairperson | P1 | VCI |
 | TC-CHA-03 | A chairperson can reopen a section's grades but not finalize them | Chairperson | P1 | VCI |
 | TC-CHA-04 | Monitor Program follows its permission and counts only the program | Chairperson, institutional administrator | P1 | IBR |
 | TC-CHA-05 | The chairperson's day: sign-in, role switch, follow-ups and override requests | Chairperson | P1 | IBR, VCI |
 
-### TC-CHA-01 A chairperson reaches the courses of the sub-departments they chair, and nothing else
+### TC-CHA-01 A chairperson reaches the courses of the departments they chair, and nothing else
 
 - **Role:** Chairperson. **Priority:** P1
-- **Data:** `chairperson1`; a course of another sub-department; a program added to IT during the test
-- **Steps:** open Courses; open IT101-A; open the other sub-department's course by address. Add a new program under IT with a section, and open it. Revoke the assignment (test database) and use the site. As `chairperson2` acting as instructor, open their own section.
-- **Expected:** every course of the chaired sub-departments is listed and opens, including a program added later, without touching the assignment; another sub-department's course is not found; a revoked assignment loses access at once; a chair with no assignment reaches nothing; a chairperson who also teaches is judged by the role of the area they are in.
-- **Already automated:** `tests/database/ChairpersonAccessServiceTest.php`, `tests/feature/ChairpersonCourseAccessTest.php`, `ChairpersonCoursesPageTest.php`, `CourseMembershipTest::testAChairpersonOnlyReachesTheirOwnSubDepartment`
+- **Data:** `chairperson1`; a course of another department; a program added to IT during the test
+- **Steps:** open Courses; open IT101-A; open the other department's course by address. Add a new program under IT with a section, and open it. Revoke the assignment (test database) and use the site. As `chairperson2` acting as instructor, open their own section.
+- **Expected:** every course of the chaired departments is listed and opens, including a program added later, without touching the assignment; another department's course is not found; a revoked assignment loses access at once; a chair with no assignment reaches nothing; a chairperson who also teaches is judged by the role of the area they are in.
+- **Already automated:** `tests/database/ChairpersonAccessServiceTest.php`, `tests/feature/ChairpersonCourseAccessTest.php`, `ChairpersonCoursesPageTest.php`, `CourseMembershipTest::testAChairpersonOnlyReachesTheirOwnDepartment`
 - **Playwright:** `tests/e2e/chairperson.spec.js` (untagged)
 - **Basis:** `ChairpersonAccessService`
 - **QA status:** VCI (PS-CHA-01)

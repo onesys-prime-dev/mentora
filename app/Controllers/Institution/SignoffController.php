@@ -11,7 +11,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * The institution administrator's Sign-off (audit decisions 2.1, 2.4): the
- * finalized grades of departments with no dean who may sign them off, per
+ * finalized grades of colleges with no dean who may sign them off, per
  * section or for a program's ready sections, with the password asked first
  * (see the routes), and reopening with a reason. The same page as the dean's;
  * never a section the administrator teaches (D4), which is the service's check.

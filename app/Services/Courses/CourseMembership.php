@@ -18,7 +18,7 @@ use CodeIgniter\Shield\Entities\User;
  *
  *  - an instructor belongs to the offerings they are assigned to teach;
  *  - a student to the ones they are enrolled in (or have completed);
- *  - a chairperson to every offering in the sub-departments they chair.
+ *  - a chairperson to every offering in the departments they chair.
  *
  * The institution's administrator has their own read-only access
  * (InstitutionCourseAccess) and is not answered here.
@@ -40,7 +40,7 @@ class CourseMembership
 
     /**
      * What this person is in this offering, whatever groups they hold (9.1): its instructor, the chairperson of
-     * its sub-department, or a student enrolled in it (or who completed it); null for none. Teaching comes first,
+     * its department, or a student enrolled in it (or who completed it); null for none. Teaching comes first,
      * then chairing: once a student can't also be staff of a course, only a chair who teaches can be two.
      */
     public function roleIn(User $user, int $offeringId): ?string

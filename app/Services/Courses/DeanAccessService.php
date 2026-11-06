@@ -16,13 +16,13 @@ class DeanAccessService
         $this->assignments = $assignments ?? new DeanAssignmentModel();
     }
 
-    public function departmentFor(User $user): ?array
+    public function collegeFor(User $user): ?array
     {
-        return $this->assignments->departmentOfDean((int) $user->id);
+        return $this->assignments->collegeOfDean((int) $user->id);
     }
 
     /**
-     * Every program under the dean's department, read from the hierarchy on each call.
+     * Every program under the dean's college, read from the hierarchy on each call.
      *
      * @return list<int>
      */
@@ -50,24 +50,24 @@ class DeanAccessService
 
     public function canAccessPerson(User $user, int $personId): bool
     {
-        $departmentIds = $this->departmentIds($user);
-        if ($departmentIds === []) {
+        $collegeIds = $this->collegeIds($user);
+        if ($collegeIds === []) {
             return false;
         }
 
         $db = db_connect();
         return $db->table('institution_users iu')
-            ->join('departments d', 'd.institution_id = iu.institution_id')
+            ->join('colleges d', 'd.institution_id = iu.institution_id')
             ->where('iu.user_id', $personId)
-            ->whereIn('d.id', $departmentIds)
+            ->whereIn('d.id', $collegeIds)
             ->countAllResults() > 0
             || $db->table('instructor_assignments ia')
                 ->join('course_offerings co', 'co.id = ia.offering_id')
                 ->join('courses c', 'c.id = co.course_id')
                 ->join('programs p', 'p.id = c.program_id')
-                ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+                ->join('departments sd', 'sd.id = p.department_id')
                 ->where('ia.instructor_user_id', $personId)
-                ->whereIn('sd.department_id', $departmentIds)
+                ->whereIn('sd.college_id', $collegeIds)
                 ->countAllResults() > 0;
     }
 
@@ -77,23 +77,23 @@ class DeanAccessService
     }
 
     /** @return list<int> */
-    public function departmentIds(User $user): array
+    public function collegeIds(User $user): array
     {
-        $row = $this->departmentFor($user);
+        $row = $this->collegeFor($user);
 
-        return $row === null ? [] : [(int) $row['department_id']];
+        return $row === null ? [] : [(int) $row['college_id']];
     }
 
     private function baseQuery(User $user): \CodeIgniter\Database\BaseBuilder
     {
-        $departmentIds = $this->departmentIds($user);
+        $collegeIds = $this->collegeIds($user);
 
         $builder = db_connect()->table('programs p')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id');
+            ->join('departments sd', 'sd.id = p.department_id');
 
         // No active assignment reaches nothing: an empty IN () is an error, not "none".
-        return $departmentIds === []
+        return $collegeIds === []
             ? $builder->where('1 = 0', null, false)
-            : $builder->whereIn('sd.department_id', $departmentIds);
+            : $builder->whereIn('sd.college_id', $collegeIds);
     }
 }

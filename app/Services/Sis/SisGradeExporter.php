@@ -192,8 +192,8 @@ class SisGradeExporter
             ->join('course_offerings o', 'o.id = g.course_offering_id')
             ->join('courses c', 'c.id = o.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->orderBy('g.id')
             ->get()->getResultArray();
@@ -252,8 +252,8 @@ class SisGradeExporter
             ->join('course_offerings o', 'o.id = s.offering_id')
             ->join('courses c', 'c.id = o.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->where('s.open_marker', 1)
             ->get()->getResultArray();

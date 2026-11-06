@@ -8,16 +8,16 @@ namespace App\Services\Courses;
  * What needs the dean's attention, as a list, from plain numbers (DeanDashboardService collects them).
  * Each rule is one item, shown only when its count is above zero, and each links to the screen where it is
  * dealt with. They are in priority order: first what only the dean can decide (overrides, sign-off), then
- * the follow-ups they sent, then what is slipping in the department, by sub-department.
+ * the follow-ups they sent, then what is slipping in the college, by department.
  *
  * Facts:
  *   overrides             grade-override requests waiting for the dean
  *   signoff_ready         sections whose grades are ready to be signed off
  *   signoff_blocked       sections whose sign-off is held up
  *   followups_overdue     follow-ups the dean sent that are past their due day
- *   overdue_grading       list of {id, name, count}: work waiting too long to be graded, per sub-department
- *   inactive_courses      list of {id, name, count}: courses with no recent activity, per sub-department
- *   at_risk               students at risk across the department
+ *   overdue_grading       list of {id, name, count}: work waiting too long to be graded, per department
+ *   inactive_courses      list of {id, name, count}: courses with no recent activity, per department
+ *   at_risk               students at risk across the college
  */
 final class DeanAttentionRules
 {
@@ -57,17 +57,17 @@ final class DeanAttentionRules
         }
 
         foreach (self::largestFirst($facts['overdue_grading'] ?? []) as $row) {
-            $items[] = self::item('overdue_grading', 'warning', $row['count'], self::count($row['count'], 'piece') . ' of work overdue for grading', $row['name'], site_url('dean/monitor-department') . '?' . http_build_query(['sub_department' => $row['id']]));
+            $items[] = self::item('overdue_grading', 'warning', $row['count'], self::count($row['count'], 'piece') . ' of work overdue for grading', $row['name'], site_url('dean/monitor-college') . '?' . http_build_query(['department' => $row['id']]));
         }
 
         foreach (self::largestFirst($facts['inactive_courses'] ?? []) as $row) {
-            $items[] = self::item('inactive_courses', 'neutral', $row['count'], self::count($row['count'], 'quiet course'), $row['name'] . ': no recent activity.', site_url('dean/courses') . '?' . http_build_query(['sub_department' => $row['id']]));
+            $items[] = self::item('inactive_courses', 'neutral', $row['count'], self::count($row['count'], 'quiet course'), $row['name'] . ': no recent activity.', site_url('dean/courses') . '?' . http_build_query(['department' => $row['id']]));
         }
 
         $risk = (int) ($facts['at_risk'] ?? 0);
 
         if ($risk > 0) {
-            $items[] = self::item('at_risk', 'danger', $risk, self::count($risk, 'student') . ' at risk', 'Behind or silent across the department.', site_url('dean/monitor-department') . '#risk-heading');
+            $items[] = self::item('at_risk', 'danger', $risk, self::count($risk, 'student') . ' at risk', 'Behind or silent across the college.', site_url('dean/monitor-college') . '#risk-heading');
         }
 
         return $items;
@@ -80,7 +80,7 @@ final class DeanAttentionRules
     }
 
     /**
-     * Sub-departments with something to report, the most first, ties by name; none with a count of zero.
+     * Departments with something to report, the most first, ties by name; none with a count of zero.
      *
      * @param list<array{id: int, name: string, count: int}> $rows
      *

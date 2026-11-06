@@ -31,11 +31,11 @@ test("TC-GGR-13 Dean opens Grades from the Apps menu, picks a program, and opens
     const page = await deanSignedIn(browser);
     await openDeanGrades(page);
 
-    await expect(page.getByText("Every section in your department.")).toBeVisible();
+    await expect(page.getByText("Every section in your college.")).toBeVisible();
     await expect(page.locator("[data-strip-line]")).toContainText(/Finalized \d+ of \d+ · Signed off \d+ · Override requests waiting: \d+/);
     await expect(page.locator("[data-program-table]")).toBeVisible();
     await expect(page.locator("[data-program-table] [data-column-label]", { hasText: "Signed off" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Download department" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Download college" })).toBeVisible();
 
     const picker = page.locator("[data-program-select]");
     await expect(picker.locator("option").first()).toHaveText("All programs");

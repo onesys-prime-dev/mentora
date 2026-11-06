@@ -129,7 +129,7 @@ final class SisCsvParserTest extends CIUnitTestCase
         $this->assertSame(['students', 'instructors', 'courses', 'enrollments', 'staff_assignments', 'class_schedules'], SisCsvParser::datasets());
     }
 
-    private const STAFF = "role,person_external_id,department_code,sub_department_code,course_external_id,section\n";
+    private const STAFF = "role,person_external_id,college_code,department_code,course_external_id,section\n";
 
     public function testEachStaffRoleNeedsTheColumnThatNamesWhatItLeadsOrTeaches(): void
     {
@@ -141,8 +141,8 @@ final class SisCsvParserTest extends CIUnitTestCase
 
         $this->assertSame([], $batch->rejected);
         $this->assertCount(4, $batch->records);
-        $this->assertSame('CCS', $batch->records[0]['department_code']);
-        $this->assertSame('IT', $batch->records[1]['sub_department_code']);
+        $this->assertSame('CCS', $batch->records[0]['college_code']);
+        $this->assertSame('IT', $batch->records[1]['department_code']);
         $this->assertSame(['C1', 'B'], [$batch->records[2]['course_external_id'], $batch->records[2]['section']]);
     }
 
@@ -158,8 +158,8 @@ final class SisCsvParserTest extends CIUnitTestCase
 
         $this->assertSame([], $batch->records);
         $this->assertSame([
-            ['row' => 2, 'reason' => 'department_code is required for a dean.'],
-            ['row' => 3, 'reason' => 'sub_department_code is required for a chairperson.'],
+            ['row' => 2, 'reason' => 'college_code is required for a dean.'],
+            ['row' => 3, 'reason' => 'department_code is required for a chairperson.'],
             ['row' => 4, 'reason' => 'course_external_id is required for an instructor.'],
             ['row' => 5, 'reason' => 'role must be one of: dean, chairperson, instructor.'],
             ['row' => 6, 'reason' => 'role is empty.'],
@@ -177,7 +177,7 @@ final class SisCsvParserTest extends CIUnitTestCase
             . "CHAIRPERSON,p1,,it,,\n");
 
         $this->assertCount(4, $batch->records, 'different things are different rows');
-        $this->assertSame([['row' => 6, 'reason' => 'Repeats row 2 (role + person_external_id + department_code + sub_department_code + course_external_id + section).']], $batch->rejected, 'the same thing in other capitals is a repeat');
+        $this->assertSame([['row' => 6, 'reason' => 'Repeats row 2 (role + person_external_id + college_code + department_code + course_external_id + section).']], $batch->rejected, 'the same thing in other capitals is a repeat');
     }
 
     public function testAStaffFileWithoutItsRequiredColumnsIsRefusedWhole(): void
@@ -185,7 +185,7 @@ final class SisCsvParserTest extends CIUnitTestCase
         $this->expectException(SisException::class);
         $this->expectExceptionMessage('staff_assignments.csv is missing the column(s): person_external_id.');
 
-        SisCsvParser::parse('staff_assignments', "role,department_code\ndean,CCS\n");
+        SisCsvParser::parse('staff_assignments', "role,college_code\ndean,CCS\n");
     }
 
     public function testTheTemplateOfTheStaffFileListsItsColumns(): void
@@ -193,8 +193,8 @@ final class SisCsvParserTest extends CIUnitTestCase
         $spec = SisCsvParser::spec('staff_assignments');
 
         $this->assertSame(['role', 'person_external_id'], $spec['required']);
-        $this->assertSame(['department_code', 'sub_department_code', 'course_external_id', 'section'], $spec['optional']);
-        $this->assertSame(['dean' => 'department_code', 'chairperson' => 'sub_department_code', 'instructor' => 'course_external_id'], SisCsvParser::STAFF_TARGET_COLUMN);
+        $this->assertSame(['college_code', 'department_code', 'course_external_id', 'section'], $spec['optional']);
+        $this->assertSame(['dean' => 'college_code', 'chairperson' => 'department_code', 'instructor' => 'course_external_id'], SisCsvParser::STAFF_TARGET_COLUMN);
     }
 
     public function testAnUploadNamesNoSisIds(): void
@@ -237,7 +237,7 @@ final class SisCsvParserTest extends CIUnitTestCase
 
     public function testAnUploadedInstructorAssignmentNeedsACourseCode(): void
     {
-        $batch = SisCsvParser::parse('staff_assignments', "role,email,department_code,sub_department_code,program_code,course_code,section\ninstructor,ivy@example.com,,,BSIT,,A\ninstructor,ivy@example.com,,,BSIT,IT101,A\n", SisCsvParser::KEYS_UPLOAD);
+        $batch = SisCsvParser::parse('staff_assignments', "role,email,college_code,department_code,program_code,course_code,section\ninstructor,ivy@example.com,,,BSIT,,A\ninstructor,ivy@example.com,,,BSIT,IT101,A\n", SisCsvParser::KEYS_UPLOAD);
 
         $this->assertCount(1, $batch->records);
         $this->assertSame('course_code is required for an instructor.', $batch->rejected[0]['reason']);

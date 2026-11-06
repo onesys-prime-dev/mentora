@@ -13,7 +13,7 @@ use Tests\Support\GradeFactory;
  * R3 of the chairperson plan: the dashboard's program snapshot, "needs
  * attention" (at-risk students, overdue grading, inactive courses), recent
  * announcements and audit-log highlights — each scoped to every course in
- * every sub-department the chairperson chairs, and nothing outside it.
+ * every department the chairperson chairs, and nothing outside it.
  *
  * @internal
  */
@@ -46,7 +46,7 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
         $this->elsewhere = $this->course('CS202', 'Course B');
 
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id'   => $this->subDepartmentOf($this->mine['id']),
+            'department_id'   => $this->departmentOf($this->mine['id']),
             'chairperson_user_id' => $this->chair->id,
             'status'              => 'active',
             'assigned_at'         => date('Y-m-d H:i:s'),
@@ -65,14 +65,14 @@ final class DashboardServiceChairpersonTest extends DatabaseTestCase
         return ['id' => $id, 'module' => $module];
     }
 
-    private function subDepartmentOf(int $offeringId): int
+    private function departmentOf(int $offeringId): int
     {
         return (int) db_connect()->table('course_offerings co')
-            ->select('programs.sub_department_id')
+            ->select('programs.department_id')
             ->join('courses', 'courses.id = co.course_id')
             ->join('programs', 'programs.id = courses.program_id')
             ->where('co.id', $offeringId)
-            ->get()->getRowArray()['sub_department_id'];
+            ->get()->getRowArray()['department_id'];
     }
 
     private function widgets(): array

@@ -19,7 +19,7 @@ final class MessagingPolicyTest extends CIUnitTestCase
 {
     private const ROLES = ['student', 'instructor', 'chairperson', 'dean', 'parent', 'institutional_admin', 'admin'];
 
-    private const FACTS = ['sharedCourse', 'sameDepartment', 'inScope', 'linkedChild'];
+    private const FACTS = ['sharedCourse', 'sameCollege', 'inScope', 'linkedChild'];
 
     /**
      * Spec 3.1 written out as data: sender => recipient => the facts that
@@ -34,12 +34,12 @@ final class MessagingPolicyTest extends CIUnitTestCase
             'dean' => null, 'parent' => null, 'institutional_admin' => null, 'admin' => null,
         ],
         'instructor' => [
-            'student' => ['sharedCourse'], 'instructor' => ['sameDepartment'], 'chairperson' => ['sameDepartment'],
-            'dean' => ['sameDepartment'], 'parent' => ['linkedChild'], 'institutional_admin' => null, 'admin' => null,
+            'student' => ['sharedCourse'], 'instructor' => ['sameCollege'], 'chairperson' => ['sameCollege'],
+            'dean' => ['sameCollege'], 'parent' => ['linkedChild'], 'institutional_admin' => null, 'admin' => null,
         ],
         'chairperson' => [
-            'student' => ['inScope'], 'instructor' => ['inScope'], 'chairperson' => ['sameDepartment'],
-            'dean' => ['sameDepartment'], 'parent' => null, 'institutional_admin' => null, 'admin' => null,
+            'student' => ['inScope'], 'instructor' => ['inScope'], 'chairperson' => ['sameCollege'],
+            'dean' => ['sameCollege'], 'parent' => null, 'institutional_admin' => null, 'admin' => null,
         ],
         'dean' => [
             'student' => ['inScope'], 'instructor' => ['inScope'], 'chairperson' => ['inScope'],
@@ -67,7 +67,7 @@ final class MessagingPolicyTest extends CIUnitTestCase
     {
         return new StartContext(...array_merge([
             'sharedCourse'     => in_array('sharedCourse', $facts, true),
-            'sameDepartment'   => in_array('sameDepartment', $facts, true),
+            'sameCollege'   => in_array('sameCollege', $facts, true),
             'inScope'          => in_array('inScope', $facts, true),
             'linkedChild'      => in_array('linkedChild', $facts, true),
             'studentDmEnabled' => $switchOn,

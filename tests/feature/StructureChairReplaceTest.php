@@ -11,13 +11,13 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * Replacing a sub-department's chairperson on the Structure page (audit decision 16.0b).
+ * Replacing a department's chairperson on the Structure page (audit decision 16.0b).
  *
  * @internal
  */
 final class StructureChairReplaceTest extends RouteTestCase
 {
-    private int $sub;
+    private int $department;
 
     private User $old;
 
@@ -31,9 +31,9 @@ final class StructureChairReplaceTest extends RouteTestCase
 
         Services::resetSingle('auditLogger');
 
-        $home        = DeanFactory::department('SR');
-        $this->sub   = DeanFactory::subDepartment($home['department'], 'SR');
-        $this->old   = DeanFactory::chair($this->sub, 'Olga');
+        $home        = DeanFactory::college('SR');
+        $this->department   = DeanFactory::department($home['college'], 'SR');
+        $this->old   = DeanFactory::chair($this->department, 'Olga');
         $this->new   = PeopleFactory::person('chairperson', 'Nina', 'New', null, $home['institution']);
         $this->admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $home['institution']);
 
@@ -43,10 +43,10 @@ final class StructureChairReplaceTest extends RouteTestCase
 
     private function activeChair(): int
     {
-        return (int) db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $this->sub, 'status' => 'active'])->get()->getRowArray()['chairperson_user_id'];
+        return (int) db_connect()->table('chairperson_assignments')->where(['department_id' => $this->department, 'status' => 'active'])->get()->getRowArray()['chairperson_user_id'];
     }
 
-    public function testAFilledSubDepartmentOffersReplacingItsChair(): void
+    public function testAFilledDepartmentOffersReplacingItsChair(): void
     {
         $html = (string) $this->step('GET', 'institution/structure')->getBody();
 
@@ -58,11 +58,11 @@ final class StructureChairReplaceTest extends RouteTestCase
     {
         $this->withHeaders(['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest']);
 
-        $refused = $this->step('POST', "institution/structure/sub-departments/{$this->sub}/chairpersons", ['user_id' => (string) $this->new->id]);
+        $refused = $this->step('POST', "institution/structure/departments/{$this->department}/chairpersons", ['user_id' => (string) $this->new->id]);
         $this->assertSame(422, $refused->response()->getStatusCode());
         $this->assertSame((int) $this->old->id, $this->activeChair());
 
-        $this->step('POST', "institution/structure/sub-departments/{$this->sub}/chairpersons", ['user_id' => (string) $this->new->id, 'replace' => '1']);
+        $this->step('POST', "institution/structure/departments/{$this->department}/chairpersons", ['user_id' => (string) $this->new->id, 'replace' => '1']);
         $this->assertSame((int) $this->new->id, $this->activeChair());
     }
 }

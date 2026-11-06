@@ -20,19 +20,19 @@ class ChairpersonAssignmentsSeeder extends Seeder
             return;
         }
 
-        $subDepartmentId = $this->db->table('sub_departments')
-            ->select('sub_departments.id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+        $departmentId = $this->db->table('departments')
+            ->select('departments.id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->where([
-                'departments.institution_id' => 1,
-                'departments.code'           => 'CBM',
-                'sub_departments.code'       => 'IT',
+                'colleges.institution_id' => 1,
+                'colleges.code'           => 'CBM',
+                'departments.code'       => 'IT',
             ])
             ->get()
             ->getRowArray()['id'] ?? null;
 
-        if (! $subDepartmentId) {
-            echo "Chairperson's sub-department not found.\n";
+        if (! $departmentId) {
+            echo "Chairperson's department not found.\n";
             return;
         }
 
@@ -40,7 +40,7 @@ class ChairpersonAssignmentsSeeder extends Seeder
 
         $data = [
             [
-                'sub_department_id' => $subDepartmentId,
+                'department_id' => $departmentId,
                 'chairperson_user_id' => $chairperson->id,
                 'status' => 'active',
                 'assigned_at' => $now,

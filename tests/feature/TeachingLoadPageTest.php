@@ -9,17 +9,17 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The dean's Teaching load pages: the instructors of the department with what they carry in a term, the
+ * The dean's Teaching load pages: the instructors of the college with what they carry in a term, the
  * high-load marker, the sort and the filters in the address, one instructor's sections, and that nothing of
- * another department or role gets through. View only: there is nothing to submit.
+ * another college or role gets through. View only: there is nothing to submit.
  *
  * @internal
  */
 final class TeachingLoadPageTest extends RouteTestCase
 {
     private int $institution;
-    private int $department;
-    private int $subA;
+    private int $college;
+    private int $departmentA;
     private int $term;
     private User $dean;
     private User $tess;
@@ -29,19 +29,19 @@ final class TeachingLoadPageTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('L');
+        $home              = DeanFactory::college('L');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $subB              = DeanFactory::subDepartment($this->department, 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $departmentB              = DeanFactory::department($this->college, 'B');
         $this->term        = DeanFactory::term($this->institution);
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
 
         $this->tess = PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution);
         $this->leo  = PeopleFactory::person('instructor', 'Leo', 'Law', null, $this->institution);
 
-        $it = DeanFactory::offering(DeanFactory::program($this->subA, 'A'), $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
-        $lw = DeanFactory::offering(DeanFactory::program($subB, 'B'), $this->term, 'LW200', 'A', 'active', 'Law Heavy');
+        $it = DeanFactory::offering(DeanFactory::program($this->departmentA, 'A'), $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $lw = DeanFactory::offering(DeanFactory::program($departmentB, 'B'), $this->term, 'LW200', 'A', 'active', 'Law Heavy');
         db_connect()->table('courses')->where('course_code', 'LW200')->update(['units' => 33]);
 
         CourseFactory::assignInstructor($it, $this->tess);
@@ -82,19 +82,19 @@ final class TeachingLoadPageTest extends RouteTestCase
         $this->assertSame(2, substr_count($body, 'High load</span>'), 'Tess (3 units) is marked now too');
     }
 
-    public function testTheSortAndTheSubDepartmentAreInTheAddress(): void
+    public function testTheSortAndTheDepartmentAreInTheAddress(): void
     {
         $byName = $this->page('dean/teaching-load?sort=name');
 
         $this->assertLessThan(strpos($byName, 'Tess Tan'), strpos($byName, 'Leo Law'), 'A to Z by name');
         $this->assertStringContainsString('aria-sort', $byName);
 
-        $narrow = $this->page('dean/teaching-load?sub_department=' . $this->subA);
+        $narrow = $this->page('dean/teaching-load?department=' . $this->departmentA);
 
         $this->assertStringContainsString('Tess Tan', $narrow);
         $this->assertStringNotContainsString('Leo Law', $narrow);
 
-        $this->assertStringNotContainsString('Tess Tan', $this->page('dean/teaching-load?sub_department=999999'));
+        $this->assertStringNotContainsString('Tess Tan', $this->page('dean/teaching-load?department=999999'));
     }
 
     public function testAnInstructorsPageListsTheirSectionsAndOpensThemReadOnly(): void
@@ -112,18 +112,18 @@ final class TeachingLoadPageTest extends RouteTestCase
     public function testAnInstructorWhoTeachesNothingThisTermStillHasAPageSayingSo(): void
     {
         $earlier = DeanFactory::term($this->institution, 'Earlier', '2026-01-10');
-        $old     = DeanFactory::offering(DeanFactory::program($this->subA, 'Z'), $earlier, 'OLD100');
+        $old     = DeanFactory::offering(DeanFactory::program($this->departmentA, 'Z'), $earlier, 'OLD100');
         $retired = PeopleFactory::person('instructor', 'Rita', 'Retired', null, $this->institution);
         CourseFactory::assignInstructor($old, $retired);
 
         $this->assertStringContainsString('No sections this term', $this->page('dean/teaching-load/' . $retired->id));
     }
 
-    public function testAnInstructorOutsideTheDepartmentIsNotFound(): void
+    public function testAnInstructorOutsideTheCollegeIsNotFound(): void
     {
-        $elsewhere = DeanFactory::department('X', $this->institution);
+        $elsewhere = DeanFactory::college('X', $this->institution);
         $stranger  = PeopleFactory::person('instructor', 'Out', 'Sider', null, $this->institution);
-        CourseFactory::assignInstructor(DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X'), $this->term, 'LAW900'), $stranger);
+        CourseFactory::assignInstructor(DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X'), $this->term, 'LAW900'), $stranger);
 
         $this->loggedInAs($this->dean);
 
@@ -137,10 +137,10 @@ final class TeachingLoadPageTest extends RouteTestCase
         }
     }
 
-    public function testItSaysSoWhenTheDepartmentHasNoCoursesYet(): void
+    public function testItSaysSoWhenTheCollegeHasNoCoursesYet(): void
     {
-        $empty = DeanFactory::department('E', $this->institution);
-        $dean  = DeanFactory::dean($this->institution, $empty['department'], 'Eve');
+        $empty = DeanFactory::college('E', $this->institution);
+        $dean  = DeanFactory::dean($this->institution, $empty['college'], 'Eve');
 
         $body = $this->page('dean/teaching-load', $dean);
 
@@ -150,7 +150,7 @@ final class TeachingLoadPageTest extends RouteTestCase
 
     public function testNobodyButADeanReachesIt(): void
     {
-        foreach ([$this->tess, DeanFactory::chair($this->subA), PeopleFactory::person('student', 'Sam', 'Student', null, $this->institution)] as $user) {
+        foreach ([$this->tess, DeanFactory::chair($this->departmentA), PeopleFactory::person('student', 'Sam', 'Student', null, $this->institution)] as $user) {
             $this->loggedInAs($user);
 
             foreach (['dean/teaching-load', 'dean/teaching-load/' . $this->tess->id] as $uri) {
@@ -159,12 +159,12 @@ final class TeachingLoadPageTest extends RouteTestCase
         }
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanation(): void
+    public function testADeanWithoutACollegeSeesTheExplanation(): void
     {
-        $stray = PeopleFactory::person('dean', 'No', 'Department', null, $this->institution);
+        $stray = PeopleFactory::person('dean', 'No', 'College', null, $this->institution);
 
         foreach (['dean/teaching-load', 'dean/teaching-load/' . $this->tess->id] as $uri) {
-            $this->assertStringContainsString('not assigned to a department yet', $this->page($uri, $stray));
+            $this->assertStringContainsString('not assigned to a college yet', $this->page($uri, $stray));
         }
     }
 

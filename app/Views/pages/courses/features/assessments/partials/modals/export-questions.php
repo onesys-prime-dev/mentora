@@ -97,7 +97,7 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
                 </div>
 
                 <p class="text-xs text-gray-500">
-                    Word and Rich Text import back in with their formatting. Excel or CSV suit departments; GIFT and Aiken suit
+                    Word and Rich Text import back in with their formatting. Excel or CSV suit colleges; GIFT and Aiken suit
                     other quiz systems. Aiken holds single-answer multiple choice only.
                 </p>
 

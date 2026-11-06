@@ -11,7 +11,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * The dean's term-end sign-off: the department's sections for a term, grouped by
+ * The dean's term-end sign-off: the college's sections for a term, grouped by
  * program, each ready, blocked (and why) or signed off. Signing off, alone or for
  * a program's ready sections, asks for the password again (the reauth filter on
  * the routes); reopening a sign-off needs a reason. The actions answer JSON for
@@ -24,7 +24,7 @@ class SignoffController extends BaseController
     {
         $user = auth()->user();
 
-        if ((new DeanAccessService())->departmentFor($user) === null) {
+        if ((new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Sign-off', 'page' => 'signoff', 'user' => $user]);
         }
 

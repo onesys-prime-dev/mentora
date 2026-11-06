@@ -29,7 +29,7 @@ Each role is offered only the permissions that have an effect for it (`AuthGroup
 | parent | `children.view`, `messages.use` |
 | instructor | `courses.view`, `courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage`, `messages.use` |
 | chairperson | the instructor's five, `program.monitor`, `followups.manage`, `messages.use` |
-| dean | `courses.view`, `department.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `department.announce`, `messages.use` |
+| dean | `courses.view`, `college.monitor`, `grades.approve`, `grades.signoff`, `followups.manage`, `college.announce`, `messages.use` |
 | institutional_admin | the institution-administration permissions, `courses.view`, `grades.approve`, `grades.signoff`, `institution.roles`, `messages.use` |
 
 `monitoring.manage` was removed (nothing used it).
@@ -39,11 +39,11 @@ Each role is offered only the permissions that have an effect for it (`AuthGroup
 - **`courses.view`**: the course pages and their data (student, instructor, chairperson, dean, institution), and each role's course list. Without it the dean's Apps menu has no Courses entry; the dashboard still opens.
 - **`courses.manage`**, **`grading.manage`**, **`announcements.manage`**, **`discussions.manage`**: changes in a course, by part; see `course-access.md`. In a course, what counts is the person's role there, not the groups they hold: an instructor enrolled in someone else's course is a student in it (`CourseMembership::roleIn`). Without one, that part of the course is shown as it is, without its controls, and the change is refused (403). The calendar follows the same rule: "Add Assessment" and "Edit Deadline" need `courses.manage`, "Add Announcement" needs `announcements.manage`.
 - **`program.monitor`**: the chairperson's Monitor Program page and its data.
-- **`department.monitor`**: the dean's Monitor Department page, its data and the department report.
+- **`college.monitor`**: the dean's Monitor College page, its data and the college report.
 - **`followups.manage`**: sending a follow-up and passing one down. Replying to and closing a follow-up you received needs none.
-- **`department.announce`**: the dean's department announcements.
-- **`grades.approve`**: deciding final-grade override requests: the dean's for their department, otherwise the institution's administrators' (`/institution/approvals`). Who decides is `GradeAuthority`; see `institutional-admin-area.md`, "Who decides grade overrides and sign-off". A change for the dean or the institutional administrator moves the waiting requests at once.
-- **`grades.signoff`**: signing off finalized grades: the dean's, otherwise the institution's administrators' (`/institution/signoff`). Both Roles pages warn where nobody holds it, or `grades.approve`, in a department.
+- **`college.announce`**: the dean's college announcements.
+- **`grades.approve`**: deciding final-grade override requests: the dean's for their college, otherwise the institution's administrators' (`/institution/approvals`). Who decides is `GradeAuthority`; see `institutional-admin-area.md`, "Who decides grade overrides and sign-off". A change for the dean or the institutional administrator moves the waiting requests at once.
+- **`grades.signoff`**: signing off finalized grades: the dean's, otherwise the institution's administrators' (`/institution/signoff`). Both Roles pages warn where nobody holds it, or `grades.approve`, in a college.
 - **`messages.use`**: the Messages area (course chats, direct messages, staff groups). Held by every institution role, never by the system administrator; the area is also behind the `messages` feature flag, which ships off. Two things are decided by role rather than by this permission: only an institutional administrator reviews message reports (`/messages/reports`) and changes the institution's "students messaging each other" switch, and only a chairperson or dean can start a staff group. See `messages.md`.
 - **Messages "Chat controls"** (the Settings tab that switches Reactions, Replies, Forwarding, Bump, Delete for everyone and the lock for a chat) is decided by role, not by `messages.use`: **only an institutional administrator** manages them, for any course chat or staff group of their own institution, whether or not they are a member (Institution settings, Messages lists the institution's chats). Instructors, chairpersons, deans, students and parents never do; an instructor can still lock their own course chat with its own button. Direct chats have no controls. Moderators of a chat also see Remove instead of Report on other people's messages. See `messages.md`.
 - **`audit.view`**, **`audit.manage`**: the platform audit log, and its settings.

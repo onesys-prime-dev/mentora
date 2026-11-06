@@ -92,8 +92,8 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
         'title'       => $area === 'instructor' ? 'Requests' : 'Follow-ups',
         'icon'        => 'inbox',
         'description' => match ($area) {
-            'dean'        => 'Ask the chairperson or instructor responsible to act on something that needs attention in your department.',
-            'chairperson' => 'Requests from the dean to you, and the follow-ups you send to instructors in your sub-departments.',
+            'dean'        => 'Ask the chairperson or instructor responsible to act on something that needs attention in your college.',
+            'chairperson' => 'Requests from the dean to you, and the follow-ups you send to instructors in your departments.',
             default       => 'Things your dean or chairperson asked you to look at. Reply, and mark each one done when it is.',
         },
         'actions'     => $actions,
@@ -202,7 +202,7 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
             // Step one: which course. A plain GET, so the next step opens for exactly that course.
             $pick = '<form method="get" action="' . esc($base, 'attr') . '" class="flex flex-col gap-3">'
                 . '<input type="hidden" name="box" value="' . esc($box, 'attr') . '">'
-                . $field(['name' => 'offering', 'label' => 'Course', 'type' => 'select', 'options' => $courseChoices, 'required' => true, 'help' => 'Then you choose whom to ask: the instructors of the course' . ($area === 'dean' ? ' and the chairperson of its sub-department.' : '.')])
+                . $field(['name' => 'offering', 'label' => 'Course', 'type' => 'select', 'options' => $courseChoices, 'required' => true, 'help' => 'Then you choose whom to ask: the instructors of the course' . ($area === 'dean' ? ' and the chairperson of its department.' : '.')])
                 . '<input type="hidden" name="reason" value="other">'
                 . '<div class="flex justify-end gap-3"><button type="button" data-dialog-close class="' . esc($ghost, 'attr') . '">Cancel</button><button type="submit" class="' . esc($primary, 'attr') . '">Continue</button></div></form>';
             ?>

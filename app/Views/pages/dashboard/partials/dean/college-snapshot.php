@@ -1,13 +1,13 @@
 <?php
 /**
- * The dean's department in numbers: sub-departments, programs, the courses running now, the instructors
+ * The dean's college in numbers: departments, programs, the courses running now, the instructors
  * teaching them and the students enrolled. Data: DeanDashboardService::overview()['snapshot'] plus the
- * department's name.
+ * college's name.
  *
- * @var array{name: string, sub_departments: int, programs: int, courses: int, instructors: int, students: int} $data
+ * @var array{name: string, departments: int, programs: int, courses: int, instructors: int, students: int} $data
  */
 $rows = [
-    ['Sub-departments', $data['sub_departments'], 'hat'],
+    ['Departments', $data['departments'], 'hat'],
     ['Programs', $data['programs'], 'modules'],
     ['Courses running', $data['courses'], 'tasks'],
     ['Instructors', $data['instructors'], 'user'],
@@ -15,11 +15,11 @@ $rows = [
 ];
 ?>
 
-<!-- department snapshot (dean) -->
+<!-- college snapshot (dean) -->
 <div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip" data-widget="snapshot">
 
     <div class="px-5 py-4 border-b border-[#F1F3F8]">
-        <span class="block text-[11px] font-bold uppercase tracking-wide text-[#6B7488]">Your department</span>
+        <span class="block text-[11px] font-bold uppercase tracking-wide text-[#6B7488]">Your college</span>
         <span class="block text-[15px] font-bold text-[#0A0F1E]"><?= esc($data['name']) ?></span>
     </div>
 

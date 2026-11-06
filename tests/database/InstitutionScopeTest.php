@@ -54,9 +54,9 @@ final class InstitutionScopeTest extends DatabaseTestCase
     {
         $db = db_connect();
 
-        $department = (int) $db->table('departments')->where('institution_id', $institutionId)->get()->getRowArray()['id'];
-        $sub        = (int) $db->table('sub_departments')->where('department_id', $department)->get()->getRowArray()['id'];
-        $program    = (int) $db->table('programs')->where('sub_department_id', $sub)->get()->getRowArray()['id'];
+        $college = (int) $db->table('colleges')->where('institution_id', $institutionId)->get()->getRowArray()['id'];
+        $department        = (int) $db->table('departments')->where('college_id', $college)->get()->getRowArray()['id'];
+        $program    = (int) $db->table('programs')->where('department_id', $department)->get()->getRowArray()['id'];
         $term       = (int) $db->table('academic_terms')->where('institution_id', $institutionId)->get()->getRowArray()['id'];
 
         $db->table('courses')->insert(['program_id' => $program, 'course_code' => "SC{$tag}1", 'course_title' => "Course {$tag}", 'units' => 3]);
@@ -67,7 +67,7 @@ final class InstitutionScopeTest extends DatabaseTestCase
         $person = PeopleFactory::person('student', 'Stu', "Dent{$tag}", null, $institutionId);
 
         return [
-            'department' => $department, 'subDepartment' => $sub, 'program' => $program, 'term' => $term,
+            'college' => $college, 'department' => $department, 'program' => $program, 'term' => $term,
             'course' => $course, 'offering' => $offering, 'person' => (int) $person->id,
         ];
     }
@@ -75,7 +75,7 @@ final class InstitutionScopeTest extends DatabaseTestCase
     /** @return iterable<string, array{string}> */
     public static function provideKinds(): iterable
     {
-        foreach (['department', 'subDepartment', 'program', 'course', 'offering', 'term', 'person'] as $kind) {
+        foreach (['college', 'department', 'program', 'course', 'offering', 'term', 'person'] as $kind) {
             yield $kind => [$kind];
         }
     }
@@ -116,7 +116,7 @@ final class InstitutionScopeTest extends DatabaseTestCase
         $nobody = new InstitutionScope(PeopleFactory::person('institutional_admin', 'No', 'Home'));
 
         $this->assertNull($nobody->institutionId());
-        $this->assertFalse($nobody->ownsDepartment($this->own['department']));
+        $this->assertFalse($nobody->ownsCollege($this->own['college']));
         $this->assertFalse($nobody->ownsPerson($this->own['person']));
         $this->assertFalse($nobody->ownsOffering($this->own['offering']));
         $this->assertFalse($nobody->ownsTerm($this->own['term']));

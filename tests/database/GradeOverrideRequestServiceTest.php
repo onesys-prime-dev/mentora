@@ -26,8 +26,8 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
 
     private GradeOverrideRequestService $service;
     private int $institution;
+    private int $college;
     private int $department;
-    private int $sub;
     private int $offering;
     private int $scheme;
     private User $teacher;
@@ -42,16 +42,16 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home              = DeanFactory::department('G');
+        $home              = DeanFactory::college('G');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'G');
-        $program           = DeanFactory::program($this->sub, 'G');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'G');
+        $program           = DeanFactory::program($this->department, 'G');
         $this->offering    = DeanFactory::offering($program, DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
 
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
-        $this->chair   = DeanFactory::chair($this->sub, 'Maria');
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
+        $this->chair   = DeanFactory::chair($this->department, 'Maria');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
         $this->student = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
 
         CourseFactory::assignInstructor($this->offering, $this->teacher);
@@ -105,10 +105,10 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         $this->assertFalse($this->service->appliesTo(999999));
     }
 
-    public function testADepartmentWithNoDeanInAnInstitutionThatHasOneStillUsesRequests(): void
+    public function testACollegeWithNoDeanInAnInstitutionThatHasOneStillUsesRequests(): void
     {
-        $other   = DeanFactory::department('H', $this->institution);
-        $program = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'H'), 'H');
+        $other   = DeanFactory::college('H', $this->institution);
+        $program = DeanFactory::program(DeanFactory::department($other['college'], 'H'), 'H');
         $offer   = DeanFactory::offering($program, DeanFactory::term($this->institution, 'Second', '2027-01-10'), 'LW100');
 
         $this->assertTrue($this->service->appliesTo($offer));
@@ -147,14 +147,14 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         $this->assertSame(Chain::AWAITING_DEAN, $this->ask()['request']['status']);
     }
 
-    public function testAChairpersonsOwnRequestGoesToTheDeanAndADeanlessDepartmentToTheAdministrator(): void
+    public function testAChairpersonsOwnRequestGoesToTheDeanAndADeanlessCollegeToTheAdministrator(): void
     {
         $asChair = $this->service->request($this->chair, $this->offering, (int) $this->student->id, 91.0, 'Appeal upheld');
         $this->assertSame(Chain::AWAITING_DEAN, $asChair['request']['status']);
         $this->assertSame('chairperson', $this->row($asChair['request']['id'])['requester_role']);
 
         db_connect()->table('dean_assignments')->where('dean_user_id', $this->dean->id)->update(['status' => 'ended', 'active_marker' => null]);
-        DeanFactory::dean($this->institution, DeanFactory::department('Z', $this->institution)['department'], 'Zed'); // another department has a dean
+        DeanFactory::dean($this->institution, DeanFactory::college('Z', $this->institution)['college'], 'Zed'); // another college has a dean
         $this->service->withdraw($this->chair, $this->offering, $asChair['request']['id']);
 
         $this->assertSame(Chain::AWAITING_INSTITUTION, $this->service->request($this->chair, $this->offering, (int) $this->student->id, 91.0, 'Appeal upheld')['request']['status']);
@@ -252,10 +252,10 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
     {
         $id = $this->ask()['request']['id'];
 
-        $elsewhere = DeanFactory::chair(DeanFactory::subDepartment($this->department, 'Other'), 'Olga');
+        $elsewhere = DeanFactory::chair(DeanFactory::department($this->college, 'Other'), 'Olga');
         $notChair  = PeopleFactory::person('instructor', 'Not', 'Chair', null, $this->institution);
 
-        foreach ([[$elsewhere, 'a chairperson of another sub-department'], [$notChair, 'an instructor'], [$this->dean, 'the dean at this step'], [$this->teacher, 'the requester']] as [$who, $label]) {
+        foreach ([[$elsewhere, 'a chairperson of another department'], [$notChair, 'an instructor'], [$this->dean, 'the dean at this step'], [$this->teacher, 'the requester']] as [$who, $label]) {
             $this->assertFalse($this->service->endorse($who, $id, '')['success'], $label);
             $this->assertFalse($this->service->sendBack($who, $id, 'No')['success'], $label);
         }
@@ -361,8 +361,8 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         $this->assertSame('IT101', $pending[0]['course_code']);
         $this->assertCount(3, $all);
 
-        $elsewhere = DeanFactory::chair(DeanFactory::subDepartment($this->department, 'Other'), 'Olga');
-        $this->assertSame([], $this->service->listForChair($elsewhere, 'all'), "another sub-department's chairperson sees none of it");
+        $elsewhere = DeanFactory::chair(DeanFactory::department($this->college, 'Other'), 'Olga');
+        $this->assertSame([], $this->service->listForChair($elsewhere, 'all'), "another department's chairperson sees none of it");
         $this->assertSame([], $this->service->listForChair($this->teacher), 'someone who chairs nothing');
     }
 
@@ -492,11 +492,11 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
     {
         $id = $this->waitingForDean();
 
-        $otherDepartment = DeanFactory::department('O', $this->institution);
-        $otherDean       = DeanFactory::dean($this->institution, $otherDepartment['department'], 'Olga');
+        $otherCollege = DeanFactory::college('O', $this->institution);
+        $otherDean       = DeanFactory::dean($this->institution, $otherCollege['college'], 'Olga');
         $notDean         = PeopleFactory::person('instructor', 'Not', 'Dean', null, $this->institution);
 
-        foreach ([[$otherDean, "another department's dean"], [$this->chair, 'the chairperson'], [$this->teacher, 'the requester'], [$notDean, 'an instructor'], [$this->student, 'a student']] as [$who, $label]) {
+        foreach ([[$otherDean, "another college's dean"], [$this->chair, 'the chairperson'], [$this->teacher, 'the requester'], [$notDean, 'an instructor'], [$this->student, 'a student']] as [$who, $label]) {
             $this->assertFalse($this->service->approve($who, $id)['success'], $label);
             $this->assertFalse($this->service->reject($who, $id, 'No')['success'], $label);
         }
@@ -518,7 +518,7 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
     public function testADeanWhoAlsoTeachesCannotDecideTheirOwnRequestNorAnyWhileActingAsAnInstructor(): void
     {
         $dean = PeopleFactory::person('instructor', 'Dora', 'Dean', null, $this->institution);
-        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->department, (int) $dean->id);
+        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->college, (int) $dean->id);
         $dean = model(CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
         CourseFactory::assignInstructor($this->offering, $dean);
 
@@ -618,13 +618,13 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         $this->assertSame('rejected', $history[0]['status']);
     }
 
-    public function testTheDeansListFollowsItsFiltersAndStaysInTheirDepartment(): void
+    public function testTheDeansListFollowsItsFiltersAndStaysInTheirCollege(): void
     {
         $this->waitingForDean();
         $filters = static fn (array $input) => \App\Services\Courses\Grades\OverrideApprovalFilters::fromInput($input);
         $count   = fn (array $input) => count($this->service->listForDean($this->dean, $filters($input)));
 
-        $program = (int) db_connect()->table('programs')->where('sub_department_id', $this->sub)->get()->getRowArray()['id'];
+        $program = (int) db_connect()->table('programs')->where('department_id', $this->department)->get()->getRowArray()['id'];
 
         $this->assertSame(1, $count(['q' => 'ann']));
         $this->assertSame(1, $count(['q' => 'IT101']));
@@ -636,11 +636,11 @@ final class GradeOverrideRequestServiceTest extends DatabaseTestCase
         $this->assertSame(1, $count(['requested_by' => (string) $this->teacher->id]));
         $this->assertSame(0, $count(['requested_by' => (string) $this->chair->id]));
 
-        $otherDepartment = DeanFactory::department('O', $this->institution);
-        $otherDean       = DeanFactory::dean($this->institution, $otherDepartment['department'], 'Olga');
+        $otherCollege = DeanFactory::college('O', $this->institution);
+        $otherDean       = DeanFactory::dean($this->institution, $otherCollege['college'], 'Olga');
 
-        $this->assertSame([], $this->service->listForDean($otherDean, new \App\Services\Courses\Grades\OverrideApprovalFilters()), "another department's dean sees none of it");
-        $this->assertSame([], $this->service->listForDean(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), new \App\Services\Courses\Grades\OverrideApprovalFilters()));
+        $this->assertSame([], $this->service->listForDean($otherDean, new \App\Services\Courses\Grades\OverrideApprovalFilters()), "another college's dean sees none of it");
+        $this->assertSame([], $this->service->listForDean(PeopleFactory::person('dean', 'No', 'College', null, $this->institution), new \App\Services\Courses\Grades\OverrideApprovalFilters()));
         $this->assertSame(['Tess Teacher'], array_column($this->service->requestersForDean($this->dean), 'name'));
     }
 

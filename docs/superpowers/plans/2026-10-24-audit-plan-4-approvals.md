@@ -2,12 +2,12 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** These flows never get stuck: grade-override requests and grade sign-off always reach someone who may decide them (findings 1, 2, F3, 7.2, 7.3, U1e, U1f, D3, D4). Each sub-department has exactly one chairperson, and chair actions can't collide (finding 16, U5).
+**Goal:** These flows never get stuck: grade-override requests and grade sign-off always reach someone who may decide them (findings 1, 2, F3, 7.2, 7.3, U1e, U1f, D3, D4). Each department has exactly one chairperson, and chair actions can't collide (finding 16, U5).
 
 **Architecture:**
-- **One resolver:** `GradeAuthority` answers "who decides here": the department's dean if they hold the permission, otherwise the institution's admins who hold it. The override chain, sign-off and SIS export all ask it.
+- **One resolver:** `GradeAuthority` answers "who decides here": the college's dean if they hold the permission, otherwise the institution's admins who hold it. The override chain, sign-off and SIS export all ask it.
 - **Admin screens:** institution admins get Approvals and Sign-off pages, which reuse the dean's views with the area as a parameter.
-- **Chairs:** chairperson assignments get an `active_marker`, with a unique key per sub-department. Endorse, send back and withdraw become conditional updates, as the dean's decision already is.
+- **Chairs:** chairperson assignments get an `active_marker`, with a unique key per department. Endorse, send back and withdraw become conditional updates, as the dean's decision already is.
 
 **Tech Stack:** CodeIgniter 4.7 + Shield, MySQL, PHPUnit 10 (`DatabaseTestCase`, `RouteTestCase`, `CourseFactory`, `PeopleFactory`, `DeanFactory`, `GradeFactory`), Playwright.
 
@@ -18,7 +18,7 @@
 - **Branch and commits:** branch `fix/approvals`, created from `fix/permissions` at 27f2012. No commits by Claude: each commit step stages files and states the message. Messages end `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Line endings:** CRLF files (`app/Config/Routes.php`, several services) are edited with the Edit tool, or with a Python script written to a file (shell heredocs collapse backslashes). Never `sed -i` on them.
 - **Permission checks:** `RolePermissions::allows($user, $permission, $asRole)` (plan 3), with the role being decided as: `dean` or `institutional_admin`.
-- **"No dean" (7.2, U1e):** a department has "no dean" for a duty when it has no active dean, or its dean lacks that duty's permission (`grades.approve` for overrides, `grades.signoff` for sign-off).
+- **"No dean" (7.2, U1e):** a college has "no dean" for a duty when it has no active dean, or its dean lacks that duty's permission (`grades.approve` for overrides, `grades.signoff` for sign-off).
 - **Whether approval is used at all (2.2):** an institution uses approval and sign-off when it has any active dean assignment, whatever their permissions. With none, overrides stay direct and finalized grades go straight to the SIS, as today.
 - **Nobody decides their own (1.5, D3, D4):**
   - No one decides their own override request.
@@ -29,10 +29,10 @@
   - **No one may decide (7.3):** "Nobody in your institution can decide this yet. An administrator needs the permission to approve overrides."
   - **One admin, own section (D4):** "You teach this section, so another administrator signs it off."
   - **Messages naming who acted:** "the dean …" or "the administrator …".
-- **One chairperson (16.0):** exactly one active chairperson per sub-department.
+- **One chairperson (16.0):** exactly one active chairperson per department.
   - **Replacing:** a new chair replaces the old one only after confirmation (16.0b). The old assignment ends (status `revoked`, history kept), and the old chair is notified.
   - **Waiting requests (16.0c, U5):** requests waiting for a chair pass to the new chair, who is notified.
-  - **Existing data (16.0d):** where a sub-department has several chairs, the most recently assigned one is kept, by migration.
+  - **Existing data (16.0d):** where a department has several chairs, the most recently assigned one is kept, by migration.
 - **Known local failures:** the six `AiWorkerEndpointsTest` failures are known. Run the full suite as `vendor/bin/phpunit --no-coverage`, and never alongside Playwright.
 
 ## Review Focus
@@ -59,12 +59,12 @@
 
 **Interfaces:**
 - Produces:
-  - `GradeAuthority::deanFor(int $departmentId, string $permission): ?int`: the active dean's user id, or null when there is no dean or they lack the permission (asked as `dean`).
+  - `GradeAuthority::deanFor(int $collegeId, string $permission): ?int`: the active dean's user id, or null when there is no dean or they lack the permission (asked as `dean`).
   - `GradeAuthority::institutionAdmins(int $institutionId, string $permission, array $except = []): list<int>`: active, non-deactivated institutional admins of the institution who hold the permission (asked as `institutional_admin`), minus `$except`.
   - `GradeAuthority::usesApproval(int $institutionId): bool`: any active dean assignment in the institution.
 
 - [ ] **Step 1: Write the failing tests**
-  - `testADeanWithThePermissionDecides`: the department's dean gives `deanFor(..., 'grades.approve')` equal to the dean's id.
+  - `testADeanWithThePermissionDecides`: the college's dean gives `deanFor(..., 'grades.approve')` equal to the dean's id.
   - `testADeanWithoutThePermissionCountsAsNoDean`: institution rows clear `grades.approve` for deans, so `deanFor` returns null, while `deanFor(..., 'grades.signoff')` still returns the dean.
   - `testTheAdministratorsWhoHoldThePermission`: two admins, one deactivated (`AccountControl::deactivate`), gives `[the active one]`. `$except` removes one.
   - `testApprovalIsUsedWhenTheInstitutionHasAnyDean`: true with one active dean. False with none, or with only an ended deanship.
@@ -75,7 +75,7 @@
 Run: `vendor/bin/phpunit --no-coverage tests/database/GradeAuthorityTest.php`
 Expected: FAIL, because the class is missing.
 
-- [ ] **Step 3: Implement, and swap the three callers.** Use `DeanAssignmentModel::currentDeanOfDepartment` for the dean. Admins come from `institution_users` joined to `auth_groups_users` (`group = 'institutional_admin'`), active and not deactivated (as `PeopleService::activeAdministrators` reads them).
+- [ ] **Step 3: Implement, and swap the three callers.** Use `DeanAssignmentModel::currentDeanOfCollege` for the dean. Admins come from `institution_users` joined to `auth_groups_users` (`group = 'institutional_admin'`), active and not deactivated (as `PeopleService::activeAdministrators` reads them).
 
 - [ ] **Step 4: Run them, and the grade suites**
 
@@ -97,14 +97,14 @@ Message: `feat: one answer to who decides a grade override or a sign-off`
   - `approve`/`reject` (`:396-480`), including the give-back on failure;
   - `tellDeanIfWaiting` (`:~695`), which becomes `tellDeciders`;
   - `request`/`resubmit` messages and `routeText` (`:335-357`).
-- Modify: `app/Services/Institutions/InstitutionRoles.php` and `app/Services/Admin/PermissionMatrix.php`. After a change to `grades.approve` for `dean` or `institutional_admin`, call `retargetDepartment` for every department of that institution, or of every institution for a platform change.
+- Modify: `app/Services/Institutions/InstitutionRoles.php` and `app/Services/Admin/PermissionMatrix.php`. After a change to `grades.approve` for `dean` or `institutional_admin`, call `retargetCollege` for every college of that institution, or of every institution for a platform change.
 - Test: `tests/database/AdministratorDecidesOverridesTest.php`
 
 **Interfaces:**
 - Consumes: Task 1's `GradeAuthority`.
 - Produces: `approve(User $decider, int $requestId, string $comment = '')` and `reject(User $decider, int $requestId, string $reason)`. Same signatures as today, now accepting an institutional admin for `awaiting_institution`.
 
-- [ ] **Step 1: Write the failing tests** (department without a dean, in an institution that uses approval)
+- [ ] **Step 1: Write the failing tests** (college without a dean, in an institution that uses approval)
   - `testARequestWithNoDeanWaitsForTheAdministratorsAndTellsThemAll`: an instructor's request ends in `awaiting_institution`. Both admins get a `grade_override` notification, and the requester doesn't.
   - `testAnAdministratorApprovesAndTheGradeChanges`: approve gives `approved`, the gradebook override is set, and the requester is told "the administrator approved your request".
   - `testAnAdministratorRejectsWithAReason`: an empty reason is refused, and with a reason the result is `rejected`.
@@ -144,7 +144,7 @@ Message: `fix: with no dean, the institution's administrators decide grade-overr
 
 **Files:**
 - Modify: `app/Views/pages/dean/approvals.php`. It takes `$area` (`'dean'` or `'institution'`) for every `site_url('dean/…')`. The back link goes to `{$area}/dashboard`.
-- Modify: `app/Services/Courses/Grades/GradeOverrideRequestService.php`. Extract `listForDean`'s builder (`:545-610`) into a private `listIn(list<int> $departmentIds, string $waitingStatus, User $viewer, OverrideApprovalFilters $f)`. `listForDean` uses it. Add `listForInstitution(User $admin, OverrideApprovalFilters $f): list<array>`, which covers the institution's departments with `awaiting_institution`, never the admin's own requests. Add `requestersForInstitution(User $admin)` too.
+- Modify: `app/Services/Courses/Grades/GradeOverrideRequestService.php`. Extract `listForDean`'s builder (`:545-610`) into a private `listIn(list<int> $collegeIds, string $waitingStatus, User $viewer, OverrideApprovalFilters $f)`. `listForDean` uses it. Add `listForInstitution(User $admin, OverrideApprovalFilters $f): list<array>`, which covers the institution's colleges with `awaiting_institution`, never the admin's own requests. Add `requestersForInstitution(User $admin)` too.
 - Create: `app/Controllers/Institution/ApprovalsController.php` (index, approve, reject), modelled on `Dean\ApprovalsController`.
 - Modify: `app/Config/Routes.php`, in the institution writing group: `get('approvals')`, `post('approvals/(:num)/approve')`, `post('approvals/(:num)/reject')`, filter `permission:grades.approve`.
 - Modify: `app/Helpers/navigation_helper.php`, adding an "Approvals" entry for the institutional admin.
@@ -192,10 +192,10 @@ Message: `feat: the institution's administrator has an Approvals page for reques
 - Consumes: Task 1's `GradeAuthority`.
 - Produces:
   - `GradeSignoffService::boardFor(list<int> $programIds, ?int $termId, string $area): array`, the shape `board()` returns. `board($dean, $term)` calls it with the dean's programs and `'dean'`.
-  - `GradeSignoffService::adminProgramIds(User $admin): list<int>`: the programs of the admin's institution whose department has no dean holding `grades.signoff`.
+  - `GradeSignoffService::adminProgramIds(User $admin): list<int>`: the programs of the admin's institution whose college has no dean holding `grades.signoff`.
 
 - [ ] **Step 1: Write the failing tests**
-  - `testAnAdministratorSignsOffWhereThereIsNoDean`: a ready section in a dean-less department is signed off by the admin, and it's then included by `SisGradeExporter` (dry run).
+  - `testAnAdministratorSignsOffWhereThereIsNoDean`: a ready section in a dean-less college is signed off by the admin, and it's then included by `SisGradeExporter` (dry run).
   - `testWhereThereIsADeanTheAdministratorCannot`: refused with "That section is not one you sign off."
   - `testADeanMaySignOffASectionTheyTeach` (D3).
   - `testAnAdministratorMayNotSignOffTheirOwnSection` (D4): refused with the D4 copy. A second admin can sign it off.
@@ -210,7 +210,7 @@ Run: `vendor/bin/phpunit --no-coverage tests/database/AdministratorSignsOffTest.
 Expected: FAIL, because `mayDecide` refuses the admin.
 
 - [ ] **Step 3: Implement.** `mayDecide($user, $offeringId)` allows two cases:
-  - the dean of the offering's department, acting as dean, with `grades.signoff` (teaching it is fine);
+  - the dean of the offering's college, acting as dean, with `grades.signoff` (teaching it is fine);
   - an institutional admin, acting as one, of that institution, where `deanFor(dept, 'grades.signoff')` is null, holding `grades.signoff`, and not an instructor of the offering (`instructor_assignments`).
 
   Otherwise it gives the matching refusal.
@@ -245,7 +245,7 @@ Message: `fix: with no dean, the institution's administrator signs off finalized
 - Consumes: Task 4's `boardFor` and `adminProgramIds`.
 
 - [ ] **Step 1: Write the failing tests**
-  - The admin sees the dean-less department's programs and sections, and not a department with a dean.
+  - The admin sees the dean-less college's programs and sections, and not a college with a dean.
   - Sign-off needs the password.
   - The own-section card shows the D4 copy instead of the button.
   - The dean's page is unchanged.
@@ -264,7 +264,7 @@ Expected: PASS.
 
 - [ ] **Step 5: Stage**
 
-Message: `feat: the institution's administrator has a Sign-off page for departments with no dean`
+Message: `feat: the institution's administrator has a Sign-off page for colleges with no dean`
 
 ---
 
@@ -276,14 +276,14 @@ Message: `feat: the institution's administrator has a Sign-off page for departme
 - Test: `tests/database/GradeAuthorityGapsTest.php`, plus a test on each of the two pages.
 
 **Interfaces:**
-- Produces: `GradeAuthority::gaps(int $institutionId): list<array{department: string, permission: 'grades.approve'|'grades.signoff'}>`. For an institution that uses approval, it lists each department with no dean holding the permission when no admin holds it either.
+- Produces: `GradeAuthority::gaps(int $institutionId): list<array{college: string, permission: 'grades.approve'|'grades.signoff'}>`. For an institution that uses approval, it lists each college with no dean holding the permission when no admin holds it either.
 
 - [ ] **Step 1: Write the failing tests**
   - No gaps by default.
-  - Clearing admins' `grades.approve` in an institution with a dean-less department gives one gap.
-  - Clearing deans' `grades.signoff` as well adds the departments with deans.
-  - **Institution page:** shows the warning alert "Nobody can approve grade overrides in <department>" (or "sign off grades"), one line per gap.
-  - **Admin Roles page:** shows "<institution>: nobody can approve grade overrides in <department>" for each institution with gaps.
+  - Clearing admins' `grades.approve` in an institution with a dean-less college gives one gap.
+  - Clearing deans' `grades.signoff` as well adds the colleges with deans.
+  - **Institution page:** shows the warning alert "Nobody can approve grade overrides in <college>" (or "sign off grades"), one line per gap.
+  - **Admin Roles page:** shows "<institution>: nobody can approve grade overrides in <college>" for each institution with gaps.
 
 - [ ] **Step 2: Run them to verify they fail**
 
@@ -303,15 +303,15 @@ Message: `feat: both Roles pages warn when nobody can approve or sign off`
 
 ---
 
-### Task 7: One chairperson per sub-department (16.0, 16.0b–d, U5)
+### Task 7: One chairperson per department (16.0, 16.0b–d, U5)
 
 **Files:**
-- Create: `app/Database/Migrations/2026-11-15-000001_OneChairpersonPerSubDepartment.php`:
+- Create: `app/Database/Migrations/2026-11-15-000001_OneChairpersonPerDepartment.php`:
   - add `active_marker TINYINT NULL`;
-  - set it to 1 for each sub-department's most recently assigned active chair, and revoke the other active ones (16.0d);
-  - add unique `(sub_department_id, active_marker)`.
+  - set it to 1 for each department's most recently assigned active chair, and revoke the other active ones (16.0d);
+  - add unique `(department_id, active_marker)`.
 
-  The existing unique `(sub_department_id, chairperson_user_id)` stays, because assigning again reuses the row (`ChairAssignmentService.php:129-136`).
+  The existing unique `(department_id, chairperson_user_id)` stays, because assigning again reuses the row (`ChairAssignmentService.php:129-136`).
 - Modify: `app/Services/Institutions/ChairAssignmentService.php`:
   - the docblock rule (`:11-17`);
   - `assign` (`:97-145`), which gets a new `bool $replace = false` parameter: with an active chair and `! $replace` it throws `StructureException::field('user_id', "<old> chairs <sub>. Assign <new> instead?")` and the error carries `replace_needed`;
@@ -319,18 +319,18 @@ Message: `feat: both Roles pages warn when nobody can approve or sign off`
   - `revoke` sets `active_marker = null`.
 - Modify: `app/Controllers/Institution/StructureController.php:162`, passing `replace` from the form, and the Structure page's chair dialog (`app/Views/pages/institution/structure.php`). When the server says `replace_needed`, the dialog shows "<old> chairs <sub>. Replace them with <new>?" and a confirm button that resubmits with `replace=1`.
 - Modify: `app/Services/Sis/SisImporter.php:707`, where the SIS sync passes `replace: true` (the SIS is the owner).
-- Modify: `app/Services/Courses/Grades/GradeOverrideRequestService.php:111, 171`. The loops over `chairIds` stay correct with one chair. The pending-requests notice to a new chair is sent from `ChairAssignmentService` (count of `awaiting_chair` in the sub-department).
+- Modify: `app/Services/Courses/Grades/GradeOverrideRequestService.php:111, 171`. The loops over `chairIds` stay correct with one chair. The pending-requests notice to a new chair is sent from `ChairAssignmentService` (count of `awaiting_chair` in the department).
 - Test: `tests/database/OneChairpersonTest.php`, `tests/feature/StructureChairReplaceTest.php`
 
 **Interfaces:**
-- Produces: `ChairAssignmentService::assign(int $institutionId, int $subDepartmentId, int $userId, ?User $actor = null, bool $replace = false): int`.
+- Produces: `ChairAssignmentService::assign(int $institutionId, int $departmentId, int $userId, ?User $actor = null, bool $replace = false): int`.
 
 - [ ] **Step 1: Write the failing tests**
   - `testASecondChairIsRefusedWithoutConfirmation`: the exception message names both, and the old chair stays.
   - `testConfirmingReplacesTheChairAndKeepsTheHistory`: the old row is `revoked`, the new one active, the old chair has a notification, and the audit has `structure.chairperson_revoked` plus `structure.chairperson_assigned`.
   - `testWaitingRequestsPassToTheNewChair`: an `awaiting_chair` request shows in the new chair's `listForChair` and not the old one's, the new chair is notified, and the old chair's `endorse` is refused.
-  - `testTheDatabaseKeepsOneActiveChair`: inserting a second row with `active_marker = 1` for the same sub-department fails.
-  - `testTheMigrationKeepsTheMostRecentlyAssigned`: a pure helper, `OneChairpersonPerSubDepartment::assignmentsToRevoke(rows)`, as plan 2 did for memberships.
+  - `testTheDatabaseKeepsOneActiveChair`: inserting a second row with `active_marker = 1` for the same department fails.
+  - `testTheMigrationKeepsTheMostRecentlyAssigned`: a pure helper, `OneChairpersonPerDepartment::assignmentsToRevoke(rows)`, as plan 2 did for memberships.
   - **Structure page:** the first submit answers with the confirmation, and the second with `replace=1` replaces.
 
 - [ ] **Step 2: Run them to verify they fail**
@@ -343,11 +343,11 @@ Expected: FAIL, because a second chair is accepted.
 - [ ] **Step 4: Run them, and the chair and SIS tests**
 
 Run: the command above, plus `grep -rl "ChairAssignment\|chairperson_assignments\|chairpersons" tests --include=*.php`
-Expected: PASS. A test that relied on several chairs per sub-department is rewritten or deleted; ledger it.
+Expected: PASS. A test that relied on several chairs per department is rewritten or deleted; ledger it.
 
 - [ ] **Step 5: Stage**
 
-Message: `fix: one chairperson per sub-department, replaced only on confirmation`
+Message: `fix: one chairperson per department, replaced only on confirmation`
 
 ---
 

@@ -134,7 +134,7 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => 1,
             ],
 
-            // Dual-role: chairs one sub-department, also teaches — exercises
+            // Dual-role: chairs one department, also teaches — exercises
             // role-switching and the "defaults to chairperson" first-login rule.
             [
                 'username'    => 'chairperson.demo2',
@@ -149,7 +149,7 @@ class DemoUsersSeeder extends Seeder
                 'program_id'  => 1,
             ],
 
-            // Dean-only: oversees the general department.
+            // Dean-only: oversees the general college.
             [
                 'username'       => 'dean.demo1',
                 'email'          => 'dean1@mentora.test',

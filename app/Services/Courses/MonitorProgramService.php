@@ -70,7 +70,7 @@ class MonitorProgramService
     }
 
     /**
-     * Every offering across every sub-department this user chairs, narrowed
+     * Every offering across every department this user chairs, narrowed
      * to one term when the filter asks for it. The full joined row shape
      * from ChairpersonAssignmentModel::chairedOfferingsBuilder() — the same
      * one the Courses page reads — so course/program/instructor labels are
@@ -82,7 +82,7 @@ class MonitorProgramService
     }
 
     /**
-     * The programs under every sub-department this user actively chairs. A
+     * The programs under every department this user actively chairs. A
      * program added later is covered at once: it is read live, never stored.
      *
      * @return list<int>
@@ -91,7 +91,7 @@ class MonitorProgramService
     {
         $rows = db_connect()->table('chairperson_assignments')
             ->select('programs.id')
-            ->join('programs', 'programs.sub_department_id = chairperson_assignments.sub_department_id')
+            ->join('programs', 'programs.department_id = chairperson_assignments.department_id')
             ->where('chairperson_assignments.chairperson_user_id', $user->id)
             ->where('chairperson_assignments.status', 'active')
             ->distinct()
@@ -104,7 +104,7 @@ class MonitorProgramService
      * Every offering in a set of programs (any status), narrowed to one term
      * when the filter asks for it, in the row shape the Courses page reads.
      * This is what makes Monitor Program scope-free: a chairperson's programs,
-     * a department's, or an institution's all go through the same metrics.
+     * a college's, or an institution's all go through the same metrics.
      *
      * @param list<int> $programIds
      *
@@ -403,7 +403,7 @@ class MonitorProgramService
     /**
      * The same viewer for a scope that is not one chairperson: with no actor,
      * every chairperson action on these offerings, whoever took it (what an
-     * institution's or a department's overseer reads). With an actor it is
+     * institution's or a college's overseer reads). With an actor it is
      * that person's own, which is the chairperson's page.
      *
      * @param  list<array<string, mixed>> $offeringRows the output of offeringRowsForPrograms(), for course labels
