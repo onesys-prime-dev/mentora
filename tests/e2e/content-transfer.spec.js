@@ -31,7 +31,7 @@ test("TC-MOD-16 A module is copied to another course, choosing what comes along"
     await openModules(page, "A");
 
     await card(page).first().locator("[data-module-actions]").click();
-    await card(page).first().getByRole("button", { name: "Copy to…" }).click();
+    await page.getByRole("button", { name: "Copy to…" }).click();
 
     const modal = page.getByRole("dialog", { name: /Copy .*Programming Fundamentals/ });
     await expect(modal).toBeVisible();
@@ -68,7 +68,7 @@ test("TC-MOD-17 The copy is moved back, after a final confirmation, and a module
     await openModules(page, "B");
 
     await card(page).first().locator("[data-module-actions]").click();
-    await card(page).first().getByRole("button", { name: "Move to…" }).click();
+    await page.getByRole("button", { name: "Move to…" }).click();
 
     const modal = page.getByRole("dialog", { name: /Move .*Programming Fundamentals/ });
     await expect(modal).toBeVisible();
@@ -93,7 +93,7 @@ test("TC-MOD-17 The copy is moved back, after a final confirmation, and a module
     await openTab(page, "Modules");
     const original = card(page).filter({ has: page.locator("[data-publish-chip='published'], :not([data-publish-chip])") }).first();
     await original.locator("[data-module-actions]").click();
-    await original.getByRole("button", { name: "Move to…" }).click();
+    await page.getByRole("button", { name: "Move to…" }).click();
 
     const again = page.getByRole("dialog", { name: /Move/ });
     await chooseCourse(again, "IT101 · B");

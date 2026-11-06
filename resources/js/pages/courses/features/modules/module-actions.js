@@ -7,5 +7,5 @@
 import { bindActionMenu } from "./action-menus.js";
 
 export function bindModuleActionMenus() {
-    bindActionMenu("[data-module-actions]", "[data-module-actions-panel]");
+    bindActionMenu("[data-module-actions]", "[data-module-actions-panel]", { floating: true });
 }

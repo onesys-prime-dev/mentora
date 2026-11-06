@@ -24,7 +24,7 @@ test("TC-MOD-13 An instructor makes a module wait for the one before it", async 
 
     const second = page.locator("[data-module-wrapper]").filter({ hasText: "E2E Second" });
     await second.locator("[data-module-actions]").first().click();
-    await second.getByRole("button", { name: "Dependencies" }).click();
+    await page.getByRole("button", { name: "Dependencies" }).click();
 
     const modal = page.getByRole("dialog", { name: "Dependencies" });
     await expect(modal).toBeVisible();
