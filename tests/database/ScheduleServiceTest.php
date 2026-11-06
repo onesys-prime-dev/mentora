@@ -158,16 +158,16 @@ final class ScheduleServiceTest extends DatabaseTestCase
         $page = $this->service->forUser($this->student);
         $class = $page['grid']['by_day']['thu'][0];
 
-        // The axis runs 9:00 to 11:00 in half-hour rows: 4 rows.
-        $this->assertSame(4, $page['grid']['total_rows']);
+        // The axis runs the default 7:00 to 19:00 in half-hour rows: 24 rows.
+        $this->assertSame(24, $page['grid']['total_rows']);
         $this->assertSame(4, $class['column'], 'Monday is column 1');
-        $this->assertSame(2, $class['row_start'], 'half an hour after the axis starts');
+        $this->assertSame(6, $class['row_start'], 'two and a half hours after the axis starts');
         $this->assertSame(3, $class['row_span'], 'an hour and a half');
         $this->assertSame(570, $class['start_minutes']);
         $this->assertSame(660, $class['end_minutes']);
     }
 
-    public function testTheTimeAxisSpansTheEarliestStartToTheLatestEndRoundedOutToTheHour(): void
+    public function testTheTimeAxisIsSevenToSevenWhenEveryClassFitsInsideIt(): void
     {
         $one = $this->course('ART 100', 'Drawing');
         $two = $this->course('BIO 200', 'Biology');
@@ -176,18 +176,51 @@ final class ScheduleServiceTest extends DatabaseTestCase
 
         $grid = $this->service->forUser($this->student)['grid'];
 
-        // 8:00 to 15:00 = 7 hours = 14 rows.
-        $this->assertSame(14, $grid['total_rows']);
-        $this->assertSame(
-            [['row' => 1, 'label' => '8 AM'], ['row' => 3, 'label' => '9 AM'], ['row' => 5, 'label' => '10 AM'], ['row' => 7, 'label' => '11 AM'], ['row' => 9, 'label' => '12 PM'], ['row' => 11, 'label' => '1 PM'], ['row' => 13, 'label' => '2 PM']],
-            $grid['hour_marks']
-        );
+        // 7:00 to 19:00 = 12 hours = 24 rows, one label per hour.
+        $this->assertSame(24, $grid['total_rows']);
+        $this->assertCount(12, $grid['hour_marks']);
+        $this->assertSame(['row' => 1, 'label' => '7 AM'], $grid['hour_marks'][0]);
+        $this->assertSame(['row' => 23, 'label' => '6 PM'], $grid['hour_marks'][11]);
         $early = $grid['by_day']['mon'][0];
-        $this->assertSame(1, $early['row_start']);
+        $this->assertSame(3, $early['row_start'], '8:15 is an hour and a quarter after 7:00');
         $this->assertSame(3, $early['row_span'], '8:15 to 9:45 is 90 minutes');
         $late = $grid['by_day']['fri'][0];
-        $this->assertSame(11, $late['row_start'], '13:00 is five hours after 8:00');
+        $this->assertSame(13, $late['row_start'], '13:00 is six hours after 7:00');
         $this->assertSame(2, $late['row_span'], '80 minutes rounds down to two rows');
+    }
+
+    public function testTheTimeAxisWidensWhenAClassStartsEarlierOrEndsLaterThanTheDefault(): void
+    {
+        $one = $this->course('ART 100', 'Drawing');
+        $two = $this->course('BIO 200', 'Biology');
+        $this->block($one, 'mon', '06:00:00', '07:30:00');
+        $this->block($two, 'fri', '20:15:00', '21:00:00');
+
+        $grid = $this->service->forUser($this->student)['grid'];
+
+        // 6:00 to 21:00 = 15 hours = 30 rows.
+        $this->assertSame(30, $grid['total_rows']);
+        $this->assertSame(['row' => 1, 'label' => '6 AM'], $grid['hour_marks'][0]);
+        $this->assertSame(1, $grid['by_day']['mon'][0]['row_start']);
+        $this->assertSame(
+            29,
+            $grid['by_day']['fri'][0]['row_start'] + $grid['by_day']['fri'][0]['row_span'] - 1,
+            'the 20:15 class sits in row 29 of 30'
+        );
+    }
+
+    public function testThePageCountsSessionsAndWeeklyClassHours(): void
+    {
+        $one = $this->course('ART 100', 'Drawing');
+        $this->block($one, 'mon', '14:00:00', '15:30:00');
+        $this->block($one, 'wed', '14:00:00', '15:30:00');
+
+        $page = $this->service->forUser($this->student);
+
+        $this->assertSame(2, $page['sessionCount']);
+        $this->assertSame(3.0, $page['classHours']);
+        $this->assertSame(7, count($page['weekDates']));
+        $this->assertSame((int) date('j', strtotime('monday this week')), $page['weekDates']['mon']);
     }
 
     public function testAVeryShortClassStillTakesOneRow(): void

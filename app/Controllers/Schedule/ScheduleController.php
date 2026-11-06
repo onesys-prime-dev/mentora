@@ -22,6 +22,7 @@ class ScheduleController extends BaseController
             'title'        => 'Schedule',
             'page'         => 'schedule',
             'previousPage' => 'dashboard',
+            'fullHeight'   => true,
         ] + $this->scheduleService->forUser($user));
     }
 }
