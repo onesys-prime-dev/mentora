@@ -218,8 +218,10 @@
         @apply bg-white lg:sticky lg:top-0 lg:z-20 lg:-mt-6 lg:pt-6;
     }
 
+    /* The bottom margin cancels the page's whole 2.5rem bottom padding, so scrolled to the very end the
+       bar rests exactly where it sticks while scrolling, and does not jump up. */
     .sticky-bar-bottom {
-        @apply bg-white lg:sticky lg:bottom-0 lg:z-20 lg:-mb-6 lg:pb-6;
+        @apply bg-white lg:sticky lg:bottom-0 lg:z-20 lg:-mb-10 lg:pb-6;
     }
 
     .spa-enter {
