@@ -24,7 +24,7 @@ export function safeReturn(value, origin) {
         return null;
     }
 
-    return value;
+    return `${url.pathname}${url.search}${url.hash}`;
 }
 
 /** The accepted `return` of the current address, or null. */
@@ -36,5 +36,11 @@ export function currentReturn() {
 }
 
 export function leaveTo(url) {
-    window.location.assign(url);
+    const accepted = safeReturn(url, window.location.origin);
+
+    if (!accepted) {
+        return;
+    }
+
+    window.location.assign(accepted);
 }
