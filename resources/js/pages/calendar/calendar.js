@@ -99,13 +99,13 @@ function isReadOnly()
 }
 
 /**
- * A student cannot add anything to a day that has already passed (yesterday and
- * earlier): the day tile is not clickable and the day view offers no Add button.
- * Dates are YYYY-MM-DD, so comparing them as text compares them as days.
+ * Nobody, whatever their role, can add anything to a day that has already passed
+ * (yesterday and earlier): the day tile is not clickable and the day view offers no
+ * Add button. Dates are YYYY-MM-DD, so comparing them as text compares them as days.
  */
 function isPastDay(dateStr)
 {
-    return role === "student" && dateStr < root.dataset.today;
+    return dateStr < root.dataset.today;
 }
 
 /*

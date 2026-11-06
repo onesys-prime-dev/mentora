@@ -34,6 +34,11 @@ class ScheduleService
     /** Grid row unit, in minutes. Every seeded class lands on the hour or half-hour. */
     protected const ROW_MINUTES = 30;
 
+    /** The default visible day, 7 AM to 7 PM. Classes outside it widen the axis. */
+    protected const DEFAULT_START_MINUTES = 7 * 60;
+
+    protected const DEFAULT_END_MINUTES = 19 * 60;
+
     protected CourseService $courseService;
 
     protected CourseScheduleModel $courseScheduleModel;
@@ -73,9 +78,43 @@ class ScheduleService
             'days'      => self::DAYS,
             'dayLabels' => self::DAY_LABELS,
             'grid'      => $grid,
+            'weekDates' => $this->weekDates(),
+            'weekLabel' => $this->weekLabel(),
+            'sessionCount' => count($classes),
+            'classHours'   => $this->classHours($classes),
             'hasAnyCourses' => $courses !== [],
             'hasAnyClasses' => $classes !== [],
         ];
+    }
+
+    /** The current week's day-of-month per day key, Monday first: ['mon' => 2, 'tue' => 3, ...]. */
+    protected function weekDates(): array
+    {
+        $monday = strtotime('monday this week');
+        $dates = [];
+
+        foreach (self::DAYS as $i => $day) {
+            $dates[$day] = (int) date('j', strtotime("+{$i} days", $monday));
+        }
+
+        return $dates;
+    }
+
+    /** "Nov 2 – 8", or "Oct 27 – Nov 2" when the week crosses a month. */
+    protected function weekLabel(): string
+    {
+        $monday = strtotime('monday this week');
+        $sunday = strtotime('+6 days', $monday);
+
+        return date('M j', $monday) . ' – ' . (date('n', $monday) === date('n', $sunday) ? date('j', $sunday) : date('M j', $sunday));
+    }
+
+    /** Total weekly class time in hours, one decimal at most ("6", "4.5"). */
+    protected function classHours(array $classes): float
+    {
+        $minutes = array_sum(array_map(static fn (array $c) => $c['end_minutes'] - $c['start_minutes'], $classes));
+
+        return round($minutes / 60, 1);
     }
 
     /**
@@ -149,8 +188,9 @@ class ScheduleService
     }
 
     /**
-     * The grid itself: a shared time axis (earliest start to latest end,
-     * rounded out to the hour) in ROW_MINUTES-sized rows, the hour labels
+     * The grid itself: a shared time axis (7 AM to 7 PM, widened to the
+     * earliest start / latest end when a class falls outside, rounded out
+     * to the hour) in ROW_MINUTES-sized rows, the hour labels
      * to run down the side of it, and every class positioned on it with a
      * day column (1-7, Monday first) and a row_start/row_span pair.
      *
@@ -159,12 +199,13 @@ class ScheduleService
     protected function buildGrid(array $classes): array
     {
         if ($classes === []) {
-            return ['total_rows' => 0, 'hour_marks' => [], 'by_day' => array_fill_keys(self::DAYS, [])];
+            return ['total_rows' => 0, 'hour_marks' => [], 'by_day' => array_fill_keys(self::DAYS, []), 'start_minutes' => 0, 'end_minutes' => 0];
         }
 
-        $startMinutes = (int) floor(min(array_column($classes, 'start_minutes')) / 60) * 60;
+        // The axis always covers the default day, and grows past it when a class starts earlier or ends later.
+        $startMinutes = (int) floor(min(self::DEFAULT_START_MINUTES, ...array_column($classes, 'start_minutes')) / 60) * 60;
 
-        $endMinutes = (int) ceil(max(array_column($classes, 'end_minutes')) / 60) * 60;
+        $endMinutes = (int) ceil(max(self::DEFAULT_END_MINUTES, ...array_column($classes, 'end_minutes')) / 60) * 60;
 
         $totalRows = (int) (($endMinutes - $startMinutes) / self::ROW_MINUTES);
 
@@ -193,7 +234,13 @@ class ScheduleService
 
         }
 
-        return ['total_rows' => $totalRows, 'hour_marks' => $hourMarks, 'by_day' => $byDay];
+        return [
+            'total_rows'    => $totalRows,
+            'hour_marks'    => $hourMarks,
+            'by_day'        => $byDay,
+            'start_minutes' => $startMinutes,
+            'end_minutes'   => $endMinutes,
+        ];
     }
 
     /** "09:30:00" -> 570 (minutes since midnight). */
