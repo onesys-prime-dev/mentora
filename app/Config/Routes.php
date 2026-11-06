@@ -192,7 +192,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->get('(:num)/content-transfer/offerings', 'Courses\ContentTransferController::offerings/$1');
         $routes->get('(:num)/content-transfer/offerings/(:num)/modules', 'Courses\ContentTransferController::modules/$1/$2');
         $routes->get('(:num)/content-transfer/modules/(:num)/units', 'Courses\ContentTransferController::units/$1/$2');
-        $routes->get('(:num)/content-transfer/(module|unit)/(:num)/tree', 'Courses\ContentTransferController::tree/$1/$2/$3');
+        $routes->get('(:num)/content-transfer/(:segment)/(:num)/tree', 'Courses\ContentTransferController::tree/$1/$2/$3');
         $routes->post('(:num)/content-transfer/copy', 'Courses\ContentTransferController::copy/$1');
         $routes->post('(:num)/content-transfer/move', 'Courses\ContentTransferController::move/$1');
 
@@ -612,7 +612,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->get('(:num)/content-transfer/offerings', 'Courses\ContentTransferController::offerings/$1');
         $routes->get('(:num)/content-transfer/offerings/(:num)/modules', 'Courses\ContentTransferController::modules/$1/$2');
         $routes->get('(:num)/content-transfer/modules/(:num)/units', 'Courses\ContentTransferController::units/$1/$2');
-        $routes->get('(:num)/content-transfer/(module|unit)/(:num)/tree', 'Courses\ContentTransferController::tree/$1/$2/$3');
+        $routes->get('(:num)/content-transfer/(:segment)/(:num)/tree', 'Courses\ContentTransferController::tree/$1/$2/$3');
         $routes->post('(:num)/content-transfer/copy', 'Courses\ContentTransferController::copy/$1');
         $routes->post('(:num)/content-transfer/move', 'Courses\ContentTransferController::move/$1');
 

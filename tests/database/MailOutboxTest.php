@@ -350,7 +350,8 @@ final class MailOutboxTest extends DatabaseTestCase
         $this->assertSame(['dean', $dept['name']], [$rows[0]['kind'], $rows[0]['detail']]);
         $this->assertSame(['chairperson', $sub['name']], [$rows[1]['kind'], $rows[1]['detail']]);
 
-        $this->outbox->sendDue($this->later(), 10);
+        // The assignment services note it by the real clock, so the wait is over by the real clock too (not the fixed one).
+        $this->outbox->sendDue((new DateTimeImmutable())->modify('+' . MailOutbox::MERGE_SECONDS . ' seconds'), 10);
         $this->assertStringContainsString("You are now the dean of {$dept['name']}.", $this->mail->sent[0]['message']);
     }
 

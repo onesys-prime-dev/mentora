@@ -50,7 +50,7 @@ class ContentTransferController extends BaseController
     /** What a module or a learning unit holds, to choose from when copying. */
     public function tree(int $offeringId, string $kind, int $id)
     {
-        $tree = $this->transfer->treeOf(auth()->user(), $offeringId, $kind, $id);
+        $tree = in_array($kind, ['module', 'unit'], true) ? $this->transfer->treeOf(auth()->user(), $offeringId, $kind, $id) : null;
 
         if ($tree === null) {
             throw PageNotFoundException::forPageNotFound();

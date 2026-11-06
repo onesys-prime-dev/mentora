@@ -141,4 +141,12 @@ final class ContentTransferRouteTest extends RouteTestCase
         $this->expectException(PageNotFoundException::class);
         $this->get($this->base() . "/offerings/{$foreign}/modules");
     }
+
+    public function testATreeOfAnythingButAModuleOrAUnitIsNotFound(): void
+    {
+        $this->loggedInAs($this->instructor);
+
+        $this->expectException(PageNotFoundException::class);
+        $this->get($this->base() . "/item/{$this->item}/tree");
+    }
 }
