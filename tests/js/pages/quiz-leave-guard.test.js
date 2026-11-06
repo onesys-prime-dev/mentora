@@ -42,9 +42,16 @@ const click = (selector) => {
     return event;
 };
 
+/** What the browser's Back button does: the address changes to another page, then popstate fires. */
+const goBack = () => {
+    window.history.replaceState(null, "", "/previous-page");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+};
+
 afterEach(() => {
     guard?.stop();
     document.body.innerHTML = "";
+    window.history.replaceState(null, "", "/");
 });
 
 describe("what the student is told", () => {
@@ -181,7 +188,7 @@ describe("the browser's Back button", () => {
     it("is held on the quiz and asked about", async () => {
         bind({ answer: false });
 
-        window.dispatchEvent(new PopStateEvent("popstate"));
+        goBack();
         await tick();
 
         expect(history_.pushState).toHaveBeenCalledWith(null, "", "/student/courses/1/assessments/9/take");
@@ -192,7 +199,7 @@ describe("the browser's Back button", () => {
     it("goes back for real on yes", async () => {
         bind();
 
-        window.dispatchEvent(new PopStateEvent("popstate"));
+        goBack();
         await tick();
 
         expect(history_.back).toHaveBeenCalledTimes(1);
@@ -203,7 +210,7 @@ describe("the browser's Back button", () => {
         const pageHandler = vi.fn();
         window.addEventListener("popstate", pageHandler);
 
-        window.dispatchEvent(new PopStateEvent("popstate"));
+        goBack();
         window.removeEventListener("popstate", pageHandler);
 
         expect(pageHandler).not.toHaveBeenCalled();
@@ -213,8 +220,19 @@ describe("the browser's Back button", () => {
         bind();
         guard.stop();
 
-        window.dispatchEvent(new PopStateEvent("popstate"));
+        goBack();
 
+        expect(history_.pushState).not.toHaveBeenCalled();
+    });
+
+    it("is not asked about when only the part after # changed (an anchor link within the quiz)", async () => {
+        bind();
+
+        window.history.replaceState(null, "", "/#top");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+        await tick();
+
+        expect(ask).not.toHaveBeenCalled();
         expect(history_.pushState).not.toHaveBeenCalled();
     });
 });

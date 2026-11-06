@@ -86,7 +86,12 @@ test("TC-QSEC-02 A password is created in a modal, shown as ******, kept after s
     await modal.getByRole("button", { name: "Cancel" }).click();
 
     // Randomize the questions and detect leaving the page, then publish.
-    await panel.locator("[data-additional-security] summary").click();
+    // Open it unless it already is (a click on its summary would close it, and a hidden switch cannot be changed).
+    const security = panel.locator("[data-additional-security]");
+    if (!(await security.evaluate((el) => el.open))) {
+        await security.locator("summary").click();
+    }
+    await expect(security).toHaveAttribute("open", "");
     await panel.locator('[data-inspector-field="randomize_questions"]').check({ force: true });
     await panel.locator('[data-inspector-field="detect_tab_switch"]').check({ force: true });
     await page.locator("[data-publish]").click();

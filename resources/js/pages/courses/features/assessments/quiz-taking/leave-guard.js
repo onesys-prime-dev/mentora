@@ -50,6 +50,11 @@ export function bindLeaveGuard({
 
     const listeners = [];
 
+    // Where the quiz is, without the part after #: moving within the page (an anchor link) fires popstate in
+    // browsers, and is not leaving it.
+    const here = () => window.location.pathname + window.location.search;
+    const quizPath = here();
+
     function on(target, type, handler, options) {
 
         target.addEventListener(type, handler, options);
@@ -151,7 +156,7 @@ export function bindLeaveGuard({
     // The browser's Back button: the page has already moved, so put the quiz's address back and ask.
     on(window, "popstate", (event) => {
 
-        if (!live()) {
+        if (!live() || here() === quizPath) {
             return;
         }
 

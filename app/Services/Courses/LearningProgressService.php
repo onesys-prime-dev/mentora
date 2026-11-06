@@ -916,7 +916,7 @@ class LearningProgressService
             $percent = null;
 
             if ($counted !== null) {
-                $percent = isset($counted['percentage']) && $counted['percentage'] !== null
+                $percent = isset($counted['percentage'])
                     ? (float) $counted['percentage']
                     : ($total > 0 ? (float) $counted['score'] / $total * 100 : null);
             }

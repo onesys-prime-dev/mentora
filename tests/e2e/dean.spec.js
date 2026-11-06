@@ -340,6 +340,12 @@ test("TC-DEAN-05 The dean signs off a section's final grades, and only the dean 
     await openTab(instructor, "Grades");
     await expect(instructor.locator("[data-signed-off-tag]")).toHaveCount(0);
     await expect(instructor.locator("[data-open-reopen]")).toBeVisible();
+
+    // Leave the data as found, for the cases that come after (IT101-B finalized would fail them): reopen it.
+    await instructor.locator("[data-open-reopen]").click();
+    await instructor.locator("[data-finalize-reason]").fill("End-to-end test: putting the section back as it was.");
+    await instructor.locator("[data-finalize-confirm]").click();
+    await expect(instructor.locator("[data-open-finalize]")).toBeVisible();
 });
 
 test("TC-DEAN-06 A dean sends a follow-up and the instructor answers it and closes it", async ({ browser }, testInfo) => {

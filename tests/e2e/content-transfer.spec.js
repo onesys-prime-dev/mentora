@@ -103,7 +103,9 @@ test("TC-MOD-17 The copy is moved back, after a final confirmation, and a module
 });
 
 test("TC-MOD-18 Clean up the copies these cases made", async ({ page }) => {
-    // Only the drafts: the original is published.
+    // Only the drafts: the original is published. A copy's quiz and assignment go first (a module's removal alone would
+    // leave them behind, with no module, in the course's gradebook).
+    runSql(`DELETE a FROM assessments a JOIN course_modules m ON m.id = a.module_id WHERE m.title = '${MODULE}' AND m.status = 'draft'`);
     runSql(`DELETE m FROM course_modules m WHERE m.title = '${MODULE}' AND m.status = 'draft'`);
 
     await openModules(page, "A");
