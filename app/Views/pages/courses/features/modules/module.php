@@ -49,6 +49,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                     <?php elseif ($canEditContent): ?>
                         <?= view('pages/courses/features/modules/partials/publish-chip', ['status' => 'published'], ['saveData' => false]) ?>
                     <?php endif; ?>
+                    <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $module['locked_by'] ?? [], 'labels' => $module['dependency_labels'] ?? []], ['saveData' => false]) ?>
                 </div>
                 <span class="text-sm font-normal text-[#A3A3A3]">
                     <?php if ($module['display_number'] !== null): ?>Module <?= esc($module['display_number']) ?><?php endif; ?>
@@ -177,6 +178,8 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                     'hiddenBy' => $moduleIsDraft ? 'module' : null,
                                 ], ['saveData' => false]) ?>
                             <?php endif; ?>
+
+                            <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $learning_unit['locked_by'] ?? [], 'labels' => $learning_unit['dependency_labels'] ?? []], ['saveData' => false]) ?>
                         </div>
 
                         <div class="flex items-center gap-2 shrink-0">
@@ -387,5 +390,19 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
 <?php if ($isInstructor): ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-dependencies') ?>
+<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+    'id' => 'learning-unit-dependencies-modal',
+    'closeAttr' => 'data-close-learning-unit-dependencies-modal',
+    'noun' => 'learning unit',
+    'earlier' => 'earlier learning units in this module',
+    'previousLabel' => 'Previous learning unit',
+], ['saveData' => false]) ?>
+<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+    'id' => 'module-dependencies-modal',
+    'closeAttr' => 'data-close-module-dependencies-modal',
+    'noun' => 'module',
+    'earlier' => 'earlier modules in this course',
+    'previousLabel' => 'Previous module',
+], ['saveData' => false]) ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-delete') ?>
 <?php endif; ?>

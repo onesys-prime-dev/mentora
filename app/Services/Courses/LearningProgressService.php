@@ -25,6 +25,9 @@ use CodeIgniter\Shield\Entities\User;
  */
 class LearningProgressService
 {
+    // Dependencies of modules and learning units (this class holds the item ones).
+    use ContainerDependencyLogic;
+
     public const VIDEO_COMPLETE_PERCENT = 90;
 
     /*
@@ -56,14 +59,62 @@ class LearningProgressService
 
         $customPrerequisites = $this->customPrerequisiteMap($itemIds);
 
+        $allItems = [];
+
+        foreach ($module['learning_units'] as $unitForScores) {
+            array_push($allItems, ...$unitForScores['learning_items']);
+        }
+
+        $scores = $isInstructor ? [] : $this->scoresFor((int) $user->id, $allItems);
+
+        // A module or unit that waits on others: locked for a student (its items with it), labelled for an instructor.
+        $containerLocks = ['modules' => [], 'units' => []];
+
+        if (! $isInstructor) {
+
+            $offeringId = (int) ($module['offering_id'] ?? db_connect()->table('course_modules')->select('offering_id')->where('id', (int) $module['id'])->get()->getRowArray()['offering_id'] ?? 0);
+
+            $containerLocks = $this->containerLocks((int) $user->id, $offeringId);
+
+            $module['is_locked'] = isset($containerLocks['modules'][(int) $module['id']]);
+            $module['locked_by'] = $containerLocks['modules'][(int) $module['id']] ?? [];
+
+        } else {
+
+            $unitLabels = $this->containerLabels('unit', $module['learning_units']);
+
+            $offeringId = (int) ($module['offering_id'] ?? db_connect()->table('course_modules')->select('offering_id')->where('id', (int) $module['id'])->get()->getRowArray()['offering_id'] ?? 0);
+
+            $siblings = db_connect()->table('course_modules')->select(['id', 'title'])->where('offering_id', $offeringId)
+                ->orderBy('order_index', 'ASC')->orderBy('id', 'ASC')->get()->getResultArray();
+
+            $module['dependency_labels'] = $this->containerLabels('module', $siblings)[(int) $module['id']] ?? [];
+
+        }
+
         $total = 0;
         $completed = 0;
 
         foreach ($module['learning_units'] as &$unit) {
 
+            $unitId = (int) $unit['id'];
+
+            $unit['is_locked'] = false;
+            $unit['locked_by'] = [];
+            $unit['dependency_labels'] = $isInstructor ? ($unitLabels[$unitId] ?? []) : [];
+
+            // What holds the whole unit (or its module) back also holds each of its items.
+            $holdingBack = $containerLocks['modules'][(int) $module['id']] ?? $containerLocks['units'][$unitId] ?? [];
+
+            if (! $isInstructor) {
+                $unit['is_locked'] = isset($containerLocks['units'][$unitId]) || $module['is_locked'];
+                // The chip names what the unit itself waits on; its module's lock is shown on the module.
+                $unit['locked_by'] = $containerLocks['units'][$unitId] ?? [];
+            }
+
             $evaluation = $isInstructor
                 ? []
-                : $this->evaluateItems($unit['learning_items'], $completions, $customPrerequisites);
+                : $this->evaluateItems($unit['learning_items'], $completions, $customPrerequisites, $scores);
 
             foreach ($unit['learning_items'] as $index => &$item) {
 
@@ -83,6 +134,11 @@ class LearningProgressService
                 }
 
                 $state = $evaluation[$id];
+
+                if ($holdingBack !== []) {
+                    $state['is_locked'] = true;
+                    $state['locked_by'] = $holdingBack;
+                }
 
                 [$canComplete, $hint] = $state['is_locked']
                     ? [false, 'Complete the required items first.']
@@ -134,7 +190,16 @@ class LearningProgressService
 
         $item = db_connect()->table('learning_items')->where('id', $learningItemId)->get()->getRowArray();
 
-        if (! $item || ($item['prerequisite_mode'] ?? 'none') === 'none') {
+        if (! $item) {
+            return null;
+        }
+
+        // Its module or unit waits on something.
+        if ($held = $this->containerLockOfItem((int) $user->id, (int) $item['learning_unit_id'])) {
+            return ['message' => $this->lockMessage($held), 'prerequisites' => $held];
+        }
+
+        if (($item['prerequisite_mode'] ?? 'none') === 'none') {
             return null;
         }
 
@@ -168,6 +233,32 @@ class LearningProgressService
 
         $db = db_connect();
 
+        // Items whose module or unit waits on something.
+        $placed = $db->table('learning_items')
+            ->select(['learning_items.id', 'learning_items.learning_unit_id', 'learning_units.module_id', 'course_modules.offering_id'])
+            ->join('learning_units', 'learning_units.id = learning_items.learning_unit_id')
+            ->join('course_modules', 'course_modules.id = learning_units.module_id')
+            ->whereIn('learning_items.id', array_keys($locks))
+            ->get()->getResultArray();
+
+        $containerLocks = [];
+
+        foreach (array_unique(array_map(static fn (array $r) => (int) $r['offering_id'], $placed)) as $offeringId) {
+            $containerLocks[$offeringId] = $this->containerLocks((int) $user->id, $offeringId);
+        }
+
+        foreach ($placed as $row) {
+
+            $held = $containerLocks[(int) $row['offering_id']]['modules'][(int) $row['module_id']]
+                ?? $containerLocks[(int) $row['offering_id']]['units'][(int) $row['learning_unit_id']]
+                ?? null;
+
+            if ($held) {
+                $locks[(int) $row['id']] = ['message' => $this->lockMessage($held), 'prerequisites' => $held];
+            }
+
+        }
+
         $gated = $db->table('learning_items')
             ->select(['id', 'learning_unit_id'])
             ->whereIn('id', array_keys($locks))
@@ -182,7 +273,7 @@ class LearningProgressService
         $unitIds = array_values(array_unique(array_map(static fn (array $r) => (int) $r['learning_unit_id'], $gated)));
 
         $rows = $db->table('learning_items')
-            ->select(['id', 'learning_unit_id', 'title', 'item_type', 'prerequisite_mode'])
+            ->select(['id', 'learning_unit_id', 'title', 'item_type', 'prerequisite_mode', 'dependency_min_score_mode', 'dependency_min_score_percent'])
             ->whereIn('learning_unit_id', $unitIds)
             ->where('status', 'published')
             ->orderBy('order_index', 'ASC')
@@ -200,11 +291,12 @@ class LearningProgressService
 
         $completions = $this->completionMap((int) $user->id, $allIds);
         $custom = $this->customPrerequisiteMap($allIds);
+        $scores = $this->scoresFor((int) $user->id, $rows);
 
         $states = [];
 
         foreach ($byUnit as $items) {
-            $states += $this->evaluateItems($items, $completions, $custom);
+            $states += $this->evaluateItems($items, $completions, $custom, $scores);
         }
 
         foreach ($gated as $row) {
@@ -213,7 +305,7 @@ class LearningProgressService
 
             $state = $states[$id] ?? null;
 
-            if ($state && $state['is_locked']) {
+            if ($state && $state['is_locked'] && $locks[$id] === null) {
                 $locks[$id] = [
                     'message' => $this->lockMessage($state['locked_by']),
                     'prerequisites' => $state['locked_by'],
@@ -227,7 +319,12 @@ class LearningProgressService
 
     public function lockMessage(array $lockedBy): string
     {
-        $titles = array_map(static fn (array $p) => '“' . $p['title'] . '”', $lockedBy);
+        // A quiz or assignment that has to be passed says with what: “Quiz 1” (at least 70%).
+        $titles = array_map(
+            static fn (array $p) => '“' . $p['title'] . '”'
+                . (isset($p['min_percent']) ? ' (at least ' . rtrim(rtrim(number_format((float) $p['min_percent'], 2, '.', ''), '0'), '.') . '%)' : ''),
+            $lockedBy
+        );
 
         $list = count($titles) > 1
             ? implode(', ', array_slice($titles, 0, -1)) . ' and ' . end($titles)
@@ -496,7 +593,12 @@ class LearningProgressService
             'item' => ['id' => (int) $item['id'], 'title' => $item['title']],
             'mode' => $item['prerequisite_mode'] ?? 'none',
             'prerequisiteIds' => $selected,
-            'previous' => $previous ? ['id' => (int) $previous['id'], 'title' => $previous['title']] : null,
+            // A quiz or assignment it waits on can also be held to a score.
+            'minScore' => [
+                'mode' => $item['dependency_min_score_mode'] ?? 'none',
+                'percent' => ($item['dependency_min_score_percent'] ?? null) !== null ? (float) $item['dependency_min_score_percent'] : null,
+            ],
+            'previous' => $previous ? ['id' => (int) $previous['id'], 'title' => $previous['title'], 'item_type' => $previous['item_type']] : null,
             'candidates' => array_map(static fn (array $c) => [
                 'id' => (int) $c['id'],
                 'title' => $c['title'],
@@ -506,7 +608,12 @@ class LearningProgressService
         ];
     }
 
-    public function saveDependencies(int $offeringId, int $learningItemId, string $mode, array $prerequisiteIds): array
+    /**
+     * @param list<int|string> $prerequisiteIds
+     * @param array{mode?: string, percent?: float|int|string|null}|null $minScore the score to require on a quiz or an
+     *        assignment it waits on (none | passing | custom with a percentage); null leaves what is saved alone
+     */
+    public function saveDependencies(int $offeringId, int $learningItemId, string $mode, array $prerequisiteIds, ?array $minScore = null): array
     {
         $item = $this->itemInOffering($offeringId, $learningItemId);
 
@@ -516,6 +623,29 @@ class LearningProgressService
 
         if (! in_array($mode, ['none', 'previous', 'custom'], true)) {
             return ['success' => false, 'message' => 'Choose how this item should be locked.'];
+        }
+
+        $scoreFields = [];
+
+        if ($minScore !== null) {
+
+            $scoreMode = $minScore['mode'] ?? 'none';
+
+            if (! in_array($scoreMode, ['none', 'passing', 'custom'], true)) {
+                return ['success' => false, 'message' => 'Choose which score to require.'];
+            }
+
+            $percent = $minScore['percent'] ?? null;
+
+            if ($scoreMode === 'custom' && (! is_numeric($percent) || (float) $percent < 1 || (float) $percent > 100)) {
+                return ['success' => false, 'message' => 'The minimum score must be a percentage from 1 to 100.'];
+            }
+
+            $scoreFields = [
+                'dependency_min_score_mode' => $scoreMode,
+                'dependency_min_score_percent' => $scoreMode === 'custom' ? round((float) $percent, 2) : null,
+            ];
+
         }
 
         $candidateIds = array_map(static fn (array $c) => (int) $c['id'], $this->earlierItems($item));
@@ -537,7 +667,12 @@ class LearningProgressService
 
         $db->transStart();
 
-        $db->table('learning_items')->where('id', $learningItemId)->update(['prerequisite_mode' => $mode]);
+        // With no dependencies there is nothing to score.
+        if ($mode === 'none' && $minScore !== null) {
+            $scoreFields = ['dependency_min_score_mode' => 'none', 'dependency_min_score_percent' => null];
+        }
+
+        $db->table('learning_items')->where('id', $learningItemId)->update(['prerequisite_mode' => $mode] + $scoreFields);
 
         $db->table('learning_item_prerequisites')->where('learning_item_id', $learningItemId)->delete();
 
@@ -632,7 +767,7 @@ class LearningProgressService
      * @param list<array> $items published items of one unit, ordered
      * @return array<int, array{is_completed: bool, progress_percent: int, is_locked: bool, locked_by: list<array{id: int, title: string}>}>
      */
-    private function evaluateItems(array $items, array $completions, array $customPrerequisites): array
+    private function evaluateItems(array $items, array $completions, array $customPrerequisites, array $scores = []): array
     {
         $items = array_values($items);
 
@@ -660,7 +795,17 @@ class LearningProgressService
 
             $missing = array_values(array_filter(
                 $effective,
-                static fn (array $prerequisite) => ($completions[(int) $prerequisite['id']]['status'] ?? null) !== 'completed'
+                function (array $prerequisite) use ($item, $scores, $completions) {
+
+                    if (($completions[(int) $prerequisite['id']]['status'] ?? null) !== 'completed') {
+                        return true;
+                    }
+
+                    $needed = $this->requiredScore($item, $prerequisite, $scores);
+
+                    return $needed !== null && ! $this->scoreReached($needed, $scores[(int) $prerequisite['id']] ?? null);
+
+                }
             ));
 
             $result[$id] = [
@@ -668,7 +813,20 @@ class LearningProgressService
                 'progress_percent' => (int) ($completions[$id]['progress_percent'] ?? 0),
                 'is_locked' => $missing !== [],
                 'locked_by' => array_map(
-                    static fn (array $p) => ['id' => (int) $p['id'], 'title' => $p['title']],
+                    function (array $p) use ($item, $scores, $completions) {
+
+                        $entry = ['id' => (int) $p['id'], 'title' => $p['title']];
+
+                        // Done, but short of the score: say what it takes.
+                        $needed = $this->requiredScore($item, $p, $scores);
+
+                        if ($needed !== null && ($completions[(int) $p['id']]['status'] ?? null) === 'completed') {
+                            $entry['min_percent'] = $needed;
+                        }
+
+                        return $entry;
+
+                    },
                     $missing
                 ),
             ];
@@ -678,10 +836,110 @@ class LearningProgressService
         return $result;
     }
 
+    /**
+     * The score a waiting item needs on this prerequisite (a percentage), or null when it asks for none: it asks only
+     * of a quiz or an assignment, and only when a score is required and (for the assessment's own passing score) it has one.
+     *
+     * @param array<int, array{percent: ?float, passing: ?float}> $scores
+     */
+    private function requiredScore(array $item, array $prerequisite, array $scores): ?float
+    {
+        $mode = $item['dependency_min_score_mode'] ?? 'none';
+
+        if ($mode === 'none' || ! in_array($prerequisite['item_type'] ?? null, ['quiz', 'assignment'], true)) {
+            return null;
+        }
+
+        return $mode === 'custom'
+            ? (($item['dependency_min_score_percent'] ?? null) !== null ? (float) $item['dependency_min_score_percent'] : null)
+            : ($scores[(int) $prerequisite['id']]['passing'] ?? null);
+    }
+
+    /** @param array{percent: ?float, passing: ?float}|null $score */
+    private function scoreReached(float $needed, ?array $score): bool
+    {
+        // Not graded yet counts as not reached: the grade that counts is not known.
+        return $score !== null && $score['percent'] !== null && round($score['percent'], 2) >= round($needed, 2);
+    }
+
+    /**
+     * The student's counted grade and the passing score of every quiz and assignment among these items, but only when
+     * some item asks for a score at all (so nothing is read otherwise).
+     *
+     * @param list<array> $items rows with id, item_type and dependency_min_score_mode
+     *
+     * @return array<int, array{percent: ?float, passing: ?float}> item id => score
+     */
+    private function scoresFor(int $userId, array $items): array
+    {
+        if (array_filter($items, static fn (array $i) => ($i['dependency_min_score_mode'] ?? 'none') !== 'none') === []) {
+            return [];
+        }
+
+        $assessed = array_values(array_filter($items, static fn (array $i) => in_array($i['item_type'] ?? null, ['quiz', 'assignment'], true)));
+
+        if ($assessed === []) {
+            return [];
+        }
+
+        $db = db_connect();
+
+        $type = array_column($assessed, 'item_type', 'id');
+
+        $assessments = $db->table('assessments')
+            ->select(['id', 'learning_item_id', 'total_points', 'passing_percentage', 'passing_score'])
+            ->whereIn('learning_item_id', array_map('intval', array_column($assessed, 'id')))
+            ->get()->getResultArray();
+
+        if ($assessments === []) {
+            return [];
+        }
+
+        $attempts = [];
+
+        foreach ($db->table('assessment_submissions')
+            ->where('student_id', $userId)
+            ->whereIn('assessment_id', array_column($assessments, 'id'))
+            ->get()->getResultArray() as $row) {
+            $attempts[(int) $row['assessment_id']][] = $row;
+        }
+
+        $results = new \App\Services\Courses\Assessments\AssessmentResultService();
+        $scores  = [];
+
+        foreach ($assessments as $assessment) {
+
+            $itemId  = (int) $assessment['learning_item_id'];
+            $counted = $results->resultFor(($type[$itemId] ?? '') === 'quiz', $attempts[(int) $assessment['id']] ?? [])['counted'];
+            $total   = (float) ($assessment['total_points'] ?? 0);
+
+            $percent = null;
+
+            if ($counted !== null) {
+                $percent = isset($counted['percentage']) && $counted['percentage'] !== null
+                    ? (float) $counted['percentage']
+                    : ($total > 0 ? (float) $counted['score'] / $total * 100 : null);
+            }
+
+            $passing = null;
+
+            if ($assessment['passing_percentage'] !== null) {
+                $passing = (float) $assessment['passing_percentage'];
+            } elseif ($assessment['passing_score'] !== null && $total > 0) {
+                $passing = (float) $assessment['passing_score'] / $total * 100;
+            }
+
+            $scores[$itemId] = ['percent' => $percent, 'passing' => $passing];
+
+        }
+
+        return $scores;
+    }
+
     private function evaluateUnitFor(int $userId, int $learningUnitId): array
     {
         $items = db_connect()->table('learning_items')
-            ->select(['id', 'title', 'item_type', 'prerequisite_mode'])
+            ->select(['id', 'title', 'item_type', 'prerequisite_mode', 'dependency_min_score_mode', 'dependency_min_score_percent'])
             ->where('learning_unit_id', $learningUnitId)
             ->where('status', 'published')
             ->orderBy('order_index', 'ASC')
@@ -691,7 +949,7 @@ class LearningProgressService
 
         $ids = array_map(static fn (array $i) => (int) $i['id'], $items);
 
-        return $this->evaluateItems($items, $this->completionMap($userId, $ids), $this->customPrerequisiteMap($ids));
+        return $this->evaluateItems($items, $this->completionMap($userId, $ids), $this->customPrerequisiteMap($ids), $this->scoresFor($userId, $items));
     }
 
     /**
@@ -704,10 +962,25 @@ class LearningProgressService
     {
         $item = $unitItems[$index];
 
+        // A quiz or assignment it waits on says the score it must reach: "Quiz 1 (70%+)" or "Quiz 1 (passing score)".
+        $name = static function (array $prerequisite) use ($item): string {
+
+            $mode = $item['dependency_min_score_mode'] ?? 'none';
+
+            if ($mode === 'none' || ! in_array($prerequisite['item_type'] ?? null, ['quiz', 'assignment'], true)) {
+                return $prerequisite['title'];
+            }
+
+            return $prerequisite['title'] . ($mode === 'passing'
+                ? ' (passing score)'
+                : ' (' . rtrim(rtrim(number_format((float) $item['dependency_min_score_percent'], 2, '.', ''), '0'), '.') . '%+)');
+
+        };
+
         return match ($item['prerequisite_mode'] ?? 'none') {
-            'previous' => $index > 0 ? [$unitItems[$index - 1]['title']] : [],
+            'previous' => $index > 0 ? [$name($unitItems[$index - 1])] : [],
             'custom' => array_values(array_map(
-                static fn (array $c) => $c['title'],
+                $name,
                 array_filter($unitItems, static fn (array $c) => in_array((int) $c['id'], $customIds, true))
             )),
             default => [],

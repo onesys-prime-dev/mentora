@@ -35,6 +35,7 @@ import { bindModuleModals } from "./modals/modules.js";
 import { bindLearningUnitModals } from "./modals/learning-units.js";
 import { bindLearningItemCreateModal } from "./modals/learning-items.js";
 import { bindLearningItemDependenciesModal } from "./modals/learning-item-dependencies.js";
+import { bindContainerDependenciesModal } from "./modals/container-dependencies.js";
 
 import { bindLearningUnitEvents } from "./learning-unit-events.js";
 import { initializeLearningUnitSorting } from "./learning-unit-sort.js";
@@ -187,6 +188,24 @@ function bindModuleBindings(moduleId, refresh, backToList) {
         modal: bindModal({
             modal: "#learning-item-dependencies-modal",
             closeButtons: "[data-close-learning-item-dependencies-modal]",
+        }),
+        refresh,
+    });
+
+    bindContainerDependenciesModal({
+        kind: "unit",
+        modal: bindModal({
+            modal: "#learning-unit-dependencies-modal",
+            closeButtons: "[data-close-learning-unit-dependencies-modal]",
+        }),
+        refresh,
+    });
+
+    bindContainerDependenciesModal({
+        kind: "module",
+        modal: bindModal({
+            modal: "#module-dependencies-modal",
+            closeButtons: "[data-close-module-dependencies-modal]",
         }),
         refresh,
     });

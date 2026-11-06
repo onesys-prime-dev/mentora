@@ -38,6 +38,7 @@ import { bindModuleActionMenus } from "./module-actions.js";
 import { bindModal } from "./modals/index.js";
 
 import { bindModuleModals } from "./modals/modules.js";
+import { bindContainerDependenciesModal } from "./modals/container-dependencies.js";
 
 import {
     initializeModuleSorting,
@@ -235,6 +236,15 @@ function initializeFeatureBindings() {
     bindModuleModals({
         editor: moduleEditorModal,
         delete: moduleDeleteModal,
+        refresh: initialize,
+    });
+
+    bindContainerDependenciesModal({
+        kind: "module",
+        modal: bindModal({
+            modal: "#module-dependencies-modal",
+            closeButtons: "[data-close-module-dependencies-modal]",
+        }),
         refresh: initialize,
     });
 

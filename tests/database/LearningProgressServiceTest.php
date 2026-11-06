@@ -488,7 +488,7 @@ final class LearningProgressServiceTest extends DatabaseTestCase
         $options = $this->service->dependencyOptions($this->offeringId, $c);
 
         $this->assertSame([$a, $b], array_column($options['candidates'], 'id'));
-        $this->assertSame(['id' => $b, 'title' => 'B'], $options['previous']);
+        $this->assertSame(['id' => $b, 'title' => 'B', 'item_type' => 'reading'], $options['previous']);
         $this->assertSame([$a], $options['prerequisiteIds']);
         $this->assertSame('none', $options['mode']);
     }

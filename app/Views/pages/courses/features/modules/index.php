@@ -128,6 +128,7 @@ $formatDuration = static function (int $minutes): string {
                                                 <?= !empty($module['scheduled_publish_at']) ? 'Scheduled · ' . esc(date('M j, g:i A', strtotime($module['scheduled_publish_at']))) : 'Draft' ?>
                                             </span>
                                         <?php endif; ?>
+                                        <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $module['locked_by'] ?? [], 'labels' => $module['dependency_labels'] ?? []], ['saveData' => false]) ?>
                                     </div>
 
                                     <span class="text-sm font-normal text-[#A3A3A3]">
@@ -265,3 +266,10 @@ $formatDuration = static function (int $minutes): string {
 <!-- modals -->
 <?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
 <?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
+<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+    'id' => 'module-dependencies-modal',
+    'closeAttr' => 'data-close-module-dependencies-modal',
+    'noun' => 'module',
+    'earlier' => 'earlier modules in this course',
+    'previousLabel' => 'Previous module',
+], ['saveData' => false]) ?>

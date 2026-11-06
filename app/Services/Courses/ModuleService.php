@@ -148,9 +148,16 @@ class ModuleService
             $classProgressByModule[(int) $row['module_id']] = $row;
         }
 
+        // A module that waits on others: locked for a student, labelled for an instructor.
+        $moduleLocks = $isInstructor ? [] : $this->progressService->containerLocks((int) $user->id, $offeringId)['modules'];
+        $moduleLabels = $isInstructor ? $this->progressService->containerLabels('module', $modules) : [];
+
         $displayNumber = 0;
 
         foreach ($modules as &$module) {
+
+            $module['locked_by'] = $moduleLocks[(int) $module['id']] ?? [];
+            $module['dependency_labels'] = $moduleLabels[(int) $module['id']] ?? [];
 
             $module['display_number'] = $module['status'] === 'published'
                 ? ++$displayNumber
@@ -1066,6 +1073,9 @@ class ModuleService
 
         }
 
+        // A dependency on a module that now comes later is dropped.
+        $this->progressService->pruneContainerDependencies('module', $offeringId);
+
         return [
 
             'success' => true,
@@ -1302,6 +1312,8 @@ class ModuleService
         |--------------------------------------------------------------------------
         */
 
+        $reorderedIn = [];
+
         foreach ($learningUnits as $learningUnit) {
 
             if (
@@ -1323,7 +1335,7 @@ class ModuleService
 
                 $this->learningUnitModel
 
-                    ->select('learning_units.id')
+                    ->select('learning_units.id, learning_units.module_id')
 
                     ->join(
                         'course_modules',
@@ -1367,6 +1379,13 @@ class ModuleService
 
             );
 
+            $reorderedIn[(int) $existing['module_id']] = true;
+
+        }
+
+        // A dependency on a unit that now comes later is dropped.
+        foreach (array_keys($reorderedIn) as $reorderedModule) {
+            $this->progressService->pruneContainerDependencies('unit', $reorderedModule);
         }
 
         return [

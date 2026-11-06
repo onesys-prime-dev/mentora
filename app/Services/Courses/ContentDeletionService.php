@@ -48,7 +48,12 @@ class ContentDeletionService
             $itemIds,
             [],
             fn () => $db->table('course_modules')->where('id', $moduleId)->delete(),
-            fn () => $this->renumber('course_modules', 'offering_id', (int) $module['offering_id'])
+            function () use ($module) {
+                $this->renumber('course_modules', 'offering_id', (int) $module['offering_id']);
+
+                // A module that waited only on this one waits on nothing now.
+                (new LearningProgressService())->pruneContainerDependencies('module', (int) $module['offering_id']);
+            }
         );
     }
 
@@ -71,7 +76,11 @@ class ContentDeletionService
             $itemIds,
             [],
             fn () => $db->table('learning_units')->where('id', $learningUnitId)->delete(),
-            fn () => $this->renumber('learning_units', 'module_id', (int) $unit['module_id'])
+            function () use ($unit) {
+                $this->renumber('learning_units', 'module_id', (int) $unit['module_id']);
+
+                (new LearningProgressService())->pruneContainerDependencies('unit', (int) $unit['module_id']);
+            }
         );
     }
 

@@ -204,7 +204,11 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/modules/items/(:num)/video', 'Courses\ModuleController::updateVideoItem/$1/$2');
         $routes->post('(:num)/modules/items/(:num)/pdf', 'Courses\ModuleController::updatePdfItem/$1/$2');
         $routes->get('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::learningItemDependencies/$1/$2');
+        $routes->get('(:num)/modules/(:num)/dependencies', 'Courses\ModuleController::moduleDependencies/$1/$2');
+        $routes->get('(:num)/learning-units/(:num)/dependencies', 'Courses\ModuleController::learningUnitDependencies/$1/$2');
         $routes->patch('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::saveLearningItemDependencies/$1/$2');
+        $routes->patch('(:num)/modules/(:num)/dependencies', 'Courses\ModuleController::saveModuleDependencies/$1/$2');
+        $routes->patch('(:num)/learning-units/(:num)/dependencies', 'Courses\ModuleController::saveLearningUnitDependencies/$1/$2');
         $routes->patch('(:num)/modules/items/reorder', 'Courses\ModuleController::reorderLearningItems/$1');
 
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
@@ -410,6 +414,8 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
         $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
         $routes->get('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::learningItemDependencies/$1/$2');
+        $routes->get('(:num)/modules/(:num)/dependencies', 'Courses\ModuleController::moduleDependencies/$1/$2');
+        $routes->get('(:num)/learning-units/(:num)/dependencies', 'Courses\ModuleController::learningUnitDependencies/$1/$2');
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
         $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
         $routes->get('(:num)/discussions/more', 'Courses\DiscussionController::loadMore/$1');
@@ -611,7 +617,11 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/modules/items/(:num)/video', 'Courses\ModuleController::updateVideoItem/$1/$2');
         $routes->post('(:num)/modules/items/(:num)/pdf', 'Courses\ModuleController::updatePdfItem/$1/$2');
         $routes->get('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::learningItemDependencies/$1/$2');
+        $routes->get('(:num)/modules/(:num)/dependencies', 'Courses\ModuleController::moduleDependencies/$1/$2');
+        $routes->get('(:num)/learning-units/(:num)/dependencies', 'Courses\ModuleController::learningUnitDependencies/$1/$2');
         $routes->patch('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::saveLearningItemDependencies/$1/$2');
+        $routes->patch('(:num)/modules/(:num)/dependencies', 'Courses\ModuleController::saveModuleDependencies/$1/$2');
+        $routes->patch('(:num)/learning-units/(:num)/dependencies', 'Courses\ModuleController::saveLearningUnitDependencies/$1/$2');
         $routes->patch('(:num)/modules/items/reorder', 'Courses\ModuleController::reorderLearningItems/$1');
 
         $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
@@ -870,6 +880,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('(:num)/modules/(:num)', 'Courses\ModuleController::showModule/$1/$2');
             $routes->get('(:num)/modules/items/(:num)', 'Courses\ModuleController::viewLearningItem/$1/$2');
             $routes->get('(:num)/modules/items/(:num)/dependencies', 'Courses\ModuleController::learningItemDependencies/$1/$2');
+            $routes->get('(:num)/modules/(:num)/dependencies', 'Courses\ModuleController::moduleDependencies/$1/$2');
+            $routes->get('(:num)/learning-units/(:num)/dependencies', 'Courses\ModuleController::learningUnitDependencies/$1/$2');
             $routes->get('(:num)/resources', 'Courses\ResourceController::show/$1');
             $routes->get('(:num)/discussions', 'Courses\DiscussionController::show/$1');
             $routes->get('(:num)/discussions/more', 'Courses\DiscussionController::loadMore/$1');

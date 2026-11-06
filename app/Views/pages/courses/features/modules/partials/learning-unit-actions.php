@@ -20,7 +20,7 @@
     </button>
 
     <div
-        class="absolute right-0 top-12 z-30 hidden w-36 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+        class="absolute right-0 top-12 z-30 hidden w-44 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
         data-learning-unit-actions-panel
         data-action-menu-panel>
 
@@ -54,6 +54,19 @@
                 </svg>
 
                 Edit
+
+            </button>
+
+            <button
+                type="button"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
+                data-learning-unit-dependencies
+                data-learning-unit-id="<?= esc($learning_unit['id']) ?>"
+                data-learning-unit-title="<?= esc($learning_unit['title']) ?>">
+
+                <?= icon('lock', 'h-4 w-4 text-current') ?>
+
+                Dependencies
 
             </button>
 

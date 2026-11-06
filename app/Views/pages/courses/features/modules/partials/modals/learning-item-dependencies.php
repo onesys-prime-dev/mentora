@@ -87,6 +87,54 @@
 
             </div>
 
+            <!-- Minimum score: only when it waits on a quiz or an assignment -->
+            <div class="hidden flex-col gap-3 rounded-xl border border-gray-200 px-5 py-4" data-minscore-block>
+
+                <label class="flex cursor-pointer items-center justify-between gap-4">
+                    <span class="flex flex-col">
+                        <span class="text-sm font-semibold text-gray-800">Require a minimum score</span>
+                        <span class="text-xs text-gray-500">Handing in the quiz or assignment is not enough: its grade has to reach this.</span>
+                    </span>
+                    <span class="relative inline-flex shrink-0 items-center">
+                        <input type="checkbox" class="peer sr-only" data-minscore-enabled>
+                        <span class="h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30"></span>
+                        <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+                    </span>
+                </label>
+
+                <div class="hidden flex-col gap-2" data-minscore-options>
+
+                    <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5">
+                        <input type="radio" name="minscore_mode" value="passing" class="mt-1 accent-brand" data-minscore-mode>
+                        <span class="flex flex-col">
+                            <span class="text-sm font-medium text-gray-800">The assessment's own passing score</span>
+                            <span class="text-xs text-gray-500">Each quiz or assignment is held to the passing score set on it. One with none asks for nothing more.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5">
+                        <input type="radio" name="minscore_mode" value="custom" class="mt-1 accent-brand" data-minscore-mode>
+                        <span class="flex flex-col gap-2">
+                            <span class="text-sm font-medium text-gray-800">A custom percentage</span>
+                            <span class="hidden items-center gap-2" data-minscore-custom>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    step="1"
+                                    inputmode="numeric"
+                                    aria-label="Minimum score in percent"
+                                    data-minscore-percent
+                                    class="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-brand">
+                                <span class="text-sm text-gray-600">%</span>
+                            </span>
+                        </span>
+                    </label>
+
+                </div>
+
+            </div>
+
             <p class="hidden text-sm font-semibold text-red-500" data-dependencies-error></p>
 
         </div>

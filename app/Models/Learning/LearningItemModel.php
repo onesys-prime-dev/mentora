@@ -53,6 +53,8 @@ class LearningItemModel extends Model
                 'status',
                 'scheduled_publish_at',
                 'prerequisite_mode',
+                'dependency_min_score_mode',
+                'dependency_min_score_percent',
             ])
             ->where('learning_unit_id', $learningUnitId);
 

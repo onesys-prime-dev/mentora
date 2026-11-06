@@ -908,3 +908,48 @@ export async function saveLearningItemDependencies(
     return response.json();
 
 }
+
+/*
+|--------------------------------------------------------------------------
+| Dependencies of a module or a learning unit (instructor)
+|--------------------------------------------------------------------------
+*/
+
+function containerDependenciesUrl(kind, id) {
+
+    const path = kind === "module" ? "modules" : "learning-units";
+
+    return `${window.coursesConfig.apiBaseUrl}/${path}/${id}/dependencies`;
+
+}
+
+export async function fetchContainerDependencies(kind, id) {
+
+    const response = await fetch(containerDependenciesUrl(kind, id), { headers: defaultHeaders() });
+
+    if (!response.ok) {
+        throw new Error("Unable to load dependencies.");
+    }
+
+    return response.json();
+
+}
+
+export async function saveContainerDependencies(kind, id, payload) {
+
+    const response = await fetch(containerDependenciesUrl(kind, id), {
+        method: "PATCH",
+        headers: {
+            ...defaultHeaders(),
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        throw new Error("Unable to save dependencies.");
+    }
+
+    return response.json();
+
+}

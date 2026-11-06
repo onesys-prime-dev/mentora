@@ -50,6 +50,17 @@ $isPublished = $module['status'] === 'published';
 
     <button
         type="button"
+        title="Dependencies"
+        aria-label="Dependencies"
+        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-brand"
+        data-module-dependencies
+        data-module-id="<?= esc($module['id']) ?>"
+        data-module-title="<?= esc($module['title']) ?>">
+        <?= icon('lock', 'h-5 w-5 text-current') ?>
+    </button>
+
+    <button
+        type="button"
         title="Delete module"
         aria-label="Delete module"
         class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"
