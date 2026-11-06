@@ -36,5 +36,11 @@ export function currentReturn() {
 }
 
 export function leaveTo(url) {
-    window.location.assign(url);
+    const accepted = safeReturn(url, window.location.origin);
+
+    if (!accepted) {
+        return;
+    }
+
+    window.location.assign(accepted);
 }
