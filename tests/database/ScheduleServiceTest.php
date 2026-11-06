@@ -209,6 +209,20 @@ final class ScheduleServiceTest extends DatabaseTestCase
         );
     }
 
+    public function testThePageCountsSessionsAndWeeklyClassHours(): void
+    {
+        $one = $this->course('ART 100', 'Drawing');
+        $this->block($one, 'mon', '14:00:00', '15:30:00');
+        $this->block($one, 'wed', '14:00:00', '15:30:00');
+
+        $page = $this->service->forUser($this->student);
+
+        $this->assertSame(2, $page['sessionCount']);
+        $this->assertSame(3.0, $page['classHours']);
+        $this->assertSame(7, count($page['weekDates']));
+        $this->assertSame((int) date('j', strtotime('monday this week')), $page['weekDates']['mon']);
+    }
+
     public function testAVeryShortClassStillTakesOneRow(): void
     {
         $offering = $this->course('ART 100', 'Drawing');
