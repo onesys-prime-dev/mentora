@@ -17,18 +17,70 @@
 */
 
 import { bindModal } from "../modals/index.js";
+import { showToast } from "../../../../../shared/toast.js";
 import { exportQuestionsUrl } from "../api.js";
 import { normalizeExportPrefs, recallExportPrefs, rememberExportPrefs } from "./import-ui.js";
 
 const KINDS = ["editable", "printable"];
 
 /**
+ * Fetches the export so a refusal (the server answers JSON with a message)
+ * can be shown as a toast, then hands the file to the browser to save.
+ */
+export async function downloadExport(url) {
+
+    try {
+
+        const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+
+        if (!response.ok) {
+
+            let message = "";
+
+            try {
+                message = (await response.json()).message || "";
+            } catch {
+                // Not JSON: the generic sentence below is used.
+            }
+
+            showToast(message || "The questions could not be exported. Try again.", { tone: "danger" });
+
+            return;
+
+        }
+
+        const blob = await response.blob();
+        const disposition = response.headers.get("Content-Disposition") || "";
+        const named = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+        const link = document.createElement("a");
+
+        link.href = URL.createObjectURL(blob);
+        link.download = named ? decodeURIComponent(named[1]) : "questions";
+        document.body.append(link);
+        link.click();
+        link.remove();
+
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+        showToast("Export ready. Your download has started.", { tone: "success" });
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast("The questions could not be exported. Check your connection and try again.", { tone: "danger" });
+
+    }
+
+}
+
+/**
  * @param {object} options
  * @param {() => {offeringId: number|string, assessmentId: number|string}} options.ids the quiz the builder is on
- * @param {(url: string) => void} [options.navigate] how the file is fetched (a test replaces it)
+ * @param {(url: string) => void} [options.navigate] how the file is fetched and saved (downloadExport; a test replaces it)
  * @param {Storage} [options.storage] where the last choice is kept (a test replaces it)
  */
-export function bindExportModal({ ids, navigate = (url) => { window.location.href = url; }, storage } = {}) {
+export function bindExportModal({ ids, navigate = downloadExport, storage } = {}) {
 
     const modal = bindModal({
         modal: "#export-questions-modal",
