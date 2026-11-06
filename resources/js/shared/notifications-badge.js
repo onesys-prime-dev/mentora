@@ -3,7 +3,7 @@
 | The unread count on the notification bell
 |--------------------------------------------------------------------------
 | The header draws [data-notifications-badge] with the count at page load. The
-| toast's 20-second check sets it from the server, and everything that marks a
+| toast's 5-second check sets it from the server, and everything that marks a
 | notification read or deletes one nudges it at once, on the panel and on the
 | Notifications page. It hides at zero and says "99+" past 99.
 |--------------------------------------------------------------------------

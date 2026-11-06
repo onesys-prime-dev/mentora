@@ -8,6 +8,10 @@
 | The cover is purely decorative and no text sits on it, so readability
 | never depends on the artwork. It uses the same banner image as the Course
 | Workspace (a per-course $course['banner_image'] can override it later).
+|
+| Every card is the same size whatever the text: the title takes two lines and
+| is cut after that, one long word breaks instead of widening the card, and
+| each detail line is one line, cut with an ellipsis (the title attribute holds the whole text).
 |--------------------------------------------------------------------------
 */
 
@@ -16,7 +20,7 @@ $cover = $course['banner_image'] ?? base_url('assets/images/placeholder/course-t
 $progressLabel = $isInstructor ? 'Class progress' : 'Your progress';
 $titleId = 'course-title-' . (int) $course['offering_id'];
 $linked = $linked ?? true;
-$cardClass = 'group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm';
+$cardClass = 'group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm';
 $linkClass = 'transition duration-200 ease-out
            hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg
            active:translate-y-0 active:scale-[0.99]
@@ -40,12 +44,12 @@ $linkClass = 'transition duration-200 ease-out
 
         <div class="flex flex-col gap-1">
 
-            <span class="text-xs font-semibold uppercase tracking-wide text-[#646464]">
+            <span class="truncate text-xs font-semibold uppercase tracking-wide text-[#646464]">
                 <?= esc($course['course_code']) ?> · <?= esc($course['section_code']) ?>
             </span>
 
-            <div class="flex items-start justify-between gap-3">
-                <span id="<?= $titleId ?>" class="line-clamp-2 min-h-14 text-xl font-bold leading-7 text-[#1A1C1E]">
+            <div class="flex min-w-0 items-start justify-between gap-3">
+                <span id="<?= $titleId ?>" title="<?= esc($course['course_title'], 'attr') ?>" class="line-clamp-2 h-14 min-w-0 flex-1 break-words text-xl font-bold leading-7 text-[#1A1C1E]">
                     <?= esc($course['course_title']) ?>
                 </span>
                 <?php if ($linked): ?>
@@ -55,18 +59,18 @@ $linkClass = 'transition duration-200 ease-out
 
         </div>
 
-        <div class="flex flex-col gap-0.5">
-            <span class="text-sm font-medium text-[#1A1C1E]"><?= esc($course['schedule'] ?? '' ?: 'No schedule set') ?></span>
-            <span class="text-xs text-[#646464]"><?= esc($course['room'] ?? '--') ?></span>
+        <div class="flex min-w-0 flex-col gap-0.5">
+            <span class="truncate text-sm font-medium text-[#1A1C1E]"><?= esc($course['schedule'] ?? '' ?: 'No schedule set') ?></span>
+            <span class="truncate text-xs text-[#646464]"><?= esc($course['room'] ?? '--') ?></span>
             <?php if (!empty($course['instructor_name'])): ?>
-                <span class="text-xs text-[#646464]">
+                <span class="block truncate text-xs text-[#646464]">
                     Instr. <?= esc($course['instructor_name']) ?><?php if ((int) ($course['instructor_count'] ?? 1) > 1): ?> +<?= (int) $course['instructor_count'] - 1 ?> more<?php endif; ?>
                 </span>
             <?php elseif (array_key_exists('instructor_count', $course)): ?>
                 <span class="text-xs text-[#646464]">No instructor assigned</span>
             <?php endif; ?>
             <?php if (!empty($course['chairperson_name'])): ?>
-                <span class="text-xs text-[#646464]">Chair <?= esc($course['chairperson_name']) ?></span>
+                <span class="truncate text-xs text-[#646464]">Chair <?= esc($course['chairperson_name']) ?></span>
             <?php endif; ?>
         </div>
 

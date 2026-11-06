@@ -5,6 +5,7 @@
 */
 
 import { bindModal } from "../modals/index.js";
+import { showToast } from "../../../../../shared/toast.js";
 
 import {
     startGeneration,
@@ -185,12 +186,16 @@ async function followJob(batchId, first) {
 
     if (result.job?.status === "failed") {
         renderJobError(result.job.message);
+        showToast(result.job.message || "The questions could not be generated. Try again.", { tone: "danger" });
     } else if (result.job?.status === "cancelled") {
         renderJobError("Generation was cancelled.");
+        showToast("Generation was cancelled.", { tone: "info" });
     } else if (jobIsRunning(result)) {
         renderJobError("This is taking longer than expected. Your questions will appear here when they are ready.");
+        showToast("Still generating. Your questions will appear in the tray when they are ready.", { tone: "info" });
     } else {
         renderJobError("");
+        showToast("Questions generated. Review them in the tray.", { tone: "success" });
     }
 
 }
@@ -629,6 +634,8 @@ function bindForm() {
             errorBox.textContent = error.message || "Something went wrong.";
             errorBox.classList.remove("hidden");
 
+            showToast(error.message || "The questions could not be generated. Try again.", { tone: "danger" });
+
         } finally {
 
             submitIcon.classList.add("hidden");
@@ -694,6 +701,9 @@ async function continueGenerating(batchId) {
             ticker?.stop();
 
             console.error(error);
+
+            showToast("Generating stopped before it finished. Check your connection and try again.", { tone: "danger" });
+
             break;
 
         }
@@ -701,6 +711,12 @@ async function continueGenerating(batchId) {
     }
 
     setGeneratingIndicator(false);
+
+    if (status === "failed") {
+        showToast("The questions could not be generated. Try again.", { tone: "danger" });
+    } else if (status !== "generating") {
+        showToast("Questions generated. Review them in the tray.", { tone: "success" });
+    }
 
 }
 
@@ -1563,6 +1579,7 @@ function bindTrayActions() {
             if (!result.success) {
 
                 showTrayMessage(result.message || "The questions could not be added. Try again.");
+                showToast(result.message || "The questions could not be added. Try again.", { tone: "danger" });
 
                 return;
 
@@ -1586,9 +1603,13 @@ function bindTrayActions() {
                 showTrayMessage(acceptReport(result));
                 refreshAcceptButtons();
 
+                showToast(acceptReport(result), { tone: "warning" });
+
             } else {
 
                 hideTray();
+
+                showToast(acceptReport(result), { tone: "success" });
 
             }
 
@@ -1597,6 +1618,7 @@ function bindTrayActions() {
             console.error(error);
 
             showTrayMessage("The questions could not be added. Check your connection and try again.");
+            showToast("The questions could not be added. Check your connection and try again.", { tone: "danger" });
 
         }
 
@@ -1625,6 +1647,7 @@ function bindTrayActions() {
                 if (!result.success) {
 
                     showTrayMessage(result.message || "More questions could not be written. Try again.");
+                    showToast(result.message || "More questions could not be written. Try again.", { tone: "danger" });
 
                     return;
 
@@ -1647,11 +1670,14 @@ function bindTrayActions() {
 
                 showTrayMessage("");
 
+                showToast("More questions written. Review them in the tray.", { tone: "success" });
+
             } catch (error) {
 
                 console.error(error);
 
                 showTrayMessage("More questions could not be written. Check your connection and try again.");
+                showToast("More questions could not be written. Check your connection and try again.", { tone: "danger" });
 
             } finally {
 
@@ -1700,6 +1726,7 @@ function bindTrayActions() {
                 if (!result.success) {
 
                     showTrayMessage(result.message || "The questions could not be discarded. Try again.");
+                    showToast(result.message || "The questions could not be discarded. Try again.", { tone: "danger" });
 
                     return;
 
@@ -1709,11 +1736,14 @@ function bindTrayActions() {
 
                 hideTray();
 
+                showToast("Generated questions discarded.", { tone: "success" });
+
             } catch (error) {
 
                 console.error(error);
 
                 showTrayMessage("The questions could not be discarded. Check your connection and try again.");
+                showToast("The questions could not be discarded. Check your connection and try again.", { tone: "danger" });
 
             }
 

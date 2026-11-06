@@ -22,11 +22,6 @@ import "./shared/data-table";
 import "./shared/spa/page-progress";
 import "./shared/messages-badge";
 
-// The administrator's Notifications page has data-page "admin", so it names its script itself.
-if (document.querySelector("[data-notifications-page]") && document.body.dataset.page !== "notifications") {
-    import("./pages/notifications/notifications.js").catch(() => {});
-}
-
 const page = document.body.dataset.page;
 
 if (page) {

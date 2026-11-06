@@ -15,6 +15,10 @@ $this->setVar('pageTitle', (string) (new App\Services\Admin\PlatformSettings())-
 
 // A slim gutter beside the menu, so the page's panel and its tables have room.
 $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
+
+// The admin pages sit on a flat grey. A page every role shares (Notifications) passes 'flat' => false to
+// keep the same background as everyone else's copy of it.
+$flat = $flat ?? true;
 ?>
 <!DOCTYPE html>
 <html lang="en" data-themeable>
@@ -26,7 +30,12 @@ $mainGutter = $mainGutter ?? 'px-4 sm:px-6 lg:px-6';
 </head>
 
 <body
+    <?php if ($flat): ?>
     class="admin-flat min-h-screen"
+    <?php else: ?>
+    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
+    style="--page-bg-light: url('<?= base_url('assets/images/background/light.png') ?>'); --page-bg-dark: url('<?= base_url('assets/images/background/dark.png') ?>'); background-image: var(--page-bg-light);"
+    <?php endif; ?>
     data-page="<?= esc($page ?? 'admin') ?>"
     data-features="<?= esc(json_encode(current_features(), JSON_FORCE_OBJECT), 'attr') ?>"
 >

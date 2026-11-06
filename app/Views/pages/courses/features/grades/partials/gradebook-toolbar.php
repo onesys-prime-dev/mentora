@@ -18,7 +18,7 @@ $finalization = $gradebook['finalization'] ?? null;
 $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'grading');
 ?>
 
-<div class="flex flex-col gap-3" data-gradebook-toolbar>
+<div class="sticky-bar-top flex flex-col gap-3 pb-3" data-gradebook-toolbar>
 
     <div class="flex flex-wrap items-center justify-between gap-3">
 
