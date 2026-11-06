@@ -35,7 +35,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
     <?= $this->include('components/back') ?>
 
-    <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0 lg:flex-1">
+    <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 sm:pb-4 lg:min-h-0 lg:flex-1">
 
         <div class="flex flex-wrap items-center justify-between gap-3">
 
@@ -155,7 +155,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
             </div>
 
             <!-- Legend -->
-            <div class="flex items-center gap-4 text-xs text-[#878787]">
+            <div class="-mt-3 flex items-center gap-3 text-[11px] text-[#878787]">
                 <span class="flex items-center gap-1.5">
                     <span class="h-2.5 w-2.5 rounded border <?= $modeTone('On-site') ?>"></span>
                     On-site
