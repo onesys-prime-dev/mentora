@@ -70,24 +70,24 @@ $features = $courseFeatures ?? [
 
                 <div class="absolute inset-0 bg-linear-to-r from-brand-dark/90 via-brand-dark/65 to-brand-dark/20" aria-hidden="true"></div>
 
-                <div class="relative flex items-center gap-4 px-5 py-5 transition-[padding] duration-200 sm:gap-5 sm:px-10 sm:py-6 group-data-[collapsed=true]/course:gap-3 group-data-[collapsed=true]/course:py-2 sm:group-data-[collapsed=true]/course:gap-3 sm:group-data-[collapsed=true]/course:py-2">
+                <div class="relative flex items-center gap-4 px-5 py-3 transition-[padding] duration-200 sm:gap-4 sm:px-10 sm:py-4 group-data-[collapsed=true]/course:gap-3 group-data-[collapsed=true]/course:py-2 sm:group-data-[collapsed=true]/course:gap-3 sm:group-data-[collapsed=true]/course:py-2">
 
-                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30 sm:h-20 sm:w-20 group-data-[collapsed=true]/course:h-9 group-data-[collapsed=true]/course:w-9 sm:group-data-[collapsed=true]/course:h-9 sm:group-data-[collapsed=true]/course:w-9">
-                        <?= icon('code', 'h-7 w-7 sm:h-10 sm:w-10 group-data-[collapsed=true]/course:h-5 group-data-[collapsed=true]/course:w-5 sm:group-data-[collapsed=true]/course:h-5 sm:group-data-[collapsed=true]/course:w-5') ?>
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30 sm:h-14 sm:w-14 group-data-[collapsed=true]/course:h-9 group-data-[collapsed=true]/course:w-9 sm:group-data-[collapsed=true]/course:h-9 sm:group-data-[collapsed=true]/course:w-9">
+                        <?= icon('code', 'h-6 w-6 sm:h-8 sm:w-8 group-data-[collapsed=true]/course:h-5 group-data-[collapsed=true]/course:w-5 sm:group-data-[collapsed=true]/course:h-5 sm:group-data-[collapsed=true]/course:w-5') ?>
                     </div>
 
                     <div class="flex min-w-0 flex-col group-data-[collapsed=true]/course:flex-row group-data-[collapsed=true]/course:items-baseline group-data-[collapsed=true]/course:gap-2">
 
-                        <span class="text-sm font-medium text-white/85 sm:text-xl group-data-[collapsed=true]/course:shrink-0 group-data-[collapsed=true]/course:text-xs sm:group-data-[collapsed=true]/course:text-sm">
+                        <span class="text-sm font-medium text-white/85 sm:text-lg group-data-[collapsed=true]/course:shrink-0 group-data-[collapsed=true]/course:text-xs sm:group-data-[collapsed=true]/course:text-sm">
                             <?= esc($course['course_code']) . ' - ' . esc($course['section_code']) ?>
                         </span>
 
-                        <h1 class="truncate text-2xl font-bold sm:text-3xl group-data-[collapsed=true]/course:text-base sm:group-data-[collapsed=true]/course:text-lg">
+                        <h1 class="truncate text-xl font-bold sm:text-2xl group-data-[collapsed=true]/course:text-base sm:group-data-[collapsed=true]/course:text-lg">
                             <?= esc($course['course_title']) ?>
                         </h1>
 
                         <?php if (!empty($course['term_name'])): ?>
-                            <span class="mt-1 text-xs text-white/80 sm:text-sm group-data-[collapsed=true]/course:hidden">
+                            <span class="text-xs text-white/80 sm:text-sm group-data-[collapsed=true]/course:hidden">
                                 <?= esc($course['term_name']) ?><?= !empty($course['academic_year']) ? ' · ' . esc($course['academic_year']) : '' ?>
                             </span>
                         <?php endif; ?>
