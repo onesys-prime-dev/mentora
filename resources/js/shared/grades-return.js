@@ -24,7 +24,7 @@ export function safeReturn(value, origin) {
         return null;
     }
 
-    return value;
+    return `${url.pathname}${url.search}${url.hash}`;
 }
 
 /** The accepted `return` of the current address, or null. */
