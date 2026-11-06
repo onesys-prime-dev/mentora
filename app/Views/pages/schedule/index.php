@@ -130,19 +130,18 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
                             <?php endforeach; ?>
                         <?php endfor; ?>
 
-                        <!-- "Now" line across today's column, only while now is inside the axis -->
-                        <?php
-                        $todayIndex = array_search($today, $days, true);
-                        $span = $grid['end_minutes'] - $grid['start_minutes'];
-                        $showNow = $todayIndex !== false && $span > 0
-                            && $nowMinutes >= $grid['start_minutes'] && $nowMinutes <= $grid['end_minutes'];
-                        ?>
-                        <?php if ($showNow): ?>
+                        <!-- "Now" line across today's column. The server runs in UTC, so the script
+                             below places it with the browser's own clock and hides it outside the axis. -->
+                        <?php $todayIndex = array_search($today, $days, true); ?>
+                        <?php if ($todayIndex !== false): ?>
                             <div
-                                class="pointer-events-none relative z-1"
+                                class="pointer-events-none relative z-1 hidden"
                                 style="grid-column: <?= $todayIndex + 2 ?>; grid-row: 1 / span <?= (int) $totalRows ?>;"
-                                aria-hidden="true">
-                                <div class="absolute inset-x-0 h-0.5 bg-brand" style="top: <?= round(($nowMinutes - $grid['start_minutes']) / $span * 100, 2) ?>%;">
+                                aria-hidden="true"
+                                data-now-line
+                                data-start="<?= (int) $grid['start_minutes'] ?>"
+                                data-end="<?= (int) $grid['end_minutes'] ?>">
+                                <div class="absolute inset-x-0 h-0.5 bg-brand" data-now-marker>
                                     <span class="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand"></span>
                                 </div>
                             </div>
@@ -204,5 +203,34 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
     </div>
 
 </div>
+
+<script>
+(function () {
+    var line = document.querySelector('[data-now-line]');
+    var marker = line && line.querySelector('[data-now-marker]');
+
+    if (!line || !marker) {
+        return;
+    }
+
+    var start = Number(line.dataset.start);
+    var end = Number(line.dataset.end);
+
+    function place() {
+        var now = new Date();
+        var minutes = now.getHours() * 60 + now.getMinutes();
+        var inside = end > start && minutes >= start && minutes <= end;
+
+        line.classList.toggle('hidden', !inside);
+
+        if (inside) {
+            marker.style.top = ((minutes - start) / (end - start) * 100) + '%';
+        }
+    }
+
+    place();
+    setInterval(place, 60000);
+})();
+</script>
 
 <?= $this->endSection() ?>

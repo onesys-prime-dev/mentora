@@ -82,7 +82,6 @@ class ScheduleService
             'weekLabel' => $this->weekLabel(),
             'sessionCount' => count($classes),
             'classHours'   => $this->classHours($classes),
-            'nowMinutes'   => (int) date('G') * 60 + (int) date('i'),
             'hasAnyCourses' => $courses !== [],
             'hasAnyClasses' => $classes !== [],
         ];
