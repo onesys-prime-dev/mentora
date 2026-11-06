@@ -35,7 +35,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
     <?= $this->include('components/back') ?>
 
-    <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+    <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0 lg:flex-1">
 
         <div class="flex flex-wrap items-center justify-between gap-3">
 
@@ -78,12 +78,12 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
         <?php else: ?>
 
-            <div class="flex flex-col overflow-x-auto lg:min-h-0 lg:flex-1">
+            <div class="flex flex-col overflow-auto lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
                 <div class="flex min-w-180 flex-1 flex-col">
 
                     <!-- Day header row -->
-                    <div class="grid" style="grid-template-columns: <?= esc($gridTemplateColumns) ?>;">
+                    <div class="sticky top-0 z-10 grid bg-white" style="grid-template-columns: <?= esc($gridTemplateColumns) ?>;">
 
                         <div></div>
 
