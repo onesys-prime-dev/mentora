@@ -6,6 +6,7 @@
 
 import { bindModal } from "../modals/index.js";
 import { bindQuestionPicker } from "./question-picker.js";
+import { showToast } from "../../../../../shared/toast.js";
 import {
     fileSummary,
     detectedLine,
@@ -133,11 +134,62 @@ function bindExportButton() {
 
             rememberExportPrefs({ format, print: printSettings() });
 
-            window.location.href = exportQuestionsUrl(state.offeringId, state.assessmentId, format, printSettings());
-
             closePanel();
 
+            downloadExport(exportQuestionsUrl(state.offeringId, state.assessmentId, format, printSettings()));
+
         });
+
+}
+
+/**
+ * Fetches the export so a refusal (the server answers JSON with a message)
+ * can be shown as a toast, then hands the file to the browser to save.
+ */
+async function downloadExport(url) {
+
+    try {
+
+        const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+
+        if (!response.ok) {
+
+            let message = "";
+
+            try {
+                message = (await response.json()).message || "";
+            } catch {
+                // Not JSON: the generic sentence below is used.
+            }
+
+            showToast(message || "The questions could not be exported. Try again.", { tone: "danger" });
+
+            return;
+
+        }
+
+        const blob = await response.blob();
+        const disposition = response.headers.get("Content-Disposition") || "";
+        const named = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+        const link = document.createElement("a");
+
+        link.href = URL.createObjectURL(blob);
+        link.download = named ? decodeURIComponent(named[1]) : "questions";
+        document.body.append(link);
+        link.click();
+        link.remove();
+
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+        showToast("Export ready. Your download has started.", { tone: "success" });
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast("The questions could not be exported. Check your connection and try again.", { tone: "danger" });
+
+    }
 
 }
 
@@ -397,6 +449,8 @@ async function showQuestionsAdded(message) {
 
     showStep("done");
 
+    showToast(message || "Questions added.", { tone: "success" });
+
     await state.refresh();
 
 }
@@ -552,6 +606,8 @@ async function handlePreview() {
         console.error(error);
 
         showError(error.message || "Something went wrong reading that file.");
+
+        showToast(error.message || "Something went wrong reading that file.", { tone: "danger" });
 
     } finally {
 
@@ -928,6 +984,8 @@ async function handleApply() {
 
         statusLabel.textContent = "";
 
+        showToast(result.message || "Questions imported.", { tone: result.skipped?.length ? "warning" : "success" });
+
         await state.refresh();
 
     } catch (error) {
@@ -935,6 +993,8 @@ async function handleApply() {
         console.error(error);
 
         statusLabel.textContent = error.message || "Something went wrong applying this import.";
+
+        showToast(error.message || "Something went wrong applying this import.", { tone: "danger" });
 
     } finally {
 
@@ -990,6 +1050,11 @@ async function handleUndo() {
         document.querySelector("[data-import-result-message]").textContent =
             result.message || (result.success ? "The import was undone." : "The import could not be undone.");
 
+        showToast(
+            result.message || (result.success ? "The import was undone." : "The import could not be undone."),
+            { tone: result.success ? "success" : "danger" }
+        );
+
         if (result.success) {
 
             undoToken = null;
@@ -1005,6 +1070,8 @@ async function handleUndo() {
         console.error(error);
 
         document.querySelector("[data-import-result-message]").textContent = "The import could not be undone.";
+
+        showToast("The import could not be undone.", { tone: "danger" });
 
     } finally {
 
