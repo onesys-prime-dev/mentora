@@ -24,9 +24,9 @@ final class ChatControlsTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
-    private int $subDepartment;
+    private int $department;
 
     private int $program;
 
@@ -37,11 +37,11 @@ final class ChatControlsTest extends DatabaseTestCase
         parent::setUp();
 
         $this->controls      = new ChatControls();
-        $d                   = DeanFactory::department('CC');
+        $d                   = DeanFactory::college('CC');
         $this->institution   = $d['institution'];
-        $this->department    = $d['department'];
-        $this->subDepartment = DeanFactory::subDepartment($this->department, 'CC');
-        $this->program       = DeanFactory::program($this->subDepartment, 'CC');
+        $this->college    = $d['college'];
+        $this->department = DeanFactory::department($this->college, 'CC');
+        $this->program       = DeanFactory::program($this->department, 'CC');
         $this->term          = DeanFactory::term($this->institution);
     }
 
@@ -103,8 +103,8 @@ final class ChatControlsTest extends DatabaseTestCase
     public function testInstructorsChairpersonsAndDeansGetNullEvenInTheirOwnChats(): void
     {
         [$chat, , $instructor] = $this->courseChat();
-        $chair                 = DeanFactory::chair($this->subDepartment);
-        $dean                  = DeanFactory::dean($this->institution, $this->department);
+        $chair                 = DeanFactory::chair($this->department);
+        $dean                  = DeanFactory::dean($this->institution, $this->college);
         $this->join($chat, $chair);
         $this->join($chat, $dean);
 
@@ -117,7 +117,7 @@ final class ChatControlsTest extends DatabaseTestCase
 
     public function testAStaffGroupsCreatorCannotLockItButTheAdministratorCan(): void
     {
-        $creator = DeanFactory::chair($this->subDepartment);
+        $creator = DeanFactory::chair($this->department);
         $now     = date('Y-m-d H:i:s');
         db_connect()->table('conversations')->insert([
             'institution_id' => $this->institution, 'type' => 'group', 'created_by' => $creator->id, 'is_locked' => 0,
@@ -137,7 +137,7 @@ final class ChatControlsTest extends DatabaseTestCase
     {
         [$chat, $student] = $this->courseChat();
         $outsider         = PeopleFactory::person('instructor', 'Out', 'Sider', null, $this->institution, true);
-        $other            = $this->admin(DeanFactory::department('CW')['institution']);
+        $other            = $this->admin(DeanFactory::college('CW')['institution']);
 
         $this->assertNull($this->controls->set($student, $chat, 'reactions', false));
         $this->assertNull($this->controls->set($outsider, $chat, 'reactions', false));
@@ -201,6 +201,6 @@ final class ChatControlsTest extends DatabaseTestCase
 
         $this->assertContains($chat, $names);
         $this->assertSame([], $this->controls->chatsFor($student));
-        $this->assertNotContains($chat, array_column($this->controls->chatsFor($this->admin(DeanFactory::department('CV')['institution'])), 'id'));
+        $this->assertNotContains($chat, array_column($this->controls->chatsFor($this->admin(DeanFactory::college('CV')['institution'])), 'id'));
     }
 }

@@ -16,7 +16,7 @@ use Tests\Support\RouteTestCase;
 final class ChairpersonCoursesPageTest extends RouteTestCase
 {
     private User $chair;
-    private int $sub;
+    private int $department;
     private int $program;
     private static int $termSequence = 0;
 
@@ -29,15 +29,15 @@ final class ChairpersonCoursesPageTest extends RouteTestCase
         $db = db_connect();
         $db->table('institutions')->insert(['name' => 'Inst', 'code' => 'INS']);
         $institution = (int) $db->insertID();
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => 'DEP', 'name' => 'Dept']);
-        $department = (int) $db->insertID();
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => 'SUB', 'name' => 'Sub']);
-        $this->sub = (int) $db->insertID();
-        $db->table('programs')->insert(['sub_department_id' => $this->sub, 'code' => 'PRG', 'name' => 'Program']);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => 'DEP', 'name' => 'College']);
+        $college = (int) $db->insertID();
+        $db->table('departments')->insert(['college_id' => $college, 'code' => 'SUB', 'name' => 'Department']);
+        $this->department = (int) $db->insertID();
+        $db->table('programs')->insert(['department_id' => $this->department, 'code' => 'PRG', 'name' => 'Program']);
         $this->program = (int) $db->insertID();
 
         $db->table('chairperson_assignments')->insert([
-            'sub_department_id'   => $this->sub,
+            'department_id'   => $this->department,
             'chairperson_user_id' => $this->chair->id,
             'status'              => 'active',
             'assigned_at'         => date('Y-m-d H:i:s'),
@@ -57,7 +57,7 @@ final class ChairpersonCoursesPageTest extends RouteTestCase
         // search, so a name containing another test's course code would
         // leak into the page and break a assertDontSee() on it.
         $db->table('academic_terms')->insert([
-            'institution_id' => (int) $db->table('departments')->get()->getRowArray()['institution_id'],
+            'institution_id' => (int) $db->table('colleges')->get()->getRowArray()['institution_id'],
             'name' => 'Term ' . (++self::$termSequence),
             'academic_year' => '2026-2027',
             'start_date' => '2026-08-01',
@@ -139,9 +139,9 @@ final class ChairpersonCoursesPageTest extends RouteTestCase
     {
         $this->offering('IT101');
 
-        $elsewhereSub = db_connect()->table('sub_departments')->insert(['department_id' => db_connect()->table('departments')->get()->getRowArray()['id'], 'code' => 'ELSE', 'name' => 'Elsewhere']);
+        $elsewhereDepartment = db_connect()->table('departments')->insert(['college_id' => db_connect()->table('colleges')->get()->getRowArray()['id'], 'code' => 'ELSE', 'name' => 'Elsewhere']);
         $elsewhereSubId = (int) db_connect()->insertID();
-        db_connect()->table('programs')->insert(['sub_department_id' => $elsewhereSubId, 'code' => 'ELSE', 'name' => 'Elsewhere program']);
+        db_connect()->table('programs')->insert(['department_id' => $elsewhereSubId, 'code' => 'ELSE', 'name' => 'Elsewhere program']);
         $elsewhereProgram = (int) db_connect()->insertID();
         db_connect()->table('courses')->insert(['program_id' => $elsewhereProgram, 'course_code' => 'XX999', 'course_title' => 'Not mine', 'units' => 3]);
 

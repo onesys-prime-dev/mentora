@@ -64,7 +64,7 @@ class AuditLogger
     }
 
     /**
-     * Replaces the value of every secret-looking key, at any depth.
+     * Replaces the value of every secret-looking key, at any collegeh.
      *
      * @param array<array-key, mixed> $values
      *

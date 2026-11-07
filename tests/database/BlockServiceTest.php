@@ -91,7 +91,7 @@ final class BlockServiceTest extends DatabaseTestCase
     public function testNobodyWhoCannotBeBlockedIsBlocked(): void
     {
         $admin   = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
-        $outside = PeopleFactory::person('student', 'Out', 'Side', null, DeanFactory::department('BK2')['institution']);
+        $outside = PeopleFactory::person('student', 'Out', 'Side', null, DeanFactory::college('BK2')['institution']);
 
         foreach ([$this->instructor, $admin, $this->ann, $outside, CourseFactory::user('admin')] as $target) {
             $this->assertFalse($this->blocks()->block($this->ann, (int) $target->id), (string) $target->first_name);

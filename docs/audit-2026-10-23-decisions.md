@@ -4,18 +4,18 @@ The decisions made for each finding in [audit-2026-10-23.md](audit-2026-10-23.md
 
 Context that shaped them: Mentora is still in development, and no real institution uses it yet. One-time safety steps for live data were therefore dropped (3.3, 3.4, 6.5, 7.8), and existing conflicts are fixed automatically (9.6, 16.0d).
 
-## Finding 1: grade-override requests stuck when a department has no dean
+## Finding 1: grade-override requests stuck when a college has no dean
 
-- **1.1** When a department has no dean, the institution admin decides.
+- **1.1** When a college has no dean, the institution admin decides.
 - **1.2** When a dean is assigned, requests waiting for the admin move to the new dean.
 - **1.3** The admin's options are the dean's: approve, or reject with a reason. There is no send-back.
 - **1.4** All institution admins are notified, any one of them can decide, and the first decision wins.
 - **1.5** No one decides their own request, admins included. This also covers a dean's own request, which always goes to the admin.
 - **1.6** In a one-admin institution, the admin's own request waits, and the requester is told it needs a second admin.
 
-## Finding 2: departments with no dean never send grades to the SIS
+## Finding 2: colleges with no dean never send grades to the SIS
 
-- **2.1** In a department with no dean, the institution admin signs off.
+- **2.1** In a college with no dean, the institution admin signs off.
 - **2.2** An institution with no deans at all needs no sign-off; finalized grades go straight to the SIS.
 - **2.3** Whether a sign-off is needed is checked when grades are sent. When the first dean is assigned, unsent grades then need one, and admins are told which sections are waiting.
 - **2.4** The admin's sign-off works exactly like the dean's: one section or a whole program, reopen with a reason, and a password check.
@@ -75,7 +75,7 @@ Who gets the missed-job alert, and what sends it: see U2.
 - **9.2** No one can be both a student and an instructor in one section, whichever role comes first.
 - **9.3** That extends to the whole course, even different sections, because the sections share a question bank.
 - **9.4** A chairperson counts as an instructor of every course in their program. They can't be enrolled in one, and can't become chair while enrolled in one.
-- **9.5** Deans (for their department's courses) and institution admins (for their institution's courses) also can't be enrolled as students in those courses.
+- **9.5** Deans (for their college's courses) and institution admins (for their institution's courses) also can't be enrolled as students in those courses.
 - **9.6** Existing conflicts are fixed automatically.
 - **9.7** When fixing a conflict, the enrolment is removed and the staff role stays.
 
@@ -121,10 +121,10 @@ Who gets the missed-job alert, and what sends it: see U2.
 
 ## Finding 16: chairperson actions are not atomic
 
-- **16.0** Exactly one chairperson per sub-department. This changes today's documented rule (`ChairAssignmentService.php:11-12`).
+- **16.0** Exactly one chairperson per department. This changes today's documented rule (`ChairAssignmentService.php:11-12`).
 - **16.0b** A new chair replaces the old one after the admin confirms. The old chair is notified, and their assignment ends with its history kept.
 - **16.0c** Requests waiting for the old chair's endorsement pass to the new chair, who is notified.
-- **16.0d** Where a sub-department already has several chairs, the most recently assigned is kept and the others' assignments end, automatically.
+- **16.0d** Where a department already has several chairs, the most recently assigned is kept and the others' assignments end, automatically.
 - **16.1** When the chair and the requester act on the same request at the same moment, only the first action counts. The second person is told, and the request ends in one clear state with one notification.
 
 ## Settled after review
@@ -160,7 +160,7 @@ These were the open questions left after the first pass.
 ### U5: one chair instead of "every chair" (16.0 and 1.4)
 
 - The one chair is notified (`GradeOverrideRequestService.php:111, 171`) and is the only one who can endorse.
-- If the sub-department has no chair, or the chair made the request, the chair step is skipped and the request goes to the dean, or to the admin (1.1). The requester sees that the step was skipped.
+- If the department has no chair, or the chair made the request, the chair step is skipped and the request goes to the dean, or to the admin (1.1). The requester sees that the step was skipped.
 - A chair assigned later picks up only requests still waiting for a chair (16.0c). Requests already past that step don't move back.
 
 ## Added during the design (2026-10-24)

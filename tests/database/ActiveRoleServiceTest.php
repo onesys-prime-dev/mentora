@@ -75,13 +75,13 @@ final class ActiveRoleServiceTest extends DatabaseTestCase
     private function deanWithOtherRoles(bool $assigned): User
     {
         $institution = PeopleFactory::institution('ARS');
-        db_connect()->table('departments')->insert(['institution_id' => $institution, 'code' => 'D1', 'name' => 'Department One']);
-        $department = (int) db_connect()->insertID();
+        db_connect()->table('colleges')->insert(['institution_id' => $institution, 'code' => 'D1', 'name' => 'College One']);
+        $college = (int) db_connect()->insertID();
 
         $user = PeopleFactory::person('instructor', 'Dana', 'Dean', null, $institution);
 
         if ($assigned) {
-            (new DeanAssignmentService())->assign($institution, $department, (int) $user->id);
+            (new DeanAssignmentService())->assign($institution, $college, (int) $user->id);
         } else {
             $user->addGroup('dean');
         }

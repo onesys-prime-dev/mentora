@@ -33,7 +33,7 @@ $ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
 
 <?php $duty = ['grades.approve' => 'approve grade overrides', 'grades.signoff' => 'sign off grades']; ?>
 <?php foreach ($roleGaps ?? [] as $gap): ?>
-    <div class="mt-4"><?= view('components/alert', ['tone' => 'warning', 'text' => $gap['institution'] . ': nobody can ' . $duty[$gap['permission']] . ' in ' . $gap['department'] . '. Its requests and sign-offs wait.'], ['saveData' => false]) ?></div>
+    <div class="mt-4"><?= view('components/alert', ['tone' => 'warning', 'text' => $gap['institution'] . ': nobody can ' . $duty[$gap['permission']] . ' in ' . $gap['college'] . '. Its requests and sign-offs wait.'], ['saveData' => false]) ?></div>
 <?php endforeach; ?>
 
 <?php if (session()->has('message')): ?>

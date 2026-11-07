@@ -52,7 +52,7 @@ final class CourseFactory
     }
 
     /**
-     * A course offering, with the institution, department, program, term and course it
+     * A course offering, with the institution, college, program, term and course it
      * needs.
      *
      * @return int offering id
@@ -65,13 +65,13 @@ final class CourseFactory
         $db->table('institutions')->insert(['name' => "Institution {$n}", 'code' => "INS{$n}"]);
         $institutionId = (int) $db->insertID();
 
-        $db->table('departments')->insert(['institution_id' => $institutionId, 'name' => "Department {$n}", 'code' => "DEP{$n}"]);
+        $db->table('colleges')->insert(['institution_id' => $institutionId, 'name' => "College {$n}", 'code' => "DEP{$n}"]);
+        $collegeId = (int) $db->insertID();
+
+        $db->table('departments')->insert(['college_id' => $collegeId, 'name' => "Department {$n}", 'code' => "SUB{$n}"]);
         $departmentId = (int) $db->insertID();
 
-        $db->table('sub_departments')->insert(['department_id' => $departmentId, 'name' => "Sub-department {$n}", 'code' => "SUB{$n}"]);
-        $subDepartmentId = (int) $db->insertID();
-
-        $db->table('programs')->insert(['sub_department_id' => $subDepartmentId, 'name' => "Program {$n}", 'code' => "PRG{$n}"]);
+        $db->table('programs')->insert(['department_id' => $departmentId, 'name' => "Program {$n}", 'code' => "PRG{$n}"]);
         $programId = (int) $db->insertID();
 
         $db->table('academic_terms')->insert([

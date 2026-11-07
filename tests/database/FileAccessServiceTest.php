@@ -321,24 +321,24 @@ final class FileAccessServiceTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    /** @return array{sub: int, department: int} the sub-department and department of this test's offering */
+    /** @return array{sub: int, college: int} the department and college of this test's offering */
     private function hierarchyOf(int $offeringId): array
     {
         $row = db_connect()->table('course_offerings co')
-            ->select('sd.id AS sub, sd.department_id AS department')
+            ->select('sd.id AS sub, sd.college_id AS college')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
             ->where('co.id', $offeringId)->get()->getRowArray();
 
-        return ['sub' => (int) $row['sub'], 'department' => (int) $row['department']];
+        return ['sub' => (int) $row['sub'], 'college' => (int) $row['college']];
     }
 
     private function chairOf(int $offeringId): User
     {
         $chair = CourseFactory::user('chairperson');
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id' => $this->hierarchyOf($offeringId)['sub'],
+            'department_id' => $this->hierarchyOf($offeringId)['sub'],
             'chairperson_user_id' => $chair->id,
             'status' => 'active',
             'assigned_at' => date('Y-m-d H:i:s'),
@@ -351,7 +351,7 @@ final class FileAccessServiceTest extends DatabaseTestCase
     {
         $dean = CourseFactory::user('dean');
         db_connect()->table('dean_assignments')->insert([
-            'department_id' => $this->hierarchyOf($offeringId)['department'],
+            'college_id' => $this->hierarchyOf($offeringId)['college'],
             'dean_user_id' => $dean->id,
             'status' => 'active',
             'active_marker' => 1,
@@ -361,7 +361,7 @@ final class FileAccessServiceTest extends DatabaseTestCase
         return $dean;
     }
 
-    public function testTheChairpersonOfTheSubDepartmentOpensItsCourseFilesWithoutTeachingIt(): void
+    public function testTheChairpersonOfTheDepartmentOpensItsCourseFilesWithoutTeachingIt(): void
     {
         $chair = $this->chairOf($this->offering);
         $file = $this->file($this->instructor);
@@ -370,7 +370,7 @@ final class FileAccessServiceTest extends DatabaseTestCase
         $this->assertTrue($this->allowed($chair, $file), 'even an unpublished resource: the chairperson has instructor rights');
     }
 
-    public function testAChairpersonOfAnotherSubDepartmentIsRefused(): void
+    public function testAChairpersonOfAnotherDepartmentIsRefused(): void
     {
         $otherSection = CourseFactory::offering();
         $elsewhere = $this->chairOf($otherSection);
@@ -380,7 +380,7 @@ final class FileAccessServiceTest extends DatabaseTestCase
         $this->assertFalse($this->allowed($elsewhere, $file));
     }
 
-    public function testTheDeanOfTheDepartmentOpensItsCourseFilesButNotStudentWork(): void
+    public function testTheDeanOfTheCollegeOpensItsCourseFilesButNotStudentWork(): void
     {
         $dean = $this->deanOf($this->offering);
         $resource = $this->file($this->instructor);
@@ -425,7 +425,7 @@ final class FileAccessServiceTest extends DatabaseTestCase
         $this->assertFalse($this->allowed($dean, $otherWork), 'an instructor does not reach sections they do not teach');
     }
 
-    public function testADeanActingAsAnInstructorGainsNoDepartmentWideFileReach(): void
+    public function testADeanActingAsAnInstructorGainsNoCollegeWideFileReach(): void
     {
         $dean = $this->deanOf($this->offering);
         $dean->addGroup('instructor');
@@ -439,7 +439,7 @@ final class FileAccessServiceTest extends DatabaseTestCase
         $this->assertFalse($this->allowed($dean, $draft), 'as an instructor they only reach the sections they teach');
     }
 
-    public function testADeanOfAnotherDepartmentIsRefused(): void
+    public function testADeanOfAnotherCollegeIsRefused(): void
     {
         $other = $this->deanOf(CourseFactory::offering());
         $file = $this->file($this->instructor);

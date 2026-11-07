@@ -1,13 +1,13 @@
 <?php
 /**
- * The dean's teaching load: each instructor of the department with what they carry in a term. View only.
+ * The dean's teaching load: each instructor of the college with what they carry in a term. View only.
  * An instructor carrying the institution's high-load number of units or more is marked. The name opens
  * the instructor's own page, which lists their sections.
  *
  * @var App\Services\Courses\TeachingLoadFilters $filters
  * @var list<array<string, mixed>> $instructors
  * @var list<array<string, mixed>> $terms
- * @var list<array<string, mixed>> $subDepartments
+ * @var list<array<string, mixed>> $departments
  * @var int $highLoadUnits
  */
 $base = site_url('dean/teaching-load');
@@ -28,10 +28,10 @@ foreach ($terms as $t) {
     $termOptions[(string) $t['id']] = $t['name'] . ' (' . $t['academic_year'] . ')';
 }
 
-$subOptions = ['' => 'Any sub-department'];
+$departmentOptions = ['' => 'Any department'];
 
-foreach ($subDepartments as $sd) {
-    $subOptions[(string) $sd['id']] = (string) $sd['name'];
+foreach ($departments as $sd) {
+    $departmentOptions[(string) $sd['id']] = (string) $sd['name'];
 }
 
 $carry = $filters->toQuery(['sort' => null, 'dir' => null]);
@@ -42,7 +42,7 @@ foreach ($instructors as $i) {
     $rows[] = [
         'id'    => (int) $i['id'],
         'cells' => [
-            'name'       => ['html' => '<a class="font-semibold text-brand hover:underline" href="' . esc($base . '/' . (int) $i['id'] . (($q = http_build_query(array_filter(['term' => $term, 'sub_department' => null]))) === '' ? '' : '?' . $q)) . '">' . esc($i['name']) . '</a>'
+            'name'       => ['html' => '<a class="font-semibold text-brand hover:underline" href="' . esc($base . '/' . (int) $i['id'] . (($q = http_build_query(array_filter(['term' => $term, 'department' => null]))) === '' ? '' : '?' . $q)) . '">' . esc($i['name']) . '</a>'
                 . ($i['high_load'] ? '<span class="mt-1 block">' . view('components/status-badge', ['label' => 'High load', 'tone' => 'warning', 'icon' => 'attention'], ['saveData' => false]) . '</span>' : '')],
             'sections'   => (string) $i['sections'],
             'students'   => number_format((int) $i['students']),
@@ -79,19 +79,19 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
     <?= view('components/page-head', [
         'title'       => 'Teaching load',
         'icon'        => 'modules',
-        'description' => 'What each instructor in your department teaches in a term. You can look, not change. A high load is ' . $highLoadUnits . ' units or more; your institution sets that number.',
+        'description' => 'What each instructor in your college teaches in a term. You can look, not change. A high load is ' . $highLoadUnits . ' units or more; your institution sets that number.',
         'actions'     => $loadError ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/teaching-load') . '?' . http_build_query($filters->toQuery(['term' => $term])), 'attr') . '" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
         'action'   => $base,
         'surface'  => 'tinted', // it sits on the page's white panel, where a white card would not stand out
-        'filtered' => $filters->subDepartmentId !== null,
+        'filtered' => $filters->departmentId !== null,
         'clearUrl' => $base . ($term !== null ? '?term=' . (int) $term : ''),
-        'hidden'   => $filters->toQuery(['term' => null, 'sub_department' => null]),
+        'hidden'   => $filters->toQuery(['term' => null, 'department' => null]),
         'fields'   => [
             ['type' => 'select', 'name' => 'term', 'label' => 'Term', 'options' => $termOptions === [] ? ['' => 'No terms yet'] : $termOptions, 'value' => (string) ($term ?? '')],
-            ['type' => 'select', 'name' => 'sub_department', 'label' => 'Sub-department', 'options' => $subOptions, 'value' => (string) ($filters->subDepartmentId ?? '')],
+            ['type' => 'select', 'name' => 'department', 'label' => 'Department', 'options' => $departmentOptions, 'value' => (string) ($filters->departmentId ?? '')],
         ],
     ], ['saveData' => false]) ?>
 
@@ -113,8 +113,8 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             'sort'       => $filters->sort,
             'dir'        => $filters->dir,
             'sortUrl'    => $sortUrl,
-            'emptyTitle' => $term === null ? 'No terms yet' : ($filters->subDepartmentId !== null ? 'No instructors in this sub-department' : 'No instructors teach this term'),
-            'emptyText'  => $term === null ? 'When your department has courses running in a term, the instructors appear here.' : 'Instructors appear here once they are assigned to a section of your department.',
+            'emptyTitle' => $term === null ? 'No terms yet' : ($filters->departmentId !== null ? 'No instructors in this department' : 'No instructors teach this term'),
+            'emptyText'  => $term === null ? 'When your college has courses running in a term, the instructors appear here.' : 'Instructors appear here once they are assigned to a section of your college.',
             'emptyIcon'  => 'modules',
         ], ['saveData' => false]) ?>
 

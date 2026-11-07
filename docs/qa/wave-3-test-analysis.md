@@ -11,7 +11,7 @@
 
 Wave 3 covers the P2 scenarios that no earlier case covered, and three groups that the wave definitions had left out:
 
-- the P1 scenarios of **medium-risk** modules (users, feature flags, the audit log, CSV upload, discussions, announcements, the calendar, the dean's reach, follow-ups, department announcements, the chairperson): Waves 1 and 2 took only critical and high-risk modules;
+- the P1 scenarios of **medium-risk** modules (users, feature flags, the audit log, CSV upload, discussions, announcements, the calendar, the dean's reach, follow-ups, college announcements, the chairperson): Waves 1 and 2 took only critical and high-risk modules;
 - PS-ENR-03 and PS-TRM-05, which Wave 2's cases mentioned in a note but did not test;
 - the chairperson's cases, in a new file `p2-chairperson.md` as decision MISS-DOC-01 asked.
 

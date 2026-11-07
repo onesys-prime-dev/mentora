@@ -27,6 +27,41 @@ class QuizAttemptController extends BaseController
         );
     }
 
+    /**
+     * The quiz page again, with the password the student typed (JSON {password}, or a form field). A missing
+     * password counts as a wrong one: the page asks again, and nothing is started.
+     */
+    public function unlock(int $offeringId, int $assessmentId)
+    {
+        $body = $this->request->getJSON(true);
+        $typed = is_array($body) && is_string($body['password'] ?? null)
+            ? $body['password']
+            : (string) $this->request->getPost('password');
+
+        return $this->response->setJSON(
+            $this->quizAttemptService->startAttempt(
+                auth()->user(),
+                $assessmentId,
+                $offeringId,
+                $typed
+            )
+        );
+    }
+
+    /** The quiz page reporting what it saw (JSON {kind, duration_seconds | detail}); the answer says whether it was kept. */
+    public function securityEvent(int $submissionId)
+    {
+        $event = $this->request->getJSON(true);
+
+        return $this->response->setJSON(
+            $this->quizAttemptService->recordSecurityEvent(
+                auth()->user(),
+                $submissionId,
+                is_array($event) ? $event : []
+            )
+        );
+    }
+
     public function saveAnswer(int $submissionId, int $questionId)
     {
         $user = auth()->user();

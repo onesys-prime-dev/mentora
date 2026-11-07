@@ -54,7 +54,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
 
             <?php if ($finalization !== null && ($gradebook['signoff'] ?? null) !== null): ?>
                 <?php
-                // Who signed off: the dean, or an administrator where the department has none (QA AMB-ASG-04).
+                // Who signed off: the dean, or an administrator where the college has none (QA AMB-ASG-04).
                 $signerRole = (int) ($gradebook['signoff']['signed_by_dean'] ?? 1) === 1 ? 'the dean' : 'the administrator';
                 $signerName = trim((string) ($gradebook['signoff']['signed_by_name'] ?? ''));
                 ?>

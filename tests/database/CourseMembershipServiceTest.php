@@ -9,7 +9,7 @@ use Tests\Support\DatabaseTestCase;
 /**
  * Whether a person belongs to an offering in a given role: the instructor who
  * teaches it, the student enrolled (or done), the chairperson of its
- * sub-department, and nobody else.
+ * department, and nobody else.
  *
  * @internal
  */
@@ -29,13 +29,13 @@ final class CourseMembershipServiceTest extends DatabaseTestCase
     private function chair(int $offeringId): CodeIgniter\Shield\Entities\User
     {
         $user = CourseFactory::user('chairperson');
-        $sub  = (int) db_connect()->query(
+        $department  = (int) db_connect()->query(
             'SELECT sd.id FROM course_offerings o JOIN courses c ON c.id = o.course_id
-               JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id WHERE o.id = ?',
+               JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id WHERE o.id = ?',
             [$offeringId],
         )->getRow()->id;
 
-        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $user->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $department, 'chairperson_user_id' => $user->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
 
         return $user;
     }
@@ -69,7 +69,7 @@ final class CourseMembershipServiceTest extends DatabaseTestCase
         $this->assertFalse($this->membership->canAccessAs(CourseFactory::user('student'), 'student', $offering));
     }
 
-    public function testAChairpersonBelongsToTheirSubDepartmentsOfferingsOnly(): void
+    public function testAChairpersonBelongsToTheirDepartmentsOfferingsOnly(): void
     {
         $mine   = CourseFactory::offering('A');
         $theirs = CourseFactory::offering('B');

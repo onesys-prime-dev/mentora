@@ -5,7 +5,7 @@
  * @var array<string, mixed>                        $reportData
  * @var array<string, mixed>                        $reportOptions
  * @var \App\Services\Courses\MonitorProgramFilters $reportFilters
- * @var ?int                                        $reportDepartment
+ * @var ?int                                        $reportCollege
  * @var ?int                                        $reportProgram
  * @var string                                      $reportSort
  * @var string                                      $reportDir
@@ -18,9 +18,9 @@ $d    = $reportData;
 
 $second = 'rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
-$filtered = $f->isFiltered() || $reportDepartment !== null || $reportProgram !== null;
+$filtered = $f->isFiltered() || $reportCollege !== null || $reportProgram !== null;
 
-$query = array_filter(array_merge($f->toQuery(), ['department' => $reportDepartment, 'program' => $reportProgram]), static fn ($v): bool => $v !== null && $v !== '');
+$query = array_filter(array_merge($f->toQuery(), ['college' => $reportCollege, 'program' => $reportProgram]), static fn ($v): bool => $v !== null && $v !== '');
 
 $sortUrl = static fn (string $column, string $next): string => site_url($base . '/courses') . '?' . http_build_query(array_merge($query, ['sort' => $column, 'dir' => $next]));
 
@@ -30,16 +30,16 @@ foreach ($reportOptions['terms'] as $t) {
     $termOptions[(string) $t['id']] = $t['name'] . ' ' . $t['academic_year'];
 }
 
-$departmentOptions = ['' => 'Any department'];
+$collegeOptions = ['' => 'Any college'];
 
-foreach ($reportOptions['departments'] as $dep) {
-    $departmentOptions[(string) $dep['id']] = $dep['name'];
+foreach ($reportOptions['colleges'] as $dep) {
+    $collegeOptions[(string) $dep['id']] = $dep['name'];
 }
 
 $programOptions = ['' => 'Any program'];
 
 foreach ($reportOptions['programs'] as $p) {
-    if ($reportDepartment === null || (int) $p['department_id'] === $reportDepartment) {
+    if ($reportCollege === null || (int) $p['college_id'] === $reportCollege) {
         $programOptions[(string) $p['id']] = $p['code'] . ' · ' . $p['name'];
     }
 }
@@ -136,7 +136,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
         'filtered' => $filtered,
         'fields'   => [
             ['type' => 'select', 'name' => 'term', 'label' => 'Term', 'options' => $termOptions, 'value' => $f->termId !== null ? (string) $f->termId : ''],
-            ['type' => 'select', 'name' => 'department', 'label' => 'Department', 'options' => $departmentOptions, 'value' => $reportDepartment !== null ? (string) $reportDepartment : ''],
+            ['type' => 'select', 'name' => 'college', 'label' => 'College', 'options' => $collegeOptions, 'value' => $reportCollege !== null ? (string) $reportCollege : ''],
             ['type' => 'select', 'name' => 'program', 'label' => 'Program', 'options' => $programOptions, 'value' => $reportProgram !== null ? (string) $reportProgram : '', 'attrs' => ['data-programs' => json_encode($reportOptions['programs'], JSON_UNESCAPED_UNICODE)]],
             ['type' => 'date', 'name' => 'from', 'label' => 'Activity from', 'value' => (string) $f->from],
             ['type' => 'date', 'name' => 'to', 'label' => 'Activity to', 'value' => (string) $f->to],
@@ -149,7 +149,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
             <?= view('components/empty-state', [
                 'icon'  => 'score',
                 'title' => $filtered ? 'No courses match these filters' : 'No courses to report on yet',
-                'text'  => $filtered ? 'Try a different term, department or program.' : 'Reports fill in as offerings, enrolments and grades are added.',
+                'text'  => $filtered ? 'Try a different term, college or program.' : 'Reports fill in as offerings, enrolments and grades are added.',
             ], ['saveData' => false]) ?>
         </div>
 

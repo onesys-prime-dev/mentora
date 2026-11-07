@@ -113,6 +113,28 @@ final class GradingEngineServiceTest extends DatabaseTestCase
         $this->assertSame(80.0, $result['categories'][0]['percentage']);
     }
 
+    public function testWorkGivenToOtherStudentsOnlyIsLeftOutEvenInAFinalGrade(): void
+    {
+        // Item 2 was given to student 99 only: for STUDENT it never existed, so it is not a zero.
+        $context = $this->context([1 => 8.0, 3 => 70.0]);
+        $context['restricted'] = [2 => [99]];
+
+        $result = $this->engine->compute($context, self::STUDENT, [], true);
+
+        $this->assertSame(80.0, $result['categories'][0]['percentage']);
+        $this->assertSame(1, $result['categories'][0]['graded_count']);
+    }
+
+    public function testWorkGivenToThisStudentStillCountsAsZeroInAFinalGradeWhenNotDone(): void
+    {
+        $context = $this->context([1 => 8.0, 3 => 70.0]);
+        $context['restricted'] = [2 => [self::STUDENT]];
+
+        $result = $this->engine->compute($context, self::STUDENT, [], true);
+
+        $this->assertSame(40.0, $result['categories'][0]['percentage']); // 8 of 20
+    }
+
     public function testACategoryWithNothingGradedDoesNotDragTheGradeDown(): void
     {
         // No exam is graded yet, so the quizzes alone decide the grade.

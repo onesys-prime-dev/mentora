@@ -9,8 +9,8 @@ use CodeIgniter\Shield\Models\UserModel;
 
 /**
  * Staff groups (spec 3.2): a small group chat that a chairperson (the
- * instructors of their sub-department) or a dean (the instructors and
- * chairpersons of their department) starts for people in their scope.
+ * instructors of their department) or a dean (the instructors and
+ * chairpersons of their college) starts for people in their scope.
  *
  * Every member goes through the same scope facts `canStart` uses, so who a
  * group may hold can never drift from who a direct message may reach. A group

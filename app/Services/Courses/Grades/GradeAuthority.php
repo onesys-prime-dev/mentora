@@ -12,7 +12,7 @@ use CodeIgniter\Shield\Models\UserModel;
 /**
  * Who decides a grade-override request or a sign-off (audit F3, 7.2, 7.3, U1e).
  *
- * The department's dean decides, when they hold the duty's permission
+ * The college's dean decides, when they hold the duty's permission
  * (grades.approve for overrides, grades.signoff for sign-off); a dean without
  * it counts as no dean. Otherwise the institution's administrators who hold
  * it do. Whether an institution uses approval and sign-off at all is
@@ -23,10 +23,10 @@ use CodeIgniter\Shield\Models\UserModel;
  */
 final class GradeAuthority
 {
-    /** The department's active dean, when they hold the permission (as dean); else null. */
-    public static function deanFor(int $departmentId, string $permission): ?int
+    /** The college's active dean, when they hold the permission (as dean); else null. */
+    public static function deanFor(int $collegeId, string $permission): ?int
     {
-        $row = (new DeanAssignmentModel())->currentDeanOfDepartment($departmentId);
+        $row = (new DeanAssignmentModel())->currentDeanOfCollege($collegeId);
 
         if ($row === null) {
             return null;
@@ -69,11 +69,11 @@ final class GradeAuthority
     }
 
     /**
-     * Where nobody may decide (7.3, U1f): each department of an institution that uses approval with no dean
+     * Where nobody may decide (7.3, U1f): each college of an institution that uses approval with no dean
      * holding the permission while no administrator holds it either, per duty. Shown as a warning on both
      * Roles pages; requests and sign-offs there wait.
      *
-     * @return list<array{department: string, permission: string}>
+     * @return list<array{college: string, permission: string}>
      */
     public static function gaps(int $institutionId): array
     {
@@ -81,7 +81,7 @@ final class GradeAuthority
             return [];
         }
 
-        $departments = db_connect()->table('departments')->select('id, name')->where('institution_id', $institutionId)->orderBy('name')->get()->getResultArray();
+        $colleges = db_connect()->table('colleges')->select('id, name')->where('institution_id', $institutionId)->orderBy('name')->get()->getResultArray();
         $gaps        = [];
 
         foreach (['grades.approve', 'grades.signoff'] as $permission) {
@@ -89,9 +89,9 @@ final class GradeAuthority
                 continue;
             }
 
-            foreach ($departments as $department) {
-                if (self::deanFor((int) $department['id'], $permission) === null) {
-                    $gaps[] = ['department' => (string) $department['name'], 'permission' => $permission];
+            foreach ($colleges as $college) {
+                if (self::deanFor((int) $college['id'], $permission) === null) {
+                    $gaps[] = ['college' => (string) $college['name'], 'permission' => $permission];
                 }
             }
         }
@@ -103,7 +103,7 @@ final class GradeAuthority
     public static function usesApproval(int $institutionId): bool
     {
         return db_connect()->table('dean_assignments da')
-            ->join('departments d', 'd.id = da.department_id')
+            ->join('colleges d', 'd.id = da.college_id')
             ->where('d.institution_id', $institutionId)
             ->where(['da.status' => 'active', 'da.active_marker' => 1])
             ->countAllResults() > 0;

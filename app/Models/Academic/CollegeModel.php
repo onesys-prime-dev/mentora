@@ -1,0 +1,84 @@
+<?php
+
+namespace App\Models\Academic;
+
+use CodeIgniter\Model;
+
+class CollegeModel extends Model
+{
+    protected $table = 'colleges';
+
+    protected $primaryKey = 'id';
+
+    protected $returnType = 'array';
+
+    protected $useAutoIncrement = true;
+
+    protected $useSoftDeletes = false;
+
+    protected $useTimestamps = true;
+
+    protected $dateFormat = 'datetime';
+
+    protected $createdField = 'created_at';
+
+    protected $updatedField = 'updated_at';
+
+    protected $allowedFields = [
+
+        'institution_id',
+        'code',
+        'name',
+        'location',
+        'established_year',
+
+    ];
+
+    protected $validationRules = [
+
+        'institution_id' => [
+            'rules' => 'required|is_natural_no_zero',
+        ],
+
+        'code' => [
+            'rules' => 'required|max_length[50]',
+        ],
+
+        'name' => [
+            'rules' => 'required|min_length[3]|max_length[255]',
+        ],
+
+        'location' => [
+            'rules' => 'permit_empty|max_length[255]',
+        ],
+
+        'established_year' => [
+            'rules' => 'permit_empty|is_natural_no_zero|exact_length[4]',
+        ],
+
+    ];
+
+    protected $validationMessages = [
+
+        'institution_id' => [
+            'required' => 'Institution is required.',
+        ],
+
+        'code' => [
+            'required' => 'College code is required.',
+        ],
+
+        'name' => [
+            'required' => 'College name is required.',
+        ],
+
+    ];
+
+    /** An institution's colleges, by name. */
+    public function forInstitution(int $institutionId): array
+    {
+        return $this->where('institution_id', $institutionId)
+            ->orderBy('name')
+            ->findAll();
+    }
+}

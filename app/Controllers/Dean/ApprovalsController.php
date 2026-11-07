@@ -13,7 +13,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * The dean's Approvals: grade-override requests of their department that the
+ * The dean's Approvals: grade-override requests of their college that the
  * chairperson endorsed (or that skipped the chairperson), to approve or reject,
  * and the ones already decided. Approving changes the grade through the grading
  * engine; rejecting changes nothing. The decisions answer JSON for the dialog
@@ -26,7 +26,7 @@ class ApprovalsController extends BaseController
     {
         $user = auth()->user();
 
-        if ((new DeanAccessService())->departmentFor($user) === null) {
+        if ((new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Approvals', 'page' => 'approvals', 'user' => $user]);
         }
 

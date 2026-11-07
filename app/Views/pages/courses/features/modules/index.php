@@ -124,10 +124,11 @@ $formatDuration = static function (int $minutes): string {
                                             <?= esc($module['title']) ?>
                                         </span>
                                         <?php if ($isDraft): ?>
-                                            <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
-                                                Draft
+                                            <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]" data-publish-chip="<?= !empty($module['scheduled_publish_at']) ? 'scheduled' : 'draft' ?>">
+                                                <?= !empty($module['scheduled_publish_at']) ? 'Scheduled · ' . esc(date('M j, g:i A', strtotime($module['scheduled_publish_at']))) : 'Draft' ?>
                                             </span>
                                         <?php endif; ?>
+                                        <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $module['locked_by'] ?? [], 'labels' => $module['dependency_labels'] ?? []], ['saveData' => false]) ?>
                                     </div>
 
                                     <span class="text-sm font-normal text-[#A3A3A3]">
@@ -265,3 +266,11 @@ $formatDuration = static function (int $minutes): string {
 <!-- modals -->
 <?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
 <?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
+<?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
+<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+    'id' => 'module-dependencies-modal',
+    'closeAttr' => 'data-close-module-dependencies-modal',
+    'noun' => 'module',
+    'earlier' => 'earlier modules in this course',
+    'previousLabel' => 'Previous module',
+], ['saveData' => false]) ?>

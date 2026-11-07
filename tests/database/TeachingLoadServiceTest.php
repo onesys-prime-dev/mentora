@@ -16,10 +16,10 @@ use Tests\Support\PeopleFactory;
  * The dean's teaching-load figures, from a fixture with known numbers:
  *
  *   Tess teaches IT101 (3 units, students s1 s2; 2 pieces of work waiting, 2 graded after 24 h and 48 h),
- *   IT102 (3 units, students s2 s3) in Sub A and LW100 (3 units, student s4) in Sub B: 3 sections, 9 units,
- *   4 students (s2 is in two of hers), turnaround 36 h. She also teaches a section of another department.
- *   Leo teaches CS200 (21 units, no students): a high load at the platform's 21. Mia co-teaches IT101.
- *   Zed teaches only in the other department, and Tess has a section in an earlier term.
+ *   IT102 (3 units, students s2 s3) in Department A and LW100 (3 units, student s4) in Department B: 3 sections, 9 units,
+ *   4 students (s2 is in two of hers), turnaround 36 h. She also teaches a section of another college.
+ *   Leo teaches CS200 (30 units, no students): a high load at the platform's 30. Mia co-teaches IT101.
+ *   Zed teaches only in the other college, and Tess has a section in an earlier term.
  *
  * @internal
  */
@@ -29,12 +29,12 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
 
     private TeachingLoadService $service;
     private int $institution;
-    private int $department;
-    private int $subA;
-    private int $subB;
+    private int $college;
+    private int $departmentA;
+    private int $departmentB;
     private int $term;
     private int $earlier;
-    private int $otherDepartment;
+    private int $otherCollege;
     private int $it101;
     private User $dean;
     private User $tess;
@@ -46,16 +46,16 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('L');
+        $home              = DeanFactory::college('L');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'B');
-        $programA          = DeanFactory::program($this->subA, 'A');
-        $programB          = DeanFactory::program($this->subB, 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->departmentB        = DeanFactory::department($this->college, 'B');
+        $programA          = DeanFactory::program($this->departmentA, 'A');
+        $programB          = DeanFactory::program($this->departmentB, 'B');
         $this->term        = DeanFactory::term($this->institution, 'Second', '2027-01-10');
         $this->earlier     = DeanFactory::term($this->institution, 'First', '2026-08-01');
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
         $this->service     = new TeachingLoadService();
 
         $this->tess = PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution);
@@ -74,7 +74,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $it102       = DeanFactory::offering($programA, $this->term, 'IT102');
         $lw100       = DeanFactory::offering($programB, $this->term, 'LW100');
         $cs200       = DeanFactory::offering($programA, $this->term, 'CS200');
-        db_connect()->table('courses')->where('course_code', 'CS200')->update(['units' => 21]);
+        db_connect()->table('courses')->where('course_code', 'CS200')->update(['units' => 30]);
 
         CourseFactory::assignInstructor($this->it101, $this->tess);
         CourseFactory::assignInstructor($this->it101, $this->mia);
@@ -96,12 +96,12 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
             AssessmentFactory::attempt($assessment, $n % 2 === 0 ? $s1 : $s2, $status, 0.0, ['submitted_at' => $at, 'graded_at' => $gradedAt, 'attempt_number' => $n + 1]);
         }
 
-        // An earlier term, and another department of the same institution.
+        // An earlier term, and another college of the same institution.
         CourseFactory::assignInstructor(DeanFactory::offering($programA, $this->earlier, 'OLD100'), $this->tess);
 
-        $other = DeanFactory::department('N', $this->institution);
-        $this->otherDepartment = $other['department'];
-        $next  = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($other['department'], 'N'), 'N'), $this->term, 'LAW900');
+        $other = DeanFactory::college('N', $this->institution);
+        $this->otherCollege = $other['college'];
+        $next  = DeanFactory::offering(DeanFactory::program(DeanFactory::department($other['college'], 'N'), 'N'), $this->term, 'LAW900');
         CourseFactory::assignInstructor($next, $this->tess);
         CourseFactory::assignInstructor($next, $this->zed);
     }
@@ -117,7 +117,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         return TeachingLoadFilters::fromInput($input);
     }
 
-    public function testEachInstructorOfTheDepartmentHasTheirOwnNumbers(): void
+    public function testEachInstructorOfTheCollegeHasTheirOwnNumbers(): void
     {
         $rows = $this->byName($this->service->load($this->dean, $this->filters()));
 
@@ -125,7 +125,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
 
         $tess = $rows['Tess Tan'];
 
-        $this->assertSame(3, $tess['sections'], 'LAW900 of the other department and OLD100 of the earlier term are not counted');
+        $this->assertSame(3, $tess['sections'], 'LAW900 of the other college and OLD100 of the earlier term are not counted');
         $this->assertSame(9.0, $tess['units']);
         $this->assertSame(4, $tess['students'], 'a student in two of her sections is one student, and a dropped one is not counted');
         $this->assertSame(2, $tess['ungraded']);
@@ -151,7 +151,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $this->assertSame(0, $leo['students']);
         $this->assertSame(0, $leo['ungraded']);
         $this->assertNull($leo['turnaround']);
-        $this->assertSame(21.0, $leo['units']);
+        $this->assertSame(30.0, $leo['units']);
     }
 
     public function testAHighLoadIsMarkedAtTheInstitutionsNumberOfUnits(): void
@@ -159,7 +159,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $result = $this->service->load($this->dean, $this->filters());
 
         $this->assertSame(AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, $result['highLoadUnits']);
-        $this->assertTrue($this->byName($result)['Leo Law']['high_load'], '21 units reaches the platform number');
+        $this->assertTrue($this->byName($result)['Leo Law']['high_load'], '30 units reaches the platform number');
 
         (new AcademicDefaults())->save($this->institution, ['high_load_units' => '9'], PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution));
 
@@ -170,7 +170,7 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $this->assertFalse($this->byName($result)['Mia Mo']['high_load']);
     }
 
-    public function testItOpensOnTheNewestTermAndAnotherTermOfTheDepartmentCanBeChosen(): void
+    public function testItOpensOnTheNewestTermAndAnotherTermOfTheCollegeCanBeChosen(): void
     {
         $this->assertSame($this->term, $this->service->load($this->dean, $this->filters())['term']);
 
@@ -181,19 +181,19 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $this->assertSame(1, $earlier['rows'][0]['sections']);
     }
 
-    public function testATermNotInTheDepartmentFallsBackToTheNewest(): void
+    public function testATermNotInTheCollegeFallsBackToTheNewest(): void
     {
         $this->assertSame($this->term, $this->service->load($this->dean, $this->filters(['term' => '999999']))['term']);
     }
 
-    public function testASubDepartmentNarrowsToTheSectionsInIt(): void
+    public function testADepartmentNarrowsToTheSectionsInIt(): void
     {
-        $rows = $this->byName($this->service->load($this->dean, $this->filters(['sub_department' => (string) $this->subB])));
+        $rows = $this->byName($this->service->load($this->dean, $this->filters(['department' => (string) $this->departmentB])));
 
         $this->assertSame(['Tess Tan'], array_keys($rows));
         $this->assertSame(1, $rows['Tess Tan']['sections']);
         $this->assertSame(3.0, $rows['Tess Tan']['units']);
-        $this->assertSame([], $this->service->load($this->dean, $this->filters(['sub_department' => '999999']))['rows'], 'a sub-department of another department finds nobody');
+        $this->assertSame([], $this->service->load($this->dean, $this->filters(['department' => '999999']))['rows'], 'a department of another college finds nobody');
     }
 
     public function testTheTableSortsByAColumnWithMissingValuesLastAndTiesByName(): void
@@ -224,17 +224,17 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $this->assertCount(2, $it101['student_ids']);
     }
 
-    public function testAnInstructorOutsideTheDepartmentIsNotFound(): void
+    public function testAnInstructorOutsideTheCollegeIsNotFound(): void
     {
         $this->assertNull($this->service->instructor($this->dean, (int) $this->zed->id, null));
-        $this->assertFalse($this->service->teachesInDepartment($this->dean, (int) $this->zed->id));
-        $this->assertTrue($this->service->teachesInDepartment($this->dean, (int) $this->tess->id));
-        $this->assertFalse($this->service->teachesInDepartment($this->dean, 999999));
+        $this->assertFalse($this->service->teachesInCollege($this->dean, (int) $this->zed->id));
+        $this->assertTrue($this->service->teachesInCollege($this->dean, (int) $this->tess->id));
+        $this->assertFalse($this->service->teachesInCollege($this->dean, 999999));
     }
 
-    public function testAnotherDeansDepartmentSeesOnlyItsOwnSectionsOfTheSameInstructor(): void
+    public function testAnotherDeansCollegeSeesOnlyItsOwnSectionsOfTheSameInstructor(): void
     {
-        $other = DeanFactory::dean($this->institution, $this->otherDepartment, 'Eve');
+        $other = DeanFactory::dean($this->institution, $this->otherCollege, 'Eve');
         $rows  = $this->byName($this->service->load($other, $this->filters()));
 
         $this->assertEqualsCanonicalizing(['Tess Tan', 'Zed Zee'], array_keys($rows));
@@ -242,14 +242,14 @@ final class TeachingLoadServiceTest extends DatabaseTestCase
         $this->assertSame(3.0, $rows['Tess Tan']['units']);
     }
 
-    public function testADeanWithoutADepartmentSeesNothing(): void
+    public function testADeanWithoutACollegeSeesNothing(): void
     {
-        $stray = PeopleFactory::person('dean', 'No', 'Department', null, $this->institution);
+        $stray = PeopleFactory::person('dean', 'No', 'College', null, $this->institution);
 
         $this->assertSame(['term' => null, 'highLoadUnits' => AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS, 'rows' => []], $this->service->load($stray, $this->filters()));
         $this->assertSame([], $this->service->terms($stray));
         $this->assertNull($this->service->instructor($stray, (int) $this->tess->id, null));
-        $this->assertFalse($this->service->teachesInDepartment($stray, (int) $this->tess->id));
+        $this->assertFalse($this->service->teachesInCollege($stray, (int) $this->tess->id));
 
         db_connect()->table('dean_assignments')->where('dean_user_id', $this->dean->id)->update(['status' => 'ended', 'active_marker' => null]);
 

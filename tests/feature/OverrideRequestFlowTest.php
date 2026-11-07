@@ -21,8 +21,8 @@ use Tests\Support\RouteTestCase;
 final class OverrideRequestFlowTest extends RouteTestCase
 {
     private int $institution;
+    private int $college;
     private int $department;
-    private int $sub;
     private int $offering;
     private int $scheme;
     private User $teacher;
@@ -37,15 +37,15 @@ final class OverrideRequestFlowTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         Services::resetSingle('renderer');
 
-        $home              = DeanFactory::department('F');
+        $home              = DeanFactory::college('F');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'F');
-        $this->offering    = DeanFactory::offering(DeanFactory::program($this->sub, 'F'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'F');
+        $this->offering    = DeanFactory::offering(DeanFactory::program($this->department, 'F'), DeanFactory::term($this->institution), 'IT101', 'A', 'active', 'Intro to Computing');
 
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
-        $this->chair   = DeanFactory::chair($this->sub, 'Maria');
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
+        $this->chair   = DeanFactory::chair($this->department, 'Maria');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
         $this->student = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
 
         CourseFactory::assignInstructor($this->offering, $this->teacher);
@@ -112,8 +112,8 @@ final class OverrideRequestFlowTest extends RouteTestCase
 
     public function testWhereTheInstitutionHasNoDeanTheOverrideStillAppliesAtOnce(): void
     {
-        $other   = DeanFactory::department('L');
-        $program = DeanFactory::program(DeanFactory::subDepartment($other['department'], 'L'), 'L');
+        $other   = DeanFactory::college('L');
+        $program = DeanFactory::program(DeanFactory::department($other['college'], 'L'), 'L');
         $offer   = DeanFactory::offering($program, DeanFactory::term($other['institution']), 'LW100');
         $teacher = PeopleFactory::person('instructor', 'Lena', 'Law', null, $other['institution']);
         $student = PeopleFactory::person('student', 'Bob', 'Ray', null, $other['institution']);
@@ -272,13 +272,13 @@ final class OverrideRequestFlowTest extends RouteTestCase
         $this->assertSame('withdrawn', $this->requestStatus($id));
     }
 
-    public function testAnotherSubDepartmentsChairpersonCannotSeeOrActOnTheRequest(): void
+    public function testAnotherDepartmentsChairpersonCannotSeeOrActOnTheRequest(): void
     {
         $this->loggedInAs($this->teacher);
         $this->override();
         $id = $this->openRequestId();
 
-        $elsewhere = DeanFactory::chair(DeanFactory::subDepartment($this->department, 'Other'), 'Olga');
+        $elsewhere = DeanFactory::chair(DeanFactory::department($this->college, 'Other'), 'Olga');
         $this->loggedInAs($elsewhere);
 
         $this->assertStringNotContainsString('Ann Lee', $this->call('get', 'chairperson/override-requests?view=all')->response()->getBody());

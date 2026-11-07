@@ -2,9 +2,9 @@
 /**
  * Identity strip. Same shape for every role, different second and third
  * lines: a student is identified by their number and programme, an
- * instructor by the department they sit in and the rank they hold.
+ * instructor by the college they sit in and the rank they hold.
  *
- * The instructor's department line is the sub-department that owns the first
+ * The instructor's college line is the department that owns the first
  * course they were assigned to teach (UserProfileModel works it out); it is
  * left out for an instructor who teaches nothing yet. user_profiles still has
  * no academic_rank column, so that line is a placeholder.
@@ -15,7 +15,7 @@ $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''))
 
 if ($userRole === 'instructor') {
     $primaryLine = $data['academic_rank'] ?? 'Associate Professor';
-    $secondaryLine = $data['teaching_sub_department_name'] ?? null;
+    $secondaryLine = $data['teaching_department_name'] ?? null;
 } else {
     $primaryLine = $data['student_number'] ?? '';
 

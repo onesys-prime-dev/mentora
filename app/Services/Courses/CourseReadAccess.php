@@ -12,7 +12,7 @@ use CodeIgniter\Shield\Entities\User;
  * Who may look at a course without being its instructor, and which courses.
  *
  * Two kinds of person have a read-only view of a course (CourseViewer):
- * the dean, of every course in their department, while acting as dean; and
+ * the dean, of every course in their college, while acting as dean; and
  * the institution's administrator, of every course in their institution.
  * Every course service that lets them in asks here, so a course outside their
  * reach answers the same way in all of them and the rule is written once.

@@ -12,10 +12,10 @@ use App\Services\Courses\TeachingLoadService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
 /**
- * The dean's teaching-load review: each instructor of the department with the sections, students, units,
+ * The dean's teaching-load review: each instructor of the college with the sections, students, units,
  * work waiting to be graded and grading speed they carry in a term, a marker for a high load, and a page per
  * instructor listing their sections (each opening read-only). View only; there is nothing to change here.
- * An instructor who teaches none of the department's sections is a 404, so an id cannot be guessed.
+ * An instructor who teaches none of the college's sections is a 404, so an id cannot be guessed.
  */
 class TeachingLoadController extends BaseController
 {
@@ -23,7 +23,7 @@ class TeachingLoadController extends BaseController
     {
         $user = auth()->user();
 
-        if ((new DeanAccessService())->departmentFor($user) === null) {
+        if ((new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Teaching load', 'page' => 'teaching-load', 'user' => $user]);
         }
 
@@ -32,12 +32,12 @@ class TeachingLoadController extends BaseController
 
         $loadError      = false;
         $terms          = [];
-        $subDepartments = [];
+        $departments = [];
         $result         = ['term' => null, 'highLoadUnits' => 0, 'rows' => []];
 
         try {
             $terms          = $service->terms($user);
-            $subDepartments = (new DeanCourseSearch())->subDepartments($user);
+            $departments = (new DeanCourseSearch())->departments($user);
             $result         = $service->load($user, $filters);
         } catch (\Throwable $e) {
             log_message('error', 'Teaching load failed to load: ' . $e->getMessage());
@@ -50,7 +50,7 @@ class TeachingLoadController extends BaseController
             'user'           => $user,
             'filters'        => $filters,
             'terms'          => $terms,
-            'subDepartments' => $subDepartments,
+            'departments' => $departments,
             'term'           => $result['term'],
             'highLoadUnits'  => $result['highLoadUnits'],
             'instructors'    => $result['rows'],
@@ -64,18 +64,18 @@ class TeachingLoadController extends BaseController
         $user    = auth()->user();
         $service = new TeachingLoadService();
 
-        if ((new DeanAccessService())->departmentFor($user) === null) {
+        if ((new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Teaching load', 'page' => 'teaching-load', 'user' => $user]);
         }
 
-        if (! $service->teachesInDepartment($user, $instructorId)) {
+        if (! $service->teachesInCollege($user, $instructorId)) {
             throw PageNotFoundException::forPageNotFound();
         }
 
         $filters = TeachingLoadFilters::fromInput($this->request->getGet());
         $detail  = $service->instructor($user, $instructorId, $filters->termId);
 
-        // They teach in the department, just not in this term.
+        // They teach in the college, just not in this term.
         if ($detail === null) {
             $name = db_connect()->table('user_profiles')->select("TRIM(CONCAT_WS(' ', first_name, last_name)) AS name", false)->where('user_id', $instructorId)->get()->getRow('name');
             $detail = [

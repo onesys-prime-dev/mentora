@@ -41,9 +41,9 @@ final class MessageActionsBumpTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $d           = DeanFactory::department('S1');
+        $d           = DeanFactory::college('S1');
         $institution = $this->institution = $d['institution'];
-        $program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'SA'), 'SA');
+        $program     = DeanFactory::program(DeanFactory::department($d['college'], 'SA'), 'SA');
         $offering    = DeanFactory::offering($program, DeanFactory::term($institution), 'MS1');
 
         $this->student    = PeopleFactory::person('student', 'Stu', 'Dent', null, $institution);

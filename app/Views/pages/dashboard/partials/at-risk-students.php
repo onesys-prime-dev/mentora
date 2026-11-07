@@ -15,6 +15,16 @@ $userRole = esc(active_role() ?: ($user->getGroups()[0] ?? ''));
 
 $students = $data['students'] ?? [];
 
+/**
+ * "See all" opens the same list on the Grades page, for the area that card belongs to. Only an instructor acting
+ * as one has that page (the chairperson's merged Needs Attention card has its own); only with courses.view, which
+ * the page's route asks.
+ */
+$seeAll = static fn (string $tab): ?string => $userRole === 'instructor' && (new \App\Services\Auth\RolePermissions())->allows($user, 'courses.view', 'instructor')
+    ? site_url('instructor/grades?tab=' . $tab)
+    : null;
+$seeAllClass = 'text-xs font-semibold text-blue-900 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 rounded';
+
 $reasonStyles = [
     'inactive' => ['chip' => 'bg-red-500/15 text-red-700',     'label' => 'Inactive',   'bar' => 'bg-red-600'],
     'behind'   => ['chip' => 'bg-amber-500/20 text-amber-700', 'label' => 'Behind',     'bar' => 'bg-amber-600'],
@@ -28,8 +38,13 @@ $reasonStyles = [
         <span class="text-xl font-display">Needs Your Attention</span>
 
         <?php if ($students !== []): ?>
-            <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-500/15 text-red-700">
-                <?= count($students) ?> students
+            <span class="flex items-center gap-3">
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-500/15 text-red-700">
+                    <?= count($students) ?> students
+                </span>
+                <?php if (($all = $seeAll('at-risk')) !== null): ?>
+                    <a href="<?= esc($all, 'attr') ?>" class="<?= $seeAllClass ?>" data-see-all>See all</a>
+                <?php endif; ?>
             </span>
         <?php endif; ?>
     </div>

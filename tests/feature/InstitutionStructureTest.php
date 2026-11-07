@@ -23,9 +23,9 @@ final class InstitutionStructureTest extends RouteTestCase
 
     private int $other;
 
-    private int $department;
+    private int $college;
 
-    private int $subDepartment;
+    private int $department;
 
     private int $program;
 
@@ -44,9 +44,9 @@ final class InstitutionStructureTest extends RouteTestCase
 
         $db = db_connect();
 
-        $this->department    = (int) $db->table('departments')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
-        $this->subDepartment = (int) $db->table('sub_departments')->where('department_id', $this->department)->get()->getRowArray()['id'];
-        $this->program       = (int) $db->table('programs')->where('sub_department_id', $this->subDepartment)->get()->getRowArray()['id'];
+        $this->college    = (int) $db->table('colleges')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
+        $this->department = (int) $db->table('departments')->where('college_id', $this->college)->get()->getRowArray()['id'];
+        $this->program       = (int) $db->table('programs')->where('department_id', $this->department)->get()->getRowArray()['id'];
 
         $db->table('audit_logs')->emptyTable();
 
@@ -82,10 +82,10 @@ final class InstitutionStructureTest extends RouteTestCase
     {
         $db = db_connect();
 
-        $department = (int) $db->table('departments')->where('institution_id', $this->other)->get()->getRowArray()['id'];
-        $sub        = (int) $db->table('sub_departments')->where('department_id', $department)->get()->getRowArray()['id'];
+        $college = (int) $db->table('colleges')->where('institution_id', $this->other)->get()->getRowArray()['id'];
+        $department        = (int) $db->table('departments')->where('college_id', $college)->get()->getRowArray()['id'];
 
-        return ['department' => $department, 'sub' => $sub, 'program' => (int) $db->table('programs')->where('sub_department_id', $sub)->get()->getRowArray()['id']];
+        return ['college' => $college, 'department' => $department, 'program' => (int) $db->table('programs')->where('department_id', $department)->get()->getRowArray()['id']];
     }
 
     /** @return iterable<string, array{string}> */
@@ -103,10 +103,10 @@ final class InstitutionStructureTest extends RouteTestCase
 
         $this->assertSame(302, $this->step('GET', $this->url())->response()->getStatusCode());
 
-        $before = db_connect()->table('departments')->countAllResults();
-        $this->step('POST', $this->url('/departments'), ['code' => 'HACK', 'name' => 'Hacked department']);
+        $before = db_connect()->table('colleges')->countAllResults();
+        $this->step('POST', $this->url('/colleges'), ['code' => 'HACK', 'name' => 'Hacked college']);
 
-        $this->assertSame($before, db_connect()->table('departments')->countAllResults());
+        $this->assertSame($before, db_connect()->table('colleges')->countAllResults());
     }
 
     /*
@@ -119,12 +119,12 @@ final class InstitutionStructureTest extends RouteTestCase
     {
         $body = $this->page();
 
+        $this->assertStringContainsString('data-college="' . $this->college . '"', $body);
         $this->assertStringContainsString('data-department="' . $this->department . '"', $body);
-        $this->assertStringContainsString('data-sub-department="' . $this->subDepartment . '"', $body);
         $this->assertStringContainsString('data-program="' . $this->program . '"', $body);
-        $this->assertMatchesRegularExpression('/<strong[^>]*>1<\/strong>\s+department.*?<strong[^>]*>1<\/strong>\s+sub-department.*?<strong[^>]*>1<\/strong>\s+program/s', $body);
-        $this->assertStringContainsString('Add a department', $body);
-        $this->assertStringContainsString('id="structure-department"', $body);
+        $this->assertMatchesRegularExpression('/<strong[^>]*>1<\/strong>\s+college.*?<strong[^>]*>1<\/strong>\s+department.*?<strong[^>]*>1<\/strong>\s+program/s', $body);
+        $this->assertStringContainsString('Add a college', $body);
+        $this->assertStringContainsString('id="structure-college"', $body);
         $this->assertStringContainsString('id="structure-confirm"', $body);
     }
 
@@ -132,22 +132,22 @@ final class InstitutionStructureTest extends RouteTestCase
     {
         $body = $this->page();
 
-        $this->assertStringNotContainsString('data-department="' . $this->foreign()['department'] . '"', $body);
+        $this->assertStringNotContainsString('data-college="' . $this->foreign()['college'] . '"', $body);
         $this->assertStringNotContainsString('STRUCTO College', $body);
     }
 
-    public function testWithNoDepartmentsThePageSaysSoAndOffersTheFirstOne(): void
+    public function testWithNoCollegesThePageSaysSoAndOffersTheFirstOne(): void
     {
         $empty = SisFixture::institution('STREMPTY');
-        db_connect()->table('departments')->where('institution_id', $empty)->delete();
+        db_connect()->table('colleges')->where('institution_id', $empty)->delete();
         $admin = PeopleFactory::person('institutional_admin', 'Eve', 'Empty', 'eve@struct.example', $empty);
         $this->signIn($admin);
 
         $body = $this->page();
 
         $this->assertStringContainsString('data-structure-empty', $body);
-        $this->assertStringContainsString('No departments yet', $body);
-        $this->assertStringContainsString('Add a department', $body);
+        $this->assertStringContainsString('No colleges yet', $body);
+        $this->assertStringContainsString('Add a college', $body);
     }
 
     public function testAnAdministratorWithNoInstitutionIsSentAway(): void
@@ -169,19 +169,19 @@ final class InstitutionStructureTest extends RouteTestCase
     {
         $this->withHeaders(['Accept' => 'application/json']);
 
-        $result = $this->step('POST', $this->url('/departments'), ['code' => 'ccs', 'name' => 'College of Computing', 'location' => '', 'established_year' => '']);
+        $result = $this->step('POST', $this->url('/colleges'), ['code' => 'ccs', 'name' => 'College of Computing', 'location' => '', 'established_year' => '']);
 
         $this->assertTrue($result->isOK());
         $json = json_decode($result->getJSON(), true);
-        $this->assertSame('The department was added.', $json['message']);
+        $this->assertSame('The college was added.', $json['message']);
         $this->assertStringContainsString('institution/structure', $json['redirect']);
 
-        $row = db_connect()->table('departments')->where(['institution_id' => $this->institution, 'code' => 'CCS'])->get()->getRowArray();
+        $row = db_connect()->table('colleges')->where(['institution_id' => $this->institution, 'code' => 'CCS'])->get()->getRowArray();
         $this->assertNotNull($row);
-        $this->assertSame(1, $this->audited('structure.department_created'));
+        $this->assertSame(1, $this->audited('structure.college_created'));
     }
 
-    public function testADeanIsAssignedToADepartmentReplacedAndRemoved(): void
+    public function testADeanIsAssignedToACollegeReplacedAndRemoved(): void
     {
         $first  = PeopleFactory::person('dean', 'Dina', 'Dean', 'dina@struct.example', $this->institution);
         $second = PeopleFactory::person('dean', 'Dan', 'Dale', 'dan@struct.example', $this->institution);
@@ -189,32 +189,32 @@ final class InstitutionStructureTest extends RouteTestCase
         $this->assertStringContainsString('Assign dean', $this->page());
 
         $this->withHeaders(['Accept' => 'application/json']);
-        $this->assertTrue($this->step('POST', $this->url('/departments/' . $this->department . '/deans'), ['user_id' => (string) $first->id])->isOK());
+        $this->assertTrue($this->step('POST', $this->url('/colleges/' . $this->college . '/deans'), ['user_id' => (string) $first->id])->isOK());
 
         $page = $this->page();
         $this->assertStringContainsString('Dina Dean', $page);
         $this->assertStringContainsString('Replace dean', $page);
 
-        $this->assertTrue($this->step('POST', $this->url('/departments/' . $this->department . '/deans'), ['user_id' => (string) $second->id])->isOK());
-        $this->assertSame('Dan Dale', (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution)[$this->department]['name']);
+        $this->assertTrue($this->step('POST', $this->url('/colleges/' . $this->college . '/deans'), ['user_id' => (string) $second->id])->isOK());
+        $this->assertSame('Dan Dale', (new \App\Services\Institutions\DeanAssignmentService())->byCollege($this->institution)[$this->college]['name']);
 
-        $id = (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution)[$this->department]['id'];
+        $id = (new \App\Services\Institutions\DeanAssignmentService())->byCollege($this->institution)[$this->college]['id'];
         $this->assertTrue($this->step('POST', $this->url('/deans/' . $id . '/remove'))->isOK());
-        $this->assertSame([], (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution));
+        $this->assertSame([], (new \App\Services\Institutions\DeanAssignmentService())->byCollege($this->institution));
     }
 
-    public function testAddingADepartmentCanPickItsDeanAndRefusesSomeoneWhoIsNotOne(): void
+    public function testAddingACollegeCanPickItsDeanAndRefusesSomeoneWhoIsNotOne(): void
     {
         $dean = PeopleFactory::person('dean', 'Dina', 'Dean', 'dina@struct.example', $this->institution);
 
         $this->withHeaders(['Accept' => 'application/json']);
-        $this->assertTrue($this->step('POST', $this->url('/departments'), ['code' => 'ccs', 'name' => 'College of Computing', 'dean_user_id' => (string) $dean->id])->isOK());
+        $this->assertTrue($this->step('POST', $this->url('/colleges'), ['code' => 'ccs', 'name' => 'College of Computing', 'dean_user_id' => (string) $dean->id])->isOK());
 
-        $row = db_connect()->table('departments')->where(['institution_id' => $this->institution, 'code' => 'CCS'])->get()->getRowArray();
-        $this->assertSame((int) $dean->id, (new \App\Services\Institutions\DeanAssignmentService())->byDepartment($this->institution)[(int) $row['id']]['user_id']);
+        $row = db_connect()->table('colleges')->where(['institution_id' => $this->institution, 'code' => 'CCS'])->get()->getRowArray();
+        $this->assertSame((int) $dean->id, (new \App\Services\Institutions\DeanAssignmentService())->byCollege($this->institution)[(int) $row['id']]['user_id']);
 
         $outsider = PeopleFactory::person('student', 'Sam', 'Student', 'sam@struct.example', $this->other);
-        $result   = $this->step('POST', $this->url('/departments'), ['code' => 'cba', 'name' => 'College of Business', 'dean_user_id' => (string) $outsider->id]);
+        $result   = $this->step('POST', $this->url('/colleges'), ['code' => 'cba', 'name' => 'College of Business', 'dean_user_id' => (string) $outsider->id]);
         $this->assertSame(422, $result->response()->getStatusCode());
     }
 
@@ -222,7 +222,7 @@ final class InstitutionStructureTest extends RouteTestCase
     {
         $this->withHeaders(['Accept' => 'application/json']);
 
-        $result = $this->step('POST', $this->url('/departments'), ['code' => 'bad code', 'name' => 'College of Computing']);
+        $result = $this->step('POST', $this->url('/colleges'), ['code' => 'bad code', 'name' => 'College of Computing']);
 
         $this->assertSame(422, $result->response()->getStatusCode());
         $json = json_decode($result->getJSON(), true);
@@ -232,43 +232,43 @@ final class InstitutionStructureTest extends RouteTestCase
 
     public function testAPlainPostRedirectsBackWithAMessage(): void
     {
-        $response = $this->step('POST', $this->url('/departments'), ['code' => 'PLAIN', 'name' => 'A plain department'])->response();
+        $response = $this->step('POST', $this->url('/colleges'), ['code' => 'PLAIN', 'name' => 'A plain college'])->response();
 
         $this->assertSame(302, $response->getStatusCode());
         $this->assertStringEndsWith('institution/structure', $response->getHeaderLine('Location'));
-        $this->assertStringContainsString('The department was added.', $this->page());
+        $this->assertStringContainsString('The college was added.', $this->page());
     }
 
     public function testAPlainPostThatIsRefusedShowsTheReasonOnThePage(): void
     {
-        $this->step('POST', $this->url('/departments'), ['code' => 'DUP', 'name' => 'First department']);
-        $this->step('POST', $this->url('/departments'), ['code' => 'DUP', 'name' => 'Second department']);
+        $this->step('POST', $this->url('/colleges'), ['code' => 'DUP', 'name' => 'First college']);
+        $this->step('POST', $this->url('/colleges'), ['code' => 'DUP', 'name' => 'Second college']);
 
-        $this->assertStringContainsString('Another department already uses the code DUP', $this->page());
-        $this->assertSame(1, db_connect()->table('departments')->where(['institution_id' => $this->institution, 'code' => 'DUP'])->countAllResults());
+        $this->assertStringContainsString('Another college already uses the code DUP', $this->page());
+        $this->assertSame(1, db_connect()->table('colleges')->where(['institution_id' => $this->institution, 'code' => 'DUP'])->countAllResults());
     }
 
     public function testEachLevelCanBeCreatedAndEdited(): void
     {
         $this->withHeaders(['Accept' => 'application/json']);
 
-        $this->step('POST', $this->url("/departments/{$this->department}/sub-departments"), ['code' => 'NEWSUB', 'name' => 'A new sub-department']);
-        $subId = (int) db_connect()->table('sub_departments')->where('code', 'NEWSUB')->get()->getRowArray()['id'];
+        $this->step('POST', $this->url("/colleges/{$this->college}/departments"), ['code' => 'NEWSUB', 'name' => 'A new department']);
+        $departmentId = (int) db_connect()->table('departments')->where('code', 'NEWSUB')->get()->getRowArray()['id'];
 
-        $this->step('POST', $this->url("/sub-departments/{$subId}/programs"), ['code' => 'NEWPRG', 'name' => 'A new program']);
+        $this->step('POST', $this->url("/departments/{$departmentId}/programs"), ['code' => 'NEWPRG', 'name' => 'A new program']);
         $programId = (int) db_connect()->table('programs')->where('code', 'NEWPRG')->get()->getRowArray()['id'];
 
-        $this->step('POST', $this->url("/departments/{$this->department}"), ['code' => 'RENAMED', 'name' => 'Renamed department', 'location' => 'East wing', 'established_year' => '2001']);
-        $this->step('POST', $this->url("/sub-departments/{$subId}"), ['code' => 'NEWSUB', 'name' => 'Renamed sub-department']);
+        $this->step('POST', $this->url("/colleges/{$this->college}"), ['code' => 'RENAMED', 'name' => 'Renamed college', 'location' => 'East wing', 'established_year' => '2001']);
+        $this->step('POST', $this->url("/departments/{$departmentId}"), ['code' => 'NEWSUB', 'name' => 'Renamed department']);
         $this->step('POST', $this->url("/programs/{$programId}"), ['code' => 'NEWPRG', 'name' => 'Renamed program']);
 
         $db = db_connect();
-        $this->assertSame('RENAMED', $db->table('departments')->where('id', $this->department)->get()->getRowArray()['code']);
-        $this->assertSame('East wing', $db->table('departments')->where('id', $this->department)->get()->getRowArray()['location']);
-        $this->assertSame('Renamed sub-department', $db->table('sub_departments')->where('id', $subId)->get()->getRowArray()['name']);
+        $this->assertSame('RENAMED', $db->table('colleges')->where('id', $this->college)->get()->getRowArray()['code']);
+        $this->assertSame('East wing', $db->table('colleges')->where('id', $this->college)->get()->getRowArray()['location']);
+        $this->assertSame('Renamed department', $db->table('departments')->where('id', $departmentId)->get()->getRowArray()['name']);
         $this->assertSame('Renamed program', $db->table('programs')->where('id', $programId)->get()->getRowArray()['name']);
 
-        foreach (['structure.sub_department_created', 'structure.program_created', 'structure.department_updated', 'structure.sub_department_updated', 'structure.program_updated'] as $action) {
+        foreach (['structure.department_created', 'structure.program_created', 'structure.college_updated', 'structure.department_updated', 'structure.program_updated'] as $action) {
             $this->assertSame(1, $this->audited($action), $action);
         }
     }
@@ -279,12 +279,12 @@ final class InstitutionStructureTest extends RouteTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testABusyDepartmentCannotBeDeactivatedAndTheReasonIsShown(): void
+    public function testABusyCollegeCannotBeDeactivatedAndTheReasonIsShown(): void
     {
-        $this->step('POST', $this->url("/departments/{$this->department}/deactivate"));
+        $this->step('POST', $this->url("/colleges/{$this->college}/deactivate"));
 
-        $this->assertStringContainsString('1 active sub-department', $this->page());
-        $this->assertSame(1, (int) db_connect()->table('departments')->where('id', $this->department)->get()->getRowArray()['is_active']);
+        $this->assertStringContainsString('1 active department', $this->page());
+        $this->assertSame(1, (int) db_connect()->table('colleges')->where('id', $this->college)->get()->getRowArray()['is_active']);
     }
 
     public function testAProgramCanBeDeactivatedArchivedAndBroughtBack(): void
@@ -303,17 +303,17 @@ final class InstitutionStructureTest extends RouteTestCase
     public function testTheWholeBranchGoesOffAndComesBackOn(): void
     {
         $this->step('POST', $this->url("/programs/{$this->program}/deactivate"));
-        $this->step('POST', $this->url("/sub-departments/{$this->subDepartment}/deactivate"));
         $this->step('POST', $this->url("/departments/{$this->department}/deactivate"));
+        $this->step('POST', $this->url("/colleges/{$this->college}/deactivate"));
 
-        $this->assertSame(0, (int) db_connect()->table('departments')->where('id', $this->department)->get()->getRowArray()['is_active']);
+        $this->assertSame(0, (int) db_connect()->table('colleges')->where('id', $this->college)->get()->getRowArray()['is_active']);
         $this->assertStringContainsString('Inactive', $this->page());
 
+        $this->step('POST', $this->url("/colleges/{$this->college}/reactivate"));
         $this->step('POST', $this->url("/departments/{$this->department}/reactivate"));
-        $this->step('POST', $this->url("/sub-departments/{$this->subDepartment}/reactivate"));
 
+        $this->assertSame(1, (int) db_connect()->table('colleges')->where('id', $this->college)->get()->getRowArray()['is_active']);
         $this->assertSame(1, (int) db_connect()->table('departments')->where('id', $this->department)->get()->getRowArray()['is_active']);
-        $this->assertSame(1, (int) db_connect()->table('sub_departments')->where('id', $this->subDepartment)->get()->getRowArray()['is_active']);
     }
 
     /*
@@ -327,11 +327,11 @@ final class InstitutionStructureTest extends RouteTestCase
         $foreign = $this->foreign();
 
         $attempts = [
+            "/colleges/{$foreign['college']}" => ['code' => 'X1', 'name' => 'Hacked name'],
+            "/colleges/{$foreign['college']}/deactivate" => [],
+            "/colleges/{$foreign['college']}/departments" => ['code' => 'X1', 'name' => 'Hacked name'],
             "/departments/{$foreign['department']}" => ['code' => 'X1', 'name' => 'Hacked name'],
-            "/departments/{$foreign['department']}/deactivate" => [],
-            "/departments/{$foreign['department']}/sub-departments" => ['code' => 'X1', 'name' => 'Hacked name'],
-            "/sub-departments/{$foreign['sub']}" => ['code' => 'X1', 'name' => 'Hacked name'],
-            "/sub-departments/{$foreign['sub']}/programs" => ['code' => 'X1', 'name' => 'Hacked name'],
+            "/departments/{$foreign['department']}/programs" => ['code' => 'X1', 'name' => 'Hacked name'],
             "/programs/{$foreign['program']}" => ['code' => 'X1', 'name' => 'Hacked name'],
             "/programs/{$foreign['program']}/archive" => [],
         ];
@@ -356,14 +356,14 @@ final class InstitutionStructureTest extends RouteTestCase
 
         $body = $this->page();
 
-        $this->assertStringContainsString('data-department="' . $this->department . '"', $body, 'it can be looked at');
+        $this->assertStringContainsString('data-college="' . $this->college . '"', $body, 'it can be looked at');
         $this->assertStringContainsString('data-lock="read_only"', $body);
-        $this->assertStringNotContainsString('Add a department', $body);
-        $this->assertStringNotContainsString('id="structure-department"', $body);
+        $this->assertStringNotContainsString('Add a college', $body);
+        $this->assertStringNotContainsString('id="structure-college"', $body);
 
-        $response = $this->step('POST', $this->url('/departments'), ['code' => 'LATE', 'name' => 'Too late department'])->response();
+        $response = $this->step('POST', $this->url('/colleges'), ['code' => 'LATE', 'name' => 'Too late college'])->response();
 
-        $this->assertSame(0, db_connect()->table('departments')->where('code', 'LATE')->countAllResults());
+        $this->assertSame(0, db_connect()->table('colleges')->where('code', 'LATE')->countAllResults());
         $this->assertContains($response->getStatusCode(), [302, 403]);
     }
 

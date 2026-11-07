@@ -28,9 +28,9 @@ final class CourseRoleWritersTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
-    private int $sub;
+    private int $department;
 
     private int $offering;
 
@@ -43,11 +43,11 @@ final class CourseRoleWritersTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home              = DeanFactory::department('CW');
+        $home              = DeanFactory::college('CW');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'CW');
-        $this->offering    = DeanFactory::offering(DeanFactory::program($this->sub, 'CW'), DeanFactory::term($this->institution), 'IT120');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'CW');
+        $this->offering    = DeanFactory::offering(DeanFactory::program($this->department, 'CW'), DeanFactory::term($this->institution), 'IT120');
         $this->admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
     }
 
@@ -97,7 +97,7 @@ final class CourseRoleWritersTest extends DatabaseTestCase
         $person = $this->student();
         db_connect()->table('enrollments')->insert(['offering_id' => $this->offering, 'student_user_id' => $person->id, 'status' => 'dropped', 'enrolled_at' => date('Y-m-d H:i:s')]);
         $id = (int) db_connect()->insertID();
-        db_connect()->table('dean_assignments')->insert(['department_id' => $this->department, 'dean_user_id' => $person->id, 'status' => 'ended', 'assigned_at' => '2025-01-01 08:00:00', 'ended_at' => '2025-06-01 08:00:00']);
+        db_connect()->table('dean_assignments')->insert(['college_id' => $this->college, 'dean_user_id' => $person->id, 'status' => 'ended', 'assigned_at' => '2025-01-01 08:00:00', 'ended_at' => '2025-06-01 08:00:00']);
 
         $message = $this->refused(fn () => (new EnrolmentService())->setStatus($this->institution, $id, 'enrolled', false, $this->admin));
 
@@ -121,7 +121,7 @@ final class CourseRoleWritersTest extends DatabaseTestCase
         $person = $this->student('chairperson');
         CourseFactory::enroll($this->offering, $person);
 
-        $message = $this->refused(fn () => (new ChairAssignmentService())->assign($this->institution, $this->sub, (int) $person->id, $this->admin));
+        $message = $this->refused(fn () => (new ChairAssignmentService())->assign($this->institution, $this->department, (int) $person->id, $this->admin));
 
         $this->assertSame('Pat Person ' . CourseRoleConflicts::STUDIES_SUB . '.', $message);
         $this->assertSame(0, db_connect()->table('chairperson_assignments')->where('chairperson_user_id', $person->id)->countAllResults());
@@ -132,9 +132,9 @@ final class CourseRoleWritersTest extends DatabaseTestCase
         $person = $this->student('dean');
         CourseFactory::enroll($this->offering, $person);
 
-        $message = $this->refused(fn () => (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $person->id, $this->admin));
+        $message = $this->refused(fn () => (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $person->id, $this->admin));
 
-        $this->assertSame('Pat Person ' . CourseRoleConflicts::STUDIES_DEPARTMENT . '.', $message);
+        $this->assertSame('Pat Person ' . CourseRoleConflicts::STUDIES_COLLEGE . '.', $message);
         $this->assertSame(0, db_connect()->table('dean_assignments')->where('dean_user_id', $person->id)->countAllResults());
     }
 

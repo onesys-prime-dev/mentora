@@ -31,21 +31,21 @@ final class MonitorProgramPageTest extends RouteTestCase
         $this->chair = CourseFactory::user('chairperson');
 
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id'   => $this->subDepartmentOf($this->mine),
+            'department_id'   => $this->departmentOf($this->mine),
             'chairperson_user_id' => $this->chair->id,
             'status'              => 'active',
             'assigned_at'         => date('Y-m-d H:i:s'),
         ]);
     }
 
-    private function subDepartmentOf(int $offeringId): int
+    private function departmentOf(int $offeringId): int
     {
         return (int) db_connect()->table('course_offerings co')
-            ->select('programs.sub_department_id')
+            ->select('programs.department_id')
             ->join('courses', 'courses.id = co.course_id')
             ->join('programs', 'programs.id = courses.program_id')
             ->where('co.id', $offeringId)
-            ->get()->getRowArray()['sub_department_id'];
+            ->get()->getRowArray()['department_id'];
     }
 
     public function testThePageLoadsForAChairperson(): void

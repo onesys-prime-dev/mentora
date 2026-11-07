@@ -134,8 +134,8 @@ class InstitutionAttention
     {
         return db_connect()->table('courses c')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->where('c.status', 'active')
             ->where('NOT EXISTS (SELECT 1 FROM course_offerings o WHERE o.course_id = c.id AND o.term_id = ' . $termId . " AND o.status != 'archived')", null, false)

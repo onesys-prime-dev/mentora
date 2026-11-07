@@ -31,8 +31,8 @@ final class MonitorManyProgramsTest extends DatabaseTestCase
         $this->monitor = new MonitorProgramService();
     }
 
-    /** @return array{sub: int, program: int, institution: int, department: int} */
-    private function unit(string $tag, ?int $institution = null, ?int $department = null): array
+    /** @return array{sub: int, program: int, institution: int, college: int} */
+    private function unit(string $tag, ?int $institution = null, ?int $college = null): array
     {
         $db = db_connect();
 
@@ -41,17 +41,17 @@ final class MonitorManyProgramsTest extends DatabaseTestCase
             $institution = (int) $db->insertID();
         }
 
-        if ($department === null) {
-            $db->table('departments')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
-            $department = (int) $db->insertID();
+        if ($college === null) {
+            $db->table('colleges')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+            $college = (int) $db->insertID();
         }
 
-        $db->table('sub_departments')->insert(['department_id' => $department, 'code' => "S{$tag}", 'name' => "Department {$tag}"]);
-        $sub = (int) $db->insertID();
+        $db->table('departments')->insert(['college_id' => $college, 'code' => "S{$tag}", 'name' => "College {$tag}"]);
+        $department = (int) $db->insertID();
 
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
+        $db->table('programs')->insert(['department_id' => $department, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
 
-        return ['sub' => $sub, 'program' => (int) $db->insertID(), 'institution' => $institution, 'department' => $department];
+        return ['sub' => $department, 'program' => (int) $db->insertID(), 'institution' => $institution, 'college' => $college];
     }
 
     private function term(int $institution, string $name = 'First', string $start = '2026-08-01'): int
@@ -150,7 +150,7 @@ final class MonitorManyProgramsTest extends DatabaseTestCase
 
         $row = $this->monitor->offeringRowsForPrograms([$a['program']], new MonitorProgramFilters())[0];
 
-        foreach (['offering_id', 'section_code', 'capacity', 'offering_status', 'course_id', 'course_code', 'course_title', 'program_id', 'program_name', 'term_id', 'term_name', 'academic_year', 'sub_department_id', 'department_id', 'institution_id', 'enrolled', 'instructor_count', 'instructor_name', 'instructor_id'] as $column) {
+        foreach (['offering_id', 'section_code', 'capacity', 'offering_status', 'course_id', 'course_code', 'course_title', 'program_id', 'program_name', 'term_id', 'term_name', 'academic_year', 'department_id', 'college_id', 'institution_id', 'enrolled', 'instructor_count', 'instructor_name', 'instructor_id'] as $column) {
             $this->assertArrayHasKey($column, $row, $column);
         }
 
@@ -231,14 +231,14 @@ final class MonitorManyProgramsTest extends DatabaseTestCase
     {
         $chair = CourseFactory::user('chairperson');
         $home  = $this->unit('H');
-        $same  = $this->unit('S', $home['institution'], $home['department']);
+        $same  = $this->unit('S', $home['institution'], $home['college']);
         $other = $this->unit('O', $home['institution']);
 
-        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $home['sub'], 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $home['sub'], 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
 
         $term = $this->term($home['institution']);
         $mine = $this->offering($home, $term, 'IT101');
-        $this->offering($same, $term, 'IT201');     // same department, another sub-department: not chaired
+        $this->offering($same, $term, 'IT201');     // same college, another department: not chaired
         $this->offering($other, $term, 'CS101');
 
         $this->assertSame([$home['program']], $this->monitor->chairedProgramIds($chair));
@@ -257,11 +257,11 @@ final class MonitorManyProgramsTest extends DatabaseTestCase
         $chair = CourseFactory::user('chairperson');
         $home  = $this->unit('H');
 
-        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $home['sub'], 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $home['sub'], 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
 
         $this->assertCount(1, $this->monitor->chairedProgramIds($chair));
 
-        db_connect()->table('programs')->insert(['sub_department_id' => $home['sub'], 'code' => 'PNEW', 'name' => 'Program New']);
+        db_connect()->table('programs')->insert(['department_id' => $home['sub'], 'code' => 'PNEW', 'name' => 'Program New']);
         $this->assertCount(2, $this->monitor->chairedProgramIds($chair), 'covered at once');
 
         db_connect()->table('chairperson_assignments')->where('chairperson_user_id', $chair->id)->update(['status' => 'revoked']);

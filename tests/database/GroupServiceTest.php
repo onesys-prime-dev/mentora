@@ -29,11 +29,11 @@ final class GroupServiceTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
-    private int $subA;
+    private int $departmentA;
 
-    private int $subB;
+    private int $departmentB;
 
     private User $chairA;
 
@@ -53,18 +53,18 @@ final class GroupServiceTest extends DatabaseTestCase
 
         Services::resetSingle('auditLogger');
 
-        $d                 = DeanFactory::department('GR1');
+        $d                 = DeanFactory::college('GR1');
         $this->institution = $d['institution'];
-        $this->department  = $d['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'GRA');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'GRB');
+        $this->college  = $d['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'GRA');
+        $this->departmentB        = DeanFactory::department($this->college, 'GRB');
         $term              = DeanFactory::term($this->institution);
-        $offeringA         = DeanFactory::offering(DeanFactory::program($this->subA, 'GPA'), $term, 'GA101');
-        $offeringB         = DeanFactory::offering(DeanFactory::program($this->subB, 'GPB'), $term, 'GB101');
+        $offeringA         = DeanFactory::offering(DeanFactory::program($this->departmentA, 'GPA'), $term, 'GA101');
+        $offeringB         = DeanFactory::offering(DeanFactory::program($this->departmentB, 'GPB'), $term, 'GB101');
 
-        $this->chairA = DeanFactory::chair($this->subA, 'Cara');
-        $this->chairB = DeanFactory::chair($this->subB, 'Bram');
-        $this->dean   = DeanFactory::dean($this->institution, $this->department, 'Dana');
+        $this->chairA = DeanFactory::chair($this->departmentA, 'Cara');
+        $this->chairB = DeanFactory::chair($this->departmentB, 'Bram');
+        $this->dean   = DeanFactory::dean($this->institution, $this->college, 'Dana');
 
         $this->teacherA1 = PeopleFactory::person('instructor', 'Ivy', 'Alpha', null, $this->institution);
         $this->teacherA2 = PeopleFactory::person('instructor', 'Ian', 'Alpha', null, $this->institution);
@@ -114,9 +114,9 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->assertSame('Exam planning', $row['name']);
     }
 
-    public function testADeanStartsAGroupOfInstructorsAndChairpersonsOfTheDepartment(): void
+    public function testADeanStartsAGroupOfInstructorsAndChairpersonsOfTheCollege(): void
     {
-        $group = $this->groupService()->create($this->dean, 'Department heads', [$this->teacherA1->id, $this->teacherB->id, $this->chairA->id, $this->chairB->id]);
+        $group = $this->groupService()->create($this->dean, 'College heads', [$this->teacherA1->id, $this->teacherB->id, $this->chairA->id, $this->chairB->id]);
 
         $this->assertNotNull($group);
         $this->assertSame(5, db_connect()->table('conversation_participants')->where('conversation_id', $group['id'])->countAllResults());
@@ -127,11 +127,11 @@ final class GroupServiceTest extends DatabaseTestCase
         $student   = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
         $parent    = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
         $admin     = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
-        $outsider  = PeopleFactory::person('instructor', 'Out', 'Sider', null, DeanFactory::department('GR2')['institution']);
+        $outsider  = PeopleFactory::person('instructor', 'Out', 'Sider', null, DeanFactory::college('GR2')['institution']);
         $inactive  = PeopleFactory::person('instructor', 'Ina', 'Ctive', null, $this->institution, false);
         $before    = $this->counts();
 
-        // A chairperson: another sub-department's instructor, a chairperson, the dean, and every kind of non-instructor.
+        // A chairperson: another department's instructor, a chairperson, the dean, and every kind of non-instructor.
         foreach ([$this->teacherB, $this->chairB, $this->dean, $student, $parent, $admin, $outsider, $inactive] as $bad) {
             $this->assertNull($this->groupService()->create($this->chairA, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
         }
@@ -184,7 +184,7 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->assertEqualsCanonicalizing([(int) $this->teacherA1->id, (int) $this->teacherA2->id], array_column($chair, 'id'));
         $this->assertSame(['instructor', 'instructor'], array_column($chair, 'role'));
 
-        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Bravo'), 'another sub-department');
+        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Bravo'), 'another department');
         $this->assertSame([], $this->groupService()->candidates($this->chairA, 'A'), 'too short');
         $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Cara'), 'never the creator');
 

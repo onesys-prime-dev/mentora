@@ -7,10 +7,10 @@ namespace App\Services\Courses\Grades;
 /**
  * Who a grade-override request waits for next. A pure rule, no database:
  *
- *   instructor's request  -> the sub-department's chairperson (if there is one
+ *   instructor's request  -> the department's chairperson (if there is one
  *                            who is not the requester), then the dean
  *   chairperson's request -> the dean
- *   the dean              -> the institution's administrator when the department
+ *   the dean              -> the institution's administrator when the college
  *                            has no dean, or the dean is the requester
  *
  * Nobody endorses or decides their own request, and a missing level is skipped
@@ -32,7 +32,7 @@ final class OverrideRequestChain
     /**
      * Where a new (or resubmitted) request starts.
      *
-     * @param list<int> $chairIds active chairpersons of the offering's sub-department
+     * @param list<int> $chairIds active chairpersons of the offering's department
      */
     public static function first(int $requesterId, string $requesterRole, array $chairIds, ?int $deanId): string
     {

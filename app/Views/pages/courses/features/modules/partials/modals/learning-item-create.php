@@ -185,6 +185,8 @@
 
             </div>
 
+            <?= view('pages/courses/features/modules/partials/modals/publish-fields', ['idPrefix' => 'item'], ['saveData' => false]) ?>
+
         </form>
 
         <!-- Footer -->

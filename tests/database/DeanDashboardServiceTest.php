@@ -16,13 +16,13 @@ use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * What the dean's home page is made of, from a fixture with known numbers, in department H:
+ * What the dean's home page is made of, from a fixture with known numbers, in college H:
  *
- *   Sub A  IT101 (running; quiet since 30 days; 2 pieces of work handed in 10 days ago and 1 yesterday, all ungraded,
+ *   Department A  IT101 (running; quiet since 30 days; 2 pieces of work handed in 10 days ago and 1 yesterday, all ungraded,
  *                 plus 1 old one already graded; 2 students who have done nothing; grades finalized)
  *          CS101 (running; busy; nothing to grade)
- *   Sub B  LW100 (running; quiet; 1 piece of work 10 days old; a grade-override request waiting for the dean)
- *   An earlier term's IT099 (completed, with old ungraded work) and department N's LAW900 (old ungraded work).
+ *   Department B  LW100 (running; quiet; 1 piece of work 10 days old; a grade-override request waiting for the dean)
+ *   An earlier term's IT099 (completed, with old ungraded work) and college N's LAW900 (old ungraded work).
  *   A follow-up the dean sent that is a day late, and a chairperson who changed IT101.
  *
  * @internal
@@ -33,9 +33,9 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
 
     private DeanDashboardService $service;
     private int $institution;
-    private int $department;
-    private int $subA;
-    private int $subB;
+    private int $college;
+    private int $departmentA;
+    private int $departmentB;
     private int $term;
     private int $it101;
     private int $cs101;
@@ -51,17 +51,17 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home              = DeanFactory::department('H');
+        $home              = DeanFactory::college('H');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'B');
-        $programA          = DeanFactory::program($this->subA, 'A');
-        $programB          = DeanFactory::program($this->subB, 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->departmentB        = DeanFactory::department($this->college, 'B');
+        $programA          = DeanFactory::program($this->departmentA, 'A');
+        $programB          = DeanFactory::program($this->departmentB, 'B');
         $this->term        = DeanFactory::term($this->institution, 'Second', '2027-01-10');
         $earlier           = DeanFactory::term($this->institution, 'First', '2026-08-01');
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
-        $this->chair       = DeanFactory::chair($this->subA, 'Ann');
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
+        $this->chair       = DeanFactory::chair($this->departmentA, 'Ann');
         $this->teacher     = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
         $this->service     = new DeanDashboardService();
 
@@ -99,9 +99,9 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
         $this->handIn($lwModule, $this->lw100, $stu, [10]);
         $this->handIn($oldModule, $it099, $stu, [10]);
 
-        // Another department's old ungraded work: nobody's but theirs.
-        $other = DeanFactory::department('N', $this->institution);
-        $next  = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($other['department'], 'N'), 'N'), $this->term, 'LAW900');
+        // Another college's old ungraded work: nobody's but theirs.
+        $other = DeanFactory::college('N', $this->institution);
+        $next  = DeanFactory::offering(DeanFactory::program(DeanFactory::department($other['college'], 'N'), 'N'), $this->term, 'LAW900');
         CourseFactory::assignInstructor($next, $this->teacher);
         $this->handIn(CourseFactory::module($next), $next, $stu, [10]);
 
@@ -158,12 +158,12 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
     {
         $snapshot = $this->service->overview($this->dean)['snapshot'];
 
-        $this->assertSame(2, $snapshot['sub_departments']);
+        $this->assertSame(2, $snapshot['departments']);
         $this->assertSame(2, $snapshot['programs']);
         $this->assertSame(3, $snapshot['courses'], 'IT099 is completed');
         $this->assertSame(1, $snapshot['instructors']);
         $this->assertSame(2, $snapshot['students'], 'the two on IT101');
-        $this->assertSame(['id' => $this->department, 'name' => 'College H'], $this->service->overview($this->dean)['department']);
+        $this->assertSame(['id' => $this->college, 'name' => 'College H'], $this->service->overview($this->dean)['college']);
     }
 
     public function testOverridesWaitingForTheDeanAreCounted(): void
@@ -204,7 +204,7 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
         db_connect()->table('grade_signoffs')->where('offering_id', $this->it101)->update(['open_marker' => null]);
 
         $this->assertSame(1, $service->counts($this->dean)['ready'], 'reopened, it is ready again');
-        $this->assertSame(['term' => null, 'ready' => 0, 'blocked' => 0, 'signed_off' => 0], $service->counts(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution)));
+        $this->assertSame(['term' => null, 'ready' => 0, 'blocked' => 0, 'signed_off' => 0], $service->counts(PeopleFactory::person('dean', 'No', 'College', null, $this->institution)));
     }
 
     public function testOverdueFollowUpsAreCounted(): void
@@ -212,23 +212,23 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
         $this->assertSame(1, $this->attention()['followups_overdue']['count']);
     }
 
-    public function testOverdueGradingIsCountedPerSubDepartmentForRunningSectionsOnly(): void
+    public function testOverdueGradingIsCountedPerDepartmentForRunningSectionsOnly(): void
     {
         $facts = $this->service->facts($this->dean, $this->running(), new DateTimeImmutable());
 
         $this->assertEqualsCanonicalizing(
-            [['id' => $this->subA, 'name' => 'Sub A', 'count' => 2], ['id' => $this->subB, 'name' => 'Sub B', 'count' => 1]],
+            [['id' => $this->departmentA, 'name' => 'Department A', 'count' => 2], ['id' => $this->departmentB, 'name' => 'Department B', 'count' => 1]],
             $facts['overdue_grading'],
-            'IT101 has 2 ten days old (the one from yesterday is not late, the graded one is done); IT099 is not running; LAW900 is another department\'s'
+            'IT101 has 2 ten days old (the one from yesterday is not late, the graded one is done); IT099 is not running; LAW900 is another college\'s'
         );
     }
 
-    public function testQuietCoursesAreCountedPerSubDepartmentForRunningSectionsOnly(): void
+    public function testQuietCoursesAreCountedPerDepartmentForRunningSectionsOnly(): void
     {
         $facts = $this->service->facts($this->dean, $this->running(), new DateTimeImmutable());
 
         $this->assertEqualsCanonicalizing(
-            [['id' => $this->subA, 'name' => 'Sub A', 'count' => 1], ['id' => $this->subB, 'name' => 'Sub B', 'count' => 1]],
+            [['id' => $this->departmentA, 'name' => 'Department A', 'count' => 1], ['id' => $this->departmentB, 'name' => 'Department B', 'count' => 1]],
             $facts['inactive_courses'],
             'IT101 and LW100 are quiet; CS101 was just touched'
         );
@@ -285,31 +285,31 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
 
     public function testTheDeansAnnouncementsAreTheLatestThreeStillShowing(): void
     {
-        $announce = new \App\Services\Courses\DepartmentAnnouncementService();
+        $announce = new \App\Services\Courses\CollegeAnnouncementService();
 
         foreach (['One', 'Two', 'Three', 'Four'] as $title) {
-            $announce->post($this->dean, ['scope' => 'department', 'audience' => 'everyone', 'title' => $title, 'message' => 'Hello.']);
+            $announce->post($this->dean, ['scope' => 'college', 'audience' => 'everyone', 'title' => $title, 'message' => 'Hello.']);
         }
 
         $this->assertSame(['Four', 'Three', 'Two'], array_column($this->service->overview($this->dean)['announcements'], 'title'));
     }
 
-    public function testADepartmentWithNothingGoingOnHasAnEmptyAttentionListAndZeros(): void
+    public function testACollegeWithNothingGoingOnHasAnEmptyAttentionListAndZeros(): void
     {
-        $quiet = DeanFactory::department('Q', $this->institution);
-        $dean  = DeanFactory::dean($this->institution, $quiet['department'], 'Quin');
+        $quiet = DeanFactory::college('Q', $this->institution);
+        $dean  = DeanFactory::dean($this->institution, $quiet['college'], 'Quin');
 
         $overview = $this->service->overview($dean);
 
         $this->assertSame([], $overview['attention']);
-        $this->assertSame(['sub_departments' => 0, 'programs' => 0, 'courses' => 0, 'instructors' => 0, 'students' => 0], $overview['snapshot']);
+        $this->assertSame(['departments' => 0, 'programs' => 0, 'courses' => 0, 'instructors' => 0, 'students' => 0], $overview['snapshot']);
         $this->assertSame(['to_review' => 0, 'entries' => []], $overview['chairperson_activity']);
         $this->assertSame([], $overview['announcements']);
     }
 
-    public function testADeanWithoutADepartmentHasNoOverviewAndAnEndedDeanshipTakesEffectAtOnce(): void
+    public function testADeanWithoutACollegeHasNoOverviewAndAnEndedDeanshipTakesEffectAtOnce(): void
     {
-        $this->assertNull($this->service->overview(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution)));
+        $this->assertNull($this->service->overview(PeopleFactory::person('dean', 'No', 'College', null, $this->institution)));
 
         db_connect()->table('dean_assignments')->where('dean_user_id', $this->dean->id)->update(['status' => 'ended', 'active_marker' => null]);
 
@@ -326,7 +326,7 @@ final class DeanDashboardServiceTest extends DatabaseTestCase
         $this->assertSame([], UngradedWork::countByOffering([]));
     }
 
-    /** @return list<array<string, mixed>> the department's running sections */
+    /** @return list<array<string, mixed>> the college's running sections */
     private function running(): array
     {
         $ids = (new \App\Services\Courses\DeanAccessService())->programIds($this->dean);

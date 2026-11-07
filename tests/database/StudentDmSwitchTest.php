@@ -42,9 +42,9 @@ final class StudentDmSwitchTest extends DatabaseTestCase
         Services::resetSingle('settings');
         Services::resetSingle('auditLogger');
 
-        $d                 = DeanFactory::department('DM1');
+        $d                 = DeanFactory::college('DM1');
         $this->institution = $d['institution'];
-        $program           = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'DMS'), 'DMP');
+        $program           = DeanFactory::program(DeanFactory::department($d['college'], 'DMS'), 'DMP');
         $offering          = DeanFactory::offering($program, DeanFactory::term($this->institution), 'DM101');
 
         $this->ann     = PeopleFactory::person('student', 'Ann', 'Lee', null, $this->institution);
@@ -77,7 +77,7 @@ final class StudentDmSwitchTest extends DatabaseTestCase
 
     public function testItIsOnByDefaultAndPerInstitution(): void
     {
-        $other = DeanFactory::department('DM2')['institution'];
+        $other = DeanFactory::college('DM2')['institution'];
 
         $this->assertTrue((new StudentMessaging())->enabled($this->institution));
 
@@ -138,7 +138,7 @@ final class StudentDmSwitchTest extends DatabaseTestCase
 
     public function testAnotherInstitutionsSwitchDoesNotReachThisOne(): void
     {
-        $far = DeanFactory::department('DM3')['institution'];
+        $far = DeanFactory::college('DM3')['institution'];
         (new StudentMessaging())->set($far, false);
 
         $this->assertNotNull((new ConversationService())->startDirect($this->ann, (int) $this->ben->id));

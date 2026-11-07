@@ -32,9 +32,9 @@ final class SyncCourseChatsCommandTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $d                 = DeanFactory::department('SC1');
+        $d                 = DeanFactory::college('SC1');
         $this->institution = $d['institution'];
-        $this->program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'SC'), 'SC');
+        $this->program     = DeanFactory::program(DeanFactory::department($d['college'], 'SC'), 'SC');
         $this->term        = DeanFactory::term($this->institution);
     }
 

@@ -25,7 +25,7 @@ final class DeanCourseFilters
     public function __construct(
         public readonly ?string $q = null,
         public readonly ?int $termId = null,
-        public readonly ?int $subDepartmentId = null,
+        public readonly ?int $departmentId = null,
         public readonly ?int $programId = null,
         public readonly ?int $instructorId = null,
         public readonly ?string $status = null,
@@ -46,7 +46,7 @@ final class DeanCourseFilters
         return new self(
             q: self::text($input['q'] ?? null),
             termId: self::positiveInt($input['term'] ?? null),
-            subDepartmentId: self::positiveInt($input['sub_department'] ?? null),
+            departmentId: self::positiveInt($input['department'] ?? null),
             programId: self::positiveInt($input['program'] ?? null),
             instructorId: self::positiveInt($input['instructor'] ?? null),
             status: in_array($status, self::STATUSES, true) ? $status : null,
@@ -71,7 +71,7 @@ final class DeanCourseFilters
         $query = [
             'q'              => $this->q,
             'term'           => $this->termId,
-            'sub_department' => $this->subDepartmentId,
+            'department' => $this->departmentId,
             'program'        => $this->programId,
             'instructor'     => $this->instructorId,
             'status'         => $this->status,
@@ -87,7 +87,7 @@ final class DeanCourseFilters
     /** True when any filter (not sort or paging) narrows the list. */
     public function isFiltered(): bool
     {
-        return $this->q !== null || $this->termId !== null || $this->subDepartmentId !== null
+        return $this->q !== null || $this->termId !== null || $this->departmentId !== null
             || $this->programId !== null || $this->instructorId !== null || $this->status !== null;
     }
 

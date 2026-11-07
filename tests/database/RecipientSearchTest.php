@@ -31,9 +31,9 @@ final class RecipientSearchTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $d                 = DeanFactory::department('Q1');
+        $d                 = DeanFactory::college('Q1');
         $this->institution = $d['institution'];
-        $this->program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'QA'), 'QA');
+        $this->program     = DeanFactory::program(DeanFactory::department($d['college'], 'QA'), 'QA');
         $this->term        = DeanFactory::term($this->institution);
         $this->search      = new RecipientSearch();
     }
@@ -83,7 +83,7 @@ final class RecipientSearchTest extends DatabaseTestCase
         $this->person('instructor', 'Ian', 'Zed');                // teaches nothing shared
         $this->person('instructor', 'Ila', 'Zed', null, false);   // deactivated
         $this->person('admin', 'Ada', 'Zed');
-        $other = DeanFactory::department('Q2');
+        $other = DeanFactory::college('Q2');
         $this->person('instructor', 'Ola', 'Zed', $other['institution']);
 
         $this->assertSame([], $this->ids($student, 'Zed'));

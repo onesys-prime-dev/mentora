@@ -1,6 +1,6 @@
 <?php
 /**
- * Shown to a dean who has no active department assignment.
+ * Shown to a dean who has no active college assignment.
  */
 ?>
 
@@ -13,13 +13,13 @@
     <?= view('components/page-head', [
         'title'       => 'Dean',
         'icon'        => 'hat',
-        'description' => 'Your department at a glance.',
+        'description' => 'Your college at a glance.',
     ], ['saveData' => false]) ?>
 
     <?= view('components/empty-state', [
         'icon'  => 'info',
-        'title' => 'You are not assigned to a department yet',
-        'text'  => 'Your institution\'s administrator assigns a dean to a department. Once that is done, your department\'s courses and tools appear here.',
+        'title' => 'You are not assigned to a college yet',
+        'text'  => 'Your institution\'s administrator assigns a dean to a college. Once that is done, your college\'s courses and tools appear here.',
     ], ['saveData' => false]) ?>
 
 </div>

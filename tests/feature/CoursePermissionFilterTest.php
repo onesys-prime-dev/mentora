@@ -33,7 +33,7 @@ final class CoursePermissionFilterTest extends RouteTestCase
         PermissionMatrix::flush();
 
         $this->offering    = CourseFactory::offering();
-        $this->institution = (int) db_connect()->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE o.id = ?', [$this->offering])->getRow()->institution_id;
+        $this->institution = (int) db_connect()->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE o.id = ?', [$this->offering])->getRow()->institution_id;
         $this->teacher     = $this->member('instructor');
 
         CourseFactory::assignInstructor($this->offering, $this->teacher);

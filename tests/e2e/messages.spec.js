@@ -3,8 +3,8 @@
 //
 // Demo data (DemoUsersSeeder and friends): Michael Villanueva (student5) and Juan Dela Cruz (student1) are
 // both in IT101-A; instructor1 (Maria Santos) teaches it; parent1 (Roberto Cruz) follows Juan and Michael;
-// chairperson1 (Antonio Fernandez) chairs the IT sub-department; dean1 (Daniel Reyes) oversees the General
-// department, which has no courses; the institution's administrator is Ines Administrador.
+// chairperson1 (Antonio Fernandez) chairs the IT department; dean1 (Daniel Reyes) oversees the General
+// college, which has no courses; the institution's administrator is Ines Administrador.
 //
 // The cases run in order on one database and each person signs in in a browser of their own. Messages ships
 // off, so the first thing is to switch it on and make the chats of the seeded offerings. runSql / spark are
@@ -294,19 +294,19 @@ test("TC-MSG-09 A chairperson starts a staff group of instructors; a dean cannot
 
     try {
         await chair.page.locator("[data-role=new-group]").click();
-        await chair.page.locator("[data-role=group-title]").fill("IT department planning");
+        await chair.page.locator("[data-role=group-title]").fill("IT college planning");
         await chair.page.locator("[data-role=group-search]").fill("Garcia");
         await chair.page.locator("[data-role=group-results] button", { hasText: people.instructor2.name }).click();
         await chair.page.locator("[data-role=group-create]").click();
-        await expect(chair.page.locator("[data-role=head-name]")).toHaveText("IT department planning");
+        await expect(chair.page.locator("[data-role=head-name]")).toHaveText("IT college planning");
         await sendMessage(chair.page, "Please send me your exam dates.");
 
         await teacher.page.reload();
-        await expect(rowFor(teacher.page, "IT department planning")).toBeVisible();
-        await rowFor(teacher.page, "IT department planning").click();
+        await expect(rowFor(teacher.page, "IT college planning")).toBeVisible();
+        await rowFor(teacher.page, "IT college planning").click();
         await expect(thread(teacher.page).getByText("Please send me your exam dates.")).toBeVisible();
 
-        // The dean (General department, no courses) has nobody in scope: a student cannot be added.
+        // The dean (General college, no courses) has nobody in scope: a student cannot be added.
         await dean.page.locator("[data-role=new-group]").click();
         await dean.page.locator("[data-role=group-search]").fill("Villanueva");
         await expect(dean.page.locator("[data-role=group-note]")).toHaveText("No one found.");

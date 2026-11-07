@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Courses;
 
 /**
- * The dean's teaching-load filters and sort, read safely from a query string: a term, a sub-department
+ * The dean's teaching-load filters and sort, read safely from a query string: a term, a department
  * and which column the table is ordered by. Anything not valid is dropped or replaced by its default, so
- * a hand-edited address can never produce an error or reach beyond the department.
+ * a hand-edited address can never produce an error or reach beyond the college.
  */
 final class TeachingLoadFilters
 {
@@ -15,7 +15,7 @@ final class TeachingLoadFilters
 
     public function __construct(
         public readonly ?int $termId = null,
-        public readonly ?int $subDepartmentId = null,
+        public readonly ?int $departmentId = null,
         public readonly string $sort = 'units',
         public readonly string $dir = 'desc',
     ) {
@@ -30,7 +30,7 @@ final class TeachingLoadFilters
 
         return new self(
             termId: self::positiveInt($input['term'] ?? null),
-            subDepartmentId: self::positiveInt($input['sub_department'] ?? null),
+            departmentId: self::positiveInt($input['department'] ?? null),
             sort: $sort,
             // Without a direction, a name reads A to Z and every number reads biggest first.
             dir: in_array($dir, ['asc', 'desc'], true) ? $dir : ($sort === 'name' ? 'asc' : 'desc'),
@@ -48,7 +48,7 @@ final class TeachingLoadFilters
     {
         $query = [
             'term'           => $this->termId,
-            'sub_department' => $this->subDepartmentId,
+            'department' => $this->departmentId,
             'sort'           => $this->sort === 'units' ? null : $this->sort,
             'dir'            => $this->dir === ($this->sort === 'name' ? 'asc' : 'desc') ? null : $this->dir,
         ];
@@ -56,10 +56,10 @@ final class TeachingLoadFilters
         return array_filter(array_merge($query, $override), static fn ($value) => $value !== null && $value !== '');
     }
 
-    /** True when a term or sub-department narrows the list (the sort does not). */
+    /** True when a term or department narrows the list (the sort does not). */
     public function isFiltered(): bool
     {
-        return $this->termId !== null || $this->subDepartmentId !== null;
+        return $this->termId !== null || $this->departmentId !== null;
     }
 
     /** @param mixed $value */

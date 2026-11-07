@@ -40,9 +40,9 @@ final class MessageActionsPinTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $d           = DeanFactory::department('P1');
+        $d           = DeanFactory::college('P1');
         $institution = $d['institution'];
-        $program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'PA'), 'PA');
+        $program     = DeanFactory::program(DeanFactory::department($d['college'], 'PA'), 'PA');
         $offering    = DeanFactory::offering($program, DeanFactory::term($institution), 'MP1');
 
         $this->student    = PeopleFactory::person('student', 'Stu', 'Dent', null, $institution);

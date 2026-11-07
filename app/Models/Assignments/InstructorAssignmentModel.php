@@ -51,10 +51,10 @@ class InstructorAssignmentModel extends Model
                 'academic_terms.name AS term_name',
                 'academic_terms.academic_year',
 
-                'sub_departments.id AS sub_department_id',
-                'sub_departments.name AS sub_department_name',
                 'departments.id AS department_id',
                 'departments.name AS department_name',
+                'colleges.id AS college_id',
+                'colleges.name AS college_name',
 
                 'institutions.id AS institution_id',
                 'institutions.name AS institution_name',
@@ -82,12 +82,12 @@ class InstructorAssignmentModel extends Model
                 'academic_terms',
                 'academic_terms.id = course_offerings.term_id'
             )
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->join(
                 'institutions',
                 'institutions.id = academic_terms.institution_id
-                AND institutions.id = departments.institution_id'
+                AND institutions.id = colleges.institution_id'
             )
             ->join(
                 'users',
@@ -135,10 +135,10 @@ class InstructorAssignmentModel extends Model
                 'academic_terms.name AS term_name',
                 'academic_terms.academic_year',
 
-                'sub_departments.id AS sub_department_id',
-                'sub_departments.name AS sub_department_name',
                 'departments.id AS department_id',
                 'departments.name AS department_name',
+                'colleges.id AS college_id',
+                'colleges.name AS college_name',
 
                 'institutions.id AS institution_id',
                 'institutions.name AS institution_name',
@@ -159,12 +159,12 @@ class InstructorAssignmentModel extends Model
                 'academic_terms',
                 'academic_terms.id = course_offerings.term_id'
             )
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->join(
                 'institutions',
                 'institutions.id = academic_terms.institution_id
-                AND institutions.id = departments.institution_id'
+                AND institutions.id = colleges.institution_id'
             )
             ->where('instructor_assignments.instructor_user_id', $userId)
             ->where('course_offerings.id', $offeringId)

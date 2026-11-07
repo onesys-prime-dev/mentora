@@ -45,18 +45,21 @@ class AssessmentOverviewService
 
     public function build(User $user, int $offeringId, int $courseId): array
     {
-        $assessments = $this->courseAssessments($courseId, $offeringId);
+        $instructorView = \App\Services\Courses\CourseViewer::seesInstructorView($user);
+
+        // A student is only given the assessments meant for them (specific students), so the rest are never loaded.
+        $assessments = $this->courseAssessments($courseId, $offeringId, $instructorView ? null : (int) $user->id);
 
         // forInstructor() is offering-scoped, not "my own sections" scoped —
         // access to the offering itself is already decided at the route
         // (AssessmentScope), so a chairperson viewing a course in their
         // program gets the same instructor-shaped overview, not the
         // student one. What they are in this course decides it (9.1): a
-        // chairperson enrolled in another sub-department's course is a
+        // chairperson enrolled in another department's course is a
         // student there. On a course page the request's course answers this
         // without a query; the dashboard builds it per section, so it isn't
         // asked again for each.
-        return \App\Services\Courses\CourseViewer::seesInstructorView($user)
+        return $instructorView
             ? $this->forInstructor($offeringId, $assessments)
             : $this->forStudent($user, $assessments);
     }
@@ -655,9 +658,9 @@ class AssessmentOverviewService
      * Sections of one course share course_id, so the section is found through
      * the assessment's module — otherwise each section would list the other's.
      */
-    private function courseAssessments(int $courseId, int $offeringId): array
+    private function courseAssessments(int $courseId, int $offeringId, ?int $forStudentId = null): array
     {
-        $rows = db_connect()->table('assessments a')
+        $builder = db_connect()->table('assessments a')
             ->select([
                 'a.*',
                 'at.name AS assessment_type',
@@ -668,7 +671,13 @@ class AssessmentOverviewService
             ->join('assessment_settings st', 'st.assessment_id = a.id', 'left')
             ->join('course_modules cm', 'cm.id = a.module_id')
             ->where('a.course_id', $courseId)
-            ->where('cm.offering_id', $offeringId)
+            ->where('cm.offering_id', $offeringId);
+
+        if ($forStudentId !== null) {
+            $builder->where('(COALESCE(st.assign_to_specific_students, 0) = 0 OR EXISTS (SELECT 1 FROM assessment_assignees aa WHERE aa.assessment_id = a.id AND aa.student_user_id = ' . $forStudentId . '))', null, false);
+        }
+
+        $rows = $builder
             ->orderBy('a.due_date IS NULL', 'ASC', false)
             ->orderBy('a.due_date', 'ASC')
             ->orderBy('a.id', 'ASC')

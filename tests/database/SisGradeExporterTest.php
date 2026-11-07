@@ -294,12 +294,12 @@ final class SisGradeExporterTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    /** A dean of this institution's department, with an active assignment (so the institution "has a dean"). */
+    /** A dean of this institution's college, with an active assignment (so the institution "has a dean"). */
     private function deanOfTheInstitution(): User
     {
-        $department = (int) db_connect()->table('departments')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
+        $college = (int) db_connect()->table('colleges')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
 
-        return DeanFactory::dean($this->institution, $department);
+        return DeanFactory::dean($this->institution, $college);
     }
 
     private function signOff(int $offering, User $dean): void
@@ -415,8 +415,8 @@ final class SisGradeExporterTest extends DatabaseTestCase
     public function testADeanOfAnotherInstitutionDoesNotGateThisOne(): void
     {
         $other      = SisFixture::institution('OTHER');
-        $department = (int) db_connect()->table('departments')->where('institution_id', $other)->get()->getRowArray()['id'];
-        DeanFactory::dean($other, $department);
+        $college = (int) db_connect()->table('colleges')->where('institution_id', $other)->get()->getRowArray()['id'];
+        DeanFactory::dean($other, $college);
 
         $result = $this->export();
 

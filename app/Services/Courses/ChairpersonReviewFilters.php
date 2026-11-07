@@ -8,7 +8,7 @@ use DateTimeImmutable;
 
 /**
  * The dean's chairperson-review filters, read safely from a query string: which chairperson,
- * which sub-department, a date range and whether to show what is still to review, what has been
+ * which department, a date range and whether to show what is still to review, what has been
  * reviewed or both. Anything not valid is dropped, so a hand-edited address can never fail or
  * widen the result.
  */
@@ -18,7 +18,7 @@ final class ChairpersonReviewFilters
 
     public function __construct(
         public readonly ?int $chairpersonId = null,
-        public readonly ?int $subDepartmentId = null,
+        public readonly ?int $departmentId = null,
         public readonly ?string $from = null,
         public readonly ?string $to = null,
         public readonly string $view = 'unreviewed',
@@ -32,7 +32,7 @@ final class ChairpersonReviewFilters
 
         return new self(
             chairpersonId: self::positiveInt($input['chairperson'] ?? null),
-            subDepartmentId: self::positiveInt($input['sub_department'] ?? null),
+            departmentId: self::positiveInt($input['department'] ?? null),
             from: self::date($input['from'] ?? null),
             to: self::date($input['to'] ?? null),
             view: in_array($view, self::VIEWS, true) ? $view : 'unreviewed',
@@ -61,7 +61,7 @@ final class ChairpersonReviewFilters
     {
         $query = [
             'chairperson'    => $this->chairpersonId,
-            'sub_department' => $this->subDepartmentId,
+            'department' => $this->departmentId,
             'from'           => $this->from,
             'to'             => $this->to,
             'view'           => $this->view === 'unreviewed' ? null : $this->view,
@@ -73,7 +73,7 @@ final class ChairpersonReviewFilters
     /** True when something other than the view narrows the list. */
     public function isFiltered(): bool
     {
-        return $this->chairpersonId !== null || $this->subDepartmentId !== null || $this->from !== null || $this->to !== null;
+        return $this->chairpersonId !== null || $this->departmentId !== null || $this->from !== null || $this->to !== null;
     }
 
     /** @param mixed $value */

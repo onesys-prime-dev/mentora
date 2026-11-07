@@ -167,7 +167,7 @@ $capacity = (int) $o['capacity'];
     ?>
 
     <?= view('components/dialog', ['id' => 'roster-add', 'title' => 'Add students', 'body' => $form(
-        $field(['name' => 'students', 'label' => 'Student numbers or email addresses', 'type' => 'textarea', 'required' => true, 'help' => 'One per line, or separated by commas. Up to 500 at once. Students who cannot be enrolled are skipped and listed.'])
+        $field(['name' => 'students', 'label' => 'Student numbers or email addresses', 'type' => 'textarea', 'required' => true, 'attrs' => 'autocomplete="off" data-student-autocomplete="' . esc(site_url('institution/enrolments/suggest') . '?offering=' . $o['id'], 'attr') . '"', 'help' => 'One per line, or separated by commas. Up to 500 at once. Start typing to pick a student from your institution. Students who cannot be enrolled are skipped and listed.'])
         . $over('Enrol even if the section goes over capacity'),
         'Enrol students',
     )], ['saveData' => false]) ?>

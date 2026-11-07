@@ -31,9 +31,9 @@ final class CourseChatSyncTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $d                 = DeanFactory::department('C1');
+        $d                 = DeanFactory::college('C1');
         $this->institution = $d['institution'];
-        $program           = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'CA'), 'CA');
+        $program           = DeanFactory::program(DeanFactory::department($d['college'], 'CA'), 'CA');
         $term              = DeanFactory::term($this->institution);
         $this->offering    = DeanFactory::offering($program, $term, 'CC1');
         $this->student     = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
@@ -221,7 +221,7 @@ final class CourseChatSyncTest extends DatabaseTestCase
 
     public function testLeavesOtherInstitutionsAlone(): void
     {
-        $other   = DeanFactory::department('C2')['institution'];
+        $other   = DeanFactory::college('C2')['institution'];
         $foreign = PeopleFactory::person('student', 'For', 'Eign', null, $other);
         CourseFactory::enroll($this->offering, $foreign);
 
@@ -239,7 +239,7 @@ final class CourseChatSyncTest extends DatabaseTestCase
             }
         };
         $db    = db_connect();
-        $depth = $db->transDepth;
+        $collegeh = $db->transDepth;
 
         try {
             $failing->syncOffering($this->offering);
@@ -248,7 +248,7 @@ final class CourseChatSyncTest extends DatabaseTestCase
             $this->assertSame('boom', $e->getMessage());
         }
 
-        $this->assertSame($depth, $db->transDepth);
+        $this->assertSame($collegeh, $db->transDepth);
     }
 
     public function testDuplicateKeyFromARacingSyncIsAbsorbed(): void

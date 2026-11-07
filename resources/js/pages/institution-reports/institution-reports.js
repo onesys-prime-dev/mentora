@@ -1,15 +1,15 @@
 /**
- * The reports filter bar: the program list follows the chosen department.
+ * The reports filter bar: the program list follows the chosen college.
  * Without this script both selects still work (the server checks that the
- * program belongs to the department); this only saves a wrong pairing.
+ * program belongs to the college); this only saves a wrong pairing.
  */
 
 import { keepProgram, programsFor } from "../../shared/report-filters.js";
 
-const department = document.querySelector("select[name='department']");
+const college = document.querySelector("select[name='college']");
 const program = document.querySelector("select[name='program']");
 
-if (department && program && program.dataset.programs) {
+if (college && program && program.dataset.programs) {
     let programs = [];
 
     try {
@@ -19,7 +19,7 @@ if (department && program && program.dataset.programs) {
     }
 
     const render = () => {
-        const available = programsFor(department.value, programs);
+        const available = programsFor(college.value, programs);
         const keep = keepProgram(program.value, available);
 
         program.replaceChildren(
@@ -30,6 +30,6 @@ if (department && program && program.dataset.programs) {
         program.value = keep;
     };
 
-    department.addEventListener("change", render);
+    college.addEventListener("change", render);
     render();
 }

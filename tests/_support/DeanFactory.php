@@ -7,33 +7,33 @@ namespace Tests\Support;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * A department with sub-departments, programs, terms and offerings, and the
+ * A college with departments, programs, terms and offerings, and the
  * dean in charge of it: what the dean's screens read.
  */
 final class DeanFactory
 {
-    /** @return array{institution: int, department: int} */
-    public static function department(string $tag, ?int $institution = null): array
+    /** @return array{institution: int, college: int} */
+    public static function college(string $tag, ?int $institution = null): array
     {
         $db = db_connect();
 
         $institution ??= PeopleFactory::institution("I{$tag}");
 
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => "D{$tag}", 'name' => "College {$tag}"]);
 
-        return ['institution' => $institution, 'department' => (int) $db->insertID()];
+        return ['institution' => $institution, 'college' => (int) $db->insertID()];
     }
 
-    public static function subDepartment(int $department, string $tag): int
+    public static function department(int $college, string $tag): int
     {
-        db_connect()->table('sub_departments')->insert(['department_id' => $department, 'code' => "S{$tag}", 'name' => "Sub {$tag}"]);
+        db_connect()->table('departments')->insert(['college_id' => $college, 'code' => "S{$tag}", 'name' => "Department {$tag}"]);
 
         return (int) db_connect()->insertID();
     }
 
-    public static function program(int $subDepartment, string $tag): int
+    public static function program(int $department, string $tag): int
     {
-        db_connect()->table('programs')->insert(['sub_department_id' => $subDepartment, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
+        db_connect()->table('programs')->insert(['department_id' => $department, 'code' => "P{$tag}", 'name' => "Program {$tag}"]);
 
         return (int) db_connect()->insertID();
     }
@@ -58,29 +58,29 @@ final class DeanFactory
         return (int) $db->insertID();
     }
 
-    public static function dean(int $institution, int $department, string $first = 'Dana'): User
+    public static function dean(int $institution, int $college, string $first = 'Dana'): User
     {
         $dean = PeopleFactory::person('dean', $first, 'Dean', null, $institution);
 
         db_connect()->table('dean_assignments')->insert([
-            'department_id' => $department, 'dean_user_id' => $dean->id, 'status' => 'active',
+            'college_id' => $college, 'dean_user_id' => $dean->id, 'status' => 'active',
             'active_marker' => 1, 'assigned_at' => date('Y-m-d H:i:s'),
         ]);
 
         return $dean;
     }
 
-    public static function chair(int $subDepartment, string $first = 'Maria', string $status = 'active'): User
+    public static function chair(int $department, string $first = 'Maria', string $status = 'active'): User
     {
-        // A chairperson belongs to the institution of the sub-department they chair.
-        $institution = (int) db_connect()->table('sub_departments sd')->select('d.institution_id')
-            ->join('departments d', 'd.id = sd.department_id')->where('sd.id', $subDepartment)->get()->getRow('institution_id');
+        // A chairperson belongs to the institution of the department they chair.
+        $institution = (int) db_connect()->table('departments sd')->select('d.institution_id')
+            ->join('colleges d', 'd.id = sd.college_id')->where('sd.id', $department)->get()->getRow('institution_id');
 
         $chair = PeopleFactory::person('chairperson', $first, 'Chair', null, $institution);
 
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id' => $subDepartment, 'chairperson_user_id' => $chair->id, 'status' => $status, 'assigned_at' => date('Y-m-d H:i:s'),
-            // One active chairperson per sub-department (decision 16.0).
+            'department_id' => $department, 'chairperson_user_id' => $chair->id, 'status' => $status, 'assigned_at' => date('Y-m-d H:i:s'),
+            // One active chairperson per department (decision 16.0).
             'active_marker' => $status === 'active' ? 1 : null,
         ]);
 

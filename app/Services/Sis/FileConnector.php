@@ -26,7 +26,14 @@ final class FileConnector implements SisConnector
         private readonly string $inbound,
         private readonly string $outbound,
         private readonly ?string $signingKey = null,
+        /** Which set of columns the files use (SisCsvParser::KEYS_SIS, or KEYS_UPLOAD for an administrator's upload). */
+        private readonly string $keys = SisCsvParser::KEYS_SIS,
     ) {
+    }
+
+    public function keys(): string
+    {
+        return $this->keys;
     }
 
     public function testConnection(): ConnectionResult
@@ -95,7 +102,7 @@ final class FileConnector implements SisConnector
             }
         }
 
-        return SisCsvParser::parse($dataset, $contents);
+        return SisCsvParser::parse($dataset, $contents, $this->keys);
     }
 
     public function publishGrades(string $batchKey, array $rows): void

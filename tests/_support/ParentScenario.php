@@ -12,7 +12,7 @@ use Config\Messages;
 
 /**
  * One institution with a child enrolled in a course taught by an instructor,
- * the child's parent (linked), and the chairperson of the child's sub-department.
+ * the child's parent (linked), and the chairperson of the child's department.
  * For the parent Messages tests.
  */
 trait ParentScenario
@@ -21,9 +21,9 @@ trait ParentScenario
 
     protected int $institution;
 
-    protected int $department;
+    protected int $college;
 
-    protected int $subDepartment;
+    protected int $department;
 
     protected int $program;
 
@@ -41,18 +41,18 @@ trait ParentScenario
 
     protected function buildParentScenario(string $tag = 'PS'): void
     {
-        $d                   = DeanFactory::department($tag);
+        $d                   = DeanFactory::college($tag);
         $this->institution   = $d['institution'];
-        $this->department    = $d['department'];
-        $this->subDepartment = DeanFactory::subDepartment($d['department'], $tag . 'S');
-        $this->program       = DeanFactory::program($this->subDepartment, $tag . 'P');
+        $this->college    = $d['college'];
+        $this->department = DeanFactory::department($d['college'], $tag . 'S');
+        $this->program       = DeanFactory::program($this->department, $tag . 'P');
         $this->term          = DeanFactory::term($this->institution);
         $this->offering      = DeanFactory::offering($this->program, $this->term, $tag . 'C1');
 
         $this->child      = PeopleFactory::person('student', 'Kid', 'Child', null, $this->institution);
         $this->parent     = PeopleFactory::person('parent', 'Pat', 'Parent', null, $this->institution);
         $this->instructor = PeopleFactory::person('instructor', 'Ins', 'Tructor', null, $this->institution);
-        $this->chair      = DeanFactory::chair($this->subDepartment);
+        $this->chair      = DeanFactory::chair($this->department);
 
         CourseFactory::enroll($this->offering, $this->child);
         CourseFactory::assignInstructor($this->offering, $this->instructor);

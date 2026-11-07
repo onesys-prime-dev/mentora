@@ -26,7 +26,7 @@ class ProgramModel extends Model
 
     protected $allowedFields = [
 
-        'sub_department_id',
+        'department_id',
         'name',
         'code',
         'status',
@@ -35,7 +35,7 @@ class ProgramModel extends Model
 
     protected $validationRules = [
 
-        'sub_department_id' => [
+        'department_id' => [
             'rules' => 'required|is_natural_no_zero',
         ],
 
@@ -55,8 +55,8 @@ class ProgramModel extends Model
 
     protected $validationMessages = [
 
-        'sub_department_id' => [
-            'required' => 'Sub-department is required.',
+        'department_id' => [
+            'required' => 'Department is required.',
         ],
 
         'name' => [
@@ -69,16 +69,16 @@ class ProgramModel extends Model
 
     ];
 
-    /** A sub-department's programs, by name. */
-    public function forSubDepartment(int $subDepartmentId): array
+    /** A department's programs, by name. */
+    public function forDepartment(int $departmentId): array
     {
-        return $this->where('sub_department_id', $subDepartmentId)
+        return $this->where('department_id', $departmentId)
             ->orderBy('name')
             ->findAll();
     }
 
     /**
-     * A program with the sub-department, department and institution above it
+     * A program with the department, college and institution above it
      * (null when there is no such program).
      */
     public function withHierarchy(int $programId): ?array
@@ -86,18 +86,18 @@ class ProgramModel extends Model
         return $this->builder()
             ->select([
                 'programs.*',
-                'sub_departments.id AS sub_department_id',
-                'sub_departments.name AS sub_department_name',
-                'sub_departments.code AS sub_department_code',
                 'departments.id AS department_id',
                 'departments.name AS department_name',
                 'departments.code AS department_code',
+                'colleges.id AS college_id',
+                'colleges.name AS college_name',
+                'colleges.code AS college_code',
                 'institutions.id AS institution_id',
                 'institutions.name AS institution_name',
             ])
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->join('institutions', 'institutions.id = departments.institution_id')
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->join('institutions', 'institutions.id = colleges.institution_id')
             ->where('programs.id', $programId)
             ->get()
             ->getRowArray();

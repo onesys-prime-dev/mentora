@@ -186,6 +186,19 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('waiting to be graded', implode(' ', $readiness['blockers']));
     }
 
+    public function testAReplacedAssignmentAttemptNoLongerBlocksFinalizing(): void
+    {
+        $assessment = CourseFactory::assessment($this->offering, $this->instructor, CourseFactory::module($this->offering), null, 'Assignment');
+        db_connect()->table('assessments')->where('id', $assessment)->update(['status' => 'Published']);
+        AssessmentFactory::attempt($assessment, $this->strong, 'Submitted');
+        AssessmentFactory::attempt($assessment, $this->strong, 'Graded', 9);
+
+        $readiness = $this->service->readiness($this->offering);
+
+        $this->assertSame(0, $readiness['counts']['ungraded_work']);
+        $this->assertStringNotContainsString('waiting to be graded', implode(' ', $readiness['blockers']));
+    }
+
     public function testAnOpenOverrideRequestBlocksFinalizing(): void
     {
         db_connect()->table('grade_override_requests')->insert([
@@ -386,7 +399,7 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
 
         $institution = (int) db_connect()->table('course_offerings o')
             ->select('d.institution_id AS id')->join('courses c', 'c.id = o.course_id')->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')->join('colleges d', 'd.id = sd.college_id')
             ->where('o.id', $this->offering)->get()->getRowArray()['id'];
 
         foreach ([[$this->strong, '2026-10-20 08:00:00'], [$this->weak, '2026-10-21 09:30:00']] as [$student, $at]) {
@@ -408,7 +421,7 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
 
         $institution = (int) db_connect()->table('course_offerings o')
             ->select('d.institution_id AS id')->join('courses c', 'c.id = o.course_id')->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')->join('colleges d', 'd.id = sd.college_id')
             ->where('o.id', $this->offering)->get()->getRowArray()['id'];
 
         db_connect()->table('sis_grade_exports')->insert([
@@ -439,14 +452,14 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
     {
         $chair = CourseFactory::user('chairperson');
 
-        $sub = (int) db_connect()->query(
+        $department = (int) db_connect()->query(
             'SELECT sd.id FROM course_offerings o JOIN courses c ON c.id = o.course_id
-               JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id WHERE o.id = ?',
+               JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id WHERE o.id = ?',
             [$this->offering],
         )->getRow()->id;
 
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
+            'department_id' => $department, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
         ]);
 
         return $chair;
@@ -514,13 +527,13 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
         $both = CourseFactory::user('chairperson');
         CourseFactory::assignInstructor($this->offering, $both);
 
-        $sub = (int) db_connect()->query(
+        $department = (int) db_connect()->query(
             'SELECT sd.id FROM course_offerings o JOIN courses c ON c.id = o.course_id
-               JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id WHERE o.id = ?',
+               JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id WHERE o.id = ?',
             [$this->offering],
         )->getRow()->id;
 
-        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $both->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $department, 'chairperson_user_id' => $both->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
 
         $this->finalize();
 
@@ -541,7 +554,7 @@ final class GradeFinalizationServiceTest extends DatabaseTestCase
 
         $institution = (int) db_connect()->table('course_offerings o')
             ->select('d.institution_id AS id')->join('courses c', 'c.id = o.course_id')->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')->join('colleges d', 'd.id = sd.college_id')
             ->where('o.id', $this->offering)->get()->getRowArray()['id'];
 
         $this->finalize();

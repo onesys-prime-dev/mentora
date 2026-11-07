@@ -14,7 +14,7 @@ use Tests\Support\PeopleFactory;
 
 /**
  * Who may look at a course without teaching it, and which: the dean (their
- * department, only while acting as dean) and the institution's administrator
+ * college, only while acting as dean) and the institution's administrator
  * (their institution). Everyone else has no read-only view.
  *
  * @internal
@@ -25,7 +25,7 @@ final class CourseReadAccessTest extends DatabaseTestCase
 
     private CourseReadAccess $access;
     private int $institution;
-    private int $department;
+    private int $college;
     private int $own;
     private int $sibling;
     private int $foreign;
@@ -37,33 +37,33 @@ final class CourseReadAccessTest extends DatabaseTestCase
 
         session()->destroy();
 
-        $home              = DeanFactory::department('H');
+        $home              = DeanFactory::college('H');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
+        $this->college  = $home['college'];
         $term              = DeanFactory::term($this->institution);
-        $next              = DeanFactory::department('N', $this->institution);
-        $elsewhere         = DeanFactory::department('X');
+        $next              = DeanFactory::college('N', $this->institution);
+        $elsewhere         = DeanFactory::college('X');
 
-        $this->own     = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($this->department, 'H'), 'H'), $term, 'IT101');
-        $this->sibling = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($next['department'], 'N'), 'N'), $term, 'LW100');
-        $this->foreign = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X'), DeanFactory::term($elsewhere['institution']), 'ZZ900');
+        $this->own     = DeanFactory::offering(DeanFactory::program(DeanFactory::department($this->college, 'H'), 'H'), $term, 'IT101');
+        $this->sibling = DeanFactory::offering(DeanFactory::program(DeanFactory::department($next['college'], 'N'), 'N'), $term, 'LW100');
+        $this->foreign = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X'), DeanFactory::term($elsewhere['institution']), 'ZZ900');
 
-        $this->dean   = DeanFactory::dean($this->institution, $this->department);
+        $this->dean   = DeanFactory::dean($this->institution, $this->college);
         $this->access = new CourseReadAccess();
     }
 
     private function teachingDean(): User
     {
         $person = PeopleFactory::person('instructor', 'Dora', 'Dean', null, $this->institution);
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $person->id);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $person->id);
 
         return model(CodeIgniter\Shield\Models\UserModel::class)->findById($person->id);
     }
 
-    public function testADeanReachesTheirDepartmentsOfferingsAndNoOthers(): void
+    public function testADeanReachesTheirCollegesOfferingsAndNoOthers(): void
     {
         $this->assertTrue($this->access->canAccess($this->dean, $this->own));
-        $this->assertFalse($this->access->canAccess($this->dean, $this->sibling), 'another department of the same institution');
+        $this->assertFalse($this->access->canAccess($this->dean, $this->sibling), 'another college of the same institution');
         $this->assertFalse($this->access->canAccess($this->dean, $this->foreign), 'another institution');
         $this->assertFalse($this->access->canAccess($this->dean, 999999));
     }
@@ -86,20 +86,20 @@ final class CourseReadAccessTest extends DatabaseTestCase
 
     public function testADeanWithoutAnAssignmentOrWithAnEndedOneReachesNothing(): void
     {
-        $this->assertFalse($this->access->canAccess(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), $this->own));
+        $this->assertFalse($this->access->canAccess(PeopleFactory::person('dean', 'No', 'College', null, $this->institution), $this->own));
 
         db_connect()->table('dean_assignments')->where('dean_user_id', $this->dean->id)->update(['status' => 'ended', 'active_marker' => null]);
 
         $this->assertFalse($this->access->canAccess($this->dean, $this->own));
     }
 
-    public function testOfferingIsTheSharedRowWithTheDepartmentNameOrNull(): void
+    public function testOfferingIsTheSharedRowWithTheCollegeNameOrNull(): void
     {
         $row = $this->access->offering($this->dean, $this->own);
 
         $this->assertSame($this->own, (int) $row['offering_id']);
         $this->assertSame('IT101', $row['course_code']);
-        $this->assertSame('College H', $row['department_name']);
+        $this->assertSame('College H', $row['college_name']);
         $this->assertNull($this->access->offering($this->dean, $this->sibling));
         $this->assertNull($this->access->offering($this->dean, $this->foreign));
     }
@@ -118,7 +118,7 @@ final class CourseReadAccessTest extends DatabaseTestCase
         CourseFactory::resource($sibItem, 'pdf', null, $mine['id']);
 
         $this->assertTrue($this->access->canReadFile($this->dean, $shared['id']));
-        $this->assertFalse($this->access->canReadFile($this->dean, $mine['id']), 'shared by a course of another department');
+        $this->assertFalse($this->access->canReadFile($this->dean, $mine['id']), 'shared by a course of another college');
         $this->assertFalse($this->access->canReadFile($this->dean, $loose['id']), 'shared by no course');
     }
 

@@ -57,7 +57,7 @@ final class MessagePreferencesTest extends DatabaseTestCase
 
     public function testOnlyInstructorsChairpersonsAndDeansAreOfferedQuietHoursButEveryoneGetsTheEmailSwitch(): void
     {
-        $dean = \Tests\Support\DeanFactory::dean($this->institution, $this->department);
+        $dean = \Tests\Support\DeanFactory::dean($this->institution, $this->college);
 
         foreach ([$this->instructor, $this->chair, $dean] as $allowed) {
             $this->assertTrue($this->prefs()->quietHoursAllowed($allowed), (string) $allowed->first_name);

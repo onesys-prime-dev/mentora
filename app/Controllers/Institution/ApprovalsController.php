@@ -13,7 +13,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * The institution administrator's Approvals (audit decision 1.1): the
- * grade-override requests of departments with no dean who may approve them,
+ * grade-override requests of colleges with no dean who may approve them,
  * to approve or reject (no send-back, 1.3), and the ones administrators
  * decided. The same page and dialog as the dean's; who may decide which
  * request is the service's check (never one's own, 1.5; the first decision
@@ -81,9 +81,9 @@ class ApprovalsController extends BaseController
     private function programs(int $institutionId): array
     {
         return db_connect()->table('programs p')
-            ->select(['p.id', 'p.name', 'p.sub_department_id'])
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->select(['p.id', 'p.name', 'p.department_id'])
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->orderBy('p.name', 'ASC')
             ->get()->getResultArray();

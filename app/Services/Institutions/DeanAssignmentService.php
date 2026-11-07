@@ -28,14 +28,14 @@ class DeanAssignmentService
      *
      * @throws StructureException
      */
-    public function assign(int $institutionId, int $departmentId, int $userId, ?User $actor = null, bool $ignoreSisLock = false): int
+    public function assign(int $institutionId, int $collegeId, int $userId, ?User $actor = null, bool $ignoreSisLock = false): int
     {
         $db = db_connect();
-        $department = $db->table('departments')->where([
-            'id' => $departmentId, 'institution_id' => $institutionId,
+        $college = $db->table('colleges')->where([
+            'id' => $collegeId, 'institution_id' => $institutionId,
         ])->get()->getRowArray();
 
-        if ($department === null) {
+        if ($college === null) {
             throw PageNotFoundException::forPageNotFound();
         }
 
@@ -47,12 +47,12 @@ class DeanAssignmentService
         }
 
         // Not the dean of courses they are a student of (9.5).
-        if (($clash = (new CourseRoleConflicts())->forDean($userId, $departmentId)) !== null) {
+        if (($clash = (new CourseRoleConflicts())->forDean($userId, $collegeId)) !== null) {
             throw StructureException::field('user_id', CourseRoleConflicts::sentence($userId, $clash));
         }
 
-        // A dean can also teach, but cannot also be a chairperson: the one who oversees a department
-        // does not lead one of its sub-departments.
+        // A dean can also teach, but cannot also be a chairperson: the one who oversees a college
+        // does not lead one of its departments.
         if (
             $db->table('auth_groups_users')->where(['user_id' => $userId, 'group' => 'chairperson'])->countAllResults() > 0
             || $db->table('chairperson_assignments')->where(['chairperson_user_id' => $userId, 'status' => 'active'])->countAllResults() > 0
@@ -64,7 +64,7 @@ class DeanAssignmentService
         if (! $ignoreSisLock) {
             $sis = new SisOwnership();
 
-            foreach (array_filter([$this->assignments->currentDeanOfDepartment($departmentId), $this->assignments->departmentOfDean($userId)]) as $held) {
+            foreach (array_filter([$this->assignments->currentDeanOfCollege($collegeId), $this->assignments->collegeOfDean($userId)]) as $held) {
                 if ($sis->managesAssignment('dean', (int) $held['id'])) {
                     throw new StructureException(self::SIS_LOCK);
                 }
@@ -84,19 +84,19 @@ class DeanAssignmentService
                 'created_at' => $now,
             ]);
         }
-        $currentDepartment = $this->assignments->currentDeanOfDepartment($departmentId);
+        $currentCollege = $this->assignments->currentDeanOfCollege($collegeId);
         $currentPerson = $this->assignments->where([
             'dean_user_id' => $userId, 'status' => 'active', 'active_marker' => 1,
         ])->findAll();
 
-        foreach (array_merge($currentDepartment === null ? [] : [$currentDepartment], $currentPerson) as $old) {
+        foreach (array_merge($currentCollege === null ? [] : [$currentCollege], $currentPerson) as $old) {
             $db->table('dean_assignments')->where('id', $old['id'])->update([
                 'status' => 'ended', 'active_marker' => null, 'ended_at' => $now, 'updated_at' => $now,
             ]);
         }
 
         $db->table('dean_assignments')->insert([
-            'department_id' => $departmentId, 'dean_user_id' => $userId, 'status' => 'active',
+            'college_id' => $collegeId, 'dean_user_id' => $userId, 'status' => 'active',
             'active_marker' => 1, 'assigned_at' => $now, 'assigned_by' => $actor?->id,
             'created_at' => $now, 'updated_at' => $now,
         ]);
@@ -107,26 +107,28 @@ class DeanAssignmentService
             throw new RuntimeException('The dean assignment could not be saved.');
         }
 
-        // Requests waiting for the department's dean now wait for this one (or, if it is their own, for the administrator).
-        (new GradeOverrideRequestService())->retargetDepartment($departmentId);
+        // Requests waiting for the college's dean now wait for this one (or, if it is their own, for the administrator).
+        (new GradeOverrideRequestService())->retargetCollege($collegeId);
 
         if ($firstDean) {
             (new \App\Services\Courses\Grades\GradeSignoffService())->announceNowNeeded($institutionId);
         }
 
         // The dean who was replaced is told, as a replaced chairperson is.
-        if ($currentDepartment !== null && (int) $currentDepartment['dean_user_id'] !== $userId) {
+        if ($currentCollege !== null && (int) $currentCollege['dean_user_id'] !== $userId) {
             (new \App\Services\Notifications\NotificationService())->send(
-                (int) $currentDepartment['dean_user_id'], 'dean', 'Dean assignment ended',
-                "You are no longer the dean of {$department['name']}: another dean was assigned.",
-                false, "dean-replaced:{$currentDepartment['id']}:" . date('YmdHis'), $institutionId, site_url('dashboard'),
+                (int) $currentCollege['dean_user_id'], 'dean', 'Dean assignment ended',
+                "You are no longer the dean of {$college['name']}: another dean was assigned.",
+                false, "dean-replaced:{$currentCollege['id']}:" . date('YmdHis'), $institutionId, site_url('dashboard'),
             );
         }
 
         service('auditLogger')->log('structure.dean_assigned', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $id, 'institution_id' => $institutionId,
-            'new' => ['department_id' => $departmentId, 'dean_user_id' => $userId],
+            'new' => ['college_id' => $collegeId, 'dean_user_id' => $userId],
         ]);
+
+        (new \App\Services\Notifications\MailOutbox())->tell($institutionId, $userId, \App\Services\Notifications\MailOutbox::DEAN, (string) $college['name']);
 
         return $id;
     }
@@ -141,7 +143,7 @@ class DeanAssignmentService
         $db = db_connect();
         $row = $db->table('dean_assignments da')
             ->select('da.*')
-            ->join('departments d', 'd.id = da.department_id')
+            ->join('colleges d', 'd.id = da.college_id')
             ->where(['da.id' => $assignmentId, 'd.institution_id' => $institutionId])
             ->get()->getRowArray();
 
@@ -162,11 +164,11 @@ class DeanAssignmentService
         ]);
 
         // Requests waiting for this dean move up one level: nobody is left to decide them.
-        (new GradeOverrideRequestService())->retargetDepartment((int) $row['department_id']);
+        (new GradeOverrideRequestService())->retargetCollege((int) $row['college_id']);
 
         service('auditLogger')->log('structure.dean_ended', $this->actorOrNull($actor), [
             'target_type' => 'dean_assignment', 'target_id' => $assignmentId, 'institution_id' => $institutionId,
-            'old' => ['department_id' => (int) $row['department_id'], 'dean_user_id' => (int) $row['dean_user_id']],
+            'old' => ['college_id' => (int) $row['college_id'], 'dean_user_id' => (int) $row['dean_user_id']],
         ]);
     }
 
@@ -176,7 +178,7 @@ class DeanAssignmentService
      */
     public function endForPerson(int $userId, ?User $actor = null): bool
     {
-        $row = $this->assignments->departmentOfDean($userId);
+        $row = $this->assignments->collegeOfDean($userId);
 
         if ($row === null) {
             return false;
@@ -189,15 +191,15 @@ class DeanAssignmentService
     }
 
     /**
-     * Active deans, by department.
+     * Active deans, by college.
      *
      * @return array<int, array{id: int, user_id: int, name: string, email: string}>
      */
-    public function byDepartment(int $institutionId): array
+    public function byCollege(int $institutionId): array
     {
         $rows = db_connect()->table('dean_assignments da')
-            ->select('da.id, da.department_id, da.dean_user_id, up.first_name, up.last_name, ai.secret AS email')
-            ->join('departments d', 'd.id = da.department_id')
+            ->select('da.id, da.college_id, da.dean_user_id, up.first_name, up.last_name, ai.secret AS email')
+            ->join('colleges d', 'd.id = da.college_id')
             ->join('users u', 'u.id = da.dean_user_id')
             ->join('user_profiles up', 'up.user_id = u.id', 'left')
             ->join('auth_identities ai', "ai.user_id = u.id AND ai.type = 'email_password'", 'left', false)
@@ -205,10 +207,10 @@ class DeanAssignmentService
             ->where(['da.status' => 'active', 'da.active_marker' => 1])
             ->get()->getResultArray();
 
-        $byDepartment = [];
+        $byCollege = [];
 
         foreach ($rows as $row) {
-            $byDepartment[(int) $row['department_id']] = [
+            $byCollege[(int) $row['college_id']] = [
                 'id'      => (int) $row['id'],
                 'user_id' => (int) $row['dean_user_id'],
                 'name'    => trim($row['first_name'] . ' ' . $row['last_name']) ?: (string) $row['email'],
@@ -216,7 +218,7 @@ class DeanAssignmentService
             ];
         }
 
-        return $byDepartment;
+        return $byCollege;
     }
 
     /**
@@ -246,14 +248,14 @@ class DeanAssignmentService
         ], $rows);
     }
 
-    public function currentDeanOfDepartment(int $departmentId): ?array
+    public function currentDeanOfCollege(int $collegeId): ?array
     {
-        return $this->assignments->currentDeanOfDepartment($departmentId);
+        return $this->assignments->currentDeanOfCollege($collegeId);
     }
 
-    public function departmentOfDean(int $userId): ?array
+    public function collegeOfDean(int $userId): ?array
     {
-        return $this->assignments->departmentOfDean($userId);
+        return $this->assignments->collegeOfDean($userId);
     }
 
     private function actorOrNull(?User $actor): ?User

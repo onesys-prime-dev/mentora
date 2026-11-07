@@ -13,7 +13,7 @@ use Config\Database;
  *
  * Seven foreign keys passed CodeIgniter's actions the wrong way round (`onUpdate`, then `onDelete`):
  * they were meant to set the actor to NULL on delete and instead deleted the row. Three more actors
- * (who asked for an override, who signed off, who posted a department announcement) cascaded on
+ * (who asked for an override, who signed off, who posted a college announcement) cascaded on
  * purpose; they now keep the row too, with the actor left empty. A file that a learning resource
  * still uses can no longer be deleted from under it.
  */
@@ -24,7 +24,7 @@ class KeepHistoryWhenAUserIsDeleted extends Migration
         'dean_assignments'         => ['assigned_by'],
         'grade_override_requests'  => ['requested_by', 'endorsed_by', 'returned_by', 'decided_by'],
         'grade_signoffs'           => ['signed_by', 'reopened_by'],
-        'department_announcements' => ['created_by', 'ended_by'],
+        'college_announcements' => ['created_by', 'ended_by'],
     ];
 
     /** The columns that were NOT NULL before. */

@@ -101,14 +101,40 @@ class QuizAttemptService
     /** Seconds past the timer a late save or submit is still accepted (the browser's own delay). */
     public const TIME_LIMIT_GRACE_SECONDS = 60;
 
+    /** The browser hands a quiz in the moment its timer ends: a few seconds' slack for the two clocks, not the full minute. */
+    public const AUTO_SUBMIT_GRACE_SECONDS = 5;
+
     /** What the student is told when the database refuses the write. */
     public const START_FAILED = 'The quiz could not be started. Reload the page to try again.';
 
     public const ANSWER_NOT_SAVED = 'Your answer could not be saved. Try again.';
 
+    /** A quiz password: this many wrong guesses within the window lock that student out of that quiz until it passes. */
+    public const PASSWORD_ATTEMPTS = 5;
+
+    public const PASSWORD_WINDOW_MINUTES = 10;
+
+    public const PASSWORD_WRONG = 'That password is not right.';
+
+    public const PASSWORD_LOCKED = 'Too many wrong passwords. Try again in ' . self::PASSWORD_WINDOW_MINUTES . ' minutes.';
+
+    /** What the quiz page may report during an attempt, and how much of it is kept. */
+    public const MAX_SECURITY_EVENTS = 100;
+
+    /** The things the lock blocks, and so the only ones it reports. */
+    public const BLOCKED_ACTIONS = ['copy', 'cut', 'paste', 'contextmenu', 'print'];
+
     public const NOT_SUBMITTED = 'The quiz could not be submitted. Your answers are kept; try submitting again.';
 
-    public function startAttempt(User $user, int $assessmentId, ?int $offeringId = null): array
+    /**
+     * Opens a quiz for a student: resumes the attempt they have running or starts a new one. A quiz with a password
+     * starts nothing until the right one is given ($password; null means they have not been asked yet), so a wrong
+     * guess uses up no attempt, and five wrong guesses in ten minutes lock that student out for the rest of the window.
+     * What a student already has running resumes without the password; a teacher is never asked.
+     *
+     * @return array{html: string, passwordRequired: bool, passwordError: ?string}
+     */
+    public function startAttempt(User $user, int $assessmentId, ?int $offeringId = null, ?string $password = null): array
     {
         $assessment = $this->assessmentModel->find($assessmentId);
 
@@ -147,7 +173,7 @@ class QuizAttemptService
 
             $assessments = new AssessmentService();
 
-            if (!$assessments->isVisibleToStudent($assessment)) {
+            if (!$assessments->isVisibleToStudent($assessment, (int) $user->id)) {
                 throw PageNotFoundException::forPageNotFound('Assessment not found.');
             }
 
@@ -163,7 +189,22 @@ class QuizAttemptService
         // quiz's landing, or the attempt already running, read-only (3.1).
         $viewAs = Impersonation::current() === null ? null : $this->viewAsLanding($user, $assessment) + ['teaches' => $teaches];
 
-        if (!$submission && !$blocked && $viewAs === null) {
+        // A quiz with a password asks for it before any attempt is made.
+        $passwordRequired = false;
+        $passwordError    = null;
+
+        if (!$submission && !$blocked && $viewAs === null && !$teaches && $this->requiresPassword($assessmentId)) {
+
+            $gate = $this->passwordGate($user, $assessmentId, $password);
+
+            if ($gate !== null) {
+                $passwordRequired = true;
+                $passwordError    = $gate === '' ? null : $gate;
+            }
+
+        }
+
+        if (!$submission && !$blocked && $viewAs === null && !$passwordRequired) {
 
             $attemptsTaken = $this->submissionModel
                 ->where('assessment_id', $assessmentId)
@@ -190,7 +231,7 @@ class QuizAttemptService
                         'started_at' => date('Y-m-d H:i:s'),
                         'status' => 'In Progress',
                         // The attempt keeps the questions it started with (QA AMB-ASM-03).
-                        'questions_snapshot' => json_encode($this->questionModel->listForAssessment($assessmentId)),
+                        'questions_snapshot' => json_encode($this->questionsForNewAttempt($assessmentId)),
                     ]);
                 } catch (DatabaseException) {
                     $inserted = false;
@@ -267,9 +308,172 @@ class QuizAttemptService
                     'endsAt' => $endsAt,
                     'viewAs' => $viewAs,
                     'startFailed' => $startFailed,
+                    'passwordRequired' => $passwordRequired,
+                    'passwordError' => $passwordError,
+                    // What the page script watches while a student answers (never for a teacher or a viewer).
+                    'guard' => $submission && !$teaches && $viewAs === null ? $this->guardOf($assessmentId) : ['detect' => false, 'lock' => false],
                 ]
             ),
+            'passwordRequired' => $passwordRequired,
+            'passwordError' => $passwordError,
         ];
+    }
+
+    /**
+     * Keeps what the quiz page saw during a running attempt: that the student left the page (and for how long), left
+     * fullscreen, or tried to copy, cut, paste, print or open a menu. A web page cannot see WHERE they went, so nothing
+     * of the kind exists here. Only the attempt's own student can report, only while it runs, only what the quiz has
+     * switched on is kept (recording leaving, or the lock), and a flood is cut off.
+     *
+     * @param array<string, mixed> $event kind, and duration_seconds (left_page) or detail (blocked_action)
+     *
+     * @return array{success: bool, message?: string}
+     */
+    public function recordSecurityEvent(User $user, int $submissionId, array $event): array
+    {
+        $submission = $this->submissionModel->find($submissionId);
+
+        if (!$submission || (int) $submission['student_id'] !== (int) $user->id || $submission['status'] !== 'In Progress') {
+            return ['success' => false, 'message' => 'That attempt is not running.'];
+        }
+
+        $kind = is_string($event['kind'] ?? null) ? $event['kind'] : '';
+
+        if (!in_array($kind, ['left_page', 'left_fullscreen', 'blocked_action'], true)) {
+            return ['success' => false, 'message' => 'Unknown event.'];
+        }
+
+        $settings = db_connect()->table('assessment_settings')->select('detect_tab_switch, browser_lockdown')->where('assessment_id', (int) $submission['assessment_id'])->get()->getRowArray() ?? [];
+
+        // Recording leaving is its own switch; fullscreen and blocked actions belong to the lock.
+        $on = $kind === 'left_page' ? !empty($settings['detect_tab_switch']) : !empty($settings['browser_lockdown']);
+
+        if (!$on) {
+            return ['success' => false, 'message' => 'Not recorded for this quiz.'];
+        }
+
+        $detail = null;
+
+        if ($kind === 'blocked_action') {
+            $detail = is_string($event['detail'] ?? null) ? $event['detail'] : '';
+
+            if (!in_array($detail, self::BLOCKED_ACTIONS, true)) {
+                return ['success' => false, 'message' => 'Unknown event.'];
+            }
+        }
+
+        $seconds = null;
+
+        if ($kind === 'left_page') {
+            $raw     = $event['duration_seconds'] ?? 0;
+            $seconds = is_numeric($raw) ? max(0, min(86400, (int) $raw)) : 0;
+        }
+
+        $db = db_connect();
+
+        if ($db->table('assessment_security_events')->where('submission_id', $submissionId)->countAllResults() >= self::MAX_SECURITY_EVENTS) {
+            return ['success' => false, 'message' => 'Too many events.'];
+        }
+
+        $db->table('assessment_security_events')->insert([
+            'submission_id'    => $submissionId,
+            'kind'             => $kind,
+            'detail'           => $detail,
+            'duration_seconds' => $seconds,
+            'occurred_at'      => date('Y-m-d H:i:s'),
+        ]);
+
+        return ['success' => true];
+    }
+
+    /**
+     * What the quiz page saw during one attempt, for the teacher: every event in order and a short count.
+     *
+     * @return array{events: list<array<string, mixed>>, summary: array{left_page: int, away_seconds: int, left_fullscreen: int, blocked_actions: int}}
+     */
+    public function securityReport(int $submissionId): array
+    {
+        $events = db_connect()->table('assessment_security_events')->where('submission_id', $submissionId)->orderBy('occurred_at')->orderBy('id')->get()->getResultArray();
+
+        $summary = ['left_page' => 0, 'away_seconds' => 0, 'left_fullscreen' => 0, 'blocked_actions' => 0];
+
+        foreach ($events as $e) {
+            match ($e['kind']) {
+                'left_page'       => [$summary['left_page']++, $summary['away_seconds'] += (int) $e['duration_seconds']],
+                'left_fullscreen' => $summary['left_fullscreen']++,
+                default           => $summary['blocked_actions']++,
+            };
+        }
+
+        return ['events' => $events, 'summary' => $summary];
+    }
+
+    /**
+     * The two things the quiz page can watch for: that the student leaves the page, and the fullscreen lock.
+     *
+     * @return array{detect: bool, lock: bool}
+     */
+    private function guardOf(int $assessmentId): array
+    {
+        $row = db_connect()->table('assessment_settings')->select('detect_tab_switch, browser_lockdown')->where('assessment_id', $assessmentId)->get()->getRowArray() ?? [];
+
+        return ['detect' => !empty($row['detect_tab_switch']), 'lock' => !empty($row['browser_lockdown'])];
+    }
+
+    /** Whether the quiz is behind a password (a quiz with the switch on and no password locks everyone out). */
+    private function requiresPassword(int $assessmentId): bool
+    {
+        return !empty(db_connect()->table('assessment_settings')->select('require_password')->where('assessment_id', $assessmentId)->get()->getRowArray()['require_password']);
+    }
+
+    /**
+     * null: let them in; '': ask for the password; anything else: the sentence to show (wrong, or locked out).
+     */
+    private function passwordGate(User $user, int $assessmentId, ?string $typed): ?string
+    {
+        if ($typed === null) {
+            return '';
+        }
+
+        $db    = db_connect();
+        $who   = ['assessment_id' => $assessmentId, 'student_user_id' => (int) $user->id];
+        $since = date('Y-m-d H:i:s', strtotime('-' . self::PASSWORD_WINDOW_MINUTES . ' minutes'));
+
+        $failures = $db->table('quiz_password_failures')->where($who)->where('failed_at >=', $since)->countAllResults();
+
+        // Locked out, whatever they type now.
+        if ($failures >= self::PASSWORD_ATTEMPTS) {
+            return self::PASSWORD_LOCKED;
+        }
+
+        if ((new AssessmentService())->quizPasswordMatches($assessmentId, $typed)) {
+            $db->table('quiz_password_failures')->where($who)->delete();
+
+            return null;
+        }
+
+        $db->table('quiz_password_failures')->insert($who + ['failed_at' => date('Y-m-d H:i:s')]);
+
+        return $failures + 1 >= self::PASSWORD_ATTEMPTS ? self::PASSWORD_LOCKED : self::PASSWORD_WRONG;
+    }
+
+    /**
+     * The questions a new attempt will keep (its snapshot): in the quiz's order, or shuffled when the quiz
+     * randomizes its questions. Shuffled once, here, so the attempt keeps its order when it is reopened.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function questionsForNewAttempt(int $assessmentId): array
+    {
+        $questions = $this->questionModel->listForAssessment($assessmentId);
+
+        $randomize = !empty(db_connect()->table('assessment_settings')->select('randomize_questions')->where('assessment_id', $assessmentId)->get()->getRowArray()['randomize_questions']);
+
+        if ($randomize) {
+            shuffle($questions);
+        }
+
+        return array_values($questions);
     }
 
     public function saveAnswer(User $user, int $submissionId, int $questionId, array $data): array
@@ -355,7 +559,7 @@ class QuizAttemptService
     }
 
     /** True when the quiz has a time limit and this attempt has used it up. */
-    private function timeIsUp(array $submission): bool
+    private function timeIsUp(array $submission, int $graceSeconds = self::TIME_LIMIT_GRACE_SECONDS): bool
     {
         $assessment = $this->assessmentModel->find((int) $submission['assessment_id']);
 
@@ -365,7 +569,7 @@ class QuizAttemptService
             return false;
         }
 
-        return time() > strtotime($submission['started_at']) + $minutes * 60 + self::TIME_LIMIT_GRACE_SECONDS;
+        return time() > strtotime($submission['started_at']) + $minutes * 60 + $graceSeconds;
     }
 
     /**
@@ -461,6 +665,20 @@ class QuizAttemptService
                 return ['success' => false, 'message' => 'This attempt has already been submitted.'];
             }
 
+            // A required question left unanswered holds the attempt back, unless the timer has run out: then
+            // whatever was answered is handed in, so a student is never stuck behind a question they ran out of time for.
+            $missing = $this->timeIsUp($submission, self::AUTO_SUBMIT_GRACE_SECONDS) ? 0 : $this->unansweredRequired($submission);
+
+            if ($missing > 0) {
+                $db->transComplete();
+
+                return [
+                    'success'             => false,
+                    'unanswered_required' => $missing,
+                    'message'             => "Answer the {$missing} required " . ($missing === 1 ? 'question' : 'questions') . ' you left blank, then submit.',
+                ];
+            }
+
             $submitted = $this->handIn($submissionId, $submission, $db);
         } catch (DatabaseException) {
             $submitted = false;
@@ -484,6 +702,44 @@ class QuizAttemptService
             'message' => 'Quiz submitted successfully.',
             'submission' => $this->submissionModel->find($submissionId),
         ];
+    }
+
+    /**
+     * How many required questions of this attempt have no answer. A question counts as answered when a choice is
+     * picked or some text is typed (not just spaces), the same as the page. A file upload cannot be answered in a
+     * quiz yet, so it is never counted.
+     */
+    private function unansweredRequired(array $submission): int
+    {
+        $responses = [];
+
+        foreach ($this->responseModel->where('submission_id', (int) $submission['id'])->findAll() as $row) {
+            $responses[(int) $row['question_id']] = $row;
+        }
+
+        $missing = 0;
+
+        foreach ($this->questionsOf($submission) as $question) {
+            if (empty($question['is_required']) || $question['question_type'] === 'File Upload') {
+                continue;
+            }
+
+            $response = $responses[(int) $question['id']] ?? null;
+
+            $choices = $response && !empty($response['selected_choice_ids']) ? json_decode((string) $response['selected_choice_ids'], true) : [];
+
+            $answered = $response && (
+                $response['selected_choice_id'] !== null
+                || (is_array($choices) && $choices !== [])
+                || trim((string) ($response['response_text'] ?? '')) !== ''
+            );
+
+            if (!$answered) {
+                $missing++;
+            }
+        }
+
+        return $missing;
     }
 
     /**

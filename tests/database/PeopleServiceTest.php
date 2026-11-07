@@ -374,9 +374,9 @@ final class PeopleServiceTest extends DatabaseTestCase
     public function testEndingTheChairpersonRoleOrAccountEndsTheAssignments(): void
     {
         $chair = $this->person('chairperson', 'Cal');
-        $sub   = (int) db_connect()->query('SELECT sd.id FROM sub_departments sd JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ? LIMIT 1', [$this->institution])->getRow()->id;
+        $department   = (int) db_connect()->query('SELECT sd.id FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ? LIMIT 1', [$this->institution])->getRow()->id;
 
-        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $department, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
 
         $this->service->setRoles($this->institution, (int) $chair->id, ['instructor'], $this->actor);
 
@@ -384,7 +384,7 @@ final class PeopleServiceTest extends DatabaseTestCase
         $this->assertSame(1, $this->audit('structure.chairperson_revoked'));
 
         $other = $this->person('chairperson', 'Dee');
-        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $sub, 'chairperson_user_id' => $other->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $department, 'chairperson_user_id' => $other->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
 
         $this->service->deactivate($this->institution, (int) $other->id, $this->actor);
 

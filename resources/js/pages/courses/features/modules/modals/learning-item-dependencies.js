@@ -32,6 +32,52 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
     const errorLabel = root.querySelector("[data-dependencies-error]");
     const saveButton = root.querySelector("[data-dependencies-save]");
 
+    // "Require a minimum score": offered only while something it waits on is a quiz or an assignment.
+    const scoreBlock = root.querySelector("[data-minscore-block]");
+    const scoreEnabled = root.querySelector("[data-minscore-enabled]");
+    const scoreOptions = root.querySelector("[data-minscore-options]");
+    const scoreCustom = root.querySelector("[data-minscore-custom]");
+    const scorePercent = root.querySelector("[data-minscore-percent]");
+    const scoreMode = () => root.querySelector("[data-minscore-mode]:checked")?.value ?? null;
+
+    const ASSESSED = ["quiz", "assignment"];
+
+    // What it waits on right now, from the chosen mode: the previous item, or the ticked ones.
+    let previousType = null;
+    const candidateTypes = new Map();
+
+    const waitsOnAssessment = () => {
+
+        if (!enabled.checked) {
+            return false;
+        }
+
+        if (selectedMode() === "previous") {
+            return ASSESSED.includes(previousType);
+        }
+
+        return [...root.querySelectorAll("[data-dependency-candidate]:checked")]
+            .some((box) => ASSESSED.includes(candidateTypes.get(Number(box.value))));
+
+    };
+
+    const syncScore = () => {
+
+        const offered = waitsOnAssessment();
+
+        scoreBlock?.classList.toggle("hidden", !offered);
+        scoreBlock?.classList.toggle("flex", offered);
+
+        const on = offered && scoreEnabled?.checked === true;
+
+        scoreOptions?.classList.toggle("hidden", !on);
+        scoreOptions?.classList.toggle("flex", on);
+
+        scoreCustom?.classList.toggle("hidden", !(on && scoreMode() === "custom"));
+        scoreCustom?.classList.toggle("flex", on && scoreMode() === "custom");
+
+    };
+
     const modeInput = (value) =>
         root.querySelector(`[data-dependencies-mode][value="${value}"]`);
 
@@ -58,6 +104,8 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
         customBox.classList.toggle("hidden", !showCustom);
         customBox.classList.toggle("flex", showCustom);
 
+        syncScore();
+
     };
 
     const render = (data) => {
@@ -67,6 +115,30 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
         const previous = modeInput("previous");
 
         previous.disabled = !data.previous;
+
+        previousType = data.previous?.item_type ?? null;
+
+        candidateTypes.clear();
+        data.candidates.forEach((candidate) => candidateTypes.set(candidate.id, candidate.item_type));
+
+        // What is saved.
+        if (scoreEnabled) {
+
+            scoreEnabled.checked = (data.minScore?.mode ?? "none") !== "none";
+
+            root.querySelectorAll("[data-minscore-mode]").forEach((input) => {
+                input.checked = input.value === data.minScore?.mode;
+            });
+
+            if (scoreEnabled.checked === false) {
+                root.querySelectorAll("[data-minscore-mode]").forEach((input) => {
+                    input.checked = false;
+                });
+            }
+
+            scorePercent.value = data.minScore?.percent ?? "";
+
+        }
 
         previousHint.textContent = data.previous
             ? `Unlocks after “${data.previous.title}” is completed.`
@@ -100,6 +172,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
             checkbox.className = "accent-brand";
             checkbox.dataset.dependencyCandidate = "";
             checkbox.checked = data.prerequisiteIds.includes(candidate.id);
+            checkbox.addEventListener("change", syncScore);
 
             const name = document.createElement("span");
 
@@ -190,6 +263,21 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
         .querySelectorAll("[data-dependencies-mode]")
         .forEach((input) => input.addEventListener("change", syncVisibility));
 
+    scoreEnabled?.addEventListener("change", () => {
+
+        // Switching it on picks the assessment's own passing score, the usual choice.
+        if (scoreEnabled.checked && !scoreMode()) {
+            root.querySelector("[data-minscore-mode][value='passing']").checked = true;
+        }
+
+        syncScore();
+
+    });
+
+    root
+        .querySelectorAll("[data-minscore-mode]")
+        .forEach((input) => input.addEventListener("change", syncScore));
+
     saveButton.addEventListener("click", async () => {
 
         showError("");
@@ -208,6 +296,26 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
 
         }
 
+        // The score counts only while something it waits on is a quiz or an assignment.
+        const required = waitsOnAssessment() && scoreEnabled?.checked === true;
+        const minScore = { mode: required ? scoreMode() ?? "none" : "none", percent: null };
+
+        if (minScore.mode === "custom") {
+
+            const percent = Number(scorePercent.value);
+
+            if (!(percent >= 1 && percent <= 100)) {
+
+                showError("Enter a minimum score from 1 to 100 percent.");
+
+                return;
+
+            }
+
+            minScore.percent = percent;
+
+        }
+
         saveButton.disabled = true;
 
         try {
@@ -215,6 +323,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
             const result = await saveLearningItemDependencies(learningItemId, {
                 mode: mode ?? "none",
                 prerequisite_ids: prerequisiteIds,
+                min_score: minScore,
             });
 
             if (!result.success) {

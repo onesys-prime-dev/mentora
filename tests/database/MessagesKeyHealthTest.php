@@ -114,7 +114,7 @@ final class MessagesKeyHealthTest extends DatabaseTestCase
 
     public function testItCannotBeSwitchedOnForOneInstitutionEither(): void
     {
-        $institution = DeanFactory::department('KH1')['institution'];
+        $institution = DeanFactory::college('KH1')['institution'];
 
         try {
             (new FeatureFlagAdmin())->setForInstitution($institution, 'messages', FeatureFlagAdmin::ON, 'Pilot', null);

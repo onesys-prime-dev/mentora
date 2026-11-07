@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Courses;
 
 use App\Controllers\BaseController;
+use App\Services\Auth\RolePermissions;
 use App\Services\Courses\ChairpersonCourseSearch;
 use App\Services\Courses\MonitorProgramFilters;
 use App\Services\Courses\MonitorProgramPage;
@@ -81,6 +82,8 @@ class MonitorProgramController extends BaseController
             'terms' => $terms,
             'mainGutter' => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
             'previousPage' => 'dashboard',
+            // The Grades page needs courses.view as chairperson; Monitor Program only program.monitor.
+            'monitorGradesBase' => (new RolePermissions())->allows($user, 'courses.view', 'chairperson') ? site_url('chairperson/grades') : null,
         ]);
     }
 

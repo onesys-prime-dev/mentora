@@ -93,9 +93,9 @@ class PlanLimits
             ->select("COALESCE(SUM(CASE WHEN ai_generation_batches.status IN ('completed', 'failed') THEN ai_generation_batches.generated_count ELSE ai_generation_batches.requested_count END), 0) AS total", false)
             ->join('courses', 'courses.id = ai_generation_batches.course_id')
             ->join('programs', 'programs.id = courses.program_id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where('departments.institution_id', $institutionId)
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where('colleges.institution_id', $institutionId)
             ->where('ai_generation_batches.created_at >=', $this->aiWindowStart($institutionId, $now ?? new DateTimeImmutable()) . ' 00:00:00')
             ->get()->getRowArray()['total'];
 

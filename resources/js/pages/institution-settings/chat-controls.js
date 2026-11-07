@@ -44,13 +44,15 @@ export async function initChatControls(root = document.querySelector("[data-chat
         return;
     }
 
-    const { status, data } = await api.chatControls();
-    const chats = (status === 200 && Array.isArray(data?.chats) ? data.chats : []).map((c) => ({ ...c, draft: { ...(c.controls ?? {}) } }));
-    let selected = chats[0]?.id ?? null;
     const form = root.closest("form");
     const radios = form ? [...form.querySelectorAll("input[name=enabled]")] : [];
     const checkedRadio = () => radios.find((r) => r.checked)?.value ?? null;
-    let studentsAtStart = checkedRadio();
+    // What the server rendered, not what is ticked once the chats arrive: a choice made while they load still counts as a change.
+    let studentsAtStart = radios.find((r) => r.defaultChecked)?.value ?? null;
+
+    const { status, data } = await api.chatControls();
+    const chats = (status === 200 && Array.isArray(data?.chats) ? data.chats : []).map((c) => ({ ...c, draft: { ...(c.controls ?? {}) } }));
+    let selected = chats[0]?.id ?? null;
     let saving = false;
 
     /** Every switch whose draft differs from what is saved. */

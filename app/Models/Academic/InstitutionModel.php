@@ -183,14 +183,14 @@ class InstitutionModel extends Model
         return $event;
     }
 
-    /** The programs an institution offers, whichever department they sit in. */
+    /** The programs an institution offers, whichever college they sit in. */
     public function programs(int $institutionId): array
     {
         return $this->db->table('programs')
             ->select('programs.*')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
-            ->where('departments.institution_id', $institutionId)
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
+            ->where('colleges.institution_id', $institutionId)
             ->orderBy('programs.name')
             ->get()
             ->getResultArray();

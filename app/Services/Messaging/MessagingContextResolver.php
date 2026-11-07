@@ -16,7 +16,7 @@ use CodeIgniter\Shield\Entities\User;
 
 /**
  * Builds the facts MessagingPolicy decides on from the real data (spec 3): who
- * shares a course, a department or a scope, which child links a parent to a
+ * shares a course, a college or a scope, which child links a parent to a
  * teacher, who has blocked whom, and the state of a conversation for one
  * person. It decides nothing itself; the services pass these contexts to the
  * policy.
@@ -86,7 +86,7 @@ class MessagingContextResolver
             senderActive: $this->accountActive($senderId),
             recipientActive: $this->accountActive($recipientId),
             sharedCourse: $sameInstitution && $this->sharedCourse($senderId, $recipientId),
-            sameDepartment: $sameInstitution && array_intersect($this->departmentIds($sender, $senderRole), $this->departmentIds($recipient, $recipientRole)) !== [],
+            sameCollege: $sameInstitution && array_intersect($this->collegeIds($sender, $senderRole), $this->collegeIds($recipient, $recipientRole)) !== [],
             inScope: $sameInstitution && $this->inScope($sender, $senderRole, $recipient, $recipientRole),
             linkedChild: $linked,
             studentDmEnabled: ! $sameInstitution || $this->studentSwitch()->enabled($senderInstitution),
@@ -259,24 +259,24 @@ class MessagingContextResolver
     }
 
     /**
-     * Sub-departments a person belongs to: the ones they chair, or the ones
+     * Departments a person belongs to: the ones they chair, or the ones
      * their offerings (taught or enrolled, any status) hang under.
      *
      * @return list<int>
      */
-    private function subDepartmentIds(User $user, string $role): array
+    private function departmentIds(User $user, string $role): array
     {
         $id = (int) $user->id;
 
         if ($role === 'chairperson') {
-            return (new ChairpersonAssignmentModel())->subDepartmentIdsFor($id);
+            return (new ChairpersonAssignmentModel())->departmentIdsFor($id);
         }
 
         if (! in_array($role, ['student', 'instructor'], true)) {
             return [];
         }
 
-        $builder = db_connect()->table('course_offerings co')->distinct()->select('p.sub_department_id')
+        $builder = db_connect()->table('course_offerings co')->distinct()->select('p.department_id')
             ->join('courses c', 'c.id = co.course_id')->join('programs p', 'p.id = c.program_id');
 
         if ($role === 'student') {
@@ -285,36 +285,36 @@ class MessagingContextResolver
             $builder->join('instructor_assignments ia', 'ia.offering_id = co.id')->where('ia.instructor_user_id', $id);
         }
 
-        return array_map('intval', array_column($builder->get()->getResultArray(), 'sub_department_id'));
+        return array_map('intval', array_column($builder->get()->getResultArray(), 'department_id'));
     }
 
     /** @return list<int> */
-    private function departmentIds(User $user, string $role): array
+    private function collegeIds(User $user, string $role): array
     {
         if ($role === 'dean') {
-            return (new DeanAccessService())->departmentIds($user);
+            return (new DeanAccessService())->collegeIds($user);
         }
 
-        $subs = $this->subDepartmentIds($user, $role);
+        $departments = $this->departmentIds($user, $role);
 
-        if ($subs === []) {
+        if ($departments === []) {
             return [];
         }
 
         return array_map('intval', array_column(
-            db_connect()->table('sub_departments')->select('department_id')->whereIn('id', $subs)->get()->getResultArray(),
-            'department_id',
+            db_connect()->table('departments')->select('college_id')->whereIn('id', $departments)->get()->getResultArray(),
+            'college_id',
         ));
     }
 
     private function inScope(User $sender, string $senderRole, User $recipient, string $recipientRole): bool
     {
         if ($senderRole === 'chairperson' && in_array($recipientRole, ['student', 'instructor'], true)) {
-            return array_intersect($this->subDepartmentIds($sender, 'chairperson'), $this->subDepartmentIds($recipient, $recipientRole)) !== [];
+            return array_intersect($this->departmentIds($sender, 'chairperson'), $this->departmentIds($recipient, $recipientRole)) !== [];
         }
 
         if ($senderRole === 'dean' && in_array($recipientRole, ['student', 'instructor', 'chairperson'], true)) {
-            return array_intersect($this->departmentIds($sender, 'dean'), $this->departmentIds($recipient, $recipientRole)) !== [];
+            return array_intersect($this->collegeIds($sender, 'dean'), $this->collegeIds($recipient, $recipientRole)) !== [];
         }
 
         return false;
@@ -339,7 +339,7 @@ class MessagingContextResolver
 
     /**
      * The parent's linked children that this instructor teaches (same active
-     * offering) or whose sub-department this chairperson chairs; narrowed to
+     * offering) or whose department this chairperson chairs; narrowed to
      * $subjectStudentId when given. A thread between them is about one of these.
      *
      * @return list<int>
@@ -356,7 +356,7 @@ class MessagingContextResolver
             $childIds = in_array($subjectStudentId, $childIds, true) ? [$subjectStudentId] : [];
         }
 
-        $staffSubs = $this->subDepartmentIds($staff, $staffRole);
+        $staffDepartments = $this->departmentIds($staff, $staffRole);
         $shared    = [];
 
         foreach ($childIds as $childId) {
@@ -368,7 +368,7 @@ class MessagingContextResolver
 
             $match = $staffRole === 'instructor'
                 ? array_intersect($this->activeOfferingIds($childId), $this->activeOfferingIds((int) $staff->id)) !== []
-                : array_intersect($this->subDepartmentIds($child, 'student'), $staffSubs) !== [];
+                : array_intersect($this->departmentIds($child, 'student'), $staffDepartments) !== [];
 
             if ($match) {
                 $shared[] = $childId;

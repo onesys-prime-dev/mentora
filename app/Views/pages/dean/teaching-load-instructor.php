@@ -1,6 +1,6 @@
 <?php
 /**
- * One instructor's teaching load in a term: their totals and each section they teach in the department,
+ * One instructor's teaching load in a term: their totals and each section they teach in the college,
  * every section opening read-only. View only.
  *
  * @var array<string, mixed> $instructor
@@ -64,7 +64,7 @@ $columns = [
     <?= view('components/page-head', [
         'title'       => (string) $instructor['name'],
         'icon'        => 'user',
-        'description' => 'Their sections in your department this term. You can look, not change.',
+        'description' => 'Their sections in your college this term. You can look, not change.',
     ], ['saveData' => false]) ?>
 
     <?php if (count($termOptions) > 1): ?>
@@ -84,11 +84,11 @@ $columns = [
     </div>
 
     <?= view('components/data-table', [
-        'caption'    => 'Sections taught by ' . $instructor['name'] . ' in your department',
+        'caption'    => 'Sections taught by ' . $instructor['name'] . ' in your college',
         'columns'    => $columns,
         'rows'       => $rows,
         'emptyTitle' => 'No sections this term',
-        'emptyText'  => 'They teach in your department, but not in this term. Choose another term above.',
+        'emptyText'  => 'They teach in your college, but not in this term. Choose another term above.',
         'emptyIcon'  => 'hat',
     ], ['saveData' => false]) ?>
 

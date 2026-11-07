@@ -40,9 +40,9 @@ trait MessagingScenario
         $config->encryptionKey = self::MESSAGES_KEY;
         $config->previousKeys  = '';
 
-        $d                 = DeanFactory::department('R1');
+        $d                 = DeanFactory::college('R1');
         $this->institution = $d['institution'];
-        $this->program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'RA'), 'RA');
+        $this->program     = DeanFactory::program(DeanFactory::department($d['college'], 'RA'), 'RA');
         $this->term        = DeanFactory::term($this->institution);
 
         $this->student    = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);

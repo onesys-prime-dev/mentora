@@ -9,13 +9,13 @@ use CodeIgniter\Database\BaseBuilder;
 /**
  * The one row shape every "offerings with their course, program, term,
  * institution and first instructor" read returns, whatever decides which
- * offerings are in scope (a chairperson's sub-departments, a set of
+ * offerings are in scope (a chairperson's departments, a set of
  * programs, a whole institution). The chairperson's Courses page, Monitor
  * Program and the institution reports all read these columns, so they cannot
  * drift apart.
  *
  * The caller joins the tables (course_offerings, courses, programs,
- * sub_departments, departments, academic_terms, institutions,
+ * departments, colleges, academic_terms, institutions,
  * instructor_assignments as the first assignment, users and
  * user_profiles AS instructor_profiles) and applies its own scope; or uses
  * inPrograms() which does both for a set of programs.
@@ -44,10 +44,10 @@ final class OfferingDetail
             'academic_terms.name AS term_name',
             'academic_terms.academic_year',
 
-            'sub_departments.id AS sub_department_id',
-            'sub_departments.name AS sub_department_name',
             'departments.id AS department_id',
             'departments.name AS department_name',
+            'colleges.id AS college_id',
+            'colleges.name AS college_name',
 
             'institutions.id AS institution_id',
             'institutions.name AS institution_name',
@@ -109,13 +109,13 @@ final class OfferingDetail
         $builder = self::select(db_connect()->table('course_offerings'))
             ->join('courses', 'courses.id = course_offerings.course_id')
             ->join('programs', 'programs.id = courses.program_id')
-            ->join('sub_departments', 'sub_departments.id = programs.sub_department_id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+            ->join('departments', 'departments.id = programs.department_id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->join('academic_terms', 'academic_terms.id = course_offerings.term_id')
             ->join(
                 'institutions',
                 'institutions.id = academic_terms.institution_id
-                AND institutions.id = departments.institution_id'
+                AND institutions.id = colleges.institution_id'
             )
             ->join(
                 'instructor_assignments',

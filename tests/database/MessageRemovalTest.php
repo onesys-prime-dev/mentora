@@ -48,9 +48,9 @@ final class MessageRemovalTest extends DatabaseTestCase
 
         Services::resetSingle('auditLogger');
 
-        $d                 = DeanFactory::department('M1');
+        $d                 = DeanFactory::college('M1');
         $this->institution = $d['institution'];
-        $this->program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'MA'), 'MA');
+        $this->program     = DeanFactory::program(DeanFactory::department($d['college'], 'MA'), 'MA');
         $this->term        = DeanFactory::term($this->institution);
         $offering          = DeanFactory::offering($this->program, $this->term, 'MR1');
         $this->student     = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);

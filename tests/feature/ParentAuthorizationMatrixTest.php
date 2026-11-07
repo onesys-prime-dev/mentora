@@ -30,6 +30,9 @@ final class ParentAuthorizationMatrixTest extends RouteTestCase
         'parent/calendar'                                              => '/parent/calendar',
         'parent/children/(:num)/calendar'                              => '/parent/children/{c}/calendar',
         'parent/children/(:num)/api/calendar/events'                   => '/parent/children/{c}/api/calendar/events?from=2026-01-01&to=2026-12-31',
+        'parent/grades'                                                => '/parent/grades',
+        'parent/children/(:num)/grades'                                => '/parent/children/{c}/grades',
+        'parent/children/(:num)/api/grades/courses/(:num)'             => '/parent/children/{c}/api/grades/courses/{o}',
         'parent/children/(:num)/api/courses/(:num)/overview'           => '/parent/children/{c}/api/courses/{o}/overview',
         'parent/children/(:num)/api/courses/(:num)/announcements'      => '/parent/children/{c}/api/courses/{o}/announcements',
         'parent/children/(:num)/api/courses/(:num)/assessments'        => '/parent/children/{c}/api/courses/{o}/assessments',
@@ -51,6 +54,8 @@ final class ParentAuthorizationMatrixTest extends RouteTestCase
         'parent/children/(:num)',
         'parent/children/(:num)/calendar',
         'parent/children/(:num)/api/calendar/events',
+        'parent/children/(:num)/grades',
+        'parent/children/(:num)/api/grades/courses/(:num)',
         'parent/children/(:num)/api/courses/(:num)/overview',
         'parent/children/(:num)/api/courses/(:num)/announcements',
         'parent/children/(:num)/api/courses/(:num)/assessments',
@@ -227,6 +232,13 @@ final class ParentAuthorizationMatrixTest extends RouteTestCase
                 // Nothing is final yet, so the report is refused with a message (ParentGradeReportTest covers the PDF).
                 $this->assertSame(404, $status, $pattern);
                 $this->assertStringContainsString('final', (string) (json_decode($body, true)['message'] ?? ''), $pattern);
+
+                continue;
+            }
+
+            if (str_contains($pattern, 'api/grades/courses/')) {
+                // The course has no published scheme, so there is no breakdown (ParentGradesBreakdownTest covers one).
+                $this->assertSame(404, $status, $pattern);
 
                 continue;
             }

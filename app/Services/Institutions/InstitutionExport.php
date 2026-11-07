@@ -19,7 +19,7 @@ use App\Services\Subscriptions\EffectiveStatus;
  * An institution's full data export (SA13): everything the customer owns, as
  * a ZIP of CSV files they can keep after the subscription ends.
  *
- * Contents: the institution, terms, departments, sub-departments, programs,
+ * Contents: the institution, terms, colleges, departments, programs,
  * courses, offerings, people (names, emails, roles; never passwords),
  * enrolments, final grades, assessments, submissions and announcements.
  * Uploaded files are not included (only what is in the database).
@@ -413,15 +413,15 @@ class InstitutionExport
      */
     private function files(): array
     {
-        $tree = 'JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id';
+        $tree = 'JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id';
         $email = static fn (string $user): string => "(SELECT ai.secret FROM auth_identities ai WHERE ai.user_id = {$user} AND ai.type = 'email_password' LIMIT 1)";
 
         return [
             'institution.csv'     => ['header' => ['code', 'name', 'status', 'created_at'], 'key' => 'i.id', 'sql' => 'SELECT i.id AS _k, i.code, i.name, i.status, i.created_at FROM institutions i WHERE i.id = ?'],
             'terms.csv'           => ['header' => ['name', 'academic_year', 'start_date', 'end_date', 'status'], 'key' => 't.id', 'sql' => 'SELECT t.id AS _k, t.name, t.academic_year, t.start_date, t.end_date, t.status FROM academic_terms t WHERE t.institution_id = ?'],
-            'departments.csv'     => ['header' => ['code', 'name', 'location', 'established_year'], 'key' => 'd.id', 'sql' => 'SELECT d.id AS _k, d.code, d.name, d.location, d.established_year FROM departments d WHERE d.institution_id = ?'],
-            'sub_departments.csv' => ['header' => ['department_code', 'code', 'name', 'active'], 'key' => 'sd.id', 'sql' => 'SELECT sd.id AS _k, d.code, sd.code, sd.name, sd.is_active FROM sub_departments sd JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?'],
-            'programs.csv'        => ['header' => ['sub_department_code', 'code', 'name', 'status'], 'key' => 'p.id', 'sql' => 'SELECT p.id AS _k, sd.code, p.code, p.name, p.status FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?'],
+            'colleges.csv'     => ['header' => ['code', 'name', 'location', 'established_year'], 'key' => 'd.id', 'sql' => 'SELECT d.id AS _k, d.code, d.name, d.location, d.established_year FROM colleges d WHERE d.institution_id = ?'],
+            'departments.csv' => ['header' => ['college_code', 'code', 'name', 'active'], 'key' => 'sd.id', 'sql' => 'SELECT sd.id AS _k, d.code, sd.code, sd.name, sd.is_active FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?'],
+            'programs.csv'        => ['header' => ['department_code', 'code', 'name', 'status'], 'key' => 'p.id', 'sql' => 'SELECT p.id AS _k, sd.code, p.code, p.name, p.status FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?'],
             'courses.csv'         => ['header' => ['program_code', 'course_code', 'course_title', 'units', 'status'], 'key' => 'c.id', 'sql' => "SELECT c.id AS _k, p.code, c.course_code, c.course_title, c.units, c.status FROM courses c {$tree} WHERE d.institution_id = ?"],
             'offerings.csv'       => ['header' => ['course_code', 'term', 'section', 'capacity', 'status'], 'key' => 'o.id', 'sql' => "SELECT o.id AS _k, c.course_code, t.name, o.section_code, o.capacity, o.status FROM course_offerings o JOIN courses c ON c.id = o.course_id {$tree} LEFT JOIN academic_terms t ON t.id = o.term_id WHERE d.institution_id = ?"],
             'people.csv'          => ['header' => ['email', 'username', 'first_name', 'last_name', 'student_number', 'roles', 'active'], 'key' => 'u.id', 'sql' => 'SELECT u.id AS _k, ' . $email('u.id') . ", u.username, up.first_name, up.last_name, up.student_number, (SELECT GROUP_CONCAT(g.`group` ORDER BY g.`group` SEPARATOR ' ') FROM auth_groups_users g WHERE g.user_id = u.id), u.active FROM institution_users iu JOIN users u ON u.id = iu.user_id LEFT JOIN user_profiles up ON up.user_id = u.id WHERE u.deleted_at IS NULL AND iu.institution_id = ?"],

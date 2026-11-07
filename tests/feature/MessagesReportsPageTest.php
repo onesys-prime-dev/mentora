@@ -143,7 +143,7 @@ final class MessagesReportsPageTest extends RouteTestCase
     public function testEveryoneElseGetsNotFoundOnAllThreeRoutes(): void
     {
         $id  = $this->report('hello');
-        $far = PeopleFactory::person('institutional_admin', 'Far', 'Admin', null, DeanFactory::department('RG2')['institution']);
+        $far = PeopleFactory::person('institutional_admin', 'Far', 'Admin', null, DeanFactory::college('RG2')['institution']);
 
         foreach ([$this->child, $this->instructor, $this->parent, $this->chair, CourseFactory::user('admin')] as $user) {
             $this->signIn($user);

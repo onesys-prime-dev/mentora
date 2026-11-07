@@ -24,14 +24,14 @@ same institution (`DemoUsersSeeder`).
 | ID | Case | Screen |
 |---|---|---|
 | TC-STR-01 | Lands on home, reaches the structure from the Apps menu | Structure |
-| TC-STR-02 | Adding a department in a dialog shows it with a message | Structure |
+| TC-STR-02 | Adding a college in a dialog shows it with a message | Structure |
 | TC-STR-03 | A refused form shows its reason beside the field and keeps what was typed | Structure |
-| TC-STR-04 | Editing opens the same dialog with the department's values | Structure |
-| TC-STR-05 | A department with active sub-departments says why it cannot be switched off | Structure |
-| TC-STR-06 | An empty new department can be switched off and on again | Structure |
+| TC-STR-04 | Editing opens the same dialog with the college's values | Structure |
+| TC-STR-05 | A college with active departments says why it cannot be switched off | Structure |
+| TC-STR-06 | An empty new college can be switched off and on again | Structure |
 | TC-CRS-01 | Adding a course files it under its program and shows it in the catalog | Courses |
 | TC-CRS-02 | A duplicate code shows its reason in the dialog; search finds the course | Courses |
-| TC-CRS-03 | A sub-department has one chairperson: replacing needs confirmation and tells the old one (rewritten 2026-10-28, see Wave 1) | Structure |
+| TC-CRS-03 | A department has one chairperson: replacing needs confirmation and tells the old one (rewritten 2026-10-28, see Wave 1) | Structure |
 | TC-TRM-01 | An overlapping term goes through with a warning | Terms |
 | TC-TRM-02 | A term that ends before it starts is refused beside the date | Terms |
 | TC-TRM-03 | Closing a term says what changes, asks for the password, and can be undone (not while another term is active) | Terms |
@@ -54,7 +54,7 @@ same institution (`DemoUsersSeeder`).
 | TC-BRD-03 | The profile is saved and the code stays | Settings |
 | TC-ACD-01 | Academic defaults are saved, weights that do not add up are refused, reset | Settings |
 | TC-SEC-01 | An announcement reaches the institution; stricter security asks for the password | Settings |
-| TC-RPT-01 | Reports narrow by department, open a course, export CSV | Reports |
+| TC-RPT-01 | Reports narrow by college, open a course, export CSV | Reports |
 | TC-VCV-01 | A course opens view only and offers nothing to change | Course view |
 | TC-SUB-01 | Subscription is read only; Integrations shows no folders | Subscription, Integrations |
 | TC-AUD-01 | The audit log narrows by what was done and exports without addresses | Audit log |
@@ -120,20 +120,20 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 
 | ID | Case | Role | Priority | QA status |
 |---|---|---|---|---|
-| TC-CRS-03 | A sub-department has one chairperson: replacing needs confirmation and tells the old one (rewritten) | Institutional administrator | P1 | FIX? |
+| TC-CRS-03 | A department has one chairperson: replacing needs confirmation and tells the old one (rewritten) | Institutional administrator | P1 | FIX? |
 | TC-CRS-04 | The database refuses a second active chairperson, whatever path writes it | (database) | P2 | FIX? |
 | TC-CRS-05 | Two administrators assigning a chairperson at once get one chair and a friendly message | Institutional administrator ×2 | P2 | FIX? |
-| TC-CRS-06 | A dean is assigned to a department, and the assignment ended, from the institution area | Institutional administrator | P2 | NB |
+| TC-CRS-06 | A dean is assigned to a college, and the assignment ended, from the institution area | Institutional administrator | P2 | NB |
 | TC-IAA-07 | Taking away an instructor's discussion moderation stops it in the server, not only on the page | Institutional administrator, instructor | P2 | FIX? |
 
-### TC-CRS-03 A sub-department has one chairperson: replacing needs confirmation and tells the old one
+### TC-CRS-03 A department has one chairperson: replacing needs confirmation and tells the old one
 
-*Rewritten 2026-10-28 (register PLN-03). The earlier case assigned a chair and removed it, from before decision 16.0 (one chairperson per sub-department). The Playwright test keeps its ID and must be updated to these steps.*
+*Rewritten 2026-10-28 (register PLN-03). The earlier case assigned a chair and removed it, from before decision 16.0 (one chairperson per department). The Playwright test keeps its ID and must be updated to these steps.*
 
 - **Role:** Institutional administrator. **Priority:** P1
-- **Data:** `institution.admin@mentora.test`; the IT sub-department of CBM, chaired by `chairperson1@mentora.test`; `chairperson2@mentora.test` (Isabel Mendoza, holds the chairperson role and chairs nothing); `instructor2`, with a grade-override request for IT201-A waiting for the chairperson (make one as in TC-DEAN-04, step 1)
+- **Data:** `institution.admin@mentora.test`; the IT department of CBM, chaired by `chairperson1@mentora.test`; `chairperson2@mentora.test` (Isabel Mendoza, holds the chairperson role and chairs nothing); `instructor2`, with a grade-override request for IT201-A waiting for the chairperson (make one as in TC-DEAN-04, step 1)
 - **Steps:**
-  1. Open Structure. On the IT sub-department, choose Isabel Mendoza and press Assign, without confirming.
+  1. Open Structure. On the IT department, choose Isabel Mendoza and press Assign, without confirming.
   2. Press Replace chairperson and confirm in the dialog.
   3. As `chairperson1`, open the notifications. As the new chairperson, open Override requests.
   4. As the administrator, press Remove on the new chairperson and confirm.
@@ -143,7 +143,7 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
   - Step 1: refused beside the field: "Antonio Fernandez chairs IT. Assign Isabel Mendoza instead? Confirm to replace them." (name format to confirm). Nothing changes.
   - Step 2: the dialog reads "Replace Antonio Fernandez as chairperson of IT? Their assignment ends and they are told." After it, IT has exactly one chairperson, the new one. The old assignment is kept in the history, ended.
   - Step 3: `chairperson1` has "Chairperson assignment ended": "Isabel Mendoza now chairs IT, so your assignment there has ended." The waiting request is now the new chairperson's to endorse, and they are told "Grade overrides to endorse".
-  - Steps 4–5: with no chairperson left, the waiting request moves on to the dean (who now sees it in Approvals) instead of waiting for nobody. The page confirms "The chairperson was removed from the sub-department."
+  - Steps 4–5: with no chairperson left, the waiting request moves on to the dean (who now sees it in Approvals) instead of waiting for nobody. The page confirms "The chairperson was removed from the department."
   - Step 6: refused: "That person is a dean. A dean cannot also be a chairperson."
   - An assignment the SIS supplies is refused before any confirmation, with "This assignment is managed by your student information system. Change it there; the next sync brings it here."
 - **Already automated:** `tests/database/OneChairpersonTest.php` (all), `tests/feature/StructureChairReplaceTest.php`, `tests/database/ChairAssignmentServiceTest.php`
@@ -155,11 +155,11 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 ### TC-CRS-04 The database refuses a second active chairperson, whatever path writes it
 
 - **Role:** none (database level). **Priority:** P2
-- **Data:** the test database after migration `2026-11-15-000001_OneChairpersonPerSubDepartment`; the IT sub-department with its active chair
+- **Data:** the test database after migration `2026-11-15-000001_OneChairpersonPerDepartment`; the IT department with its active chair
 - **Steps:**
   1. Insert a second `chairperson_assignments` row for IT with status `active` directly with SQL.
   2. Insert one with status `revoked`.
-  3. Run the migration on a copy that holds two active chairs for one sub-department (made before the migration).
+  3. Run the migration on a copy that holds two active chairs for one department (made before the migration).
 - **Expected:**
   - Step 1 is refused by the unique key. IT keeps one active chair.
   - Step 2 is accepted (ended assignments are history and do not count).
@@ -174,10 +174,10 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 
 - **Role:** Institutional administrator, in two browsers. **Priority:** P2
 - **Data:** a second institutional administrator for institution 1 (invite one from People), and two people who hold the chairperson role
-- **Steps:** both administrators open Structure on the same sub-department with no chairperson. Each picks a different person and presses Assign at the same moment.
+- **Steps:** both administrators open Structure on the same department with no chairperson. Each picks a different person and presses Assign at the same moment.
 - **Expected:**
   - Exactly one assignment is made.
-  - The other administrator sees, beside the field, "Someone else just changed the chairperson of <sub-department>. Reload the page to see who chairs it now." No database error, stack trace or blank page is shown.
+  - The other administrator sees, beside the field, "Someone else just changed the chairperson of <department>. Reload the page to see who chairs it now." No database error, stack trace or blank page is shown.
   - The unique key in the database stays the final safeguard (TC-CRS-04).
 - **Already automated:** `OneChairpersonTest::testTwoAdministratorsAssigningAtOnceGetTheRaceMessage`
 - **Playwright:** no (two simultaneous sessions)
@@ -185,19 +185,19 @@ From the QA plan's Wave 1. The expected results come from `docs/qa/decision-regi
 - **QA status:** FIX? (PS-CHR-07)
 - **Review:** Draft. Expected result set by AMB-INST-07.
 
-### TC-CRS-06 A dean is assigned to a department, and the assignment ended, from the institution area
+### TC-CRS-06 A dean is assigned to a college, and the assignment ended, from the institution area
 
 - **Role:** Institutional administrator. **Priority:** P2
-- **Data:** `institution.admin@mentora.test`; the General department (dean `dean1`); a person who holds the dean role and no department
+- **Data:** `institution.admin@mentora.test`; the General college (dean `dean1`); a person who holds the dean role and no college
 - **Steps:**
-  1. Find the screen to assign a dean to a department. Assign the person to a department with no dean.
-  2. Try to assign a second dean to the same department, and to assign a chairperson as dean.
+  1. Find the screen to assign a dean to a college. Assign the person to a college with no dean.
+  2. Try to assign a second dean to the same college, and to assign a chairperson as dean.
   3. End `dean1`'s assignment.
   4. Try to end an assignment the SIS supplies.
 - **Expected:**
   - Assigning and ending are possible from the institution area. Each is audited, and an ended assignment stays in the history.
   - A conflicting or invalid assignment is refused with a reason beside the field.
-  - The person who lost the department has no dean powers there from then on.
+  - The person who lost the college has no dean powers there from then on.
   - An SIS-managed assignment is refused with "This assignment is managed by your student information system. Change it there; the next sync brings it here."
 - **Already automated:** `tests/database/DeanAssignmentServiceTest.php` (the service, which exists)
 - **Playwright:** no
@@ -236,7 +236,7 @@ From the QA plan's Wave 2: P1 scenarios of the critical and high-risk modules. *
 | TC-IAA-10 | A person outside a course, or outside the institution, gets "not found" for everything in it | Every role | P1 | IBR |
 | TC-IAA-11 | A read-only, past or suspended institution can look and export, change nothing, and still manage its own account | Every role | P1 | IBR |
 | TC-IAA-12 | The administrator views as one of their own people only, and it is view only | Institutional administrator | P1 | VCI |
-| TC-STR-07 | A program or sub-department in use cannot be switched off, and the page says why | Institutional administrator | P1 | VCI |
+| TC-STR-07 | A program or department in use cannot be switched off, and the page says why | Institutional administrator | P1 | VCI |
 | TC-CRS-07 | Chairs and deans from the SIS, and the rules for deans | Institutional administrator | P1 | VCI |
 | TC-TRM-04 | A term moves between upcoming and active only while nobody is enrolled, and a completed term is closed | Institutional administrator | P1 | VCI |
 | TC-TRM-05 | Closing a term completes its sections and places, and reopening puts back exactly that | Institutional administrator | P1 | VCI |
@@ -302,14 +302,14 @@ From the QA plan's Wave 2: P1 scenarios of the critical and high-risk modules. *
 ### TC-IAA-10 A person outside a course, or outside the institution, gets "not found" for everything in it
 
 - **Role:** Every role. **Priority:** P1
-- **Data:** IT201-A's course, assessment, announcement and discussion ids; a person, term, offering and department id of a second institution (onboard one as in TC-SA-04)
+- **Data:** IT201-A's course, assessment, announcement and discussion ids; a person, term, offering and college id of a second institution (onboard one as in TC-SA-04)
 - **Steps:**
   1. As `student3` (not in IT201-A), open IT201-A's pages and call its APIs. Repeat as `instructor1`, `chairperson2`, `dean1`, `parent2` and a student who dropped IT201-A.
-  2. As institution 1's administrator, open and change the second institution's people, terms, offerings and departments by id.
+  2. As institution 1's administrator, open and change the second institution's people, terms, offerings and colleges by id.
   3. As `student3`, try to post in a course they are in (student route group).
 - **Expected:**
   - Steps 1–2: every page and API answers 404 "not found", never 403 "forbidden" and never the data; writes are refused the same way.
-  - A chairperson reaches only their own sub-department; an instructor who is also a chairperson reaches the program as chairperson.
+  - A chairperson reaches only their own department; an instructor who is also a chairperson reaches the program as chairperson.
   - Step 3: a student has no route to post announcements (TC-ANN-02).
 - **Already automated:** `tests/feature/CourseMembershipTest.php` (all); the per-page tests named "another institution… is a 404"
 - **Playwright:** `tests/e2e/announcements.spec.js` (TC-ANN-02)
@@ -360,11 +360,11 @@ From the QA plan's Wave 2: P1 scenarios of the critical and high-risk modules. *
 - **QA status:** VCI (PS-IMP-04); FIX? for the writes-nothing part (PS-IMP-02, PS-IMP-03, commit `5140068`)
 - **Review:** Draft
 
-### TC-STR-07 A program or sub-department in use cannot be switched off, and the page says why
+### TC-STR-07 A program or department in use cannot be switched off, and the page says why
 
 - **Role:** Institutional administrator. **Priority:** P1
 - **Data:** Structure: CBM › IT › its program, with active courses and sections in the active term
-- **Steps:** switch off the IT sub-department; the program; a program whose courses are archived but which still has sections in the active term. Then build a new branch (department, sub-department, program), switch it off from the bottom up and back on from the top down. Try to add a program under an inactive sub-department.
+- **Steps:** switch off the IT department; the program; a program whose courses are archived but which still has sections in the active term. Then build a new branch (college, department, program), switch it off from the bottom up and back on from the top down. Try to add a program under an inactive department.
 - **Expected:** each node in use is refused with the reason (active children, active courses, sections in an active term); an empty branch switches off bottom-up and back on top-down; nothing is created under an inactive parent; switching twice is harmless.
 - **Already automated:** `tests/database/StructureServiceTest.php` (all)
 - **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-STR-05, TC-STR-06)
@@ -379,14 +379,14 @@ From the QA plan's Wave 2: P1 scenarios of the critical and high-risk modules. *
 - **Steps:**
   1. Run the staff file. Look at Structure and the deans.
   2. Try to remove or replace the SIS chairperson by hand.
-  3. Run a file with two chairs for IT, and one with two deans for one department.
+  3. Run a file with two chairs for IT, and one with two deans for one college.
   4. Assign a chairperson as dean (service or SIS). Assign `instructor2` as dean.
   5. Assign the first dean in an institution that had none, where finalized grades were not yet sent to the SIS.
   6. Turn the connection off and look again.
 - **Expected:**
   - The SIS chairperson replaces one made by hand, and the history stays; the page marks it as SIS and refuses changing it by hand ("This assignment is managed by your student information system. Change it there; the next sync brings it here.").
   - A second chair or dean for one place in one file is refused for that row; the rest of the run goes on.
-  - One dean per department and one department per dean, enforced by the database; a chairperson cannot be dean; an instructor can and keeps teaching.
+  - One dean per college and one college per dean, enforced by the database; a chairperson cannot be dean; an instructor can and keeps teaching.
   - Step 5: from then on unsent finalized grades need sign-off, and the administrators are told which sections wait.
   - With the connection off, nothing is marked and everything can be changed by hand.
 - **Already automated:** `tests/database/SisStaffImportTest.php`, `DeanAssignmentServiceTest.php`, `tests/feature/SisStaffLockPagesTest.php`, `AdministratorSignsOffTest::testTheFirstDeanTellsEachSignerWhatNowNeedsSignOff`
@@ -676,6 +676,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 | TC-OFF-08 | Class times from the SIS replace a section's week and lock it | Institutional administrator | P2 | FIX? |
 | TC-ENR-06 | A former student may later teach; a former dean or administrator never enrols where they led | Institutional administrator | P2 | IBR |
 | TC-ENR-07 | Bringing a student back through Add refreshes the gradebook like a status change | Institutional administrator | P2 | REG |
+| TC-ENR-08 | Typing in an Add students box suggests students of the institution, and picking one fills the box | Institutional administrator | P2 | VCI |
 | TC-PPL-06 | A password link sent from People needs the password and goes to the person | Institutional administrator | P2 | VCI |
 | TC-UPL-03 | CSV upload: file limits, the header, and the staff-assignments file | Institutional administrator | P1 | VCI |
 | TC-UPL-04 | CSV upload: each row's rule, a preview equal to the result, and no upload while the SIS is connected | Institutional administrator | P1 | VCI |
@@ -724,11 +725,11 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 
   | Field | Accepted | Refused |
   |---|---|---|
-  | Code (department, sub-department, program) | 1 to 50 characters, starting with a letter or digit (the code's rule), stored in capitals | 51 characters; a code starting with a symbol; a duplicate within its parent (the same code under another parent, or in another institution, is fine) |
+  | Code (college, department, program) | 1 to 50 characters, starting with a letter or digit (the code's rule), stored in capitals | 51 characters; a code starting with a symbol; a duplicate within its parent (the same code under another parent, or in another institution, is fine) |
   | Name | 3 and 255 characters | 2 and 256 characters |
   | Established year | 1800 and the current year | 1799, next year, `abc` |
 
-- **Then:** create a sub-department under an inactive department, and reactivate a program under an inactive sub-department (both refused); save a department with nothing changed, then with a new name, and read the audit log.
+- **Then:** create a department under an inactive college, and reactivate a program under an inactive department (both refused); save a college with nothing changed, then with a new name, and read the audit log.
 - **Expected (also):** an unchanged save writes no entry; each change writes a `structure.*` entry; renaming keeps the code free for itself.
 - **Already automated:** `tests/database/StructureServiceTest.php`
 - **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-STR-02, 03)
@@ -817,6 +818,18 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 - **QA status:** IBR (PS-ENR-06)
 - **Review:** Draft
 
+### TC-ENR-08 Typing in an Add students box suggests students of the institution, and picking one fills the box
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** an offering with some students enrolled and some not; a student of another institution whose email or number resembles one of ours; the same on a block section
+- **Steps:** open the roster's (and a section's) Add students dialog; type one character, then two or more of an email, a student number and a name; keep typing, then change the text quickly; type a second entry after a first; pick with the mouse, then with Down/Up and Enter; press Escape with the list open, then again; click elsewhere with the list open; switch the network off and type.
+- **Expected:** nothing for one character; from two, a list of at most 8 with name, number and email, updating as you type without the page moving or reloading, and never showing an answer for older text; only students of this institution who could still be added (not those already enrolled or completed in this offering, not members of this section, not inactive or switched-off accounts, not instructors or parents, never another institution's); a dropped student is still offered; only the entry under the caret is searched; picking writes the email in place of the typed piece and a new line, keeping the other entries; the first Escape closes the list and leaves the dialog, the second closes the dialog; clicking away closes the list; with the network down the list closes and the box still works as a plain textarea; nobody is enrolled until Enrol/Add students is pressed, and the server checks every entry again.
+- **Already automated:** `tests/database/StudentSuggestionsTest.php`, `tests/feature/InstitutionStudentSuggestTest.php`, `InstitutionEnrolmentsTest::testTheAddBoxAsksForSuggestionsLeavingOutThoseAlreadyInThisOffering`, `InstitutionSectionsTest::testTheAddStudentsBoxAsksForSuggestionsLeavingOutThoseAlreadyInTheSection`, `tests/js/shared/student-autocomplete.test.js`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-ENR-08, TC-ENR-09)
+- **Basis:** `StudentSuggestions`, `shared/student-autocomplete.js`
+- **QA status:** VCI
+- **Review:** Draft
+
 ### TC-ENR-07 Bringing a student back through Add refreshes the gradebook like a status change
 
 - **Role:** Institutional administrator. **Priority:** P2
@@ -884,7 +897,7 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 ### TC-ACD-02 Academic defaults: new sections take the institution's, existing ones keep theirs
 
 - **Role:** Institutional administrator. **Priority:** P2
-- **Steps:** set the institution's default scale, passing mark and categories (with weights 60 / 30, then 60 / 40); add a new section and open its grades; open an existing section's grades; reset; set the high-load units and thresholds and look at Monitor Department.
+- **Steps:** set the institution's default scale, passing mark and categories (with weights 60 / 30, then 60 / 40); add a new section and open its grades; open an existing section's grades; reset; set the high-load units and thresholds and look at Monitor College.
 - **Expected:** weights must total 100 (refused beside the field otherwise); a new section starts from the institution's defaults, another institution still from the platform's, and a section that already has a scheme keeps it; reset goes back to the platform's for new sections; the high load and thresholds are the institution's for its own sections; every change is audited with old and new values.
 - **Already automated:** `tests/database/AcademicDefaultsTest.php` (all)
 - **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-ACD-01)
@@ -896,8 +909,8 @@ P2 scenarios, and the P1 scenarios of medium-risk modules that no earlier wave t
 
 - **Role:** Institutional administrator. **Priority:** P2
 - **Data:** a course titled `=SUM(1,1)`; Monitor Program as `chairperson1`
-- **Steps:** open Reports; narrow by department, program and term; sort the comparison; open a course; export each CSV; compare the IT program's numbers with Monitor Program.
-- **Expected:** the numbers match Monitor Program; another institution's courses, departments and programs never show (not found); each export is CSV of the same scope and is logged; the at-risk CSV lists students and the reason; the formula-like title is defused; the institution's thresholds decide who needs attention; an institution with nothing yet says so.
+- **Steps:** open Reports; narrow by college, program and term; sort the comparison; open a course; export each CSV; compare the IT program's numbers with Monitor Program.
+- **Expected:** the numbers match Monitor Program; another institution's courses, colleges and programs never show (not found); each export is CSV of the same scope and is logged; the at-risk CSV lists students and the reason; the formula-like title is defused; the institution's thresholds decide who needs attention; an institution with nothing yet says so.
 - **Already automated:** `tests/feature/InstitutionReportsTest.php` (all)
 - **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-RPT-01)
 - **Basis:** the institution reports controller, `MonitorProgramService`
@@ -913,9 +926,14 @@ P3 scenarios. QA status as in the README; none has been run.
 | ID | Case | Role | Priority | QA status |
 |---|---|---|---|---|
 | TC-IAA-16 | An institution cannot turn its lockout off while the platform has one | Institutional administrator | P3 | IBR |
-| TC-IAA-17 | Giving someone the dean role before a department is assigned | Institutional administrator | P3 | IBR |
+| TC-IAA-17 | Giving someone the dean role before a college is assigned | Institutional administrator | P3 | IBR |
 | TC-IAA-18 | The institution's banner | Institutional administrator | P3 | VCI |
 | TC-UPL-05 | A CSV preview nobody applies is removed within an hour | Institutional administrator | P3 | REG? |
+| TC-UPL-06 | CSV upload names people and courses as an administrator knows them, and shows the sections it creates | Institutional administrator | P1 | VCI |
+| TC-UPL-07 | After an upload, new people are emailed a link to choose a password and others are told what changed | Institutional administrator | P1 | VCI |
+| TC-SEC-01 | A block section takes courses and students; students are enrolled in every course | Institutional administrator | P1 | VCI |
+| TC-SEC-02 | Taking a student or a course out of a section keeps work and grades; a section with students cannot be archived | Institutional administrator | P1 | VCI |
+| TC-SEC-03 | A CSV row naming a block section joins the course to it | Institutional administrator | P2 | VCI |
 | TC-STR-09 | A program's status: inactive, archived, reactivated | Institutional administrator | P3 | VCI |
 | TC-BRD-05 | Brand colours must keep text readable | Institutional administrator | P3 | VCI |
 | TC-HOM-02 | The home page's attention list | Institutional administrator | P3 | VCI |
@@ -931,10 +949,10 @@ P3 scenarios. QA status as in the README; none has been run.
 - **QA status:** IBR (PS-AUT-19)
 - **Review:** Draft
 
-### TC-IAA-17 Giving someone the dean role before a department is assigned
+### TC-IAA-17 Giving someone the dean role before a college is assigned
 
-- **Steps:** on People give `instructor1` the dean role. Read the page. As `instructor1`, switch to Dean. Assign them to a department later (TC-CRS-06, not built today: on the test database), without removing the role.
-- **Expected:** the role is given with a clear warning that they have no dean authority until a department is assigned; meanwhile no dean-only action works (a dean with another role cannot act as dean; one with only the dean role sees the explanation page); once assigned they act as dean without the role being given again.
+- **Steps:** on People give `instructor1` the dean role. Read the page. As `instructor1`, switch to Dean. Assign them to a college later (TC-CRS-06, not built today: on the test database), without removing the role.
+- **Expected:** the role is given with a clear warning that they have no dean authority until a college is assigned; meanwhile no dean-only action works (a dean with another role cannot act as dean; one with only the dean role sees the explanation page); once assigned they act as dean without the role being given again.
 - **Already automated:** `ActiveRoleServiceTest::testADeanWithoutAnAssignmentCannotActAsDeanWhileHoldingAnotherRole`
 - **Playwright:** no
 - **Basis:** decision AMB-INST-05
@@ -961,9 +979,74 @@ P3 scenarios. QA status as in the README; none has been run.
 - **QA status:** REG? (PS-CSV-06) **Defect confirmed 2026-10-28** by reading the code (`docs/qa/defects-2026-10-28.md`).
 - **Review:** Draft
 
+### TC-UPL-06 CSV upload names people and courses as an administrator knows them, and shows the sections it creates
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a students file with a middle name and suffix; an existing student whose email changed; an enrolments file naming students by student number and by email, a course by code alone and by code with program, a section that exists and one that does not; a course code used in two programs; a file in the SIS columns (`external_id`)
+- **Steps:** download every template; upload the files; read the preview; apply.
+- **Expected:** no template has an `external_id` column; the student keeps the middle name and suffix; the existing student is found by number and their email corrected (no second account); enrolments go into the right course and section of the active term; the missing section is listed once under "New sections" (not with the refused rows) and is created on applying; a code in two programs without program_code is refused naming both programs; a student not in the institution is refused with "add them in students.csv or on the People page"; the SIS-columns file is refused whole; nothing is written to `sis_links`.
+- **Already automated:** `CsvUploadServiceTest`, `InstitutionCsvUploadTest`, `SisCsvParserTest`, `SisMapperTest`
+- **Playwright:** `tests/e2e/institution-structure.spec.js` (TC-UPL-01)
+- **Basis:** `CsvUploadService`, `SisCsvParser::KEYS_UPLOAD`, `SisImporter`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-UPL-07 After an upload, new people are emailed a link to choose a password and others are told what changed
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a students file with two new students (one also enrolled in a course), an instructors file with one new instructor, and an enrolments file for a student who already has an account; a mail server (or the log in development)
+- **Steps:** upload with the "Email the people in these files" box ticked; read the preview; apply; wait two minutes and run the job (`php spark exports:run`); open each email. Repeat with the box unticked. Repeat with the mail server down, then up.
+- **Expected:** the preview says how many people will be emailed (new accounts getting a link, others told what changed) and sends nothing; after applying, each new person gets ONE email with their sign-in email, what they were given and a link that opens "Choose a new password" and works once; the person who already had an account gets one email and an app notification listing the new places and no link; a place uploaded as dropped is not announced; unticked, nobody is emailed and the accounts exist; a refused or rolled-back apply emails nobody; with the mail server down nothing is lost and the emails go out when it is back; a deactivated account is never emailed. The first real SIS import emails nobody, later ones do.
+- **Already automated:** `tests/database/MailOutboxTest.php`, `CsvUploadServiceTest` (the email tests), `SisImporterTest::testTheFirstRealImportEmailsNobodyButLaterOnesWelcomeNewPeople`, `InstitutionCsvUploadTest`
+- **Playwright:** no
+- **Basis:** `MailOutbox`, `SisImporter`, `PasswordResetService::welcomeLink`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-SEC-01 A block section takes courses and students; students are enrolled in every course
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a program, an active term, two active courses (IT101, IT102), three students with student numbers, one of them an instructor of IT101 as well
+- **Steps:**
+  1. Sections › Add a section: BSIT 1-A, year 1, capacity 2. You are taken to the section.
+  2. Add IT101 and IT102.
+  3. Add two students by number; then add the third without the tick box, and again with it.
+  4. Add the person who teaches IT101 as a student. Add a name that is not a student.
+  5. Add IT103 afterwards.
+- **Expected:** the section is listed with its program, year, term, 2 courses and its students over capacity; each student is enrolled in IT101 and IT102 (on their rosters); the third is refused with "over capacity by 1" until the box is ticked; the instructor is skipped for IT101 with the reason and still goes into IT102; the unknown name is listed as skipped; IT103 enrols the existing students at once. A section name already used in the term is refused; another institution may use it.
+- **Already automated:** `tests/database/ClassSectionServiceTest.php`, `tests/feature/InstitutionSectionsTest.php`
+- **Playwright:** no
+- **Basis:** `ClassSectionService`, `EnrolmentService`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-SEC-02 Taking a student or a course out of a section keeps work and grades; a section with students cannot be archived
+
+- **Role:** Institutional administrator. **Priority:** P1
+- **Data:** a section with two courses and two students, one with graded work
+- **Steps:** take a student out; try to take a course out; try to archive the section; take the other student out, then the courses, then archive; reactivate it and add a course again.
+- **Expected:** the student leaves the section and their places in its courses become Dropped (the rows, work and grades stay; they can be reinstated on the roster); a course with students enrolled cannot be taken out and the message says to drop them first; the section cannot be archived while it has students or enrolled places; once empty it can, and its offerings are archived; reactivated in an open term, adding the course brings the same offering back with its content.
+- **Already automated:** `ClassSectionServiceTest`, `InstitutionSectionsTest`
+- **Playwright:** no
+- **Basis:** `ClassSectionService`
+- **QA status:** VCI
+- **Review:** Draft
+
+### TC-SEC-03 A CSV row naming a block section joins the course to it
+
+- **Role:** Institutional administrator. **Priority:** P2
+- **Data:** an active block section BSIT 1-A with two students, and an enrolments file with a student not in it, course IT101 and section `BSIT 1-A`
+- **Steps:** upload; read the preview; apply.
+- **Expected:** the preview lists "IT101 is added to the block section BSIT 1-A, and its 2 students are enrolled in it" under New sections (not as a refusal) and writes nothing; applying makes the block's IT101 offering, enrols its two students and the row's student, and does not make the row's student a member of the block.
+- **Already automated:** `CsvUploadServiceTest::testASectionNamingABlockJoinsTheCourseToItAndEnrolsItsStudents`
+- **Playwright:** no
+- **Basis:** `SisImporter::offeringFor`
+- **QA status:** VCI
+- **Review:** Draft
+
 ### TC-STR-09 A program's status: inactive, archived, reactivated
 
-- **Steps:** set an empty program inactive, archived, and active again; send an unknown status; reactivate a program under an inactive sub-department.
+- **Steps:** set an empty program inactive, archived, and active again; send an unknown status; reactivate a program under an inactive department.
 - **Expected:** each allowed change works and is audited; an unknown status is refused; nothing is reactivated under an inactive parent.
 - **Already automated:** `StructureServiceTest::testAnUnknownProgramStatusIsRefused`, `testNothingIsCreatedUnderAnInactiveParent`
 - **Playwright:** no

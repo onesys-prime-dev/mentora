@@ -94,7 +94,7 @@
   - "Add Announcement" needs `abilities.announcements`.
   - With no attribute, `abilities` defaults to all false. Read-only stays as it is for parents.
 - Modify: `app/Config/Routes.php:325`. `dean/courses` gets `['filter' => 'permission:courses.view']`.
-- Modify: `app/Helpers/navigation_helper.php:62-79`. The dean's `courses` entry is dropped when `allows($user, 'courses.view')` is false, the way `monitor-department` is.
+- Modify: `app/Helpers/navigation_helper.php:62-79`. The dean's `courses` entry is dropped when `allows($user, 'courses.view')` is false, the way `monitor-college` is.
 - Modify:
   - `tests/_support/DatabaseTestCase.php` `setUp()`: call `\App\Services\Auth\RolePermissions::flush()`.
   - `app/Config/Events.php`: `Events::on('pre_system', [\App\Services\Auth\RolePermissions::class, 'flush'])`.
@@ -128,7 +128,7 @@
 - Test: `tests/database/OneChairpersonTest.php` (exists)
 
 - [ ] **Step 1: Write `testTwoAdministratorsAssigningAtOnceGetTheRaceMessage`.**
-  - Set up the state the other administrator left: a second person's `chairperson_assignments` row for the sub-department, with `status = 'revoked'` and `active_marker = 1`. The service's "who chairs it" read misses it, but the unique key `(sub_department_id, active_marker)` doesn't. First confirm the key's columns in the migration.
+  - Set up the state the other administrator left: a second person's `chairperson_assignments` row for the department, with `status = 'revoked'` and `active_marker = 1`. The service's "who chairs it" read misses it, but the unique key `(department_id, active_marker)` doesn't. First confirm the key's columns in the migration.
   - `assign()` for another candidate throws a `StructureException` with the message "Someone else just changed the chairperson of {sub name}. Reload the page to see who chairs it now."
   - No new active row exists, and no notification was sent.
 - [ ] **Step 2: Run it.** Expected: PASS, because the code already handles the race. If it fails, the race handling is broken: debug it before going on. Record the result.
@@ -152,7 +152,7 @@
   - `testASubmitTheDatabaseRefusesSaysSoAndChangesNothing`. Trigger: `BEFORE UPDATE ON assessment_submissions FOR EACH ROW SIGNAL SQLSTATE '45000'`. `submitAttempt` returns `success === false` with the submit copy, and the attempt is still `In Progress`.
   - `testAnAnswerTheDatabaseRefusesSaysSo`. Trigger: `BEFORE INSERT` on the responses table (the model's table). The answer copy comes back.
   - `testAStartTheDatabaseRefusesSaysItCouldNotStart`. Trigger: `BEFORE INSERT ON assessment_submissions`. The HTML contains "The quiz could not be started. Reload the page to try again.", and not "already been submitted".
-  - `testADeanWhoIsAStudentElsewhereIsNotAStudentInADepartmentCourse`. A dean who is also enrolled in another course opens a department course through the dean route (no `coursemember` filter), and `isStudentHere($dean)` is false.
+  - `testADeanWhoIsAStudentElsewhereIsNotAStudentInACollegeCourse`. A dean who is also enrolled in another course opens a college course through the dean route (no `coursemember` filter), and `isStudentHere($dean)` is false.
 - [ ] **Step 2: Run them.** Expected: FAIL. The rolled-back submit reports success, the start shows "already submitted", and the dean counts as a student.
 - [ ] **Step 3: Implement as listed above.**
 - [ ] **Step 4: Run them, and the quiz and course suites** (`--filter 'Quiz|Assessment|CourseViewer|ViewAs|Dean'`). Expected: PASS.

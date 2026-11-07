@@ -44,6 +44,8 @@ import {
     initializeInspectorPanel,
 } from "./inspector/inspector.js";
 
+import { bindPasswordGate } from "./quiz-taking/password-gate.js";
+
 import {
     initializeQuestions,
 } from "./questions/questions.js";
@@ -71,6 +73,11 @@ import {
 import {
     swapContent,
 } from "../../../../shared/spa/swap.js";
+
+import {
+    currentReturn,
+    leaveTo,
+} from "../../../../shared/grades-return.js";
 
 import {
     renderAssessmentsSkeleton,
@@ -796,7 +803,7 @@ export async function loadQuizAttempt(
     offeringId,
     assessmentId,
     refresh,
-    { pushState = true, mode = "navigate" } = {}
+    { pushState = true, mode = "navigate", password = null } = {}
 ) {
 
     const container =
@@ -804,7 +811,7 @@ export async function loadQuizAttempt(
 
     const swapped = await swapContent(
         container,
-        async () => (await fetchQuizAttempt(offeringId, assessmentId)).html,
+        async () => (await fetchQuizAttempt(offeringId, assessmentId, password)).html,
         {
             mode,
             skeleton: mode === "navigate" ? renderAssessmentDetailSkeleton() : null,
@@ -842,6 +849,17 @@ export async function loadQuizAttempt(
                 "click",
                 backToView
             );
+
+        // A quiz with a password shows its prompt first: the password is posted to the same page, which
+        // comes back as the quiz, or as the prompt again with the reason.
+        bindPasswordGate({
+            submit: (typed) => loadQuizAttempt(
+                offeringId,
+                assessmentId,
+                refresh,
+                { pushState: false, mode: "refresh", password: typed }
+            ),
+        });
 
         initializeQuizTaking(
             offeringId,
@@ -1134,12 +1152,16 @@ export async function loadGradeWork(
 
     try {
 
+        // Opened from the Grades page queue: remember where to lead back to.
+        const returnTo = currentReturn();
+
         if (pushState) {
 
             const query =
                 `?assessment=${assessmentId}&grade=1`
                 + (studentId ? `&student=${studentId}` : "")
-                + (studentId && attemptId ? `&attempt=${attemptId}` : "");
+                + (studentId && attemptId ? `&attempt=${attemptId}` : "")
+                + (returnTo ? `&return=${encodeURIComponent(returnTo)}` : "");
 
             history.pushState(
                 { assessmentId, grade: true, studentId, attemptId },
@@ -1149,11 +1171,29 @@ export async function loadGradeWork(
 
         }
 
-        document
-            .querySelector("[data-back-to-assessments]")
+        const backButton =
+            document.querySelector("[data-back-to-assessments]");
+
+        if (backButton && returnTo) {
+
+            backButton.textContent = "← Back to To grade";
+
+            backButton.classList.add("text-sm", "font-medium", "hover:text-brand");
+
+        }
+
+        backButton
             ?.addEventListener(
                 "click",
                 () => {
+
+                    if (returnTo) {
+
+                        leaveTo(returnTo);
+
+                        return;
+
+                    }
 
                     history.pushState(
                         {},

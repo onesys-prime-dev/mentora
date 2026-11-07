@@ -4,6 +4,7 @@
  * band, Final or So far, tag) and how each category stands. No item, manual
  * score or assessment is ever passed to this view.
  *
+ * @var ?string $allGrades the child's Grades page for this course's term; null where there is none
  * @var ?array{percentage: ?float, band: ?string, tag: string, is_final: bool, categories: list<array>, periods: list<array>} $standing null while the grades are not published
  */
 helper('grade');
@@ -15,7 +16,13 @@ $category = static function (array $c): string {
 
 <div class="p-10 flex flex-col gap-8">
 
-    <?= view('components/page-header', ['icon' => 'grades', 'title' => 'Grades'], ['saveData' => false]) ?>
+    <?= view('components/page-header', [
+        'icon'    => 'grades',
+        'title'   => 'Grades',
+        'actions' => $allGrades !== null
+            ? '<a href="' . esc($allGrades, 'attr') . '" data-all-grades class="inline-flex min-h-9 items-center justify-center rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">All grades →</a>'
+            : '',
+    ], ['saveData' => false]) ?>
 
     <?php if ($standing === null): ?>
 

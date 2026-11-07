@@ -61,7 +61,7 @@ final class DeanAttentionRulesTest extends CIUnitTestCase
         $this->assertStringEndsWith('dean/follow-ups?tab=overdue', $this->only(['followups_overdue' => 2], 'followups_overdue')['url']);
     }
 
-    public function testOverdueGradingIsOneItemPerSubDepartmentMostFirstAndNeverForZero(): void
+    public function testOverdueGradingIsOneItemPerDepartmentMostFirstAndNeverForZero(): void
     {
         $items = DeanAttentionRules::items(['overdue_grading' => [
             ['id' => 1, 'name' => 'Computer Science', 'count' => 9],
@@ -71,11 +71,11 @@ final class DeanAttentionRulesTest extends CIUnitTestCase
 
         $this->assertSame(['Arts', 'Computer Science'], array_column($items, 'detail'));
         $this->assertSame('12 pieces of work overdue for grading', $items[0]['title']);
-        $this->assertStringEndsWith('dean/monitor-department?sub_department=3', $items[0]['url']);
+        $this->assertStringEndsWith('dean/monitor-college?department=3', $items[0]['url']);
         $this->assertSame('1 piece of work overdue for grading', DeanAttentionRules::items(['overdue_grading' => [['id' => 1, 'name' => 'A', 'count' => 1]]])[0]['title']);
     }
 
-    public function testQuietCoursesAreOneItemPerSubDepartmentLinkingToItsCourses(): void
+    public function testQuietCoursesAreOneItemPerDepartmentLinkingToItsCourses(): void
     {
         $items = DeanAttentionRules::items(['inactive_courses' => [
             ['id' => 5, 'name' => 'Beta', 'count' => 2],
@@ -84,16 +84,16 @@ final class DeanAttentionRulesTest extends CIUnitTestCase
 
         $this->assertSame(['Alpha: no recent activity.', 'Beta: no recent activity.'], array_column($items, 'detail'), 'ties go by name');
         $this->assertSame('2 quiet courses', $items[0]['title']);
-        $this->assertStringEndsWith('dean/courses?sub_department=6', $items[0]['url']);
+        $this->assertStringEndsWith('dean/courses?department=6', $items[0]['url']);
         $this->assertSame('1 quiet course', DeanAttentionRules::items(['inactive_courses' => [['id' => 1, 'name' => 'A', 'count' => 1]]])[0]['title']);
     }
 
-    public function testStudentsAtRiskAreOneItemLinkingToTheListOnMonitorDepartment(): void
+    public function testStudentsAtRiskAreOneItemLinkingToTheListOnMonitorCollege(): void
     {
         $item = $this->only(['at_risk' => 37], 'at_risk');
 
         $this->assertSame('37 students at risk', $item['title']);
-        $this->assertStringEndsWith('dean/monitor-department#risk-heading', $item['url']);
+        $this->assertStringEndsWith('dean/monitor-college#risk-heading', $item['url']);
         $this->assertSame('1 student at risk', $this->only(['at_risk' => 1], 'at_risk')['title']);
     }
 

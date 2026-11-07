@@ -35,6 +35,17 @@ import { bindModuleModals } from "./modals/modules.js";
 import { bindLearningUnitModals } from "./modals/learning-units.js";
 import { bindLearningItemCreateModal } from "./modals/learning-items.js";
 import { bindLearningItemDependenciesModal } from "./modals/learning-item-dependencies.js";
+import { bindContainerDependenciesModal } from "./modals/container-dependencies.js";
+import { bindContentTransfer } from "./modals/content-transfer.js";
+import {
+    copyContent,
+    fetchTransferModules,
+    fetchTransferOfferings,
+    fetchTransferTree,
+    fetchTransferUnits,
+    moveContent,
+} from "./api.js";
+import { showToast } from "../../../../shared/toast.js";
 
 import { bindLearningUnitEvents } from "./learning-unit-events.js";
 import { initializeLearningUnitSorting } from "./learning-unit-sort.js";
@@ -187,6 +198,41 @@ function bindModuleBindings(moduleId, refresh, backToList) {
         modal: bindModal({
             modal: "#learning-item-dependencies-modal",
             closeButtons: "[data-close-learning-item-dependencies-modal]",
+        }),
+        refresh,
+    });
+
+    bindContentTransfer({
+        modal: bindModal({
+            modal: "#content-transfer-modal",
+            closeButtons: "[data-close-transfer-modal]",
+        }),
+        api: {
+            fetchOfferings: fetchTransferOfferings,
+            fetchModules: fetchTransferModules,
+            fetchUnits: fetchTransferUnits,
+            fetchTree: fetchTransferTree,
+            copy: copyContent,
+            move: moveContent,
+        },
+        refresh: refresh,
+        notify: (message, tone) => showToast(message, { tone }),
+    });
+
+    bindContainerDependenciesModal({
+        kind: "unit",
+        modal: bindModal({
+            modal: "#learning-unit-dependencies-modal",
+            closeButtons: "[data-close-learning-unit-dependencies-modal]",
+        }),
+        refresh,
+    });
+
+    bindContainerDependenciesModal({
+        kind: "module",
+        modal: bindModal({
+            modal: "#module-dependencies-modal",
+            closeButtons: "[data-close-module-dependencies-modal]",
         }),
         refresh,
     });

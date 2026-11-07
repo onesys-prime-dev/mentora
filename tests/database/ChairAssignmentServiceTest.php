@@ -13,8 +13,8 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\SisFixture;
 
 /**
- * Assigning chairpersons to sub-departments: who can be assigned, that a
- * sub-department can have several and a person several, that revoking keeps
+ * Assigning chairpersons to departments: who can be assigned, that a
+ * department can have several and a person several, that revoking keeps
  * the row and assigning again reuses it, scoping, audit, and that the
  * chairperson's reach follows the assignment at once.
  *
@@ -28,7 +28,7 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
 
     private int $other;
 
-    private int $sub;
+    private int $department;
 
     private User $admin;
 
@@ -47,14 +47,14 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
         $this->admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         $this->chair       = PeopleFactory::person('chairperson', 'Cho', 'Chair', 'cho@chairs.example', $this->institution);
         $this->service     = new ChairAssignmentService();
-        $this->sub         = $this->subOf($this->institution);
+        $this->department         = $this->departmentOf($this->institution);
 
         db_connect()->table('audit_logs')->emptyTable();
     }
 
-    private function subOf(int $institutionId): int
+    private function departmentOf(int $institutionId): int
     {
-        return (int) db_connect()->query('SELECT sd.id FROM sub_departments sd JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$institutionId])->getRow()->id;
+        return (int) db_connect()->query('SELECT sd.id FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$institutionId])->getRow()->id;
     }
 
     private function refused(callable $do): StructureException
@@ -82,43 +82,43 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
         $this->assertSame('cho@chairs.example', $candidates[0]['email']);
     }
 
-    public function testAssigningRecordsItAndShowsItUnderTheSubDepartment(): void
+    public function testAssigningRecordsItAndShowsItUnderTheDepartment(): void
     {
-        $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin);
 
-        $chairs = $this->service->bySubDepartment($this->institution);
+        $chairs = $this->service->byDepartment($this->institution);
 
-        $this->assertSame([(int) $this->chair->id], array_column($chairs[$this->sub], 'user_id'));
+        $this->assertSame([(int) $this->chair->id], array_column($chairs[$this->department], 'user_id'));
 
         $log = db_connect()->table('audit_logs')->where('action', 'structure.chairperson_assigned')->get()->getRowArray();
         $this->assertNotNull($log);
         $this->assertSame($this->institution, (int) $log['institution_id']);
     }
 
-    public function testASubDepartmentHasOneChairpersonAndAPersonMayChairSeveral(): void
+    public function testADepartmentHasOneChairpersonAndAPersonMayChairSeveral(): void
     {
         $second = PeopleFactory::person('chairperson', 'Dee', 'Second', null, $this->institution);
 
-        $deptId = (int) db_connect()->table('departments')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
-        db_connect()->table('sub_departments')->insert(['department_id' => $deptId, 'code' => 'SUB2', 'name' => 'Second sub', 'is_active' => 1]);
-        $sub2 = (int) db_connect()->insertID();
+        $collegeId = (int) db_connect()->table('colleges')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
+        db_connect()->table('departments')->insert(['college_id' => $collegeId, 'code' => 'SUB2', 'name' => 'Second department', 'is_active' => 1]);
+        $department2 = (int) db_connect()->insertID();
 
-        $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
-        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->sub, (int) $second->id, $this->admin));
-        $this->service->assign($this->institution, $sub2, (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin);
+        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->department, (int) $second->id, $this->admin));
+        $this->service->assign($this->institution, $department2, (int) $this->chair->id, $this->admin);
 
-        $chairs = $this->service->bySubDepartment($this->institution);
+        $chairs = $this->service->byDepartment($this->institution);
 
         $this->assertStringContainsString('Confirm to replace them', $e->getMessage());
-        $this->assertCount(1, $chairs[$this->sub]);
-        $this->assertCount(1, $chairs[$sub2]);
+        $this->assertCount(1, $chairs[$this->department]);
+        $this->assertCount(1, $chairs[$department2]);
     }
 
     public function testAssigningTheSamePersonTwiceIsRefused(): void
     {
-        $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin);
 
-        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin));
+        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin));
 
         $this->assertStringContainsString('already chairs', $e->getMessage());
         $this->assertSame(1, db_connect()->table('chairperson_assignments')->where('chairperson_user_id', $this->chair->id)->countAllResults());
@@ -130,7 +130,7 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
         $elsewhere  = PeopleFactory::person('chairperson', 'Els', 'Where', null, $this->other);
 
         foreach ([(int) $instructor->id, (int) $elsewhere->id, 999999] as $userId) {
-            $e = $this->refused(fn () => $this->service->assign($this->institution, $this->sub, $userId, $this->admin));
+            $e = $this->refused(fn () => $this->service->assign($this->institution, $this->department, $userId, $this->admin));
             $this->assertArrayHasKey('user_id', $e->errors());
         }
 
@@ -144,41 +144,41 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
 
         $this->assertSame([(int) $this->chair->id], array_column($this->service->candidates($this->institution), 'id'));
 
-        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->sub, (int) $dean->id, $this->admin));
+        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->department, (int) $dean->id, $this->admin));
 
         $this->assertArrayHasKey('user_id', $e->errors());
         $this->assertStringContainsString('dean cannot also be a chairperson', $e->getMessage());
         $this->assertSame(0, db_connect()->table('chairperson_assignments')->where('chairperson_user_id', $dean->id)->countAllResults());
     }
 
-    public function testNobodyIsAssignedToAnInactiveSubDepartment(): void
+    public function testNobodyIsAssignedToAnInactiveDepartment(): void
     {
-        db_connect()->table('sub_departments')->where('id', $this->sub)->update(['is_active' => 0]);
+        db_connect()->table('departments')->where('id', $this->department)->update(['is_active' => 0]);
 
-        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin));
+        $e = $this->refused(fn () => $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin));
 
         $this->assertStringContainsString('inactive', $e->getMessage());
     }
 
-    public function testASubDepartmentOfAnotherInstitutionIsA404(): void
+    public function testADepartmentOfAnotherInstitutionIsA404(): void
     {
         $this->expectException(PageNotFoundException::class);
 
-        $this->service->assign($this->institution, $this->subOf($this->other), (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->departmentOf($this->other), (int) $this->chair->id, $this->admin);
     }
 
     public function testRevokingKeepsTheRowAndAssigningAgainReusesIt(): void
     {
-        $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin);
         $id = (int) db_connect()->table('chairperson_assignments')->get()->getRowArray()['id'];
 
         $this->service->revoke($this->institution, $id, $this->admin);
 
         $this->assertSame('revoked', db_connect()->table('chairperson_assignments')->where('id', $id)->get()->getRowArray()['status']);
-        $this->assertSame([], $this->service->bySubDepartment($this->institution));
+        $this->assertSame([], $this->service->byDepartment($this->institution));
         $this->assertNotNull(db_connect()->table('audit_logs')->where('action', 'structure.chairperson_revoked')->get()->getRowArray());
 
-        $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin);
 
         $this->assertSame(1, db_connect()->table('chairperson_assignments')->countAllResults(), 'the same row, not a second');
         $this->assertSame('active', db_connect()->table('chairperson_assignments')->where('id', $id)->get()->getRowArray()['status']);
@@ -186,7 +186,7 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
 
     public function testRevokingTwiceIsHarmlessAndAForeignAssignmentIsA404(): void
     {
-        $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin);
         $id = (int) db_connect()->table('chairperson_assignments')->get()->getRowArray()['id'];
 
         $this->service->revoke($this->institution, $id, $this->admin);
@@ -205,7 +205,7 @@ final class ChairAssignmentServiceTest extends DatabaseTestCase
 
         $this->assertFalse($access->canAccess($this->chair, $course['offering']));
 
-        $this->service->assign($this->institution, $this->sub, (int) $this->chair->id, $this->admin);
+        $this->service->assign($this->institution, $this->department, (int) $this->chair->id, $this->admin);
         $this->assertTrue($access->canAccess($this->chair, $course['offering']));
 
         $id = (int) db_connect()->table('chairperson_assignments')->get()->getRowArray()['id'];

@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * Secrets never reach the audit log: any value under a secret-looking key is
- * replaced before the entry is stored, at any depth.
+ * replaced before the entry is stored, at any collegeh.
  *
  * @internal
  */

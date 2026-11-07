@@ -46,9 +46,9 @@ class RolesController extends BaseController
     }
 
     /**
-     * Every institution where nobody may approve overrides or sign off grades in some department (U1f).
+     * Every institution where nobody may approve overrides or sign off grades in some college (U1f).
      *
-     * @return list<array{institution: string, department: string, permission: string}>
+     * @return list<array{institution: string, college: string, permission: string}>
      */
     private function gaps(): array
     {

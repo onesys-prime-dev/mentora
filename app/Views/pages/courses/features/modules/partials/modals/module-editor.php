@@ -104,6 +104,8 @@
 
             </div>
 
+            <?= view('pages/courses/features/modules/partials/modals/publish-fields', ['idPrefix' => 'module'], ['saveData' => false]) ?>
+
         </form>
 
         <!-- Footer -->

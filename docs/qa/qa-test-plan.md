@@ -279,8 +279,8 @@ All 52 modules, with existing coverage, proposed scenarios, priority and wave, a
 |---|---|---|
 | `admin` (system administrator) | Locked permissions; 2FA always; no academic access; view-as; reauth on dangerous actions; platform settings | PS-AUT-*, PS-REA-*, PS-IMP-*, PS-RBA-04, PS-SET-*, PS-USR-*, PS-BAK-*, PS-INS-* |
 | `institutional_admin` | Own-institution scope; editing the five academic roles; approvals and sign-off fallback (no dean); read-only behaviour; CSV and SIS; export | PS-RBA-14, PS-OVR-04..07, PS-SGN-03..06, PS-ROM-*, PS-CSV-*, PS-SIS-*, PS-RPT-* |
-| `dean` | Department reach from the live assignment; approvals and sign-off; may sign off a section they teach; follow-ups; department announcements; read-only course views | PS-DEA-*, PS-SGN-02, PS-OVR-12 |
-| `chairperson` | Reach = chaired sub-departments; instructor parity (D:9.4); cannot finalize; audited writes; endorse / send back; one-chair rule | PS-CHA-*, PS-CHR-01..08, PS-GRD-05, PS-DSC-08 |
+| `dean` | College reach from the live assignment; approvals and sign-off; may sign off a section they teach; follow-ups; college announcements; read-only course views | PS-DEA-*, PS-SGN-02, PS-OVR-12 |
+| `chairperson` | Reach = chaired departments; instructor parity (D:9.4); cannot finalize; audited writes; endorse / send back; one-chair rule | PS-CHA-*, PS-CHR-01..08, PS-GRD-05, PS-DSC-08 |
 | `instructor` | Section scope; permission-gated course parts (`courses.manage`, `grading.manage`, `announcements.manage`, `discussions.manage`); grading; finalization | PS-RBA-11, PS-GRD-*, PS-FIN-*, PS-QBK-*, PS-AIQ-* |
 | `student` | Enrolment scope; visibility chain; quiz and assignment rules; closed offerings; grade views; own parents visible | PS-MOD-01, PS-QUZ-*, PS-ASG-*, PS-STU-* |
 | `parent` | Linked children only; portal switch; read-only tabs; privacy canary; notifier; no files | PS-PRT-*, PS-PAR-*, PS-FIL-03 |
@@ -314,7 +314,7 @@ Method: for each machine, a **transition table** (valid transitions each get a p
 | Override request | 7 states, section 5.1 of the inventory | decide own; decide after claimed; act twice | — |
 | Grade adjustment | live → undone | second live per target | — |
 | Chair assignment | active → revoked (reuse row) | second active chair | `expired` has no writer |
-| Dean assignment | active → ended | second dean per department / person | — |
+| Dean assignment | active → ended | second dean per college / person | — |
 | AI batch / job | batch pending → generating → completed / failed; job queued → running → … ; requeue ≤ 2 | claim by another worker; progress after cancel | cancel path differs between `AiJobGeneration` and `AiJobService` |
 | Backup | requested → running → succeeded / failed | second request while pending; stuck `running` | no timeout |
 | Notification | unread → read | duplicate key | — |
@@ -444,7 +444,7 @@ None is a true duplicate (IDs differ and each states its own role), but these re
 
 | Case | Problem | Authority |
 |---|---|---|
-| TC-CRS-03 "a chairperson is assigned to a sub-department and removed again" | Predates exactly-one-chair with confirmed replacement | D:16.0, 16.0b |
+| TC-CRS-03 "a chairperson is assigned to a department and removed again" | Predates exactly-one-chair with confirmed replacement | D:16.0, 16.0b |
 | TC-DEAN-04 "the chairperson endorses it, the dean decides it" | Does not cover the institution admin deciding, nobody deciding their own, the dean-less path | D:1.1–1.6, U5 |
 | TC-DEAN-05 "only the dean can reopen the sign-off" | Administrator sign-off and its reopen are now a path | D:2.4, 2.5, D3, D4 |
 | TC-SA-06 lapses the subscription then runs `subscriptions:sync` | Access now follows dates without the job; the case can drop the job and add a variant | D:6.1 |
@@ -502,7 +502,7 @@ These are **defect candidates found by reading the code**. None has been confirm
 | DEF-09 | Only `subscriptions:sync` is monitored; no alert or email for any missed job; `parents:notify` does not record a heartbeat | **[V]** `parentsNotifyAt` absent from `app/`; monitoring reads one heartbeat **[A]** | A missed job shows a warning on the admin home page and sends one email to all system admins, and one on recovery; the hourly uptime check reports it (D:6.2, U2, D11) | PS-MON-04, PS-MON-05, PS-JOB-06 | NB |
 | DEF-10 | The institution export is built synchronously in the request | **[A]** `ZipArchive` in the export service; no job | Handles 20,000 students and 5 years in the background; one at a time per institution; only the requester is notified; a seventh scheduled job (D:12.1–12.4, 6.4) | PS-RPT-03, PS-JOB-05 | NB |
 | DEF-11 | No way to enter a section's class times; no SIS class-time dataset | **[V]** only `OfferingCopyService` touches `course_schedules`; the SIS reads five datasets | Admin enters weekly pattern on the offering form; clash warns but saves; SIS-owned times are locked; the class-times file is the whole timetable (D:13.1–13.5, D8, D9, U4) | PS-OFF-06, -07, -08 | NB |
-| DEF-12 | The seeded chairperson has no `active_marker`, so the unique key does not cover it | **[V]** no seeder sets the marker | Exactly one active chair per sub-department (D:16.0) | PS-CHR-06 | REG |
+| DEF-12 | The seeded chairperson has no `active_marker`, so the unique key does not cover it | **[V]** no seeder sets the marker | Exactly one active chair per department (D:16.0) | PS-CHR-06 | REG |
 | DEF-13 | A chairperson who is not also an instructor may be refused when posting feedback | **[V]** `AssessmentFeedbackService` line 40 `$isInstructor = $user->inGroup('instructor')`; behavior not run | A chairperson counts as an instructor of every course in their program (D:9.1, 9.4) | PS-GRD-05, PS-DSC-08 | REG? |
 | DEF-14 | The PHP suite depends on the local `.env` (the AI worker secret and four more files) | **[A]** audit finding 14; 6 `AiWorkerEndpointsTest` failures recorded | The suite passes whatever a developer's `.env` contains; CI also runs with a filled sample `.env` (D:14.1, 14.2) | PS-AIQ-13, PS-CI-01 | REG? |
 | DEF-15 | Deleting others' discussion posts and marking an answer may not require `discussions.manage` (the route filter gates only pin and lock) | **[A]** `CoursePermissionFilter` rules; `DiscussionService` unread | The permission covers pin, lock, delete others' posts, mark the answer (D:D6) | PS-RBA-12 | REG? |

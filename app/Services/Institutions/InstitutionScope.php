@@ -14,7 +14,7 @@ use CodeIgniter\Shield\Entities\User;
  *
  * The institution is always decided on the server from the signed-in person,
  * never from an id in the address or a form. Every id that does arrive (a
- * department, a term, a course, an offering, a person) is checked against it
+ * college, a term, a course, an offering, a person) is checked against it
  * before anything is read or written, and a foreign id answers 404 rather
  * than 403: the page does not confirm that the thing exists elsewhere.
  *
@@ -68,16 +68,16 @@ class InstitutionScope
         return $this->institutionId() ?? throw PageNotFoundException::forPageNotFound();
     }
 
-    public function ownsDepartment(int $id): bool
+    public function ownsCollege(int $id): bool
     {
-        return $this->count('departments d', 'd.id', $id, 'd.institution_id') > 0;
+        return $this->count('colleges d', 'd.id', $id, 'd.institution_id') > 0;
     }
 
-    public function ownsSubDepartment(int $id): bool
+    public function ownsDepartment(int $id): bool
     {
         return $this->countThrough(
-            'sub_departments sd',
-            ['departments d' => 'd.id = sd.department_id'],
+            'departments sd',
+            ['colleges d' => 'd.id = sd.college_id'],
             'sd.id',
             $id,
         ) > 0;
@@ -87,7 +87,7 @@ class InstitutionScope
     {
         return $this->countThrough(
             'programs p',
-            ['sub_departments sd' => 'sd.id = p.sub_department_id', 'departments d' => 'd.id = sd.department_id'],
+            ['departments sd' => 'sd.id = p.department_id', 'colleges d' => 'd.id = sd.college_id'],
             'p.id',
             $id,
         ) > 0;
@@ -97,7 +97,7 @@ class InstitutionScope
     {
         return $this->countThrough(
             'courses c',
-            ['programs p' => 'p.id = c.program_id', 'sub_departments sd' => 'sd.id = p.sub_department_id', 'departments d' => 'd.id = sd.department_id'],
+            ['programs p' => 'p.id = c.program_id', 'departments sd' => 'sd.id = p.department_id', 'colleges d' => 'd.id = sd.college_id'],
             'c.id',
             $id,
         ) > 0;
@@ -110,12 +110,17 @@ class InstitutionScope
             [
                 'courses c'          => 'c.id = o.course_id',
                 'programs p'         => 'p.id = c.program_id',
-                'sub_departments sd' => 'sd.id = p.sub_department_id',
-                'departments d'      => 'd.id = sd.department_id',
+                'departments sd' => 'sd.id = p.department_id',
+                'colleges d'      => 'd.id = sd.college_id',
             ],
             'o.id',
             $id,
         ) > 0;
+    }
+
+    public function ownsClassSection(int $id): bool
+    {
+        return $this->count('class_sections cs', 'cs.id', $id, 'cs.institution_id') > 0;
     }
 
     public function ownsTerm(int $id): bool
@@ -143,19 +148,20 @@ class InstitutionScope
     /**
      * Passes when the thing is the institution's own, otherwise a 404.
      *
-     * @param 'department'|'subDepartment'|'program'|'course'|'offering'|'term'|'person' $kind
+     * @param 'college'|'department'|'program'|'course'|'offering'|'term'|'person'|'classSection' $kind
      *
      * @throws PageNotFoundException
      */
     public function require(string $kind, int $id): void
     {
         $owned = match ($kind) {
-            'department'    => $this->ownsDepartment($id),
-            'subDepartment' => $this->ownsSubDepartment($id),
+            'college'    => $this->ownsCollege($id),
+            'department' => $this->ownsDepartment($id),
             'program'       => $this->ownsProgram($id),
             'course'        => $this->ownsCourse($id),
             'offering'      => $this->ownsOffering($id),
             'term'          => $this->ownsTerm($id),
+            'classSection'  => $this->ownsClassSection($id),
             'person'        => $this->ownsPerson($id),
             default         => false,
         };
@@ -177,7 +183,7 @@ class InstitutionScope
     }
 
     /**
-     * @param array<string, string> $joins table alias => join condition, ending at the departments table (alias d)
+     * @param array<string, string> $joins table alias => join condition, ending at the colleges table (alias d)
      */
     private function countThrough(string $table, array $joins, string $idColumn, int $id): int
     {

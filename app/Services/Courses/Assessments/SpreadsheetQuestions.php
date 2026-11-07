@@ -10,7 +10,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Csv;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
- * Questions as a spreadsheet, one per row: the layout departments already
+ * Questions as a spreadsheet, one per row: the layout colleges already
  * keep in Excel.
  *
  *     Type | Question | A | B | C | D | E | F | G | H | Answer | Points | Required

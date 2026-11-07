@@ -85,7 +85,10 @@ if (! function_exists('global_apps')) {
      * Global apps, same set for every role. `url` is null while a page isn't
      * built yet — those render as inert tiles (see components/app-tile.php).
      *
-     * @return list<array{key: string, label: string, icon: string, url: ?string, badge?: int}>
+     * The Grades tile may carry a `badge` count and its `badge_label` (grades_badge_on());
+     * the Messages tile carries its unread count as `badge` (messages_tile()).
+     *
+     * @return list<array{key: string, label: string, icon: string, url: ?string, badge?: int, badge_label?: string}>
      */
     function global_apps(string $role): array
     {
@@ -98,6 +101,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'courses',     'label' => 'Courses',     'icon' => 'resources', 'url' => site_url('institution/courses')],
                 ['key' => 'terms',       'label' => 'Terms',       'icon' => 'calendar', 'url' => site_url('institution/terms')],
                 ['key' => 'offerings',   'label' => 'Offerings',   'icon' => 'modules',  'url' => site_url('institution/offerings')],
+                ['key' => 'sections',    'label' => 'Sections',    'icon' => 'user',     'url' => site_url('institution/sections')],
                 ['key' => 'people',      'label' => 'People',      'icon' => 'user',     'url' => site_url('institution/people')],
                 ['key' => 'roles',       'label' => 'Roles and permissions', 'icon' => 'lock', 'url' => site_url('institution/roles')],
                 ['key' => 'approvals',   'label' => 'Approvals',   'icon' => 'tasks',    'url' => site_url('institution/approvals')],
@@ -117,13 +121,14 @@ if (! function_exists('global_apps')) {
             $dean = [
                 ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('dean/dashboard')],
                 ['key' => 'courses', 'label' => 'Courses', 'icon' => 'hat', 'url' => site_url('dean/courses')],
+                ['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('dean/grades')],
                 ['key' => 'approvals', 'label' => 'Approvals', 'icon' => 'tasks', 'url' => site_url('dean/approvals')],
                 ['key' => 'signoff', 'label' => 'Sign-off', 'icon' => 'check', 'url' => site_url('dean/signoff')],
                 ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('dean/follow-ups')],
                 ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => site_url('dean/announcements')],
                 ['key' => 'teaching-load', 'label' => 'Teaching load', 'icon' => 'modules', 'url' => site_url('dean/teaching-load')],
                 ['key' => 'chairperson-review', 'label' => 'Chairperson review', 'icon' => 'tasks', 'url' => site_url('dean/chairperson-review')],
-                ['key' => 'monitor-department', 'label' => 'Monitor Department', 'icon' => 'score', 'url' => site_url('dean/monitor-department')],
+                ['key' => 'monitor-college', 'label' => 'Monitor College', 'icon' => 'score', 'url' => site_url('dean/monitor-college')],
             ];
 
             // Only what their institution lets them open (QA AMB-AUTH-08): each tile's page refuses without its
@@ -132,29 +137,31 @@ if (! function_exists('global_apps')) {
                 $permissions = new \App\Services\Auth\RolePermissions();
                 $gates       = [
                     'courses'            => 'courses.view',
+                    'grades'             => 'college.monitor',
                     'approvals'          => 'grades.approve',
                     'signoff'            => 'grades.signoff',
-                    'announcements'      => 'department.announce',
-                    'monitor-department' => 'department.monitor',
+                    'announcements'      => 'college.announce',
+                    'monitor-college' => 'college.monitor',
                 ];
                 // Asked of the dean role only: what another role of theirs has does not open the dean's pages.
                 $hidden      = array_keys(array_filter($gates, static fn (string $p): bool => ! $permissions->allows($user, $p, 'dean')));
                 $dean        = array_values(array_filter($dean, static fn (array $app): bool => ! in_array($app['key'], $hidden, true)));
             }
 
-            return [...$dean, ...array_filter([messages_tile($role)])];
+            return grades_badge_on([...$dean, ...array_filter([messages_tile($role)])], $role);
         }
 
-        // A parent's tools: their children's dashboard and calendar, the shared notifications list,
-        // and their own profile.
+        // A parent's tools: their children's dashboard, calendar and grades, the shared notifications
+        // list, and their own profile.
         if ($role === 'parent') {
-            return [
+            return grades_badge_on([
                 ['key' => 'dashboard', 'label' => 'Home', 'icon' => 'apps', 'url' => site_url('parent/dashboard')],
                 ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'calendar', 'url' => site_url('parent/calendar')],
+                ['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('parent/grades')],
                 ['key' => 'notifications', 'label' => 'Notifications', 'icon' => 'bell', 'url' => site_url('notifications')],
                 ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('parent/profile')],
                 ...array_filter([messages_tile($role)]),
-            ];
+            ], $role);
         }
 
         // The system administrator's tools. The page also has its own grouped navigation bar;
@@ -180,7 +187,13 @@ if (! function_exists('global_apps')) {
             ['key' => 'courses',       'label' => 'Courses',       'icon' => 'hat',          'url' => site_url($role . '/courses')],
             ['key' => 'calendar',      'label' => 'Calendar',      'icon' => 'calendar',     'url' => site_url($role . '/calendar')],
             ['key' => 'schedule',      'label' => 'Schedule',      'icon' => 'clock',        'url' => site_url($role . '/schedule')],
-            ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => null],
+            // The dean's and the parent's Grades tiles are in their own lists above.
+            ['key' => 'grades',        'label' => 'Grades',        'icon' => 'grades',       'url' => match ($role) {
+                'instructor'  => site_url('instructor/grades'),
+                'student'     => site_url('student/grades'),
+                'chairperson' => site_url('chairperson/grades'),
+                default      => null,
+            }],
             ['key' => 'announcements', 'label' => 'Announcements', 'icon' => 'announcement', 'url' => in_array($role, ['student', 'instructor', 'chairperson'], true) ? site_url($role . '/announcements') : null],
         ];
 
@@ -195,6 +208,12 @@ if (! function_exists('global_apps')) {
             $apps[] = ['key' => 'follow-ups', 'label' => 'Follow-ups', 'icon' => 'inbox', 'url' => site_url('chairperson/follow-ups')];
         }
 
+        // The instructor's, the student's and the chairperson's Grades pages need courses.view (in that role):
+        // without it there is no page, so no tile.
+        if (in_array($role, ['instructor', 'student', 'chairperson'], true) && ($user = auth()->user()) !== null && ! (new \App\Services\Auth\RolePermissions())->allows($user, 'courses.view', $role)) {
+            $apps = array_values(array_filter($apps, static fn (array $app): bool => $app['key'] !== 'grades'));
+        }
+
         // What the dean or a chairperson asked of an instructor.
         if ($role === 'instructor') {
             $apps[] = ['key' => 'follow-ups', 'label' => 'Requests', 'icon' => 'inbox', 'url' => site_url('instructor/follow-ups')];
@@ -202,6 +221,40 @@ if (! function_exists('global_apps')) {
 
         if (($messages = messages_tile($role)) !== null) {
             $apps[] = $messages;
+        }
+
+        return grades_badge_on($apps, $role);
+    }
+}
+
+if (! function_exists('grades_badge_on')) {
+
+    /**
+     * The Grades tile with what needs the signed-in person there (GradesBadge: cached a minute, worked out once
+     * per request), as `badge` and its spoken `badge_label`; nothing when the count is 0, when no one is signed
+     * in, or when the list has no Grades page to open.
+     *
+     * @param list<array<string, mixed>> $apps
+     *
+     * @return list<array<string, mixed>>
+     */
+    function grades_badge_on(array $apps, string $role): array
+    {
+        if (($user = auth()->user()) === null) {
+            return $apps;
+        }
+
+        foreach ($apps as $i => $app) {
+            if ($app['key'] !== 'grades' || $app['url'] === null) {
+                continue;
+            }
+
+            $count = \App\Services\Grades\GradesBadge::for($user, $role);
+
+            if ($count > 0) {
+                $apps[$i]['badge']       = $count;
+                $apps[$i]['badge_label'] = \App\Services\Grades\GradesBadge::label($role, $count);
+            }
         }
 
         return $apps;

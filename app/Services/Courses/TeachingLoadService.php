@@ -8,10 +8,10 @@ use App\Services\Institutions\AcademicDefaults;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * What each instructor of the dean's department carries in a term: sections, students, units, work waiting
+ * What each instructor of the dean's college carries in a term: sections, students, units, work waiting
  * to be graded and how fast they grade, with a marker for a high load. View only.
  *
- * Only the sections of the dean's department count, so an instructor who also teaches elsewhere appears
+ * Only the sections of the dean's college count, so an instructor who also teaches elsewhere appears
  * here with the load they carry here, and a dean sees nobody else's. A section with two instructors counts
  * for both. The high-load line is the institution's own setting (AcademicDefaults), like the other shared
  * thresholds. Turnaround is the monitoring service's per-section figure, weighted by the work graded.
@@ -28,7 +28,7 @@ class TeachingLoadService
     }
 
     /**
-     * The terms the department's courses run in, newest first, for the term filter.
+     * The terms the college's courses run in, newest first, for the term filter.
      *
      * @return list<array<string, mixed>>
      */
@@ -38,7 +38,7 @@ class TeachingLoadService
     }
 
     /**
-     * The term the page opens on: the one asked for if it is the department's, else the newest.
+     * The term the page opens on: the one asked for if it is the college's, else the newest.
      */
     public function termFor(User $dean, ?int $asked): ?int
     {
@@ -49,7 +49,7 @@ class TeachingLoadService
     }
 
     /**
-     * One row per instructor of the department for the term, sorted.
+     * One row per instructor of the college for the term, sorted.
      *
      * @return array{term: ?int, highLoadUnits: int, rows: list<array<string, mixed>>}
      */
@@ -62,15 +62,15 @@ class TeachingLoadService
             return ['term' => null, 'highLoadUnits' => $threshold, 'rows' => []];
         }
 
-        $sections = $this->sections($dean, $term, $filters->subDepartmentId);
+        $sections = $this->sections($dean, $term, $filters->departmentId);
         $rows     = array_map(fn (array $group): array => $this->summarise($group, $threshold), $this->byInstructor($sections));
 
         return ['term' => $term, 'highLoadUnits' => $threshold, 'rows' => RowSort::by(array_values($rows), $filters->sort, $filters->dir)];
     }
 
     /**
-     * One instructor's sections in the department for the term, or null when they teach none of the
-     * department's (so an id cannot be guessed into somebody else's load).
+     * One instructor's sections in the college for the term, or null when they teach none of the
+     * college's (so an id cannot be guessed into somebody else's load).
      *
      * @return array{instructor: array<string, mixed>, term: ?int, highLoadUnits: int, sections: list<array<string, mixed>>}|null
      */
@@ -99,8 +99,8 @@ class TeachingLoadService
         ];
     }
 
-    /** The instructors of the department in any term, for telling "teaches nothing this term" from "not ours". */
-    public function teachesInDepartment(User $dean, int $instructorId): bool
+    /** The instructors of the college in any term, for telling "teaches nothing this term" from "not ours". */
+    public function teachesInCollege(User $dean, int $instructorId): bool
     {
         $programIds = $this->access->programIds($dean);
 
@@ -117,18 +117,18 @@ class TeachingLoadService
     }
 
     /**
-     * Every section of the department in a term that has an instructor, one entry per instructor on it, with
+     * Every section of the college in a term that has an instructor, one entry per instructor on it, with
      * the section's own figures.
      *
      * @return list<array<string, mixed>>
      */
-    private function sections(User $dean, int $termId, ?int $subDepartmentId): array
+    private function sections(User $dean, int $termId, ?int $departmentId): array
     {
         $programIds = $this->access->programIds($dean);
         $rows       = $this->monitor->offeringRowsForPrograms($programIds, new MonitorProgramFilters(termId: $termId));
 
-        if ($subDepartmentId !== null) {
-            $rows = array_values(array_filter($rows, static fn (array $r): bool => (int) $r['sub_department_id'] === $subDepartmentId));
+        if ($departmentId !== null) {
+            $rows = array_values(array_filter($rows, static fn (array $r): bool => (int) $r['department_id'] === $departmentId));
         }
 
         $offeringIds = array_map(static fn (array $r): int => (int) $r['offering_id'], $rows);
@@ -249,13 +249,13 @@ class TeachingLoadService
 
     private function threshold(User $dean): int
     {
-        $department = $this->access->departmentFor($dean);
+        $college = $this->access->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS;
         }
 
-        $institution = db_connect()->table('departments')->select('institution_id')->where('id', (int) $department['department_id'])->get()->getRow('institution_id');
+        $institution = db_connect()->table('colleges')->select('institution_id')->where('id', (int) $college['college_id'])->get()->getRow('institution_id');
 
         return $institution === null ? AcademicDefaults::PLATFORM_HIGH_LOAD_UNITS : $this->defaults->highLoadUnitsFor((int) $institution);
     }

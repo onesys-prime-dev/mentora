@@ -1,7 +1,7 @@
 <?php
 /**
  * The dean's Courses page: search, filter, sort and page through every
- * course offering in their department. Filters live in the address (GET), so
+ * course offering in their college. Filters live in the address (GET), so
  * a filtered view can be bookmarked and every sort and paging link keeps it.
  *
  * @var App\Services\Courses\DeanCourseFilters $filters
@@ -56,7 +56,7 @@ foreach ($statuses as $status) {
     <?= view('components/page-head', [
         'title'       => 'Courses',
         'icon'        => 'hat',
-        'description' => 'Every course in your department. You can look, not change.',
+        'description' => 'Every course in your college. You can look, not change.',
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
@@ -66,7 +66,7 @@ foreach ($statuses as $status) {
         'fields'   => [
             ['type' => 'search', 'name' => 'q', 'label' => 'Search', 'placeholder' => 'Course code, title or section', 'value' => $filters->q ?? '', 'span' => 'sm:col-span-2'],
             ['type' => 'select', 'name' => 'term', 'label' => 'Term', 'options' => $termOptions, 'value' => (string) ($filters->termId ?? '')],
-            ['type' => 'select', 'name' => 'sub_department', 'label' => 'Sub-department', 'options' => $options($subDepartments, 'Any sub-department'), 'value' => (string) ($filters->subDepartmentId ?? '')],
+            ['type' => 'select', 'name' => 'department', 'label' => 'Department', 'options' => $options($departments, 'Any department'), 'value' => (string) ($filters->departmentId ?? '')],
             ['type' => 'select', 'name' => 'program', 'label' => 'Program', 'options' => $options($programs, 'Any program'), 'value' => (string) ($filters->programId ?? '')],
             ['type' => 'select', 'name' => 'instructor', 'label' => 'Instructor', 'options' => $options($instructors, 'Any instructor'), 'value' => (string) ($filters->instructorId ?? '')],
             ['type' => 'select', 'name' => 'status', 'label' => 'Status', 'options' => $statusOptions, 'value' => (string) ($filters->status ?? '')],
@@ -93,7 +93,7 @@ foreach ($statuses as $status) {
 
         <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#C33939]/30 bg-white px-8 py-14 text-center" role="alert" data-load-error>
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
-            <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your department's courses</span>
+            <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your college's courses</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
             <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
@@ -104,13 +104,13 @@ foreach ($statuses as $status) {
             'icon'  => 'hat',
             'title' => $filters->isFiltered() ? 'No courses match these filters' : 'No courses yet',
             'text'  => $filters->isFiltered()
-                ? 'Try a different search, term, sub-department, program, instructor or status.'
-                : 'Courses in your department will appear here.',
+                ? 'Try a different search, term, department, program, instructor or status.'
+                : 'Courses in your college will appear here.',
         ], ['saveData' => false]) ?>
 
     <?php else: ?>
 
-        <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Courses in your department">
+        <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Courses in your college">
             <?php foreach ($courses as $course): ?>
                 <li class="h-full min-w-0">
                     <?= view('pages/courses/partials/course-card', [

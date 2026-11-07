@@ -19,7 +19,7 @@ use Throwable;
  * quiz.
  *
  * A person may take from the quizzes of the sections they teach and, for a
- * chairperson, the sections of the sub-departments they chair, in any term.
+ * chairperson, the sections of the departments they chair, in any term.
  * Everything is checked here against that list, so an id in a request that is
  * not one of theirs is simply not found.
  */

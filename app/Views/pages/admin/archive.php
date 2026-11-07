@@ -43,7 +43,7 @@ foreach ($deletedRows as $row) {
         . '<form data-dialog-form method="post" action="' . site_url('admin/institutions/' . $id . '/purge') . '" class="mt-2 flex w-72 flex-col gap-2">' . csrf_field()
         . '<input type="hidden" name="return" value="archive">'
         . '<p class="text-xs text-[#8E2424]">This cannot be undone. It permanently removes the institution and everything in it: '
-        . esc((string) $c['departments']) . ' department(s), ' . esc((string) $c['programs']) . ' program(s), '
+        . esc((string) $c['colleges']) . ' college(s), ' . esc((string) $c['programs']) . ' program(s), '
         . esc((string) $c['courses']) . ' course(s) and all their offerings, enrolments, work and grades. ' . $members . '.</p>'
         . '<label class="text-xs text-[#646464]" for="purge-' . $id . '">Type <strong>' . esc($row['name']) . '</strong> to confirm</label>'
         . '<input id="purge-' . $id . '" class="' . $input . '" type="text" name="confirm_name" autocomplete="off" required>'

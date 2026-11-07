@@ -9,7 +9,7 @@ use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * The database facts behind MessagingPolicy: who shares a course, a department, a
+ * The database facts behind MessagingPolicy: who shares a course, a college, a
  * scope or a linked child, and the state of a conversation for one person.
  *
  * @internal
@@ -22,11 +22,11 @@ final class MessagingContextResolverTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
-    private int $subA;
+    private int $departmentA;
 
-    private int $subB;
+    private int $departmentB;
 
     private int $term;
 
@@ -40,13 +40,13 @@ final class MessagingContextResolverTest extends DatabaseTestCase
 
         $this->resolver = new MessagingContextResolver();
 
-        $d                 = DeanFactory::department('M1');
+        $d                 = DeanFactory::college('M1');
         $this->institution = $d['institution'];
-        $this->department  = $d['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'MA');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'MB');
-        $this->programA    = DeanFactory::program($this->subA, 'MA');
-        $this->programB    = DeanFactory::program($this->subB, 'MB');
+        $this->college  = $d['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'MA');
+        $this->departmentB        = DeanFactory::department($this->college, 'MB');
+        $this->programA    = DeanFactory::program($this->departmentA, 'MA');
+        $this->programB    = DeanFactory::program($this->departmentB, 'MB');
         $this->term        = DeanFactory::term($this->institution);
     }
 
@@ -93,35 +93,35 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         $this->assertFalse($this->resolver->forStart($student, $instructor, null)->sharedCourse);
     }
 
-    public function testSameDepartmentCoversInstructorsChairpersonsAndDeans(): void
+    public function testSameCollegeCoversInstructorsChairpersonsAndDeans(): void
     {
         $i1    = $this->person('instructor');
         $i2    = $this->person('instructor');
         $far   = $this->person('instructor');
-        $chair = DeanFactory::chair($this->subA);
-        $dean  = DeanFactory::dean($this->institution, $this->department);
+        $chair = DeanFactory::chair($this->departmentA);
+        $dean  = DeanFactory::dean($this->institution, $this->college);
 
         CourseFactory::assignInstructor($this->offering($this->programA, 'C5'), $i1);
         CourseFactory::assignInstructor($this->offering($this->programB, 'C6'), $i2);
 
-        $other      = DeanFactory::department('M2');
-        $otherSub   = DeanFactory::subDepartment($other['department'], 'MX');
-        $otherProg  = DeanFactory::program($otherSub, 'MX');
+        $other      = DeanFactory::college('M2');
+        $otherDepartment   = DeanFactory::department($other['college'], 'MX');
+        $otherProg  = DeanFactory::program($otherDepartment, 'MX');
         $otherTerm  = DeanFactory::term($other['institution']);
         $farOffer   = DeanFactory::offering($otherProg, $otherTerm, 'CX');
         CourseFactory::assignInstructor($farOffer, $far);
 
-        $this->assertTrue($this->resolver->forStart($i1, $i2, null)->sameDepartment);
-        $this->assertFalse($this->resolver->forStart($i1, $far, null)->sameDepartment);
-        $this->assertTrue($this->resolver->forStart($i1, $chair, null)->sameDepartment);
-        $this->assertTrue($this->resolver->forStart($i1, $dean, null)->sameDepartment);
-        $this->assertTrue($this->resolver->forStart($chair, $dean, null)->sameDepartment);
+        $this->assertTrue($this->resolver->forStart($i1, $i2, null)->sameCollege);
+        $this->assertFalse($this->resolver->forStart($i1, $far, null)->sameCollege);
+        $this->assertTrue($this->resolver->forStart($i1, $chair, null)->sameCollege);
+        $this->assertTrue($this->resolver->forStart($i1, $dean, null)->sameCollege);
+        $this->assertTrue($this->resolver->forStart($chair, $dean, null)->sameCollege);
     }
 
-    public function testInScopeForAChairpersonIsTheirSubDepartmentAndForADeanTheirDepartment(): void
+    public function testInScopeForAChairpersonIsTheirDepartmentAndForADeanTheirCollege(): void
     {
-        $chairA  = DeanFactory::chair($this->subA);
-        $dean    = DeanFactory::dean($this->institution, $this->department);
+        $chairA  = DeanFactory::chair($this->departmentA);
+        $dean    = DeanFactory::dean($this->institution, $this->college);
         $studentA = $this->person('student');
         $studentB = $this->person('student');
         CourseFactory::enroll($this->offering($this->programA, 'C7'), $studentA);
@@ -133,10 +133,10 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         $this->assertTrue($this->resolver->forStart($dean, $studentB, null)->inScope);
         $this->assertTrue($this->resolver->forStart($dean, $chairA, null)->inScope);
 
-        $other     = DeanFactory::department('M3');
-        $otherSub  = DeanFactory::subDepartment($other['department'], 'MY');
+        $other     = DeanFactory::college('M3');
+        $otherDepartment  = DeanFactory::department($other['college'], 'MY');
         $outsider  = $this->person('student', $other['institution']);
-        CourseFactory::enroll(DeanFactory::offering(DeanFactory::program($otherSub, 'MY'), DeanFactory::term($other['institution']), 'CY'), $outsider);
+        CourseFactory::enroll(DeanFactory::offering(DeanFactory::program($otherDepartment, 'MY'), DeanFactory::term($other['institution']), 'CY'), $outsider);
 
         $this->assertFalse($this->resolver->forStart($dean, $outsider, null)->inScope);
         $this->assertFalse($this->resolver->forStart($dean, $outsider, null)->sameInstitution);
@@ -148,7 +148,7 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         $stranger   = $this->person('parent');
         $child      = $this->person('student');
         $instructor = $this->person('instructor');
-        $chair      = DeanFactory::chair($this->subA);
+        $chair      = DeanFactory::chair($this->departmentA);
         $offering   = $this->offering($this->programA, 'C9');
         CourseFactory::enroll($offering, $child);
         CourseFactory::assignInstructor($offering, $instructor);

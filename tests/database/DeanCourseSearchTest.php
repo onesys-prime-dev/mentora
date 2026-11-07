@@ -11,7 +11,7 @@ use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * The dean's Courses list: exactly the offerings of their department, read
+ * The dean's Courses list: exactly the offerings of their college, read
  * live from the hierarchy, filtered, sorted and paged.
  *
  * @internal
@@ -22,9 +22,9 @@ final class DeanCourseSearchTest extends DatabaseTestCase
 
     private DeanCourseSearch $search;
     private int $institution;
-    private int $department;
-    private int $subA;
-    private int $subB;
+    private int $college;
+    private int $departmentA;
+    private int $departmentB;
     private int $programA;
     private int $programB;
     private int $term;
@@ -34,15 +34,15 @@ final class DeanCourseSearchTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('H');
+        $home              = DeanFactory::college('H');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'B');
-        $this->programA    = DeanFactory::program($this->subA, 'A');
-        $this->programB    = DeanFactory::program($this->subB, 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->departmentB        = DeanFactory::department($this->college, 'B');
+        $this->programA    = DeanFactory::program($this->departmentA, 'A');
+        $this->programB    = DeanFactory::program($this->departmentB, 'B');
         $this->term        = DeanFactory::term($this->institution);
-        $this->dean        = DeanFactory::dean($this->institution, $this->department);
+        $this->dean        = DeanFactory::dean($this->institution, $this->college);
         $this->search      = new DeanCourseSearch();
     }
 
@@ -54,17 +54,17 @@ final class DeanCourseSearchTest extends DatabaseTestCase
         return array_column($rows, 'course_code');
     }
 
-    public function testOnlyTheOfferingsOfTheDeansDepartmentAreListed(): void
+    public function testOnlyTheOfferingsOfTheDeansCollegeAreListed(): void
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101');
         DeanFactory::offering($this->programB, $this->term, 'CS201');
 
-        $elsewhere = DeanFactory::department('X');
-        $otherProgram = DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X');
+        $elsewhere = DeanFactory::college('X');
+        $otherProgram = DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X');
         DeanFactory::offering($otherProgram, DeanFactory::term($elsewhere['institution']), 'ZZ999');
 
-        $sameInstitutionOther = DeanFactory::department('Y', $this->institution);
-        $siblingProgram = DeanFactory::program(DeanFactory::subDepartment($sameInstitutionOther['department'], 'Y'), 'Y');
+        $sameInstitutionOther = DeanFactory::college('Y', $this->institution);
+        $siblingProgram = DeanFactory::program(DeanFactory::department($sameInstitutionOther['college'], 'Y'), 'Y');
         DeanFactory::offering($siblingProgram, $this->term, 'YY100');
 
         $this->assertSame(['CS201', 'IT101'], $this->codes());
@@ -76,7 +76,7 @@ final class DeanCourseSearchTest extends DatabaseTestCase
         DeanFactory::offering($this->programA, $this->term, 'IT101');
         $this->assertSame(['IT101'], $this->codes());
 
-        $later = DeanFactory::program($this->subA, 'N');
+        $later = DeanFactory::program($this->departmentA, 'N');
         DeanFactory::offering($later, $this->term, 'NEW100');
 
         $this->assertSame(['IT101', 'NEW100'], $this->codes());
@@ -89,7 +89,7 @@ final class DeanCourseSearchTest extends DatabaseTestCase
 
         $this->assertSame([], $this->codes());
         $this->assertSame([], $this->search->terms($this->dean));
-        $this->assertSame([], $this->search->subDepartments($this->dean));
+        $this->assertSame([], $this->search->departments($this->dean));
         $this->assertSame([], $this->search->programs($this->dean));
         $this->assertSame([], $this->search->instructors($this->dean));
     }
@@ -98,7 +98,7 @@ final class DeanCourseSearchTest extends DatabaseTestCase
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101');
 
-        $this->assertSame([], $this->codes(null, PeopleFactory::person('dean', 'No', 'Department', null, $this->institution)));
+        $this->assertSame([], $this->codes(null, PeopleFactory::person('dean', 'No', 'College', null, $this->institution)));
     }
 
     public function testEachFilterNarrowsTheList(): void
@@ -112,7 +112,7 @@ final class DeanCourseSearchTest extends DatabaseTestCase
         CourseFactory::assignInstructor($it101, $teacher);
 
         $this->assertSame(['IT102'], $this->codes(new DeanCourseFilters(termId: $laterTerm)));
-        $this->assertSame(['CS201'], $this->codes(new DeanCourseFilters(subDepartmentId: $this->subB)));
+        $this->assertSame(['CS201'], $this->codes(new DeanCourseFilters(departmentId: $this->departmentB)));
         $this->assertSame(['CS201'], $this->codes(new DeanCourseFilters(programId: $this->programB)));
         $this->assertSame(['IT101'], $this->codes(new DeanCourseFilters(instructorId: (int) $teacher->id)));
         $this->assertSame(['IT102'], $this->codes(new DeanCourseFilters(status: 'completed')));
@@ -129,10 +129,10 @@ final class DeanCourseSearchTest extends DatabaseTestCase
         $this->assertSame([], $this->codes(new DeanCourseFilters(q: '_')));
     }
 
-    public function testAFilterForAnotherDepartmentsProgramFindsNothing(): void
+    public function testAFilterForAnotherCollegesProgramFindsNothing(): void
     {
-        $elsewhere = DeanFactory::department('X');
-        $foreign   = DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X');
+        $elsewhere = DeanFactory::college('X');
+        $foreign   = DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X');
         DeanFactory::offering($foreign, DeanFactory::term($elsewhere['institution']), 'ZZ999');
 
         $this->assertSame([], $this->codes(new DeanCourseFilters(programId: $foreign)));
@@ -169,13 +169,13 @@ final class DeanCourseSearchTest extends DatabaseTestCase
         $this->assertSame([2, 1], array_map('intval', array_column($rows, 'enrolled')));
     }
 
-    public function testEachRowNamesTheInstructorAndTheChairpersonOfItsSubDepartment(): void
+    public function testEachRowNamesTheInstructorAndTheChairpersonOfItsDepartment(): void
     {
         $offering = DeanFactory::offering($this->programA, $this->term, 'IT101');
         DeanFactory::offering($this->programB, $this->term, 'CS201');
         CourseFactory::assignInstructor($offering, PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution));
-        DeanFactory::chair($this->subA, 'Maria');
-        DeanFactory::chair($this->subB, 'Gone', 'ended');
+        DeanFactory::chair($this->departmentA, 'Maria');
+        DeanFactory::chair($this->departmentB, 'Gone', 'ended');
 
         $rows = array_column($this->search->page($this->dean, new DeanCourseFilters())['rows'], null, 'course_code');
 
@@ -185,18 +185,18 @@ final class DeanCourseSearchTest extends DatabaseTestCase
         $this->assertNull($rows['CS201']['chairperson_name'], 'an ended chairperson is not named');
     }
 
-    public function testTheFilterListsHoldOnlyTheDepartmentsOwn(): void
+    public function testTheFilterListsHoldOnlyTheCollegesOwn(): void
     {
         $offering = DeanFactory::offering($this->programA, $this->term, 'IT101');
         CourseFactory::assignInstructor($offering, PeopleFactory::person('instructor', 'Tess', 'Tan', null, $this->institution));
 
-        $elsewhere = DeanFactory::department('X');
-        $foreign   = DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X');
+        $elsewhere = DeanFactory::college('X');
+        $foreign   = DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X');
         $foreignOffering = DeanFactory::offering($foreign, DeanFactory::term($elsewhere['institution'], 'Foreign'), 'ZZ999');
         CourseFactory::assignInstructor($foreignOffering, PeopleFactory::person('instructor', 'Fay', 'Far', null, $elsewhere['institution']));
 
         $this->assertSame(['First'], array_column($this->search->terms($this->dean), 'name'));
-        $this->assertEqualsCanonicalizing(['Sub A', 'Sub B'], array_column($this->search->subDepartments($this->dean), 'name'));
+        $this->assertEqualsCanonicalizing(['Department A', 'Department B'], array_column($this->search->departments($this->dean), 'name'));
         $this->assertEqualsCanonicalizing(['Program A', 'Program B'], array_column($this->search->programs($this->dean), 'name'));
         $this->assertSame(['Tess Tan'], array_column($this->search->instructors($this->dean), 'name'));
     }

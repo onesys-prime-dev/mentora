@@ -20,15 +20,15 @@ final class DeletingAUserKeepsHistoryTest extends DatabaseTestCase
     protected bool $isolateTests = true;
 
     private int $institution;
-    private int $department;
+    private int $college;
     private int $offering;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        ['institution' => $this->institution, 'department' => $this->department] = DeanFactory::department('H');
-        $program        = DeanFactory::program(DeanFactory::subDepartment($this->department, 'H'), 'H');
+        ['institution' => $this->institution, 'college' => $this->college] = DeanFactory::college('H');
+        $program        = DeanFactory::program(DeanFactory::department($this->college, 'H'), 'H');
         $this->offering = DeanFactory::offering($program, DeanFactory::term($this->institution), 'HIS101');
     }
 
@@ -58,7 +58,7 @@ final class DeletingAUserKeepsHistoryTest extends DatabaseTestCase
     {
         $actor = $this->actor();
         $dean  = (int) PeopleFactory::person('dean', 'Dana', 'Dean', null, $this->institution)->id;
-        db_connect()->table('dean_assignments')->insert(['department_id' => $this->department, 'dean_user_id' => $dean, 'assigned_by' => $actor, 'assigned_at' => date('Y-m-d H:i:s'), 'status' => 'active', 'active_marker' => 1]);
+        db_connect()->table('dean_assignments')->insert(['college_id' => $this->college, 'dean_user_id' => $dean, 'assigned_by' => $actor, 'assigned_at' => date('Y-m-d H:i:s'), 'status' => 'active', 'active_marker' => 1]);
         $id = (int) db_connect()->insertID();
 
         $this->deleteUser($actor);
@@ -103,19 +103,19 @@ final class DeletingAUserKeepsHistoryTest extends DatabaseTestCase
         $this->assertNull($row['reopened_by']);
     }
 
-    public function testADepartmentAnnouncementStaysWhenItsAuthorAndWhoEndedItAreDeleted(): void
+    public function testACollegeAnnouncementStaysWhenItsAuthorAndWhoEndedItAreDeleted(): void
     {
         [$author, $ender] = [$this->actor(), $this->actor()];
-        db_connect()->table('department_announcements')->insert([
-            'institution_id' => $this->institution, 'department_id' => $this->department, 'created_by' => $author, 'ended_by' => $ender,
-            'scope_type' => 'department', 'scope_id' => $this->department, 'title' => 'Notice', 'message' => 'Read me',
+        db_connect()->table('college_announcements')->insert([
+            'institution_id' => $this->institution, 'college_id' => $this->college, 'created_by' => $author, 'ended_by' => $ender,
+            'scope_type' => 'college', 'scope_id' => $this->college, 'title' => 'Notice', 'message' => 'Read me',
         ]);
         $id = (int) db_connect()->insertID();
 
         $this->deleteUser($author);
         $this->deleteUser($ender);
 
-        $row = $this->row('department_announcements', $id);
+        $row = $this->row('college_announcements', $id);
         $this->assertNotNull($row);
         $this->assertNull($row['created_by']);
         $this->assertNull($row['ended_by']);

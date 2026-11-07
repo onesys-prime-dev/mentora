@@ -1,11 +1,11 @@
 <?php
 /**
- * The dean's Approvals: grade-override requests of the department. "Waiting for you" are the ones the
+ * The dean's Approvals: grade-override requests of the college. "Waiting for you" are the ones the
  * chairperson endorsed (or that had no chairperson to ask); each opens a dialog with how the student's
  * grade is made up, and Approve (the grade is changed) or Reject (with a reason). "Decided" is the history.
  * A student's work is not shown, only the numbers asked for and the reason.
  *
- * Also the institution administrator's Approvals ($area 'institution'): the requests of departments
+ * Also the institution administrator's Approvals ($area 'institution'): the requests of colleges
  * with no dean who may approve them (audit decision 1.1), with the same dialog.
  *
  * @var App\Services\Courses\Grades\OverrideApprovalFilters $filters
@@ -90,7 +90,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
     <?= view('components/page-head', [
         'title'       => 'Grade overrides',
         'icon'        => 'tasks',
-        'description' => ($area === 'dean' ? 'Requests to change a final grade in your department.' : 'Requests to change a final grade in a department with no dean who decides them.') . ' Approving changes the grade; rejecting leaves it as it is.',
+        'description' => ($area === 'dean' ? 'Requests to change a final grade in your college.' : 'Requests to change a final grade in a college with no dean who decides them.') . ' Approving changes the grade; rejecting leaves it as it is.',
     ], ['saveData' => false]) ?>
 
     <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
@@ -130,7 +130,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             'dir'        => $filters->direction(),
             'sortUrl'    => $sortUrl,
             'emptyTitle' => $filters->isFiltered() ? 'No requests match these filters' : ($decided ? 'Nothing decided yet' : 'Nothing waiting for you'),
-            'emptyText'  => $filters->isFiltered() ? 'Try a different search, program or requester.' : ($decided ? 'Requests you approve or reject are listed here.' : ($area === 'dean' ? 'When a chairperson endorses a request to change a final grade in your department, it appears here.' : 'When a request to change a final grade waits for an administrator, it appears here.')),
+            'emptyText'  => $filters->isFiltered() ? 'Try a different search, program or requester.' : ($decided ? 'Requests you approve or reject are listed here.' : ($area === 'dean' ? 'When a chairperson endorses a request to change a final grade in your college, it appears here.' : 'When a request to change a final grade waits for an administrator, it appears here.')),
             'emptyIcon'  => 'tasks',
         ], ['saveData' => false]) ?>
 

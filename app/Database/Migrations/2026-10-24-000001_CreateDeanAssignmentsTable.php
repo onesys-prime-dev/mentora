@@ -12,7 +12,7 @@ class CreateDeanAssignmentsTable extends Migration
     {
         $this->forge->addField([
             'id' => ['type' => 'INT', 'unsigned' => true, 'auto_increment' => true],
-            'department_id' => ['type' => 'INT', 'unsigned' => true],
+            'college_id' => ['type' => 'INT', 'unsigned' => true],
             'dean_user_id' => ['type' => 'INT', 'unsigned' => true],
             'status' => ['type' => 'VARCHAR', 'constraint' => 20, 'default' => 'active'],
             'active_marker' => ['type' => 'TINYINT', 'null' => true],
@@ -24,12 +24,12 @@ class CreateDeanAssignmentsTable extends Migration
         ]);
 
         $this->forge->addKey('id', true);
-        $this->forge->addKey('department_id');
+        $this->forge->addKey('college_id');
         $this->forge->addKey('dean_user_id');
         $this->forge->addKey('status');
-        $this->forge->addUniqueKey(['department_id', 'active_marker']);
+        $this->forge->addUniqueKey(['college_id', 'active_marker']);
         $this->forge->addUniqueKey(['dean_user_id', 'active_marker']);
-        $this->forge->addForeignKey('department_id', 'departments', 'id', 'CASCADE', 'CASCADE');
+        $this->forge->addForeignKey('college_id', 'colleges', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('dean_user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('assigned_by', 'users', 'id', 'SET NULL', 'CASCADE');
         $this->forge->createTable('dean_assignments');

@@ -7,7 +7,7 @@ How its screens are built (tokens, components, patterns and the acceptance list)
 ## Scope
 
 - The institution is **decided on the server** from the signed-in person (`InstitutionScope`, built on `PlanLimits::institutionOf`), never from an id in the address or a form.
-- Every id a page is handed (department, sub-department, program, course, offering, term, person) is checked with `InstitutionScope::require()` before anything is read or written. A foreign or missing id answers **404**, not 403, so the page does not confirm it exists elsewhere.
+- Every id a page is handed (college, department, program, course, offering, term, person) is checked with `InstitutionScope::require()` before anything is read or written. A foreign or missing id answers **404**, not 403, so the page does not confirm it exists elsewhere.
 - A person removed from the platform (soft-deleted) is not owned.
 - **Read-only** follows the institution's effective status (`EffectiveStatus`): the subscription dates count even before the nightly `subscriptions:sync` has moved the stored status. A person's own things stay open in a read-only or past institution: their calendar reminders, and a parent's email choices and password link (`ReadOnlyFilter::OWN_ACCOUNT`).
 
@@ -49,10 +49,10 @@ To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', '
 
 `/institution/structure` (permission `structure.manage`; the page is read-only while the institution is read-only).
 
-- **Levels:** departments -> sub-departments -> programs. Created, renamed, switched off and back on; nothing is deleted.
-- **Codes:** capital letters, numbers, dots, dashes, underscores (up to 50). Unique where the database says: departments within the institution, sub-departments within their department, programs within their sub-department.
-- **Switching off:** a node cannot be switched off while it has active children (sub-departments, programs, courses) or offerings in an active term; the message says which. Nothing is created under an inactive parent, and nothing is reactivated under one. Programs can also be archived.
-- **Departments** gained an `is_active` flag for this (existing ones stay active).
+- **Levels:** colleges -> departments -> programs. Created, renamed, switched off and back on; nothing is deleted.
+- **Codes:** capital letters, numbers, dots, dashes, underscores (up to 50). Unique where the database says: colleges within the institution, departments within their college, programs within their department.
+- **Switching off:** a node cannot be switched off while it has active children (departments, programs, courses) or offerings in an active term; the message says which. Nothing is created under an inactive parent, and nothing is reactivated under one. Programs can also be archived.
+- **Colleges** gained an `is_active` flag for this (existing ones stay active).
 - **Audit:** `structure.<level>_created|updated|deactivated|reactivated` (programs also `archived`), with old and new values.
 - **Forms:** short forms are one shared dialog per level, filled from the row's button (`data-dialog-*` attributes, see `resources/js/shared/dialog.js`). The server answers a dialog form with JSON (`422 {errors}` shown beside the field, or `{message, redirect}`) and a plain post with a redirect and a message, so it also works without JavaScript.
 
@@ -71,12 +71,12 @@ To guard a route: `['filter' => ['role:institutional_admin', 'permission:...', '
 
 ## Chairpersons
 
-On the Structure page, each sub-department shows its chairperson with **Assign chairperson** (when it has none), **Replace chairperson** and **Remove** (`ChairAssignmentService`).
+On the Structure page, each department shows its chairperson with **Assign chairperson** (when it has none), **Replace chairperson** and **Remove** (`ChairAssignmentService`).
 
-- **One chairperson per sub-department** (audit 16.0); a person can chair several sub-departments. The database keeps it so: `active_marker` is 1 on the one active row and a unique key covers `(sub_department_id, active_marker)`. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active sub-department.
-- **Replacing:** assigning someone to a sub-department that has a chairperson is refused ("… chairs …. Confirm to replace them.") unless the administrator confirms (`replace=1`, the Replace chairperson dialog). The old assignment then ends (`revoked`, history kept) and the old chair is told; override requests waiting for a chairperson's endorsement pass to the new chair, who is told. A request the new chair made themselves moves on to the dean (or the administrators), since nobody else could endorse it. If another administrator changed the chair at the same moment, the second is told to reload.
-- **The SIS:** a chairperson the SIS supplies is replaced or removed there, not by hand (no Replace button; a request anyway gets the SIS message). The SIS sync replaces the chair it lists, and a file listing two chairpersons for one sub-department fails the second row.
-- **Existing data:** the migration `OneChairpersonPerSubDepartment` keeps each sub-department's most recently assigned chair and ends the others.
+- **One chairperson per department** (audit 16.0); a person can chair several departments. The database keeps it so: `active_marker` is 1 on the one active row and a unique key covers `(department_id, active_marker)`. Only members of the institution who hold the chairperson role (and whose account is active) can be assigned, and only into an active department.
+- **Replacing:** assigning someone to a department that has a chairperson is refused ("… chairs …. Confirm to replace them.") unless the administrator confirms (`replace=1`, the Replace chairperson dialog). The old assignment then ends (`revoked`, history kept) and the old chair is told; override requests waiting for a chairperson's endorsement pass to the new chair, who is told. A request the new chair made themselves moves on to the dean (or the administrators), since nobody else could endorse it. If another administrator changed the chair at the same moment, the second is told to reload.
+- **The SIS:** a chairperson the SIS supplies is replaced or removed there, not by hand (no Replace button; a request anyway gets the SIS message). The SIS sync replaces the chair it lists, and a file listing two chairpersons for one department fails the second row.
+- **Existing data:** the migration `OneChairpersonPerDepartment` keeps each department's most recently assigned chair and ends the others.
 - Removing keeps the row (`revoked`); assigning again reuses it. Requests that were waiting for the removed chair move on to the dean (or the administrators) instead of waiting for nobody (`grade.override_rerouted`). A chairperson's reach is derived live from these rows, so it follows on their next request.
 - Audit: `structure.chairperson_assigned|revoked` (a replacement records both, the revoked one with `replaced_by`).
 - Giving someone the chairperson role is done on the People page (a later branch).
@@ -97,6 +97,7 @@ On the Structure page, each sub-department shows its chairperson with **Assign c
 `/institution/offerings` (permission `offerings.manage`; read-only while the institution is read-only). Fourth tab of Academics, and an Apps tile.
 
 - **An offering** is an active course taught in an upcoming or active term, as a section. Course, term and section together are unique; the section is shown in capitals. Capacity is 1 to 1000; the description is optional (5,000 characters).
+- **"Add an offering" picks a section from the Sections table** (the active block sections of an upcoming or active term, shown as "BSIT 1-A · BSIT year 1 · First Term 2026-2027"), not a typed code. The section fixes the offering's term, its section name and its capacity, so the dialog asks only for the course, the section and an optional description; the students already in the section are enrolled in the new offering (`OfferingService::createInSection`, which is the Sections page's "Add a course"). With no section yet the page says to add one first. An offering of a section cannot be renamed here (rename the section instead); its capacity can still be changed. Offerings made before sections existed keep their typed section and are edited as before, and a request that sends `section_code` instead of `class_section_id` (older forms, tests) still creates a standalone offering.
 - **List:** search (course code, title, section), filters (term, program, instructor, status), sort (course, section, term, capacity, enrolled, status), 25 per page. Filters live in the address. Instructor "No instructor" finds offerings nobody teaches; they are flagged in the list.
 - **Edit:** section, capacity, description, and only while the offering is active. Capacity cannot go below the students already enrolled.
 - **Archive, never delete.** An offering with enrolled students cannot be archived (the message gives the count). Reactivating needs an upcoming or active term.
@@ -114,12 +115,30 @@ On the Structure page, each sub-department shows its chairperson with **Assign c
 - **From the SIS:** a section whose times the SIS sends (`class_schedules.csv`, see `sis-integration.md`) shows them read-only, with a "From the SIS" badge and "These class times come from your student information system. Change them there; the next sync brings them here." The server refuses a save as well. Disabling the connection hands the times back.
 - **Audit:** `structure.offering_schedule_changed` with the week before and after.
 
+## Sections (block sections)
+
+`/institution/sections` and `/institution/sections/{id}` (the section and its courses: `offerings.manage`; putting students in and out: `enrolments.manage`; read-only while the institution is read-only). In the Academics group of the menu and an Apps tile.
+
+A **section** is a cohort of students for one term, such as **BSIT 1-A**: it belongs to a program, a year level and a term, has a capacity, and takes a set of courses together. It is the `class_sections` table; its members are `class_section_students`; and each course it takes is an ordinary offering with `course_offerings.class_section_id` set and `section_code` equal to the section's name.
+
+- **The name is unique within the institution's term** (shown in capitals, up to 50 characters). That is what lets it be every offering's section code: two blocks that share a general-education course never clash. Another institution may use the same name.
+- **Courses:** "Add a course" makes the section's offering of it (or brings back one that was taken out) and enrols the section's students in it. "Take out" archives that offering, and only works while nobody is enrolled in it (an offering holds work and grades; drop the enrolments on its roster first).
+- **Students:** "Add students" takes student numbers or emails (up to 500). Each is put in the section and enrolled in every one of its courses **through `EnrolmentService`**, so its rules hold: the student role, an active account, the conflict of teaching or leading the same course, the SIS lock. A place that cannot be given is listed with its reason and the rest go in. Going over the capacity needs the tick box and says by how many. "Take out" drops (never deletes) their places in the section's courses, so their work and grades stay.
+- **Irregular students** are just enrolled in one offering, on its roster or by upload; they are not members of the section. A student already enrolled in a course of the section is not enrolled twice when they join.
+- **Edit:** name, year level, capacity. Renaming moves the section's offerings to the new name (refused if a course already has that section in the term); capacity cannot go below the students in the section.
+- **Archive:** only a section with no students in it and nobody enrolled in its courses; its offerings are archived with it. It can be brought back while its term is open, and its courses are added again.
+- **Existing offerings** (section "A" and so on) are not block sections and are left as they are: `class_section_id` is empty for them.
+- **CSV upload and SIS import:** a row whose `section` names an active block section of the active term (for example `BSIT 1-A`) puts that course in the block, enrols the block's students in it, and enrols the row's student; the preview lists it under "New sections" ("IT101 is added to the block section BSIT 1-A, and its 3 students are enrolled in it."). The row's student is not made a member of the block.
+- **Audit:** `structure.class_section_created|updated|archived|reactivated|course_added|course_restored|course_removed|student_added|student_removed`.
+- **Demo data** (`ClassSectionsSeeder`, run by `DatabaseSeeder` before the offerings): block **A** (BSIT, year 1) owns IT101-A and IT102-A and has students 1 to 3 as members, who are enrolled in both when `DemoActivitySeeder` runs; students 4 and 5 also sit in IT101-A as irregular students (enrolled on its roster, not members); block **B** owns IT101-B and is empty; IT201-A is a standalone offering in no block. The blocks take the short names the rest of the demo already uses, so every offering is still named as before (IT101-A, IT101-B) and the enrolments are exactly what they were. `ExportScaleSeeder` gives each of its ten terms one archived block "A" that owns that term's 20 offerings, with no members.
+
 ## Enrolment
 
 `/institution/enrolments/offering/{id}` (permission `enrolments.manage`; read-only while the institution is read-only). Reached from the "enrolled / capacity" figure on the Offerings list.
 
 - **Roster:** students of one offering with status (enrolled, dropped, withdrawn, completed), student number, email and since-date; search (name, number, email), status filter, sort, 25 per page, and a places bar that says "over capacity by N" when it is.
 - **Add students:** paste student numbers or email addresses, one per line or separated by commas (up to 500). They must be active people of the institution holding the student role. Anyone who cannot be enrolled is skipped and named with the reason ("is already enrolled", "has an inactive account", "does not hold the student role", "is managed by your student information system", or a course-role conflict such as "teaches or has taught this course", see `course-access.md`); the rest go in together. If nobody can be enrolled the dialog says why, beside the field. A student with a dropped or withdrawn place is reinstated on the same row.
+- **Suggestions while typing** (the Add students box here and on a section's page; `StudentSuggestions`, `shared/student-autocomplete.js`): from two characters, a list drops under the box with each matching student's name, student number and email, found by email, student number or name. The box holds several entries, so only the one the caret is in is searched. Picking one (click, or Down/Up and Enter) writes the **email** in place of what was typed and starts a new line; Escape closes the list and leaves the dialog open. It is `GET institution/enrolments/suggest?q=&offering=` (or `&section=`, `enrolments.manage`, JSON, 8 at most): only students of the administrator's own institution (the institution is never taken from the request; an offering or section of another one is a 404) with an active account that has not been switched off, and not those who already have the place (enrolled or completed for an offering; a dropped or withdrawn student is offered, since adding brings the place back; members for a section). It only reads: the add still checks every entry, and a failed request just closes the list.
 - **Capacity:** a guide with a deliberate override. Going over it is refused with "over capacity by N" until the box "Enrol even if the section goes over capacity" is ticked; the same applies to bringing someone back. Nothing is partly added.
 - **Status:** change one place at a time. Dropping or withdrawing never deletes anything: the student's work and grades stay and the place can be reinstated.
 - **Only an active offering** takes changes; an archived or completed one shows its roster with a closed note.
@@ -135,14 +154,14 @@ On the Structure page, each sub-department shows its chairperson with **Assign c
 - **Not here:** the institutional administrator and system administrator roles, and any platform or institution-administration permission.
 - **Rules:** a role keeps at least one permission; a permission a role is not offered cannot be set.
 - **Audit:** `roles.permission_changed` with the institution. More in `roles-and-permissions.md`.
-- **Warnings:** where nobody can approve grade overrides or sign off grades in a department ("Nobody can … in …"), the page says so; the system administrator's Roles page lists the same for every institution (`GradeAuthority::gaps`).
+- **Warnings:** where nobody can approve grade overrides or sign off grades in a college ("Nobody can … in …"), the page says so; the system administrator's Roles page lists the same for every institution (`GradeAuthority::gaps`).
 
 ## Who decides grade overrides and sign-off
 
 `GradeAuthority` answers it for the override chain, sign-off and the SIS grade export.
 
-- **Whether approval is used:** an institution uses approval and sign-off once it has any active dean assignment. With none, overrides stay direct and finalized grades go straight to the SIS, as before. When the first dean is assigned, the finalized sections whose grades were not sent yet are announced to whoever now signs them off: the new dean for their department, the administrators for the rest.
-- **Who:** in a department, its dean if they hold the permission as dean (`grades.approve`, `grades.signoff`); otherwise the institution's active administrators who hold it. Both permissions are institutional administrator defaults.
+- **Whether approval is used:** an institution uses approval and sign-off once it has any active dean assignment. With none, overrides stay direct and finalized grades go straight to the SIS, as before. When the first dean is assigned, the finalized sections whose grades were not sent yet are announced to whoever now signs them off: the new dean for their college, the administrators for the rest.
+- **Who:** in a college, its dean if they hold the permission as dean (`grades.approve`, `grades.signoff`); otherwise the institution's active administrators who hold it. Both permissions are institutional administrator defaults.
 - **Nobody decides their own request**, and an administrator never signs off a section they teach (another administrator does). A dean may sign off a section they teach.
 - **Changing the permission** (either Roles page) moves waiting requests to whoever now decides them.
 
@@ -156,7 +175,7 @@ On the Structure page, each sub-department shows its chairperson with **Assign c
 
 ## Sign-off
 
-`/institution/signoff` (permission `grades.signoff`; signing off a section or a program also needs the password). The dean's Sign-off board, for the programs of departments with no dean who signs off.
+`/institution/signoff` (permission `grades.signoff`; signing off a section or a program also needs the password). The dean's Sign-off board, for the programs of colleges with no dean who signs off.
 
 - **Board:** term filter, programs with their ready sections; signing off one section or a whole program, and reopening.
 - **Own sections:** a section the administrator teaches is marked and can't be signed off by them ("You teach this section, so another administrator signs it off."). "Sign off all N ready" leaves them out of N and says how many were left for another administrator.
@@ -209,12 +228,26 @@ Institution settings has a **Parents** tab (`institution/settings/parents`, `ins
 
 `/institution/people/upload` (People page, "Upload CSV"; `people.manage`; applying also needs the password; read-only while the institution is read-only). A three-step page: Upload, Preview, Apply.
 
-- **It is the SIS import with a different source.** `UploadConnections` stands in for a SIS connection and points `SisImporter` at the uploaded files, so the importer runs unchanged and gives the same guarantees: a preview that writes nothing and reports exactly what applying does, one transaction (all or nothing), and a bad row refused with its reason while the rest still go in. Same columns as the SIS files (`docs/sis-integration.md`); a header-only template of each file can be downloaded.
-- **Upload:** any of students, instructors, courses and enrolments (at least one). A file that cannot be used as a whole (missing column, empty, over 10 MB) is refused and nothing is kept.
-- **Preview:** counts to create, to update, unchanged and refused (as a whole and per file), the refused rows with their reason, and "Nothing has been saved yet". The files are kept for an hour under a random token inside the institution's own folder (`writable/csv-uploads/<institution>/<token>`, or `upload.csvPath`); another institution's token is a 404.
+- **It is the SIS import with a different source.** `UploadConnections` stands in for a SIS connection and points `SisImporter` at the uploaded files, which gives the same guarantees: a preview that writes nothing and reports exactly what applying does, one transaction (all or nothing), and a bad row refused with its reason while the rest still go in. A header-only template of each file can be downloaded.
+- **Its own columns, with no SIS ids** (`SisCsvParser::KEYS_UPLOAD`). An administrator names records the way they know them, never by `external_id` (that stays for the SIS files, `docs/sis-integration.md`). `sis_links` is neither read nor written.
+
+  | File | Columns (required **bold**) | How a record is found |
+  |---|---|---|
+  | students.csv | student_number, **email**, **first_name**, middle_name, **last_name**, suffix | by student number, or else by email (so an email can be corrected) |
+  | instructors.csv | **email**, **first_name**, middle_name, **last_name**, suffix | by email |
+  | courses.csv | **program_code**, **course_code**, **course_title**, units | by program and course code |
+  | enrollments.csv | student_number or email (one is required), program_code, **course_code**, section, status | student by number or email; course by code (program_code only when the code is in more than one program) |
+  | staff_assignments.csv | **role**, **email**, college_code, department_code, program_code, course_code, section | person by email; an instructor's section by course code and section |
+  | class_schedules.csv | program_code, **course_code**, section, **day_of_week**, **start_time**, **end_time**, room, delivery_mode | course by code; section by its code |
+
+  A person found must already be of this institution with the file's role; a course code in more than one program without program_code is refused with the programs it is in. A student or instructor not here yet is created (with middle name and suffix when given).
+- **Sections:** enrolments, staff assignments and class times go into the active term, in the section named ("A" when empty). A section that is not there yet is **created**, and the preview lists it under "New sections" (once each, apart from the refused rows) so a mistyped section is seen before applying. These are issues with `note: true`; they are not counted as refused.
+- **Upload:** any of the six files (at least one). A file that cannot be used as a whole (missing column, empty, over 10 MB, the SIS columns instead of these) is refused and nothing is kept.
+- **Preview:** counts to create, to update, unchanged and refused (as a whole and per file), the new sections, the refused rows with their reason, and "Nothing has been saved yet". The files are kept for an hour under a random token inside the institution's own folder (`writable/csv-uploads/<institution>/<token>`, or `upload.csvPath`); another institution's token is a 404.
+- **Emails:** the first step has a box, ticked by default, "Email the people in these files"; the choice is kept with the preview. After the upload is applied, **new students and instructors get an email with a link to choose their password** (how they set one at all), and **people who already have an account are told what changed for them** (a place in a course, a section they teach, a dean or chairperson role), by email and in the app. See `docs/notifications.md` (Emails to people who are added or changed). The preview says how many people will be emailed. Unticked, they are added quietly and password links go out later from People.
 - **Apply:** behind the password, uses the kept files, removes them, and says how many were created, updated and refused. If the run fails part-way nothing is changed and the files are kept for another try. Starting over removes them, and a preview nobody applies is removed once its hour is up by the every-minute `exports:run` job (it does not wait for the next upload).
 - **Refused while a SIS connection is enabled:** one source of truth at a time (a connection that is configured but switched off does not block it).
-- **Records linked by an upload** are not SIS-owned and stay editable while no connection is enabled; if one is enabled later, matching external ids become SIS-owned as usual.
+- **Records made by an upload** are not SIS-owned and stay editable while no connection is enabled. If one is enabled later, the SIS finds them as it finds any record it has no link for (a person by email, a course by program and code) and links them.
 - **History:** preview and apply appear in the run history like any import (trigger "manual"); applying is audited as `sis.import_run`.
 
 ## Closing a term
@@ -306,18 +339,18 @@ The three brand colours are tokens, not hex values, so one place decides them (a
 `MonitorProgramService` no longer assumes one chairperson. Its metrics already took plain lists of offering ids; what tied it to a chairperson was how the offerings were found and the audit viewer. Both now take a scope.
 
 - **`offeringRowsForPrograms(programIds, filters)`** returns every offering in a set of programs (any status, optionally one term) in the shared row shape (`App\Models\Courses\OfferingDetail`, also what the chairperson's Courses page reads). An empty set is no offerings, never all of them.
-- **`chairedProgramIds(user)`** is the chairperson's scope: the programs under the sub-departments they actively chair, read live (a program added later is covered at once, an ended assignment stops at once). `offeringRows(user, filters)` is now exactly `offeringRowsForPrograms(chairedProgramIds(user), filters)`, so the chairperson's page is unchanged.
+- **`chairedProgramIds(user)`** is the chairperson's scope: the programs under the departments they actively chair, read live (a program added later is covered at once, an ended assignment stops at once). `offeringRows(user, filters)` is now exactly `offeringRowsForPrograms(chairedProgramIds(user), filters)`, so the chairperson's page is unchanged.
 - **`termsForPrograms(programIds)`** feeds the term filter for any scope.
 - **`auditEntries(actor|null, offeringRows, filters)`** is the audit viewer for a scope: with an actor it is that person's own chairperson actions (the chairperson page, via `auditLog()`), with none it is every chairperson action on the offerings in scope.
-- **Every metric** (snapshot, enrolment and completion, grades, instructor activity, at risk, the comparison table) is the same code for one program or many, so a department's or an institution's numbers are the union of the single programs' and always agree with the chairperson's. The thresholds they use are the institution's academic defaults.
-- **Used next by** the institution reports (and, later, the dean's Monitor Department).
+- **Every metric** (snapshot, enrolment and completion, grades, instructor activity, at risk, the comparison table) is the same code for one program or many, so a college's or an institution's numbers are the union of the single programs' and always agree with the chairperson's. The thresholds they use are the institution's academic defaults.
+- **Used next by** the institution reports (and, later, the dean's Monitor College).
 
 ## Reports
 
 `/institution/reports` (permission `reports.view`; reading and exporting still work in a read-only institution). The Apps tile "Reports".
 
 - **It is Monitor Program over the institution.** Nothing is calculated again: `InstitutionReports` takes the programs in scope and hands them to `MonitorProgramService`, so the institutional administrator, the chairperson and the dashboards read the same numbers, with the same thresholds (the institution's academic defaults).
-- **Filters** (in the address, so a view can be shared): term, department, program, and an activity date range. Choosing a department narrows the program list. A department or program that is not the institution's answers 404; a term that is not its own matches nothing.
+- **Filters** (in the address, so a view can be shared): term, college, program, and an activity date range. Choosing a college narrows the program list. A college or program that is not the institution's answers 404; a term that is not its own matches nothing.
 - **The page:** totals (courses, instructors, students, who needs attention, how much is graded and how fast), the grade distribution, a sortable comparison of courses (enrolment, completion, average grade, grading time) and the students who need attention (the 25 silent longest; the export has everyone).
 - **A course:** each course links to its own page: enrolment, completion, grades and distribution, grading time, instructor activity and its students who need attention. (The read-only view of its content is a later branch.)
 - **CSV, one per report:** course comparison, at-risk students, grades and grading, instructor activity. Each is for the same filters as the page, with a name or title that could be read as a spreadsheet formula defused, and each export is itself audited as `institution.report_exported` with the filters and the row count.

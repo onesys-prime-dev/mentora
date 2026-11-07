@@ -107,8 +107,8 @@ final class AdminRolesPageTest extends RouteTestCase
 
     public function testThePageWarnsAboutInstitutionsWhereNobodyCanSignOff(): void
     {
-        $home = \Tests\Support\DeanFactory::department('ARW');
-        \Tests\Support\DeanFactory::dean($home['institution'], $home['department']);
+        $home = \Tests\Support\DeanFactory::college('ARW');
+        \Tests\Support\DeanFactory::dean($home['institution'], $home['college']);
         db_connect()->table('institutions')->where('id', $home['institution'])->update(['name' => 'Warn University']);
         db_connect()->table('role_permissions')->insertBatch([
             ['institution_id' => $home['institution'], 'role' => 'dean', 'permission' => 'grades.signoff', 'granted' => 0],

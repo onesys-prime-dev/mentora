@@ -16,7 +16,7 @@ use Tests\Support\GradeFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * With no dean in the department, the institution's administrators decide a
+ * With no dean in the college, the institution's administrators decide a
  * grade-override request (audit decisions 1.1–1.6, 7.2, 7.3).
  *
  * @internal
@@ -27,7 +27,7 @@ final class AdministratorDecidesOverridesTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
     private int $offering;
 
@@ -49,15 +49,15 @@ final class AdministratorDecidesOverridesTest extends DatabaseTestCase
         PermissionMatrix::flush();
         session()->destroy();
 
-        $home              = DeanFactory::department('AD');
+        $home              = DeanFactory::college('AD');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
+        $this->college  = $home['college'];
 
-        // Another department has a dean, so the institution uses approval; this one has none.
-        $other = DeanFactory::department('AE', $this->institution);
-        DeanFactory::dean($this->institution, $other['department'], 'Otto');
+        // Another college has a dean, so the institution uses approval; this one has none.
+        $other = DeanFactory::college('AE', $this->institution);
+        DeanFactory::dean($this->institution, $other['college'], 'Otto');
 
-        $program        = DeanFactory::program(DeanFactory::subDepartment($this->department, 'AD'), 'AD');
+        $program        = DeanFactory::program(DeanFactory::department($this->college, 'AD'), 'AD');
         $this->offering = DeanFactory::offering($program, DeanFactory::term($this->institution), 'IT201', 'A', 'active', 'Data');
 
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
@@ -183,7 +183,7 @@ final class AdministratorDecidesOverridesTest extends DatabaseTestCase
 
     public function testADeanWhoLosesThePermissionHandsTheirQueueToTheAdministrators(): void
     {
-        $dean = DeanFactory::dean($this->institution, $this->department, 'Dana');
+        $dean = DeanFactory::dean($this->institution, $this->college, 'Dana');
         $id   = (int) $this->ask()['request']['id'];
         $this->assertSame(OverrideRequestChain::AWAITING_DEAN, $this->statusOf($id));
 
@@ -200,7 +200,7 @@ final class AdministratorDecidesOverridesTest extends DatabaseTestCase
         $id   = (int) $this->ask()['request']['id'];
         $dean = PeopleFactory::person('dean', 'Dora', 'Dean', null, $this->institution);
 
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $dean->id, $this->adminA);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $dean->id, $this->adminA);
 
         $this->assertSame(OverrideRequestChain::AWAITING_DEAN, $this->statusOf($id));
     }

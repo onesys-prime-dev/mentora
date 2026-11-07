@@ -414,7 +414,7 @@ class DashboardService
 
     /**
      * The chairperson's program snapshot (R3): how many courses, instructors
-     * and students sit under every sub-department they chair right now.
+     * and students sit under every department they chair right now.
      */
     protected function getProgramSnapshotData(User $user): array
     {
@@ -694,7 +694,7 @@ class DashboardService
     }
 
     /**
-     * Every active offering across every sub-department the chairperson
+     * Every active offering across every department the chairperson
      * chairs, resolved once and reused — the same "sections" shape
      * instructorSections() returns, so widgets built for one role don't
      * need their own copy for the other.

@@ -16,7 +16,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * dean (the same filter; CourseReadAccess decides by who is looking).
  *
  * The offering named in `.../courses/{id}/...` must be one the person may look
- * at (their institution's, or their department's); anything else is a 404
+ * at (their institution's, or their college's); anything else is a 404
  * before a controller runs, so a course outside their reach cannot be reached
  * by guessing its number
  * (the course services decide access for their own roles and are not asked

@@ -62,7 +62,7 @@
 
 | Module | Scope | Existing automated coverage | Existing catalog | Risk / Pri / Wave | Proposed additional scenarios | Unresolved decisions | Evidence |
 |---|---|---|---|---|---|---|---|
-| **STR** Structure | departments, sub-departments, programs | `StructureServiceTest` (18), `InstitutionStructureTest` (16), `AcademicHierarchyTest` | TC-STR-01..06 | R-18 HIGH / P1 / 2 | **5** (VCI 5); PS-STR-01…05 | — (all decided 2026-10-28) | [A] |
+| **STR** Structure | colleges, departments, programs | `StructureServiceTest` (18), `InstitutionStructureTest` (16), `AcademicHierarchyTest` | TC-STR-01..06 | R-18 HIGH / P1 / 2 | **5** (VCI 5); PS-STR-01…05 | — (all decided 2026-10-28) | [A] |
 | **CHR** Chair and dean assignment | one chair, replace, SIS lock, dean rules | `OneChairpersonTest`, `StructureChairReplaceTest`, `ChairAssignmentServiceTest`, `DeanAssignmentServiceTest` (12), `SisStaffImportTest` (staged) | TC-CRS-03 (**stale**), TC-DEAN-02 | R-08 CRIT / P1 / 1 | **13** (IBR 6, VCI 3, FIX? 2, NB 1, EXP 1); PS-CHR-01…13 | — (all decided 2026-10-28) | [A], [V] V12 |
 | **TRM** Terms | create, status, close, reopen | `TermServiceTest` (14), `TermCloseServiceTest` (8), `InstitutionTermCloseTest`, `ClosedOfferingTest` | TC-TRM-01..03 | R-18 HIGH / P1 / 2 | **7** (VCI 5, REG? 1, NB 1); PS-TRM-01…07 | — (all decided 2026-10-28) | [A] |
 | **OFF** Offerings and copy | create, instructors, copy, class times | `OfferingServiceTest` (19), `OfferingCopyServiceTest` (14), `OfferingCopyRollbackTest` | TC-OFF-01..03, TC-CPY-01 | R-18 HIGH / P1 / 2 | **10** (VCI 4, FIX? 3, EXP 3); PS-OFF-01…10 | — (all decided 2026-10-28) | [A], [V] no class-time entry |
@@ -97,11 +97,11 @@
 | Module | Scope | Existing automated coverage | Existing catalog | Risk / Pri / Wave | Proposed additional scenarios | Unresolved decisions | Evidence |
 |---|---|---|---|---|---|---|---|
 | **DSC** Discussions | threads, replies, moderation, attachments | `DiscussionServiceTest` (~40), `DiscussionRoutesTest` (~26); no e2e | none | R-22 MED / P2 / 3 | **8** (IBR 1, VCI 5, FIX? 1, EXP 1); PS-DSC-01…08 | — (all decided 2026-10-28) | [A] |
-| **ANN** Announcements | course feed, app page, department / institution / platform | `AnnouncementServiceTest` (33), `AnnouncementRoutesTest` (11), `DepartmentAnnouncementServiceTest`; no page test for the Announcements app | TC-ANN-01, -02 (confirmed), TC-DEAN-07 | R-22 MED / P2 / 3 | **11** (VCI 6, REG? 3, NB 2); PS-ANN-01…11 | — (all decided 2026-10-28) | [A] |
+| **ANN** Announcements | course feed, app page, college / institution / platform | `AnnouncementServiceTest` (33), `AnnouncementRoutesTest` (11), `CollegeAnnouncementServiceTest`; no page test for the Announcements app | TC-ANN-01, -02 (confirmed), TC-DEAN-07 | R-22 MED / P2 / 3 | **11** (VCI 6, REG? 3, NB 2); PS-ANN-01…11 | — (all decided 2026-10-28) | [A] |
 | **CAL** Calendar, reminders, schedule | events, range, reminders, grid | `CalendarEventServiceTest` (15), `CalendarRoutesTest`, `ScheduleServiceTest` (14); no schedule route test | TC-PRT-05 (parent calendar) | R-23 MED / P2 / 3 | **6** (IBR 2, VCI 4); PS-CAL-01…06 | — (all decided 2026-10-28) | [A] |
 | **NOT** Notifications | dedupe, urgent email, triggers, lists | `NotificationsTest` (20), `NotificationPagesTest` (12) | none | R-17 HIGH / P1 / 2 | **7** (IBR 2, VCI 3, REG? 1, NB 1); PS-NOT-01…08 | — (all decided 2026-10-28) | [A] |
 | **FIL** File serving and storage | access matrix, ranges, quota | `FileAccessServiceTest` (19), `FileRouteTest` (8), `StorageServiceTest` (8) | none | R-13 HIGH / P1 / 2 | **7** (VCI 6, NB 1); PS-FIL-01…07 | — (all decided 2026-10-28) | [A] |
-| **DEA** Dean area | dashboard, follow-ups, department announcements, monitor, load, chair review | `DeanDashboardServiceTest`, `DeanAttentionRulesTest`, `DeanAccessServiceTest`, `FollowUpServiceTest`, `MonitorDepartmentServiceTest`, `TeachingLoadServiceTest`, `ChairpersonReviewServiceTest`; e2e `dean.spec.js` | TC-DEAN-01, -03, -06..-11 | R-24 MED / P2 / 3 | **7** (VCI 7); PS-DEA-01…07 | — (all decided 2026-10-28) | [A] (calculations unread) |
+| **DEA** Dean area | dashboard, follow-ups, college announcements, monitor, load, chair review | `DeanDashboardServiceTest`, `DeanAttentionRulesTest`, `DeanAccessServiceTest`, `FollowUpServiceTest`, `MonitorCollegeServiceTest`, `TeachingLoadServiceTest`, `ChairpersonReviewServiceTest`; e2e `dean.spec.js` | TC-DEAN-01, -03, -06..-11 | R-24 MED / P2 / 3 | **7** (VCI 7); PS-DEA-01…07 | — (all decided 2026-10-28) | [A] (calculations unread) |
 | **CHA** Chairperson area | reach, course writes audit, finalize boundary, monitor program | `ChairpersonAccessServiceTest`, `ChairpersonCourseAccessTest`, `GradeRoutesTest`, `MonitorProgram*Test`; e2e `chairperson.spec.js` (5) and `monitor-program.spec.js` (3), **no TC ids** | none | R-24 MED / P2 / 3 | **6** (IBR 2, VCI 4); PS-CHA-01…06 | — (all decided 2026-10-28) | [A] |
 | **PRT** Parent portal | authorization, dashboard, course tabs, notifier, report | `ParentAuthorizationMatrixTest`, `ParentPrivacyCanaryTest`, `ParentDashboardServiceTest` (14), `ParentNotifierTest` (31), `ParentCoursePageTest`, `ParentGradeReportTest`; e2e `parent.spec.js` | TC-PRT-01..08 | R-16 HIGH / P1 / 2 | **8** (IBR 1, VCI 5, REG? 2); PS-PRT-01…08 | — (all decided 2026-10-28) | [A] |
 | **STU** Student dashboard and profile | widgets, caps, parent names | `DashboardServiceTest` (28), `StudentProfilePageTest` (11); no student dashboard page test | TC-PRT-09 (student side) | R-29 MED / P2 / 3 | **2** (VCI 2); PS-STU-01…02 | — (all decided 2026-10-28) | [A] |
@@ -147,7 +147,7 @@ A workflow is a path that crosses browser, route and filter, controller, service
 | W21 | Question import, preview, undo | upload / paste → parser → validator → `ImportPreviewStore` token → apply → undo → rescore | instructor | `QuestionImport*Test` | none | PS-QBK-02..08 | P1 | MISS-ASM-02 | [A] |
 | W22 | Deploy → migrate → health → jobs | tag / merge → CI → rsync → `spark migrate` → worker restart → `/health` → cron | ops | CI and smoke script; deploy untested | none | PS-CI-01..03, PS-DAT-01, PS-JOB-01..03 | P1 | PLN-05 | [A], [V] V4 |
 | W23 | Data export when read-only | lapse → export page → build zip → download → 7-day expiry | institution admin | `InstitutionExportTest`; e2e SA-06 | TC-SA-06 | PS-RPT-02, PS-RPT-03 | P1 | — | [A], [V] synchronous |
-| W24 | Follow-up and department announcement | dean / chair form → `FollowUpService` / `DepartmentAnnouncementService` → notify → reply / close | dean, chair, instructor, students | `FollowUpServiceTest`, `DepartmentAnnouncementServiceTest`; e2e TC-DEAN-06/07 | TC-DEAN-06, -07 | PS-DEA-03, PS-DEA-04, PS-CHA-05 | P2 | — | [A] |
+| W24 | Follow-up and college announcement | dean / chair form → `FollowUpService` / `CollegeAnnouncementService` → notify → reply / close | dean, chair, instructor, students | `FollowUpServiceTest`, `CollegeAnnouncementServiceTest`; e2e TC-DEAN-06/07 | TC-DEAN-06, -07 | PS-DEA-03, PS-DEA-04, PS-CHA-05 | P2 | — | [A] |
 
 
 ## Part C. Scenario backlog (proposed additional scenarios)
@@ -356,7 +356,7 @@ Oracle column: `DD:<id>` = delegated decision in `decision-register.md` Part I (
 | PS-STR-03 | Nothing can be created or reactivated under an inactive parent | T:StructureServiceTest | READY-VCI | P2 |
 | PS-STR-04 | Program inactive / archived / reactivate transitions; invalid status refused | T:StructureServiceTest | READY-VCI | P3 |
 | PS-STR-05 | An unchanged save writes no audit entry; every change writes `structure.*` | T:StructureServiceTest | READY-VCI | P2 |
-| PS-CHR-01 | Assigning a second chair to a sub-department asks for confirmation naming both; confirming replaces the old chair, keeps history and notifies them | D:16.0, 16.0b; PLN-03 | READY-IBR | P1 |
+| PS-CHR-01 | Assigning a second chair to a department asks for confirmation naming both; confirming replaces the old chair, keeps history and notifies them | D:16.0, 16.0b; PLN-03 | READY-IBR | P1 |
 | PS-CHR-02 | Requests waiting for the old chair pass to the new chair, who is notified | D:16.0c | READY-IBR | P1 |
 | PS-CHR-03 | Requests already past the chair step do not move back to a newly assigned chair | D:U5 | READY-IBR | P1 |
 | PS-CHR-04 | Where several chairs exist, the migration keeps the most recently assigned and ends the others | D:16.0d | READY-IBR | P1 |
@@ -364,8 +364,8 @@ Oracle column: `DD:<id>` = delegated decision in `decision-register.md` Part I (
 | PS-CHR-06 | A second active chair cannot be inserted by a path that bypasses the service (the seeded chair has no `active_marker`) (**after the new commits:** 48543c7; unique key in migration 2026-11-15-000001; `OneChairpersonTest`) | D:16.0, V:12 | FIX? | P2 |
 | PS-CHR-07 | Two simultaneous chair assignments end in one chair and a friendly message, not a raw database error (**after the new commits:** 48543c7, 67cc8bf; `OverrideRequestRaceTest`, the chairperson race test) | AMB-INST-07; SO:AMB-INST-07 | FIX? | P2 |
 | PS-CHR-08 | Removing a chair (not replacing): what happens to requests waiting for the chair, and who is told (requests stay `awaiting_chair`; dean or administrator is told) (**after the new commits:** code is the source of truth: `revoke()` moves waiting requests on to the dean or the administrators (`retargetChairStep`) [V]; supersedes the AMB-INST-03 sign-off) | AMB-INST-03; SO:AMB-INST-03 | READY-VCI | P2 |
-| PS-CHR-09 | The SIS replaces a hand-made chair; a hand assignment cannot replace a SIS-owned chair; a second chair for one sub-department in one file is refused | T:SisStaffImportTest | READY-VCI | P1 |
-| PS-CHR-10 | Dean: one per department and per person (database-enforced); a chairperson cannot be made dean; SIS lock | T:DeanAssignmentServiceTest | READY-VCI | P1 |
+| PS-CHR-09 | The SIS replaces a hand-made chair; a hand assignment cannot replace a SIS-owned chair; a second chair for one department in one file is refused | T:SisStaffImportTest | READY-VCI | P1 |
+| PS-CHR-10 | Dean: one per college and per person (database-enforced); a chairperson cannot be made dean; SIS lock | T:DeanAssignmentServiceTest | READY-VCI | P1 |
 | PS-CHR-11 | When the first dean is assigned, unsent finalized grades now need sign-off and the admins are told which sections wait | D:2.3 | READY-IBR | P1 |
 | PS-CHR-12 | Assign or end a dean from the institution area (open: SIS source of truth) (**decided 2026-10-28:** SIS-managed dean assignments locked like chairs) | MISS-INST-01; SO:MISS-INST-01; DD:MISS-INST-01 | NB | P2 |
 | PS-CHR-13 | Chair status `expired` and reactivation overwriting `assigned_at` | GAP-DB-01 | EXP | P3 |
@@ -408,7 +408,7 @@ Oracle column: `DD:<id>` = delegated decision in `decision-register.md` Part I (
 | PS-PPL-01 | Invite each role; seat check for students; duplicate email refused; resend and revoke; pending list | T:InstitutionPeopleTest | READY-VCI | P1 |
 | PS-PPL-02 | Deactivate / reactivate guards (last admin, yourself); removing a role ends the chair or dean assignment | T:PeopleServiceTest | READY-VCI | P1 |
 | PS-PPL-03 | One account, one institution: inviting an address that belongs to another institution is refused | D:D1 | READY-IBR | P1 |
-| PS-PPL-04 | A person given the dean role with no department assignment (role granted with a warning; no dean powers until assigned; assignable later) | AMB-INST-05; SO:AMB-INST-05 | READY-IBR | P3 |
+| PS-PPL-04 | A person given the dean role with no college assignment (role granted with a warning; no dean powers until assigned; assignable later) | AMB-INST-05; SO:AMB-INST-05 | READY-IBR | P3 |
 | PS-PPL-05 | Reset-password from People needs the password; the link goes to the person's address | T:InstitutionPeopleTest | READY-VCI | P2 |
 | PS-CSV-01 | Per-row validation message for every rule in each dataset (required, >255, email, units, status, staff role target, repeated key) | T:SisCsvParserTest | READY-VCI | P1 |
 | PS-CSV-02 | File limits (10 MB, 50,000 rows), BOM, header case and spaces, unknown columns ignored, header-only file refused | T:CsvUploadServiceTest | READY-VCI | P2 |
@@ -601,12 +601,12 @@ Oracle column: `DD:<id>` = delegated decision in `decision-register.md` Part I (
 | PS-OVR-15 | The requester sees that the chair step was skipped and why a request waits ("needs a second admin", "nobody holds the permission") | D:U5, 7.3 | READY-IBR | P2 |
 | PS-SGN-01 | States blocked / ready / signed off; an open override request blocks | T:GradeSignoffServiceTest | READY-VCI | P1 |
 | PS-SGN-02 | A dean may sign off a section they teach | D:D3 | READY-IBR | P1 |
-| PS-SGN-03 | An admin signs off only where the department has no dean (or a dean without `grades.signoff`), holds the permission, and does not teach the section; another admin does; with one admin it waits and they are told | D:2.1, D4; PLN-03 | READY-IBR | P1 |
+| PS-SGN-03 | An admin signs off only where the college has no dean (or a dean without `grades.signoff`), holds the permission, and does not teach the section; another admin does; with one admin it waits and they are told | D:2.1, D4; PLN-03 | READY-IBR | P1 |
 | PS-SGN-04 | The admin's sign-off works exactly like the dean's: one section or a whole program, reopen with a reason, password check | D:2.4; PLN-03 | READY-IBR | P1 |
 | PS-SGN-05 | Sign-offs given stay valid when the signer changes; a new dean can reopen one with a reason | D:2.5 | READY-IBR | P1 |
 | PS-SGN-06 | An institution with no deans needs no sign-off | D:2.2 | READY-IBR | P1 |
 | PS-SGN-07 | Whether reopening a sign-off asks for the password (reason plus password; password missing today [A]) (**decided 2026-10-28:** reopen needs a reason, not the password (route comment, I4)) | AMB-ASG-04; SO:AMB-ASG-04; DD:AMB-ASG-04 | READY-VCI | P2 |
-| PS-SGN-08 | Who may reopen a sign-off an administrator gave, and the wording shown to the instructor ("Signed off by the dean") (a dean may reopen an administrator's sign-off; open: wording for the instructor, reconcile with D:1.1/1.3) (**after the new commits:** after 48543c7: same mixed wording [V]) (**decided 2026-10-28:** the department's decider may reopen an administrator's sign-off; wording must be "Signed off by <name>"; toolbar line 58 says "the dean" [V]) | AMB-ASG-04, GAP-GRD-03; PLN-03; SO:AMB-ASG-04; DD:AMB-ASG-04 | REG | P2 |
+| PS-SGN-08 | Who may reopen a sign-off an administrator gave, and the wording shown to the instructor ("Signed off by the dean") (a dean may reopen an administrator's sign-off; open: wording for the instructor, reconcile with D:1.1/1.3) (**after the new commits:** after 48543c7: same mixed wording [V]) (**decided 2026-10-28:** the college's decider may reopen an administrator's sign-off; wording must be "Signed off by <name>"; toolbar line 58 says "the dean" [V]) | AMB-ASG-04, GAP-GRD-03; PLN-03; SO:AMB-ASG-04; DD:AMB-ASG-04 | REG | P2 |
 | PS-SGN-09 | Program sign-off signs the ready sections, leaves the rest and reports counts | T:GradeSignoffServiceTest | READY-VCI | P2 |
 | PS-SGN-10 | Sign-off is not a lock: finalization already locks; reopened sign-off holds later SIS changes | T:SisGradeExporterTest | READY-VCI | P2 |
 
@@ -629,7 +629,7 @@ Oracle column: `DD:<id>` = delegated decision in `decision-register.md` Part I (
 | PS-ANN-05 | A calendar post dated for a later day: when the feed, dashboard, Announcements app, parent tab, calendar and parent notification show it | AMB-COM-01; SO:AMB-COM-01 | REG? | P1 |
 | PS-ANN-06 | An author with two roles shows each post once in the course feed | AMB-COM-03; SO:AMB-COM-03 | REG? | P2 |
 | PS-ANN-07 | Announcements app: four levels in order, `?q` words all match, `?level` fallback, counts before search, load failure shows an error | none (no page test) | READY-VCI | P1 |
-| PS-ANN-08 | Department / institution / platform announcements: visibility, end dates, audience, scope recipients | T:DepartmentAnnouncementServiceTest | READY-VCI | P1 |
+| PS-ANN-08 | College / institution / platform announcements: visibility, end dates, audience, scope recipients | T:CollegeAnnouncementServiceTest | READY-VCI | P1 |
 | PS-ANN-09 | Draft and scheduled states for course announcements | MISS-COM-01; SO:MISS-COM-01 | NB | P2 |
 | PS-ANN-10 | Students and instructors are notified of a new course announcement | MISS-COM-02; SO:MISS-COM-02 | NB | P2 |
 | PS-ANN-11 | Reaction message and allowed set for an empty or over-long emoji (**decided 2026-10-28:** allowed: 👍 ❤️ 😂 😮; message "Pick a reaction."; the server accepts any value up to 32 characters today [V]) | AMB-COM-08; DD:AMB-COM-08 | REG? | P3 |
@@ -661,11 +661,11 @@ Oracle column: `DD:<id>` = delegated decision in `decision-register.md` Part I (
 | PS-DEA-01 | Dashboard attention items appear in the stated priority order from the stated rules | T:DeanAttentionRulesTest | READY-VCI | P2 |
 | PS-DEA-02 | Dean reach follows the live assignment; a dean who loses it reaches nothing and sees the explanation page | T:DeanAccessServiceTest, TC:DEAN-11 (draft) | READY-VCI | P1 |
 | PS-DEA-03 | Follow-ups: who may ask whom, field limits, one open per sender / recipient / subject, pass-down, either side closes once, overdue rule | T:FollowUpServiceTest | READY-VCI | P1 |
-| PS-DEA-04 | Department announcement: audience and scope recipients computed live, in-app only, end keeps history, edit only while active | T:DepartmentAnnouncementServiceTest | READY-VCI | P1 |
-| PS-DEA-05 | Teaching load, Monitor Department and the department report show correct figures and exports | T:TeachingLoadServiceTest (calculations unread) | READY-VCI | P2 |
+| PS-DEA-04 | College announcement: audience and scope recipients computed live, in-app only, end keeps history, edit only while active | T:CollegeAnnouncementServiceTest | READY-VCI | P1 |
+| PS-DEA-05 | Teaching load, Monitor College and the college report show correct figures and exports | T:TeachingLoadServiceTest (calculations unread) | READY-VCI | P2 |
 | PS-DEA-06 | Chairperson review lists only chairs' writes in courses the chair does not teach; "reviewed" is the dean's mark | T:ChairpersonReviewServiceTest | READY-VCI | P2 |
 | PS-DEA-07 | Dean read-only course API has no write route | T:DeanCourseViewTest | READY-VCI | P1 |
-| PS-CHA-01 | Chair reach is the actively chaired sub-departments only; a chair who also instructs is judged by the area's role | T:CourseMembershipTest | READY-VCI | P1 |
+| PS-CHA-01 | Chair reach is the actively chaired departments only; a chair who also instructs is judged by the area's role | T:CourseMembershipTest | READY-VCI | P1 |
 | PS-CHA-02 | Every successful chair write in a course is audited as `course.chairperson_action` | T:ChairpersonCourseAccessTest | READY-VCI | P1 |
 | PS-CHA-03 | Chair cannot finalize but can reopen | T:GradeRoutesTest | READY-VCI | P1 |
 | PS-CHA-04 | Monitor Program is gated by `program.monitor` and not offered to an institution admin by default | D:7.5 | READY-IBR | P1 |

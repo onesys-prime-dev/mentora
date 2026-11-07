@@ -129,7 +129,7 @@ foreach ($offeringInstructors as $i) {
     $instructorOptions[(string) $i['id']] = $i['name'];
 }
 
-$canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOptions['terms'] !== [];
+$canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOptions['sections'] !== [];
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -156,8 +156,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
         <?= view('components/lock-note', ['kind' => 'read_only'], ['saveData' => false]) ?>
     <?php elseif ($offeringOptions['courses'] === []): ?>
         <?= view('components/alert', ['tone' => 'info', 'title' => 'Add a course first', 'text' => 'An offering is a course taught in a term, and there is no active course yet. Add one on the Courses tab.'], ['saveData' => false]) ?>
-    <?php elseif ($offeringOptions['terms'] === []): ?>
-        <?= view('components/alert', ['tone' => 'info', 'title' => 'Add a term first', 'text' => 'Offerings go into an upcoming or active term, and there is none yet. Add one on the Terms tab.'], ['saveData' => false]) ?>
+    <?php elseif ($offeringOptions['sections'] === []): ?>
+        <?= view('components/alert', ['tone' => 'info', 'title' => 'Add a section first', 'text' => 'An offering is added to a section of an upcoming or active term, and there is none yet. Add one on the Sections tab.'], ['saveData' => false]) ?>
     <?php endif; ?>
 
     <?php if (session()->has('message')): ?>
@@ -234,10 +234,11 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
         $courseSelect[(string) $c['id']] = $c['code'] . ' · ' . $c['title'];
     }
 
-    $termSelect = ['' => 'Choose a term'];
+    // The sections of the Sections page, each with its term: choosing one fixes the offering's term and capacity.
+    $sectionSelect = ['' => 'Choose a section'];
 
-    foreach ($offeringOptions['terms'] as $t) {
-        $termSelect[(string) $t['id']] = $t['name'] . ' ' . $t['year'] . ($t['status'] === 'active' ? ' (active)' : '');
+    foreach ($offeringOptions['sections'] as $sec) {
+        $sectionSelect[(string) $sec['id']] = $sec['code'] . ' · ' . $sec['program'] . ' year ' . $sec['year_level'] . ' · ' . $sec['term'] . ' ' . $sec['term_year'];
     }
 
     // Built per dialog: each needs its own field ids.
@@ -255,8 +256,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
     <?php if ($canAdd): ?>
     <?= view('components/dialog', ['id' => 'offering-add', 'title' => 'Add an offering', 'body' => $form(
         $field(['name' => 'course_id', 'label' => 'Course', 'type' => 'select', 'options' => $courseSelect, 'required' => true])
-        . $field(['name' => 'term_id', 'label' => 'Term', 'type' => 'select', 'options' => $termSelect, 'required' => true])
-        . $details(),
+        . $field(['name' => 'class_section_id', 'label' => 'Section', 'type' => 'select', 'options' => $sectionSelect, 'required' => true, 'help' => 'The offering takes the section\'s term and capacity, and the students already in the section are enrolled in it.'])
+        . $field(['name' => 'description', 'label' => 'Description', 'type' => 'textarea', 'maxlength' => 5000, 'help' => 'Optional.']),
         'Add offering',
     )], ['saveData' => false]) ?>
     <?php endif; ?>

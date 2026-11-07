@@ -68,7 +68,23 @@ class OfferingsController extends BaseController
 
     public function create(): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->offerings->create($inst, $this->input(), auth()->user()), 'The offering was added.', self::BACK);
+        $input = $this->input();
+
+        // The dialog picks a section (which fixes the term and the capacity); a post without one is the older
+        // form with a section code typed in.
+        if (array_key_exists('class_section_id', $input)) {
+            return $this->run(
+                fn (int $inst) => $this->offerings->createInSection($inst, $input, auth()->user()),
+                static function (mixed $result): string {
+                    $enrolled = (int) ($result['enrolled'] ?? 0);
+
+                    return 'The offering was added' . ($enrolled > 0 ? ($enrolled === 1 ? ' and 1 student of the section was enrolled in it.' : " and {$enrolled} students of the section were enrolled in it.") : '.');
+                },
+                self::BACK,
+            );
+        }
+
+        return $this->run(fn (int $inst) => $this->offerings->create($inst, $input, auth()->user()), 'The offering was added.', self::BACK);
     }
 
     public function update(int $id): ResponseInterface|RedirectResponse

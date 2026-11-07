@@ -93,9 +93,9 @@ final class CourseRoleChecksTest extends DatabaseTestCase
 
     public function testADeanActingAsDeanIsNotAStudentOfACourseTheyLookAt(): void
     {
-        // Studies elsewhere, and opens a department course as dean: the dean routes set no course of the request.
-        $home = DeanFactory::department('DSTU');
-        $dean = DeanFactory::dean($home['institution'], $home['department']);
+        // Studies elsewhere, and opens a college course as dean: the dean routes set no course of the request.
+        $home = DeanFactory::college('DSTU');
+        $dean = DeanFactory::dean($home['institution'], $home['college']);
         db_connect()->table('auth_groups_users')->insert(['user_id' => $dean->id, 'group' => 'student', 'created_at' => date('Y-m-d H:i:s')]);
         $dean = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
         session()->set('active_role', 'dean');
@@ -134,12 +134,12 @@ final class CourseRoleChecksTest extends DatabaseTestCase
         $this->assertNull((new FileAccessService())->authorize($this->teacher, $file['id']));
     }
 
-    public function testAChairpersonStudyingAnotherSubDepartmentsCourseGetsTheStudentOverview(): void
+    public function testAChairpersonStudyingAnotherDepartmentsCourseGetsTheStudentOverview(): void
     {
-        ['department' => $dept, 'institution' => $institution] = DeanFactory::department('CO');
-        $chair = DeanFactory::chair(DeanFactory::subDepartment($dept, 'CO'), 'Maria');
+        ['college' => $college, 'institution' => $institution] = DeanFactory::college('CO');
+        $chair = DeanFactory::chair(DeanFactory::department($college, 'CO'), 'Maria');
         $chair->addGroup('student');
-        $elsewhere = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($dept, 'CP'), 'CP'), DeanFactory::term($institution), 'IT902');
+        $elsewhere = DeanFactory::offering(DeanFactory::program(DeanFactory::department($college, 'CP'), 'CP'), DeanFactory::term($institution), 'IT902');
         CourseFactory::enroll($elsewhere, $chair);
         service('courseContext')->set($elsewhere, 'student');
 
@@ -151,10 +151,10 @@ final class CourseRoleChecksTest extends DatabaseTestCase
 
     public function testAChairWhoAlsoHoldsTheInstructorRoleCanPostInTheirProgramsCourse(): void
     {
-        ['department' => $dept, 'institution' => $institution] = DeanFactory::department('CK');
-        $sub      = DeanFactory::subDepartment($dept, 'CK');
-        $offering = DeanFactory::offering(DeanFactory::program($sub, 'CK'), DeanFactory::term($institution), 'IT901');
-        $chair    = DeanFactory::chair($sub, 'Maria');
+        ['college' => $college, 'institution' => $institution] = DeanFactory::college('CK');
+        $department      = DeanFactory::department($college, 'CK');
+        $offering = DeanFactory::offering(DeanFactory::program($department, 'CK'), DeanFactory::term($institution), 'IT901');
+        $chair    = DeanFactory::chair($department, 'Maria');
         $chair->addGroup('instructor');
 
         $this->assertTrue((new AnnouncementService())->create($chair, $offering, ['subject' => 'Welcome'])['success']);

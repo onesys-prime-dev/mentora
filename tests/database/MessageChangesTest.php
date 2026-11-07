@@ -38,9 +38,9 @@ final class MessageChangesTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $d           = DeanFactory::department('CH1');
+        $d           = DeanFactory::college('CH1');
         $institution = $d['institution'];
-        $program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'CA'), 'CA');
+        $program     = DeanFactory::program(DeanFactory::department($d['college'], 'CA'), 'CA');
         $offering    = DeanFactory::offering($program, DeanFactory::term($institution), 'MC1');
 
         $this->student    = PeopleFactory::person('student', 'Stu', 'Dent', null, $institution);
@@ -138,7 +138,7 @@ final class MessageChangesTest extends DatabaseTestCase
 
     public function testAChatThatIsNotThePersonsIsNull(): void
     {
-        $outsider = PeopleFactory::person('student', 'Out', 'Sider', null, DeanFactory::department('CH2')['institution']);
+        $outsider = PeopleFactory::person('student', 'Out', 'Sider', null, DeanFactory::college('CH2')['institution']);
 
         $this->assertNull($this->messages()->changedSince($outsider, $this->chat, self::LONG_AGO));
         $this->assertNull($this->messages()->changedSince($this->student, 999999, self::LONG_AGO));

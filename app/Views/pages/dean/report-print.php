@@ -1,8 +1,8 @@
 <?php
 /**
- * The dean's department report as one page to print or save as a PDF: Monitor Department's totals and
+ * The dean's college report as one page to print or save as a PDF: Monitor College's totals and
  * comparison, the teaching load and where sign-off stands. Plain tables, so it prints cleanly; the bar at
- * the top is for the screen only. Data: DepartmentReportService::build() as $report.
+ * the top is for the screen only. Data: CollegeReportService::build() as $report.
  *
  * @var array<string, mixed> $report
  */
@@ -35,7 +35,7 @@ $query = http_build_query((array) service('request')->getGet());
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= esc($report['department']) ?> department report</title>
+    <title><?= esc($report['college']) ?> college report</title>
     <?= view('pages/courses/features/grades/reports/_style', [], ['saveData' => false]) ?>
     <style>
         section { break-inside: avoid-page; }
@@ -47,17 +47,17 @@ $query = http_build_query((array) service('request')->getGet());
 
 <div class="printbar">
     <button type="button" onclick="window.print()">Print or save as PDF</button>
-    <a class="back" href="<?= esc(site_url('dean/monitor-department') . ($query === '' ? '' : '?' . $query), 'attr') ?>">Back to Monitor Department</a>
+    <a class="back" href="<?= esc(site_url('dean/monitor-college') . ($query === '' ? '' : '?' . $query), 'attr') ?>">Back to Monitor College</a>
 </div>
 
-<h1><?= esc($report['department']) ?>: department report</h1>
+<h1><?= esc($report['college']) ?>: college report</h1>
 <p class="muted small">
     Generated <?= esc(date('M j, Y g:i A', strtotime($report['generated_at']))) ?>
     <?php if ($report['filters'] !== []): ?>· <?= esc(implode(' · ', $report['filters'])) ?><?php endif; ?>
 </p>
 
 <section data-part="monitor">
-    <h2>Monitor Department</h2>
+    <h2>Monitor College</h2>
 
     <?php if ((int) ($totals['courses'] ?? 0) === 0): ?>
         <p class="muted">No courses match these filters.</p>
@@ -74,7 +74,7 @@ $query = http_build_query((array) service('request')->getGet());
         <table>
             <thead>
                 <tr>
-                    <th><?= $byProgram ? 'Program' : 'Sub-department' ?></th>
+                    <th><?= $byProgram ? 'Program' : 'Department' ?></th>
                     <th class="num">Students</th>
                     <th class="num">Completion</th>
                     <th class="num">Avg. grade</th>

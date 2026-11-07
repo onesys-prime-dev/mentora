@@ -31,6 +31,7 @@ class LearningUnitModel extends Model
         'description',
         'order_index',
         'status',
+        'scheduled_publish_at',
     ];
 
     public function retrieveLearningUnits(int $moduleId, User $user): array
@@ -45,6 +46,7 @@ class LearningUnitModel extends Model
                 'description',
                 'order_index',
                 'status',
+                'scheduled_publish_at',
             ])
             ->where('module_id', $moduleId);
 
@@ -75,6 +77,7 @@ class LearningUnitModel extends Model
                 'description',
                 'order_index',
                 'status',
+                'scheduled_publish_at',
             ])
             ->where('id', $learningUnitId);
 

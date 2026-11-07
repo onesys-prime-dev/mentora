@@ -217,7 +217,7 @@ works on a fresh seed. A full run needs a fresh seed.
   1. Complete the two items before the quiz: reading "What Is a Variable?" and PDF "Data Types Cheat Sheet".
   2. Open Quiz 1. It shows "0 of 2 attempts used", and Mark as Completed is off. Press Take Quiz.
   3. Answer questions 1 to 4 correctly and write a short essay. Each answer saves as you go.
-  4. Press Submit Quiz and accept the confirmation ("Submit your answers? You won't be able to change them afterward.").
+  4. Press Submit Quiz (it is off until every required question is answered, with "Answer the N required questions to submit." beside it), and press Submit in the dialog that asks "Submit your answers? You won't be able to change them afterward." A toast says "Quiz submitted." Before answering, following a course tab asks "Leave this quiz?" and Stay keeps the quiz.
   5. Return to the quiz item in Modules.
 - **Expected:**
   - Step 1: the quiz is locked until both are completed.
@@ -1069,7 +1069,7 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
 ### TC-FIL-01 Who may download each kind of file
 
 - **Role:** every role. **Priority:** P1
-- **Data:** in IT101-A: a published PDF, a draft PDF, a PDF behind an unfinished prerequisite, student1's assignment file, an announcement attachment, a discussion attachment, a generation source file. Accounts: student1 (owner), student5 (enrolled), a student who dropped IT101-A, `instructor1`, `instructor2` (another section), `chairperson1` (IT), `chairperson2` (unassigned), `dean2` (CBM), `dean1` (another department), `parent1`, the institution's administrator, a person of another institution. Get each file's download address as `instructor1`.
+- **Data:** in IT101-A: a published PDF, a draft PDF, a PDF behind an unfinished prerequisite, student1's assignment file, an announcement attachment, a discussion attachment, a generation source file. Accounts: student1 (owner), student5 (enrolled), a student who dropped IT101-A, `instructor1`, `instructor2` (another section), `chairperson1` (IT), `chairperson2` (unassigned), `dean2` (CBM), `dean1` (another college), `parent1`, the institution's administrator, a person of another institution. Get each file's download address as `instructor1`.
 - **Steps:** as each account, open each address.
 - **Expected:**
 
@@ -1082,7 +1082,7 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
   | Generation source | the course's instructors | students |
   | Any file | the owner always | a parent, always; anyone for a missing, inactive or deleted file |
 
-  `dean2` acting as the instructor of a section they teach opens its student work; as dean they gain no department-wide reach to student work. The institution's administrator opens course files read-only (wording of their view to confirm).
+  `dean2` acting as the instructor of a section they teach opens its student work; as dean they gain no college-wide reach to student work. The institution's administrator opens course files read-only (wording of their view to confirm).
 - **Already automated:** `tests/database/FileAccessServiceTest.php` (all); `tests/feature/ParentAuthorizationMatrixTest.php` (indirectly, for parents)
 - **Playwright:** no
 - **Basis:** `FileAccessService::canAccess`
@@ -1107,8 +1107,8 @@ From the QA plan's Wave 2: the P1 scenarios of the critical and high-risk module
 
 - **Role:** Chairperson. **Priority:** P1
 - **Data:** `chairperson1` (IT; does not teach IT101-A); student1's graded assignment in IT101-A
-- **Steps:** open the submission's feedback as the chairperson and post a comment. As student1, read it and reply. As `chairperson2` (another sub-department), try to post on it.
-- **Expected:** the chairperson posts as staff of the course (not refused as "You can only reply to your own submission."); the student sees it as from staff; a chairperson of another sub-department cannot reach the submission.
+- **Steps:** open the submission's feedback as the chairperson and post a comment. As student1, read it and reply. As `chairperson2` (another department), try to post on it.
+- **Expected:** the chairperson posts as staff of the course (not refused as "You can only reply to your own submission."); the student sees it as from staff; a chairperson of another department cannot reach the submission.
 - **Already automated:** `tests/database/CourseRoleChecksTest.php`, `CourseRoleInTest.php`
 - **Playwright:** no
 - **Basis:** `AssessmentFeedbackService` (staff by `roleIn`: instructor or chairperson); decisions 9.1, 9.4; commit `5140068`
@@ -1147,6 +1147,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 | TC-QUIZ-26 | Generating questions without the job queue, and what the provider is sent | Instructor | P2 | VCI, IBR |
 | TC-QUIZ-27 | A generation request asks for 1 to 50 questions, and only questions made count toward the allowance | Instructor | P2 | REG? |
 | TC-QUIZ-28 | Generated questions are measured against a recorded baseline before release | (QA, AI owner) | P2 | NB |
+| TC-QUIZ-31 | The Export modal: an editable file or a printable test, each with only the formats we can write | Instructor | P2 | VCI |
 | TC-ASG-05 | Assignment uploads accept only the allowed file types | Student | P2 | NB |
 | TC-GRD-08 | The feedback thread on a piece of work | Instructor, student | P2 | VCI |
 | TC-DSC-01 | Discussions: titles, replies, attachments, unread marks and filters | Instructor, student | P2 | VCI |
@@ -1188,7 +1189,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 
 - **Role:** a test account in no group. **Priority:** P2
 - **Steps:** create an account with no role on the test database; sign in.
-- **Expected:** a 403 page explains there is no area to open; no error page. A dean with no department and no other role reaches the dean explanation page instead (TC-AUTH-10).
+- **Expected:** a 403 page explains there is no area to open; no error page. A dean with no college and no other role reaches the dean explanation page instead (TC-AUTH-10).
 - **Already automated:** `AuthFlowTest::testSomeoneWithoutAnyRoleGetsAForbiddenPageNotACrash`
 - **Playwright:** no
 - **Basis:** `RedirectController`
@@ -1279,12 +1280,24 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 
 - **Role:** Instructor. **Priority:** P2
 - **Data:** Quiz 1 of IT101-A; an empty quiz
-- **Steps:** export as Word, RTF, PDF and HTML; one version, with and without shuffling; four versions; five versions; key only; Letter and an unknown paper size; print the same export twice. Export the empty quiz and an unknown format.
+- **Steps:** from the Export modal's Printable test (TC-QUIZ-31), export as Word, RTF, PDF and HTML; one version, with and without shuffling; four versions; five versions; key only; Letter and an unknown paper size; print the same export twice. Export the empty quiz and an unknown format.
 - **Expected:** the test numbers every question with its points and marks no answer; the key gives the right answer of every kind and says when a question has none; the key comes after a page break (Word), after the questions (RTF), on later pages (PDF); the Word file opens again; typed text is escaped in HTML; one version keeps the quiz order unless shuffling is asked; versions are letters, A being the quiz as written, at most four; each version's key follows its own shuffle, and the shuffle is the same every time; choices that point at each other ("all of the above") are not shuffled; key only leaves out the questions; an unknown paper falls back to A4; an empty quiz still prints saying so; an unknown format is refused.
 - **Already automated:** `tests/database/PrintableTestExportTest.php` (all)
 - **Playwright:** no
 - **Basis:** `PrintableTestExport`
 - **QA status:** VCI (PS-QBK-07)
+- **Review:** Draft
+
+### TC-QUIZ-31 The Export modal: an editable file or a printable test, each with only the formats we can write
+
+- **Role:** Instructor. **Priority:** P2
+- **Data:** Quiz 1 of IT101-A in the quiz builder
+- **Steps:** press the export icon; look at the modal; choose Editable file, then Printable test; change Versions, Paper and each checkbox; export one of each; reload the builder and open the modal again; close it with the X, Cancel, the backdrop and Escape.
+- **Expected:** the icon opens a modal (no dropdown panel) with two choices, Editable file and Printable test (the printable test is chosen first). **Editable file** offers Word (.docx), Rich Text (.rtf), Excel (.xlsx), CSV (.csv), GIFT (Moodle, .txt) and Aiken (.txt): the formats the question builder writes and reads back. **Printable test** offers PDF (.pdf), Word (.docx) and Rich Text (.rtf), and under that picker Versions (1 to 4), Paper (A4, Letter, Legal) and the checkboxes "Shuffle the order of questions", "Shuffle the choices" and "Answer key only"; a hint appears when more than one version is chosen. Print settings show only with the printable test and never reach an editable export. Exporting downloads the chosen file, closes the modal and is remembered in this browser: reopened, the modal is on the same choice, format and print settings. Nothing offered is a format the server cannot write: Blackboard, D2L, Sakai and QTI packages, Moodle XML, TestGen (.tst) and HTML are import-only.
+- **Already automated:** `tests/unit/ExportQuestionsModalTest.php`, `tests/js/pages/quiz-export-modal.test.js`, `tests/js/pages/quiz-export-url.test.js`, `tests/js/pages/quiz-import-ui.test.js`, `AssessmentServiceTest::testTheQuizBuilderOpensTheExportModalFromItsIconForItsOwnQuiz`
+- **Playwright:** `tests/e2e/export-modal.spec.js` (TC-QUIZ-31)
+- **Basis:** `partials/modals/export-questions.php`, `export-modal.js`, `QuestionExportService`
+- **QA status:** VCI
 - **Review:** Draft
 
 ### TC-QUIZ-26 Generating questions without the job queue, and what the provider is sent
@@ -1485,7 +1498,7 @@ From the QA plan's Wave 3: the P2 scenarios, and the P1 scenarios of medium-risk
 ### TC-ANN-07 Who may change a course announcement, and the Announcements app
 
 - **Role:** Instructor, student. **Priority:** P1
-- **Data:** IT101-A with a second instructor (`instructor2`, added for the test); posts by each; the Announcements app with department, institution and platform announcements
+- **Data:** IT101-A with a second instructor (`instructor2`, added for the test); posts by each; the Announcements app with college, institution and platform announcements
 - **Steps:** as `instructor2`, edit and delete `instructor1`'s post, then pin it. As a student, use the instructor's post route; open another section's announcement. Open the Announcements app; search with two words; use `?level=` with a known and an unknown level; make the feed fail to load.
 - **Expected:** only the author edits and deletes; any instructor of the section pins; a student cannot post; another section's announcement is not found; the app shows four levels in order; a search matches only posts containing all the words; an unknown level falls back to all; counts are shown before searching; a load failure shows an error, not an empty list.
 - **Already automated:** `tests/database/AnnouncementServiceTest.php`, `tests/feature/AnnouncementRoutesTest.php`, `AnnouncementHelperTest.php`

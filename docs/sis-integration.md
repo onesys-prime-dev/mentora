@@ -43,7 +43,7 @@ The SIS (or someone on its behalf) drops CSV files in a folder; grades are writt
 | instructors.csv | external_id, email, first_name, last_name | |
 | courses.csv | external_id, course_code, course_title | units, program_code |
 | enrollments.csv | course_external_id, student_external_id | section, status (enrolled, dropped, withdrawn, completed) |
-| staff_assignments.csv | role, person_external_id | department_code, sub_department_code, course_external_id, section |
+| staff_assignments.csv | role, person_external_id | college_code, department_code, course_external_id, section |
 | class_schedules.csv | course_external_id, day_of_week, start_time, end_time | section ("A" when empty), room (up to 50 characters), delivery_mode (onsite, online, hybrid; onsite when empty) |
 
 Header names are matched without regard to case; spaces count as underscores; a byte order mark is ignored; unknown columns are ignored. A missing required column rejects the file. A bad row (empty required value, invalid email, units not 0 to 99.99, a value over 255 characters, wrong column count, repeated `external_id`) is rejected alone, with its row number (the header is row 1). Files over 10 MB or 50,000 rows are refused.
@@ -129,6 +129,7 @@ Each row is one weekly meeting of a section: `day_of_week` is `mon` to `sun` or 
 - **People:** by link; otherwise by email, but only an account that already belongs to this institution with the same role. An account in another institution, with another role, or an administrator is never taken over: the row fails. One account cannot belong to two SIS records.
 - **Courses:** by link; otherwise by program and course code (an existing course is adopted, not duplicated). A new course needs a `program_code` that is a program of this institution. Units default to 3 when the SIS says none.
 - **Enrolments:** the course and the student must be known (listed in `courses.csv` / `students.csv`, in this run or an earlier one). They go into the institution's **active term** (the latest, if several), in the section the SIS names ("A" when none), with the status the SIS gives ("enrolled" when none).
+- **Emails:** a sync that adds a person tells them (`MailOutbox`, see `docs/notifications.md`): a new student or instructor gets an email with a link to choose a password, and a person who gets a place, a section to teach or a dean or chairperson role is told. The **first real import** of an institution (a preview does not count) emails nobody, since it can add a whole school at once; send the first password links from People. A preview says how many people a real run would email.
 
 What the SIS leaves empty is not a change. Things the SIS stops listing are **never deleted**.
 

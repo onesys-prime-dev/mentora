@@ -29,7 +29,7 @@ final class OfferingCopyRollbackTest extends DatabaseTestCase
     /** Touched by these tests; emptied with foreign keys off. */
     private const TABLES = [
         'course_schedules', 'instructor_assignments', 'course_modules', 'course_offerings', 'courses',
-        'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
+        'academic_terms', 'programs', 'departments', 'colleges', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs',
     ];
 
@@ -55,7 +55,7 @@ final class OfferingCopyRollbackTest extends DatabaseTestCase
 
         $db = db_connect();
 
-        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
         $db->table('courses')->insert(['program_id' => $program, 'course_code' => 'IT101', 'course_title' => 'Intro', 'units' => 3]);
         $course = (int) $db->insertID();
 

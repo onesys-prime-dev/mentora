@@ -56,7 +56,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
     {
         $db       = db_connect();
         $offering = CourseFactory::offering();
-        $id       = (int) $db->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
+        $id       = (int) $db->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
 
         $db->table('institutions')->where('id', $id)->update(['status' => $status]);
 
@@ -149,7 +149,7 @@ final class InstitutionExportServiceTest extends DatabaseTestCase
 
         $files = $this->open($this->exportNow($id, $admin, $this->now));
 
-        foreach (['institution', 'terms', 'departments', 'sub_departments', 'programs', 'courses', 'offerings', 'people', 'enrollments', 'final_grades', 'assessments', 'submissions', 'announcements'] as $name) {
+        foreach (['institution', 'terms', 'colleges', 'departments', 'programs', 'courses', 'offerings', 'people', 'enrollments', 'final_grades', 'assessments', 'submissions', 'announcements'] as $name) {
             $this->assertArrayHasKey("{$name}.csv", $files);
             $this->assertCount(2, $files["{$name}.csv"] === [] ? [] : array_slice($files["{$name}.csv"], 0, 2), "{$name}.csv should have a header and a row");
         }

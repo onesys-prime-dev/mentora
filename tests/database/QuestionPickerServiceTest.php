@@ -187,13 +187,13 @@ final class QuestionPickerServiceTest extends DatabaseTestCase
         $ids = $this->sourceQuestions();
 
         $chair = CourseFactory::user('chairperson');
-        $sub = (int) db_connect()->table('course_offerings co')
-            ->select('p.sub_department_id')
+        $department = (int) db_connect()->table('course_offerings co')
+            ->select('p.department_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->where('co.id', $this->offering)->get()->getRow('sub_department_id');
+            ->where('co.id', $this->offering)->get()->getRow('department_id');
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id' => $sub, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
+            'department_id' => $department, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
         ]);
 
         $this->assertContains($this->source, array_column($this->picker->sources($chair, $this->target), 'id'));

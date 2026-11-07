@@ -274,6 +274,12 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
     */
 
     /** An in-progress attempt of Ada's with a question of each kind. @return array{attempt: int, mc: array, multi: array, short: int, essay: int} */
+    /** Questions that may be left blank (a required one has to be answered before a hand-in, see QuizRequiredQuestionsTest). */
+    private function leaveBlankAllowed(): void
+    {
+        db_connect()->table('assessment_questions')->where('assessment_id', $this->quiz)->update(['is_required' => 0]);
+    }
+
     private function running(): array
     {
         $mc = AssessmentFactory::multipleChoice($this->quiz, $this->instructor, [false, true, false], 2);
@@ -585,6 +591,7 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
         db_connect()->table('assessments')->where('id', $this->quiz)->update(['total_points' => 4]);
         $attempt = AssessmentFactory::attempt($this->quiz, $this->ada, 'In Progress');
 
+        $this->leaveBlankAllowed();
         $this->service->submitAttempt($this->ada, $attempt);
 
         $this->assertEquals(0, $this->row('assessment_submissions', $attempt)['score']);
@@ -599,6 +606,7 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
         $attempt = AssessmentFactory::attempt($this->quiz, $this->ada, 'In Progress');
         $this->service->saveAnswer($this->ada, $attempt, $mc['question'], ['selected_choice_id' => $mc['choices'][1]]);
 
+        $this->leaveBlankAllowed();
         $this->service->submitAttempt($this->ada, $attempt);
 
         $row = $this->row('assessment_submissions', $attempt);
@@ -615,6 +623,7 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
         AssessmentFactory::shortAnswer($this->quiz, $this->instructor, null, 5);
         $attempt = AssessmentFactory::attempt($this->quiz, $this->ada, 'In Progress');
 
+        $this->leaveBlankAllowed();
         $this->service->submitAttempt($this->ada, $attempt);
 
         $row = $this->row('assessment_submissions', $attempt);
@@ -779,6 +788,7 @@ final class QuizAttemptServiceTest extends DatabaseTestCase
         [$quizItem] = $this->quizInAUnit();
         $q = $this->running();
 
+        $this->leaveBlankAllowed();
         $this->service->submitAttempt($this->ada, $q['attempt']);
 
         $this->assertSame('Partially Graded', $this->row('assessment_submissions', $q['attempt'])['status']);

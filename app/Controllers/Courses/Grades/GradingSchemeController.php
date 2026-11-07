@@ -175,6 +175,10 @@ class GradingSchemeController extends BaseController
         $data['overrideRoute'] = $isRequest ? $requests->routeText(auth()->user(), $offeringId) : '';
         $data['openRequests']  = $isRequest ? $requests->openByStudent($offeringId) : [];
 
+        // The Grades page embeds this grid: no back button, and it may ask for the view-only grid (never the editable one).
+        $data['embedded'] = $this->request->getGet('embedded') === '1';
+        $data['readonly'] = $this->request->getGet('readonly') === '1';
+
         return $this->response->setJSON([
             'success' => true,
             'html' => view('pages/courses/features/grades/roster', $data),

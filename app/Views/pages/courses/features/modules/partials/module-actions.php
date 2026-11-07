@@ -20,7 +20,7 @@
     </button>
 
     <div
-        class="absolute right-0 top-12 z-30 hidden w-36 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+        class="absolute right-0 top-12 z-30 hidden w-44 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
         data-module-actions-panel
         data-action-menu-panel>
 
@@ -32,7 +32,9 @@
                 data-edit-module
                 data-module-id="<?= esc($module['id']) ?>"
                 data-module-title="<?= esc($module['title']) ?>"
-                data-module-description="<?= esc($module['description']) ?>">
+                data-module-description="<?= esc($module['description']) ?>"
+                data-status="<?= esc($module['status']) ?>"
+                data-scheduled-at="<?= esc($module['scheduled_publish_at'] ?? '') ?>">
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -50,6 +52,19 @@
                 </svg>
 
                 Edit
+
+            </button>
+
+            <button
+                type="button"
+                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
+                data-module-dependencies
+                data-module-id="<?= esc($module['id']) ?>"
+                data-module-title="<?= esc($module['title']) ?>">
+
+                <?= icon('lock', 'h-4 w-4 text-current') ?>
+
+                Dependencies
 
             </button>
 
@@ -78,6 +93,8 @@
                 <span data-publish-toggle-label><?= $module['status'] === 'published' ? 'Unpublish' : 'Publish' ?></span>
 
             </button>
+
+            <?= view('pages/courses/features/modules/partials/transfer-buttons', ['kind' => 'module', 'id' => $module['id'], 'name' => $module['title'], 'variant' => 'menu'], ['saveData' => false]) ?>
 
             <button
                 type="button"

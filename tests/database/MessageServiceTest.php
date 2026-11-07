@@ -40,9 +40,9 @@ final class MessageServiceTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $d                 = DeanFactory::department('S1');
+        $d                 = DeanFactory::college('S1');
         $this->institution = $d['institution'];
-        $this->program     = DeanFactory::program(DeanFactory::subDepartment($d['department'], 'SA'), 'SA');
+        $this->program     = DeanFactory::program(DeanFactory::department($d['college'], 'SA'), 'SA');
         $this->term        = DeanFactory::term($this->institution);
 
         $this->student    = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);

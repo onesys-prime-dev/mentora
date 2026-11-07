@@ -23,7 +23,7 @@ final class SisStaffLockPagesTest extends RouteTestCase
 {
     private int $institution;
 
-    private int $sub;
+    private int $department;
 
     private int $offering;
 
@@ -59,16 +59,16 @@ final class SisStaffLockPagesTest extends RouteTestCase
         SisFixture::connect($this->institution, $root);
 
         $db        = db_connect();
-        $dept      = (int) $db->table('departments')->where('institution_id', $this->institution)->get()->getRow('id');
-        $this->sub = (int) $db->table('sub_departments')->where('department_id', $dept)->get()->getRow('id');
+        $college      = (int) $db->table('colleges')->where('institution_id', $this->institution)->get()->getRow('id');
+        $this->department = (int) $db->table('departments')->where('college_id', $college)->get()->getRow('id');
 
         $this->sisChair  = PeopleFactory::person('chairperson', 'Sis', 'Chair', null, $this->institution);
         $this->handChair = PeopleFactory::person('chairperson', 'Hand', 'Chair', null, $this->institution);
 
         $chairs             = new ChairAssignmentService();
-        $this->sisChairRow  = $chairs->assign($this->institution, $this->sub, (int) $this->sisChair->id, $this->admin);
-        // One chairperson per sub-department (16.0): the one made by hand chairs a second sub-department.
-        $db->table('sub_departments')->insert(['department_id' => $dept, 'code' => 'HAND', 'name' => 'Hand sub', 'is_active' => 1]);
+        $this->sisChairRow  = $chairs->assign($this->institution, $this->department, (int) $this->sisChair->id, $this->admin);
+        // One chairperson per department (16.0): the one made by hand chairs a second department.
+        $db->table('departments')->insert(['college_id' => $college, 'code' => 'HAND', 'name' => 'Hand department', 'is_active' => 1]);
         $this->handChairRow = $chairs->assign($this->institution, (int) $db->insertID(), (int) $this->handChair->id, $this->admin);
 
         $this->offering = SisFixture::course($this->institution)['offering'];
@@ -82,7 +82,7 @@ final class SisStaffLockPagesTest extends RouteTestCase
 
         // These two are the ones the SIS supplied.
         $now = date('Y-m-d H:i:s');
-        $db->table('sis_staff_assignments')->insert(['institution_id' => $this->institution, 'role' => 'chairperson', 'person_user_id' => (int) $this->sisChair->id, 'target_id' => $this->sub, 'local_id' => $this->sisChairRow, 'created_at' => $now, 'updated_at' => $now]);
+        $db->table('sis_staff_assignments')->insert(['institution_id' => $this->institution, 'role' => 'chairperson', 'person_user_id' => (int) $this->sisChair->id, 'target_id' => $this->department, 'local_id' => $this->sisChairRow, 'created_at' => $now, 'updated_at' => $now]);
         $db->table('sis_staff_assignments')->insert(['institution_id' => $this->institution, 'role' => 'instructor', 'person_user_id' => (int) $this->sisTeacher->id, 'target_id' => $this->offering, 'local_id' => $this->sisTeachRow, 'created_at' => $now, 'updated_at' => $now]);
 
         $db->table('audit_logs')->emptyTable();
@@ -202,11 +202,11 @@ final class SisStaffLockPagesTest extends RouteTestCase
 
     public function testTheDeansLockIsTheServicesAndTheDeanPageNeedsNoNewControl(): void
     {
-        $dept = (int) db_connect()->table('departments')->where('institution_id', $this->institution)->get()->getRow('id');
+        $college = (int) db_connect()->table('colleges')->where('institution_id', $this->institution)->get()->getRow('id');
         $dean = PeopleFactory::person('dean', 'Sis', 'Dean', null, $this->institution);
-        $row  = (new DeanAssignmentService())->assign($this->institution, $dept, (int) $dean->id, $this->admin);
+        $row  = (new DeanAssignmentService())->assign($this->institution, $college, (int) $dean->id, $this->admin);
         $now  = date('Y-m-d H:i:s');
-        db_connect()->table('sis_staff_assignments')->insert(['institution_id' => $this->institution, 'role' => 'dean', 'person_user_id' => (int) $dean->id, 'target_id' => $dept, 'local_id' => $row, 'created_at' => $now, 'updated_at' => $now]);
+        db_connect()->table('sis_staff_assignments')->insert(['institution_id' => $this->institution, 'role' => 'dean', 'person_user_id' => (int) $dean->id, 'target_id' => $college, 'local_id' => $row, 'created_at' => $now, 'updated_at' => $now]);
 
         $this->expectException(\App\Services\Institutions\StructureException::class);
         $this->expectExceptionMessage('managed by your student information system');
@@ -221,12 +221,12 @@ final class SisStaffLockPagesTest extends RouteTestCase
         $body = $this->page('institution/people/upload');
 
         $this->assertStringContainsString('Staff assignments (staff_assignments.csv)', $body);
-        $this->assertStringContainsString('department_code for a dean', $body);
+        $this->assertStringContainsString('college_code for a dean', $body);
         $this->assertStringContainsString('upload/template/staff_assignments', $body);
 
         $template = $this->step('GET', 'institution/people/upload/template/staff_assignments')->response();
 
         $this->assertSame(200, $template->getStatusCode());
-        $this->assertStringContainsString('role,person_external_id,department_code,sub_department_code,course_external_id,section', $template->getBody());
+        $this->assertStringContainsString('role,email,college_code,department_code,program_code,course_code,section', $template->getBody());
     }
 }

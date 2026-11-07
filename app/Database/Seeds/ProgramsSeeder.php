@@ -10,7 +10,7 @@ class ProgramsSeeder extends Seeder
     {
         $now = date('Y-m-d H:i:s');
 
-        // [institution_id, department code, sub-department code, name, code]
+        // [institution_id, college code, department code, name, code]
         $programs = [
 
             // San Beda University
@@ -35,7 +35,7 @@ class ProgramsSeeder extends Seeder
 
         $rows = array_map(
             fn (array $program): array => [
-                'sub_department_id' => $this->subDepartmentId($program[0], $program[1], $program[2]),
+                'department_id' => $this->departmentId($program[0], $program[1], $program[2]),
                 'name'              => $program[3],
                 'code'              => $program[4],
                 'status'            => 'active',
@@ -50,15 +50,15 @@ class ProgramsSeeder extends Seeder
             ->insertBatch($rows);
     }
 
-    private function subDepartmentId(int $institutionId, string $departmentCode, string $code): int
+    private function departmentId(int $institutionId, string $collegeCode, string $code): int
     {
-        return (int) $this->db->table('sub_departments')
-            ->select('sub_departments.id')
-            ->join('departments', 'departments.id = sub_departments.department_id')
+        return (int) $this->db->table('departments')
+            ->select('departments.id')
+            ->join('colleges', 'colleges.id = departments.college_id')
             ->where([
-                'departments.institution_id' => $institutionId,
-                'departments.code'           => $departmentCode,
-                'sub_departments.code'       => $code,
+                'colleges.institution_id' => $institutionId,
+                'colleges.code'           => $collegeCode,
+                'departments.code'       => $code,
             ])
             ->get()
             ->getRowArray()['id'];

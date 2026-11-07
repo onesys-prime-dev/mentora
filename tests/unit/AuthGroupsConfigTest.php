@@ -18,7 +18,7 @@ final class AuthGroupsConfigTest extends CIUnitTestCase
     /** Permissions that belong inside an institution (the system administrator never holds them). */
     private const ACADEMIC = [
         'courses.view', 'courses.manage', 'grading.manage', 'announcements.manage', 'discussions.manage', 'program.monitor',
-        'department.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'department.announce',
+        'college.monitor', 'grades.approve', 'grades.signoff', 'followups.manage', 'college.announce',
         'children.view', 'messages.use',
         // The institutional administrator's own administration.
         'structure.manage', 'terms.manage', 'offerings.manage', 'enrolments.manage', 'people.view', 'people.manage',

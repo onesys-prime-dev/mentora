@@ -65,6 +65,8 @@
 
             </button>
 
+            <?= view('pages/courses/features/modules/partials/transfer-buttons', ['kind' => 'item', 'id' => $learning_item['id'], 'name' => $learning_item['title'], 'variant' => 'menu'], ['saveData' => false]) ?>
+
             <button
                 type="button"
                 class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"

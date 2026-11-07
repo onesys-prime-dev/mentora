@@ -12,7 +12,7 @@ The person must **belong to the offering, in the role of the area they are in**:
 |---|---|
 | `student/...` | enrolled (or completed) in an active or completed offering |
 | `instructor/...` | assigned to teach it |
-| `chairperson/...` | the offering is in a sub-department they chair |
+| `chairperson/...` | the offering is in a department they chair |
 
 The institution's administrator is separate: they reach every course of their
 own institution through the read-only mirror routes (`InstitutionCourseFilter`).
@@ -122,12 +122,12 @@ institutional administrator role.
 | Refused | Because the person | Words |
 |---|---|---|
 | enrolling in a course | has an instructor assignment on any of its sections, any term | "teaches or has taught this course" |
-| | has (or had) a chairperson assignment on its sub-department | "chairs or has chaired the sub-department of this course" |
-| | is (or was) the dean of its department | "is or was the dean of this course's department" |
+| | has (or had) a chairperson assignment on its department | "chairs or has chaired the department of this course" |
+| | is (or was) the dean of its college | "is or was the dean of this course's college" |
 | | is an administrator of its institution | "is an administrator of this institution" |
 | teaching a section | is enrolled (or completed) in the same course this term | "is enrolled in this course this term" |
-| chairing a sub-department | is enrolled in one of its courses | "is enrolled in a course of this sub-department" |
-| being dean of a department | is enrolled in one of its courses | "is enrolled in a course of this department" |
+| chairing a department | is enrolled in one of its courses | "is enrolled in a course of this department" |
+| being dean of a college | is enrolled in one of its courses | "is enrolled in a course of this college" |
 | the administrator role | is enrolled in one of the institution's courses | "is enrolled in a course of this institution" |
 
 An enrolment that ended (completed, dropped, withdrawn) never blocks a staff role

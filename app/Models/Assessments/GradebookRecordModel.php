@@ -103,4 +103,24 @@ class GradebookRecordModel extends Model
 
         return $value === null ? null : (float) $value;
     }
+
+    /**
+     * The grade scale band that counts, picked like the percentage: the
+     * override's; else, once finalized, the frozen final band; else the
+     * calculated one.
+     */
+    public static function effectiveBandId(?array $record): ?int
+    {
+        if (!$record) {
+            return null;
+        }
+
+        $id = match (true) {
+            !empty($record['is_override']) => $record['overridden_grade_scale_item_id'] ?? null,
+            !empty($record['finalized_at']) => $record['final_grade_scale_item_id'] ?? null,
+            default => $record['calculated_grade_scale_item_id'] ?? null,
+        };
+
+        return $id === null ? null : (int) $id;
+    }
 }

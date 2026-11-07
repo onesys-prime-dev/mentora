@@ -31,6 +31,7 @@ class CourseModuleModel extends Model
         'description',
         'order_index',
         'status',
+        'scheduled_publish_at',
     ];
 
     public function retrieveCourseModules(int $offeringId, User $user): array
@@ -44,6 +45,7 @@ class CourseModuleModel extends Model
                 'description',
                 'order_index',
                 'status',
+                'scheduled_publish_at',
             ])
             ->where('offering_id', $offeringId);
 
@@ -77,6 +79,7 @@ class CourseModuleModel extends Model
                 'description',
                 'order_index',
                 'status',
+                'scheduled_publish_at',
             ])
             ->where('id', $moduleId);
 

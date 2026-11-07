@@ -54,8 +54,8 @@ The feature is named **Messages**, not "Inbox": it should feel like personal, sc
 - Stack: PHP 8.2+, CodeIgniter 4.7, Shield, MySQL/MariaDB, Vite + vanilla JS in `resources/js`, Vitest, Playwright.
 - Who belongs to a course: `enrollments` (`offering_id`, `student_user_id`, `status`) and `instructor_assignments`
   (`offering_id`, `instructor_user_id`). Ask `App\Services\Courses\CourseMembership` (`canAccess`, `roleIn`).
-- Scope of staff: `ChairpersonAccessService`, `DeanAccessService` (chairperson → sub-department, dean → department;
-  programs hang off `sub_departments`). **Reuse these; do not re-derive scope with new SQL.**
+- Scope of staff: `ChairpersonAccessService`, `DeanAccessService` (chairperson → department, dean → college;
+  programs hang off `departments`). **Reuse these; do not re-derive scope with new SQL.**
 - Parents: `parent_student_links` (`institution_id`, `parent_user_id`, `student_user_id`); `ParentAccessService`,
   `ParentChildFilter`, `ParentPortal`.
 - Cross-cutting pieces to reuse: `AuditLogger::log($action, $actor, $details)` (with `redact`),
@@ -78,9 +78,9 @@ course offering that is not closed.
 | From ↓ / To → | Student | Instructor | Chairperson | Dean | Parent | Inst. admin |
 |---|---|---|---|---|---|---|
 | **Student** | Yes — classmates in a shared course, if the institution switch is on | Yes — instructors of a course they are enrolled in | No | No | No | No |
-| **Instructor** | Yes — students of own course | Yes — same department | Yes — own department's chairpersons | Yes — own department's dean | Yes — parents of students in own courses | No |
-| **Chairperson** | Yes — students of own sub-department | Yes — instructors of own sub-department | Yes — other chairpersons in the same department | Yes — own department's dean | **Reply only** (a parent must start) | No |
-| **Dean** | Yes — students of own department | Yes — instructors of own department | Yes — chairpersons of own department | Yes — other deans in the institution | No | No |
+| **Instructor** | Yes — students of own course | Yes — same college | Yes — own college's chairpersons | Yes — own college's dean | Yes — parents of students in own courses | No |
+| **Chairperson** | Yes — students of own department | Yes — instructors of own department | Yes — other chairpersons in the same college | Yes — own college's dean | **Reply only** (a parent must start) | No |
+| **Dean** | Yes — students of own college | Yes — instructors of own college | Yes — chairpersons of own college | Yes — other deans in the institution | No | No |
 | **Parent** | No | Yes — instructors of the linked child's courses | Yes — the linked child's chairperson | No | No | No |
 | **Inst. admin** | Yes | Yes | Yes | Yes | Yes | Yes |
 | **System admin** | **No access to Messages at all** | | | | | |
@@ -91,8 +91,8 @@ the chairperson/dean cells above are correct.
 
 - Non-admins cannot start a thread *to* an institutional admin **(my call)** — admins reach out; people reply.
   Change this only if the owner asks.
-- "Same department" for instructors and "other chairpersons in the same department" resolve through the sub-department
-  → department relation, via the existing access services.
+- "Same college" for instructors and "other chairpersons in the same college" resolve through the department
+  → college relation, via the existing access services.
 - A person who holds two roles messages under their **active role** (`ActiveRoleService`).
 
 ### 3.2 Group chats
@@ -100,7 +100,7 @@ the chairperson/dean cells above are correct.
 | Chat | Created by | Members | Who can post |
 |---|---|---|---|
 | **Course chat** | The system, when a course offering is created | The assigned instructor(s) and every enrolled student; kept in sync as enrollment and assignment change | Everyone in it. The instructor can **lock** it to announcements-only (students read, instructor posts). |
-| **Staff group** | A chairperson (instructors of their sub-department) or a dean (instructors and chairpersons of their department) | The creator plus the people they pick, from within their scope | Everyone in it |
+| **Staff group** | A chairperson (instructors of their department) or a dean (instructors and chairpersons of their college) | The creator plus the people they pick, from within their scope | Everyone in it |
 
 - Parents are never members of a course chat. For each linked child, a parent sees a **read-only feed** of the
   instructor's posts in that child's course chats (no student messages, no reply box). To answer, the parent opens a
@@ -321,7 +321,7 @@ The suite follows the repository's layers (`docs/testing.md`). Database tests ex
 ### 8.1 Unit (no database)
 
 - **`MessagingPolicy` matrix** — a data provider covering **every ordered pair of the seven roles** plus each context
-  (shared course or not, same department or not, linked child or not, switch on/off, blocked or not, locked chat).
+  (shared course or not, same college or not, linked child or not, switch on/off, blocked or not, locked chat).
   The expected values are the table in 3.1, written out as data so a reviewer can compare them to this document.
   This is the most important test in the feature.
 - `MessageCipher`: round trip; ciphertext differs for the same text twice; tampered ciphertext fails; a ciphertext
@@ -409,7 +409,7 @@ no unrelated files staged; docs for the slice updated. CI runs the whole suite o
 6. Quiet hours offered to instructors, chairpersons and deans; email alerts at most hourly per thread.
 7. With the student-DM switch off, existing student↔student threads stay readable but become read-only.
 8. No attachments, edits or body search in v1.
-9. Dean → dean messaging allowed within the institution; chairperson → chairperson within the same department.
+9. Dean → dean messaging allowed within the institution; chairperson → chairperson within the same college.
 10. The `messages` flag ships off and is enabled per institution after slice 7.
 
 ## 10. Still needs the owner's answer

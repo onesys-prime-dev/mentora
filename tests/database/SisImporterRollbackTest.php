@@ -31,7 +31,7 @@ final class SisImporterRollbackTest extends DatabaseTestCase
     private const TABLES = [
         'sis_runs', 'sis_links', 'sis_staff_assignments', 'sis_class_schedules', 'course_schedules', 'dean_assignments', 'chairperson_assignments', 'instructor_assignments',
         'sis_connections', 'feature_flag_overrides', 'enrollments', 'course_offerings', 'courses',
-        'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
+        'academic_terms', 'programs', 'departments', 'colleges', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs', 'notifications',
     ];
 
@@ -102,9 +102,9 @@ final class SisImporterRollbackTest extends DatabaseTestCase
         (new SisImporter())->run($this->institution, $this->actor, true);
         $this->assertTrue((new SisImporter())->run($this->institution, $this->actor, false)->ok);
 
-        $dept = (string) db_connect()->table('departments')->where('institution_id', $this->institution)->get()->getRow('code');
-        SisFixture::drop($this->institution, 'staff_assignments', "role,person_external_id,department_code,sub_department_code,course_external_id,section\n"
-            . "dean,I1,{$dept},,,\n"
+        $college = (string) db_connect()->table('colleges')->where('institution_id', $this->institution)->get()->getRow('code');
+        SisFixture::drop($this->institution, 'staff_assignments', "role,person_external_id,college_code,department_code,course_external_id,section\n"
+            . "dean,I1,{$college},,,\n"
             . "instructor,I1,,,C1,A\n"
             . "instructor,I1,,,C1,B\n");
 

@@ -908,3 +908,110 @@ export async function saveLearningItemDependencies(
     return response.json();
 
 }
+
+/*
+|--------------------------------------------------------------------------
+| Dependencies of a module or a learning unit (instructor)
+|--------------------------------------------------------------------------
+*/
+
+function containerDependenciesUrl(kind, id) {
+
+    const path = kind === "module" ? "modules" : "learning-units";
+
+    return `${window.coursesConfig.apiBaseUrl}/${path}/${id}/dependencies`;
+
+}
+
+export async function fetchContainerDependencies(kind, id) {
+
+    const response = await fetch(containerDependenciesUrl(kind, id), { headers: defaultHeaders() });
+
+    if (!response.ok) {
+        throw new Error("Unable to load dependencies.");
+    }
+
+    return response.json();
+
+}
+
+export async function saveContainerDependencies(kind, id, payload) {
+
+    const response = await fetch(containerDependenciesUrl(kind, id), {
+        method: "PATCH",
+        headers: {
+            ...defaultHeaders(),
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        throw new Error("Unable to save dependencies.");
+    }
+
+    return response.json();
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Copy and move to another course (instructor)
+|--------------------------------------------------------------------------
+*/
+
+async function transferRequest(path, options = {}) {
+
+    const response = await fetch(`${window.coursesConfig.apiBaseUrl}/content-transfer${path}`, {
+        headers: {
+            ...defaultHeaders(),
+            ...(options.body ? { "Content-Type": "application/json" } : {}),
+        },
+        ...options,
+    });
+
+    if (!response.ok) {
+        throw new Error("The request failed.");
+    }
+
+    return response.json();
+
+}
+
+/** The courses the person may copy or move content into. */
+export async function fetchTransferOfferings() {
+
+    return (await transferRequest("/offerings")).offerings;
+
+}
+
+export async function fetchTransferModules(offeringId) {
+
+    return (await transferRequest(`/offerings/${offeringId}/modules`)).modules;
+
+}
+
+export async function fetchTransferUnits(moduleId) {
+
+    return (await transferRequest(`/modules/${moduleId}/units`)).units;
+
+}
+
+/** What a module or a learning unit holds, to choose from. */
+export function fetchTransferTree(kind, id) {
+
+    return transferRequest(`/${kind}/${id}/tree`);
+
+}
+
+export function copyContent(payload) {
+
+    return transferRequest("/copy", { method: "POST", body: JSON.stringify(payload) });
+
+}
+
+export function moveContent(payload) {
+
+    return transferRequest("/move", { method: "POST", body: JSON.stringify(payload) });
+
+}

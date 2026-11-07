@@ -17,19 +17,19 @@ class DeanAssignmentsSeeder extends Seeder
 
         foreach ([['dean1@mentora.test', 'GEN'], ['dean2@mentora.test', 'CBM']] as [$email, $code]) {
             $user = $users->findByCredentials(['email' => $email]);
-            $department = $this->db->table('departments')->where([
+            $college = $this->db->table('colleges')->where([
                 'institution_id' => 1, 'code' => $code,
             ])->get()->getRowArray();
 
-            if ($user === null || $department === null) {
+            if ($user === null || $college === null) {
                 echo "Dean assignment skipped for {$email}.\n";
                 continue;
             }
 
             if ($this->db->table('dean_assignments')->where([
-                'department_id' => $department['id'], 'status' => 'active',
+                'college_id' => $college['id'], 'status' => 'active',
             ])->countAllResults() === 0) {
-                $service->assign(1, (int) $department['id'], (int) $user->id);
+                $service->assign(1, (int) $college['id'], (int) $user->id);
             }
         }
     }

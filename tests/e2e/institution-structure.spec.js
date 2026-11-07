@@ -61,9 +61,9 @@ async function openStructure(page) {
     await expect(page.getByRole("heading", { name: "Structure", level: 1 })).toBeVisible();
 }
 
-// The tree on the left chooses which department the page shows.
-async function openDepartment(page, name) {
-    await page.locator("[data-structure-tree] > li > [data-select^='dept-']").filter({ hasText: name }).click();
+// The tree on the left chooses which college the page shows.
+async function openCollege(page, name) {
+    await page.locator("[data-structure-tree] > li > [data-select^='college-']").filter({ hasText: name }).click();
 }
 
 test("TC-STR-01 The administrator lands on their home and reaches the structure from the sidebar", async ({ page }) => {
@@ -73,97 +73,97 @@ test("TC-STR-01 The administrator lands on their home and reaches the structure 
     await page.getByRole("navigation", { name: "Institution" }).getByRole("link", { name: "Structure", exact: true }).click();
 
     await expect(page).toHaveURL(/\/institution\/structure$/);
-    await expect(page.locator("[data-department]").first()).toBeVisible();
+    await expect(page.locator("[data-college]").first()).toBeVisible();
 });
 
-test("TC-STR-02 Adding a department in a dialog shows it on the page with a message", async ({ page }) => {
+test("TC-STR-02 Adding a college in a dialog shows it on the page with a message", async ({ page }) => {
     await openStructure(page);
 
-    await page.getByRole("button", { name: "Add a department" }).click();
+    await page.getByRole("button", { name: "Add a college" }).click();
 
-    const dialog = page.getByRole("dialog", { name: "Add a department" });
+    const dialog = page.getByRole("dialog", { name: "Add a college" });
     await expect(dialog).toBeVisible();
 
     await dialog.getByLabel("Code").fill("e2e-arts");
     await dialog.getByLabel("Name").fill("College of E2E Arts");
-    await dialog.getByRole("button", { name: "Add department" }).click();
+    await dialog.getByRole("button", { name: "Add college" }).click();
 
-    await expect(page.getByText("The department was added.")).toBeVisible();
-    await openDepartment(page, "College of E2E Arts");
-    await expect(page.locator("[data-department]").filter({ hasText: "College of E2E Arts" })).toBeVisible();
-    await expect(page.locator("[data-department]").filter({ hasText: "E2E-ARTS" })).toBeVisible();
+    await expect(page.getByText("The college was added.")).toBeVisible();
+    await openCollege(page, "College of E2E Arts");
+    await expect(page.locator("[data-college]").filter({ hasText: "College of E2E Arts" })).toBeVisible();
+    await expect(page.locator("[data-college]").filter({ hasText: "E2E-ARTS" })).toBeVisible();
 });
 
 test("TC-STR-03 A refused form shows its reason beside the field and keeps what was typed", async ({ page }) => {
     await openStructure(page);
 
-    await page.getByRole("button", { name: "Add a department" }).click();
+    await page.getByRole("button", { name: "Add a college" }).click();
 
-    const dialog = page.getByRole("dialog", { name: "Add a department" });
+    const dialog = page.getByRole("dialog", { name: "Add a college" });
     await dialog.getByLabel("Code").fill("E2E-ARTS");
     await dialog.getByLabel("Name").fill("Another one entirely");
-    await dialog.getByRole("button", { name: "Add department" }).click();
+    await dialog.getByRole("button", { name: "Add college" }).click();
 
-    await expect(dialog.getByText("Another department already uses the code E2E-ARTS.")).toBeVisible();
+    await expect(dialog.getByText("Another college already uses the code E2E-ARTS.")).toBeVisible();
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel("Name")).toHaveValue("Another one entirely");
 
     // Closing it and opening it again starts clean.
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
-    await page.getByRole("button", { name: "Add a department" }).click();
-    await expect(page.getByRole("dialog", { name: "Add a department" }).getByLabel("Name")).toHaveValue("");
+    await page.getByRole("button", { name: "Add a college" }).click();
+    await expect(page.getByRole("dialog", { name: "Add a college" }).getByLabel("Name")).toHaveValue("");
 });
 
-test("TC-STR-04 Editing opens the same dialog with the department's values", async ({ page }) => {
+test("TC-STR-04 Editing opens the same dialog with the college's values", async ({ page }) => {
     await openStructure(page);
 
-    await openDepartment(page, "College of E2E Arts");
-    const card = page.locator("[data-department]").filter({ hasText: "College of E2E Arts" });
+    await openCollege(page, "College of E2E Arts");
+    const card = page.locator("[data-college]").filter({ hasText: "College of E2E Arts" });
     await card.getByRole("button", { name: "Edit" }).first().click();
 
-    const dialog = page.getByRole("dialog", { name: "Edit department" });
+    const dialog = page.getByRole("dialog", { name: "Edit college" });
     await expect(dialog.getByLabel("Code")).toHaveValue("E2E-ARTS");
     await expect(dialog.getByLabel("Name")).toHaveValue("College of E2E Arts");
 
     await dialog.getByLabel("Name").fill("College of E2E Arts and Letters");
     await dialog.getByRole("button", { name: "Save" }).click();
 
-    await expect(page.getByText("The department was saved.")).toBeVisible();
-    await openDepartment(page, "College of E2E Arts and Letters");
-    await expect(page.locator("[data-department]").filter({ hasText: "College of E2E Arts and Letters" })).toBeVisible();
+    await expect(page.getByText("The college was saved.")).toBeVisible();
+    await openCollege(page, "College of E2E Arts and Letters");
+    await expect(page.locator("[data-college]").filter({ hasText: "College of E2E Arts and Letters" })).toBeVisible();
 });
 
-test("TC-STR-05 A department with active sub-departments says why it cannot be switched off", async ({ page }) => {
+test("TC-STR-05 A college with active departments says why it cannot be switched off", async ({ page }) => {
     await openStructure(page);
 
-    // The first demo department has sub-departments under it.
-    await page.locator("[data-tree-dept]:has(ul) > [data-select]").first().click();
-    const card = page.locator("[data-department]:not([hidden])");
+    // The first demo college has departments under it.
+    await page.locator("[data-tree-college]:has(ul) > [data-select]").first().click();
+    const card = page.locator("[data-college]:not([hidden])");
     await card.getByRole("button", { name: "Deactivate" }).first().click();
 
     const confirm = page.getByRole("dialog", { name: /^Deactivate / });
-    await expect(confirm).toContainText("must have no active sub-departments");
+    await expect(confirm).toContainText("must have no active departments");
     await confirm.getByRole("button", { name: "Deactivate" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: "cannot be switched off yet" })).toBeVisible();
 });
 
-test("TC-STR-06 An empty new department can be switched off and on again", async ({ page }) => {
+test("TC-STR-06 An empty new college can be switched off and on again", async ({ page }) => {
     await openStructure(page);
 
-    await openDepartment(page, "College of E2E Arts and Letters");
-    const card = page.locator("[data-department]").filter({ hasText: "College of E2E Arts and Letters" });
+    await openCollege(page, "College of E2E Arts and Letters");
+    const card = page.locator("[data-college]").filter({ hasText: "College of E2E Arts and Letters" });
     await card.getByRole("button", { name: "Deactivate" }).click();
     await page.getByRole("dialog", { name: /^Deactivate / }).getByRole("button", { name: "Deactivate" }).click();
 
-    await expect(page.getByText("The department was deactivated.")).toBeVisible();
-    await openDepartment(page, "College of E2E Arts and Letters");
+    await expect(page.getByText("The college was deactivated.")).toBeVisible();
+    await openCollege(page, "College of E2E Arts and Letters");
     await expect(card.getByText("Inactive").first()).toBeVisible();
 
     await card.getByRole("button", { name: "Reactivate" }).click();
 
-    await expect(page.getByText("The department is active again.")).toBeVisible();
+    await expect(page.getByText("The college is active again.")).toBeVisible();
     await expect(card.getByText("Active", { exact: true })).toBeVisible();
 });
 
@@ -209,21 +209,21 @@ test("TC-CRS-02 A duplicate code shows its reason in the dialog, and search find
     await expect(page.getByRole("row", { name: /E2E 101/ })).toBeVisible();
 });
 
-test("TC-CRS-03 A chairperson is assigned to a sub-department and removed again", async ({ page }) => {
+test("TC-CRS-03 A chairperson is assigned to a department and removed again", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await page.goto("/institution/structure");
 
-    // The first sub-department that has a program (the demo data has a chairperson who is not yet assigned there).
-    // The first department is open when the page loads; a click on an open department folds it.
-    const department = page.locator("[data-tree-dept]:has(ul)").first();
-    const firstSub = department.locator("ul [data-select]").first();
+    // The first department that has a program (the demo data has a chairperson who is not yet assigned there).
+    // The first college is open when the page loads; a click on an open college folds it.
+    const college = page.locator("[data-tree-college]:has(ul)").first();
+    const firstDepartment = college.locator("ul [data-select]").first();
 
-    if (!(await firstSub.isVisible())) {
-        await department.locator("> [data-select]").click();
+    if (!(await firstDepartment.isVisible())) {
+        await college.locator("> [data-select]").click();
     }
 
-    await firstSub.click();
-    const sub = page.locator("[data-sub-department]:not([hidden])");
+    await firstDepartment.click();
+    const sub = page.locator("[data-department]:not([hidden])");
     await sub.getByRole("button", { name: "Assign chairperson" }).click();
 
     const dialog = page.getByRole("dialog", { name: /^Assign a chairperson to / });
@@ -236,7 +236,7 @@ test("TC-CRS-03 A chairperson is assigned to a sub-department and removed again"
     await page.locator("[data-chair]").first().getByRole("button", { name: /^Remove / }).click();
     await page.getByRole("dialog", { name: /as chairperson\?$/ }).getByRole("button", { name: "Remove" }).click();
 
-    await expect(page.getByText("The chairperson was removed from the sub-department.")).toBeVisible();
+    await expect(page.getByText("The chairperson was removed from the department.")).toBeVisible();
 });
 
 test("TC-TRM-01 Adding an overlapping term goes through with a warning, and starting it warns again", async ({ page }) => {
@@ -285,25 +285,38 @@ test("TC-TRM-02 A term that ends before it starts is refused beside the date", a
 });
 
 
-test("TC-OFF-01 Adding an offering opens a course in a term and lists it with no instructor yet", async ({ page }) => {
+test("TC-OFF-01 Adding an offering opens a course in a section and lists it with no instructor yet", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    // An offering is added to a section, so the section is made first (Sections page).
+    await page.goto("/institution/sections");
+    await page.getByRole("button", { name: "Add a section" }).first().click();
+
+    const sectionDialog = page.getByRole("dialog", { name: "Add a section" });
+    await sectionDialog.getByLabel("Term").selectOption({ index: 1 });
+    await sectionDialog.getByLabel("Program").selectOption({ index: 1 });
+    await sectionDialog.getByLabel("Year level").fill("1");
+    await sectionDialog.getByLabel("Section name").fill("e2e-a");
+    await sectionDialog.getByLabel("Capacity").fill("30");
+    await sectionDialog.getByRole("button", { name: "Add section" }).click();
+    await expect(page.getByRole("heading", { name: "E2E-A", level: 1 })).toBeVisible();
+
     await page.goto("/institution/offerings");
     await expect(page.getByRole("heading", { name: "Offerings", level: 1 })).toBeVisible();
 
     await page.getByRole("button", { name: "Add an offering" }).first().click();
 
+    // The section is chosen from the Sections table; its term and capacity come with it.
     const dialog = page.getByRole("dialog", { name: "Add an offering" });
     await dialog.getByLabel("Course").selectOption({ index: 1 });
-    await dialog.getByLabel("Term").selectOption({ index: 1 });
-    await dialog.getByLabel("Section").fill("e2e-a");
-    await dialog.getByLabel("Capacity").fill("30");
+    await dialog.getByLabel("Section").selectOption({ index: 1 });
     await dialog.getByRole("button", { name: "Add offering" }).click();
 
     await expect(page.getByText("The offering was added.")).toBeVisible();
     await expect(page.getByRole("row", { name: /E2E-A/ })).toContainText("No instructor");
 });
 
-test("TC-OFF-02 The same section twice is refused beside the field, keeping what was typed", async ({ page }) => {
+test("TC-OFF-02 The same course twice in a section is refused beside the field", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await page.goto("/institution/offerings?q=E2E-A");
 
@@ -314,13 +327,11 @@ test("TC-OFF-02 The same section twice is refused beside the field, keeping what
 
     const dialog = page.getByRole("dialog", { name: "Add an offering" });
     await dialog.getByLabel("Course").selectOption({ index: 1 });
-    await dialog.getByLabel("Term").selectOption({ index: 1 });
-    await dialog.getByLabel("Section").fill("E2E-A");
+    await dialog.getByLabel("Section").selectOption({ index: 1 });
     await dialog.getByRole("button", { name: "Add offering" }).click();
 
-    // Only refuses when the first course and term chosen are the same pair.
-    await expect(dialog.getByText(/already has a section/)).toBeVisible();
-    await expect(dialog.getByLabel("Section")).toHaveValue("E2E-A");
+    // Only refuses when the first course and section chosen are the pair TC-OFF-01 added.
+    await expect(dialog.getByText(/is already in this section/)).toBeVisible();
 });
 
 test("TC-OFF-03 An offering with no students can be archived and brought back", async ({ page }) => {
@@ -355,6 +366,67 @@ test("TC-ENR-01 Students are enrolled by email from the roster, and listed with 
     await expect(page.getByText(/1 student was enrolled/)).toBeVisible();
     await expect(page.getByText(/nobody@mentora.test is not a student number or email/)).toBeVisible();
     await expect(page.getByRole("row", { name: new RegExp(accounts.student.email) })).toContainText("Enrolled");
+});
+
+test("TC-ENR-08 Typing in the Add students box suggests students of the institution, and picking one fills the box", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    // IT101-B has no students, so every demo student is still there to be suggested.
+    await page.goto("/institution/offerings?q=IT101");
+    await page.getByRole("link", { name: "Roster of IT101 B" }).click();
+    await page.getByRole("button", { name: "Add students" }).first().click();
+
+    const dialog = page.getByRole("dialog", { name: /Add students/ });
+    const box = dialog.getByLabel("Student numbers or email addresses");
+    const options = dialog.getByRole("option");
+
+    // Nothing for one character; a list once there are two.
+    await box.pressSequentially("s");
+    await expect(options).toHaveCount(0);
+    await box.pressSequentially("tudent");
+    await expect(options).toHaveCount(5);
+    await expect(options.first()).toContainText("@mentora.test");
+
+    // Escape closes the list and leaves the dialog open.
+    await box.press("Escape");
+    await expect(options).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+
+    // Narrowing it down, then picking with the mouse puts the email in the box, ready for the next entry.
+    await box.fill("");
+    await box.pressSequentially("student3@");
+    await expect(options).toHaveCount(1);
+    await options.first().click();
+    await expect(box).toHaveValue("student3@mentora.test\n");
+    await expect(options).toHaveCount(0);
+
+    // The next entry is searched alone, and picking with the keyboard keeps what is already there.
+    await box.pressSequentially("student4@");
+    await expect(options).toHaveCount(1);
+    await box.press("ArrowDown");
+    await box.press("Enter");
+    await expect(box).toHaveValue("student3@mentora.test\nstudent4@mentora.test\n");
+
+    // Nobody was enrolled by looking: the roster is still empty.
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("No students enrolled yet")).toBeVisible();
+});
+
+test("TC-ENR-09 The Add students box of a section suggests students too", async ({ page }) => {
+    await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
+
+    // E2E-A is the section TC-OFF-01 made.
+    await page.goto("/institution/sections");
+    await page.getByRole("link", { name: "E2E-A" }).first().click();
+    await page.getByRole("button", { name: "Add students" }).first().click();
+
+    const dialog = page.getByRole("dialog", { name: /Add students/ });
+    const box = dialog.getByLabel("Student numbers or email addresses");
+
+    await box.pressSequentially("student2@");
+    await expect(dialog.getByRole("option")).toHaveCount(1);
+    await dialog.getByRole("option").first().click();
+    await expect(box).toHaveValue("student2@mentora.test\n");
 });
 
 test("TC-ENR-02 A student can be dropped and the row stays with its new status", async ({ page }) => {
@@ -507,10 +579,10 @@ test("TC-UPL-01 Files are previewed first, and applying them (after the password
         name: "students.csv",
         mimeType: "text/csv",
         buffer: Buffer.from(
-            "external_id,email,first_name,last_name,student_number\n" +
-                "UP1,e2e.upload1@mentora.test,Una,Upload,2026-9001\n" +
-                "UP2,e2e.upload2@mentora.test,Uri,Upload,2026-9002\n" +
-                "UP3,not-an-email,Uma,Upload,2026-9003\n",
+            "student_number,email,first_name,middle_name,last_name,suffix\n" +
+                "2026-9001,e2e.upload1@mentora.test,Una,,Upload,\n" +
+                "2026-9002,e2e.upload2@mentora.test,Uri,,Upload,\n" +
+                "2026-9003,not-an-email,Uma,,Upload,\n",
         ),
     });
     await page.getByRole("button", { name: "Preview the changes" }).click();
@@ -754,7 +826,7 @@ test("TC-SEC-01 An announcement reaches the whole institution, and stricter secu
     await expect(page.getByText("The announcement was removed.")).toBeVisible();
 });
 
-test("TC-RPT-01 Reports open on an overview, compare courses on their own page, narrow by department, open a course and export CSV", async ({ page }) => {
+test("TC-RPT-01 Reports open on an overview, compare courses on their own page, narrow by college, open a course and export CSV", async ({ page }) => {
     await submitLoginForm(page, accounts.institutionAdmin.email, accounts.institutionAdmin.password);
     await page.goto("/institution/reports");
     await expect(page.getByRole("heading", { name: "Reports", level: 1 })).toBeVisible();
@@ -770,14 +842,14 @@ test("TC-RPT-01 Reports open on an overview, compare courses on their own page, 
     const all = await rows.count();
     expect(all).toBeGreaterThan(1);
 
-    // The program list follows the department, and applying narrows the table.
-    const department = page.getByLabel("Department");
-    const options = await department.locator("option").count();
+    // The program list follows the college, and applying narrows the table.
+    const college = page.getByLabel("College");
+    const options = await college.locator("option").count();
     expect(options).toBeGreaterThan(1);
 
-    await department.selectOption({ index: 1 });
+    await college.selectOption({ index: 1 });
     await page.getByRole("button", { name: "Apply" }).click();
-    await expect(page).toHaveURL(/department=\d+/);
+    await expect(page).toHaveURL(/college=\d+/);
 
     // A course opens with its own numbers and a way back that keeps the filters.
     await page.getByRole("table", { name: "Courses compared" }).locator("tbody a").first().click();

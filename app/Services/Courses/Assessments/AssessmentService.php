@@ -44,6 +44,11 @@ class AssessmentService
     /** A quiz is published only with a question to answer (QA AMB-ASM-02). */
     public const NO_QUESTIONS = 'Add at least one question before publishing this quiz.';
 
+    /** A quiz password is 4 to 64 characters (surrounding spaces are ignored, case matters). */
+    public const PASSWORD_MIN = 4;
+
+    public const PASSWORD_MAX = 64;
+
     public function __construct()
     {
         $this->assessmentModel = new AssessmentModel();
@@ -120,13 +125,13 @@ class AssessmentService
 
             $row = $this->assessmentModel->find($assessmentId);
 
-            if (!$row || !$this->isVisibleToStudent($row)) {
+            if (!$row || !$this->isVisibleToStudent($row, (int) $user->id)) {
                 throw PageNotFoundException::forPageNotFound('Assessment not found.');
             }
 
         }
 
-        $data = $this->buildAssessmentContext($assessmentId, $isStudent);
+        $data = $this->buildAssessmentContext($assessmentId, $isStudent ? (int) $user->id : null);
 
         $isAssignment = strtolower($data['assessment']['assessment_type']) === 'assignment';
 
@@ -171,7 +176,7 @@ class AssessmentService
                 [
                     'user' => $user,
                     'currentAssessment' => $data['assessment'],
-                    'currentSettings' => $data['settings'],
+                    'currentSettings' => ($data['settings'] ?? []) + ['assignee_count' => count($this->assigneeIds($assessmentId))],
                     'currentUnit' => $data['currentUnit'],
                     'previousAssessment' => $data['previousAssessment'],
                     'nextAssessment' => $data['nextAssessment'],
@@ -218,7 +223,7 @@ class AssessmentService
                 [
                     'user' => $user,
                     'currentAssessment' => $data['assessment'],
-                    'currentSettings' => $data['settings'],
+                    'currentSettings' => ($data['settings'] ?? []) + ['assignee_count' => count($this->assigneeIds($assessmentId))],
                     'currentUnit' => $data['currentUnit'],
                     'previousAssessment' => $data['previousAssessment'],
                     'nextAssessment' => $data['nextAssessment'],
@@ -433,7 +438,7 @@ class AssessmentService
      * @param list<array> $assessments assessment rows (need id, status, learning_item_id)
      * @return array<int, true> visible assessment ids
      */
-    public function studentVisibleIds(array $assessments): array
+    public function studentVisibleIds(array $assessments, ?int $studentId = null): array
     {
         $itemIds = array_values(array_filter(array_map(
             static fn (array $a) => (int) ($a['learning_item_id'] ?? 0),
@@ -476,15 +481,136 @@ class AssessmentService
 
         }
 
+        // "Specific students": an assessment given to chosen students is hidden from the others.
+        if ($studentId !== null && $visible !== []) {
+
+            // One query: the ones given to chosen students only, where this student is not one of them.
+            $hidden = db_connect()->table('assessment_settings st')
+                ->select('st.assessment_id')
+                ->whereIn('st.assessment_id', array_keys($visible))
+                ->where('st.assign_to_specific_students', 1)
+                ->where('NOT EXISTS (SELECT 1 FROM assessment_assignees aa WHERE aa.assessment_id = st.assessment_id AND aa.student_user_id = ' . (int) $studentId . ')', null, false)
+                ->get()->getResultArray();
+
+            foreach ($hidden as $row) {
+                unset($visible[(int) $row['assessment_id']]);
+            }
+
+        }
+
         return $visible;
     }
 
-    public function isVisibleToStudent(array $assessment): bool
+    public function isVisibleToStudent(array $assessment, ?int $studentId = null): bool
     {
-        return isset($this->studentVisibleIds([$assessment])[(int) $assessment['id']]);
+        return isset($this->studentVisibleIds([$assessment], $studentId)[(int) $assessment['id']]);
     }
 
-    private function buildAssessmentContext(int $assessmentId, bool $forStudent = false): array
+    /*
+    |--------------------------------------------------------------------------
+    | Specific students
+    |--------------------------------------------------------------------------
+    */
+
+    /** Whether this student is meant to get the assessment: everyone is, unless it is given to chosen students only. */
+    public function isAssignedTo(int $assessmentId, int $studentId): bool
+    {
+        $chosenOnly = db_connect()->table('assessment_settings')->where('assessment_id', $assessmentId)->where('assign_to_specific_students', 1)->countAllResults() > 0;
+
+        return !$chosenOnly || db_connect()->table('assessment_assignees')->where('assessment_id', $assessmentId)->where('student_user_id', $studentId)->countAllResults() > 0;
+    }
+
+    /** @return list<int> the students an assessment is given to (used only while "specific students" is on) */
+    public function assigneeIds(int $assessmentId): array
+    {
+        $rows = db_connect()->table('assessment_assignees')->select('student_user_id')->where('assessment_id', $assessmentId)->get()->getResultArray();
+
+        return array_map(static fn (array $r) => (int) $r['student_user_id'], $rows);
+    }
+
+    /** The section an assessment belongs to (through its module). */
+    private function offeringOfAssessment(int $assessmentId): int
+    {
+        return (int) (db_connect()->table('assessments')
+            ->select('course_modules.offering_id')
+            ->join('course_modules', 'course_modules.id = assessments.module_id')
+            ->where('assessments.id', $assessmentId)
+            ->get()->getRowArray()['offering_id'] ?? 0);
+    }
+
+    /**
+     * The students of the assessment's section, and whether each is chosen, for the picker.
+     *
+     * @return list<array{id: int, name: string, email: string, selected: bool}>
+     */
+    public function assignmentRoster(int $assessmentId): array
+    {
+        $offeringId = $this->offeringOfAssessment($assessmentId);
+
+        if ($offeringId === 0) {
+            return [];
+        }
+
+        $rows = db_connect()->table('enrollments')
+            ->select("enrollments.student_user_id AS id, COALESCE(NULLIF(TRIM(CONCAT(user_profiles.first_name, ' ', user_profiles.last_name)), ''), users.username) AS name, auth_identities.secret AS email", false)
+            ->join('users', 'users.id = enrollments.student_user_id')
+            ->join('user_profiles', 'user_profiles.user_id = users.id', 'left')
+            ->join('auth_identities', "auth_identities.user_id = users.id AND auth_identities.type = 'email_password'", 'left')
+            ->where('enrollments.offering_id', $offeringId)
+            ->whereIn('enrollments.status', ['enrolled', 'completed'])
+            ->orderBy('name', 'ASC')
+            ->get()->getResultArray();
+
+        $chosen = array_flip($this->assigneeIds($assessmentId));
+
+        return array_map(static fn (array $r) => [
+            'id'       => (int) $r['id'],
+            'name'     => (string) $r['name'],
+            'email'    => (string) ($r['email'] ?? ''),
+            'selected' => isset($chosen[(int) $r['id']]),
+        ], $rows);
+    }
+
+    /**
+     * Replaces who the assessment is given to. Every id must be a student enrolled in its section: one that is not
+     * refuses the whole change. Whether the list is used is the "specific students" toggle, saved with the settings.
+     *
+     * @param list<int|string> $studentIds
+     */
+    public function setAssignees(User $user, int $assessmentId, array $studentIds): array
+    {
+        if (!$this->assessmentModel->find($assessmentId)) {
+            return ['success' => false, 'message' => 'Assessment not found.'];
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', $studentIds), static fn (int $id) => $id > 0)));
+
+        $allowed = array_map(static fn (array $s) => $s['id'], $this->assignmentRoster($assessmentId));
+
+        if (array_diff($ids, $allowed) !== []) {
+            return ['success' => false, 'message' => 'Only students enrolled in this section can be chosen.'];
+        }
+
+        $db = db_connect();
+
+        $db->transStart();
+
+        $db->table('assessment_assignees')->where('assessment_id', $assessmentId)->delete();
+
+        if ($ids !== []) {
+            $db->table('assessment_assignees')->insertBatch(array_map(static fn (int $id) => [
+                'assessment_id'   => $assessmentId,
+                'student_user_id' => $id,
+                'created_at'      => date('Y-m-d H:i:s'),
+            ], $ids));
+        }
+
+        $db->transComplete();
+
+        return ['success' => $db->transStatus(), 'message' => 'Students saved.', 'count' => count($ids)];
+    }
+
+    private function buildAssessmentContext(int $assessmentId, ?int $forStudentId = null): array
     {
 
         $assessment = $this->assessmentModel
@@ -553,9 +679,9 @@ class AssessmentService
             ->findAll();
 
         // Students step only through assessments they're allowed to see.
-        if ($forStudent) {
+        if ($forStudentId !== null) {
 
-            $visible = $this->studentVisibleIds($siblings);
+            $visible = $this->studentVisibleIds($siblings, $forStudentId);
 
             $siblings = array_values(array_filter(
                 $siblings,
@@ -1116,6 +1242,73 @@ class AssessmentService
         return $assessmentId;
     }
 
+    /** Whether this assessment is a quiz (the settings that are quiz only do not apply to anything else). */
+    private function isQuizAssessment(array $assessment): bool
+    {
+        return strtolower((string) ($this->assessmentTypeModel->find($assessment['assessment_type_id'])['name'] ?? '')) === 'quiz';
+    }
+
+    private function quizPasswordHash(int $assessmentId): ?string
+    {
+        $hash = db_connect()->table('assessment_settings')->select('password')->where('assessment_id', $assessmentId)->get()->getRowArray()['password'] ?? null;
+
+        return is_string($hash) && $hash !== '' ? $hash : null;
+    }
+
+    /** Whether the quiz has a password saved (the password itself is never given back). */
+    public function hasQuizPassword(int $assessmentId): bool
+    {
+        return $this->quizPasswordHash($assessmentId) !== null;
+    }
+
+    /** Whether what a student typed is the quiz's password. Case matters; surrounding spaces do not. */
+    public function quizPasswordMatches(int $assessmentId, string $typed): bool
+    {
+        $hash  = $this->quizPasswordHash($assessmentId);
+        $typed = trim($typed);
+
+        return $hash !== null && $typed !== '' && password_verify($typed, $hash);
+    }
+
+    /**
+     * Saves a quiz's password (stored as a hash, never as text) and requires it. It has its own method, not a field
+     * of updateAssessment, so the password is only ever sent when it is being set. Turning the password off is
+     * updateAssessment with require_password off.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function setQuizPassword(User $user, int $assessmentId, string $password): array
+    {
+        $assessment = $this->assessmentModel->find($assessmentId);
+
+        if (!$assessment) {
+            return ['success' => false, 'message' => 'Assessment not found.'];
+        }
+
+        if (!$this->isQuizAssessment($assessment)) {
+            return ['success' => false, 'message' => 'Only a quiz can have a password.'];
+        }
+
+        $password = trim($password);
+        $length   = mb_strlen($password);
+
+        if ($length < self::PASSWORD_MIN) {
+            return ['success' => false, 'message' => 'The password must be at least ' . self::PASSWORD_MIN . ' characters.'];
+        }
+
+        if ($length > self::PASSWORD_MAX) {
+            return ['success' => false, 'message' => 'The password can be at most ' . self::PASSWORD_MAX . ' characters.'];
+        }
+
+        db_connect()->table('assessment_settings')->where('assessment_id', $assessmentId)->update([
+            'password'         => password_hash($password, PASSWORD_DEFAULT),
+            'require_password' => 1,
+            'updated_at'       => date('Y-m-d H:i:s'),
+        ]);
+
+        return ['success' => true, 'message' => 'Password saved.'];
+    }
+
     public function updateAssessment(User $user, int $assessmentId, array $data): array {
         $db = db_connect();
 
@@ -1162,6 +1355,11 @@ class AssessmentService
 
             if ($problem = $this->settingsProblem($assessment, $data)) {
                 return ['success' => false, 'message' => $problem];
+            }
+
+            // Requiring a password needs one to exist: with none, no student could ever start the quiz.
+            if ($this->isQuizAssessment($assessment) && !empty($data['require_password']) && !$this->hasQuizPassword($assessmentId)) {
+                return ['success' => false, 'message' => 'Create a password for this quiz first, or leave the password off.'];
             }
 
             /*
@@ -1275,6 +1473,27 @@ class AssessmentService
                     'updated_at' => date('Y-m-d H:i:s')
 
                 ];
+
+                // A switch not sent keeps what it was.
+                $flag = static fn (string $key): int => array_key_exists($key, $data) ? (int) (bool) $data[$key] : (int) ($settings[$key] ?? 0);
+
+                // For every assessment: given to the students listed (assessment_assignees), not to everyone.
+                $settingsData['assign_to_specific_students'] = $flag('assign_to_specific_students');
+
+                // Quiz only: an assignment never stores these (they would suggest protection it cannot have).
+                if ($this->isQuizAssessment($assessment)) {
+
+                    $settingsData['randomize_questions'] = $flag('randomize_questions');
+                    $settingsData['browser_lockdown']    = $flag('browser_lockdown');
+                    $settingsData['detect_tab_switch']   = $flag('detect_tab_switch');
+
+                    // Turning the password off forgets it. It is set only through setQuizPassword().
+                    if (array_key_exists('require_password', $data) && empty($data['require_password'])) {
+                        $settingsData['require_password'] = 0;
+                        $settingsData['password']         = null;
+                    }
+
+                }
 
                 $this->assessmentSettingsModel->update(
                     $settings['id'],

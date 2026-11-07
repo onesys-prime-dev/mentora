@@ -64,28 +64,28 @@ class OneInstitutionPerAccount extends Migration
 
         $offerings = array_map('intval', array_column($db->query(
             'SELECT o.id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id'
-            . ' JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?',
+            . ' JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?',
             [$institutionId]
         )->getResultArray(), 'id'));
 
-        $subDepartments = array_map('intval', array_column($db->query(
-            'SELECT sd.id FROM sub_departments sd JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?',
+        $departments = array_map('intval', array_column($db->query(
+            'SELECT sd.id FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?',
             [$institutionId]
         )->getResultArray(), 'id'));
 
-        $departments = array_map('intval', array_column($db->table('departments')->select('id')->where('institution_id', $institutionId)->get()->getResultArray(), 'id'));
+        $colleges = array_map('intval', array_column($db->table('colleges')->select('id')->where('institution_id', $institutionId)->get()->getResultArray(), 'id'));
 
         if ($offerings !== []) {
             $db->table('enrollments')->where('student_user_id', $userId)->whereIn('offering_id', $offerings)->whereIn('status', ['enrolled'])->update(['status' => 'dropped', 'updated_at' => $now]);
             $db->table('instructor_assignments')->where('instructor_user_id', $userId)->whereIn('offering_id', $offerings)->delete();
         }
 
-        if ($subDepartments !== []) {
-            $db->table('chairperson_assignments')->where(['chairperson_user_id' => $userId, 'status' => 'active'])->whereIn('sub_department_id', $subDepartments)->update(['status' => 'revoked', 'updated_at' => $now]);
+        if ($departments !== []) {
+            $db->table('chairperson_assignments')->where(['chairperson_user_id' => $userId, 'status' => 'active'])->whereIn('department_id', $departments)->update(['status' => 'revoked', 'updated_at' => $now]);
         }
 
-        if ($departments !== []) {
-            $db->table('dean_assignments')->where(['dean_user_id' => $userId, 'status' => 'active'])->whereIn('department_id', $departments)
+        if ($colleges !== []) {
+            $db->table('dean_assignments')->where(['dean_user_id' => $userId, 'status' => 'active'])->whereIn('college_id', $colleges)
                 ->update(['status' => 'ended', 'active_marker' => null, 'ended_at' => $now, 'updated_at' => $now]);
         }
     }

@@ -47,7 +47,7 @@ final class InstitutionExportScaleTest extends DatabaseTestCase
     {
         $db       = db_connect();
         $offering = CourseFactory::offering();
-        $id       = (int) $db->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
+        $id       = (int) $db->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
         $db->table('institutions')->where('id', $id)->update(['status' => 'read_only']);
         $teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $id);
         $student = PeopleFactory::person('student', 'Sam', 'Student', null, $id);

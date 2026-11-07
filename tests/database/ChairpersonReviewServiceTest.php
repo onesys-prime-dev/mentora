@@ -13,7 +13,7 @@ use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * The dean's review of chairperson changes: only the department's courses, only what the chairperson
+ * The dean's review of chairperson changes: only the college's courses, only what the chairperson
  * did not do as the course's own instructor, the filters, the paging, the dean's own "reviewed" marks
  * (a later dean starts with none), and that marking changes nothing in the audit entry itself.
  *
@@ -25,9 +25,9 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
 
     private ChairpersonReviewService $service;
     private int $institution;
-    private int $department;
-    private int $subA;
-    private int $subB;
+    private int $college;
+    private int $departmentA;
+    private int $departmentB;
     private int $itA;
     private int $lawB;
     private User $dean;
@@ -41,19 +41,19 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home              = DeanFactory::department('R');
+        $home              = DeanFactory::college('R');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->subA        = DeanFactory::subDepartment($this->department, 'A');
-        $this->subB        = DeanFactory::subDepartment($this->department, 'B');
+        $this->college  = $home['college'];
+        $this->departmentA        = DeanFactory::department($this->college, 'A');
+        $this->departmentB        = DeanFactory::department($this->college, 'B');
         $term              = DeanFactory::term($this->institution);
 
-        $this->itA  = DeanFactory::offering(DeanFactory::program($this->subA, 'A'), $term, 'IT101', 'A', 'active', 'Intro to Computing');
-        $this->lawB = DeanFactory::offering(DeanFactory::program($this->subB, 'B'), $term, 'LW100', 'A', 'active', 'Intro to Law');
+        $this->itA  = DeanFactory::offering(DeanFactory::program($this->departmentA, 'A'), $term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->lawB = DeanFactory::offering(DeanFactory::program($this->departmentB, 'B'), $term, 'LW100', 'A', 'active', 'Intro to Law');
 
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
-        $this->chairA  = DeanFactory::chair($this->subA, 'Ana');
-        $this->chairB  = DeanFactory::chair($this->subB, 'Ben');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
+        $this->chairA  = DeanFactory::chair($this->departmentA, 'Ana');
+        $this->chairB  = DeanFactory::chair($this->departmentB, 'Ben');
         $this->service = new ChairpersonReviewService();
     }
 
@@ -82,7 +82,7 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
         return ChairpersonReviewFilters::fromInput($input);
     }
 
-    public function testItListsChairpersonChangesInTheDepartmentsCoursesNewestFirst(): void
+    public function testItListsChairpersonChangesInTheCollegesCoursesNewestFirst(): void
     {
         $first  = $this->action($this->chairA, $this->itA, at: '2026-10-10 09:00:00');
         $second = $this->action($this->chairB, $this->lawB, 'PATCH', 'assessments', '2026-10-11 09:00:00');
@@ -96,16 +96,16 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
         $row = $result['rows'][1];
 
         $this->assertSame('IT101', $row['course_code']);
-        $this->assertSame('Sub A', $row['sub_department']);
+        $this->assertSame('Department A', $row['department']);
         $this->assertSame('Created an announcement', $row['description']);
         $this->assertSame('Updated an assessment', $result['rows'][0]['description']);
         $this->assertStringContainsString('ana.chair', (string) $row['actor']);
     }
 
-    public function testNothingFromAnotherDepartmentOrAnotherKindOfEntryIsListed(): void
+    public function testNothingFromAnotherCollegeOrAnotherKindOfEntryIsListed(): void
     {
-        $elsewhere = DeanFactory::department('X', $this->institution);
-        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
+        $elsewhere = DeanFactory::college('X', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
         $mine      = $this->action($this->chairA, $this->itA);
 
         $this->action($this->chairA, $foreign);
@@ -113,9 +113,9 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
 
         $this->assertSame([$mine], $this->ids($this->service->entries($this->dean, $this->filters())));
 
-        $other = DeanFactory::dean($this->institution, $elsewhere['department'], 'Eve');
+        $other = DeanFactory::dean($this->institution, $elsewhere['college'], 'Eve');
 
-        $this->assertSame(1, $this->service->entries($other, $this->filters())['total'], 'the other dean sees only their own department\'s');
+        $this->assertSame(1, $this->service->entries($other, $this->filters())['total'], 'the other dean sees only their own college\'s');
     }
 
     public function testWhatAChairpersonDidInACourseTheyTeachIsLeftOut(): void
@@ -127,26 +127,26 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
         $this->assertSame(0, $this->service->pendingCount($this->dean));
     }
 
-    public function testTheFiltersNarrowByChairpersonSubDepartmentAndDates(): void
+    public function testTheFiltersNarrowByChairpersonDepartmentAndDates(): void
     {
         $a = $this->action($this->chairA, $this->itA, at: '2026-10-05 09:00:00');
         $b = $this->action($this->chairB, $this->lawB, at: '2026-10-20 23:30:00');
 
         $this->assertSame([$a], $this->ids($this->service->entries($this->dean, $this->filters(['chairperson' => (string) $this->chairA->id]))));
-        $this->assertSame([$b], $this->ids($this->service->entries($this->dean, $this->filters(['sub_department' => (string) $this->subB]))));
+        $this->assertSame([$b], $this->ids($this->service->entries($this->dean, $this->filters(['department' => (string) $this->departmentB]))));
         $this->assertSame([$b], $this->ids($this->service->entries($this->dean, $this->filters(['from' => '2026-10-10']))));
         $this->assertSame([$b, $a], $this->ids($this->service->entries($this->dean, $this->filters(['to' => '2026-10-20']))), 'the whole last day counts');
         $this->assertSame([$a], $this->ids($this->service->entries($this->dean, $this->filters(['to' => '2026-10-19']))));
-        $this->assertSame([], $this->ids($this->service->entries($this->dean, $this->filters(['chairperson' => (string) $this->chairA->id, 'sub_department' => (string) $this->subB]))));
+        $this->assertSame([], $this->ids($this->service->entries($this->dean, $this->filters(['chairperson' => (string) $this->chairA->id, 'department' => (string) $this->departmentB]))));
     }
 
-    public function testASubDepartmentOrChairpersonOutsideTheDepartmentFindsNothingNotEverything(): void
+    public function testADepartmentOrChairpersonOutsideTheCollegeFindsNothingNotEverything(): void
     {
         $this->action($this->chairA, $this->itA);
-        $elsewhere = DeanFactory::department('X', $this->institution);
-        $foreignSub = DeanFactory::subDepartment($elsewhere['department'], 'X');
+        $elsewhere = DeanFactory::college('X', $this->institution);
+        $foreignDepartment = DeanFactory::department($elsewhere['college'], 'X');
 
-        $this->assertSame(0, $this->service->entries($this->dean, $this->filters(['sub_department' => (string) $foreignSub]))['total']);
+        $this->assertSame(0, $this->service->entries($this->dean, $this->filters(['department' => (string) $foreignDepartment]))['total']);
         $this->assertSame(0, $this->service->entries($this->dean, $this->filters(['chairperson' => '999999']))['total']);
     }
 
@@ -199,10 +199,10 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
         $this->assertStringContainsString((string) $id, (string) $audit['new_values']);
     }
 
-    public function testOnlyEntriesOfTheDeansOwnDepartmentCanBeMarked(): void
+    public function testOnlyEntriesOfTheDeansOwnCollegeCanBeMarked(): void
     {
-        $elsewhere = DeanFactory::department('X', $this->institution);
-        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
+        $elsewhere = DeanFactory::college('X', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
         $theirs    = $this->action($this->chairA, $foreign);
         $mine      = $this->action($this->chairA, $this->itA);
 
@@ -219,7 +219,7 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
         $id = $this->action($this->chairA, $this->itA);
 
         $this->assertFalse($this->service->markReviewed($this->chairA, [$id])['success']);
-        $this->assertFalse($this->service->markReviewed(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), [$id])['success']);
+        $this->assertFalse($this->service->markReviewed(PeopleFactory::person('dean', 'No', 'College', null, $this->institution), [$id])['success']);
         $this->assertSame(0, db_connect()->table('chairperson_action_reviews')->countAllResults());
     }
 
@@ -229,22 +229,22 @@ final class ChairpersonReviewServiceTest extends DatabaseTestCase
         $this->service->markReviewed($this->dean, [$id]);
 
         db_connect()->table('dean_assignments')->where('dean_user_id', $this->dean->id)->update(['status' => 'ended', 'active_marker' => null]);
-        $next = DeanFactory::dean($this->institution, $this->department, 'Nora');
+        $next = DeanFactory::dean($this->institution, $this->college, 'Nora');
 
         $this->assertSame([$id], $this->ids($this->service->entries($next, $this->filters())), 'unreviewed for the new dean');
         $this->assertSame(0, $this->service->entries($this->dean, $this->filters())['total'], 'and the old dean no longer reaches anything');
     }
 
-    public function testADeanWithoutADepartmentSeesNothing(): void
+    public function testADeanWithoutACollegeSeesNothing(): void
     {
         $this->action($this->chairA, $this->itA);
-        $stray = PeopleFactory::person('dean', 'No', 'Department', null, $this->institution);
+        $stray = PeopleFactory::person('dean', 'No', 'College', null, $this->institution);
 
         $this->assertSame(['rows' => [], 'total' => 0, 'counts' => ['unreviewed' => 0, 'reviewed' => 0]], $this->service->entries($stray, $this->filters()));
         $this->assertSame([], $this->service->chairpersons($stray));
     }
 
-    public function testTheChairpersonFilterListsTheDepartmentsChairpersons(): void
+    public function testTheChairpersonFilterListsTheCollegesChairpersons(): void
     {
         $names = array_column($this->service->chairpersons($this->dean), 'name');
 

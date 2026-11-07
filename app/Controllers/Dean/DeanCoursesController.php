@@ -10,7 +10,7 @@ use App\Services\Courses\DeanCourseFilters;
 use App\Services\Courses\DeanCourseSearch;
 
 /**
- * The dean's Courses page: every course in their department. A card opens
+ * The dean's Courses page: every course in their college. A card opens
  * the course in its read-only view (the dean/courses/{id} routes).
  */
 class DeanCoursesController extends BaseController
@@ -19,7 +19,7 @@ class DeanCoursesController extends BaseController
     {
         $user = auth()->user();
 
-        if ((new DeanAccessService())->departmentFor($user) === null) {
+        if ((new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Courses', 'page' => 'courses', 'user' => $user]);
         }
 
@@ -29,14 +29,14 @@ class DeanCoursesController extends BaseController
         $loadError      = false;
         $result         = ['rows' => [], 'total' => 0];
         $terms          = [];
-        $subDepartments = [];
+        $departments = [];
         $programs       = [];
         $instructors    = [];
 
         try {
             $result         = $search->page($user, $filters);
             $terms          = $search->terms($user);
-            $subDepartments = $search->subDepartments($user);
+            $departments = $search->departments($user);
             $programs       = $search->programs($user);
             $instructors    = $search->instructors($user);
         } catch (\Throwable $e) {
@@ -55,7 +55,7 @@ class DeanCoursesController extends BaseController
             'total'          => $result['total'],
             'pages'          => max(1, (int) ceil($result['total'] / $filters->perPage)),
             'terms'          => $terms,
-            'subDepartments' => $subDepartments,
+            'departments' => $departments,
             'programs'       => $programs,
             'instructors'    => $instructors,
             'statuses'       => DeanCourseFilters::STATUSES,

@@ -52,8 +52,8 @@ class CourseCatalogService
 
         $builder = $db->table('courses c')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId);
 
         $q = trim((string) ($filters['q'] ?? ''));
@@ -80,7 +80,7 @@ class CourseCatalogService
         $dir  = ($filters['dir'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
 
         $rows = $builder
-            ->select('c.*, p.code AS program_code, p.name AS program_name, p.status AS program_status, sd.name AS sub_department_name')
+            ->select('c.*, p.code AS program_code, p.name AS program_name, p.status AS program_status, sd.name AS department_name')
             ->select('(SELECT COUNT(*) FROM course_offerings o WHERE o.course_id = c.id AND o.status != \'archived\') AS offering_count', false)
             ->select('EXISTS (SELECT 1 FROM sis_links l JOIN sis_connections sc ON sc.institution_id = l.institution_id AND sc.enabled = 1 WHERE l.entity = \'course\' AND l.local_id = c.id) AS sis_managed', false)
             ->orderBy($sort, $dir)
@@ -100,8 +100,8 @@ class CourseCatalogService
     {
         $builder = db_connect()->table('programs p')
             ->select('p.id, p.code, p.name')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->orderBy('p.code');
 

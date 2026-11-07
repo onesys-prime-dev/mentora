@@ -101,7 +101,7 @@
 
 **Interfaces:**
 - Produces: the seven tables exactly as spec section 4 lists them (columns, uniques, indexes), with these decisions:
-  - Column types follow `CreateDepartmentAnnouncementsTable` (`INT` unsigned ids, `TINYINT` constraint 1 for booleans, `DATETIME` for timestamps, `MEDIUMTEXT` for `body_enc` and `snapshot_enc`); if a foreign key refuses to create, match the referenced column's exact type.
+  - Column types follow `CreateCollegeAnnouncementsTable` (`INT` unsigned ids, `TINYINT` constraint 1 for booleans, `DATETIME` for timestamps, `MEDIUMTEXT` for `body_enc` and `snapshot_enc`); if a foreign key refuses to create, match the referenced column's exact type.
   - `institution_id` and user columns are foreign keys (`CASCADE`, `SET NULL` for nullable `created_by`/`removed_by`/`reviewed_by`, as in neighbouring migrations). `conversations.last_message_id` and `conversation_participants.*_message_id` are plain indexed columns, **no** foreign key (circular).
   - MySQL has no partial indexes: `UNIQUE(offering_id)` and `UNIQUE(direct_key)` on `conversations` are plain uniques, which is correct because both are NULL for the other conversation types.
   - `message_reports.reason` is `VARCHAR(20)` (values `harassment`, `spam`, `inappropriate`, `other`), `note_enc` MEDIUMTEXT NULL.
@@ -133,7 +133,7 @@
 
 **Interfaces:**
 - Produces (all `final`, namespace `App\Services\Messaging`, no database access):
-  - `StartContext` — `readonly` constructor properties, all `bool`: `sameInstitution = true`, `senderActive = true`, `recipientActive = true`, `sharedCourse = false`, `sameDepartment = false`, `inScope = false`, `linkedChild = false`, `studentDmEnabled = true`, `blockedByRecipient = false`. Meanings: `sharedCourse` both active in one non-closed offering; `inScope` the sender's sub-department (chairperson) or department (dean) covers the recipient; `linkedChild` the parent's linked child is taught by that instructor or chaired by that chairperson.
+  - `StartContext` — `readonly` constructor properties, all `bool`: `sameInstitution = true`, `senderActive = true`, `recipientActive = true`, `sharedCourse = false`, `sameCollege = false`, `inScope = false`, `linkedChild = false`, `studentDmEnabled = true`, `blockedByRecipient = false`. Meanings: `sharedCourse` both active in one non-closed offering; `inScope` the sender's department (chairperson) or college (dean) covers the recipient; `linkedChild` the parent's linked child is taught by that instructor or chaired by that chairperson.
   - `PostContext` — `readonly`: `string $type` (`course|direct|group`), `bool $activeParticipant`, `$accountActive`, `$institutionReadOnly = false`, `$offeringClosed = false`, `$locked = false`, `$isCourseInstructor = false`, `$blocked = false`, `$studentDmBlocked = false`. (`studentDmBlocked` = a student↔student direct thread while the institution switch is off.)
   - `MessagingPolicy::canStart(string $senderRole, string $recipientRole, StartContext $c): bool`
   - `canPost(PostContext $c): bool`
@@ -148,10 +148,10 @@
   | student → student | `sharedCourse` and `studentDmEnabled` |
   | student → instructor | `sharedCourse` |
   | instructor → student | `sharedCourse` |
-  | instructor → instructor / chairperson / dean | `sameDepartment` |
+  | instructor → instructor / chairperson / dean | `sameCollege` |
   | instructor → parent | `linkedChild` |
   | chairperson → student / instructor | `inScope` |
-  | chairperson → chairperson / dean | `sameDepartment` |
+  | chairperson → chairperson / dean | `sameCollege` |
   | dean → student / instructor / chairperson | `inScope` |
   | dean → dean | nothing more |
   | parent → instructor / chairperson | `linkedChild` |

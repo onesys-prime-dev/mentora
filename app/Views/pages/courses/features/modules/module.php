@@ -43,12 +43,13 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                 <div class="flex items-center gap-2">
                     <span class="text-2xl font-bold text-brand"><?= esc($module['title']) ?></span>
                     <?php if ($isDraft): ?>
-                        <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
-                            Draft
+                        <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]" data-publish-chip="<?= !empty($module['scheduled_publish_at']) ? 'scheduled' : 'draft' ?>">
+                            <?= !empty($module['scheduled_publish_at']) ? 'Scheduled · ' . esc(date('M j, g:i A', strtotime($module['scheduled_publish_at']))) : 'Draft' ?>
                         </span>
                     <?php elseif ($canEditContent): ?>
                         <?= view('pages/courses/features/modules/partials/publish-chip', ['status' => 'published'], ['saveData' => false]) ?>
                     <?php endif; ?>
+                    <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $module['locked_by'] ?? [], 'labels' => $module['dependency_labels'] ?? []], ['saveData' => false]) ?>
                 </div>
                 <span class="text-sm font-normal text-[#A3A3A3]">
                     <?php if ($module['display_number'] !== null): ?>Module <?= esc($module['display_number']) ?><?php endif; ?>
@@ -167,15 +168,18 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                             <?php endif; ?>
 
                             <?php if ($unitIsDraft): ?>
-                                <span class="shrink-0 rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]">
-                                    Draft
+                                <span class="shrink-0 rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]" data-publish-chip="<?= !empty($learning_unit['scheduled_publish_at']) ? 'scheduled' : 'draft' ?>">
+                                    <?= !empty($learning_unit['scheduled_publish_at']) ? 'Scheduled · ' . esc(date('M j, g:i A', strtotime($learning_unit['scheduled_publish_at']))) : 'Draft' ?>
                                 </span>
                             <?php elseif ($canEditContent): ?>
                                 <?= view('pages/courses/features/modules/partials/publish-chip', [
                                     'status' => $learning_unit['status'],
+                                    'scheduledAt' => $learning_unit['scheduled_publish_at'] ?? null,
                                     'hiddenBy' => $moduleIsDraft ? 'module' : null,
                                 ], ['saveData' => false]) ?>
                             <?php endif; ?>
+
+                            <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $learning_unit['locked_by'] ?? [], 'labels' => $learning_unit['dependency_labels'] ?? []], ['saveData' => false]) ?>
                         </div>
 
                         <div class="flex items-center gap-2 shrink-0">
@@ -277,6 +281,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
                                                         <?= view('pages/courses/features/modules/partials/publish-chip', [
                                                             'status' => $learning_item['status'],
+                                                            'scheduledAt' => $learning_item['scheduled_publish_at'] ?? null,
                                                             'hiddenBy' => $moduleIsDraft ? 'module' : ($learning_unit['status'] !== 'published' ? 'unit' : null),
                                                         ], ['saveData' => false]) ?>
 
@@ -313,6 +318,8 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                     data-create-learning-item-button
                                     data-module-id="<?= esc($module['id']) ?>"
                                     data-learning-unit-id="<?= esc($learning_unit['id']) ?>"
+                                    data-module-status="<?= esc($module['status']) ?>"
+                                    data-unit-status="<?= esc($learning_unit['status']) ?>"
                                     class="group flex cursor-pointer items-center gap-3 px-2 py-5 transition-all duration-200">
 
                                     <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-brand/40"></div>
@@ -345,7 +352,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
         <?php if ($canEditContent): ?>
 
-            <div data-create-learning-unit-button data-module-id="<?= esc($module['id']) ?>" class="group flex cursor-pointer items-center gap-3 px-2 py-5 transition-all duration-200">
+            <div data-create-learning-unit-button data-module-id="<?= esc($module['id']) ?>" data-module-status="<?= esc($module['status']) ?>" class="group flex cursor-pointer items-center gap-3 px-2 py-5 transition-all duration-200">
 
                 <div class="h-px flex-1 rounded-full bg-gray-200 transition-all duration-200 group-hover:bg-brand/40"></div>
 
@@ -383,5 +390,20 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
 <?php if ($isInstructor): ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-dependencies') ?>
+<?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
+<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+    'id' => 'learning-unit-dependencies-modal',
+    'closeAttr' => 'data-close-learning-unit-dependencies-modal',
+    'noun' => 'learning unit',
+    'earlier' => 'earlier learning units in this module',
+    'previousLabel' => 'Previous learning unit',
+], ['saveData' => false]) ?>
+<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+    'id' => 'module-dependencies-modal',
+    'closeAttr' => 'data-close-module-dependencies-modal',
+    'noun' => 'module',
+    'earlier' => 'earlier modules in this course',
+    'previousLabel' => 'Previous module',
+], ['saveData' => false]) ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-delete') ?>
 <?php endif; ?>

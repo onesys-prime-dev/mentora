@@ -20,7 +20,7 @@ use CodeIgniter\Shield\Entities\User;
  *
  * In an institution that has deans, an override is a request: the calculated
  * grade stays in force until it is approved. An instructor's request waits for
- * the sub-department's chairperson to endorse it or send it back with a comment
+ * the department's chairperson to endorse it or send it back with a comment
  * (the requester may then edit and resubmit, or withdraw); an endorsed request
  * waits for the dean. Who is next is OverrideRequestChain. An institution with
  * no dean keeps the direct override it always had (GradingEngineService).
@@ -85,7 +85,7 @@ class GradeOverrideRequestService
         }
 
         $context = $this->context($offeringId);
-        $status  = OverrideRequestChain::first((int) $user->id, $role, $this->chairIds((int) $context['sub_department_id']), $this->deanId((int) $context['department_id']));
+        $status  = OverrideRequestChain::first((int) $user->id, $role, $this->chairIds((int) $context['department_id']), $this->deanId((int) $context['college_id']));
 
         try {
             $id = (int) $this->requests->insert([
@@ -108,7 +108,7 @@ class GradeOverrideRequestService
         $this->audit('grade.override_requested', $user, $id, $context, null, ['status' => $status, 'requested_percentage' => $percentage, 'student_id' => $studentId]);
 
         if ($status === OverrideRequestChain::AWAITING_CHAIR) {
-            foreach (array_diff($this->chairIds((int) $context['sub_department_id']), [(int) $user->id]) as $chairId) {
+            foreach (array_diff($this->chairIds((int) $context['department_id']), [(int) $user->id]) as $chairId) {
                 $this->tell($chairId, "grade-override:{$id}:chair", 'Grade override to endorse', $this->label($context) . ': a final-grade override is waiting for you.', (int) $context['institution_id'], site_url('chairperson/override-requests'));
             }
         }
@@ -154,7 +154,7 @@ class GradeOverrideRequestService
         }
 
         $context = $this->context($offeringId);
-        $status  = OverrideRequestChain::first((int) $user->id, (string) $row['requester_role'], $this->chairIds((int) $context['sub_department_id']), $this->deanId((int) $context['department_id']));
+        $status  = OverrideRequestChain::first((int) $user->id, (string) $row['requester_role'], $this->chairIds((int) $context['department_id']), $this->deanId((int) $context['college_id']));
 
         $this->requests->update($requestId, [
             'requested_percentage' => $percentage,
@@ -168,7 +168,7 @@ class GradeOverrideRequestService
         $this->audit('grade.override_resubmitted', $user, $requestId, $context, ['requested_percentage' => $row['requested_percentage']], ['status' => $status, 'requested_percentage' => $percentage]);
 
         if ($status === OverrideRequestChain::AWAITING_CHAIR) {
-            foreach (array_diff($this->chairIds((int) $context['sub_department_id']), [(int) $user->id]) as $chairId) {
+            foreach (array_diff($this->chairIds((int) $context['department_id']), [(int) $user->id]) as $chairId) {
                 $this->tell($chairId, "grade-override:{$requestId}:chair:" . date('YmdHis'), 'Grade override to endorse', $this->label($context) . ': a request you sent back was edited and sent again.', (int) $context['institution_id'], site_url('chairperson/override-requests'));
             }
         }
@@ -218,7 +218,7 @@ class GradeOverrideRequestService
         }
 
         $context = $this->context((int) $row['offering_id']);
-        $status  = OverrideRequestChain::afterChair((int) $row['requested_by'], $this->deanId((int) $context['department_id']));
+        $status  = OverrideRequestChain::afterChair((int) $row['requested_by'], $this->deanId((int) $context['college_id']));
 
         $moved = $this->moveOn($requestId, OverrideRequestChain::AWAITING_CHAIR, [
             'status'          => $status,
@@ -292,35 +292,35 @@ class GradeOverrideRequestService
     }
 
     /**
-     * The requests a chairperson sees for the sub-departments they chair, newest first.
-     * "pending" is only what waits for them; "all" is every request in their sub-departments.
+     * The requests a chairperson sees for the departments they chair, newest first.
+     * "pending" is only what waits for them; "all" is every request in their departments.
      *
      * @return list<array<string, mixed>>
      */
     public function listForChair(User $chair, string $view = 'pending'): array
     {
-        $subs = array_map('intval', array_column(
-            db_connect()->table('chairperson_assignments')->select('sub_department_id')->where(['chairperson_user_id' => (int) $chair->id, 'status' => 'active'])->get()->getResultArray(),
-            'sub_department_id'
+        $departments = array_map('intval', array_column(
+            db_connect()->table('chairperson_assignments')->select('department_id')->where(['chairperson_user_id' => (int) $chair->id, 'status' => 'active'])->get()->getResultArray(),
+            'department_id'
         ));
 
-        if ($subs === []) {
+        if ($departments === []) {
             return [];
         }
 
         $builder = db_connect()->table('grade_override_requests r')
             ->select([
-                'r.*', 'c.course_code', 'c.course_title', 'co.section_code', 'sd.id AS sub_department_id',
+                'r.*', 'c.course_code', 'c.course_title', 'co.section_code', 'sd.id AS department_id',
                 "CONCAT(sp.first_name, ' ', sp.last_name) AS student_name",
                 "CONCAT(rp.first_name, ' ', rp.last_name) AS requester_name",
             ], false)
             ->join('course_offerings co', 'co.id = r.offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
             ->join('user_profiles sp', 'sp.user_id = r.student_id', 'left')
             ->join('user_profiles rp', 'rp.user_id = r.requested_by', 'left')
-            ->whereIn('sd.id', $subs);
+            ->whereIn('sd.id', $departments);
 
         if ($view !== 'all') {
             $builder->where('r.status', OverrideRequestChain::AWAITING_CHAIR)->where('r.requested_by !=', (int) $chair->id);
@@ -351,14 +351,14 @@ class GradeOverrideRequestService
             return '';
         }
 
-        $chairs = $this->chairIds((int) $context['sub_department_id']);
-        $first  = OverrideRequestChain::first((int) $user->id, $role, $chairs, $this->deanId((int) $context['department_id']));
+        $chairs = $this->chairIds((int) $context['department_id']);
+        $first  = OverrideRequestChain::first((int) $user->id, $role, $chairs, $this->deanId((int) $context['college_id']));
         $steps  = [];
 
         if ($first === OverrideRequestChain::AWAITING_CHAIR) {
             $names = array_column(db_connect()->table('user_profiles')->select("CONCAT(first_name, ' ', last_name) AS name", false)->whereIn('user_id', array_diff($chairs, [(int) $user->id]))->get()->getResultArray(), 'name');
             $steps[] = 'the chairperson' . ($names === [] ? '' : ' (' . implode(', ', $names) . ')') . ' to endorse';
-            $first   = OverrideRequestChain::afterChair((int) $user->id, $this->deanId((int) $context['department_id']));
+            $first   = OverrideRequestChain::afterChair((int) $user->id, $this->deanId((int) $context['college_id']));
         }
 
         $steps[] = OverrideRequestChain::waitingFor($first) . ' to decide';
@@ -490,19 +490,19 @@ class GradeOverrideRequestService
     }
 
     /**
-     * Sends the requests of a department that are past the chairperson to whoever is next now: the dean,
-     * or the institution's administrator when the department has no dean (or the dean asked themselves).
+     * Sends the requests of a college that are past the chairperson to whoever is next now: the dean,
+     * or the institution's administrator when the college has no dean (or the dean asked themselves).
      * Run when a dean is assigned or a deanship ends, so a request is never left waiting for someone who
      * is gone: it moves up one level, and moves back when a new dean arrives. Idempotent.
      *
      * @return int how many requests moved
      */
-    public function retargetDepartment(int $departmentId): int
+    public function retargetCollege(int $collegeId): int
     {
-        $deanId = $this->deanId($departmentId);
+        $deanId = $this->deanId($collegeId);
         $moved  = 0;
 
-        foreach ($this->pastTheChair($departmentId) as $row) {
+        foreach ($this->pastTheChair($collegeId) as $row) {
             $next = OverrideRequestChain::afterChair((int) $row['requested_by'], $deanId);
 
             if ($next === $row['status']) {
@@ -522,41 +522,41 @@ class GradeOverrideRequestService
     }
 
     /**
-     * The open requests of a department that are past the chairperson, as they are now.
+     * The open requests of a college that are past the chairperson, as they are now.
      *
      * @return list<array{id: int|string, offering_id: int|string, requested_by: int|string, status: string}>
      */
-    protected function pastTheChair(int $departmentId): array
+    protected function pastTheChair(int $collegeId): array
     {
         return db_connect()->table('grade_override_requests r')
             ->select(['r.id', 'r.offering_id', 'r.requested_by', 'r.status'])
             ->join('course_offerings co', 'co.id = r.offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->where('sd.department_id', $departmentId)
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->where('sd.college_id', $collegeId)
             ->whereIn('r.status', [OverrideRequestChain::AWAITING_DEAN, OverrideRequestChain::AWAITING_INSTITUTION])
             ->get()->getResultArray();
     }
 
     /**
-     * Moves on the requests of a sub-department still waiting for a chairperson when no chairperson may endorse
+     * Moves on the requests of a department still waiting for a chairperson when no chairperson may endorse
      * them any more: the chair left with nobody after them, or the new chair is the one who asked. They go where
      * the chain sends a request with no chairperson to endorse it (16.0c). Run when a chair is assigned or removed.
      *
      * @return int how many requests moved
      */
-    public function retargetChairStep(int $subDepartmentId): int
+    public function retargetChairStep(int $departmentId): int
     {
-        $chairs = $this->chairIds($subDepartmentId);
+        $chairs = $this->chairIds($departmentId);
 
         $rows = db_connect()->table('grade_override_requests r')
-            ->select(['r.id', 'r.offering_id', 'r.requested_by', 'r.status', 'sd.department_id'])
+            ->select(['r.id', 'r.offering_id', 'r.requested_by', 'r.status', 'sd.college_id'])
             ->join('course_offerings co', 'co.id = r.offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->where(['sd.id' => $subDepartmentId, 'r.status' => OverrideRequestChain::AWAITING_CHAIR])
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->where(['sd.id' => $departmentId, 'r.status' => OverrideRequestChain::AWAITING_CHAIR])
             ->get()->getResultArray();
 
         $moved = 0;
@@ -566,7 +566,7 @@ class GradeOverrideRequestService
                 continue;
             }
 
-            $next = OverrideRequestChain::afterChair((int) $row['requested_by'], $this->deanId((int) $row['department_id']));
+            $next = OverrideRequestChain::afterChair((int) $row['requested_by'], $this->deanId((int) $row['college_id']));
 
             if (! $this->moveOn((int) $row['id'], OverrideRequestChain::AWAITING_CHAIR, ['status' => $next])) {
                 continue;
@@ -600,20 +600,20 @@ class GradeOverrideRequestService
     }
 
     /**
-     * Re-routes the waiting requests of every department of an institution (or of every institution, for null)
+     * Re-routes the waiting requests of every college of an institution (or of every institution, for null)
      * after a change to who may approve overrides there: a dean who lost grades.approve hands theirs to the
      * administrators, and gets them back with it (7.2).
      */
     public function retargetInstitution(?int $institutionId): void
     {
-        $builder = db_connect()->table('departments')->select('id');
+        $builder = db_connect()->table('colleges')->select('id');
 
         if ($institutionId !== null) {
             $builder->where('institution_id', $institutionId);
         }
 
-        foreach (array_column($builder->get()->getResultArray(), 'id') as $departmentId) {
-            $this->retargetDepartment((int) $departmentId);
+        foreach (array_column($builder->get()->getResultArray(), 'id') as $collegeId) {
+            $this->retargetCollege((int) $collegeId);
         }
     }
 
@@ -624,7 +624,7 @@ class GradeOverrideRequestService
     }
 
     /**
-     * The requests of the dean's department: what waits for them (oldest first), or what was decided
+     * The requests of the dean's college: what waits for them (oldest first), or what was decided
      * (newest first). A dean's own request never waits for them (the chain sends it to the
      * administrator).
      *
@@ -632,26 +632,26 @@ class GradeOverrideRequestService
      */
     public function listForDean(User $dean, OverrideApprovalFilters $filters): array
     {
-        $department = (new DeanAccessService())->departmentFor($dean);
+        $college = (new DeanAccessService())->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return [];
         }
 
-        return $this->listIn([(int) $department['department_id']], OverrideRequestChain::AWAITING_DEAN, $dean, $filters);
+        return $this->listIn([(int) $college['college_id']], OverrideRequestChain::AWAITING_DEAN, $dean, $filters);
     }
 
     /**
-     * The requests the institution's administrator decides (1.1): those of its departments waiting for the
+     * The requests the institution's administrator decides (1.1): those of its colleges waiting for the
      * institution (oldest first), or the ones decided at that step (newest first). Never their own.
      *
      * @return list<array<string, mixed>>
      */
     public function listForInstitution(User $admin, OverrideApprovalFilters $filters): array
     {
-        $departments = $this->departmentsOfAdministrator($admin);
+        $colleges = $this->collegesOfAdministrator($admin);
 
-        return $departments === [] ? [] : $this->listIn($departments, OverrideRequestChain::AWAITING_INSTITUTION, $admin, $filters);
+        return $colleges === [] ? [] : $this->listIn($colleges, OverrideRequestChain::AWAITING_INSTITUTION, $admin, $filters);
     }
 
     /**
@@ -661,9 +661,9 @@ class GradeOverrideRequestService
      */
     public function requestersForInstitution(User $admin): array
     {
-        $departments = $this->departmentsOfAdministrator($admin);
+        $colleges = $this->collegesOfAdministrator($admin);
 
-        if ($departments === []) {
+        if ($colleges === []) {
             return [];
         }
 
@@ -672,14 +672,14 @@ class GradeOverrideRequestService
             ->join('course_offerings co', 'co.id = r.offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
             ->join('user_profiles rp', 'rp.user_id = r.requested_by', 'left')
-            ->whereIn('sd.department_id', $departments)
+            ->whereIn('sd.college_id', $colleges)
             ->distinct()->orderBy('name', 'ASC')->get()->getResultArray();
     }
 
-    /** @return list<int> the departments of the administrator's institution */
-    private function departmentsOfAdministrator(User $admin): array
+    /** @return list<int> the colleges of the administrator's institution */
+    private function collegesOfAdministrator(User $admin): array
     {
         $institution = (new PlanLimits())->institutionOf((int) $admin->id);
 
@@ -687,18 +687,18 @@ class GradeOverrideRequestService
             return [];
         }
 
-        return array_map('intval', array_column(db_connect()->table('departments')->select('id')->where('institution_id', $institution)->get()->getResultArray(), 'id'));
+        return array_map('intval', array_column(db_connect()->table('colleges')->select('id')->where('institution_id', $institution)->get()->getResultArray(), 'id'));
     }
 
     /**
-     * Requests of these departments: what waits at this step for the viewer (never their own), or, for the
+     * Requests of these colleges: what waits at this step for the viewer (never their own), or, for the
      * "decided" view, those decided by someone deciding at this step (the dean, or an administrator).
      *
-     * @param list<int> $departmentIds
+     * @param list<int> $collegeIds
      *
      * @return list<array<string, mixed>>
      */
-    private function listIn(array $departmentIds, string $waiting, User $viewer, OverrideApprovalFilters $filters): array
+    private function listIn(array $collegeIds, string $waiting, User $viewer, OverrideApprovalFilters $filters): array
     {
         $builder = db_connect()->table('grade_override_requests r')
             ->select([
@@ -711,17 +711,17 @@ class GradeOverrideRequestService
             ->join('course_offerings co', 'co.id = r.offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
             ->join('user_profiles sp', 'sp.user_id = r.student_id', 'left')
             ->join('user_profiles rp', 'rp.user_id = r.requested_by', 'left')
             ->join('user_profiles ep', 'ep.user_id = r.endorsed_by', 'left')
             ->join('gradebook_records g', 'g.course_offering_id = r.offering_id AND g.student_id = r.student_id', 'left')
-            ->whereIn('sd.department_id', $departmentIds);
+            ->whereIn('sd.college_id', $collegeIds);
 
         if ($filters->view === 'decided') {
             $builder->whereIn('r.status', [OverrideRequestChain::APPROVED, OverrideRequestChain::REJECTED]);
 
-            // The administrator's history is what administrators decided; the dean's stays the whole department's.
+            // The administrator's history is what administrators decided; the dean's stays the whole college's.
             if ($waiting === OverrideRequestChain::AWAITING_INSTITUTION) {
                 $builder->where("r.decided_by IN (SELECT user_id FROM auth_groups_users WHERE `group` = 'institutional_admin')", null, false);
             }
@@ -771,9 +771,9 @@ class GradeOverrideRequestService
      */
     public function requestersForDean(User $dean): array
     {
-        $department = (new DeanAccessService())->departmentFor($dean);
+        $college = (new DeanAccessService())->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return [];
         }
 
@@ -782,9 +782,9 @@ class GradeOverrideRequestService
             ->join('course_offerings co', 'co.id = r.offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
             ->join('user_profiles rp', 'rp.user_id = r.requested_by', 'left')
-            ->where('sd.department_id', (int) $department['department_id'])
+            ->where('sd.college_id', (int) $college['college_id'])
             ->distinct()->orderBy('name', 'ASC')->get()->getResultArray();
     }
 
@@ -811,7 +811,7 @@ class GradeOverrideRequestService
 
     /**
      * The request, if it waits for this person and they may decide it, never their own (1.5): the dean of its
-     * department for one waiting for the dean, an administrator of its institution for one waiting for the
+     * college for one waiting for the dean, an administrator of its institution for one waiting for the
      * institution (1.1); either acting as that role and holding grades.approve (7.2, 7.3).
      */
     private function decidable(User $decider, int $requestId): ?array
@@ -929,7 +929,7 @@ class GradeOverrideRequestService
             return;
         }
 
-        $deanId = $this->deanId((int) $context['department_id']);
+        $deanId = $this->deanId((int) $context['college_id']);
 
         if ($deanId === null) {
             return;
@@ -974,7 +974,7 @@ class GradeOverrideRequestService
         return $row !== null && (int) $row['offering_id'] === $offeringId && (int) $row['requested_by'] === (int) $user->id ? $row : null;
     }
 
-    /** The request, if it waits for this chairperson: in a sub-department they chair, not their own. */
+    /** The request, if it waits for this chairperson: in a department they chair, not their own. */
     private function actionable(User $chair, int $requestId): ?array
     {
         $row = $this->requestRow($requestId);
@@ -994,28 +994,28 @@ class GradeOverrideRequestService
     private function context(int $offeringId): ?array
     {
         return db_connect()->table('course_offerings co')
-            ->select(['d.institution_id', 'd.id AS department_id', 'sd.id AS sub_department_id', 'c.course_code', 'c.course_title', 'co.section_code'])
+            ->select(['d.institution_id', 'd.id AS college_id', 'sd.id AS department_id', 'c.course_code', 'c.course_title', 'co.section_code'])
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('co.id', $offeringId)
             ->get()->getRowArray();
     }
 
     /** @return list<int> */
-    private function chairIds(int $subDepartmentId): array
+    private function chairIds(int $departmentId): array
     {
         return array_map('intval', array_column(
-            db_connect()->table('chairperson_assignments')->select('chairperson_user_id')->where(['sub_department_id' => $subDepartmentId, 'status' => 'active'])->get()->getResultArray(),
+            db_connect()->table('chairperson_assignments')->select('chairperson_user_id')->where(['department_id' => $departmentId, 'status' => 'active'])->get()->getResultArray(),
             'chairperson_user_id'
         ));
     }
 
-    /** The dean who decides here: the department's, if they may approve overrides (7.2); else null (the administrators). */
-    private function deanId(int $departmentId): ?int
+    /** The dean who decides here: the college's, if they may approve overrides (7.2); else null (the administrators). */
+    private function deanId(int $collegeId): ?int
     {
-        return GradeAuthority::deanFor($departmentId, 'grades.approve');
+        return GradeAuthority::deanFor($collegeId, 'grades.approve');
     }
 
     /** @return array<string, mixed>|null the student's gradebook record, calculated first if there is none yet */

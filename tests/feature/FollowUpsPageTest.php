@@ -12,15 +12,15 @@ use Tests\Support\RouteTestCase;
 /**
  * The follow-up pages of the dean, the chairperson and the instructor: each sees the right box, a new
  * request starts from a course (or from an attention item that links with it chosen), the actions answer
- * the dialogs, nothing leaks across departments or roles, and a read-only institution only lets people look.
+ * the dialogs, nothing leaks across colleges or roles, and a read-only institution only lets people look.
  *
  * @internal
  */
 final class FollowUpsPageTest extends RouteTestCase
 {
     private int $institution;
+    private int $college;
     private int $department;
-    private int $sub;
     private int $offering;
     private User $dean;
     private User $chair;
@@ -31,14 +31,14 @@ final class FollowUpsPageTest extends RouteTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('F');
+        $home              = DeanFactory::college('F');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'F');
-        $program           = DeanFactory::program($this->sub, 'F');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'F');
+        $program           = DeanFactory::program($this->department, 'F');
 
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
-        $this->chair   = DeanFactory::chair($this->sub, 'Maria');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
+        $this->chair   = DeanFactory::chair($this->department, 'Maria');
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
         $this->student = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
 
@@ -145,10 +145,10 @@ final class FollowUpsPageTest extends RouteTestCase
         $this->assertStringContainsString('name="student_id" value="' . $this->student->id . '"', $body);
     }
 
-    public function testACourseOutsideTheDepartmentOpensNoFormAndAStrangerStudentIsDropped(): void
+    public function testACourseOutsideTheCollegeOpensNoFormAndAStrangerStudentIsDropped(): void
     {
-        $elsewhere = DeanFactory::department('E', $this->institution);
-        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900', 'A', 'active', 'Foreign Law');
+        $elsewhere = DeanFactory::college('E', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900', 'A', 'active', 'Foreign Law');
 
         $this->assertStringNotContainsString('data-dialog-autoopen', $this->page($this->dean, 'dean/follow-ups?offering=' . $foreign));
         $this->assertStringNotContainsString('LAW900', $this->page($this->dean, 'dean/follow-ups?offering=' . $foreign), 'it is not even offered in the picker');
@@ -228,11 +228,11 @@ final class FollowUpsPageTest extends RouteTestCase
         }
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanation(): void
+    public function testADeanWithoutACollegeSeesTheExplanation(): void
     {
-        $body = $this->page(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), 'dean/follow-ups');
+        $body = $this->page(PeopleFactory::person('dean', 'No', 'College', null, $this->institution), 'dean/follow-ups');
 
-        $this->assertStringContainsString('not assigned to a department yet', $body);
+        $this->assertStringContainsString('not assigned to a college yet', $body);
     }
 
     public function testAReadOnlyInstitutionLetsPeopleLookButNotSendReplyOrClose(): void

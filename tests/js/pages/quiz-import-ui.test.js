@@ -4,6 +4,7 @@ import {
     fileSummary,
     importLabel,
     isAcceptedFile,
+    normalizeExportPrefs,
     recallExportPrefs,
     rememberExportPrefs,
     statusChip,
@@ -105,3 +106,26 @@ describe("detectedLine", () => {
     });
 
 });
+
+describe("normalizeExportPrefs", () => {
+
+    it("keeps a remembered choice and format", () => {
+        expect(normalizeExportPrefs({ kind: "editable", format: "gift", print: { versions: 2 } }))
+            .toEqual({ kind: "editable", format: "gift", print: { versions: 2 } });
+    });
+
+    it("works the choice out from the format when only a format was remembered (the old panel)", () => {
+        expect(normalizeExportPrefs({ format: "test-pdf" }).kind).toBe("printable");
+        expect(normalizeExportPrefs({ format: "rtf" }).kind).toBe("editable");
+        expect(normalizeExportPrefs({ format: "csv" }).kind).toBe("editable");
+    });
+
+    it("drops what cannot be a choice, a format or print settings", () => {
+        expect(normalizeExportPrefs({ kind: "newsletter", format: 5, print: "x" })).toEqual({});
+        expect(normalizeExportPrefs(null)).toEqual({});
+        expect(normalizeExportPrefs("nope")).toEqual({});
+        expect(normalizeExportPrefs({})).toEqual({});
+    });
+
+});
+

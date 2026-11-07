@@ -43,7 +43,7 @@ final class InstitutionExportQueueTest extends DatabaseTestCase
         $this->now           = new DateTimeImmutable('2026-10-10 12:00:00');
 
         $offering          = CourseFactory::offering();
-        $this->institution = (int) db_connect()->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
+        $this->institution = (int) db_connect()->query('SELECT d.institution_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE o.id = ?', [$offering])->getRow()->institution_id;
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
         $this->ada = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', 'ada@queue.test', $this->institution);
         $this->ben = PeopleFactory::person('institutional_admin', 'Ben', 'Admin', 'ben@queue.test', $this->institution);

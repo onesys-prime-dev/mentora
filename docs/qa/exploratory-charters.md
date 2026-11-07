@@ -77,7 +77,7 @@ Explore every place one person's text is shown to another
   to discover stored cross-site scripting
 ```
 
-- Where: names, announcement subjects and messages, discussion titles and posts, rubric text, question text and choices, feedback, the institution banner, follow-ups, department announcements, audit values, file names, rich-text lesson content.
+- Where: names, announcement subjects and messages, discussion titles and posts, rubric text, question text and choices, feedback, the institution banner, follow-ups, college announcements, audit values, file names, rich-text lesson content.
 - Who sees it: put it in as a student, view it as an instructor, dean, parent and administrator, and in exports and PDFs.
 - Oracle: nothing runs; the text shows as typed or is cleaned; rich text keeps only safe formatting.
 

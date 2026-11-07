@@ -35,15 +35,15 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     private const COURSES = "external_id,course_code,course_title,units,program_code\nC1,IT101,Intro to Computing,3,BSIT\nC2,IT102,Data Structures,3,BSIT\n";
 
-    private const HEADER = "role,person_external_id,department_code,sub_department_code,course_external_id,section\n";
+    private const HEADER = "role,person_external_id,college_code,department_code,course_external_id,section\n";
 
     private string $folder;
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
-    private int $sub;
+    private int $department;
 
     private User $actor;
 
@@ -65,8 +65,8 @@ final class SisStaffImportTest extends DatabaseTestCase
         SisFixture::connect($this->institution, $this->actor);
         SisFixture::priorSuccess($this->institution);
 
-        $this->department = (int) db_connect()->table('departments')->where('institution_id', $this->institution)->get()->getRow('id');
-        $this->sub        = (int) db_connect()->table('sub_departments')->where('department_id', $this->department)->get()->getRow('id');
+        $this->college = (int) db_connect()->table('colleges')->where('institution_id', $this->institution)->get()->getRow('id');
+        $this->department        = (int) db_connect()->table('departments')->where('college_id', $this->college)->get()->getRow('id');
 
         // The people and the courses the staff files refer to, in a first run of their own.
         SisFixture::drop($this->institution, 'instructors', self::PEOPLE);
@@ -92,7 +92,7 @@ final class SisStaffImportTest extends DatabaseTestCase
         return (new SisImporter())->run($this->institution, $this->actor, $dry, SisRunLog::MANUAL, $this->now);
     }
 
-    /** Drops staff_assignments.csv with these rows (each "role,person,department,sub-department,course,section") and runs. */
+    /** Drops staff_assignments.csv with these rows (each "role,person,college,department,course,section") and runs. */
     private function sync(string ...$rows): SisImportResult
     {
         SisFixture::drop($this->institution, 'staff_assignments', self::HEADER . implode("\n", $rows) . ($rows === [] ? '' : "\n"));
@@ -131,14 +131,14 @@ final class SisStaffImportTest extends DatabaseTestCase
         return $this->person('ida@example.com');
     }
 
-    private function deptCode(): string
+    private function collegeCode(): string
     {
-        return (string) db_connect()->table('departments')->where('id', $this->department)->get()->getRow('code');
+        return (string) db_connect()->table('colleges')->where('id', $this->college)->get()->getRow('code');
     }
 
-    private function subCode(): string
+    private function departmentCode(): string
     {
-        return (string) db_connect()->table('sub_departments')->where('id', $this->sub)->get()->getRow('code');
+        return (string) db_connect()->table('departments')->where('id', $this->department)->get()->getRow('code');
     }
 
     private function hasGroup(int $userId, string $group): bool
@@ -154,14 +154,14 @@ final class SisStaffImportTest extends DatabaseTestCase
     /** @return list<array<string, mixed>> */
     private function deans(?string $status = null): array
     {
-        $builder = db_connect()->table('dean_assignments')->where('department_id', $this->department)->orderBy('id');
+        $builder = db_connect()->table('dean_assignments')->where('college_id', $this->college)->orderBy('id');
 
         return ($status === null ? $builder : $builder->where('status', $status))->get()->getResultArray();
     }
 
     private function chairs(string $status = 'active'): array
     {
-        return db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $this->sub, 'status' => $status])->orderBy('id')->get()->getResultArray();
+        return db_connect()->table('chairperson_assignments')->where(['department_id' => $this->department, 'status' => $status])->orderBy('id')->get()->getResultArray();
     }
 
     private function offering(string $code, string $section = 'A'): ?int
@@ -194,9 +194,9 @@ final class SisStaffImportTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testADeanIsAssignedToTheDepartmentAndGrantedTheRole(): void
+    public function testADeanIsAssignedToTheCollegeAndGrantedTheRole(): void
     {
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,");
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $this->assertTrue($result->ok);
         $this->assertSame(['created' => 1, 'updated' => 0, 'skipped' => 0, 'failed' => 0], $this->counts($result));
@@ -210,12 +210,12 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertContains('structure.dean_assigned', $this->actions(), 'through the same service as the screens, so audited the same way');
     }
 
-    public function testTheSisReplacesTheCurrentDeanOfTheDepartmentAndTheHistoryStays(): void
+    public function testTheSisReplacesTheCurrentDeanOfTheCollegeAndTheHistoryStays(): void
     {
         $hand = PeopleFactory::person('dean', 'Hand', 'Made', null, $this->institution);
-        (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $hand->id, $this->actor);
+        (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $hand->id, $this->actor);
 
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,");
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $this->assertSame(['created' => 0, 'updated' => 1, 'skipped' => 0, 'failed' => 0], $this->counts($result), 'a dean who is replaced is an update, not a creation');
 
@@ -229,21 +229,21 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertTrue($this->hasGroup((int) $hand->id, 'dean'), 'ending a deanship does not take their roles away');
     }
 
-    public function testAnotherDeansDeanshipOfThisPersonEndsWhenTheSisMovesThemToAnotherDepartment(): void
+    public function testAnotherDeansDeanshipOfThisPersonEndsWhenTheSisMovesThemToAnotherCollege(): void
     {
-        db_connect()->table('departments')->insert(['institution_id' => $this->institution, 'name' => 'Arts', 'code' => 'ARTS']);
+        db_connect()->table('colleges')->insert(['institution_id' => $this->institution, 'name' => 'Arts', 'code' => 'ARTS']);
         $arts = (int) db_connect()->insertID();
         (new DeanAssignmentService())->assign($this->institution, $arts, $this->ivy(), $this->actor);
 
-        $this->sync("dean,I1,{$this->deptCode()},,,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
 
-        $this->assertSame('ended', db_connect()->table('dean_assignments')->where('department_id', $arts)->get()->getRow('status'), 'a person is dean of one department');
+        $this->assertSame('ended', db_connect()->table('dean_assignments')->where('college_id', $arts)->get()->getRow('status'), 'a person is dean of one college');
         $this->assertCount(1, $this->deans('active'));
     }
 
-    public function testTwoDeansForOneDepartmentInOneFileRefusesTheSecond(): void
+    public function testTwoDeansForOneCollegeInOneFileRefusesTheSecond(): void
     {
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,", "dean,I2,{$this->deptCode()},,,");
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,", "dean,I2,{$this->collegeCode()},,,");
 
         $this->assertSame(1, $this->counts($result)['created']);
         $this->assertSame(1, $this->counts($result)['failed']);
@@ -251,21 +251,21 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertSame($this->ivy(), (int) $this->deans('active')[0]['dean_user_id'], 'the first listed stays');
     }
 
-    public function testOnePersonAsDeanOfTwoDepartmentsInOneFileRefusesTheSecond(): void
+    public function testOnePersonAsDeanOfTwoCollegesInOneFileRefusesTheSecond(): void
     {
-        db_connect()->table('departments')->insert(['institution_id' => $this->institution, 'name' => 'Arts', 'code' => 'ARTS']);
+        db_connect()->table('colleges')->insert(['institution_id' => $this->institution, 'name' => 'Arts', 'code' => 'ARTS']);
 
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,", 'dean,I1,ARTS,,,');
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,", 'dean,I1,ARTS,,,');
 
         $this->assertSame(1, $this->counts($result)['failed']);
-        $this->assertStringContainsString('dean of another department in this file', $result->issues[0]['reason']);
+        $this->assertStringContainsString('dean of another college in this file', $result->issues[0]['reason']);
     }
 
     public function testAChairpersonCannotAlsoBeADean(): void
     {
         $this->giveRole($this->ivy(), 'chairperson');
 
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,");
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $this->assertSame(1, $this->counts($result)['failed']);
         $this->assertStringContainsString('cannot also be a chairperson', $result->issues[0]['reason'], 'the rule of the service, in its own words');
@@ -279,11 +279,11 @@ final class SisStaffImportTest extends DatabaseTestCase
     |--------------------------------------------------------------------------
     */
 
-    public function testAChairpersonIsAssignedToTheSubDepartment(): void
+    public function testAChairpersonIsAssignedToTheDepartment(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
 
-        $result = $this->sync("chairperson,I2,,{$this->subCode()},,");
+        $result = $this->sync("chairperson,I2,,{$this->departmentCode()},,");
 
         $this->assertSame(['created' => 1, 'updated' => 0, 'skipped' => 0, 'failed' => 0], $this->counts($result));
         $this->assertSame($this->ian(), (int) $this->chairs()[0]['chairperson_user_id']);
@@ -291,13 +291,13 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertContains('structure.chairperson_assigned', $this->actions());
     }
 
-    public function testASubDepartmentHasOneChairpersonAndOneMayChairSeveral(): void
+    public function testADepartmentHasOneChairpersonAndOneMayChairSeveral(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
         $this->giveRole($this->ida(), 'chairperson');
-        db_connect()->table('sub_departments')->insert(['department_id' => $this->department, 'name' => 'Networks', 'code' => 'NET']);
+        db_connect()->table('departments')->insert(['college_id' => $this->college, 'name' => 'Networks', 'code' => 'NET']);
 
-        $result = $this->sync("chairperson,I2,,{$this->subCode()},,", "chairperson,I3,,{$this->subCode()},,", 'chairperson,I2,,NET,,');
+        $result = $this->sync("chairperson,I2,,{$this->departmentCode()},,", "chairperson,I3,,{$this->departmentCode()},,", 'chairperson,I2,,NET,,');
 
         $this->assertSame(2, $this->counts($result)['created']);
         $this->assertSame(1, $this->counts($result)['failed']);
@@ -310,9 +310,9 @@ final class SisStaffImportTest extends DatabaseTestCase
     {
         $this->giveRole($this->ian(), 'chairperson');
         $this->giveRole($this->ida(), 'chairperson');
-        (new ChairAssignmentService())->assign($this->institution, $this->sub, $this->ida(), $this->actor);
+        (new ChairAssignmentService())->assign($this->institution, $this->department, $this->ida(), $this->actor);
 
-        $this->sync("chairperson,I2,,{$this->subCode()},,");
+        $this->sync("chairperson,I2,,{$this->departmentCode()},,");
 
         $this->assertCount(1, $this->chairs());
         $this->assertSame($this->ian(), (int) $this->chairs()[0]['chairperson_user_id']);
@@ -323,10 +323,10 @@ final class SisStaffImportTest extends DatabaseTestCase
     {
         $this->giveRole($this->ian(), 'chairperson');
         $this->giveRole($this->ida(), 'chairperson');
-        $this->sync("chairperson,I2,,{$this->subCode()},,");
+        $this->sync("chairperson,I2,,{$this->departmentCode()},,");
 
         try {
-            (new ChairAssignmentService())->assign($this->institution, $this->sub, $this->ida(), $this->actor, true);
+            (new ChairAssignmentService())->assign($this->institution, $this->department, $this->ida(), $this->actor, true);
             $this->fail('the SIS owns this chairperson');
         } catch (StructureException $e) {
             $this->assertSame(ChairAssignmentService::SIS_LOCK, $e->getMessage());
@@ -364,7 +364,7 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testAPersonWhoDoesNotHoldTheChairpersonRoleIsRefusedAndNeverGrantedIt(): void
     {
-        $result = $this->sync("chairperson,I2,,{$this->subCode()},,");
+        $result = $this->sync("chairperson,I2,,{$this->departmentCode()},,");
 
         $this->assertSame(1, $this->counts($result)['failed']);
         $this->assertStringContainsString('does not hold the chairperson role', $result->issues[0]['reason']);
@@ -372,25 +372,25 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertSame([], $this->chairs());
     }
 
-    public function testASubDepartmentCodeSharedByTwoDepartmentsCannotSayWhichOne(): void
+    public function testADepartmentCodeSharedByTwoCollegesCannotSayWhichOne(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
-        db_connect()->table('departments')->insert(['institution_id' => $this->institution, 'name' => 'Arts', 'code' => 'ARTS']);
-        db_connect()->table('sub_departments')->insert(['department_id' => (int) db_connect()->insertID(), 'name' => 'Other IT', 'code' => $this->subCode()]);
+        db_connect()->table('colleges')->insert(['institution_id' => $this->institution, 'name' => 'Arts', 'code' => 'ARTS']);
+        db_connect()->table('departments')->insert(['college_id' => (int) db_connect()->insertID(), 'name' => 'Other IT', 'code' => $this->departmentCode()]);
 
-        $result = $this->sync("chairperson,I2,,{$this->subCode()},,");
+        $result = $this->sync("chairperson,I2,,{$this->departmentCode()},,");
 
         $this->assertSame(1, $this->counts($result)['failed']);
-        $this->assertStringContainsString('more than one sub-department', $result->issues[0]['reason']);
+        $this->assertStringContainsString('more than one department', $result->issues[0]['reason']);
         $this->assertSame([], $this->chairs());
     }
 
-    public function testAnInactiveSubDepartmentRefusesItsChairpersonWithTheServicesOwnWords(): void
+    public function testAnInactiveDepartmentRefusesItsChairpersonWithTheServicesOwnWords(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
-        db_connect()->table('sub_departments')->where('id', $this->sub)->update(['is_active' => 0]);
+        db_connect()->table('departments')->where('id', $this->department)->update(['is_active' => 0]);
 
-        $result = $this->sync("chairperson,I2,,{$this->subCode()},,");
+        $result = $this->sync("chairperson,I2,,{$this->departmentCode()},,");
 
         $this->assertSame(1, $this->counts($result)['failed']);
         $this->assertStringContainsString('is inactive', $result->issues[0]['reason']);
@@ -466,7 +466,7 @@ final class SisStaffImportTest extends DatabaseTestCase
     public function testRunningTheSameFileAgainChangesNothing(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
-        $rows = ["dean,I1,{$this->deptCode()},,,", "chairperson,I2,,{$this->subCode()},,", 'instructor,I3,,,C1,A'];
+        $rows = ["dean,I1,{$this->collegeCode()},,,", "chairperson,I2,,{$this->departmentCode()},,", 'instructor,I3,,,C1,A'];
 
         $this->sync(...$rows);
         $before = [count($this->deans()), count($this->chairs()), db_connect()->table('instructor_assignments')->countAllResults(), $this->tracked()];
@@ -480,7 +480,7 @@ final class SisStaffImportTest extends DatabaseTestCase
     public function testWhatTheSisStopsListingIsEndedAndNeverDeleted(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
-        $this->sync("dean,I1,{$this->deptCode()},,,", "chairperson,I2,,{$this->subCode()},,", 'instructor,I3,,,C1,A');
+        $this->sync("dean,I1,{$this->collegeCode()},,,", "chairperson,I2,,{$this->departmentCode()},,", 'instructor,I3,,,C1,A');
         $offering = (int) $this->offering('IT101', 'A');
 
         $result = $this->sync();
@@ -494,7 +494,7 @@ final class SisStaffImportTest extends DatabaseTestCase
         $this->assertCount(1, $dean, 'the dean row stays');
         $this->assertSame('ended', $dean[0]['status']);
 
-        $chair = db_connect()->table('chairperson_assignments')->where('sub_department_id', $this->sub)->get()->getResultArray();
+        $chair = db_connect()->table('chairperson_assignments')->where('department_id', $this->department)->get()->getResultArray();
         $this->assertCount(1, $chair, 'the chairperson row stays');
         $this->assertSame('revoked', $chair[0]['status']);
 
@@ -507,7 +507,7 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testARunThatEndsNothingSaysNothingAboutEnding(): void
     {
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,");
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $this->assertSame(0, $this->ended($result));
         $this->assertSame(0, $result->ended());
@@ -517,7 +517,7 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testAPreviewSaysWhatWouldBeEnded(): void
     {
-        $this->sync("dean,I1,{$this->deptCode()},,,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
         SisFixture::drop($this->institution, 'staff_assignments', self::HEADER);
 
         $preview = $this->run_(true);
@@ -529,10 +529,10 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testAnAssignmentListedAgainAfterItEndedIsAssignedAgain(): void
     {
-        $this->sync("dean,I1,{$this->deptCode()},,,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
         $this->sync();
 
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,");
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $this->assertSame(1, $this->counts($result)['created']);
         $this->assertCount(1, $this->deans('active'));
@@ -543,32 +543,32 @@ final class SisStaffImportTest extends DatabaseTestCase
     {
         $this->giveRole($this->ian(), 'chairperson');
         $this->giveRole($this->ida(), 'chairperson');
-        // One chairperson per sub-department (16.0): the one made by hand chairs another.
-        db_connect()->table('sub_departments')->insert(['department_id' => $this->department, 'name' => 'Networks', 'code' => 'NET']);
-        $handSub = (int) db_connect()->insertID();
-        (new ChairAssignmentService())->assign($this->institution, $handSub, $this->ida(), $this->actor);
+        // One chairperson per department (16.0): the one made by hand chairs another.
+        db_connect()->table('departments')->insert(['college_id' => $this->college, 'name' => 'Networks', 'code' => 'NET']);
+        $handDepartment = (int) db_connect()->insertID();
+        (new ChairAssignmentService())->assign($this->institution, $handDepartment, $this->ida(), $this->actor);
         $handDean = PeopleFactory::person('dean', 'Hand', 'Made', null, $this->institution);
         $handTeacher = $this->ivy();
         $this->sync('instructor,I2,,,C1,A'); // creates the section
         $offering = (int) $this->offering('IT101', 'A');
         (new OfferingService())->assignInstructor($this->institution, $offering, $handTeacher, $this->actor);
 
-        $this->sync("chairperson,I2,,{$this->subCode()},,", 'instructor,I2,,,C1,A');
+        $this->sync("chairperson,I2,,{$this->departmentCode()},,", 'instructor,I2,,,C1,A');
         $result = $this->sync();
 
         $this->assertSame(2, $this->ended($result), 'only the two the SIS itself supplied are ended');
         $this->assertSame(0, $this->counts($result)['updated']);
         $this->assertSame([], $this->chairs());
-        $this->assertSame(1, db_connect()->table('chairperson_assignments')->where(['sub_department_id' => $handSub, 'chairperson_user_id' => $this->ida(), 'status' => 'active'])->countAllResults(), 'the chairperson made by hand stays');
+        $this->assertSame(1, db_connect()->table('chairperson_assignments')->where(['department_id' => $handDepartment, 'chairperson_user_id' => $this->ida(), 'status' => 'active'])->countAllResults(), 'the chairperson made by hand stays');
         $this->assertSame([$handTeacher], $this->teachers($offering), 'so does the instructor added by hand');
         $this->assertNotNull($handDean);
     }
 
     public function testAnAssignmentThatAlreadyExistsByHandBecomesTheSisAndIsEndedWhenItIsNotListed(): void
     {
-        (new ChairAssignmentService())->assign($this->institution, $this->sub, $this->giveChair($this->ian()), $this->actor);
+        (new ChairAssignmentService())->assign($this->institution, $this->department, $this->giveChair($this->ian()), $this->actor);
 
-        $first = $this->sync("chairperson,I2,,{$this->subCode()},,");
+        $first = $this->sync("chairperson,I2,,{$this->departmentCode()},,");
 
         $this->assertSame(['created' => 0, 'updated' => 1, 'skipped' => 0, 'failed' => 0], $this->counts($first), 'adopted: it is now the SIS that supplies it');
         $this->assertSame(1, $this->tracked('chairperson'));
@@ -588,7 +588,7 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testNothingIsEndedWhenTheFileHadRowsThatCouldNotBeRead(): void
     {
-        $this->sync("dean,I1,{$this->deptCode()},,,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         SisFixture::drop($this->institution, 'staff_assignments', self::HEADER . "boss,I1,,,,\n");
         $result = $this->run_();
@@ -605,7 +605,7 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testNothingIsEndedWhenTheStaffFileIsNotProvidedAtAll(): void
     {
-        $this->sync("dean,I1,{$this->deptCode()},,,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
         unlink(\App\Services\Sis\SisConnectors::folders($this->institution)['inbound'] . DIRECTORY_SEPARATOR . 'staff_assignments.csv');
         SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,ann@example.com,Ann,Lee\n");
 
@@ -616,10 +616,10 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testAnAssignmentThatWasEndedByHandIsNotMistakenForOneThatIsStillThere(): void
     {
-        $this->sync("dean,I1,{$this->deptCode()},,,");
-        db_connect()->table('dean_assignments')->where('department_id', $this->department)->update(['status' => 'ended', 'active_marker' => null]);
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
+        db_connect()->table('dean_assignments')->where('college_id', $this->college)->update(['status' => 'ended', 'active_marker' => null]);
 
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,");
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $this->assertSame(1, $this->counts($result)['updated'], 'the SIS wins: it is assigned again');
         $this->assertCount(1, $this->deans('active'));
@@ -654,7 +654,7 @@ final class SisStaffImportTest extends DatabaseTestCase
     public function testEachRowThatCannotBeAppliedSaysWhy(): void
     {
         $result = $this->sync(
-            'dean,NOBODY,' . $this->deptCode() . ',,,',
+            'dean,NOBODY,' . $this->collegeCode() . ',,,',
             'dean,I1,NOPE,,,',
             'chairperson,I2,,NOPE,,',
             'instructor,I3,,,C9,A',
@@ -665,8 +665,8 @@ final class SisStaffImportTest extends DatabaseTestCase
         $reasons = array_column($result->issues, 'reason');
 
         $this->assertStringContainsString('NOBODY is not a known person', $reasons[0]);
-        $this->assertStringContainsString('department_code "NOPE"', $reasons[1]);
-        $this->assertStringContainsString('sub_department_code "NOPE"', $reasons[2]);
+        $this->assertStringContainsString('college_code "NOPE"', $reasons[1]);
+        $this->assertStringContainsString('department_code "NOPE"', $reasons[2]);
         $this->assertStringContainsString('The course C9 is not known', $reasons[3]);
         $this->assertSame(0, db_connect()->table('instructor_assignments')->countAllResults());
     }
@@ -679,8 +679,8 @@ final class SisStaffImportTest extends DatabaseTestCase
 
         $reasons = array_column($result->issues, 'reason');
 
-        $this->assertContains('department_code is required for a dean.', $reasons);
-        $this->assertContains('sub_department_code is required for a chairperson.', $reasons);
+        $this->assertContains('college_code is required for a dean.', $reasons);
+        $this->assertContains('department_code is required for a chairperson.', $reasons);
         $this->assertContains('course_external_id is required for an instructor.', $reasons);
         $this->assertContains('role is empty.', $reasons);
         $this->assertSame('row 2', $result->issues[0]['item']);
@@ -737,7 +737,7 @@ final class SisStaffImportTest extends DatabaseTestCase
     public function testWhatTheSisSuppliedCannotBeChangedByHandWhileItsConnectionIsEnabled(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
-        $this->sync("dean,I1,{$this->deptCode()},,,", "chairperson,I2,,{$this->subCode()},,", 'instructor,I3,,,C1,A');
+        $this->sync("dean,I1,{$this->collegeCode()},,,", "chairperson,I2,,{$this->departmentCode()},,", 'instructor,I3,,,C1,A');
 
         $dean    = (int) $this->deans('active')[0]['id'];
         $chair   = (int) $this->chairs()[0]['id'];
@@ -752,7 +752,7 @@ final class SisStaffImportTest extends DatabaseTestCase
 
         $other = PeopleFactory::person('dean', 'Hand', 'Made', null, $this->institution);
 
-        $this->assertSame($lock, $this->refused(fn () => (new DeanAssignmentService())->assign($this->institution, $this->department, (int) $other->id, $this->actor)), 'nor can a hand-made dean replace the SIS one');
+        $this->assertSame($lock, $this->refused(fn () => (new DeanAssignmentService())->assign($this->institution, $this->college, (int) $other->id, $this->actor)), 'nor can a hand-made dean replace the SIS one');
 
         $this->assertCount(1, $this->deans('active'));
         $this->assertCount(1, $this->chairs());
@@ -769,7 +769,7 @@ final class SisStaffImportTest extends DatabaseTestCase
     public function testTheLockEndsWhenTheConnectionIsSwitchedOff(): void
     {
         $this->giveRole($this->ian(), 'chairperson');
-        $this->sync("dean,I1,{$this->deptCode()},,,", "chairperson,I2,,{$this->subCode()},,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,", "chairperson,I2,,{$this->departmentCode()},,");
         $chair = (int) $this->chairs()[0]['id'];
 
         db_connect()->table('sis_connections')->where('institution_id', $this->institution)->update(['enabled' => 0]);
@@ -785,7 +785,7 @@ final class SisStaffImportTest extends DatabaseTestCase
     public function testAnAssignmentMadeByHandIsNotLockedEvenWhileTheConnectionIsEnabled(): void
     {
         $this->giveRole($this->ida(), 'chairperson');
-        $id = (new ChairAssignmentService())->assign($this->institution, $this->sub, $this->ida(), $this->actor);
+        $id = (new ChairAssignmentService())->assign($this->institution, $this->department, $this->ida(), $this->actor);
 
         $this->assertFalse((new SisOwnership())->managesAssignment('chairperson', $id));
 
@@ -796,7 +796,7 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testTakingTheDeanRoleAwayStillEndsTheDeanshipWhoeverSuppliedIt(): void
     {
-        $this->sync("dean,I1,{$this->deptCode()},,,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $ended = (new DeanAssignmentService())->endForPerson($this->ivy(), $this->actor);
 
@@ -806,26 +806,26 @@ final class SisStaffImportTest extends DatabaseTestCase
 
     public function testAnotherInstitutionsAssignmentsAreNeitherSeenNorEnded(): void
     {
-        $this->sync("dean,I1,{$this->deptCode()},,,");
+        $this->sync("dean,I1,{$this->collegeCode()},,,");
 
         $other = SisFixture::institution('OTHR');
         SisFixture::connect($other, $this->actor);
         SisFixture::priorSuccess($other);
-        $dept = (int) db_connect()->table('departments')->where('institution_id', $other)->get()->getRow('id');
+        $college = (int) db_connect()->table('colleges')->where('institution_id', $other)->get()->getRow('id');
         $dean = PeopleFactory::person('dean', 'Other', 'Dean', null, $other);
-        (new DeanAssignmentService())->assign($other, $dept, (int) $dean->id, $this->actor);
-        db_connect()->table('sis_staff_assignments')->insert(['institution_id' => $other, 'role' => 'dean', 'person_user_id' => (int) $dean->id, 'target_id' => $dept, 'local_id' => (int) db_connect()->table('dean_assignments')->where('department_id', $dept)->get()->getRow('id')]);
+        (new DeanAssignmentService())->assign($other, $college, (int) $dean->id, $this->actor);
+        db_connect()->table('sis_staff_assignments')->insert(['institution_id' => $other, 'role' => 'dean', 'person_user_id' => (int) $dean->id, 'target_id' => $college, 'local_id' => (int) db_connect()->table('dean_assignments')->where('college_id', $college)->get()->getRow('id')]);
 
         $this->sync(); // ends this institution's dean only
 
         $this->assertSame([], $this->deans('active'));
-        $this->assertSame(1, db_connect()->table('dean_assignments')->where(['department_id' => $dept, 'status' => 'active'])->countAllResults());
+        $this->assertSame(1, db_connect()->table('dean_assignments')->where(['college_id' => $college, 'status' => 'active'])->countAllResults());
         $this->assertSame(1, db_connect()->table('sis_staff_assignments')->where('institution_id', $other)->countAllResults());
     }
 
     public function testTheRunIsRecordedWithTheStaffCounts(): void
     {
-        $result = $this->sync("dean,I1,{$this->deptCode()},,,", 'boss,I2,,,,');
+        $result = $this->sync("dean,I1,{$this->collegeCode()},,,", 'boss,I2,,,,');
 
         $run = db_connect()->table('sis_runs')->where('id', $result->runId)->get()->getRowArray();
 

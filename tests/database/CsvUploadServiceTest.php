@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Services\Audit\AuditLogger;
+use App\Services\Institutions\ClassSectionService;
 use App\Services\Institutions\CsvUploadService;
 use App\Services\Institutions\StructureException;
+use App\Services\Notifications\MailOutbox;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
@@ -29,10 +31,21 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 {
     protected bool $isolateTests = false;
 
+    /** Upload columns (no SIS ids). Two good students and one with a bad email. */
+    private const STUDENTS = "student_number,email,first_name,middle_name,last_name,suffix\n2026-001,ann@example.com,Ann,Cruz,Lee,Jr.\n2026-002,ben@example.com,Ben,,Ng,\n,not-an-email,Cy,,Ho,\n";
+
+    private const INSTRUCTORS = "email,first_name,middle_name,last_name,suffix\nivy@example.com,Ivy,,Tan,\n";
+
+    /** One good course; one in a program the institution does not have. */
+    private const COURSES = "program_code,course_code,course_title,units\nBSIT,IT101,Intro to Computing,3\nNOPE,IT102,No Program,3\n";
+
+    /** By student number, by email (into a new section B), and one into a course that does not exist. */
+    private const ENROLLMENTS = "student_number,email,program_code,course_code,section,status\n2026-001,,,IT101,,enrolled\n,ben@example.com,BSIT,IT101,B,dropped\n2026-001,,,IT999,,enrolled\n";
+
     /** Touched by these tests; emptied with foreign keys off. */
     private const TABLES = [
-        'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'course_offerings', 'courses',
-        'academic_terms', 'programs', 'sub_departments', 'departments', 'institution_users', 'user_profiles',
+        'mail_outbox', 'password_resets', 'sis_runs', 'sis_links', 'sis_connections', 'feature_flag_overrides', 'enrollments', 'class_section_students', 'course_offerings', 'class_sections', 'courses',
+        'academic_terms', 'programs', 'departments', 'colleges', 'institution_users', 'user_profiles',
         'auth_groups_users', 'auth_identities', 'users', 'institutions', 'audit_logs', 'notifications',
     ];
 
@@ -101,10 +114,10 @@ final class CsvUploadServiceTest extends DatabaseTestCase
     private function files(): array
     {
         return [
-            'students'    => SisFixture::STUDENTS,
-            'instructors' => SisFixture::INSTRUCTORS,
-            'courses'     => SisFixture::COURSES,
-            'enrollments' => SisFixture::ENROLLMENTS,
+            'students'    => self::STUDENTS,
+            'instructors' => self::INSTRUCTORS,
+            'courses'     => self::COURSES,
+            'enrollments' => self::ENROLLMENTS,
         ];
     }
 
@@ -166,7 +179,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     public function testOnlyTheFilesGivenAreUsed(): void
     {
-        $preview = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
 
         $kept = $this->service->kept($this->institution, $preview['token']);
 
@@ -179,7 +192,8 @@ final class CsvUploadServiceTest extends DatabaseTestCase
     {
         yield 'no files' => [[], ''];
         yield 'only blanks' => [['students' => "  \n"], ''];
-        yield 'a missing column' => [['students' => "external_id,email\nS1,a@b.test\n"], 'students'];
+        yield 'a missing column' => [['students' => "email,first_name\na@b.test,Ann\n"], 'students'];
+        yield 'the SIS columns instead of the upload columns' => [['enrollments' => "course_external_id,student_external_id\nC1,S1\n"], 'enrollments'];
         yield 'a header that is only spaces' => [['courses' => '   '], ''];
         yield 'a file this upload does not take' => [['grades' => "a,b\n1,2\n"], ''];
     }
@@ -232,7 +246,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     public function testAKeptPreviewBelongsToOneInstitutionAndExpires(): void
     {
-        $preview = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
 
         foreach ([
             fn () => $this->service->kept($this->other, $preview['token']),
@@ -270,9 +284,9 @@ final class CsvUploadServiceTest extends DatabaseTestCase
     /** A preview nobody applies or starts over from is removed within its hour, whatever else happens (QA AMB-INST-06). */
     public function testAnAbandonedPreviewIsRemovedOnceItsHourIsUpWithoutAnotherPreview(): void
     {
-        $old   = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
-        $other = $this->service->preview($this->other, ['students' => SisFixture::STUDENTS], $this->actor);
-        $fresh = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $old   = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
+        $other = $this->service->preview($this->other, ['students' => self::STUDENTS], $this->actor);
+        $fresh = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
 
         $gone = $this->age($this->institution, $old['token'], CsvUploadService::KEEP_SECONDS + 5);
         $alsoGone = $this->age($this->other, $other['token'], CsvUploadService::KEEP_SECONDS + 5);
@@ -287,7 +301,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     public function testTheEveryMinuteJobSweepsThem(): void
     {
-        $preview = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
         $folder  = $this->age($this->institution, $preview['token'], CsvUploadService::KEEP_SECONDS + 5);
 
         putenv('upload.csvPath=' . $this->base);
@@ -303,7 +317,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     public function testStartingOverRemovesTheKeptFiles(): void
     {
-        $preview = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
 
         $this->service->discard($this->institution, $preview['token']);
 
@@ -313,22 +327,314 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     public function testRecordsMadeByAnUploadAreNotSisOwnedWhileNoConnectionIsOn(): void
     {
-        $preview = $this->service->preview($this->institution, ['students' => SisFixture::STUDENTS], $this->actor);
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
         $this->service->apply($this->institution, $preview['token'], $this->actor);
 
-        $id = (int) db_connect()->table('sis_links')->where(['institution_id' => $this->institution, 'entity' => 'person'])->get()->getRowArray()['local_id'];
-
-        $this->assertFalse((new \App\Services\Sis\SisOwnership())->managesPerson($id));
+        $this->assertFalse((new \App\Services\Sis\SisOwnership())->managesPerson($this->userId('ann@example.com')));
     }
 
-    public function testEachTemplateIsItsHeaderRow(): void
+    public function testAnUploadWritesNoSisLinks(): void
     {
-        $this->assertSame("external_id,email,first_name,last_name,student_number\r\n", CsvUploadService::template('students'));
-        $this->assertSame("course_external_id,student_external_id,section,status\r\n", CsvUploadService::template('enrollments'));
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(0, db_connect()->table('sis_links')->countAllResults(), 'an upload names people and courses by what they are, not by SIS ids');
+    }
+
+    public function testEachTemplateIsItsHeaderRowWithNoSisIds(): void
+    {
+        $this->assertSame("student_number,email,first_name,middle_name,last_name,suffix\r\n", CsvUploadService::template('students'));
+        $this->assertSame("email,first_name,middle_name,last_name,suffix\r\n", CsvUploadService::template('instructors'));
+        $this->assertSame("program_code,course_code,course_title,units\r\n", CsvUploadService::template('courses'));
+        $this->assertSame("student_number,email,program_code,course_code,section,status\r\n", CsvUploadService::template('enrollments'));
+        $this->assertSame("role,email,college_code,department_code,program_code,course_code,section\r\n", CsvUploadService::template('staff_assignments'));
+        $this->assertSame("program_code,course_code,section,day_of_week,start_time,end_time,room,delivery_mode\r\n", CsvUploadService::template('class_schedules'));
 
         foreach (CsvUploadService::datasets() as $dataset) {
-            $this->assertStringContainsString('external_id', CsvUploadService::template($dataset));
+            $this->assertStringNotContainsString('external_id', CsvUploadService::template($dataset));
         }
+    }
+
+    public function testAStudentIsSavedWithTheirMiddleNameAndSuffix(): void
+    {
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $profile = db_connect()->table('user_profiles')->where('user_id', $this->userId('ann@example.com'))->get()->getRowArray();
+
+        $this->assertSame(['Ann', 'Cruz', 'Lee', 'Jr.', '2026-001'], [$profile['first_name'], $profile['middle_name'], $profile['last_name'], $profile['suffix'], $profile['student_number']]);
+        $this->assertNull(db_connect()->table('user_profiles')->where('user_id', $this->userId('ben@example.com'))->get()->getRowArray()['middle_name'], 'an empty middle name stays empty');
+    }
+
+    public function testAStudentAlreadyHereIsFoundByStudentNumberSoTheirEmailCanBeCorrected(): void
+    {
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+        $ann = $this->userId('ann@example.com');
+
+        $preview = $this->service->preview($this->institution, ['students' => "student_number,email,first_name,last_name\n2026-001,ann.lee@example.com,Ann,Lee\n"], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertSame(['created' => 0, 'updated' => 1], array_intersect_key($kept['totals'], ['created' => 0, 'updated' => 0]));
+
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame($ann, $this->userId('ann.lee@example.com'), 'the same account, with the new address');
+    }
+
+    public function testAnInstructorAlreadyHereIsFoundByEmail(): void
+    {
+        $ivy = PeopleFactory::person('instructor', 'Ivy', 'Tan', 'ivy@example.com', $this->institution);
+
+        $preview = $this->service->preview($this->institution, ['instructors' => "email,first_name,middle_name,last_name,suffix\nIVY@example.com,Ivy,Mae,Tan,\n"], $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame('Mae', db_connect()->table('user_profiles')->where('user_id', $ivy->id)->get()->getRowArray()['middle_name']);
+        $this->assertSame(1, db_connect()->table('auth_identities')->where('secret', 'ivy@example.com')->countAllResults(), 'no second account');
+    }
+
+    public function testEnrolmentsNameTheStudentByNumberOrEmailAndTheCourseByCode(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertSame(['created' => 2, 'updated' => 0, 'skipped' => 0, 'failed' => 1], $kept['datasets']['enrollments']);
+
+        $refused = array_values(array_filter($kept['issues'], static fn (array $i): bool => $i['dataset'] === 'enrollments' && empty($i['note'])));
+        $this->assertSame('There is no course IT999 in this institution; add it in courses.csv.', $refused[0]['reason']);
+
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $rows = db_connect()->table('enrollments e')
+            ->select('o.section_code, e.status, e.student_user_id')
+            ->join('course_offerings o', 'o.id = e.offering_id')
+            ->orderBy('o.section_code')
+            ->get()->getResultArray();
+
+        $this->assertSame([
+            ['section_code' => 'A', 'status' => 'enrolled', 'student_user_id' => (string) $this->userId('ann@example.com')],
+            ['section_code' => 'B', 'status' => 'dropped', 'student_user_id' => (string) $this->userId('ben@example.com')],
+        ], $rows);
+    }
+
+    public function testASectionNotThereYetIsCreatedAndNotedOnceButNotRefused(): void
+    {
+        $files                = $this->files();
+        $files['enrollments'] .= ",ann@example.com,,IT101,B,enrolled\n"; // a second row into the same new section
+
+        $preview = $this->service->preview($this->institution, $files, $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+        $notes   = array_values(array_filter($kept['issues'], static fn (array $i): bool => ! empty($i['note'])));
+
+        $this->assertSame(['IT101 A', 'IT101 B'], array_column($notes, 'item'), 'each new section once');
+        $this->assertSame('Section B of IT101 is not in the active term yet, so it is created.', $notes[1]['reason']);
+        $this->assertSame(1, $kept['datasets']['enrollments']['failed'], 'a note is not a refusal');
+    }
+
+    public function testASectionAlreadyThereIsNotNoted(): void
+    {
+        $preview = $this->service->preview($this->institution, ['courses' => self::COURSES], $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $course = (int) db_connect()->table('courses')->where('course_code', 'IT101')->get()->getRowArray()['id'];
+        $term   = (int) db_connect()->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
+        db_connect()->table('course_offerings')->insert(['course_id' => $course, 'term_id' => $term, 'section_code' => 'A']);
+
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS, 'enrollments' => "student_number,email,program_code,course_code,section,status\n2026-001,,,IT101,A,\n"], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertSame([], array_values(array_filter($kept['issues'], static fn (array $i): bool => ! empty($i['note']))));
+        $this->assertSame(1, $kept['datasets']['enrollments']['created']);
+    }
+
+    public function testACourseCodeInMoreThanOneProgramNeedsTheProgram(): void
+    {
+        $db  = db_connect();
+        $department = (int) $db->query('SELECT sd.id FROM departments sd JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $db->table('programs')->insert(['department_id' => $department, 'name' => 'BS Computer Science', 'code' => 'BSCS']);
+
+        $courses = "program_code,course_code,course_title,units\nBSIT,IT101,Intro to Computing,3\nBSCS,IT101,Intro to Computing (CS),3\n";
+        $preview = $this->service->preview($this->institution, ['courses' => $courses], $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $enrol   = "student_number,email,program_code,course_code,section,status\n2026-001,,,IT101,A,\n2026-001,,BSCS,IT101,A,\n";
+        $preview = $this->service->preview($this->institution, ['students' => self::STUDENTS, 'enrollments' => $enrol], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+        $refused = array_values(array_filter($kept['issues'], static fn (array $i): bool => $i['dataset'] === 'enrollments' && empty($i['note'])));
+
+        $this->assertSame(['created' => 1, 'failed' => 1], array_intersect_key($kept['datasets']['enrollments'], ['created' => 0, 'failed' => 0]));
+        $this->assertSame('Course IT101 is in more than one program (BSCS, BSIT); add program_code to say which.', $refused[0]['reason']);
+    }
+
+    public function testACourseIsUpdatedByItsProgramAndCode(): void
+    {
+        $preview = $this->service->preview($this->institution, ['courses' => self::COURSES], $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $preview = $this->service->preview($this->institution, ['courses' => "program_code,course_code,course_title,units\nBSIT,IT101,Introduction to Computing,3\n"], $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(['Introduction to Computing'], array_column(db_connect()->table('courses')->where('course_code', 'IT101')->get()->getResultArray(), 'course_title'), 'updated, not added');
+    }
+
+    public function testAStudentNotHereIsRefusedInEnrolmentsWithAWayToAddThem(): void
+    {
+        $preview = $this->service->preview($this->institution, ['courses' => self::COURSES, 'enrollments' => "student_number,email,program_code,course_code,section,status\n2026-404,,,IT101,A,\n"], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+        $refused = array_values(array_filter($kept['issues'], static fn (array $i): bool => $i['dataset'] === 'enrollments'));
+
+        $this->assertSame('2026-404 is not a student of this institution; add them in students.csv or on the People page.', $refused[0]['reason']);
+    }
+
+    private function outbox(): int
+    {
+        return db_connect()->table('mail_outbox')->countAllResults();
+    }
+
+    public function testAPreviewWritesNoEmailsButSaysWhoWillBeEmailed(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertSame(0, $this->outbox(), 'a preview tells nobody');
+        $this->assertTrue($kept['email']);
+
+        // Ann, Ben and Ivy are new accounts: each gets a link to choose a password (Ann's place is in the same email).
+        $this->assertSame(['people' => 3, 'welcome' => 3, 'notices' => 0], $kept['mail']);
+    }
+
+    public function testApplyingNotesAWelcomeForEachNewAccountAndTheirPlacesButNotADroppedOne(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $applied = $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(['people' => 3, 'welcome' => 3, 'notices' => 0], $applied->mail);
+
+        $rows = db_connect()->table('mail_outbox')->select('kind, detail, user_id')->orderBy('id')->get()->getResultArray();
+        $kinds = array_count_values(array_column($rows, 'kind'));
+
+        $this->assertSame(['welcome' => 3, 'enrolled' => 1], $kinds, 'Ben was uploaded as dropped, so he is not told of a place');
+        $this->assertSame(['student', 'student', 'instructor'], array_values(array_column(array_filter($rows, static fn (array $r): bool => $r['kind'] === 'welcome'), 'detail')));
+
+        $enrolled = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] === 'enrolled'))[0];
+        $this->assertSame('IT101 Intro to Computing, section A', $enrolled['detail']);
+        $this->assertSame($this->userId('ann@example.com'), (int) $enrolled['user_id']);
+    }
+
+    public function testTheJobThenEmailsEachPersonOnceWithTheirLinkAndTheirPlace(): void
+    {
+        $mail    = \Tests\Support\FakeEmail::install();
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(3, (new MailOutbox())->sendDue(new DateTimeImmutable('+10 minutes')));
+
+        $byTo = array_column($mail->sent, null, 'to');
+        $this->assertSame(['ann@example.com', 'ben@example.com', 'ivy@example.com'], array_keys($byTo));
+
+        $this->assertStringContainsString('as a student', $byTo['ann@example.com']['message']);
+        $this->assertStringContainsString(' - IT101 Intro to Computing, section A', $byTo['ann@example.com']['message']);
+        $this->assertStringContainsString('as an instructor', $byTo['ivy@example.com']['message']);
+        $this->assertSame(3, db_connect()->table('password_resets')->countAllResults(), 'a link each');
+    }
+
+    public function testUntickingTheBoxAddsThemQuietly(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor, false);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertFalse($kept['email']);
+        $this->assertSame([], $kept['mail']);
+
+        $applied = $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame([], $applied->mail);
+        $this->assertSame(0, $this->outbox());
+        $this->assertGreaterThan(0, $this->userId('ann@example.com'), 'they were still added');
+    }
+
+    public function testSomeoneWhoAlreadyHasAnAccountIsToldWhatChangedNotWelcomed(): void
+    {
+        // Ann exists and is a student here; this upload only enrols her.
+        $first = $this->service->preview($this->institution, ['students' => self::STUDENTS, 'courses' => self::COURSES], $this->actor, false);
+        $this->service->apply($this->institution, $first['token'], $this->actor);
+
+        $preview = $this->service->preview($this->institution, ['enrollments' => "student_number,email,program_code,course_code,section,status\n2026-001,,,IT101,A,\n"], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+
+        $this->assertSame(['people' => 1, 'welcome' => 0, 'notices' => 1], $kept['mail']);
+
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $this->assertSame(['enrolled'], array_column(db_connect()->table('mail_outbox')->get()->getResultArray(), 'kind'));
+    }
+
+    public function testAnApplyThatFailsPartWayNotesNoEmails(): void
+    {
+        $preview = $this->service->preview($this->institution, $this->files(), $this->actor);
+
+        Services::injectMock('auditLogger', new class () extends AuditLogger {
+            public function log(string $action, ?User $actor = null, array $details = []): int
+            {
+                if ($action === 'sis.import_run') {
+                    throw new RuntimeException('audit down');
+                }
+
+                return parent::log($action, $actor, $details);
+            }
+        });
+
+        $this->refused(fn () => $this->service->apply($this->institution, $preview['token'], $this->actor));
+
+        $this->assertSame(0, $this->outbox(), 'what was rolled back tells nobody');
+        $this->assertFalse(MailOutbox::isMuted(), 'and the run left the outbox as it found it');
+
+        Services::resetSingle('auditLogger');
+    }
+
+    public function testASectionNamingABlockJoinsTheCourseToItAndEnrolsItsStudents(): void
+    {
+        $setup = $this->service->preview($this->institution, ['courses' => self::COURSES, 'students' => self::STUDENTS], $this->actor);
+        $this->service->apply($this->institution, $setup['token'], $this->actor);
+
+        $db      = db_connect();
+        $blocks  = new ClassSectionService();
+        $program = (int) $db->table('programs')->where('code', 'BSIT')->get()->getRowArray()['id'];
+        $term    = (int) $db->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
+        $block   = $blocks->create($this->institution, ['term_id' => (string) $term, 'program_id' => (string) $program, 'year_level' => '1', 'code' => 'BSIT 1-A', 'capacity' => '5'], $this->actor);
+        $blocks->addStudents($this->institution, $block, '2026-002', false, $this->actor); // Ben is in the block
+
+        // Ann is enrolled in IT101 of the block by the upload, without being in the block.
+        $enrol   = "student_number,email,program_code,course_code,section,status
+2026-001,,,IT101,BSIT 1-A,
+";
+        $preview = $this->service->preview($this->institution, ['enrollments' => $enrol], $this->actor);
+        $kept    = $this->service->kept($this->institution, $preview['token']);
+        $notes   = array_values(array_filter($kept['issues'], static fn (array $i): bool => ! empty($i['note'])));
+
+        $this->assertSame(['IT101 BSIT 1-A'], array_column($notes, 'item'));
+        $this->assertSame('IT101 is added to the block section BSIT 1-A, and its 1 student is enrolled in it.', $notes[0]['reason']);
+        $this->assertSame(0, $db->table('course_offerings')->where('class_section_id', $block)->countAllResults(), 'a preview writes nothing');
+
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $offering = $db->table('course_offerings')->where(['class_section_id' => $block])->get()->getRowArray();
+
+        $this->assertSame('BSIT 1-A', $offering['section_code']);
+        $this->assertSame(
+            ['enrolled', 'enrolled'],
+            [
+                $db->table('enrollments')->where(['offering_id' => $offering['id'], 'student_user_id' => $this->userId('ann@example.com')])->get()->getRowArray()['status'],
+                $db->table('enrollments')->where(['offering_id' => $offering['id'], 'student_user_id' => $this->userId('ben@example.com')])->get()->getRowArray()['status'],
+            ],
+            'Ann by the file, Ben because he is in the block',
+        );
+        $this->assertSame(1, $db->table('class_section_students')->where('class_section_id', $block)->countAllResults(), 'Ann is not made a member');
+    }
+
+    private function userId(string $email): int
+    {
+        return (int) db_connect()->table('auth_identities')->where(['type' => 'email_password', 'secret' => $email])->get()->getRowArray()['user_id'];
     }
 
     public function testAnApplyThatFailsPartWayLeavesNothingAndKeepsTheFilesForANewTry(): void

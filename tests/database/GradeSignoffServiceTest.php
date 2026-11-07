@@ -33,8 +33,8 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
     private Signoff $service;
     private GradeFinalizationService $finalization;
     private int $institution;
+    private int $college;
     private int $department;
-    private int $sub;
     private int $program;
     private int $term;
     private int $offering;
@@ -49,16 +49,16 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home              = DeanFactory::department('G');
+        $home              = DeanFactory::college('G');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'G');
-        $this->program     = DeanFactory::program($this->sub, 'G');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'G');
+        $this->program     = DeanFactory::program($this->department, 'G');
         $this->term        = DeanFactory::term($this->institution);
 
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
-        $this->chair   = DeanFactory::chair($this->sub, 'Maria');
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
+        $this->chair   = DeanFactory::chair($this->department, 'Maria');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
 
         $this->offering = $this->section($this->program, 'IT101', 'A');
 
@@ -249,10 +249,10 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
     {
         $this->finalized();
 
-        $otherDepartment = DeanFactory::department('O', $this->institution);
-        $otherDean       = DeanFactory::dean($this->institution, $otherDepartment['department'], 'Olga');
+        $otherCollege = DeanFactory::college('O', $this->institution);
+        $otherDean       = DeanFactory::dean($this->institution, $otherCollege['college'], 'Olga');
 
-        foreach ([[$otherDean, "another department's dean"], [$this->chair, 'the chairperson'], [$this->teacher, 'the instructor']] as [$who, $label]) {
+        foreach ([[$otherDean, "another college's dean"], [$this->chair, 'the chairperson'], [$this->teacher, 'the instructor']] as [$who, $label]) {
             $this->assertFalse($this->service->signOff($who, $this->offering)['success'], $label);
             $this->assertFalse($this->service->reopen($who, $this->offering, 'Because')['success'], $label);
         }
@@ -265,7 +265,7 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         $this->finalized();
 
         $person = PeopleFactory::person('instructor', 'Dora', 'Dean', null, $this->institution);
-        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->department, (int) $person->id);
+        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->college, (int) $person->id);
         $dora = model(CodeIgniter\Shield\Models\UserModel::class)->findById($person->id);
 
         (new ActiveRoleService())->switchTo($dora, 'instructor');
@@ -393,7 +393,7 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         $done    = $this->finalized($this->section($this->program, 'IT104', 'A'));
         $this->service->signOff($this->dean, $done);
 
-        $otherProgram = $this->section(DeanFactory::program($this->sub, 'H'), 'LW100', 'A');
+        $otherProgram = $this->section(DeanFactory::program($this->department, 'H'), 'LW100', 'A');
         $this->finalized($otherProgram);
 
         $result = $this->service->signOffProgram($this->dean, $this->program, $this->term);
@@ -412,10 +412,10 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         $this->assertSame('Nothing was ready to sign off.', $again['message']);
     }
 
-    public function testSigningOffAProgramOutsideTheDepartmentIsRefused(): void
+    public function testSigningOffAProgramOutsideTheCollegeIsRefused(): void
     {
-        $elsewhere = DeanFactory::department('X', $this->institution);
-        $foreign   = DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X');
+        $elsewhere = DeanFactory::college('X', $this->institution);
+        $foreign   = DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X');
 
         $result = $this->service->signOffProgram($this->dean, $foreign, $this->term);
 
@@ -429,7 +429,7 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         $this->service->signOff($this->dean, $this->offering);
         $this->section($this->program, 'IT102', 'A');                                  // blocked: not finalized
         $this->finalized($this->section($this->program, 'IT103', 'A'));                 // ready
-        $second = DeanFactory::program($this->sub, 'H');
+        $second = DeanFactory::program($this->department, 'H');
         $this->section($second, 'LW100', 'A');
 
         $board = $this->service->board($this->dean, $this->term);
@@ -447,7 +447,7 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         $this->assertSame(['The instructor has not finalized the grades yet.'], $first['sections'][1]['blockers']);
     }
 
-    public function testTheBoardDefaultsToTheNewestTermAndIgnoresAnotherDepartmentsOrAnUnknownOne(): void
+    public function testTheBoardDefaultsToTheNewestTermAndIgnoresAnotherCollegesOrAnUnknownOne(): void
     {
         $later = DeanFactory::term($this->institution, 'Second', '2027-01-10');
         DeanFactory::offering($this->program, $later, 'IT201');
@@ -456,17 +456,17 @@ final class GradeSignoffServiceTest extends DatabaseTestCase
         $this->assertSame($later, $this->service->board($this->dean, 999999)['term'], 'an unknown term falls back');
         $this->assertSame($this->term, $this->service->board($this->dean, $this->term)['term']);
 
-        $elsewhere = DeanFactory::department('X', $this->institution);
-        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'X'), 'X'), $this->term, 'ZZ900');
+        $elsewhere = DeanFactory::college('X', $this->institution);
+        $foreign   = DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'X'), 'X'), $this->term, 'ZZ900');
         $codes     = array_merge(...array_map(static fn (array $p): array => array_column($p['sections'], 'course_code'), $this->service->board($this->dean, $this->term)['programs']));
 
         $this->assertNotContains('ZZ900', $codes);
         $this->assertSame($foreign, $foreign);
     }
 
-    public function testADeanWithoutADepartmentHasAnEmptyBoard(): void
+    public function testADeanWithoutACollegeHasAnEmptyBoard(): void
     {
-        $board = $this->service->board(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution), null);
+        $board = $this->service->board(PeopleFactory::person('dean', 'No', 'College', null, $this->institution), null);
 
         $this->assertSame([], $board['programs']);
         $this->assertNull($board['term']);

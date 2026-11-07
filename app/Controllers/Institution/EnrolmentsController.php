@@ -9,6 +9,7 @@ use App\Controllers\Institution\Concerns\AnswersDialogForms;
 use App\Services\Institutions\EnrolmentService;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
+use App\Services\Institutions\StudentSuggestions;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -56,6 +57,31 @@ class EnrolmentsController extends BaseController
             'rosterLocked'  => $result['courseLocked'],
             'rosterFilters' => $filters,
             'rosterCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
+        ]);
+    }
+
+    /**
+     * The students to offer while someone types in an "add students" box: JSON {students: [{name, student_number,
+     * email}]}. The institution is the signed-in administrator's, never the request's; an offering or a section named
+     * to leave out those who already have the place must be this institution's too (404 otherwise).
+     */
+    public function suggest(): ResponseInterface
+    {
+        $scope         = new InstitutionScope();
+        $institutionId = $scope->requireInstitutionId();
+        $offering      = (int) $this->request->getGet('offering');
+        $section       = (int) $this->request->getGet('section');
+
+        if ($offering > 0) {
+            $scope->require('offering', $offering);
+        }
+
+        if ($section > 0) {
+            $scope->require('classSection', $section);
+        }
+
+        return $this->response->setJSON([
+            'students' => (new StudentSuggestions())->search($institutionId, (string) $this->request->getGet('q'), $offering > 0 ? $offering : null, $section > 0 ? $section : null),
         ]);
     }
 

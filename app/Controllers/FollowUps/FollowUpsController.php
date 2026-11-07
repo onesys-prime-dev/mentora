@@ -35,7 +35,7 @@ class FollowUpsController extends BaseController
         $area    = $this->area();
         $service = new FollowUpService();
 
-        if ($area === 'dean' && (new DeanAccessService())->departmentFor($user) === null) {
+        if ($area === 'dean' && (new DeanAccessService())->collegeFor($user) === null) {
             return view('pages/dean/no-assignment', ['title' => 'Follow-ups', 'page' => 'follow-ups', 'user' => $user]);
         }
 

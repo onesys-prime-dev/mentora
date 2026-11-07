@@ -67,6 +67,9 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         // back in another institution.
         \App\Services\Auth\RolePermissions::flush();
 
+        // Nor are the Grades tile counts an earlier test's page worked out (each test has a fresh cache already).
+        \App\Services\Grades\GradesBadge::flush();
+
         if ($this->isolateTests) {
             $this->emptyTablesOnce();
             self::forgetEarlierQueryFailure();

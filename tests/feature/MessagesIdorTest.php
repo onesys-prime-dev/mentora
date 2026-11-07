@@ -96,8 +96,8 @@ final class MessagesIdorTest extends RouteTestCase
         // Another institution's thread.
         $farInstitution = PeopleFactory::institution('FARX');
         $farTerm        = DeanFactory::term($farInstitution);
-        $farDept        = DeanFactory::department('FX', $farInstitution);
-        $farProgram     = DeanFactory::program(DeanFactory::subDepartment($farDept['department'], 'FX'), 'FX');
+        $farCollege        = DeanFactory::college('FX', $farInstitution);
+        $farProgram     = DeanFactory::program(DeanFactory::department($farCollege['college'], 'FX'), 'FX');
         $farStudent     = PeopleFactory::person('student', 'Far', 'S', null, $farInstitution);
         $farInstructor  = PeopleFactory::person('instructor', 'Far', 'I', null, $farInstitution);
         $farOffering    = DeanFactory::offering($farProgram, $farTerm, 'FX1');

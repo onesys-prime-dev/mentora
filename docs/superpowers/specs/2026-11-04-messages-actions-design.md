@@ -106,12 +106,12 @@ starts with a row of quick reactions.
 Who manages a chat and so sees Chat controls (confirmed by the owner unless marked):
 
 - the **instructor** in the course chats they teach;
-- a **chairperson** in the course chats of their sub-department and in the staff groups they created;
-- a **dean** in the course chats of their department and in the staff groups they created;
+- a **chairperson** in the course chats of their department and in the staff groups they created;
+- a **dean** in the course chats of their college and in the staff groups they created;
 - the **institutional administrator** in any chat of their institution **(my call)**.
 
 Scope for chairpersons and deans comes from the existing access services (`ChairpersonAccessService`,
-`DeanAccessService`): a course chat is in scope when its offering belongs to their sub-department / department.
+`DeanAccessService`): a course chat is in scope when its offering belongs to their department / college.
 Do not write new scope SQL. This is a separate decision from `canModerate` (which does not give chairpersons and
 deans power over course chats), so add `canManageControls` to `MessagingPolicy` with its own table of tests; it must
 not widen who can remove, pin or lock beyond what is listed here.

@@ -10,10 +10,10 @@ use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * What chairpersons changed in the department's courses, for the dean to look over.
+ * What chairpersons changed in the college's courses, for the dean to look over.
  *
  * The list is the audit entries ChairpersonCourseAudit writes whenever a chairperson changes a
- * course through the chairperson area, limited to the dean's department and to courses the
+ * course through the chairperson area, limited to the dean's college and to courses the
  * chairperson does not teach themselves (what they change as the instructor is the instructor's
  * own work, and does not come through here). It is review only: nothing is blocked, held or
  * reverted. The dean marks entries as reviewed; the mark is theirs alone and changes nothing about
@@ -35,7 +35,7 @@ class ChairpersonReviewService
      */
     public function entries(User $dean, ChairpersonReviewFilters $filters, int $page = 1, int $perPage = 15): array
     {
-        $courses = $this->courses($dean, $filters->subDepartmentId);
+        $courses = $this->courses($dean, $filters->departmentId);
         $counts  = [
             'unreviewed' => $this->scoped($dean, $filters, $courses, 'unreviewed')->countAllResults(),
             'reviewed'   => $this->scoped($dean, $filters, $courses, 'reviewed')->countAllResults(),
@@ -62,7 +62,7 @@ class ChairpersonReviewService
                 'offering_id'    => (int) $row['target_id'],
                 'course_code'    => $course['course_code'] ?? null,
                 'section_code'   => $course['section_code'] ?? null,
-                'sub_department' => $course['sub_department'] ?? null,
+                'department' => $course['department'] ?? null,
                 'slug'           => $course !== null ? url_title((string) $course['course_title'], '-', true) : null,
                 'description'    => self::describe($new['method'] ?? null, $new['path'] ?? null),
                 'reviewed_at'    => $row['reviewed_at'],
@@ -81,7 +81,7 @@ class ChairpersonReviewService
     }
 
     /**
-     * The dean marks entries as reviewed. Only entries of their own department count; any other id is
+     * The dean marks entries as reviewed. Only entries of their own college count; any other id is
      * ignored, and one already marked is left as it is.
      *
      * @param list<int> $auditIds
@@ -90,8 +90,8 @@ class ChairpersonReviewService
      */
     public function markReviewed(User $dean, array $auditIds): array
     {
-        if ((new ActiveRoleService())->resolve($dean) !== 'dean' || $this->access->departmentFor($dean) === null) {
-            return ['success' => false, 'message' => 'Only the dean of the department reviews these.', 'marked' => 0];
+        if ((new ActiveRoleService())->resolve($dean) !== 'dean' || $this->access->collegeFor($dean) === null) {
+            return ['success' => false, 'message' => 'Only the dean of the college reviews these.', 'marked' => 0];
         }
 
         $auditIds = array_values(array_unique(array_filter(array_map('intval', $auditIds), static fn (int $id): bool => $id > 0)));
@@ -119,8 +119,8 @@ class ChairpersonReviewService
 
         (new AuditLogger())->log('chairperson_review.marked', $dean, [
             'acting_role' => 'dean',
-            'target_type' => 'department',
-            'target_id'   => (int) $this->access->departmentFor($dean)['department_id'],
+            'target_type' => 'college',
+            'target_id'   => (int) $this->access->collegeFor($dean)['college_id'],
             'new'         => ['audit_ids' => $ids],
         ]);
 
@@ -128,23 +128,23 @@ class ChairpersonReviewService
     }
 
     /**
-     * The chairpersons of the department's sub-departments, now or before, for the filter.
+     * The chairpersons of the college's departments, now or before, for the filter.
      *
      * @return list<array{id: int, name: string}>
      */
     public function chairpersons(User $dean): array
     {
-        $department = $this->access->departmentFor($dean);
+        $college = $this->access->collegeFor($dean);
 
-        if ($department === null) {
+        if ($college === null) {
             return [];
         }
 
         $rows = db_connect()->table('chairperson_assignments ca')
             ->select(['ca.chairperson_user_id AS id', "TRIM(CONCAT_WS(' ', up.first_name, up.last_name)) AS name"], false)
-            ->join('sub_departments sd', 'sd.id = ca.sub_department_id')
+            ->join('departments sd', 'sd.id = ca.department_id')
             ->join('user_profiles up', 'up.user_id = ca.chairperson_user_id', 'left')
-            ->where('sd.department_id', (int) $department['department_id'])
+            ->where('sd.college_id', (int) $college['college_id'])
             ->groupBy('ca.chairperson_user_id')->groupBy('up.first_name')->groupBy('up.last_name')
             ->orderBy('up.first_name', 'ASC')->orderBy('up.last_name', 'ASC')
             ->get()->getResultArray();
@@ -183,17 +183,17 @@ class ChairpersonReviewService
     }
 
     /**
-     * The department's courses by offering id, for labels and for the boundary of the list.
+     * The college's courses by offering id, for labels and for the boundary of the list.
      *
      * @return array<int, array<string, mixed>>
      */
-    private function courses(User $dean, ?int $subDepartmentId): array
+    private function courses(User $dean, ?int $departmentId): array
     {
         $rows = $this->monitor->offeringRowsForPrograms($this->access->programIds($dean), new MonitorProgramFilters());
         $by   = [];
 
         foreach ($rows as $row) {
-            if ($subDepartmentId !== null && (int) $row['sub_department_id'] !== $subDepartmentId) {
+            if ($departmentId !== null && (int) $row['department_id'] !== $departmentId) {
                 continue;
             }
 
@@ -201,11 +201,11 @@ class ChairpersonReviewService
         }
 
         if ($by !== []) {
-            $names = db_connect()->table('sub_departments')->select(['id', 'name'])->whereIn('id', array_unique(array_map(static fn (array $r): int => (int) $r['sub_department_id'], $by)))->get()->getResultArray();
+            $names = db_connect()->table('departments')->select(['id', 'name'])->whereIn('id', array_unique(array_map(static fn (array $r): int => (int) $r['department_id'], $by)))->get()->getResultArray();
             $names = array_column($names, 'name', 'id');
 
             foreach ($by as &$row) {
-                $row['sub_department'] = $names[$row['sub_department_id']] ?? null;
+                $row['department'] = $names[$row['department_id']] ?? null;
             }
             unset($row);
         }
@@ -225,7 +225,7 @@ class ChairpersonReviewService
             ->join('chairperson_action_reviews r', 'r.audit_log_id = a.id AND r.reviewer_id = ' . (int) $dean->id, 'left')
             ->where('a.action', 'course.chairperson_action');
 
-        // No courses (no department, or none in it) reaches nothing: an empty IN () is an error, not "none".
+        // No courses (no college, or none in it) reaches nothing: an empty IN () is an error, not "none".
         if ($courses === []) {
             return $builder->where('1 = 0', null, false);
         }

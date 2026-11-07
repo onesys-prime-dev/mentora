@@ -1,7 +1,7 @@
 <?php
 $level = $level ?? 'offering';
 
-// Same trail at every depth; each ancestor is clickable, the deepest is the current page.
+// Same trail at every collegeh; each ancestor is clickable, the deepest is the current page.
 $crumbs = [['label' => 'Modules', 'attrs' => $level === 'offering' ? null : 'data-resources-crumb-root']];
 
 if ($level !== 'offering' && $module) {

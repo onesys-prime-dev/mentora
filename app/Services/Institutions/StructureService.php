@@ -8,16 +8,16 @@ use CodeIgniter\Shield\Entities\User;
 use DateTimeImmutable;
 
 /**
- * An institution's academic structure: departments, sub-departments and
+ * An institution's academic structure: colleges, departments and
  * programs. Created, renamed, switched off and back on by the institutional
  * administrator; nothing is deleted, because courses, offerings and grades
  * hang below.
  *
  * Rules:
  *  - A code is upper case letters, numbers, dots, dashes or underscores, and
- *    unique where the database says: departments within the institution,
- *    sub-departments within their department, programs within their
- *    sub-department.
+ *    unique where the database says: colleges within the institution,
+ *    departments within their college, programs within their
+ *    department.
  *  - Nothing is created under an inactive parent, and nothing is reactivated
  *    under one.
  *  - A node cannot be switched off while it still has active children, or
@@ -32,8 +32,8 @@ class StructureService
     private const CODE_PATTERN = '/^[A-Z0-9][A-Z0-9._-]{0,49}$/';
 
     /**
-     * The whole structure for one institution: departments, each with its
-     * sub-departments, each with its programs, and the counts to show.
+     * The whole structure for one institution: colleges, each with its
+     * departments, each with its programs, and the counts to show.
      *
      * @return list<array<string, mixed>>
      */
@@ -41,19 +41,19 @@ class StructureService
     {
         $db = db_connect();
 
-        $departments = $db->table('departments')->where('institution_id', $institutionId)->orderBy('code')->get()->getResultArray();
+        $colleges = $db->table('colleges')->where('institution_id', $institutionId)->orderBy('code')->get()->getResultArray();
 
-        $subs = $db->table('sub_departments sd')
+        $departments = $db->table('departments sd')
             ->select('sd.*')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->orderBy('sd.code')
             ->get()->getResultArray();
 
         $programs = $db->table('programs p')
             ->select('p.*, (SELECT COUNT(*) FROM courses c WHERE c.program_id = p.id AND c.status != \'archived\') AS course_count', false)
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('d.institution_id', $institutionId)
             ->orderBy('p.code')
             ->get()->getResultArray();
@@ -61,23 +61,90 @@ class StructureService
         $programsBySub = [];
 
         foreach ($programs as $program) {
-            $programsBySub[(int) $program['sub_department_id']][] = $program;
+            $programsBySub[(int) $program['department_id']][] = $program;
         }
 
-        $subsByDepartment = [];
+        $departmentsByCollege = [];
 
-        foreach ($subs as $sub) {
-            $sub['programs']                              = $programsBySub[(int) $sub['id']] ?? [];
-            $subsByDepartment[(int) $sub['department_id']][] = $sub;
+        foreach ($departments as $department) {
+            $department['programs']                              = $programsBySub[(int) $department['id']] ?? [];
+            $departmentsByCollege[(int) $department['college_id']][] = $department;
         }
 
-        foreach ($departments as &$department) {
-            $department['subDepartments'] = $subsByDepartment[(int) $department['id']] ?? [];
+        foreach ($colleges as &$college) {
+            $college['departments'] = $departmentsByCollege[(int) $college['id']] ?? [];
         }
 
-        unset($department);
+        unset($college);
 
-        return $departments;
+        return $colleges;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Colleges
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * @param array<string, mixed> $input code, name, location, established_year
+     *
+     * @return int the new college's id
+     *
+     * @throws StructureException
+     */
+    public function createCollege(int $institutionId, array $input, ?User $actor = null): int
+    {
+        $values = $this->collegeValues($input);
+
+        $this->codeIsFree('colleges', ['institution_id' => $institutionId], $values['code'], null, 'college');
+
+        $db = db_connect();
+        $db->table('colleges')->insert($values + ['institution_id' => $institutionId, 'is_active' => 1] + $this->stamps(true));
+        $id = (int) $db->insertID();
+
+        $this->audit('structure.college_created', $actor, $institutionId, 'college', $id, null, $values);
+
+        return $id;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     *
+     * @throws StructureException
+     */
+    public function updateCollege(int $institutionId, int $id, array $input, ?User $actor = null): void
+    {
+        $this->scope($institutionId)->require('college', $id);
+
+        $values = $this->collegeValues($input);
+        $before = $this->row('colleges', $id);
+
+        $this->codeIsFree('colleges', ['institution_id' => $institutionId], $values['code'], $id, 'college');
+
+        $this->change('colleges', $id, $values, $before, ['code', 'name', 'location', 'established_year'], 'structure.college_updated', $actor, $institutionId, 'college');
+    }
+
+    /**
+     * @throws StructureException
+     */
+    public function setCollegeActive(int $institutionId, int $id, bool $active, ?User $actor = null): void
+    {
+        $this->scope($institutionId)->require('college', $id);
+
+        $row = $this->row('colleges', $id);
+
+        if ((int) $row['is_active'] === ($active ? 1 : 0)) {
+            return;
+        }
+
+        if (! $active) {
+            $this->refuseWhileBusy($row['name'], $this->collegeBlockers($id));
+        }
+
+        db_connect()->table('colleges')->where('id', $id)->update(['is_active' => $active ? 1 : 0] + $this->stamps(false));
+
+        $this->audit($active ? 'structure.college_reactivated' : 'structure.college_deactivated', $actor, $institutionId, 'college', $id, ['is_active' => ! $active], ['is_active' => $active]);
     }
 
     /*
@@ -87,23 +154,29 @@ class StructureService
     */
 
     /**
-     * @param array<string, mixed> $input code, name, location, established_year
-     *
-     * @return int the new department's id
+     * @param array<string, mixed> $input code, name
      *
      * @throws StructureException
      */
-    public function createDepartment(int $institutionId, array $input, ?User $actor = null): int
+    public function createDepartment(int $institutionId, int $collegeId, array $input, ?User $actor = null): int
     {
-        $values = $this->departmentValues($input);
+        $this->scope($institutionId)->require('college', $collegeId);
 
-        $this->codeIsFree('departments', ['institution_id' => $institutionId], $values['code'], null, 'department');
+        $college = $this->row('colleges', $collegeId);
+
+        if ((int) $college['is_active'] !== 1) {
+            throw new StructureException("{$college['name']} is inactive. Reactivate it before adding a department.");
+        }
+
+        $values = $this->nameAndCode($input, 'department');
+
+        $this->codeIsFree('departments', ['college_id' => $collegeId], $values['code'], null, 'department');
 
         $db = db_connect();
-        $db->table('departments')->insert($values + ['institution_id' => $institutionId, 'is_active' => 1] + $this->stamps(true));
+        $db->table('departments')->insert($values + ['college_id' => $collegeId, 'is_active' => 1] + $this->stamps(true));
         $id = (int) $db->insertID();
 
-        $this->audit('structure.department_created', $actor, $institutionId, 'department', $id, null, $values);
+        $this->audit('structure.department_created', $actor, $institutionId, 'department', $id, null, $values + ['college_id' => $collegeId]);
 
         return $id;
     }
@@ -117,12 +190,12 @@ class StructureService
     {
         $this->scope($institutionId)->require('department', $id);
 
-        $values = $this->departmentValues($input);
+        $values = $this->nameAndCode($input, 'department');
         $before = $this->row('departments', $id);
 
-        $this->codeIsFree('departments', ['institution_id' => $institutionId], $values['code'], $id, 'department');
+        $this->codeIsFree('departments', ['college_id' => (int) $before['college_id']], $values['code'], $id, 'department');
 
-        $this->change('departments', $id, $values, $before, ['code', 'name', 'location', 'established_year'], 'structure.department_updated', $actor, $institutionId, 'department');
+        $this->change('departments', $id, $values, $before, ['code', 'name'], 'structure.department_updated', $actor, $institutionId, 'department');
     }
 
     /**
@@ -138,92 +211,19 @@ class StructureService
             return;
         }
 
-        if (! $active) {
+        if ($active) {
+            $college = $this->row('colleges', (int) $row['college_id']);
+
+            if ((int) $college['is_active'] !== 1) {
+                throw new StructureException("{$college['name']} is inactive. Reactivate it first.");
+            }
+        } else {
             $this->refuseWhileBusy($row['name'], $this->departmentBlockers($id));
         }
 
         db_connect()->table('departments')->where('id', $id)->update(['is_active' => $active ? 1 : 0] + $this->stamps(false));
 
         $this->audit($active ? 'structure.department_reactivated' : 'structure.department_deactivated', $actor, $institutionId, 'department', $id, ['is_active' => ! $active], ['is_active' => $active]);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Sub-departments
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * @param array<string, mixed> $input code, name
-     *
-     * @throws StructureException
-     */
-    public function createSubDepartment(int $institutionId, int $departmentId, array $input, ?User $actor = null): int
-    {
-        $this->scope($institutionId)->require('department', $departmentId);
-
-        $department = $this->row('departments', $departmentId);
-
-        if ((int) $department['is_active'] !== 1) {
-            throw new StructureException("{$department['name']} is inactive. Reactivate it before adding a sub-department.");
-        }
-
-        $values = $this->nameAndCode($input, 'sub-department');
-
-        $this->codeIsFree('sub_departments', ['department_id' => $departmentId], $values['code'], null, 'sub-department');
-
-        $db = db_connect();
-        $db->table('sub_departments')->insert($values + ['department_id' => $departmentId, 'is_active' => 1] + $this->stamps(true));
-        $id = (int) $db->insertID();
-
-        $this->audit('structure.sub_department_created', $actor, $institutionId, 'sub_department', $id, null, $values + ['department_id' => $departmentId]);
-
-        return $id;
-    }
-
-    /**
-     * @param array<string, mixed> $input
-     *
-     * @throws StructureException
-     */
-    public function updateSubDepartment(int $institutionId, int $id, array $input, ?User $actor = null): void
-    {
-        $this->scope($institutionId)->require('subDepartment', $id);
-
-        $values = $this->nameAndCode($input, 'sub-department');
-        $before = $this->row('sub_departments', $id);
-
-        $this->codeIsFree('sub_departments', ['department_id' => (int) $before['department_id']], $values['code'], $id, 'sub-department');
-
-        $this->change('sub_departments', $id, $values, $before, ['code', 'name'], 'structure.sub_department_updated', $actor, $institutionId, 'sub_department');
-    }
-
-    /**
-     * @throws StructureException
-     */
-    public function setSubDepartmentActive(int $institutionId, int $id, bool $active, ?User $actor = null): void
-    {
-        $this->scope($institutionId)->require('subDepartment', $id);
-
-        $row = $this->row('sub_departments', $id);
-
-        if ((int) $row['is_active'] === ($active ? 1 : 0)) {
-            return;
-        }
-
-        if ($active) {
-            $department = $this->row('departments', (int) $row['department_id']);
-
-            if ((int) $department['is_active'] !== 1) {
-                throw new StructureException("{$department['name']} is inactive. Reactivate it first.");
-            }
-        } else {
-            $this->refuseWhileBusy($row['name'], $this->subDepartmentBlockers($id));
-        }
-
-        db_connect()->table('sub_departments')->where('id', $id)->update(['is_active' => $active ? 1 : 0] + $this->stamps(false));
-
-        $this->audit($active ? 'structure.sub_department_reactivated' : 'structure.sub_department_deactivated', $actor, $institutionId, 'sub_department', $id, ['is_active' => ! $active], ['is_active' => $active]);
     }
 
     /*
@@ -237,25 +237,25 @@ class StructureService
      *
      * @throws StructureException
      */
-    public function createProgram(int $institutionId, int $subDepartmentId, array $input, ?User $actor = null): int
+    public function createProgram(int $institutionId, int $departmentId, array $input, ?User $actor = null): int
     {
-        $this->scope($institutionId)->require('subDepartment', $subDepartmentId);
+        $this->scope($institutionId)->require('department', $departmentId);
 
-        $sub = $this->row('sub_departments', $subDepartmentId);
+        $department = $this->row('departments', $departmentId);
 
-        if ((int) $sub['is_active'] !== 1) {
-            throw new StructureException("{$sub['name']} is inactive. Reactivate it before adding a program.");
+        if ((int) $department['is_active'] !== 1) {
+            throw new StructureException("{$department['name']} is inactive. Reactivate it before adding a program.");
         }
 
         $values = $this->nameAndCode($input, 'program');
 
-        $this->codeIsFree('programs', ['sub_department_id' => $subDepartmentId], $values['code'], null, 'program');
+        $this->codeIsFree('programs', ['department_id' => $departmentId], $values['code'], null, 'program');
 
         $db = db_connect();
-        $db->table('programs')->insert($values + ['sub_department_id' => $subDepartmentId, 'status' => 'active'] + $this->stamps(true));
+        $db->table('programs')->insert($values + ['department_id' => $departmentId, 'status' => 'active'] + $this->stamps(true));
         $id = (int) $db->insertID();
 
-        $this->audit('structure.program_created', $actor, $institutionId, 'program', $id, null, $values + ['sub_department_id' => $subDepartmentId]);
+        $this->audit('structure.program_created', $actor, $institutionId, 'program', $id, null, $values + ['department_id' => $departmentId]);
 
         return $id;
     }
@@ -272,7 +272,7 @@ class StructureService
         $values = $this->nameAndCode($input, 'program');
         $before = $this->row('programs', $id);
 
-        $this->codeIsFree('programs', ['sub_department_id' => (int) $before['sub_department_id']], $values['code'], $id, 'program');
+        $this->codeIsFree('programs', ['department_id' => (int) $before['department_id']], $values['code'], $id, 'program');
 
         $this->change('programs', $id, $values, $before, ['code', 'name'], 'structure.program_updated', $actor, $institutionId, 'program');
     }
@@ -295,10 +295,10 @@ class StructureService
         }
 
         if ($status === 'active') {
-            $sub = $this->row('sub_departments', (int) $row['sub_department_id']);
+            $department = $this->row('departments', (int) $row['department_id']);
 
-            if ((int) $sub['is_active'] !== 1) {
-                throw new StructureException("{$sub['name']} is inactive. Reactivate it first.");
+            if ((int) $department['is_active'] !== 1) {
+                throw new StructureException("{$department['name']} is inactive. Reactivate it first.");
             }
         } elseif ($row['status'] === 'active') {
             $this->refuseWhileBusy($row['name'], $this->programBlockers($id));
@@ -315,27 +315,27 @@ class StructureService
     |--------------------------------------------------------------------------
     */
 
-    /** @return list<string> reasons, such as "2 active sub-departments" */
-    public function departmentBlockers(int $id): array
+    /** @return list<string> reasons, such as "2 active departments" */
+    public function collegeBlockers(int $id): array
     {
         $db = db_connect();
 
         return $this->reasons(
             [
-                'active sub-department' => (int) $db->table('sub_departments')->where(['department_id' => $id, 'is_active' => 1])->countAllResults(),
+                'active department' => (int) $db->table('departments')->where(['college_id' => $id, 'is_active' => 1])->countAllResults(),
                 'offering in an active term' => $this->activeTermOfferings('d.id', $id),
             ],
         );
     }
 
     /** @return list<string> */
-    public function subDepartmentBlockers(int $id): array
+    public function departmentBlockers(int $id): array
     {
         $db = db_connect();
 
         return $this->reasons(
             [
-                'active program' => (int) $db->table('programs')->where(['sub_department_id' => $id, 'status' => 'active'])->countAllResults(),
+                'active program' => (int) $db->table('programs')->where(['department_id' => $id, 'status' => 'active'])->countAllResults(),
                 'offering in an active term' => $this->activeTermOfferings('sd.id', $id),
             ],
         );
@@ -372,8 +372,8 @@ class StructureService
             ->join('academic_terms t', 't.id = o.term_id')
             ->join('courses c', 'c.id = o.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('t.status', 'active')
             ->where('o.status', 'active')
             ->where($column, $id)
@@ -419,9 +419,9 @@ class StructureService
      *
      * @throws StructureException
      */
-    private function departmentValues(array $input): array
+    private function collegeValues(array $input): array
     {
-        $values = $this->nameAndCode($input, 'department');
+        $values = $this->nameAndCode($input, 'college');
 
         $location = trim((string) ($input['location'] ?? ''));
 

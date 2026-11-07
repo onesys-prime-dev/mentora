@@ -16,10 +16,10 @@ namespace App\Services\Courses;
  * "Course" is the course, all its sections in every term (they share a question
  * bank). Enrolling is refused to anyone who teaches or ever taught it (an
  * instructor assignment that still exists), chairs or ever chaired its
- * sub-department, is or was the dean of its department, or administers its
+ * department, is or was the dean of its college, or administers its
  * institution. A staff role is refused to a student enrolled there now: in the
  * same course in the same term for teaching, in any course of the
- * sub-department, department or institution for the others. An enrolment that
+ * department, college or institution for the others. An enrolment that
  * ended (completed, dropped, withdrawn) never blocks a staff role in a later
  * term, so a former student may teach or chair the course later.
  *
@@ -28,12 +28,12 @@ namespace App\Services\Courses;
 class CourseRoleConflicts
 {
     public const TAUGHT  = 'teaches or has taught this course';
-    public const CHAIRED = 'chairs or has chaired the sub-department of this course';
-    public const LED     = "is or was the dean of this course's department";
+    public const CHAIRED = 'chairs or has chaired the department of this course';
+    public const LED     = "is or was the dean of this course's college";
     public const ADMIN   = 'is an administrator of this institution';
     public const STUDIES_COURSE      = 'is enrolled in this course this term';
-    public const STUDIES_SUB         = 'is enrolled in a course of this sub-department';
-    public const STUDIES_DEPARTMENT  = 'is enrolled in a course of this department';
+    public const STUDIES_SUB         = 'is enrolled in a course of this department';
+    public const STUDIES_COLLEGE  = 'is enrolled in a course of this college';
     public const STUDIES_INSTITUTION = 'is enrolled in a course of this institution';
 
     /** The refusal for one person: "{name} {predicate}." */
@@ -64,11 +64,11 @@ class CourseRoleConflicts
             return self::TAUGHT;
         }
 
-        if ($db->table('chairperson_assignments')->where(['chairperson_user_id' => $userId, 'sub_department_id' => $place['sub_department_id']])->countAllResults() > 0) {
+        if ($db->table('chairperson_assignments')->where(['chairperson_user_id' => $userId, 'department_id' => $place['department_id']])->countAllResults() > 0) {
             return self::CHAIRED;
         }
 
-        if ($db->table('dean_assignments')->where(['dean_user_id' => $userId, 'department_id' => $place['department_id']])->countAllResults() > 0) {
+        if ($db->table('dean_assignments')->where(['dean_user_id' => $userId, 'college_id' => $place['college_id']])->countAllResults() > 0) {
             return self::LED;
         }
 
@@ -121,14 +121,14 @@ class CourseRoleConflicts
         return $studies ? self::STUDIES_COURSE : null;
     }
 
-    public function forChairing(int $userId, int $subDepartmentId): ?string
+    public function forChairing(int $userId, int $departmentId): ?string
     {
-        return $this->studiesWhere($userId, 'sd.id', $subDepartmentId) ? self::STUDIES_SUB : null;
+        return $this->studiesWhere($userId, 'sd.id', $departmentId) ? self::STUDIES_SUB : null;
     }
 
-    public function forDean(int $userId, int $departmentId): ?string
+    public function forDean(int $userId, int $collegeId): ?string
     {
-        return $this->studiesWhere($userId, 'sd.department_id', $departmentId) ? self::STUDIES_DEPARTMENT : null;
+        return $this->studiesWhere($userId, 'sd.college_id', $collegeId) ? self::STUDIES_COLLEGE : null;
     }
 
     public function forAdministrator(int $userId, int $institutionId): ?string
@@ -136,28 +136,28 @@ class CourseRoleConflicts
         return $this->studiesWhere($userId, 'd.institution_id', $institutionId) ? self::STUDIES_INSTITUTION : null;
     }
 
-    /** Enrolled now (not completed or ended) in a course under this sub-department, department or institution. */
+    /** Enrolled now (not completed or ended) in a course under this department, college or institution. */
     private function studiesWhere(int $userId, string $column, int $id): bool
     {
         return db_connect()->table('enrollments e')
             ->join('course_offerings co', 'co.id = e.offering_id')
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where(['e.student_user_id' => $userId, 'e.status' => 'enrolled', $column => $id])
             ->countAllResults() > 0;
     }
 
-    /** @return array{course_id: int, term_id: int, sub_department_id: int, department_id: int, institution_id: int}|null */
+    /** @return array{course_id: int, term_id: int, department_id: int, college_id: int, institution_id: int}|null */
     private function place(int $offeringId): ?array
     {
         $row = db_connect()->table('course_offerings co')
-            ->select(['co.course_id', 'co.term_id', 'sd.id AS sub_department_id', 'd.id AS department_id', 'd.institution_id'])
+            ->select(['co.course_id', 'co.term_id', 'sd.id AS department_id', 'd.id AS college_id', 'd.institution_id'])
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('co.id', $offeringId)
             ->get()->getRowArray();
 

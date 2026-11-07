@@ -27,10 +27,10 @@ final class GradeAuthorityGapsTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         PermissionMatrix::flush();
 
-        $withDean          = DeanFactory::department('GP');
+        $withDean          = DeanFactory::college('GP');
         $this->institution = $withDean['institution'];
-        DeanFactory::dean($this->institution, $withDean['department']);
-        DeanFactory::department('GQ', $this->institution); // College GQ: no dean
+        DeanFactory::dean($this->institution, $withDean['college']);
+        DeanFactory::college('GQ', $this->institution); // College GQ: no dean
 
         PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
     }
@@ -53,24 +53,24 @@ final class GradeAuthorityGapsTest extends DatabaseTestCase
         $this->assertSame([], GradeAuthority::gaps($this->institution));
     }
 
-    public function testADepartmentWithNoDeanIsAGapWhenNoAdministratorMayApprove(): void
+    public function testACollegeWithNoDeanIsAGapWhenNoAdministratorMayApprove(): void
     {
         $this->clear('institutional_admin', 'grades.approve');
 
-        $this->assertSame([['department' => 'College GQ', 'permission' => 'grades.approve']], GradeAuthority::gaps($this->institution));
+        $this->assertSame([['college' => 'College GQ', 'permission' => 'grades.approve']], GradeAuthority::gaps($this->institution));
     }
 
-    public function testDeansWithoutThePermissionAddTheirDepartments(): void
+    public function testDeansWithoutThePermissionAddTheirColleges(): void
     {
         $this->clear('institutional_admin', 'grades.signoff');
         $this->clear('dean', 'grades.signoff');
 
-        $this->assertSame(['College GP', 'College GQ'], array_column(GradeAuthority::gaps($this->institution), 'department'));
+        $this->assertSame(['College GP', 'College GQ'], array_column(GradeAuthority::gaps($this->institution), 'college'));
     }
 
     public function testAnInstitutionWithNoDeanHasNoGaps(): void
     {
-        ['institution' => $noDeans] = DeanFactory::department('GR');
+        ['institution' => $noDeans] = DeanFactory::college('GR');
         db_connect()->table('role_permissions')->insert(['institution_id' => $noDeans, 'role' => 'institutional_admin', 'permission' => 'grades.approve', 'granted' => 0]);
         PermissionMatrix::flush();
 

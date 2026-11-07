@@ -11,5 +11,5 @@
 import { bindActionMenu } from "./action-menus.js";
 
 export function bindLearningItemActionMenus() {
-    bindActionMenu("[data-learning-item-actions]", "[data-learning-item-actions-panel]");
+    bindActionMenu("[data-learning-item-actions]", "[data-learning-item-actions-panel]", { floating: true });
 }

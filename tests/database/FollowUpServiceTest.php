@@ -12,7 +12,7 @@ use Tests\Support\PeopleFactory;
 
 /**
  * Follow-up requests: who may ask whom (a dean the chairpersons and instructors of the
- * department, a chairperson the instructors of their sub-departments), no second open request
+ * college, a chairperson the instructors of their departments), no second open request
  * for the same subject, the reply thread, closing, passing a dean's request down, what counts
  * as overdue, and the notifications and audit entries each step leaves.
  *
@@ -24,8 +24,8 @@ final class FollowUpServiceTest extends DatabaseTestCase
 
     private FollowUpService $service;
     private int $institution;
+    private int $college;
     private int $department;
-    private int $sub;
     private int $offering;
     private User $dean;
     private User $chair;
@@ -39,15 +39,15 @@ final class FollowUpServiceTest extends DatabaseTestCase
         Services::resetSingle('auditLogger');
         session()->destroy();
 
-        $home              = DeanFactory::department('F');
+        $home              = DeanFactory::college('F');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'F');
-        $program           = DeanFactory::program($this->sub, 'F');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'F');
+        $program           = DeanFactory::program($this->department, 'F');
         $term              = DeanFactory::term($this->institution);
 
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
-        $this->chair   = DeanFactory::chair($this->sub, 'Maria');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
+        $this->chair   = DeanFactory::chair($this->department, 'Maria');
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
         $this->student = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
 
@@ -76,19 +76,19 @@ final class FollowUpServiceTest extends DatabaseTestCase
         $this->assertSame(['Maria Chair' => 'chairperson', 'Tess Teacher' => 'instructor'], $names);
     }
 
-    public function testAChairpersonMayAskOnlyTheInstructorsOfTheirSubDepartments(): void
+    public function testAChairpersonMayAskOnlyTheInstructorsOfTheirDepartments(): void
     {
         $this->assertSame(['Tess Teacher'], array_column($this->service->recipientsFor($this->chair, $this->offering), 'name'));
 
-        $other = DeanFactory::chair(DeanFactory::subDepartment($this->department, 'Other'), 'Olga');
+        $other = DeanFactory::chair(DeanFactory::department($this->college, 'Other'), 'Olga');
 
-        $this->assertSame([], $this->service->recipientsFor($other, $this->offering), 'a section of another sub-department is out of reach');
+        $this->assertSame([], $this->service->recipientsFor($other, $this->offering), 'a section of another department is out of reach');
     }
 
-    public function testNobodyOutsideTheDepartmentIsReachedAndNeitherIsAnInstructorOrAStudentASender(): void
+    public function testNobodyOutsideTheCollegeIsReachedAndNeitherIsAnInstructorOrAStudentASender(): void
     {
-        $elsewhere = DeanFactory::department('E', $this->institution);
-        $dean      = DeanFactory::dean($this->institution, $elsewhere['department']);
+        $elsewhere = DeanFactory::college('E', $this->institution);
+        $dean      = DeanFactory::dean($this->institution, $elsewhere['college']);
 
         $this->assertSame([], $this->service->recipientsFor($dean, $this->offering));
         $this->assertFalse($this->service->send($dean, $this->input($this->teacher))['success']);
@@ -289,8 +289,8 @@ final class FollowUpServiceTest extends DatabaseTestCase
 
     public function testTheCoursePickerListsTheSectionsOfTheSendersReachOnly(): void
     {
-        $elsewhere = DeanFactory::department('E', $this->institution);
-        DeanFactory::offering(DeanFactory::program(DeanFactory::subDepartment($elsewhere['department'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
+        $elsewhere = DeanFactory::college('E', $this->institution);
+        DeanFactory::offering(DeanFactory::program(DeanFactory::department($elsewhere['college'], 'E'), 'E'), DeanFactory::term($this->institution, 'Other'), 'LAW900');
 
         foreach ([$this->dean, $this->chair] as $sender) {
             $this->assertSame([$this->offering], array_column($this->service->offeringsFor($sender), 'id'));

@@ -20,9 +20,9 @@ final class CourseRoleConflictsTest extends DatabaseTestCase
 
     private int $institution;
 
-    private int $department;
+    private int $college;
 
-    private int $sub;
+    private int $department;
 
     private int $term;
 
@@ -36,13 +36,13 @@ final class CourseRoleConflictsTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $home              = DeanFactory::department('CF');
+        $home              = DeanFactory::college('CF');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'CF');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'CF');
         $this->term        = DeanFactory::term($this->institution, 'First', '2026-08-01');
         $this->laterTerm   = DeanFactory::term($this->institution, 'Second', '2027-01-10');
-        $this->offering    = DeanFactory::offering(DeanFactory::program($this->sub, 'CF'), $this->term, 'IT110');
+        $this->offering    = DeanFactory::offering(DeanFactory::program($this->department, 'CF'), $this->term, 'IT110');
         $this->conflicts   = new CourseRoleConflicts();
     }
 
@@ -76,24 +76,24 @@ final class CourseRoleConflictsTest extends DatabaseTestCase
         $this->assertSame('teaches or has taught this course', $this->conflicts->forEnrolment((int) $person->id, $this->section($this->laterTerm)));
     }
 
-    public function testAChairOrFormerChairCannotEnrolInTheSubDepartmentsCourses(): void
+    public function testAChairOrFormerChairCannotEnrolInTheDepartmentsCourses(): void
     {
-        $chair  = DeanFactory::chair($this->sub, 'Maria');
-        $former = DeanFactory::chair(DeanFactory::subDepartment($this->department, 'CG'), 'Fred');
-        db_connect()->table('chairperson_assignments')->insert(['sub_department_id' => $this->sub, 'chairperson_user_id' => $former->id, 'status' => 'revoked', 'assigned_at' => '2025-01-01 08:00:00']);
+        $chair  = DeanFactory::chair($this->department, 'Maria');
+        $former = DeanFactory::chair(DeanFactory::department($this->college, 'CG'), 'Fred');
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $this->department, 'chairperson_user_id' => $former->id, 'status' => 'revoked', 'assigned_at' => '2025-01-01 08:00:00']);
 
-        $this->assertSame('chairs or has chaired the sub-department of this course', $this->conflicts->forEnrolment((int) $chair->id, $this->offering));
-        $this->assertSame('chairs or has chaired the sub-department of this course', $this->conflicts->forEnrolment((int) $former->id, $this->offering));
+        $this->assertSame('chairs or has chaired the department of this course', $this->conflicts->forEnrolment((int) $chair->id, $this->offering));
+        $this->assertSame('chairs or has chaired the department of this course', $this->conflicts->forEnrolment((int) $former->id, $this->offering));
     }
 
-    public function testADeanOrFormerDeanCannotEnrolInTheDepartmentsCourses(): void
+    public function testADeanOrFormerDeanCannotEnrolInTheCollegesCourses(): void
     {
-        $dean   = DeanFactory::dean($this->institution, $this->department);
+        $dean   = DeanFactory::dean($this->institution, $this->college);
         $former = $this->person('instructor');
-        db_connect()->table('dean_assignments')->insert(['department_id' => $this->department, 'dean_user_id' => $former->id, 'status' => 'ended', 'active_marker' => null, 'assigned_at' => '2025-01-01 08:00:00', 'ended_at' => '2025-06-01 08:00:00']);
+        db_connect()->table('dean_assignments')->insert(['college_id' => $this->college, 'dean_user_id' => $former->id, 'status' => 'ended', 'active_marker' => null, 'assigned_at' => '2025-01-01 08:00:00', 'ended_at' => '2025-06-01 08:00:00']);
 
-        $this->assertSame("is or was the dean of this course's department", $this->conflicts->forEnrolment((int) $dean->id, $this->offering));
-        $this->assertSame("is or was the dean of this course's department", $this->conflicts->forEnrolment((int) $former->id, $this->offering));
+        $this->assertSame("is or was the dean of this course's college", $this->conflicts->forEnrolment((int) $dean->id, $this->offering));
+        $this->assertSame("is or was the dean of this course's college", $this->conflicts->forEnrolment((int) $former->id, $this->offering));
     }
 
     public function testAnAdministratorCannotEnrolInTheInstitutionsCourses(): void
@@ -140,8 +140,8 @@ final class CourseRoleConflictsTest extends DatabaseTestCase
         $person = $this->person();
         CourseFactory::enroll($this->offering, $person);
 
-        $this->assertSame('is enrolled in a course of this sub-department', $this->conflicts->forChairing((int) $person->id, $this->sub));
-        $this->assertSame('is enrolled in a course of this department', $this->conflicts->forDean((int) $person->id, $this->department));
+        $this->assertSame('is enrolled in a course of this department', $this->conflicts->forChairing((int) $person->id, $this->department));
+        $this->assertSame('is enrolled in a course of this college', $this->conflicts->forDean((int) $person->id, $this->college));
         $this->assertSame('is enrolled in a course of this institution', $this->conflicts->forAdministrator((int) $person->id, $this->institution));
     }
 
@@ -150,8 +150,8 @@ final class CourseRoleConflictsTest extends DatabaseTestCase
         $person = $this->person();
         CourseFactory::enroll($this->offering, $person, 'completed');
 
-        $this->assertNull($this->conflicts->forChairing((int) $person->id, $this->sub));
-        $this->assertNull($this->conflicts->forDean((int) $person->id, $this->department));
+        $this->assertNull($this->conflicts->forChairing((int) $person->id, $this->department));
+        $this->assertNull($this->conflicts->forDean((int) $person->id, $this->college));
         $this->assertNull($this->conflicts->forAdministrator((int) $person->id, $this->institution));
     }
 }

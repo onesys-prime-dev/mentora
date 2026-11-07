@@ -17,10 +17,13 @@ use InvalidArgumentException;
 
 /**
  * Bulk entry from CSV files an institutional administrator uploads: students,
- * instructors, courses and enrolments, in the same columns as the SIS files.
+ * instructors, courses, enrolments, staff assignments and class times. Their
+ * columns name records the way an administrator knows them (a student by
+ * student number or email, a course by program and course code, a section by
+ * its code), not by SIS ids: SisCsvParser::KEYS_UPLOAD.
  *
  * It is the SIS import with a different source (UploadConnections stands in
- * for the connection, so SisImporter runs unchanged), which gives it the same
+ * for the connection, and its files are read with the upload's columns), which gives it the same
  * guarantees: a preview that writes nothing and reports exactly what applying
  * will do, one transaction, all or nothing, and a bad row refused with its
  * reason while the rest still go in.
@@ -61,9 +64,19 @@ class CsvUploadService
     /** The header line of a template file. */
     public static function template(string $dataset): string
     {
-        $spec = SisCsvParser::spec($dataset);
+        return implode(',', self::columns($dataset)) . "\r\n";
+    }
 
-        return implode(',', array_merge($spec['required'], $spec['optional'])) . "\r\n";
+    /**
+     * A file's columns, in the template's order.
+     *
+     * @return list<string>
+     */
+    public static function columns(string $dataset): array
+    {
+        $spec = SisCsvParser::spec($dataset, SisCsvParser::KEYS_UPLOAD);
+
+        return $spec['template'] ?? array_merge($spec['required'], $spec['optional']);
     }
 
     /**
@@ -75,7 +88,7 @@ class CsvUploadService
      *
      * @throws StructureException refused: nothing stored, nothing written
      */
-    public function preview(int $institutionId, array $files, ?User $actor = null): array
+    public function preview(int $institutionId, array $files, ?User $actor = null, bool $email = true): array
     {
         $this->mustBeAllowed($institutionId);
         $this->forget($institutionId);
@@ -96,7 +109,7 @@ class CsvUploadService
             }
 
             try {
-                SisCsvParser::parse($dataset, $contents);
+                SisCsvParser::parse($dataset, $contents, SisCsvParser::KEYS_UPLOAD);
             } catch (SisException $e) {
                 throw StructureException::field($dataset, $e->getMessage());
             }
@@ -113,7 +126,7 @@ class CsvUploadService
             file_put_contents($folder . DIRECTORY_SEPARATOR . $dataset . '.csv', $contents);
         }
 
-        $result = $this->run($institutionId, $folder, true, $actor);
+        $result = $this->run($institutionId, $folder, true, $actor, $email);
 
         if (! $result->ok) {
             $this->remove($folder);
@@ -127,6 +140,8 @@ class CsvUploadService
             'issues'   => $result->issues,
             'message'  => $result->message,
             'files'    => array_keys($files),
+            'email'    => $email,
+            'mail'     => $result->mail,
         ]));
 
         return ['token' => $token, 'result' => $result];
@@ -135,7 +150,7 @@ class CsvUploadService
     /**
      * What a kept preview found.
      *
-     * @return array{datasets: array<string, array<string, int>>, issues: list<array<string, string>>, message: string, files: list<string>, totals: array{created: int, updated: int, skipped: int, failed: int, ended: int}}
+     * @return array{datasets: array<string, array<string, int>>, issues: list<array<string, mixed>>, message: string, files: list<string>, email: bool, mail: array<string, int>, totals: array{created: int, updated: int, skipped: int, failed: int, ended: int}}
      *
      * @throws PageNotFoundException when the token is not this institution's, or has expired
      */
@@ -169,12 +184,13 @@ class CsvUploadService
     public function apply(int $institutionId, string $token, ?User $actor = null): SisImportResult
     {
         $this->mustBeAllowed($institutionId);
-        $this->kept($institutionId, $token);
+        $kept = $this->kept($institutionId, $token);
 
         $folder = $this->folderOf($institutionId, $token);
 
         try {
-            $result = $this->run($institutionId, $folder, false, $actor);
+            // Emailed, or not, as the administrator chose when previewing.
+            $result = $this->run($institutionId, $folder, false, $actor, (bool) ($kept['email'] ?? true));
         } catch (InvalidArgumentException $e) {
             throw new StructureException($e->getMessage());
         }
@@ -210,9 +226,9 @@ class CsvUploadService
         }
     }
 
-    private function run(int $institutionId, string $folder, bool $dryRun, ?User $actor): SisImportResult
+    private function run(int $institutionId, string $folder, bool $dryRun, ?User $actor, bool $email): SisImportResult
     {
-        return (new SisImporter(new UploadConnections($folder)))->run($institutionId, $actor ?? auth()->user(), $dryRun);
+        return (new SisImporter(new UploadConnections($folder), null, $email))->run($institutionId, $actor ?? auth()->user(), $dryRun);
     }
 
     private function folder(int $institutionId, string $token): string

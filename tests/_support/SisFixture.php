@@ -65,11 +65,11 @@ final class SisFixture
         $db = db_connect();
         $id = PeopleFactory::institution($code, 'active', "{$code} College");
 
-        $db->table('departments')->insert(['institution_id' => $id, 'name' => 'Computing', 'code' => "D{$code}"]);
+        $db->table('colleges')->insert(['institution_id' => $id, 'name' => 'Computing', 'code' => "D{$code}"]);
+        $college = (int) $db->insertID();
+        $db->table('departments')->insert(['college_id' => $college, 'name' => 'IT', 'code' => "S{$code}"]);
         $department = (int) $db->insertID();
-        $db->table('sub_departments')->insert(['department_id' => $department, 'name' => 'IT', 'code' => "S{$code}"]);
-        $sub = (int) $db->insertID();
-        $db->table('programs')->insert(['sub_department_id' => $sub, 'name' => 'BS Information Technology', 'code' => self::PROGRAM]);
+        $db->table('programs')->insert(['department_id' => $department, 'name' => 'BS Information Technology', 'code' => self::PROGRAM]);
 
         if ($withTerm) {
             $db->table('academic_terms')->insert(['institution_id' => $id, 'name' => 'First Term', 'academic_year' => '2026-2027', 'start_date' => '2026-08-01', 'end_date' => '2026-12-20', 'status' => 'active']);
@@ -114,7 +114,7 @@ final class SisFixture
     public static function course(int $institutionId, string $external = 'C1', string $code = 'IT101'): array
     {
         $db      = db_connect();
-        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ? AND p.code = ?', [$institutionId, self::PROGRAM])->getRow()->id;
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ? AND p.code = ?', [$institutionId, self::PROGRAM])->getRow()->id;
         $term    = (int) $db->table('academic_terms')->where('institution_id', $institutionId)->get()->getRowArray()['id'];
 
         $db->table('courses')->insert(['program_id' => $program, 'course_code' => $code, 'course_title' => "Course {$code}", 'units' => 3]);

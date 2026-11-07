@@ -510,10 +510,58 @@ class ModuleController extends BaseController
                 $offeringId,
                 $learningItemId,
                 (string) ($payload['mode'] ?? 'none'),
-                (array) ($payload['prerequisite_ids'] ?? [])
+                (array) ($payload['prerequisite_ids'] ?? []),
+                isset($payload['min_score']) && is_array($payload['min_score']) ? $payload['min_score'] : null
             )
         );
 
+    }
+
+    /** Dependencies of a module and of a learning unit: the same flow as an item's. */
+    public function moduleDependencies(int $offeringId, int $moduleId)
+    {
+        return $this->containerDependencies('module', $offeringId, $moduleId);
+    }
+
+    public function learningUnitDependencies(int $offeringId, int $learningUnitId)
+    {
+        return $this->containerDependencies('unit', $offeringId, $learningUnitId);
+    }
+
+    public function saveModuleDependencies(int $offeringId, int $moduleId)
+    {
+        return $this->saveContainerDependencies('module', $offeringId, $moduleId);
+    }
+
+    public function saveLearningUnitDependencies(int $offeringId, int $learningUnitId)
+    {
+        return $this->saveContainerDependencies('unit', $offeringId, $learningUnitId);
+    }
+
+    private function containerDependencies(string $kind, int $offeringId, int $id)
+    {
+        $options = $this->progressService->containerDependencyOptions($kind, $offeringId, $id);
+
+        if (! $options) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        return $this->response->setJSON($options);
+    }
+
+    private function saveContainerDependencies(string $kind, int $offeringId, int $id)
+    {
+        $payload = $this->request->getJSON(true) ?? [];
+
+        return $this->response->setJSON(
+            $this->progressService->saveContainerDependencies(
+                $kind,
+                $offeringId,
+                $id,
+                (string) ($payload['mode'] ?? 'none'),
+                (array) ($payload['prerequisite_ids'] ?? [])
+            )
+        );
     }
 
     public function reorderLearningItems(

@@ -11,9 +11,9 @@ use CodeIgniter\Shield\Entities\User;
 
 /**
  * Follow-up requests: one feature with two scopes. A dean asks the chairpersons and
- * instructors responsible for a section of their department to act on something that needs
+ * instructors responsible for a section of their college to act on something that needs
  * attention (overdue grading, an inactive course, an at-risk student, a blocked sign-off); a
- * chairperson asks the instructors of the sections in their sub-departments. The person asked
+ * chairperson asks the instructors of the sections in their departments. The person asked
  * sees it in their list, answers in a small thread and marks it done; the sender sees what is
  * open, overdue and done.
  *
@@ -69,7 +69,7 @@ class FollowUpService
             $people[(int) $row['id']] = FollowUpRules::INSTRUCTOR;
         }
 
-        foreach ($db->table('chairperson_assignments')->select('chairperson_user_id AS id')->where(['sub_department_id' => $section['sub_department_id'], 'status' => 'active'])->get()->getResultArray() as $row) {
+        foreach ($db->table('chairperson_assignments')->select('chairperson_user_id AS id')->where(['department_id' => $section['department_id'], 'status' => 'active'])->get()->getResultArray() as $row) {
             // A person who is both the section's instructor and its chairperson is asked as the chairperson.
             $people[(int) $row['id']] = FollowUpRules::CHAIRPERSON;
         }
@@ -95,8 +95,8 @@ class FollowUpService
     }
 
     /**
-     * Sections this sender may ask about, for the course picker: a dean's whole department, a
-     * chairperson's sub-departments.
+     * Sections this sender may ask about, for the course picker: a dean's whole college, a
+     * chairperson's departments.
      *
      * @return list<array{id: int, label: string}>
      */
@@ -501,11 +501,11 @@ class FollowUpService
     private function section(int $offeringId): ?array
     {
         return db_connect()->table('course_offerings co')
-            ->select(['d.institution_id', 'sd.id AS sub_department_id', 'c.course_code', 'c.course_title', 'co.section_code'])
+            ->select(['d.institution_id', 'sd.id AS department_id', 'c.course_code', 'c.course_title', 'co.section_code'])
             ->join('courses c', 'c.id = co.course_id')
             ->join('programs p', 'p.id = c.program_id')
-            ->join('sub_departments sd', 'sd.id = p.sub_department_id')
-            ->join('departments d', 'd.id = sd.department_id')
+            ->join('departments sd', 'sd.id = p.department_id')
+            ->join('colleges d', 'd.id = sd.college_id')
             ->where('co.id', $offeringId)
             ->get()->getRowArray();
     }

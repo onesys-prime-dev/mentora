@@ -15,15 +15,15 @@ use Tests\Support\RouteTestCase;
  * The dean's term-end sign-off page as the dean uses it: the sections by program
  * and where each stands, signing off one or all ready ones (which asks for the
  * password again), reopening with a reason, and the doors: nobody else signs off,
- * nothing from another department, and a read-only institution signs nothing.
+ * nothing from another college, and a read-only institution signs nothing.
  *
  * @internal
  */
 final class DeanSignoffPageTest extends RouteTestCase
 {
     private int $institution;
+    private int $college;
     private int $department;
-    private int $sub;
     private int $program;
     private int $term;
     private int $ready;
@@ -40,16 +40,16 @@ final class DeanSignoffPageTest extends RouteTestCase
         Services::resetSingle('auditLogger');
         Services::resetSingle('renderer');
 
-        $home              = DeanFactory::department('S');
+        $home              = DeanFactory::college('S');
         $this->institution = $home['institution'];
-        $this->department  = $home['department'];
-        $this->sub         = DeanFactory::subDepartment($this->department, 'S');
-        $this->program     = DeanFactory::program($this->sub, 'S');
+        $this->college  = $home['college'];
+        $this->department         = DeanFactory::department($this->college, 'S');
+        $this->program     = DeanFactory::program($this->department, 'S');
         $this->term        = DeanFactory::term($this->institution);
 
         $this->teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
-        $this->chair   = DeanFactory::chair($this->sub, 'Maria');
-        $this->dean    = DeanFactory::dean($this->institution, $this->department);
+        $this->chair   = DeanFactory::chair($this->department, 'Maria');
+        $this->dean    = DeanFactory::dean($this->institution, $this->college);
 
         $this->ready   = $this->section('IT101', true);
         $this->blocked = $this->section('IT102', false);
@@ -243,10 +243,10 @@ final class DeanSignoffPageTest extends RouteTestCase
         $this->assertFalse($this->service->isSignedOff($this->ready));
     }
 
-    public function testAnotherDepartmentsDeanSeesAndSignsOffNothing(): void
+    public function testAnotherCollegesDeanSeesAndSignsOffNothing(): void
     {
-        $other      = DeanFactory::department('B', $this->institution);
-        $this->dean = DeanFactory::dean($this->institution, $other['department'], 'Olga');
+        $other      = DeanFactory::college('B', $this->institution);
+        $this->dean = DeanFactory::dean($this->institution, $other['college'], 'Olga');
 
         $this->assertStringNotContainsString('IT101', $this->page());
 
@@ -259,7 +259,7 @@ final class DeanSignoffPageTest extends RouteTestCase
     public function testADeanWhoAlsoTeachesCannotUseItWhileActingAsAnInstructor(): void
     {
         $person = PeopleFactory::person('instructor', 'Dora', 'Dean', null, $this->institution);
-        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->department, (int) $person->id);
+        (new \App\Services\Institutions\DeanAssignmentService())->assign($this->institution, $this->college, (int) $person->id);
         $dora = model(CodeIgniter\Shield\Models\UserModel::class)->findById($person->id);
         $this->loggedInAs($dora);
 
@@ -271,14 +271,14 @@ final class DeanSignoffPageTest extends RouteTestCase
         $this->assertSame(302, $this->call('post', "dean/signoff/{$this->ready}")->response()->getStatusCode());
     }
 
-    public function testADeanWithoutADepartmentSeesTheExplanation(): void
+    public function testADeanWithoutACollegeSeesTheExplanation(): void
     {
-        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'Department', null, $this->institution));
+        $this->loggedInAs(PeopleFactory::person('dean', 'No', 'College', null, $this->institution));
 
         $response = $this->call('GET', '/dean/signoff')->response();
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertStringContainsString('not assigned to a department yet', $response->getBody());
+        $this->assertStringContainsString('not assigned to a college yet', $response->getBody());
     }
 
     public function testAReadOnlyInstitutionSignsNothing(): void
@@ -292,10 +292,10 @@ final class DeanSignoffPageTest extends RouteTestCase
         $this->assertFalse($this->service->isSignedOff($this->ready));
     }
 
-    public function testAnEmptyDepartmentSaysSo(): void
+    public function testAnEmptyCollegeSaysSo(): void
     {
-        $other      = DeanFactory::department('E', $this->institution);
-        $this->dean = DeanFactory::dean($this->institution, $other['department'], 'Eve');
+        $other      = DeanFactory::college('E', $this->institution);
+        $this->dean = DeanFactory::dean($this->institution, $other['college'], 'Eve');
 
         $this->assertStringContainsString('No sections to sign off', $this->page());
     }

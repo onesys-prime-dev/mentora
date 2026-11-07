@@ -100,7 +100,7 @@ class ParentCourseTabs
      * scheme is published; a course without a scheme shows nothing (and none
      * is created by looking), and neither does a child who is also staff.
      *
-     * @param array<string, mixed> $offering at least `id` and `course_id`
+     * @param array<string, mixed> $offering at least `id` and `course_id`; with `term_id` the tab also links to the child's Grades page
      */
     public function grades(User $child, array $offering): array
     {
@@ -133,7 +133,13 @@ class ParentCourseTabs
             }
         }
 
-        return ['html' => view('pages/parent/course/grades', ['standing' => $standing], ['saveData' => false])];
+        // "All grades →": the child's Grades page for this course's term, where the page itself is open (a child who is
+        // also staff has none to show).
+        $allGrades = isset($offering['term_id']) && ParentAccessService::readsAsStudent($child)
+            ? site_url('parent/children/' . (int) $child->id . '/grades?term=' . (int) $offering['term_id'])
+            : null;
+
+        return ['html' => view('pages/parent/course/grades', ['standing' => $standing, 'allGrades' => $allGrades], ['saveData' => false])];
     }
 
     /** The course facts: what it is, who teaches it, when and where, the term. */

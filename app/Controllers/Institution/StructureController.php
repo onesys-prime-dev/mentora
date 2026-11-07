@@ -16,8 +16,8 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * The institutional administrator's academic structure: departments,
- * sub-departments and programs. The routes decide who may (structure.manage,
+ * The institutional administrator's academic structure: colleges,
+ * departments and programs. The routes decide who may (structure.manage,
  * and not while the institution is read-only); the rules and the audit
  * entries live in StructureService, and every id is checked against the
  * administrator's own institution there (a foreign one is a 404).
@@ -42,16 +42,16 @@ class StructureController extends BaseController
     public function index(): string|RedirectResponse
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
-        $departments   = $this->structure->tree($institutionId);
+        $colleges   = $this->structure->tree($institutionId);
 
         $programs = 0;
-        $subs     = 0;
+        $departments     = 0;
 
-        foreach ($departments as $department) {
-            $subs += count($department['subDepartments']);
+        foreach ($colleges as $college) {
+            $departments += count($college['departments']);
 
-            foreach ($department['subDepartments'] as $sub) {
-                $programs += count($sub['programs']);
+            foreach ($college['departments'] as $department) {
+                $programs += count($department['programs']);
             }
         }
 
@@ -60,12 +60,12 @@ class StructureController extends BaseController
             'page'             => 'academics',
             'pageTitle'        => 'Structure',
             'user'             => auth()->user(),
-            'structureTree'    => $departments,
-            'structureCounts'  => ['departments' => count($departments), 'subDepartments' => $subs, 'programs' => $programs],
+            'structureTree'    => $colleges,
+            'structureCounts'  => ['colleges' => count($colleges), 'departments' => $departments, 'programs' => $programs],
             'structureCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
-            'structureChairs'  => (new ChairAssignmentService())->bySubDepartment($institutionId),
+            'structureChairs'  => (new ChairAssignmentService())->byDepartment($institutionId),
             'structureCandidates' => (new ChairAssignmentService())->candidates($institutionId),
-            'structureDeans'   => (new DeanAssignmentService())->byDepartment($institutionId),
+            'structureDeans'   => (new DeanAssignmentService())->byCollege($institutionId),
             'structureDeanCandidates' => (new DeanAssignmentService())->candidates($institutionId),
             'structureSisDeans' => (new \App\Services\Sis\SisOwnership())->managedAssignments('dean', $institutionId),
             'structureSisChairs' => (new \App\Services\Sis\SisOwnership())->managedAssignments('chairperson', $institutionId),
@@ -74,28 +74,54 @@ class StructureController extends BaseController
 
     /*
     |--------------------------------------------------------------------------
-    | Departments
+    | Colleges
     |--------------------------------------------------------------------------
     */
 
-    public function createDepartment(): ResponseInterface|RedirectResponse
+    public function createCollege(): ResponseInterface|RedirectResponse
     {
         return $this->run(function (int $inst) {
             $input = $this->input();
-            $id    = $this->structure->createDepartment($inst, $input, auth()->user());
+            $id    = $this->structure->createCollege($inst, $input, auth()->user());
             $dean  = (int) ($input['dean_user_id'] ?? 0);
 
-            // A dean is chosen with the department. The department is already saved if the choice is refused.
+            // A dean is chosen with the college. The college is already saved if the choice is refused.
             if ($dean > 0) {
                 try {
                     (new DeanAssignmentService())->assign($inst, $id, $dean, auth()->user());
                 } catch (StructureException $e) {
-                    throw new StructureException('The department was added, but its dean was not assigned: ' . $e->getMessage() . ' Assign one from the department.');
+                    throw new StructureException('The college was added, but its dean was not assigned: ' . $e->getMessage() . ' Assign one from the college.');
                 }
             }
 
             return $id;
-        }, 'The department was added.', self::BACK);
+        }, 'The college was added.', self::BACK);
+    }
+
+    public function updateCollege(int $id): ResponseInterface|RedirectResponse
+    {
+        return $this->run(fn (int $inst) => $this->structure->updateCollege($inst, $id, $this->input(), auth()->user()), 'The college was saved.', self::BACK);
+    }
+
+    public function deactivateCollege(int $id): ResponseInterface|RedirectResponse
+    {
+        return $this->run(fn (int $inst) => $this->structure->setCollegeActive($inst, $id, false, auth()->user()), 'The college was deactivated.', self::BACK);
+    }
+
+    public function reactivateCollege(int $id): ResponseInterface|RedirectResponse
+    {
+        return $this->run(fn (int $inst) => $this->structure->setCollegeActive($inst, $id, true, auth()->user()), 'The college is active again.', self::BACK);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Departments
+    |--------------------------------------------------------------------------
+    */
+
+    public function createDepartment(int $collegeId): ResponseInterface|RedirectResponse
+    {
+        return $this->run(fn (int $inst) => $this->structure->createDepartment($inst, $collegeId, $this->input(), auth()->user()), 'The department was added.', self::BACK);
     }
 
     public function updateDepartment(int $id): ResponseInterface|RedirectResponse
@@ -115,39 +141,13 @@ class StructureController extends BaseController
 
     /*
     |--------------------------------------------------------------------------
-    | Sub-departments
-    |--------------------------------------------------------------------------
-    */
-
-    public function createSubDepartment(int $departmentId): ResponseInterface|RedirectResponse
-    {
-        return $this->run(fn (int $inst) => $this->structure->createSubDepartment($inst, $departmentId, $this->input(), auth()->user()), 'The sub-department was added.', self::BACK);
-    }
-
-    public function updateSubDepartment(int $id): ResponseInterface|RedirectResponse
-    {
-        return $this->run(fn (int $inst) => $this->structure->updateSubDepartment($inst, $id, $this->input(), auth()->user()), 'The sub-department was saved.', self::BACK);
-    }
-
-    public function deactivateSubDepartment(int $id): ResponseInterface|RedirectResponse
-    {
-        return $this->run(fn (int $inst) => $this->structure->setSubDepartmentActive($inst, $id, false, auth()->user()), 'The sub-department was deactivated.', self::BACK);
-    }
-
-    public function reactivateSubDepartment(int $id): ResponseInterface|RedirectResponse
-    {
-        return $this->run(fn (int $inst) => $this->structure->setSubDepartmentActive($inst, $id, true, auth()->user()), 'The sub-department is active again.', self::BACK);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | Programs
     |--------------------------------------------------------------------------
     */
 
-    public function createProgram(int $subDepartmentId): ResponseInterface|RedirectResponse
+    public function createProgram(int $departmentId): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => $this->structure->createProgram($inst, $subDepartmentId, $this->input(), auth()->user()), 'The program was added.', self::BACK);
+        return $this->run(fn (int $inst) => $this->structure->createProgram($inst, $departmentId, $this->input(), auth()->user()), 'The program was added.', self::BACK);
     }
 
     public function updateProgram(int $id): ResponseInterface|RedirectResponse
@@ -172,15 +172,15 @@ class StructureController extends BaseController
 
     /*
     |--------------------------------------------------------------------------
-    | Chairpersons (per sub-department)
+    | Chairpersons (per department)
     |--------------------------------------------------------------------------
     */
 
-    public function assignChairperson(int $subDepartmentId): ResponseInterface|RedirectResponse
+    public function assignChairperson(int $departmentId): ResponseInterface|RedirectResponse
     {
         return $this->run(
-            // replace=1: the administrator confirmed replacing the sub-department's chairperson (16.0b).
-            fn (int $inst) => (new ChairAssignmentService())->assign($inst, $subDepartmentId, (int) ($this->input()['user_id'] ?? 0), auth()->user(), (string) ($this->input()['replace'] ?? '') === '1'),
+            // replace=1: the administrator confirmed replacing the department's chairperson (16.0b).
+            fn (int $inst) => (new ChairAssignmentService())->assign($inst, $departmentId, (int) ($this->input()['user_id'] ?? 0), auth()->user(), (string) ($this->input()['replace'] ?? '') === '1'),
             'The chairperson was assigned.',
             self::BACK,
         );
@@ -188,19 +188,19 @@ class StructureController extends BaseController
 
     public function revokeChairperson(int $assignmentId): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => (new ChairAssignmentService())->revoke($inst, $assignmentId, auth()->user()), 'The chairperson was removed from the sub-department.', self::BACK);
+        return $this->run(fn (int $inst) => (new ChairAssignmentService())->revoke($inst, $assignmentId, auth()->user()), 'The chairperson was removed from the department.', self::BACK);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Deans (per department)
+    | Deans (per college)
     |--------------------------------------------------------------------------
     */
 
-    public function assignDean(int $departmentId): ResponseInterface|RedirectResponse
+    public function assignDean(int $collegeId): ResponseInterface|RedirectResponse
     {
         return $this->run(
-            fn (int $inst) => (new DeanAssignmentService())->assign($inst, $departmentId, (int) ($this->input()['user_id'] ?? 0), auth()->user()),
+            fn (int $inst) => (new DeanAssignmentService())->assign($inst, $collegeId, (int) ($this->input()['user_id'] ?? 0), auth()->user()),
             'The dean was assigned.',
             self::BACK,
         );
@@ -208,6 +208,6 @@ class StructureController extends BaseController
 
     public function revokeDean(int $assignmentId): ResponseInterface|RedirectResponse
     {
-        return $this->run(fn (int $inst) => (new DeanAssignmentService())->end($inst, $assignmentId, auth()->user()), 'The dean was removed from the department.', self::BACK);
+        return $this->run(fn (int $inst) => (new DeanAssignmentService())->end($inst, $assignmentId, auth()->user()), 'The dean was removed from the college.', self::BACK);
     }
 }

@@ -11,7 +11,7 @@ use Tests\Support\RouteTestCase;
 /**
  * A course route names an offering in its address. Whoever asks must belong
  * to that offering in the role of the area they are in: its instructor, an
- * enrolled student, or the chairperson of its sub-department. Anyone else,
+ * enrolled student, or the chairperson of its department. Anyone else,
  * with a valid account and the right role, gets a 404 before any controller
  * runs: reads, writes and exports alike.
  *
@@ -46,7 +46,7 @@ final class CourseMembershipTest extends RouteTestCase
         $this->student = CourseFactory::user('student');
         CourseFactory::enroll($this->mine, $this->student);
 
-        // The chairperson of the sub-department of offering A only.
+        // The chairperson of the department of offering A only.
         $this->chair = CourseFactory::user('chairperson');
         $this->chairing($this->chair, $this->mine);
 
@@ -58,14 +58,14 @@ final class CourseMembershipTest extends RouteTestCase
 
     private function chairing(User $user, int $offeringId): void
     {
-        $sub = (int) db_connect()->query(
+        $department = (int) db_connect()->query(
             'SELECT sd.id FROM course_offerings o JOIN courses c ON c.id = o.course_id
-               JOIN programs p ON p.id = c.program_id JOIN sub_departments sd ON sd.id = p.sub_department_id WHERE o.id = ?',
+               JOIN programs p ON p.id = c.program_id JOIN departments sd ON sd.id = p.department_id WHERE o.id = ?',
             [$offeringId],
         )->getRow()->id;
 
         db_connect()->table('chairperson_assignments')->insert([
-            'sub_department_id' => $sub, 'chairperson_user_id' => $user->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
+            'department_id' => $department, 'chairperson_user_id' => $user->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
         ]);
     }
 
@@ -147,7 +147,7 @@ final class CourseMembershipTest extends RouteTestCase
         $this->assertSame(200, $this->answer('GET', "student/api/courses/{$this->mine}/grades"));
     }
 
-    public function testAChairpersonOnlyReachesTheirOwnSubDepartment(): void
+    public function testAChairpersonOnlyReachesTheirOwnDepartment(): void
     {
         $this->as($this->chair);
 

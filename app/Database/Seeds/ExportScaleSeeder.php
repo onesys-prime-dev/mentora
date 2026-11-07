@@ -12,7 +12,8 @@ use RuntimeException;
  *
  * 20,000 students, ten terms (five years), 20 courses offered every term (200 sections), 50 assessments per
  * course, each student in ten sections and with ten submissions in each: 200,000 enrolments and 2,000,000
- * submissions. Everything is made with INSERT ... SELECT, so it takes minutes, not hours. The institution is
+ * submissions. Each term has one block section, "A", that owns that term's 20 offerings; the students are enrolled
+ * one offering at a time (irregular students), not as members of it. Everything is made with INSERT ... SELECT, so it takes minutes, not hours. The institution is
  * read-only, so it can be exported straight away.
  *
  * Only on a throw-away database whose name contains "scale" (for example mentora_scale): it adds millions of
@@ -38,9 +39,9 @@ class ExportScaleSeeder extends Seeder
 
         $db->table('institutions')->insert(['name' => 'Scale Test University', 'code' => 'SCALE' . random_int(100, 999), 'status' => 'read_only', 'created_at' => $now]);
         $institution = (int) $db->insertID();
-        $db->table('departments')->insert(['institution_id' => $institution, 'code' => 'DSC', 'name' => 'College of Scale']);
-        $db->table('sub_departments')->insert(['department_id' => (int) $db->insertID(), 'code' => 'SSC', 'name' => 'Scale Studies', 'is_active' => 1]);
-        $db->table('programs')->insert(['sub_department_id' => (int) $db->insertID(), 'code' => 'PSC' . $institution, 'name' => 'BS Scale']);
+        $db->table('colleges')->insert(['institution_id' => $institution, 'code' => 'DSC', 'name' => 'College of Scale']);
+        $db->table('departments')->insert(['college_id' => (int) $db->insertID(), 'code' => 'SSC', 'name' => 'Scale Studies', 'is_active' => 1]);
+        $db->table('programs')->insert(['department_id' => (int) $db->insertID(), 'code' => 'PSC' . $institution, 'name' => 'BS Scale']);
         $program = (int) $db->insertID();
 
         // 0..99999, for numbering rows in one statement.
@@ -60,7 +61,9 @@ class ExportScaleSeeder extends Seeder
         // Ten terms, 20 courses, each offered every term.
         $db->query("INSERT INTO academic_terms (institution_id, name, academic_year, start_date, end_date) SELECT ?, CONCAT('Term ', n + 1), CONCAT(2021 + FLOOR(n / 2), '-', 2022 + FLOOR(n / 2)), DATE_ADD('2021-08-01', INTERVAL n * 6 MONTH), DATE_ADD('2021-12-20', INTERVAL n * 6 MONTH) FROM scale_nums WHERE n < 10", [$institution]);
         $db->query("INSERT INTO courses (program_id, course_code, course_title, units) SELECT ?, CONCAT('SC', 100 + n), CONCAT('Scale course ', n + 1), 3 FROM scale_nums WHERE n < 20", [$program]);
-        $db->query("INSERT INTO course_offerings (course_id, term_id, section_code, status) SELECT c.id, t.id, 'A', 'completed' FROM courses c JOIN academic_terms t ON t.institution_id = ? WHERE c.program_id = ?", [$institution, $program]);
+        // One block section per term, "A", which owns that term's offerings (so an offering's section_code is its name).
+        $db->query("INSERT INTO class_sections (institution_id, term_id, program_id, year_level, code, capacity, status, created_at) SELECT ?, t.id, ?, 1, 'A', 40, 'archived', ? FROM academic_terms t WHERE t.institution_id = ?", [$institution, $program, $now, $institution]);
+        $db->query("INSERT INTO course_offerings (course_id, term_id, section_code, class_section_id, status) SELECT c.id, t.id, 'A', cs.id, 'completed' FROM courses c JOIN academic_terms t ON t.institution_id = ? JOIN class_sections cs ON cs.term_id = t.id AND cs.code = 'A' WHERE c.program_id = ?", [$institution, $program]);
 
         // 50 assessments per course.
         $type    = (int) $db->table('assessment_types')->select('id')->orderBy('id')->get()->getRow('id');

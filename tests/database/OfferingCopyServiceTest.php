@@ -59,7 +59,7 @@ final class OfferingCopyServiceTest extends DatabaseTestCase
 
         $db = db_connect();
 
-        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
         $db->table('courses')->insert(['program_id' => $program, 'course_code' => 'IT101', 'course_title' => 'Intro', 'units' => 3]);
         $this->course = (int) $db->insertID();
 
@@ -147,6 +147,30 @@ final class OfferingCopyServiceTest extends DatabaseTestCase
         $this->assertSame(1, (int) $plan['offerings'][0]['assessments']);
         $this->assertSame(1, (int) $plan['offerings'][0]['instructors']);
         $this->assertFalse($plan['offerings'][0]['conflict']);
+    }
+
+    public function testDependenciesOfModulesAndUnitsComeAcrossPointingInsideTheCopy(): void
+    {
+        $db   = db_connect();
+        $m1   = CourseFactory::module($this->offering, 'published', 1);
+        $m2   = CourseFactory::module($this->offering, 'published', 2);
+        $u1   = CourseFactory::unit($m2, 'published', 1);
+        $u2   = CourseFactory::unit($m2, 'published', 2);
+        $now  = date('Y-m-d H:i:s');
+        $db->table('course_modules')->where('id', $m2)->update(['prerequisite_mode' => 'custom']);
+        $db->table('course_module_prerequisites')->insert(['module_id' => $m2, 'prerequisite_module_id' => $m1, 'created_at' => $now]);
+        $db->table('learning_units')->where('id', $u2)->update(['prerequisite_mode' => 'custom']);
+        $db->table('learning_unit_prerequisites')->insert(['learning_unit_id' => $u2, 'prerequisite_unit_id' => $u1, 'created_at' => $now]);
+
+        $this->service->copy($this->institution, $this->sourceTerm, $this->targetTerm, [$this->offering], false, $this->actor);
+
+        $modules = $db->table('course_modules')->where('offering_id', $this->copied())->orderBy('order_index')->get()->getResultArray();
+        $link    = $db->table('course_module_prerequisites')->where('module_id', $modules[1]['id'])->get()->getRowArray();
+        $this->assertSame((int) $modules[0]['id'], (int) $link['prerequisite_module_id']);
+
+        $units = $db->table('learning_units')->where('module_id', $modules[1]['id'])->orderBy('order_index')->get()->getResultArray();
+        $unitLink = $db->table('learning_unit_prerequisites')->where('learning_unit_id', $units[1]['id'])->get()->getRowArray();
+        $this->assertSame((int) $units[0]['id'], (int) $unitLink['prerequisite_unit_id']);
     }
 
     public function testTheContentComesAcrossWithItsLinksRemappedAndNothingElseDoes(): void

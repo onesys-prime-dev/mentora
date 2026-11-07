@@ -148,9 +148,16 @@ class ModuleService
             $classProgressByModule[(int) $row['module_id']] = $row;
         }
 
+        // A module that waits on others: locked for a student, labelled for an instructor.
+        $moduleLocks = $isInstructor ? [] : $this->progressService->containerLocks((int) $user->id, $offeringId)['modules'];
+        $moduleLabels = $isInstructor ? $this->progressService->containerLabels('module', $modules) : [];
+
         $displayNumber = 0;
 
         foreach ($modules as &$module) {
+
+            $module['locked_by'] = $moduleLocks[(int) $module['id']] ?? [];
+            $module['dependency_labels'] = $moduleLabels[(int) $module['id']] ?? [];
 
             $module['display_number'] = $module['status'] === 'published'
                 ? ++$displayNumber
@@ -814,6 +821,13 @@ class ModuleService
 
         }
 
+        // Published now, a draft, or a draft that publishes itself later.
+        $publish = ScheduledPublishing::fields($request->getPost());
+
+        if (! $publish['ok']) {
+            return ['success' => false, 'message' => $publish['message']];
+        }
+
         $lastModule =
             $this->courseModuleModel
                 ->where(
@@ -841,9 +855,7 @@ class ModuleService
 
             'order_index' => $orderIndex,
 
-            'status' => 'draft',
-
-        ]);
+        ] + $publish['fields']);
 
         return [
 
@@ -915,16 +927,28 @@ class ModuleService
 
         }
 
-        $this->courseModuleModel->update(
-            $moduleId,
-            [
+        $changes = [
 
-                'title' => $title,
+            'title' => $title,
 
-                'description' => $description,
+            'description' => $description,
 
-            ]
-        );
+        ];
+
+        // The modal sends the publish choice too; a caller that does not send it leaves the status alone.
+        if (array_key_exists('status', $request->getPost())) {
+
+            $publish = ScheduledPublishing::fields($request->getPost());
+
+            if (! $publish['ok']) {
+                return ['success' => false, 'message' => $publish['message']];
+            }
+
+            $changes += $publish['fields'];
+
+        }
+
+        $this->courseModuleModel->update($moduleId, $changes);
 
         return [
 
@@ -993,6 +1017,9 @@ class ModuleService
 
                     'status' => $status,
 
+                    // Published or drafted by hand: no schedule is left waiting.
+                    'scheduled_publish_at' => null,
+
                 ]
 
             );
@@ -1046,6 +1073,9 @@ class ModuleService
 
         }
 
+        // A dependency on a module that now comes later is dropped.
+        $this->progressService->pruneContainerDependencies('module', $offeringId);
+
         return [
 
             'success' => true,
@@ -1097,6 +1127,12 @@ class ModuleService
 
         }
 
+        $publish = ScheduledPublishing::fields($request->getPost());
+
+        if (! $publish['ok']) {
+            return ['success' => false, 'message' => $publish['message']];
+        }
+
         $lastUnit =
             $this->learningUnitModel
                 ->where(
@@ -1124,9 +1160,7 @@ class ModuleService
 
             'order_index' => $orderIndex,
 
-            'status' => 'draft',
-
-        ]);
+        ] + $publish['fields']);
 
         return [
 
@@ -1243,6 +1277,7 @@ class ModuleService
             $learningUnitId,
             [
                 'status' => $payload['status'],
+                'scheduled_publish_at' => null,
             ]
         );
 
@@ -1277,6 +1312,8 @@ class ModuleService
         |--------------------------------------------------------------------------
         */
 
+        $reorderedIn = [];
+
         foreach ($learningUnits as $learningUnit) {
 
             if (
@@ -1298,7 +1335,7 @@ class ModuleService
 
                 $this->learningUnitModel
 
-                    ->select('learning_units.id')
+                    ->select('learning_units.id, learning_units.module_id')
 
                     ->join(
                         'course_modules',
@@ -1342,6 +1379,13 @@ class ModuleService
 
             );
 
+            $reorderedIn[(int) $existing['module_id']] = true;
+
+        }
+
+        // A dependency on a unit that now comes later is dropped.
+        foreach (array_keys($reorderedIn) as $reorderedModule) {
+            $this->progressService->pruneContainerDependencies('unit', $reorderedModule);
         }
 
         return [
@@ -1442,6 +1486,17 @@ class ModuleService
 
         }
 
+        $publish = ScheduledPublishing::fields($request->getPost());
+
+        if (! $publish['ok']) {
+            return ['success' => false, 'message' => $publish['message']];
+        }
+
+        // A quiz publishes with its questions, and a new one has none.
+        if ($itemType === 'quiz' && $publish['fields']['status'] === 'published') {
+            return ['success' => false, 'message' => \App\Services\Courses\Assessments\AssessmentService::NO_QUESTIONS];
+        }
+
         $lastItem =
             $this->learningItemModel
                 ->where(
@@ -1469,9 +1524,7 @@ class ModuleService
 
             'order_index' => $orderIndex,
 
-            'status' => 'draft',
-
-        ]);
+        ] + $publish['fields']);
 
         $learningItemId =
             $this->learningItemModel->getInsertID();
@@ -1502,6 +1555,11 @@ class ModuleService
 
             }
 
+        }
+
+        // An assignment added as published is published with its item (a draft is how the assessment starts).
+        if ($publish['fields']['status'] === 'published') {
+            $this->syncLinkedAssessment((int) $learningItemId, ['status' => 'published']);
         }
 
         // A discussion item is backed by one thread the instructor opens
@@ -1642,6 +1700,9 @@ class ModuleService
 
             $update['status'] =
                 $payload['status'];
+
+            // Published or drafted by hand: no schedule is left waiting.
+            $update['scheduled_publish_at'] = null;
 
         }
 
@@ -1787,7 +1848,7 @@ class ModuleService
      * AssessmentService::updateAssessment()) so the two sides' syncs can't
      * call back into each other.
      */
-    private function syncLinkedAssessment(int $learningItemId, array $itemUpdate): void
+    public function syncLinkedAssessment(int $learningItemId, array $itemUpdate): void
     {
         $assessment = $this->assessmentModel->findByLearningItem($learningItemId);
 

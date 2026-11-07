@@ -37,7 +37,7 @@ final class OfferingSchedulePageTest extends RouteTestCase
         $this->admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', 'ada@sched.example', $this->institution);
 
         $db      = db_connect();
-        $program = (int) $db->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
+        $program = (int) $db->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$this->institution])->getRow()->id;
         $db->table('courses')->insert(['program_id' => $program, 'course_code' => 'IT101', 'course_title' => 'Intro to Computing', 'units' => 3]);
         $course = (int) $db->insertID();
         $term   = (int) $db->table('academic_terms')->where('institution_id', $this->institution)->get()->getRowArray()['id'];
@@ -115,7 +115,7 @@ final class OfferingSchedulePageTest extends RouteTestCase
     public function testAnotherInstitutionsSectionIsNotFound(): void
     {
         $other   = SisFixture::institution('SCHEDB');
-        $program = (int) db_connect()->query('SELECT p.id FROM programs p JOIN sub_departments sd ON sd.id = p.sub_department_id JOIN departments d ON d.id = sd.department_id WHERE d.institution_id = ?', [$other])->getRow()->id;
+        $program = (int) db_connect()->query('SELECT p.id FROM programs p JOIN departments sd ON sd.id = p.department_id JOIN colleges d ON d.id = sd.college_id WHERE d.institution_id = ?', [$other])->getRow()->id;
         db_connect()->table('courses')->insert(['program_id' => $program, 'course_code' => 'ZZ1', 'course_title' => 'Elsewhere', 'units' => 3]);
         db_connect()->table('course_offerings')->insert(['course_id' => (int) db_connect()->insertID(), 'term_id' => (int) db_connect()->table('academic_terms')->where('institution_id', $other)->get()->getRow('id'), 'section_code' => 'A', 'status' => 'active']);
         $foreign = (int) db_connect()->insertID();

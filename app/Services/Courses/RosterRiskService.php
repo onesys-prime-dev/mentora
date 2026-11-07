@@ -41,7 +41,7 @@ class RosterRiskService
      * (never-active students lead).
      *
      * @param  list<int> $offeringIds
-     * @return list<array{offering_id: int, name: string, progress: int, days_since: ?int, reason: string}>
+     * @return list<array{offering_id: int, student_id: int, name: string, progress: int, days_since: ?int, reason: string}>
      */
     public function atRisk(array $offeringIds): array
     {

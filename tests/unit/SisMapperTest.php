@@ -14,13 +14,44 @@ final class SisMapperTest extends CIUnitTestCase
 {
     public function testAStaffAssignmentTakesItsTargetFromTheColumnOfItsRole(): void
     {
-        $dean       = SisMapper::staffAssignment(['role' => 'Dean', 'person_external_id' => 'P1', 'department_code' => 'CCS', 'sub_department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
-        $chair      = SisMapper::staffAssignment(['role' => 'chairperson', 'person_external_id' => 'P2', 'department_code' => 'CCS', 'sub_department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
-        $instructor = SisMapper::staffAssignment(['role' => 'INSTRUCTOR', 'person_external_id' => 'P3', 'department_code' => 'CCS', 'sub_department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
+        $dean       = SisMapper::staffAssignment(['role' => 'Dean', 'person_external_id' => 'P1', 'college_code' => 'CCS', 'department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
+        $chair      = SisMapper::staffAssignment(['role' => 'chairperson', 'person_external_id' => 'P2', 'college_code' => 'CCS', 'department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
+        $instructor = SisMapper::staffAssignment(['role' => 'INSTRUCTOR', 'person_external_id' => 'P3', 'college_code' => 'CCS', 'department_code' => 'IT', 'course_external_id' => 'C1', 'section' => 'B']);
 
-        $this->assertSame(['role' => 'dean', 'person_external_id' => 'P1', 'target' => 'CCS', 'section' => 'A'], $dean, 'a section means nothing for a dean');
-        $this->assertSame(['role' => 'chairperson', 'person_external_id' => 'P2', 'target' => 'IT', 'section' => 'A'], $chair);
-        $this->assertSame(['role' => 'instructor', 'person_external_id' => 'P3', 'target' => 'C1', 'section' => 'B'], $instructor);
+        $this->assertSame(['role' => 'dean', 'person_external_id' => 'P1', 'target' => 'CCS', 'section' => 'A', 'program_code' => null], $dean, 'a section means nothing for a dean');
+        $this->assertSame(['role' => 'chairperson', 'person_external_id' => 'P2', 'target' => 'IT', 'section' => 'A', 'program_code' => null], $chair);
+        $this->assertSame(['role' => 'instructor', 'person_external_id' => 'P3', 'target' => 'C1', 'section' => 'B', 'program_code' => null], $instructor);
+    }
+
+    public function testAnUploadedStaffAssignmentNamesThePersonByEmailAndTheCourseByCode(): void
+    {
+        $instructor = SisMapper::staffAssignment(['role' => 'instructor', 'email' => 'Ivy@Example.com', 'college_code' => '', 'department_code' => '', 'program_code' => 'BSIT', 'course_code' => 'IT101', 'section' => 'B']);
+        $dean       = SisMapper::staffAssignment(['role' => 'dean', 'email' => 'dee@example.com', 'college_code' => 'CCS', 'department_code' => '', 'program_code' => 'BSIT', 'course_code' => '', 'section' => '']);
+
+        $this->assertSame(['role' => 'instructor', 'person_external_id' => 'ivy@example.com', 'target' => 'IT101', 'section' => 'B', 'program_code' => 'BSIT'], $instructor);
+        $this->assertSame(['role' => 'dean', 'person_external_id' => 'dee@example.com', 'target' => 'CCS', 'section' => 'A', 'program_code' => null], $dean, 'a program means nothing for a dean');
+    }
+
+    public function testAnUploadedEnrollmentNamesTheStudentByNumberOrElseEmail(): void
+    {
+        $this->assertSame(
+            ['course_external_id' => 'IT101', 'student_external_id' => '2026-001', 'program_code' => 'BSIT', 'section' => 'B', 'status' => 'enrolled'],
+            SisMapper::enrollment(['student_number' => '2026-001', 'email' => 'ann@example.com', 'program_code' => 'BSIT', 'course_code' => 'IT101', 'section' => 'B', 'status' => '']),
+        );
+
+        $byEmail = SisMapper::enrollment(['student_number' => '', 'email' => 'Ann@Example.com', 'program_code' => '', 'course_code' => 'IT101', 'section' => '', 'status' => '']);
+
+        $this->assertSame('ann@example.com', $byEmail['student_external_id']);
+        $this->assertNull($byEmail['program_code']);
+        $this->assertSame('A', $byEmail['section']);
+    }
+
+    public function testAnUploadedPersonHasNoSisIdAndKeepsMiddleNameAndSuffix(): void
+    {
+        $this->assertSame(
+            ['external_id' => '', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.', 'email' => 'ann@example.com', 'student_number' => null],
+            SisMapper::person(['student_number' => '', 'email' => 'ann@example.com', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.']),
+        );
     }
 
     public function testAnInstructorWithNoSectionTeachesSectionA(): void
@@ -32,7 +63,7 @@ final class SisMapperTest extends CIUnitTestCase
     public function testAPersonIsMappedWithALowerCasedEmailAndAnOptionalStudentNumber(): void
     {
         $this->assertSame(
-            ['external_id' => 'S1', 'first_name' => 'Ann', 'last_name' => 'Lee', 'email' => 'ann@example.com', 'student_number' => '2026-001'],
+            ['external_id' => 'S1', 'first_name' => 'Ann', 'middle_name' => null, 'last_name' => 'Lee', 'suffix' => null, 'email' => 'ann@example.com', 'student_number' => '2026-001'],
             SisMapper::person(['external_id' => 'S1', 'first_name' => 'Ann', 'last_name' => 'Lee', 'email' => 'Ann@Example.COM', 'student_number' => '2026-001']),
         );
 
@@ -56,7 +87,7 @@ final class SisMapperTest extends CIUnitTestCase
     public function testAnEnrollmentDefaultsToSectionAAndEnrolled(): void
     {
         $this->assertSame(
-            ['course_external_id' => 'C1', 'student_external_id' => 'S1', 'section' => 'A', 'status' => 'enrolled'],
+            ['course_external_id' => 'C1', 'student_external_id' => 'S1', 'program_code' => null, 'section' => 'A', 'status' => 'enrolled'],
             SisMapper::enrollment(['course_external_id' => 'C1', 'student_external_id' => 'S1', 'section' => '', 'status' => '']),
         );
 

@@ -37,6 +37,32 @@ no `emailed_at`.
   admin header; everyone else sees a notice line under the page header while
   something is unread.
 
+## Emails to people who are added or changed
+
+People are told when an upload, an import, an enrolment or an assignment adds them or changes their courses and roles
+(`MailOutbox`). A new student or instructor has no password, so the first email is how they set one.
+
+| What happened | Told | Emailed |
+|---|---|---|
+| A new account was made by an upload or an SIS import | the person | **a link to choose a password** (works once, as long as an invitation link: `invitationValidityDays`), their sign-in email, and what they were given |
+| A student got a place in a course (enrolled by hand, in a section, by upload or import; a dropped place that is reinstated) | the student | yes, and in the app |
+| An instructor was assigned to a section (by hand, upload or import) | the instructor | yes, and in the app |
+| Someone was made dean or chairperson (by hand, upload or import) | the person | yes, and in the app |
+| A place was dropped or withdrawn, an assignment ended, a name or an email corrected | nobody | no |
+
+How it works:
+
+- The change writes a row to `mail_outbox` **in the same transaction**, so a preview, a refused change or a run that rolled back
+  tells nobody. Nothing is sent inside the request.
+- `php spark exports:run` (every minute) sends what is due: **one email per person per institution**, made from all their
+  rows. A row waits two minutes first, so changes made one after another make one email. At most 50 people per run; the
+  rest wait for the next. A failed send is tried again after 15 minutes, up to 5 times, and never loses the change.
+- The welcome link is made when the email is sent, so its time starts then. If it expires, send a new one from People.
+- Deactivated, switched-off and deleted accounts are never emailed; their rows are closed with the reason in `last_error`.
+- **An upload** can be made quiet with the box on its first step. **The first real import from an institution's SIS** emails
+  nobody (it can add a whole school at once): send the first password links from People. Later syncs email as above.
+- No email carries a grade, a percentage or a score.
+
 ## Parents
 
 A child's linked parents are told what changes for the child (`ParentNotifier`). Each parent hears each

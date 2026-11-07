@@ -1,7 +1,7 @@
 <?php
 /**
  * The dean's "Needs attention": overrides to decide, sections to sign off or holding it up, follow-ups past
- * their day, and what is slipping in the department by sub-department, each opening the screen where it is
+ * their day, and what is slipping in the college by department, each opening the screen where it is
  * dealt with. Data: DeanAttentionRules::items() through DeanDashboardService::overview()['attention'].
  *
  * @var array{items: list<array{key: string, tone: string, count: int, title: string, detail: string, url: string}>} $data

@@ -27,9 +27,9 @@ trait AnswersDialogForms
 {
     /**
      * @param callable(int): mixed $change    given the administrator's institution id
-     * @param ?string              $successTo where to go once it worked, when that is not where to go back to
+     * @param string|\Closure|null $successTo where to go once it worked, when that is not where to go back to (a closure is given what the change returned, for a page named by a new id)
      */
-    private function run(callable $change, string|\Closure $success, string $backTo, ?string $successTo = null): ResponseInterface|RedirectResponse
+    private function run(callable $change, string|\Closure $success, string $backTo, string|\Closure|null $successTo = null): ResponseInterface|RedirectResponse
     {
         $institutionId = (new InstitutionScope())->requireInstitutionId();
         $wantsJson     = $this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json');
@@ -45,7 +45,7 @@ trait AnswersDialogForms
             return redirect()->to($back)->withInput()->with('error', $e->getMessage());
         }
 
-        $next = $successTo === null ? $back : site_url($successTo);
+        $next = $successTo === null ? $back : site_url($successTo instanceof \Closure ? $successTo($result) : $successTo);
 
         // A change may hand back warnings (it went through, but the person should know something).
         $warnings = [];
