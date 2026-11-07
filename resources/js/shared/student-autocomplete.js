@@ -266,6 +266,15 @@ function wire(box) {
     });
 
     box.addEventListener("blur", () => setTimeout(close, BLUR_DELAY));
+
+    // A suggestion asked for after the form is sent would reach the server between the save and the page
+    // it leads to, and use up the session's one-time success message on the way.
+    box.form?.addEventListener("submit", () => {
+        clearTimeout(timer);
+        controller?.abort();
+        latest++;
+        close();
+    });
 }
 
 /** Wires every marked box under `root`; safe to call again (a box is wired once). */

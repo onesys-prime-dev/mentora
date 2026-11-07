@@ -164,6 +164,22 @@ describe("the suggestions", () => {
         expect(box.getAttribute("aria-expanded")).toBe("false");
     });
 
+    it("are not asked for once the form is sent, so the save's message is not used up", async () => {
+        const fetchMock = vi.fn().mockResolvedValue(answer([ANN]));
+        vi.stubGlobal("fetch", fetchMock);
+        const { initStudentAutocomplete } = await load();
+        document.body.innerHTML = `<form id="f"><textarea name="students" data-student-autocomplete="${URL_BASE}"></textarea></form>`;
+        const box = document.querySelector("textarea");
+        document.querySelector("#f").addEventListener("submit", (event) => event.preventDefault());
+        initStudentAutocomplete();
+
+        type(box, "ann@x.test");
+        box.form.dispatchEvent(new Event("submit", { cancelable: true }));
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it("are asked for once while someone types, not once per key", async () => {
         const fetchMock = vi.fn().mockResolvedValue(answer([ANN]));
         vi.stubGlobal("fetch", fetchMock);

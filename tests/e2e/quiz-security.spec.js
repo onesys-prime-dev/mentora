@@ -55,7 +55,7 @@ test("TC-QSEC-02 A password is created in a modal, shown as ******, kept after s
     const panel = page.locator("#editor-inspector-panel");
 
     // Switched on with no password yet: a Create password button.
-    await panel.locator("[data-password-toggle]").check({ force: true });
+    await panel.locator("label:has([data-password-toggle])").check();
     await expect(panel.getByRole("button", { name: "Create password" })).toBeVisible();
     await panel.getByRole("button", { name: "Create password" }).click();
 
@@ -92,8 +92,8 @@ test("TC-QSEC-02 A password is created in a modal, shown as ******, kept after s
         await security.locator("summary").click();
     }
     await expect(security).toHaveAttribute("open", "");
-    await panel.locator('[data-inspector-field="randomize_questions"]').check({ force: true });
-    await panel.locator('[data-inspector-field="detect_tab_switch"]').check({ force: true });
+    await panel.locator('label:has([data-inspector-field="randomize_questions"])').check();
+    await panel.locator('label:has([data-inspector-field="detect_tab_switch"])').check();
     await page.locator("[data-publish]").click();
 
     // Reopened: everything is as it was left, and the password is nowhere in the page.
@@ -149,9 +149,9 @@ test("TC-QSEC-04 Put the quiz back as it was", async ({ page }) => {
     await openEditor(page, QUIZ);
 
     const panel = page.locator("#editor-inspector-panel");
-    await panel.locator("[data-password-toggle]").uncheck({ force: true });
-    await panel.locator('[data-inspector-field="randomize_questions"]').uncheck({ force: true });
-    await panel.locator('[data-inspector-field="detect_tab_switch"]').uncheck({ force: true });
+    await panel.locator("label:has([data-password-toggle])").uncheck();
+    await panel.locator('label:has([data-inspector-field="randomize_questions"])').uncheck();
+    await panel.locator('label:has([data-inspector-field="detect_tab_switch"])').uncheck();
     await page.locator("[data-save-draft]").click();
 
     await openEditor(page, QUIZ);

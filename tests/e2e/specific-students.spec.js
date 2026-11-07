@@ -28,7 +28,7 @@ test("TC-QSEC-05 Specific students: the switch shows how many are chosen, the li
     const panel = page.locator("#editor-inspector-panel");
     await expect(panel.locator("[data-specific-state]")).toBeHidden();
 
-    await panel.locator("[data-specific-toggle]").check({ force: true });
+    await panel.locator("label:has([data-specific-toggle])").check();
     await expect(panel.getByText("0 students selected")).toBeVisible();
 
     // On with nobody chosen: refused, with the reason.
@@ -83,7 +83,7 @@ test("TC-QSEC-07 Put the assignment back for everyone", async ({ page }) => {
     await signInAs(page, accounts.instructor, "instructor");
     await openEditor(page, ASSIGNMENT);
 
-    await page.locator("[data-specific-toggle]").uncheck({ force: true });
+    await page.locator("label:has([data-specific-toggle])").uncheck();
     await page.locator("[data-publish]").click();
 
     // The chosen list goes too (cleanup of this case's own data; the app keeps it so switching back on remembers who).
