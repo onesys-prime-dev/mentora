@@ -75,4 +75,20 @@ describe("the institution settings chat controls", () => {
 
         expect(document.querySelector('[data-toast="info"]').textContent).toContain("Nothing to save.");
     });
+
+    it("lets the form save the students setting when it was changed while the chats were still loading", async () => {
+        let answer;
+        const chatControls = vi.fn(() => new Promise((resolve) => { answer = resolve; }));
+        const loading = initChatControls(q("[data-chat-controls]"), { chatControls, setControl: vi.fn() });
+
+        q('input[value="0"]').checked = true;
+        answer(ok({ chats: [chat()] }));
+        await loading;
+
+        const submit = new Event("submit", { cancelable: true });
+        q("#f").dispatchEvent(submit);
+
+        expect(submit.defaultPrevented).toBe(false);
+        expect(document.querySelector('[data-toast="info"]')).toBeNull();
+    });
 });
