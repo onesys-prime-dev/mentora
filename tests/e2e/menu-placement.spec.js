@@ -35,7 +35,14 @@ test("TC-MOD-19 A menu opens where there is room: under its button, or over it n
     expect(count).toBeGreaterThan(1);
 
     // The first item's menu, near the top of the page: under the button.
-    await page.evaluate(() => globalThis.scrollTo(0, 0));
+    // The course content scrolls inside its own box (not the window), under the module's sticky title bar. Where
+    // "Go to module" leaves that scroll varies: put the button just under the bar. Behind the bar, the click would
+    // be blocked and Playwright would scroll the button elsewhere (the bottom), and the menu would rightly open above.
+    await triggers.first().evaluate((el) => {
+        const bar = el.closest("#course-content")?.querySelector(".sticky-bar-top");
+        el.style.scrollMarginTop = `${(bar?.offsetHeight ?? 0) + 16}px`;
+        el.scrollIntoView({ block: "start", behavior: "instant" });
+    });
     await triggers.first().click();
     let state = await openMenuState(page);
     expect(state.placement).toBe("below");
