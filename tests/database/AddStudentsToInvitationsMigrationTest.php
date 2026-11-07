@@ -24,6 +24,9 @@ final class AddStudentsToInvitationsMigrationTest extends DatabaseTestCase
     /** @var list<int> */
     private array $ids = [];
 
+    /** @var list<int> */
+    private array $institutions = [];
+
     private function migration(): object
     {
         require_once self::FILE;
@@ -44,6 +47,10 @@ final class AddStudentsToInvitationsMigrationTest extends DatabaseTestCase
             db_connect()->table('institution_invitations')->whereIn('id', $this->ids)->delete();
         }
 
+        if ($this->institutions !== []) {
+            db_connect()->table('institutions')->whereIn('id', $this->institutions)->delete();
+        }
+
         if (! $this->hasColumn()) {
             $this->migration()->up();
         }
@@ -53,7 +60,8 @@ final class AddStudentsToInvitationsMigrationTest extends DatabaseTestCase
 
     private function invitation(?string $studentIds = null): int
     {
-        $institution = PeopleFactory::institution('AS' . random_int(100, 999));
+        // The code is a unique key, and three random digits collided on CI with one already there.
+        $this->institutions[] = $institution = PeopleFactory::institution('AS' . bin2hex(random_bytes(6)));
         $this->ids[] = $id = (int) (new InstitutionInvitationModel())->insert([
             'institution_id' => $institution, 'role' => 'parent', 'email' => 'p' . random_int(1000, 9999) . '@example.test',
             'first_name' => 'Pam', 'last_name' => 'Parent', 'token_hash' => bin2hex(random_bytes(32)),
