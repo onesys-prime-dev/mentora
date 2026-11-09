@@ -15,6 +15,14 @@
  * click on the backdrop, puts focus back where it was, and stops the page
  * behind it from scrolling.
  *
+ * Layouts (components/dialog.php `variant`) and motion:
+ *   data-dialog-variant="sheet|fullscreen|menu"   on the dialog; none is the centered default
+ *   data-state="open" | "closing"                  set here; the CSS animates enter and exit on it
+ *   [data-dialog-panel]                            the box inside the backdrop
+ *   [data-dialog-handle], [data-dialog-header]     on a sheet, dragging these down closes it
+ * Closing waits for the exit animation, or hides at once when nothing animates
+ * (reduced motion, or no animation support).
+ *
  * A [data-dialog-form] is posted with fetch and the server answers JSON:
  *   200  { redirect?: string, message?: string }   go there / show a toast
  *   422  { errors: { field: "message" }, message?: string }   shown in place
@@ -30,7 +38,8 @@ const FOCUSABLE =
 
 /** @param {ParentNode} root */
 export function focusableIn(root) {
-    return Array.from(root.querySelectorAll(FOCUSABLE)).filter((el) => !el.hasAttribute("hidden") && !el.closest("[hidden]"));
+    // checkVisibility drops controls a breakpoint hides (sm:hidden); jsdom has none, so it keeps them.
+    return Array.from(root.querySelectorAll(FOCUSABLE)).filter((el) => !el.hasAttribute("hidden") && !el.closest("[hidden]") && el.checkVisibility?.() !== false);
 }
 
 /**
@@ -117,11 +126,88 @@ export function applyFieldErrors(form, errors, general = "") {
 }
 
 /**
+ * Swipe-to-dismiss for a sheet: a drag that starts on the handle or the header
+ * row and goes down far enough (or fast enough) closes it; a shorter one lets
+ * the panel spring back. Drags in the scrolling body are left alone.
+ *
+ * @param {HTMLElement} el the [data-dialog] element
+ * @param {() => void} close
+ * @returns {() => void} removes the listeners
+ */
+function bindSwipe(el, close) {
+    const panel = el.querySelector("[data-dialog-panel]") ?? el.firstElementChild;
+    let drag = null;
+
+    const reset = () => {
+        drag = null;
+        panel.style.transform = "";
+        panel.style.transition = "";
+    };
+
+    const onDown = (event) => {
+        // From sm up the sheet is a centered dialog: nothing to swipe. Same query as the sheet CSS.
+        if (window.matchMedia?.("(width < 40rem)").matches === false) {
+            return;
+        }
+
+        if (event.target.closest?.("[data-dialog-handle], [data-dialog-header]")) {
+            drag = { id: event.pointerId, y: event.clientY, at: performance.now(), dy: 0 };
+        }
+    };
+
+    const onMove = (event) => {
+        if (!drag || event.pointerId !== drag.id) {
+            return;
+        }
+
+        drag.dy = Math.max(0, event.clientY - drag.y);
+        panel.style.transition = "none";
+        panel.style.transform = `translateY(${drag.dy}px)`;
+    };
+
+    const onUp = (event) => {
+        if (!drag || event.pointerId !== drag.id) {
+            return;
+        }
+
+        const { dy, at } = drag;
+        const far = dy >= 80 || (dy >= 40 && performance.now() - at < 250);
+
+        // Clearing the inline transition hands the spring-back to the CSS one.
+        panel.style.transition = "";
+
+        if (far) {
+            drag = null;
+            close();
+        } else {
+            reset();
+        }
+    };
+
+    const onCancel = () => drag && reset();
+
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onCancel);
+
+    return () => {
+        el.removeEventListener("pointerdown", onDown);
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerup", onUp);
+        el.removeEventListener("pointercancel", onCancel);
+        reset();
+    };
+}
+
+/**
  * @param {HTMLElement} el the [data-dialog] element
  */
 export function createDialog(el) {
     let opener = null;
     let open = false;
+    let unbindSwipe = null;
+    let closes = 0;
 
     const onKeydown = (event) => {
         if (event.key === "Escape") {
@@ -148,11 +234,26 @@ export function createDialog(el) {
     };
 
     function openDialog(trigger = null) {
+        // Reopened while its exit still runs: stay open.
+        if (open && el.dataset.state === "closing") {
+            el.dataset.state = "open";
+            opener = trigger ?? opener;
+            closes++;
+
+            return;
+        }
+
         if (open) {
             return;
         }
 
         open = true;
+        el.dataset.state = "open";
+
+        if (el.dataset.dialogVariant === "sheet") {
+            unbindSwipe = bindSwipe(el, close);
+        }
+
         opener = trigger ?? document.activeElement;
         el.hidden = false;
         el.classList.remove("hidden");
@@ -167,11 +268,36 @@ export function createDialog(el) {
     }
 
     function close() {
-        if (!open) {
+        if (!open || el.dataset.state === "closing") {
             return;
         }
 
+        el.dataset.state = "closing";
+
+        const animations = typeof el.getAnimations === "function" && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+            ? el.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming?.().iterations !== Infinity)
+            : [];
+
+        if (animations.length === 0) {
+            finishClose();
+
+            return;
+        }
+
+        // The timeout keeps a stalled animation from leaving the dialog up; the count skips a close that was reopened.
+        const id = ++closes;
+        Promise.race([Promise.all(animations.map((a) => a.finished.catch(() => {}))), new Promise((resolve) => setTimeout(resolve, 1000))]).then(() => {
+            if (id === closes && open) {
+                finishClose();
+            }
+        });
+    }
+
+    function finishClose() {
         open = false;
+        delete el.dataset.state;
+        unbindSwipe?.();
+        unbindSwipe = null;
         el.hidden = true;
         el.classList.add("hidden");
         el.classList.remove("flex");
@@ -293,7 +419,8 @@ function bindDialogForm(form) {
 
         event.preventDefault();
 
-        const buttons = Array.from(form.querySelectorAll('button[type="submit"]'));
+        // form.elements also holds submit buttons outside the form linked by form="..." (a full-screen dialog's top action).
+        const buttons = Array.from(form.elements).filter((el) => el.type === "submit");
 
         // Where focus returns to when the password dialog closes: the button that was pressed.
         const returnTo = event.submitter ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);

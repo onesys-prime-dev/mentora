@@ -37,7 +37,53 @@
         "Montserrat",
         system-ui,
         sans-serif;
+
+    /* Two extra breakpoints: xs for large phones, 3xl so ultra-wide screens stop stretching layouts. */
+    --breakpoint-xs: 25rem;
+    --breakpoint-3xl: 120rem;
+
+    /* Fluid type for headings and metrics only (body stays 16px); scales over 320 to 1440px. */
+    --text-fluid-h1: clamp(1.5rem, 1.357rem + 0.714vw, 2rem);
+    --text-fluid-h1--line-height: 1.25;
+    --text-fluid-h2: clamp(1.25rem, 1.179rem + 0.357vw, 1.5rem);
+    --text-fluid-h2--line-height: 1.25;
+    --text-fluid-metric: clamp(1.75rem, 1.536rem + 1.071vw, 2.5rem);
+    --text-fluid-metric--line-height: 1.1;
+
+    /* Page gutter and fluid gap, so padding grows with the viewport instead of jumping at breakpoints. */
+    --spacing-gutter: clamp(1rem, 4vw, 2.5rem);
+    --spacing-fluid: clamp(0.75rem, 0.536rem + 1.071vw, 1.5rem);
+
+    /* One enter (springy) and one exit curve so every animation moves the same way. */
+    --ease-spring: cubic-bezier(.34,1.45,.64,1);
+    --ease-exit: cubic-bezier(.4,0,1,1);
+
+    /* Readable line length for prose, and a cap for the app shell on very wide screens. */
+    --max-width-reading: 70ch;
+    --max-width-shell: 105rem;
 }
+
+/* Motion durations are not a Tailwind namespace, so they live on :root; reduced-motion users get none. */
+:root {
+    --motion-fast: 180ms;
+    --motion-base: 380ms;
+    --motion-slow: 480ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --motion-fast: 0ms;
+        --motion-base: 0ms;
+        --motion-slow: 0ms;
+    }
+}
+
+/* Safe-area padding so content clears notches and home indicators on phones. */
+@utility pt-safe { padding-top: env(safe-area-inset-top); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+@utility pl-safe { padding-left: env(safe-area-inset-left); }
+@utility pr-safe { padding-right: env(safe-area-inset-right); }
+@utility pb-safe-4 { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 
 @layer base {
     html {
@@ -150,8 +196,28 @@
     view-transition-name: course-content;
 }
 
-::view-transition-old(root),
+/* Cross-fade every same-origin page navigation (opacity only: no stacking-context trap). */
+@view-transition {
+    navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    @view-transition {
+        navigation: none;
+    }
+}
+
+::view-transition-old(root) {
+    animation: spa-fade-out var(--motion-fast) var(--ease-exit) both;
+}
+
 ::view-transition-new(root) {
+    animation: page-fade-in var(--motion-base) var(--ease-spring) both;
+}
+
+/* A course SPA swap fades only its content card, not the whole page. */
+html:has(.spa-transitioning)::view-transition-old(root),
+html:has(.spa-transitioning)::view-transition-new(root) {
     animation: none;
 }
 
@@ -173,6 +239,12 @@
     from {
         opacity: 0;
         transform: translateY(6px);
+    }
+}
+
+@keyframes page-fade-in {
+    from {
+        opacity: 0;
     }
 }
 
@@ -751,5 +823,109 @@ input[type="search"]::-webkit-search-cancel-button:hover {
     .admin-flat main[data-pinned-panel]:has(> div > [data-page-panel]) {
         padding-bottom: 0.75rem;
         padding-top: 0.75rem;
+    }
+}
+
+/*
+ * Dialog motion and variants (components/dialog.php, shared/dialog.js).
+ *
+ * shared/dialog.js sets data-state="open" while a dialog shows and
+ * data-state="closing" while it leaves, and hides it once the exit animation
+ * ends. Centered dialogs fade in from .9 scale; a sheet and a full-screen form
+ * rise from the bottom on a phone, the menu slides in from the left below lg.
+ * The enter fill is backwards only, so nothing is left on the panel
+ * afterwards: a sheet being dragged moves by its inline transform.
+ * The exit keyframes have no "from", so a swiped sheet leaves from where the
+ * finger let go.
+ */
+@layer components {
+    @keyframes dialog-backdrop-in { from { opacity: 0; } }
+    @keyframes dialog-backdrop-out { to { opacity: 0; } }
+    @keyframes dialog-pop-in { from { opacity: 0; transform: scale(.9); } }
+    @keyframes dialog-pop-out { to { opacity: 0; transform: scale(.9); } }
+    @keyframes dialog-rise-in { from { transform: translateY(100%); } }
+    @keyframes dialog-rise-out { to { transform: translateY(100%); } }
+    @keyframes dialog-slide-in { from { transform: translateX(-100%); } }
+    @keyframes dialog-slide-out { to { transform: translateX(-100%); } }
+
+    [data-dialog][data-state="open"] {
+        animation: dialog-backdrop-in var(--motion-fast) ease-out backwards;
+    }
+
+    [data-dialog][data-state="closing"] {
+        animation: dialog-backdrop-out var(--motion-fast) var(--ease-exit) forwards;
+    }
+
+    [data-dialog][data-state="open"] > [data-dialog-panel] {
+        animation: dialog-pop-in var(--motion-base) var(--ease-spring) backwards;
+    }
+
+    [data-dialog][data-state="closing"] > [data-dialog-panel] {
+        animation: dialog-pop-out var(--motion-fast) var(--ease-exit) forwards;
+    }
+
+    @media (width < 40rem) {
+        [data-dialog]:is([data-dialog-variant="sheet"], [data-dialog-variant="fullscreen"])[data-state="open"] > [data-dialog-panel] {
+            animation-name: dialog-rise-in;
+        }
+
+        [data-dialog]:is([data-dialog-variant="sheet"], [data-dialog-variant="fullscreen"])[data-state="closing"] > [data-dialog-panel] {
+            animation-name: dialog-rise-out;
+        }
+
+        /* A drag let go short of closing springs back. */
+        [data-dialog-variant="sheet"] > [data-dialog-panel] {
+            transition: transform var(--motion-base) var(--ease-spring);
+        }
+
+        /* The handle and header take the drag instead of scrolling the page. */
+        [data-dialog-variant="sheet"] :is([data-dialog-handle], [data-dialog-header]) {
+            touch-action: none;
+        }
+    }
+
+    @media (width < 64rem) {
+        [data-dialog-variant="menu"][data-state="open"] > [data-dialog-panel] {
+            animation-name: dialog-slide-in;
+        }
+
+        [data-dialog-variant="menu"][data-state="closing"] > [data-dialog-panel] {
+            animation-name: dialog-slide-out;
+        }
+    }
+
+    [data-dialog-handle] > span {
+        background-color: #d1d5db;
+    }
+}
+
+html[data-theme="dark"] [data-dialog-handle] > span { background-color: var(--dk-line-strong); }
+html[data-theme="dark"] [data-dialog-variant="fullscreen"] [data-dialog-header] { border-color: var(--dk-line); }
+html[data-theme="dark"] [data-dialog-panel] { background-color: var(--dk-surface); }
+
+/* Expandable action bar (shared/action-bar.js): the panel grows upward from the bar. In the components
+   layer, so utilities on the bar (sm:hidden, bg-*, pb-0) win. */
+@layer components {
+    [data-action-bar] {
+        display: flex;
+        flex-direction: column;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        background: #fff;
+        border-top: 1px solid rgb(229 231 235);
+    }
+    html[data-theme="dark"] [data-action-bar] { background: var(--dk-surface); border-color: var(--dk-line); }
+    [data-action-bar-panel] {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows var(--motion-base) var(--ease-spring);
+    }
+    [data-action-bar][data-open] > [data-action-bar-panel] { grid-template-rows: 1fr; }
+    [data-action-bar-panel] > * {
+        min-height: 0;
+        overflow: hidden;
+    }
+    [data-action-bar][data-open] > [data-action-bar-panel] > * {
+        max-height: min(60dvh, 28rem);
+        overflow-y: auto;
     }
 }

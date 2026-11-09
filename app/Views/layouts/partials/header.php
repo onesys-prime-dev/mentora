@@ -174,7 +174,7 @@ $accountLinks = [
                             'app' => $app,
                             'variant' => 'menu',
                             'active' => $app['key'] === ($page ?? null),
-                        ]) ?>
+                        ], ['saveData' => false]) ?>
 
                     <?php endforeach; ?>
 

@@ -44,6 +44,17 @@ final class UiKitPageTest extends RouteTestCase
         }
     }
 
+    public function testTheResponsiveSectionShowsEveryDialogVariantAndTheActionBar(): void
+    {
+        $this->signIn();
+
+        $body = $this->step('GET', 'ui-kit')->response()->getBody();
+
+        foreach (['data-responsive-kit', 'data-action-bar', 'data-dialog-variant="fullscreen"', 'data-dialog-variant="sheet"', 'data-dialog-variant="menu"', 'id="kit-resp-confirm"'] as $marker) {
+            $this->assertStringContainsString($marker, $body, "{$marker} is missing");
+        }
+    }
+
     public function testTheGalleryTitleIsAWordNotAKey(): void
     {
         $this->signIn();

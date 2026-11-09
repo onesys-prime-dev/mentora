@@ -11,7 +11,7 @@
 
 <?= $this->section('content') ?>
 
-<div class="min-h-screen flex items-center justify-center px-4 py-10">
+<div class="min-h-dvh flex items-center justify-center px-4 py-10">
 
     <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl px-8 py-10">
 

@@ -27,9 +27,20 @@ export default defineConfig({
         baseURL,
         trace: "retain-on-failure",
         screenshot: "only-on-failure",
+        // Dialogs close at once instead of animating, so a closing one never matches a visible-dialog locator.
+        reducedMotion: "reduce",
     },
 
-    projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+    // The responsive sweep's screenshot baselines (tests/e2e/responsive.spec.js) are made on CI's Linux runner
+    // and committed; a missing or different one fails the run instead of being written.
+    snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{projectName}/{arg}{ext}",
+    updateSnapshots: "none",
+
+    projects: [
+        { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+        // Safari's engine, for the responsive sweep only (its 375px phone size).
+        { name: "webkit", testMatch: "responsive.spec.js", use: { ...devices["iPhone 13"] } },
+    ],
 
     webServer: {
         command: "node tests/e2e/support/serve.js",

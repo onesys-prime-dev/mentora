@@ -25,8 +25,8 @@ $hasMenu     = active_role() === 'institutional_admin';
 
 // With the institution menu the header and the menu stay put from lg up and only the page scrolls.
 $locked      = $fullHeight || $hasMenu;
-$bodyHeight  = $locked ? 'min-h-screen lg:h-screen lg:overflow-hidden' : 'min-h-screen';
-$shellHeight = $locked ? 'min-h-screen lg:h-full lg:min-h-0' : 'min-h-screen';
+$bodyHeight  = $locked ? 'min-h-dvh lg:h-dvh lg:overflow-hidden' : 'min-h-dvh';
+$shellHeight = $locked ? 'min-h-dvh lg:h-full lg:min-h-0' : 'min-h-dvh';
 // A page can pass its own gutter. The default keeps px-40 from xl up (as before) and
 // narrows below it, so pages work on a laptop, a tablet and a phone.
 $mainGutter  = $mainGutter ?? 'px-4 sm:px-8 lg:px-16 xl:px-40';

@@ -4,7 +4,7 @@
 
 <?= $this->section('content') ?>
 
-<div class="min-h-screen flex items-center justify-center px-4 py-10">
+<div class="min-h-dvh flex items-center justify-center px-4 py-10">
 
     <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl px-8 py-10">
 
@@ -66,7 +66,7 @@
                     placeholder="Email"
                     value="<?= old('email') ?>"
                     required
-                    class="w-full h-12 pl-4 pr-11 rounded-full border border-gray-300 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800">
+                    class="w-full h-12 pl-4 pr-11 rounded-full border border-gray-300 text-base sm:text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800">
 
                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -85,14 +85,14 @@
                     autocomplete="current-password"
                     placeholder="Password"
                     required
-                    class="w-full h-12 pl-4 pr-11 rounded-full border border-gray-300 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800">
+                    class="w-full h-12 pl-4 pr-11 rounded-full border border-gray-300 text-base sm:text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800">
 
                 <button
                     type="button"
                     data-password-toggle="password"
                     aria-label="Show password"
                     aria-pressed="false"
-                    class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    class="absolute right-4 top-1/2 -translate-y-1/2 flex min-h-6 min-w-6 items-center justify-center text-gray-400 hover:text-gray-600 pointer-coarse:right-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                     <!-- eye: shown while the password is masked -->
                     <svg data-password-icon="shown" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -110,7 +110,7 @@
             <div class="flex items-center justify-between text-sm">
 
                 <?php if (setting('Auth.sessionConfig')['allowRemembering']): ?>
-                    <label class="flex items-center gap-2 text-gray-700">
+                    <label class="flex items-center gap-2 text-gray-700 pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                         <input
                             type="checkbox"
                             name="remember"

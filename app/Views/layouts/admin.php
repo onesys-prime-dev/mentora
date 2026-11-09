@@ -31,9 +31,9 @@ $flat = $flat ?? true;
 
 <body
     <?php if ($flat): ?>
-    class="admin-flat min-h-screen"
+    class="admin-flat min-h-dvh"
     <?php else: ?>
-    class="min-h-screen bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
+    class="min-h-dvh bg-gray-100 bg-cover bg-center bg-no-repeat bg-fixed"
     style="--page-bg-light: url('<?= base_url('assets/images/background/light.png') ?>'); --page-bg-dark: url('<?= base_url('assets/images/background/dark.png') ?>'); background-image: var(--page-bg-light);"
     <?php endif; ?>
     data-page="<?= esc($page ?? 'admin') ?>"
@@ -43,7 +43,7 @@ $flat = $flat ?? true;
     <?= $this->include('layouts/partials/page-progress') ?>
 
     <?php // From lg up the header and the menu stay put and only the page scrolls; below it the whole page scrolls as usual. ?>
-    <div class="flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:overflow-hidden">
+    <div class="flex min-h-dvh flex-col lg:h-dvh lg:min-h-0 lg:overflow-hidden">
 
         <div class="sticky top-0 z-30 shrink-0">
 

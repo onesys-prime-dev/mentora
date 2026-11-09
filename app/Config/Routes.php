@@ -797,8 +797,10 @@ $routes->get('reauth', 'ReauthController::show', ['filter' => 'role:institutiona
 $routes->post('reauth', 'ReauthController::confirm', ['filter' => 'role:institutional_admin,dean']);
 
 // A gallery of the shared interface components (app/Views/components), for the people
-// building and reviewing screens. Signed-in people only; not routed in production.
-if (ENVIRONMENT !== 'production') {
+// building and reviewing screens. Signed-in people only; not routed in production, except
+// when UIKIT_ROUTES=1: only the browser-test server sets it (tests/e2e/support/serve.js runs
+// the app as production), so the responsive sweep can check the kit. Never set it in a real .env.
+if (ENVIRONMENT !== 'production' || env('UIKIT_ROUTES') === '1') {
     $routes->get('ui-kit', 'UiKitController::index', ['filter' => 'session']);
     $routes->post('ui-kit', 'UiKitController::submit', ['filter' => 'session']);
 }

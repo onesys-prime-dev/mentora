@@ -112,7 +112,8 @@ const server = spawn(
     "php",
     [...php, "-S", `127.0.0.1:${port}`, "-t", "public", "vendor/codeigniter4/framework/system/rewrite.php"],
     // The server's request log is noisy; E2E_VERBOSE=1 shows it. PHP errors still reach writable/logs.
-    { cwd: root, env, stdio: ["ignore", "inherit", process.env.E2E_VERBOSE ? "inherit" : "ignore"] }
+    // UIKIT_ROUTES=1 routes /ui-kit in production (app/Config/Routes.php), for the responsive sweep.
+    { cwd: root, env: { ...env, UIKIT_ROUTES: "1" }, stdio: ["ignore", "inherit", process.env.E2E_VERBOSE ? "inherit" : "ignore"] }
 );
 
 for (const signal of ["SIGINT", "SIGTERM"]) {

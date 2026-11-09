@@ -33,6 +33,7 @@ $sortUrl = static fn (string $column, string $next): string => site_url('ui-kit'
 $primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $second  = 'rounded-full border border-brand px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A82E2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
+$touch   = 'pointer-coarse:min-h-11 pointer-coarse:min-w-11';
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -159,7 +160,56 @@ $danger  = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white
         </div>
     </section>
 
-</div>
+    <section class="flex flex-col gap-fluid" data-kit="responsive" data-responsive-kit>
+        <h2 class="text-lg font-bold text-brand">Responsive</h2>
+
+        <div class="flex flex-col gap-2">
+            <p class="text-fluid-h1 font-bold text-brand">Fluid heading one</p>
+            <p class="text-fluid-h2 font-bold text-[#1A1C1E]">Fluid heading two</p>
+            <p class="text-fluid-metric font-bold text-brand">17 / 20</p>
+            <p class="max-w-reading text-base text-[#3D3D3D]">Headings and metrics scale smoothly between 320 and 1440 pixels. Body text stays at 16 pixels.</p>
+        </div>
+
+        <div class="grid gap-fluid px-gutter sm:grid-cols-2 lg:grid-cols-3">
+            <?php foreach (['Algorithms' => '24 students', 'Databases' => '31 students', 'Networks' => '18 students'] as $course => $count): ?>
+                <div class="@container">
+                    <div class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 @sm:flex-row @sm:items-center @sm:justify-between">
+                        <div>
+                            <p class="text-sm font-bold text-[#1A1C1E]"><?= esc($course) ?></p>
+                            <p class="text-xs text-[#646464]"><?= esc($count) ?></p>
+                        </div>
+                        <button type="button" class="<?= $second ?> <?= $touch ?>">Open course</button>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+            <button type="button" class="<?= $primary ?> <?= $touch ?>" data-dialog-open="kit-fullscreen">New announcement</button>
+            <button type="button" class="<?= $second ?> <?= $touch ?>" data-dialog-open="kit-sheet">Row actions</button>
+            <button type="button" class="<?= $second ?> <?= $touch ?>" data-dialog-open="kit-menu">Open menu</button>
+            <button type="button" class="<?= $danger ?> <?= $touch ?>" data-dialog-open="kit-resp-confirm">Delete announcement</button>
+        </div>
+
+        <div data-action-bar class="sticky bottom-0 -mx-4 sm:mx-0">
+            <div id="kit-score-panel" data-action-bar-panel>
+                <div>
+                    <div class="flex flex-col gap-2 p-4 text-sm text-[#3D3D3D]">
+                        <p class="font-semibold text-[#1A1C1E]">Rubric</p>
+                        <p>Clarity: 6 / 8</p>
+                        <p>Method: 7 / 8</p>
+                        <p>Presentation: 4 / 4</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between gap-3 px-4 pt-3">
+                <span class="text-base font-bold text-brand">17 / 20</span>
+                <div class="flex items-center gap-3">
+                    <button type="button" data-action-bar-toggle aria-controls="kit-score-panel" aria-expanded="false" class="<?= $second ?> <?= $touch ?>">Rubric</button>
+                    <button type="button" class="<?= $primary ?> <?= $touch ?>">Save, next</button>
+                </div>
+            </div>
+        </div>
 
 <?php
 $formBody = '<form id="kit-form-el" method="post" action="' . site_url('ui-kit') . '" data-dialog-form class="flex flex-col gap-4">'
@@ -184,5 +234,46 @@ $formFooter = '<button type="button" data-dialog-close class="rounded-full borde
     'tone'          => 'danger',
     'typeToConfirm' => 'Ann Lee',
 ], ['saveData' => false]) ?>
+
+<?php
+$annBody = '<form id="kit-announcement" method="post" action="' . site_url('ui-kit') . '" data-dialog-form class="flex flex-col gap-4">'
+    . csrf_field()
+    . '<label class="flex flex-col gap-1 text-sm font-medium text-[#1A1C1E]" data-field="name">Title<input type="text" name="name" required class="pointer-coarse:min-h-11 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-[#1A1C1E] placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span data-field-error class="text-xs text-[#C33939]"></span></label>'
+    . '<label class="flex flex-col gap-1 text-sm font-medium text-[#1A1C1E]">Message<textarea name="message" rows="4" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-[#1A1C1E] placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></textarea></label>'
+    . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
+    . '</form>';
+$annFooter = '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] hover:bg-gray-50 pointer-coarse:min-h-11 pointer-coarse:min-w-11">Cancel</button>'
+    . '<button type="submit" form="kit-announcement" class="' . $primary . ' ' . $touch . '">Publish</button>';
+
+$rowActions = '';
+foreach (['View submission', 'Grade work', 'Send a message', 'Remove from course'] as $action) {
+    $rowActions .= '<button type="button" data-dialog-close class="flex w-full items-center rounded-lg px-3 py-3 text-left text-sm font-semibold text-[#1A1C1E] hover:bg-gray-50 pointer-coarse:min-h-11 pointer-coarse:min-w-11">' . esc($action) . '</button>';
+}
+
+$tiles = '<div class="grid grid-cols-2 gap-3">';
+foreach (['Courses', 'Grades', 'Messages', 'Schedule'] as $tile) {
+    $tiles .= '<button type="button" data-dialog-close class="flex min-h-24 items-center justify-center rounded-xl border border-gray-200 text-sm font-semibold text-brand pointer-coarse:min-w-11">' . esc($tile) . '</button>';
+}
+$tiles .= '</div>';
+?>
+
+<?= view('components/dialog', ['id' => 'kit-fullscreen', 'variant' => 'fullscreen', 'title' => 'New announcement', 'body' => $annBody, 'footer' => $annFooter, 'topAction' => ['label' => 'Publish', 'form' => 'kit-announcement']], ['saveData' => false]) ?>
+
+<?= view('components/dialog', ['id' => 'kit-sheet', 'variant' => 'sheet', 'title' => 'Row actions', 'body' => '<div class="flex flex-col">' . $rowActions . '</div>'], ['saveData' => false]) ?>
+
+<?= view('components/dialog', ['id' => 'kit-menu', 'variant' => 'menu', 'title' => 'Menu', 'body' => $tiles], ['saveData' => false]) ?>
+
+<?= view('components/confirm', [
+    'id'           => 'kit-resp-confirm',
+    'title'        => 'Delete this announcement?',
+    'text'         => 'Students will no longer see it. This cannot be undone.',
+    'action'       => site_url('ui-kit'),
+    'confirmLabel' => 'Delete',
+    'tone'         => 'danger',
+], ['saveData' => false]) ?>
+
+    </section>
+
+</div>
 
 <?= $this->endSection() ?>

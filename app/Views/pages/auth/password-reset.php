@@ -6,7 +6,7 @@
  * @var array<string, mixed> $reset      the reset, with the account's `email`
  */
 $min   = (int) config('Auth')->minimumPasswordLength;
-$field = 'w-full h-12 px-4 rounded-full border border-gray-300 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800';
+$field = 'w-full h-12 px-4 rounded-full border border-gray-300 text-base sm:text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800';
 ?>
 <?= $this->extend('layouts/auth') ?>
 
@@ -14,7 +14,7 @@ $field = 'w-full h-12 px-4 rounded-full border border-gray-300 text-sm placehold
 
 <?= $this->section('content') ?>
 
-<div class="min-h-screen flex items-center justify-center px-4 py-10">
+<div class="min-h-dvh flex items-center justify-center px-4 py-10">
 
     <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl px-8 py-10">
 
