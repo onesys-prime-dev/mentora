@@ -20,4 +20,12 @@ describe("responsive tokens", () => {
 
     it("zeroes motion for reduced-motion users", () =>
         expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*--motion-base: 0ms/));
+
+    it("declares the lock variant", () =>
+        expect(css).toContain("@custom-variant lock (@media (min-width: 80rem) and (min-height: 47.5rem));"));
+
+    it("keeps backdrop-filter off the header itself (it would trap fixed descendants)", () => {
+        expect(css).toMatch(/\[data-app-header\]\[data-scrolled\]::before \{[^}]*backdrop-filter/);
+        expect(css).not.toMatch(/\[data-app-header\]\[data-scrolled\] \{[^}]*backdrop-filter/);
+    });
 });

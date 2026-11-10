@@ -32,8 +32,18 @@ export function sizes() {
     return process.env.RESPONSIVE_FULL === "1" ? [...FULL, LANDSCAPE] : SMOKE;
 }
 
-/** The page is no wider than the window, apart from content inside a `[data-scroll-x]` scroller. */
-export async function expectNoPageOverflow(page) {
+/**
+ * The page is no wider than the window, apart from content inside a `[data-scroll-x]` scroller. With `scope`
+ * (a selector), only that element is measured: it has no sideways scroll of its own, whatever the page does.
+ */
+export async function expectNoPageOverflow(page, scope) {
+    if (scope) {
+        const box = await page.locator(scope).first().evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+        expect(box.scrollWidth, `${scope} is ${box.scrollWidth}px wide inside ${box.clientWidth}px`).toBeLessThanOrEqual(box.clientWidth);
+
+        return;
+    }
+
     const { scrollWidth, width, offenders } = await page.evaluate(() => {
         const html = globalThis.document.documentElement;
         // Clip the allowed scrollers for the measurement, so only what spills outside them counts.
@@ -96,6 +106,21 @@ export async function expectTouchTargets(page, scope = "body") {
     }, scope);
 
     expect(offenders, "controls smaller than 44×44 or outside the window").toEqual([]);
+}
+
+/** The (first) element matching `selector` is visible and lies wholly inside the window. */
+export async function expectInViewport(page, selector) {
+    const el = page.locator(selector).first();
+    await expect(el, selector).toBeVisible();
+
+    const { r, w, h } = await el.evaluate((node) => ({
+        r: node.getBoundingClientRect().toJSON(),
+        w: globalThis.document.documentElement.clientWidth,
+        h: globalThis.innerHeight,
+    }));
+    const inside = r.left >= 0 && r.top >= 0 && r.right <= w + 1 && r.bottom <= h + 1;
+
+    expect(inside, `${selector} at ${Math.round(r.left)},${Math.round(r.top)} to ${Math.round(r.right)},${Math.round(r.bottom)} in a ${w}×${h} window`).toBe(true);
 }
 
 /** No serious or critical axe findings against WCAG 2.2 A and AA (the filter dean.spec.js uses). */

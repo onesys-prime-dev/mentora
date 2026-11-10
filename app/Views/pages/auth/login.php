@@ -4,9 +4,9 @@
 
 <?= $this->section('content') ?>
 
-<div class="min-h-dvh flex items-center justify-center px-4 py-10">
+<div class="min-h-dvh flex items-center justify-center px-gutter pt-safe pb-safe">
 
-    <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl px-8 py-10">
+    <div class="w-full max-w-sm my-10 bg-white rounded-3xl shadow-xl px-6 xs:px-8 py-10">
 
         <div class="flex items-center justify-start">
             <img
@@ -123,7 +123,7 @@
                 <?php endif ?>
 
                 <?php if (setting('Auth.allowMagicLinkLogins')): ?>
-                    <a class="text-blue-800 font-medium hover:underline" href="<?= url_to('magic-link') ?>">
+                    <a class="inline-flex items-center text-blue-800 font-medium hover:underline pointer-coarse:min-h-11" href="<?= url_to('magic-link') ?>">
                         Forgot Password?
                     </a>
                 <?php endif ?>
@@ -132,14 +132,14 @@
 
             <button
                 type="submit"
-                class="mt-2 h-12 rounded-full bg-blue-800 text-white text-sm font-bold shadow-md transition hover:bg-blue-900">
+                class="mt-2 h-12 pointer-coarse:min-h-11 rounded-full bg-blue-800 text-white text-sm font-bold shadow-md transition hover:bg-blue-900">
                 Login
             </button>
 
             <?php if (setting('Auth.allowRegistration')): ?>
                 <p class="text-center text-sm text-gray-600">
                     Need an account?
-                    <a class="text-blue-800 font-medium hover:underline" href="<?= url_to('register') ?>">
+                    <a class="inline-flex items-center text-blue-800 font-medium hover:underline pointer-coarse:min-h-11" href="<?= url_to('register') ?>">
                         Register
                     </a>
                 </p>

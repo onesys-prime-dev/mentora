@@ -80,6 +80,24 @@ describe("the unread badge on the Messages tile", () => {
 
     });
 
+    it("the ⋯ dot shows when unread > 0 and hides at 0", async () => {
+
+        document.body.innerHTML = tile() + `<span data-messages-dot hidden></span>`;
+        const fetchImpl = vi.fn().mockResolvedValueOnce(reply(200, { unread: 4 })).mockResolvedValueOnce(reply(200, { unread: 0 }));
+
+        const stop = startBadgePolling(document, fetchImpl);
+        const dot = () => document.querySelector("[data-messages-dot]");
+
+        await vi.advanceTimersByTimeAsync(30000);
+        expect(dot().hidden).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(30000);
+        expect(dot().hidden).toBe(true);
+
+        stop();
+
+    });
+
     it("does nothing without a badge, or on the Messages page, which refreshes the count itself", async () => {
 
         const fetchImpl = vi.fn().mockResolvedValue(reply(200, { unread: 1 }));

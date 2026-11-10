@@ -27,7 +27,7 @@ class UiKitController extends BaseController
             'user'       => auth()->user(),
             'flashToasts' => true,
             // Explicit, so view data left by another page cannot change it (it is also the layout's default).
-            'mainGutter'  => 'px-4 sm:px-8 lg:px-16 xl:px-40',
+            'mainGutter'  => 'px-gutter xl:px-40',
             'sort'       => $sort,
             'dir'        => $dir,
         ]);

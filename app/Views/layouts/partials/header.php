@@ -24,6 +24,9 @@ $studentMeta = $userRole === 'student'
 
 $avatarUrl = base_url('assets/images/placeholder/profile.png');
 
+// The Apps menu and the phone block draw the same tiles; work them (and their badges) out once.
+$headerApps = $userRole === 'institutional_admin' ? [] : global_apps($userRole);
+
 // Not built yet — shown so the menu's shape is settled, but inert. "My Profile" is real for the
 // roles that have a profile page (a student's, to read; a parent's, with their email choices).
 $accountLinks = [
@@ -40,37 +43,57 @@ $accountLinks = [
         border-b
         border-b-black/10
         bg-white
-        px-6
-        py-3
+        gap-2
+        px-3
+        py-2
+        sm:px-6
+        sm:py-3
         shadow
     ">
-    <div class="flex gap-2 items-stretch font-lao">
+    <div class="flex min-w-0 gap-2 items-stretch font-lao">
+        <?php // Below lg the side menu (the layout says which) lives behind this button, as a full-screen dialog. ?>
+        <?php if (($navMenuId ?? null) !== null): ?>
+            <button
+                type="button"
+                data-dialog-open="<?= esc($navMenuId, 'attr') ?>"
+                aria-haspopup="dialog" aria-controls="<?= esc($navMenuId, 'attr') ?>"
+                aria-label="Open the menu"
+                class="lg:hidden h-11 w-11 shrink-0 self-center flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
+                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+            </button>
+        <?php endif; ?>
         <a
             class="flex gap-1 items-center self-center"
             href="<?= site_url(role_home($userRole) . '/dashboard') ?>"
             data-brand-logo>
+            <?php // Phones get the mark alone; the wordmark needs the width the title wants. The span makes the 32px mark a 44px touch target. ?>
+            <span class="flex items-center justify-center sm:hidden pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                <img
+                    class="h-8 w-auto"
+                    src="<?= base_url('assets/images/logos/logo.png') ?>" alt="Mentora">
+            </span>
             <img
-                class="h-11 w-auto"
+                class="h-11 w-auto max-sm:hidden"
                 src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="Mentora">
         </a>
 
         <?php $headerBranding = (new \App\Services\Institutions\InstitutionBranding())->forUser(auth()->user()); ?>
         <?php if ($headerBranding !== null && $headerBranding['logoUrl'] !== null): ?>
-            <span class="mx-1 h-8 w-px self-center bg-black/10" aria-hidden="true"></span>
-            <img class="h-9 w-auto max-w-[10rem] self-center object-contain" src="<?= esc($headerBranding['logoUrl']) ?>" alt="<?= esc($headerBranding['name']) ?>" data-institution-logo>
+            <span class="mx-1 h-8 w-px self-center bg-black/10 max-sm:hidden" aria-hidden="true"></span>
+            <img class="h-9 w-auto max-sm:hidden max-w-[10rem] self-center object-contain" src="<?= esc($headerBranding['logoUrl']) ?>" alt="<?= esc($headerBranding['name']) ?>" data-institution-logo>
         <?php endif; ?>
 
-        <div class="flex items-end">
+        <div class="flex min-w-0 items-center sm:items-end">
             <?php /* The page's own <h1> says where you are; the layout sets headerTitle false then. */ ?>
             <?php if ($page !== null && $page !== 'dashboard' && ($headerTitle ?? true)): ?>
-                <span class="text-2xl font-semibold text-brand capitalize pb-px" data-header-title>
+                <span class="min-w-0 truncate text-base sm:text-2xl font-semibold text-brand capitalize pb-px" data-header-title>
                     <?= esc($pageTitle ?? ucwords(str_replace(['-', '_'], ' ', (string) $page))) ?>
                 </span>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="flex gap-4 items-center">
+    <div class="flex shrink-0 gap-2 sm:gap-4 items-center">
         <?php // One pill for the quick-access icons: Messages, notifications, dark mode, Apps. ?>
         <div class="flex items-center gap-0.5 rounded-full bg-white p-1 shadow" data-header-pill>
         <?php // Messages is quick access: next to the bell and dark mode, not inside the Apps menu. Null while the flag is off or the role has no messages.use. ?>
@@ -81,11 +104,11 @@ $accountLinks = [
             aria-label="Messages"
             title="Messages"
             <?= ($page ?? null) === 'messages' ? 'aria-current="page"' : '' ?>
-            class="relative h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-[current=page]:bg-brand aria-[current=page]:text-white">
+            class="relative h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-[current=page]:bg-brand aria-[current=page]:text-white max-sm:hidden">
             <?= icon('chat', 'h-5 w-5 text-current') ?>
             <span data-messages-badge data-url="<?= esc(site_url('messages/api/unread-count')) ?>" <?= (int) $messagesTile['badge'] > 0 ? '' : 'hidden' ?> class="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= (int) $messagesTile['badge'] > 99 ? '99+' : (int) $messagesTile['badge'] ?></span>
         </a>
-        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
+        <span class="h-5 w-px bg-black/10 max-sm:hidden" aria-hidden="true"></span>
         <?php endif; ?>
         <div class="relative">
             <button
@@ -105,8 +128,9 @@ $accountLinks = [
             <!-- Latest notifications, 7 at a time; more load as the list is scrolled -->
             <div
                 id="notifications-panel"
+                data-header-panel
                 data-feed-url="<?= site_url('notifications/feed') ?>"
-                class="hidden z-50 absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1.5rem)] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                class="hidden z-50 absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1.5rem)] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg max-sm:fixed max-sm:inset-x-2.5 max-sm:top-[calc(var(--app-header-h,4.75rem)+0.5rem)] max-sm:mt-0 max-sm:w-auto max-sm:max-h-[60dvh] max-sm:overflow-y-auto">
 
                 <div class="flex items-center justify-between px-5 pt-4 pb-2">
                     <span class="text-lg font-display">Notifications</span>
@@ -135,17 +159,17 @@ $accountLinks = [
 
             </div>
         </div>
-        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
+        <span class="h-5 w-px bg-black/10 max-sm:hidden" aria-hidden="true"></span>
         <button
             type="button"
             data-theme-toggle aria-pressed="false" aria-label="Dark mode is off. Switch to dark mode" title="Switch to dark mode"
-            class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
+            class="max-sm:hidden h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">
             <?= icon('night', 'h-5 w-5 text-current') ?>
         </button>
 
         <?php // The institutional administrator has a sidebar instead of the Apps menu. ?>
         <?php if ($userRole !== 'institutional_admin'): ?>
-        <span class="h-5 w-px bg-black/10" aria-hidden="true"></span>
+        <span class="h-5 w-px bg-black/10 max-sm:hidden" aria-hidden="true"></span>
         <div class="relative">
             <button
                 id="app-menu-button"
@@ -154,20 +178,21 @@ $accountLinks = [
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="app-menu-panel"
-                class="h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white">
+                class="max-sm:hidden h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white aria-expanded:hover:text-white">
                 <?= icon('apps', 'h-5 w-5 text-current') ?>
             </button>
 
             <!-- Global apps — same list as the dashboard's Quick Access (global_apps()) -->
             <div
                 id="app-menu-panel"
-                class="hidden z-50 absolute right-0 top-full mt-2 w-72 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-lg">
+                data-header-panel
+                class="hidden z-50 absolute right-0 top-full mt-2 w-72 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-lg max-sm:fixed max-sm:inset-x-2.5 max-sm:top-[calc(var(--app-header-h,4.75rem)+0.5rem)] max-sm:mt-0 max-sm:w-auto max-sm:max-h-[60dvh] max-sm:overflow-y-auto">
 
                 <span class="text-md font-display">Apps</span>
 
                 <nav class="grid grid-cols-3 gap-x-3 gap-y-4" aria-label="Apps">
 
-                    <?php foreach (global_apps($userRole) as $app): ?>
+                    <?php foreach ($headerApps as $app): ?>
                         <?php if ($app['key'] === 'messages') { continue; } ?>
 
                         <?= view('components/app-tile', [
@@ -188,12 +213,13 @@ $accountLinks = [
         <div class="relative">
             <button
                 id="profile-menu-button"
+                data-profile-menu-trigger
                 type="button"
                 aria-label="Account menu"
                 aria-haspopup="menu"
                 aria-expanded="false"
                 aria-controls="profile-menu-panel"
-                class="h-11 flex items-center gap-5 p-1 pr-3 border border-gray-300 rounded-4xl cursor-pointer transition duration-150 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 aria-expanded:border-brand aria-expanded:bg-brand/10 aria-expanded:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
+                class="max-sm:hidden h-11 flex items-center gap-5 p-1 pr-3 border border-gray-300 rounded-4xl cursor-pointer transition duration-150 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 aria-expanded:border-brand aria-expanded:bg-brand/10 aria-expanded:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
                 <img
                     class="h-full w-auto rounded-full"
                     src="<?= $avatarUrl ?>"
@@ -216,9 +242,68 @@ $accountLinks = [
                 </svg>
             </button>
 
+            <?php // Phones: Messages, dark mode, Apps and the account all sit behind this one button. ?>
+            <button
+                type="button"
+                data-profile-menu-trigger
+                aria-controls="profile-menu-panel"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-label="More: <?= implode(', ', array_merge($messagesTile !== null ? ['messages'] : [], $userRole !== 'institutional_admin' ? ['apps'] : [], ['account'])) ?>"
+                class="sm:hidden relative h-11 w-11 flex justify-center items-center rounded-full cursor-pointer transition duration-150 text-brand hover:bg-brand-tint hover:text-brand-dark active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand aria-expanded:text-white">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+                </svg>
+                <?php if ($messagesTile !== null): ?>
+                    <span data-messages-dot <?= (int) $messagesTile['badge'] > 0 ? '' : 'hidden' ?> class="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#C33939] ring-2 ring-white"><span class="sr-only">unread messages</span></span>
+                <?php endif; ?>
+            </button>
+
             <div
                 id="profile-menu-panel"
-                class="hidden z-50 absolute right-0 top-full mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                data-header-panel
+                class="hidden z-50 absolute right-0 top-full mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg max-sm:fixed max-sm:inset-x-2.5 max-sm:top-[calc(var(--app-header-h,4.75rem)+0.5rem)] max-sm:mt-0 max-sm:w-auto max-sm:max-h-[60dvh] max-sm:overflow-y-auto">
+
+                <?php // Phones only: what the header has no room for. ?>
+                <div class="sm:hidden flex flex-col border-b border-gray-100 p-2" data-profile-phone-block>
+                    <?php $phoneRow = 'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-[#1A1C1E] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11'; ?>
+
+                    <?php if ($messagesTile !== null): ?>
+                        <a href="<?= esc($messagesTile['url']) ?>" <?= ($page ?? null) === 'messages' ? 'aria-current="page"' : '' ?> class="<?= $phoneRow ?>">
+                            <?= icon('chat', 'h-4 w-4 text-brand') ?>
+                            <span class="flex-1">Messages</span>
+                            <span data-messages-badge data-url="<?= esc(site_url('messages/api/unread-count')) ?>" <?= (int) $messagesTile['badge'] > 0 ? '' : 'hidden' ?> class="min-w-[18px] rounded-full bg-[#C33939] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"><?= (int) $messagesTile['badge'] > 99 ? '99+' : (int) $messagesTile['badge'] ?></span>
+                        </a>
+                    <?php endif; ?>
+
+                    <?php // theme.js keeps this button's aria-label and aria-pressed in step with the header one. ?>
+                    <button type="button" data-theme-toggle aria-pressed="false" aria-label="Dark mode is off. Switch to dark mode" title="Switch to dark mode" class="<?= $phoneRow ?>">
+                        <?= icon('night', 'h-4 w-4 text-brand') ?>
+                        <span class="flex-1">Dark mode</span>
+                    </button>
+
+                    <?php if ($userRole !== 'institutional_admin'): ?>
+                        <details class="group/apps">
+                            <summary class="<?= $phoneRow ?> cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                                <?= icon('apps', 'h-4 w-4 text-brand') ?>
+                                <span class="flex-1">Apps</span>
+                                <svg class="h-4 w-4 text-gray-500 transition group-open/apps:rotate-180 motion-reduce:transition-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                            </summary>
+
+                            <nav class="grid grid-cols-3 gap-x-3 gap-y-4 px-3 pb-2 pt-3" aria-label="Apps">
+                                <?php foreach ($headerApps as $app): ?>
+                                    <?php if ($app['key'] === 'messages') { continue; } ?>
+
+                                    <?= view('components/app-tile', [
+                                        'app' => $app,
+                                        'variant' => 'menu',
+                                        'active' => $app['key'] === ($page ?? null),
+                                    ], ['saveData' => false]) ?>
+                                <?php endforeach; ?>
+                            </nav>
+                        </details>
+                    <?php endif; ?>
+                </div><!-- /phone block -->
 
                 <!-- Identity -->
                 <div class="flex items-center gap-3 bg-brand-tint px-4 py-4">

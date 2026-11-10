@@ -9,6 +9,7 @@
 |
 */
 
+import { clampToViewport } from "./clamp-panel.js";
 import { adjustBellCount, setBellCount } from "./notifications-badge.js";
 
 const BATCH_SKELETON_ROWS = 3;
@@ -117,6 +118,7 @@ if (button && panel) {
     const openPanel = () => {
         panel.classList.remove("hidden");
         button.setAttribute("aria-expanded", "true");
+        clampToViewport(panel);
 
         if (!loaded) {
             loadBatch();

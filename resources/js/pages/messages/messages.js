@@ -126,6 +126,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             el.textContent = count > 99 ? "99+" : String(count);
             el.hidden = count <= 0;
         });
+        // The phone header's ⋯ dot; messages-badge.js stays out of this page.
+        document.querySelectorAll("[data-messages-dot]").forEach((el) => { el.hidden = count <= 0; });
     }
 
     const serverItems = () => state.items.filter((item) => typeof item.id === "number");

@@ -29,11 +29,6 @@
       "count": 1
     }
   },
-  "resources/js/shared/profile-menu.js": {
-    "no-unused-vars": {
-      "count": 1
-    }
-  },
   "resources/js/shared/spa/skeleton-rows.js": {
     "no-unused-vars": {
       "count": 2

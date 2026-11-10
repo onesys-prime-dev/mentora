@@ -11,9 +11,9 @@
 
 <?= $this->section('content') ?>
 
-<div class="min-h-dvh flex items-center justify-center px-4 py-10">
+<div class="min-h-dvh flex items-center justify-center px-gutter pt-safe pb-safe">
 
-    <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl px-8 py-10">
+    <div class="w-full max-w-sm my-10 bg-white rounded-3xl shadow-xl px-6 xs:px-8 py-10">
 
         <div class="flex items-center justify-start">
             <img class="h-10 w-auto" src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="Mentora logo">
@@ -25,7 +25,7 @@
         </div>
 
         <p class="mt-6 text-center text-sm text-gray-600">
-            <a class="text-blue-800 font-medium hover:underline" href="<?= site_url('login') ?>">Go to sign in</a>
+            <a class="inline-flex items-center text-blue-800 font-medium hover:underline pointer-coarse:min-h-11" href="<?= site_url('login') ?>">Go to sign in</a>
         </p>
 
     </div>
