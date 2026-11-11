@@ -47,7 +47,7 @@
     "@fontsource/phetsarath": "^5.2.8",
     "@fontsource/poppins": "^5.2.7",
     "@tiptap/core": "^3.29.2",
-    "@tiptap/extension-placeholder": "^3.29.2",
+    "@tiptap/extension-placeholder": "^3.32.1",
     "@tiptap/extension-text-align": "^3.29.2",
     "@tiptap/extension-underline": "^3.29.2",
     "@tiptap/starter-kit": "^3.31.4",
