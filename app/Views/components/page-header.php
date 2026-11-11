@@ -27,7 +27,7 @@ $actions = $actions ?? '';
                 </span>
             <?php endif; ?>
 
-            <h2 class="text-2xl font-bold text-brand"><?= esc($title) ?></h2>
+            <h2 class="text-fluid-h1 font-bold text-brand"><?= esc($title) ?></h2>
 
         </div>
 
@@ -40,7 +40,7 @@ $actions = $actions ?? '';
     </div>
 
     <?php if ($actions !== ''): ?>
-        <div class="flex flex-wrap items-center gap-3"><?= $actions ?></div>
+        <div class="flex flex-wrap items-center gap-3 max-xs:w-full max-xs:*:basis-full"><?= $actions ?></div>
     <?php endif; ?>
 
 </div>

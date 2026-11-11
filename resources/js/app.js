@@ -20,6 +20,8 @@ import "./shared/dialog";
 import "./shared/action-bar";
 import "./shared/student-autocomplete";
 import "./shared/data-table";
+import "./shared/row-actions";
+import "./shared/scroll-x";
 import "./shared/spa/page-progress";
 import "./shared/messages-badge";
 

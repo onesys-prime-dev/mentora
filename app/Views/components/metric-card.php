@@ -56,13 +56,15 @@ if ($filter !== null) {
     $attrs .= ' data-assessments-filter-set="' . esc($filter, 'attr') . '"';
 }
 
-$surface = 'relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#A9A9A9]/50 bg-white text-left '
+$surface = 'relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#A9A9A9]/50 bg-white text-left '
     . ($prominent ? 'gap-2 px-6 py-6' : 'gap-2 px-5 py-5')
     . ($interactive
-        ? ' cursor-pointer transition hover:border-brand/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50'
+        ? ' cursor-pointer transition pointer-coarse:active:scale-[0.98] hover:border-brand/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50'
         : '');
 ?>
 
+<?php // The wrapper is the query container, so the icon's query measures the card's outer width, not its padded content box. ?>
+<div class="@container w-full min-w-0">
 <<?= $tag ?> class="<?= $surface ?>" <?= $attrs ?>>
 
     <?php if ($colors['accent'] !== null): ?>
@@ -73,11 +75,11 @@ $surface = 'relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl bo
 
         <div class="flex min-w-0 flex-col gap-1">
 
-            <span class="text-xs font-bold uppercase tracking-wide text-[#646464]/80">
+            <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">
                 <?= esc($label) ?>
             </span>
 
-            <span class="<?= $prominent ? 'text-3xl' : 'text-2xl' ?> font-black <?= $colors['ink'] ?>">
+            <span class="<?= $prominent ? 'text-fluid-metric' : 'text-2xl' ?> font-black <?= $colors['ink'] ?>">
                 <?php if ($colors['sr'] !== null): ?><span class="sr-only"><?= esc($colors['sr']) ?>: </span><?php endif; ?>
                 <?= isset($value_html) ? $value_html : esc($value ?? '') ?>
             </span>
@@ -85,11 +87,11 @@ $surface = 'relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl bo
         </div>
 
         <?php if ($prominent): ?>
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full <?= $colors['bubble'] ?>">
+            <span class="flex h-11 w-11 shrink-0 items-center @max-[10rem]:hidden justify-center rounded-full <?= $colors['bubble'] ?>">
                 <?= icon($icon, 'h-5 w-5 ' . $colors['ink']) ?>
             </span>
         <?php else: ?>
-            <?= icon($icon, 'h-6 w-6 shrink-0 ' . $colors['ink'] . ' opacity-70') ?>
+            <?= icon($icon, 'h-6 w-6 shrink-0 @max-[10rem]:hidden ' . $colors['ink'] . ' opacity-70') ?>
         <?php endif; ?>
 
     </div>
@@ -101,3 +103,4 @@ $surface = 'relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl bo
     <?php endif; ?>
 
 </<?= $tag ?>>
+</div>

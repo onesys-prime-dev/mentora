@@ -8,13 +8,17 @@
 | (html, usually the buttons), size (sm|md|lg), autoOpen (bool: open when the page
 | loads, for a step the server has already prepared, such as a form for a chosen row),
 | centered (bool: centered on a phone too, for a short question; confirm uses it),
-| variant (default|sheet|fullscreen|menu), topAction (fullscreen only:
-| ['label' => 'Post', 'form' => '<form id>'], the submit button in the phone top bar).
+| variant (default|sheet|fullscreen|menu; left out it is auto: fullscreen when body
+| holds a <form> with a field that is not hidden, else default; centered wins),
+| topAction (fullscreen only: ['label' => 'Post', 'form' => '<form id>'], the
+| submit button in the phone top bar).
 |
 | Variants, below the breakpoint named; above it each is the centered dialog:
 |   default     sits at the bottom, full width (sm)
 |   sheet       a bottom sheet with a drag handle; swipe it down to close (sm)
-|   fullscreen  fills the screen: Cancel | title | topAction on top; with a topAction, no footer (sm)
+|   fullscreen  fills the screen: Cancel | title | topAction on top; with a topAction, no footer;
+|               without one, the footer (or, with no footer, the one form's own submit
+|               row) is a sticky bottom bar; Cancel buttons below the top bar hide (sm)
 |   menu        a full-screen panel from the left (lg)
 |
 | Open it with <button data-dialog-open="<id>">. Put a form inside as
@@ -28,7 +32,9 @@ $size      = $size ?? 'md';
 $footer    = $footer ?? '';
 $autoOpen  = $autoOpen ?? false;
 $centered  = $centered ?? false;
-$variant   = in_array($variant ?? 'default', ['sheet', 'fullscreen', 'menu'], true) ? $variant : 'default';
+// No variant is auto: a form with a field a person fills in fills the phone screen (the hidden CSRF field does not count).
+$variant ??= !$centered && str_contains($body, '<form') && preg_match('/<(?:textarea|select)\b|<input\b(?![^>]*\btype=["\']?hidden\b)/i', $body) ? 'fullscreen' : 'default';
+$variant   = in_array($variant, ['sheet', 'fullscreen', 'menu'], true) ? $variant : 'default';
 $topAction = $topAction ?? null;
 // Only a well-formed ['label' => ..., 'form' => ...] on a fullscreen dialog renders (no warning on bad input).
 $topAction = $variant === 'fullscreen' && is_array($topAction) && ($topAction['label'] ?? '') !== '' && ($topAction['form'] ?? '') !== '' ? $topAction : null;
@@ -53,10 +59,15 @@ $root = match (true) {
     default                 => 'items-end justify-center p-0 sm:items-center sm:p-4',
 };
 
+// A full-screen form without a top action keeps its footer as a sticky bar on a phone; the bar takes the bottom safe area.
+$stickyFooter = $variant === 'fullscreen' && ! $topAction && $footer !== '';
+// Most forms carry their own Cancel/Save row: with one form and nothing else holding the action, app.css pins that row instead.
+$pinActions = $variant === 'fullscreen' && ! $topAction && $footer === '' && substr_count($body, '<form') === 1;
+
 $panel = match (true) {
     $centered               => 'max-h-full rounded-2xl',
     $variant === 'sheet'      => 'max-h-[min(90dvh,100%)] rounded-t-2xl max-sm:pt-3 max-sm:pb-safe-4 sm:rounded-2xl',
-    $variant === 'fullscreen' => 'h-full max-h-full max-sm:pt-[max(1rem,env(safe-area-inset-top))] max-sm:pb-safe-4 sm:h-auto sm:rounded-2xl',
+    $variant === 'fullscreen' => 'h-full max-h-full max-sm:pt-[max(1rem,env(safe-area-inset-top))] ' . ($stickyFooter ? 'max-sm:pb-0' : 'max-sm:pb-safe-4') . ' sm:h-auto sm:rounded-2xl',
     $variant === 'menu'       => 'h-full max-h-full pt-[max(1.5rem,env(safe-area-inset-top))] lg:h-auto lg:rounded-2xl lg:pt-6',
     default                 => 'max-h-full rounded-t-2xl max-sm:pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:rounded-2xl',
 };
@@ -80,7 +91,7 @@ $panel = match (true) {
                     </svg>
                 </button>
 
-                <h2 id="<?= esc($id) ?>-title" data-dialog-title class="min-w-0 truncate text-center text-base font-bold text-brand sm:text-left sm:text-lg"><?= esc($title) ?></h2>
+                <h2 id="<?= esc($id) ?>-title" data-dialog-title class="min-w-0 max-sm:truncate text-center text-base font-bold text-brand sm:text-left sm:text-lg"><?= esc($title) ?></h2>
 
                 <?php if ($topAction): ?>
                     <button type="submit" form="<?= esc($topAction['form']) ?>" class="min-h-11 justify-self-end rounded-full bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 sm:hidden"><?= esc($topAction['label']) ?></button>
@@ -98,10 +109,10 @@ $panel = match (true) {
             </div>
         <?php endif; ?>
 
-        <div class="flex flex-col gap-4 text-sm text-[#3D3D3D]"><?= $body ?></div>
+        <div data-dialog-body <?= $pinActions ? 'data-dialog-pin-actions ' : '' ?>class="@container flex flex-col gap-4 text-sm text-[#3D3D3D]"><?= $body ?></div>
 
         <?php if ($footer !== ''): ?>
-            <div class="<?= $topAction ? 'hidden sm:flex' : 'flex' ?> flex-wrap items-center justify-end gap-3"><?= $footer ?></div>
+            <div data-dialog-footer class="<?= $topAction ? 'hidden sm:flex' : 'flex' ?> flex-wrap items-center justify-end gap-3<?= $stickyFooter ? ' border-black/10 bg-white max-sm:sticky max-sm:bottom-0 max-sm:-mx-6 max-sm:mt-auto max-sm:border-t max-sm:px-6 max-sm:pt-4 max-sm:pb-safe-4 max-sm:[&_[data-dialog-close]]:hidden' : '' ?>"><?= $footer ?></div>
         <?php endif; ?>
 
     </div>

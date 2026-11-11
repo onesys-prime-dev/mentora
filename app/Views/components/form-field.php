@@ -5,7 +5,11 @@
 | Form field — label, control, help and error, tied together
 |--------------------------------------------------------------------------
 | Params: name (required), label (required), type (text|email|password|date|
-| number|search|textarea|select|checkbox), value, options (value => label,
+| number|search|textarea|select|checkbox), value, inputmode and autocomplete
+| (escaped, emitted only when set; email, number and password default sensibly), options (value => label,
+| -- the derived defaults are traps in two cases: pass autocomplete="new-password" for a new or
+| confirm password (the default is current-password), and inputmode="decimal" for a number with
+| decimals (the default numeric keypad has no decimal point on some phones) --
 | for select), help, error, required, placeholder, maxlength, attrs (extra,
 | already-escaped attributes), span (grid class such as "sm:col-span-2").
 |
@@ -24,6 +28,12 @@ $placeholder = $placeholder ?? '';
 $maxlength   = $maxlength ?? null;
 $attrs       = $attrs ?? '';
 $span        = $span ?? '';
+// A caller's attrs that already carry an attribute of that name keep it: no derived duplicate.
+// Quoted values are blanked first, so text inside a value never counts as an attribute name.
+$attrNames = ' ' . preg_replace('/"[^"]*"|\'[^\']*\'/', '""', $attrs);
+$hasAttr   = static fn (string $name): bool => (bool) preg_match('/\s' . $name . '\s*=/i', $attrNames);
+$inputmode   = $inputmode ?? ($hasAttr('inputmode') ? '' : match ($type) { 'email' => 'email', 'number' => 'numeric', default => '' });
+$autocomplete = $autocomplete ?? ($hasAttr('autocomplete') ? '' : match ($type) { 'email' => 'email', 'password' => 'current-password', default => '' });
 
 // A page can hold the same field twice (an add and an edit dialog): each needs its own id,
 // or the label of the second would point at the first.
@@ -32,7 +42,7 @@ $GLOBALS['mentoraFormFieldSeq'] = ((int) ($GLOBALS['mentoraFormFieldSeq'] ?? 0))
 $id       = 'f-' . preg_replace('/[^a-z0-9_-]/i', '-', $name) . '-' . $GLOBALS['mentoraFormFieldSeq'];
 $describe = trim(($help !== '' ? $id . '-help ' : '') . $id . '-error');
 
-$control = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-[#1A1C1E] placeholder:text-gray-400 '
+$control = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-[#1A1C1E] sm:text-sm pointer-coarse:min-h-11 placeholder:text-gray-400 '
     . 'focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:bg-gray-50 disabled:text-gray-500 '
     . 'aria-[invalid=true]:border-[#C33939] aria-[invalid=true]:ring-[#C33939]/30';
 
@@ -40,6 +50,8 @@ $common = 'id="' . esc($id) . '" name="' . esc($name) . '" aria-describedby="' .
     . ($required ? ' required' : '')
     . ($error !== '' ? ' aria-invalid="true"' : '')
     . ($placeholder !== '' ? ' placeholder="' . esc($placeholder) . '"' : '')
+    . ($inputmode !== '' ? ' inputmode="' . esc($inputmode) . '"' : '')
+    . ($autocomplete !== '' ? ' autocomplete="' . esc($autocomplete) . '"' : '')
     . ($maxlength !== null ? ' maxlength="' . (int) $maxlength . '"' : '')
     . ($attrs !== '' ? ' ' . $attrs : '');
 ?>
@@ -48,7 +60,7 @@ $common = 'id="' . esc($id) . '" name="' . esc($name) . '" aria-describedby="' .
 
     <?php if ($type === 'checkbox'): ?>
 
-        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]" for="<?= esc($id) ?>">
+        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11" for="<?= esc($id) ?>">
             <input type="checkbox" value="1" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" <?= $common ?> <?= $value ? 'checked' : '' ?>>
             <?= esc($label) ?>
         </label>

@@ -158,6 +158,24 @@
 
 @layer components {
     /*
+     * Form grid: one column below a container width of 28rem, two from there. The grid reads the width
+     * of its nearest query container (the dialog body is one; a page form wraps itself in "@container"),
+     * so a form in a narrow dialog stacks even on a wide screen. Spans should use container variants
+     * such as "@sm:col-span-2".
+     */
+    .form-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    @container (width >= 28rem) {
+        .form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    /*
      * Floating pill scrollbar.
      *
      * The track is fully transparent and the thumb is inset from the gutter
@@ -505,6 +523,7 @@ html[data-theme="dark"] .bg-white\/40 { background-color: rgb(23 27 36 / 0.45); 
 html[data-theme="dark"] .bg-white\/20 { background-color: rgb(23 27 36 / 0.35); }
 html[data-theme="dark"] .bg-gray-50,
 html[data-theme="dark"] .bg-gray-50\/70,
+html[data-theme="dark"] .bg-gray-50\/60,
 html[data-theme="dark"] .bg-\[\#F9F9FC\],
 html[data-theme="dark"] .hover\:bg-gray-50:hover { background-color: var(--dk-raised); }
 html[data-theme="dark"] .bg-gray-100 { background-color: var(--dk-sunken); }
@@ -952,6 +971,45 @@ html[data-theme="dark"] [data-dialog-handle] > span { background-color: var(--dk
 html[data-theme="dark"] [data-dialog-variant="fullscreen"] [data-dialog-header] { border-color: var(--dk-line); }
 html[data-theme="dark"] [data-dialog-panel] { background-color: var(--dk-surface); }
 
+/* Full-screen form dialogs on a phone (components/dialog.php marks the body data-dialog-pin-actions when its one form
+   holds its own buttons). The row holding the submit button becomes the sticky bottom bar, full-bleed over the panel's
+   p-6, carrying the bottom safe area in place of the panel. Cancel buttons below the top bar hide: it has Cancel.
+   Unlayered, so it wins over the pages' utility classes. Without :has() the form simply ends with its buttons. */
+@media (width < 40rem) {
+    [data-dialog-pin-actions],
+    [data-dialog-pin-actions] > form {
+        flex: 1 0 auto;
+    }
+
+    [data-dialog-pin-actions] > form > :has(> button[type="submit"]) {
+        position: sticky;
+        bottom: 0;
+        margin: auto -1.5rem 0;
+        padding: 1rem 1.5rem 0;
+        background-color: #fff;
+        border-top: 1px solid rgb(0 0 0 / 0.1);
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    /* :has() cannot nest, so this spells out "a row with a submit button". */
+    [data-dialog-panel]:has(> [data-dialog-pin-actions] > form > * > button[type="submit"]) {
+        padding-bottom: 0;
+    }
+
+    /* A bare submit button keeps its own look and floats pinned above the home indicator. */
+    [data-dialog-pin-actions] > form > button[type="submit"] {
+        position: sticky;
+        bottom: max(1rem, env(safe-area-inset-bottom));
+        margin-top: auto;
+    }
+
+    [data-dialog-variant="fullscreen"] [data-dialog-body] [data-dialog-close] {
+        display: none;
+    }
+}
+
+html[data-theme="dark"] [data-dialog-pin-actions] > form > :has(> button[type="submit"]) { background-color: var(--dk-surface); border-color: var(--dk-line); }
+
 /* Side menus at lg to xl: the <nav> is a sticky 72px slot, and its panel is 256px over the page when peeked
    and 72px as the rail (the same selectors as the rail: variant above), so <main> never moves.
    Enter springs, exit is quick. */
@@ -1012,4 +1070,108 @@ html[data-theme="dark"] [data-menu-tile]:not([aria-current], :hover) { backgroun
         max-height: min(60dvh, 28rem);
         overflow-y: auto;
     }
+}
+
+/* Phone list rows of components/data-table.php (below md). A row is a two-line grid: the tick box and
+   the avatar, the primary text over the status and the secondary text, then the actions. The cells say
+   where they go with data-role; a cell without one is max-md:hidden in the markup. Each <tbody> is a
+   white panel (its classes); the wrapper's own card is dropped below. */
+@layer components {
+    @media (width < 48rem) {
+        [data-phone-rows] [data-row] {
+            display: grid;
+            grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+            grid-template-areas:
+                "select avatar primary primary actions"
+                "select avatar status secondary actions";
+            align-items: center;
+            padding: 0.625rem 1rem;
+        }
+
+        [data-phone-rows] [data-row] > [data-role="select"] { grid-area: select; }
+        [data-phone-rows] [data-row] > [data-role="avatar"] { grid-area: avatar; margin-right: 0.75rem; }
+        [data-phone-rows] [data-row] > [data-role="primary"] { grid-area: primary; }
+        [data-phone-rows] [data-row] > [data-role="status"] { grid-area: status; margin-top: 0.125rem; margin-right: 0.5rem; }
+        [data-phone-rows] [data-row] > [data-role="secondary"] { grid-area: secondary; margin-top: 0.125rem; }
+        [data-phone-rows] [data-row] > [data-role="actions"] { grid-area: actions; }
+        [data-phone-rows] [data-row] > [data-role="more"] { grid-area: actions; }
+    }
+}
+
+/* The row-actions sheet (components/data-table.php, shared/row-actions.js). The row's own action links
+   and buttons are moved in as they are, so this is unlayered to undo their table spacing: no side
+   margins, finger-sized on touch, and the destructive one under a divider (it keeps its red text). */
+[data-row-actions-slot] > * { margin-inline: 0; }
+
+/* Every control, however deep in the caller's spans and forms (tick boxes and radios keep their size).
+   Layered, so a control's own display utility (hidden, sm:hidden, block) still wins. */
+@layer components {
+    @media (pointer: coarse) {
+        :is([data-row-actions-slot], [data-row-actions-fields]) :is(a, button, summary, [role="button"], input:not([type="hidden"], [type="checkbox"], [type="radio"]), select) {
+            min-height: 2.75rem;
+            min-width: 2.75rem;
+            display: inline-flex;
+            align-items: center;
+        }
+    }
+}
+
+[data-row-actions-slot] :is([data-destructive], :is(a, button).text-\[\#C33939\]) {
+    width: 100%;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--color-gray-100, #f3f4f6);
+    padding-top: 0.75rem;
+    text-align: left;
+}
+
+html[data-theme="dark"] [data-row-actions-slot] :is([data-destructive], :is(a, button).text-\[\#C33939\]) { border-top-color: var(--dk-line); }
+
+/* Outside the layers and after the dark surfaces: on a phone the panels are the cards, so the wrapper
+   (a plain .bg-white card from md up) has no surface of its own, in either theme. The selector (0,4,2)
+   outranks the admin-flat outline and min-height and the page panel's card outline (up to 0,4,1). */
+@media (width < 48rem) {
+    html body [data-table][data-phone-rows].bg-white.shadow-sm {
+        min-height: 0;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background-color: transparent;
+        box-shadow: none;
+    }
+
+    html[data-theme="dark"] [data-phone-rows] [data-row] > [data-role="secondary"] { color: var(--dk-text-muted); }
+}
+
+/* Grid-table scroller (shared/scroll-x.js). The edge fades are a mask on the scroller, so they work on any
+   surface in both themes; with a pinned first column the start edge is the column's own shadow instead. */
+@layer components {
+    [data-scroll-x] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        --fade-start: 0px;
+        --fade-end: 0px;
+    }
+
+    [data-scroll-x][data-fade-start]:not([data-sticky-first]) { --fade-start: 1.5rem; }
+    [data-scroll-x][data-fade-end] { --fade-end: 1.5rem; }
+
+    [data-scroll-x]:is([data-fade-start]:not([data-sticky-first]), [data-fade-end]) {
+        mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+    }
+
+    [data-scroll-x][data-sticky-first][data-fade-start] tr:not([data-roles-section-head]) > :first-child {
+        box-shadow: 6px 0 8px -6px rgb(0 0 0 / 0.25);
+    }
+
+    @media (pointer: coarse) {
+        [data-scroll-x] :is(button, a, select, input:not([type="hidden"], [type="checkbox"], [type="radio"])) {
+            min-height: 2.75rem;
+            min-width: 2.75rem;
+        }
+    }
+}
+
+html[data-theme="dark"] [data-scroll-x][data-sticky-first][data-fade-start] tr:not([data-roles-section-head]) > :first-child {
+    box-shadow: 6px 0 8px -6px rgb(0 0 0 / 0.6);
 }

@@ -23,13 +23,22 @@ $sticky ??= true;
 $last = count($crumbs) - 1;
 ?>
 
-<nav aria-label="Breadcrumb" <?= $sticky ? 'class="sticky-bar-top lg:-mb-4 lg:pb-4" data-sticky-breadcrumb' : '' ?>>
+<nav aria-label="Breadcrumb" class="group/crumbs<?= $sticky ? ' sticky-bar-top lg:-mb-4 lg:pb-4' : '' ?>" <?= $sticky ? 'data-sticky-breadcrumb' : '' ?>>
 
-    <ol class="flex flex-wrap items-center gap-x-2 text-sm">
+    <?php // Below sm each crumb is still rendered once: earlier ones hide behind an ellipsis whose <details> reveals them via :has() (no script). The group is named, so an open <details> in an outer `group` (a data-menu dropdown) cannot reveal them. ?>
+    <ol class="flex flex-nowrap items-center gap-x-2 text-sm sm:flex-wrap">
+
+        <?php if ($last > 0): ?>
+            <li class="flex items-center sm:hidden">
+                <details>
+                    <summary class="cursor-pointer list-none rounded px-1 font-medium text-[#646464] pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:justify-center [&::-webkit-details-marker]:hidden" aria-label="Show the full path">&hellip;</summary>
+                </details>
+            </li>
+        <?php endif; ?>
 
         <?php foreach ($crumbs as $index => $crumb): ?>
 
-            <li class="flex items-center gap-2">
+            <li class="<?= $index < $last ? 'max-sm:hidden max-sm:group-has-[details[open]]/crumbs:flex ' : '' ?>flex min-w-0 items-center gap-2">
 
                 <?php if ($index > 0): ?>
                     <svg class="h-5 w-4 shrink-0 text-[#767676]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -39,7 +48,7 @@ $last = count($crumbs) - 1;
 
                 <?php if ($index === $last): ?>
 
-                    <span class="font-medium text-[#1A1C1E]" aria-current="page"><?= esc($crumb['label']) ?></span>
+                    <span class="truncate font-medium text-[#1A1C1E]" aria-current="page"><?= esc($crumb['label']) ?></span>
 
                 <?php elseif (!empty($crumb['attrs'])): ?>
 

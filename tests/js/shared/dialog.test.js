@@ -728,3 +728,65 @@ describe("review fixes", () => {
         expect(document.getElementById("s").hidden).toBe(false);
     });
 });
+
+describe("returning focus", () => {
+    const FALLBACK = `
+        <button id="back">Back</button>
+        <button id="opener" data-return-focus="back">Open</button>
+        <div id="d" data-dialog hidden class="hidden"><button id="x" data-dialog-close>Close</button></div>`;
+
+    it("focuses the opener's fallback when the opener is hidden", () => {
+        page(FALLBACK);
+        const opener = document.getElementById("opener");
+        const dialog = createDialog(document.getElementById("d"));
+
+        dialog.open(opener);
+        opener.checkVisibility = () => false;
+        dialog.close();
+
+        expect(document.activeElement.id).toBe("back");
+    });
+
+    it("focuses the fallback when the opener left the page", () => {
+        page(FALLBACK);
+        const opener = document.getElementById("opener");
+        const dialog = createDialog(document.getElementById("d"));
+
+        dialog.open(opener);
+        opener.remove();
+        dialog.close();
+
+        expect(document.activeElement.id).toBe("back");
+    });
+
+    it("still focuses a visible opener, fallback or not", () => {
+        page(FALLBACK);
+        const opener = document.getElementById("opener");
+        const dialog = createDialog(document.getElementById("d"));
+
+        dialog.open(opener);
+        dialog.close();
+
+        expect(document.activeElement).toBe(opener);
+    });
+
+    it("an instant close cuts short an exit already running", () => {
+        page(FALLBACK);
+        const el = document.getElementById("d");
+        const dialog = createDialog(el);
+        const closed = vi.fn();
+        el.addEventListener("dialog:close", closed);
+        el.getAnimations = () => [{ finished: new Promise(() => {}) }];
+
+        dialog.open(document.getElementById("opener"));
+        dialog.close();
+        expect(el.dataset.state).toBe("closing");
+
+        dialog.close({ instant: true });
+
+        expect(el.hidden).toBe(true);
+        expect(dialog.isOpen()).toBe(false);
+        expect(closed).toHaveBeenCalledTimes(1);
+        expect(document.body.classList.contains("overflow-hidden")).toBe(false);
+    });
+});

@@ -206,7 +206,7 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
                 . '<input type="hidden" name="reason" value="other">'
                 . '<div class="flex justify-end gap-3"><button type="button" data-dialog-close class="' . esc($ghost, 'attr') . '">Cancel</button><button type="submit" class="' . esc($primary, 'attr') . '">Continue</button></div></form>';
             ?>
-            <?= view('components/dialog', ['id' => 'follow-up-pick', 'title' => 'New follow-up', 'body' => $pick, 'size' => 'sm'], ['saveData' => false]) ?>
+            <?= view('components/dialog', ['id' => 'follow-up-pick', 'title' => 'New follow-up', 'body' => $pick, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
 
             <?php if ($prefill !== null): ?>
                 <?php

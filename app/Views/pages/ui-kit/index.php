@@ -212,6 +212,195 @@ $touch   = 'pointer-coarse:min-h-11 pointer-coarse:min-w-11';
         </div>
 
 <?php
+// The Components showcase: the shared components as phones, tablets and laptops get them (responsive.spec.js).
+$learners = [
+    ['id' => 11, 'name' => 'Ann Reyes',     'program' => 'BS Computer Science',       'status' => 'Active',      'email' => 'ann.reyes@example.edu',     'seen' => 'Today, 9:41 AM', 'group' => 'Section A'],
+    ['id' => 12, 'name' => 'Ben Santos',    'program' => 'BS Information Technology', 'status' => 'Invited',     'email' => 'ben.santos@example.edu',    'seen' => 'Never',          'group' => 'Section A'],
+    ['id' => 13, 'name' => 'Carla Mendoza', 'program' => 'BS Computer Science',       'status' => 'Active',      'email' => 'carla.mendoza@example.edu', 'seen' => 'Yesterday',      'group' => 'Section B'],
+    ['id' => 14, 'name' => 'Dan Cruz',      'program' => 'BS Data Science',           'status' => 'Deactivated', 'email' => 'dan.cruz@example.edu',      'seen' => '12 Oct 2026',    'group' => 'Section B'],
+];
+
+$learnerRows = [];
+
+foreach ($learners as $learner) {
+    $learnerRows[] = [
+        'id'      => $learner['id'],
+        'label'   => $learner['name'],
+        'group'   => $learner['group'],
+        'cells'   => [
+            'name'    => $learner['name'],
+            'program' => $learner['program'],
+            'status'  => ['html' => view('components/status-badge', ['label' => $learner['status'], 'tone' => $tones[$learner['status']]], ['saveData' => false])],
+            'email'   => $learner['email'],
+            'seen'    => $learner['seen'],
+        ],
+        'actions' => '<button type="button" class="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand/10 ' . $touch . '">Send a message</button> '
+            . '<button type="button" class="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-semibold text-[#C33939] hover:bg-[#C33939]/10 ' . $touch . '">Remove from section</button>',
+    ];
+}
+
+$gridRoles = [
+    'institutional_admin' => 'Institution administrator',
+    'dean'                => 'Dean',
+    'chairperson'         => 'Chairperson',
+    'instructor'          => 'Instructor',
+    'student'             => 'Student',
+    'parent'              => 'Parent',
+];
+$gridSections = [
+    'Courses' => [
+        'courses.view'   => 'See courses and what is in them',
+        'courses.manage' => 'Add and change course content',
+        'grading.manage' => 'Grade work and release marks',
+    ],
+    'People and messages' => [
+        'people.view'   => 'See the people of the institution',
+        'messages.use'  => 'Send and read messages',
+        'children.view' => "Follow a child's courses and grades",
+    ],
+];
+$gridNow = [
+    'institutional_admin' => ['courses.view', 'people.view', 'messages.use'],
+    'dean'                => ['courses.view', 'messages.use'],
+    'chairperson'         => ['courses.view', 'courses.manage', 'grading.manage', 'messages.use'],
+    'instructor'          => ['courses.view', 'courses.manage', 'grading.manage', 'messages.use'],
+    'student'             => ['courses.view', 'messages.use'],
+    'parent'              => ['children.view', 'messages.use'],
+];
+// One difference from the defaults, so a cell shows its "Edited" mark.
+$gridDefault = array_merge($gridNow, ['dean' => ['courses.view']]);
+
+$personFields = static fn (): string => view('components/form-field', ['name' => 'given_name', 'label' => 'First name', 'autocomplete' => 'given-name'], ['saveData' => false])
+    . view('components/form-field', ['name' => 'family_name', 'label' => 'Last name', 'autocomplete' => 'family-name'], ['saveData' => false])
+    . view('components/form-field', ['name' => 'email', 'label' => 'Email', 'type' => 'email'], ['saveData' => false])
+    . view('components/form-field', ['name' => 'student_number', 'label' => 'Student number', 'inputmode' => 'numeric'], ['saveData' => false]);
+?>
+
+        <section class="flex flex-col gap-fluid" data-kit="components">
+            <h3 class="text-base font-bold text-brand">Components</h3>
+
+            <div class="flex flex-col gap-3" data-kit="people">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">A grouped list with row actions</h4>
+                <?= view('components/data-table', [
+                    'id'      => 'kit-people',
+                    'caption' => 'Students by section',
+                    'columns' => [
+                        ['key' => 'name', 'label' => 'Name'],
+                        ['key' => 'program', 'label' => 'Program'],
+                        ['key' => 'status', 'label' => 'Status'],
+                        ['key' => 'email', 'label' => 'Email', 'priority' => 2],
+                        ['key' => 'seen', 'label' => 'Last active', 'priority' => 3],
+                    ],
+                    'rows'    => $learnerRows,
+                ], ['saveData' => false]) ?>
+                <?= view('components/pagination', ['page' => 3, 'pages' => 9, 'total' => 214, 'baseUrl' => site_url('ui-kit')], ['saveData' => false]) ?>
+            </div>
+
+            <div class="flex flex-col gap-3" data-kit="grid">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">A wide grid that scrolls under its first column</h4>
+                <?= view('components/permission-grid', [
+                    'roleTitles'     => $gridRoles,
+                    'sections'       => $gridSections,
+                    'lockedRole'     => '',
+                    'currentMatrix'  => $gridNow,
+                    'defaultMatrix'  => $gridDefault,
+                    'gridAction'     => site_url('ui-kit'),
+                    'gridReadOnly'   => false,
+                    'gridScrollable' => false,
+                ], ['saveData' => false]) ?>
+            </div>
+
+            <div class="flex flex-col gap-3" data-kit="form-dialog">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">A form dialog and a confirm</h4>
+                <p class="max-w-reading text-sm text-[#646464]">On a phone the form fills the screen and its button stays at the bottom; the confirm stays small everywhere.</p>
+                <div class="flex flex-wrap gap-3">
+                    <button type="button" class="<?= $primary ?> <?= $touch ?>" data-dialog-open="kit-comp-form">New course</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3" data-kit="forms">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">One form in a narrow card and in a wide one</h4>
+                <div class="grid gap-fluid lg:grid-cols-[20rem_minmax(0,1fr)]">
+                    <div class="@container rounded-2xl bg-white p-5 shadow-sm" data-kit-form="narrow">
+                        <form method="get" action="<?= site_url('ui-kit') ?>" class="form-grid" aria-label="Student details in a narrow card"><?= $personFields() ?></form>
+                    </div>
+                    <div class="@container rounded-2xl bg-white p-5 shadow-sm" data-kit-form="wide">
+                        <form method="get" action="<?= site_url('ui-kit') ?>" class="form-grid" aria-label="Student details in a wide card"><?= $personFields() ?></form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3" data-kit="stepper">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">Steps</h4>
+                <?= view('components/stepper', ['steps' => ['Choose a file', 'Check the rows', 'Import'], 'current' => 2, 'ariaLabel' => 'Import steps'], ['saveData' => false]) ?>
+            </div>
+
+            <div class="flex flex-col gap-3" data-kit="tabs">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">Tabs</h4>
+                <?= view('components/breadcrumb', ['crumbs' => [['label' => 'Algorithms'], ['label' => 'Modules'], ['label' => 'Week 3: Sorting and searching']], 'sticky' => false], ['saveData' => false]) ?>
+                <?= view('components/tabs', ['ariaLabel' => 'Course sections', 'tabs' => [
+                    ['label' => 'Overview', 'href' => '#kit-overview', 'active' => true],
+                    ['label' => 'Modules', 'href' => '#kit-modules', 'count' => 8],
+                    ['label' => 'Assessments', 'href' => '#kit-assessments', 'count' => 5],
+                    ['label' => 'People', 'href' => '#kit-people', 'count' => 38],
+                    ['label' => 'Grades', 'href' => '#kit-grades'],
+                    ['label' => 'Settings', 'href' => '#kit-settings'],
+                ]], ['saveData' => false]) ?>
+            </div>
+
+            <div class="flex flex-col gap-3" data-kit="cards">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">Cards of two widths</h4>
+                <div class="flex flex-wrap gap-fluid">
+                    <div class="w-52 shrink-0">
+                        <?= view('components/metric-card', ['label' => 'Handed in', 'value' => '31 / 38', 'icon' => 'check', 'detail' => '7 still to come'], ['saveData' => false]) ?>
+                    </div>
+                    <div class="min-w-64 flex-1">
+                        <?= view('components/metric-card', ['label' => 'Class average', 'value' => '84%', 'icon' => 'hat', 'tone' => 'success', 'size' => 'prominent', 'detail' => 'Up 3 points since the midterm'], ['saveData' => false]) ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3" data-kit="empty">
+                <h4 class="text-sm font-semibold text-[#1A1C1E]">Nothing yet</h4>
+                <div class="rounded-2xl bg-white/70">
+                    <?= view('components/empty-state', [
+                        'icon'   => 'user',
+                        'title'  => 'No submissions yet',
+                        'text'   => 'Work that students hand in shows here.',
+                        'action' => '<button type="button" class="' . $second . ' ' . $touch . '">Remind the class</button>',
+                    ], ['saveData' => false]) ?>
+                </div>
+            </div>
+        </section>
+
+<?php
+$visibility = '';
+foreach (['Everyone in the institution', 'Enrolled students', 'Instructors only'] as $choice) {
+    $visibility .= '<button type="button" class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-[#1A1C1E] hover:bg-gray-50 ' . $touch . '">' . esc($choice) . '</button>';
+}
+
+// One form, its buttons inside it, no footer and no top action: on a phone it fills the screen and pins its submit row.
+$courseBody = '<form id="kit-course" method="post" action="' . site_url('ui-kit') . '" data-dialog-form class="flex flex-col gap-4">'
+    . csrf_field()
+    . view('components/form-field', ['name' => 'name', 'label' => 'Course title', 'required' => true], ['saveData' => false])
+    . view('components/form-field', ['name' => 'term', 'label' => 'Term', 'type' => 'select', 'options' => ['1' => 'First term, 2026 to 2027', '2' => 'Second term, 2026 to 2027']], ['saveData' => false])
+    . '<div class="flex flex-col gap-1 text-sm font-medium text-[#1A1C1E]"><span aria-hidden="true">Who can see it</span>'
+    . '<details data-menu class="relative" data-kit-dropdown>'
+    . '<summary class="flex cursor-pointer list-none items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-base font-normal sm:text-sm pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden"><span><span class="sr-only">Who can see it: </span>Enrolled students</span><span aria-hidden="true">&#9662;</span></summary>'
+    . '<div class="absolute inset-x-0 top-full z-10 mt-1 flex flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">' . $visibility . '</div>'
+    . '</details></div>'
+    . view('components/form-field', ['name' => 'description', 'label' => 'Description', 'type' => 'textarea'], ['saveData' => false])
+    . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
+    . '<div class="flex justify-end gap-3">'
+    . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] hover:bg-gray-50 ' . $touch . '">Cancel</button>'
+    . '<button type="submit" class="' . $primary . ' ' . $touch . '">Create course</button>'
+    . '</div>'
+    . '</form>';
+?>
+
+<?= view('components/dialog', ['id' => 'kit-comp-form', 'title' => 'New course', 'body' => $courseBody], ['saveData' => false]) ?>
+
+<?php
 $formBody = '<form id="kit-form-el" method="post" action="' . site_url('ui-kit') . '" data-dialog-form class="flex flex-col gap-4">'
     . csrf_field()
     . view('components/form-field', ['name' => 'name', 'label' => 'Name', 'required' => true, 'help' => 'Leave it empty to see how an error looks.'], ['saveData' => false])

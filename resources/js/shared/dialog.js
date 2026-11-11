@@ -6,6 +6,7 @@
  *   <div data-dialog id="x" hidden role="dialog" aria-modal="true" aria-labelledby="x-title"> ... </div>
  *   <button data-dialog-open="x">   opens it
  *   data-dialog-autoopen              on the dialog: opens it when the page loads
+ *   data-return-focus="y"             on an opener: where focus goes on close if the opener is hidden or gone
  *   <button data-dialog-close>      closes the dialog it sits in
  *   <form data-dialog-form>         submitted without leaving the page (below)
  *   <input data-confirm-match="Ann Lee"> inside a dialog: its
@@ -267,14 +268,25 @@ export function createDialog(el) {
         wanted.focus();
     }
 
-    function close() {
-        if (!open || el.dataset.state === "closing") {
+    // instant: skip the exit animation, for a caller whose next step needs the dialog gone now.
+    // An instant close also cuts short an exit that is already running.
+    function close({ instant = false } = {}) {
+        if (!open) {
+            return;
+        }
+
+        if (el.dataset.state === "closing") {
+            if (instant) {
+                closes++;
+                finishClose();
+            }
+
             return;
         }
 
         el.dataset.state = "closing";
 
-        const animations = typeof el.getAnimations === "function" && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+        const animations = !instant && typeof el.getAnimations === "function" && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
             ? el.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming?.().iterations !== Infinity)
             : [];
 
@@ -305,8 +317,13 @@ export function createDialog(el) {
         el.removeEventListener("keydown", onKeydown);
         el.removeEventListener("click", onClick);
 
-        if (opener && typeof opener.focus === "function") {
-            opener.focus();
+        // An opener that is hidden or gone can't take focus: its data-return-focus names the element that can.
+        const gone = opener && (!opener.isConnected || opener.checkVisibility?.() === false);
+        const fallback = gone && opener.dataset?.returnFocus ? document.getElementById(opener.dataset.returnFocus) : null;
+        const target = fallback ?? opener;
+
+        if (target && typeof target.focus === "function") {
+            target.focus();
         }
 
         opener = null;

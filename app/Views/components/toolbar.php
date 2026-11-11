@@ -47,10 +47,10 @@ $wide     = $inline === '2xl' ? '2xl:col-span-1' : 'xl:col-span-1';
 $tracks   = implode(' ', array_map(static fn (array $f): string => str_contains((string) ($f['span'] ?? ''), 'col-span-2') ? 'minmax(0, 2fr)' : 'minmax(0, 1fr)', $fields));
 $surface  = ($surface ?? 'raised') === 'tinted' ? 'border border-brand/20 bg-brand-tint' : 'bg-white shadow-sm';
 
-$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 ?>
 
-<form method="get" action="<?= esc($action) ?>" role="search" class="grid gap-3 rounded-2xl <?= $surface ?> p-4 sm:grid-cols-2 <?= $columns ?>"<?= $inline !== false ? ' style="--toolbar-cols: ' . esc($tracks) . ' auto"' : '' ?> data-toolbar>
+<form method="get" action="<?= esc($action) ?>" role="search" class="grid gap-3 rounded-2xl <?= $surface ?> p-4 grid-cols-1 sm:grid-cols-2 <?= $columns ?>"<?= $inline !== false ? ' style="--toolbar-cols: ' . esc($tracks) . ' auto"' : '' ?> data-toolbar>
 
     <?php foreach ($hidden as $hiddenName => $hiddenValue): ?>
         <input type="hidden" name="<?= esc((string) $hiddenName) ?>" value="<?= esc((string) $hiddenValue) ?>">
@@ -73,10 +73,10 @@ $input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm fo
         </label>
     <?php endforeach; ?>
 
-    <div class="flex items-end gap-2 sm:col-span-2 <?= $span ?>">
-        <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Apply</button>
+    <div class="flex items-end gap-2 max-sm:flex-col max-sm:items-stretch sm:col-span-2 <?= $span ?>">
+        <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm max-sm:w-full pointer-coarse:min-h-11 font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Apply</button>
         <?php if ($filtered): ?>
-            <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= esc($clearUrl) ?>">Clear</a>
+            <a class="px-2 py-2 text-center text-sm font-semibold text-brand hover:underline pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:justify-center" href="<?= esc($clearUrl) ?>">Clear</a>
         <?php endif; ?>
     </div>
 

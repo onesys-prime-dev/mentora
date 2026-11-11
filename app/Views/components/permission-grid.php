@@ -19,17 +19,19 @@
  */
 $scroll = ! empty($gridScrollable);
 $sticky = $scroll ? 'sticky top-0 z-10 bg-gray-50 ' : '';
+// The pinned first column: opaque (plain bg-white, which dark mode maps) so scrolled cells do not show through.
+$pinned = 'sticky left-0 z-10 bg-white ';
 $th     = $sticky . 'px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[#646464]';
 ?>
 <?php if ($scroll): ?>
-<div class="mt-4 overflow-auto rounded-lg bg-white shadow-sm lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Roles and permissions" data-table>
+<div class="mt-4 overflow-auto rounded-lg bg-white shadow-sm lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Roles and permissions" data-table data-scroll-x data-sticky-first>
 <?php else: ?>
-<div class="mt-6 overflow-x-auto rounded-lg bg-white shadow">
+<div class="mt-6 rounded-lg bg-white shadow" tabindex="0" role="region" aria-label="Roles and permissions" data-scroll-x data-sticky-first>
 <?php endif; ?>
     <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="<?= $scroll ? '' : 'bg-gray-50' ?>">
             <tr>
-                <th class="<?= $sticky ?>px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]">Permission</th>
+                <th class="<?= $scroll ? 'sticky top-0 left-0 z-20 bg-gray-50 ' : 'sticky left-0 z-10 bg-gray-50 ' ?>px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]">Permission</th>
                 <?php foreach ($roleTitles as $role => $roleTitle): ?>
                     <th class="<?= $th ?>">
                         <?= esc($roleTitle) ?>
@@ -51,7 +53,7 @@ $th     = $sticky . 'px-3 py-2 text-center text-xs font-semibold uppercase track
                     }
                     ?>
                     <tr data-roles-row data-search="<?= esc(strtolower($permission . ' ' . $description)) ?>" data-edited="<?= $rowEdited ? '1' : '0' ?>">
-                        <td class="px-3 py-2">
+                        <td class="<?= $pinned ?>px-3 py-2">
                             <span class="font-mono text-xs"><?= esc($permission) ?></span>
                             <span class="block text-xs text-[#646464]"><?= esc($description) ?></span>
                         </td>
@@ -76,7 +78,7 @@ $th     = $sticky . 'px-3 py-2 text-center text-xs font-semibold uppercase track
                                         <input type="hidden" name="granted" value="<?= $has ? '0' : '1' ?>">
                                         <button
                                             type="submit"
-                                            class="h-7 w-7 rounded border <?= $has ? 'border-brand bg-brand text-white' : 'border-gray-300 bg-white text-gray-300' ?> hover:opacity-80"
+                                            class="h-7 w-7 pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded border <?= $has ? 'border-brand bg-brand text-white' : 'border-gray-300 bg-white text-gray-300' ?> hover:opacity-80"
                                             aria-label="<?= esc("{$verb} {$permission} for {$roleTitle}") ?>"
                                             title="<?= esc("{$verb} {$permission} for {$roleTitle}") ?>"><?= $has ? '✓' : '+' ?></button>
                                     </form>

@@ -210,7 +210,7 @@ $settingsForm = '<form data-dialog-form method="post" action="' . site_url('admi
     . '</div></form>';
 ?>
 
-<?= view('components/dialog', ['id' => 'audit-settings', 'title' => 'Display settings', 'body' => $settingsForm], ['saveData' => false]) ?>
+<?= view('components/dialog', ['id' => 'audit-settings', 'title' => 'Display settings', 'body' => $settingsForm, 'variant' => 'default'], ['saveData' => false]) ?>
 
 </div>
 

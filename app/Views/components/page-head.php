@@ -25,7 +25,7 @@ $actions     = $actions ?? '';
 <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
 
     <div class="flex min-w-0 flex-col gap-1">
-        <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
+        <h1 class="flex items-center gap-4 text-fluid-h1 font-bold text-brand">
             <?php if ($icon !== null): ?><?= icon($icon, 'h-6 w-6 shrink-0 text-brand') ?><?php endif; ?>
             <?= esc($title) ?>
         </h1>
@@ -35,7 +35,7 @@ $actions     = $actions ?? '';
     </div>
 
     <?php if ($actions !== ''): ?>
-        <div class="flex flex-wrap items-center gap-3"><?= $actions ?></div>
+        <div class="flex flex-wrap items-center gap-3 max-xs:w-full max-xs:*:basis-full"><?= $actions ?></div>
     <?php endif; ?>
 
 </div>

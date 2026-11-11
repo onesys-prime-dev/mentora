@@ -16,13 +16,15 @@ $ariaLabel = $ariaLabel ?? 'Sections';
 ?>
 
 <nav class="border-b border-gray-200" aria-label="<?= esc($ariaLabel) ?>" data-tabs>
-    <ul class="-mb-px flex flex-wrap gap-1">
+    <?php // One scrolling row below md (scroll-x.js brings the current tab into view); wraps from md up. ?>
+    <div data-scroll-x data-scroll-current class="-mb-px">
+    <ul class="flex flex-nowrap gap-1 md:flex-wrap">
         <?php foreach ($tabs as $tab): ?>
             <?php $active = ! empty($tab['active']); ?>
             <li>
                 <a
                     href="<?= esc($tab['href']) ?>"
-                    class="inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 <?= $active ? 'border-brand text-brand' : 'border-transparent text-[#646464] hover:border-gray-300 hover:text-[#1A1C1E]' ?>"
+                    class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 pointer-coarse:min-h-11 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50 <?= $active ? 'border-brand text-brand' : 'border-transparent text-[#646464] hover:border-gray-300 hover:text-[#1A1C1E]' ?>"
                     <?= $active ? 'aria-current="page"' : '' ?>>
                     <?= esc($tab['label']) ?>
                     <?php if (isset($tab['count']) && $tab['count'] !== null): ?>
@@ -32,4 +34,5 @@ $ariaLabel = $ariaLabel ?? 'Sections';
             </li>
         <?php endforeach; ?>
     </ul>
+    </div>
 </nav>

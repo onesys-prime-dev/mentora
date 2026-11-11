@@ -19,4 +19,4 @@ $reauthBody = '<form method="post" action="' . esc(site_url($reauthAction)) . '"
     . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Confirm</button>'
     . '</div></form>';
 ?>
-<?= view('components/dialog', ['id' => 'reauth-dialog', 'title' => 'Confirm your password', 'body' => $reauthBody, 'size' => 'sm'], ['saveData' => false]) ?>
+<?= view('components/dialog', ['id' => 'reauth-dialog', 'title' => 'Confirm your password', 'body' => $reauthBody, 'size' => 'sm', 'centered' => true], ['saveData' => false]) ?>

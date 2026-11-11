@@ -21,7 +21,7 @@ $classes = match ($tone) {
 };
 ?>
 
-<span class="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-bold <?= $classes ?>">
+<span class="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-bold <?= $classes ?>" data-status-badge>
     <?php if ($icon !== null): ?>
         <?= icon($icon, 'h-3 w-3 text-current') ?>
     <?php endif; ?>
