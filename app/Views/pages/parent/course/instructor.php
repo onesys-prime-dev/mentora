@@ -9,16 +9,16 @@
  */
 ?>
 
-<div class="p-10 flex flex-col gap-8" data-parent-instructor-feed>
+<div class="p-4 sm:p-10 flex flex-col gap-8" data-parent-instructor-feed>
 
     <?= view('components/page-header', ['icon' => 'message', 'title' => 'From the instructor'], ['saveData' => false]) ?>
 
     <?php if ($feed['instructors'] !== []): ?>
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <?php foreach ($feed['instructors'] as $instructor): ?>
                 <button
                     type="button"
-                    class="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="rounded-full bg-brand px-4 py-2 pointer-coarse:min-h-11 text-sm break-words font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50"
                     data-parent-message
                     data-instructor-id="<?= (int) $instructor['id'] ?>"
                     data-child-id="<?= (int) $studentId ?>">
@@ -41,7 +41,7 @@
 
         <div class="flex flex-col gap-4">
             <?php foreach ($feed['posts'] as $post): ?>
-                <article class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm" data-instructor-post="<?= (int) $post['id'] ?>">
+                <article class="rounded-2xl border border-gray-200 bg-white px-4 py-4 sm:px-5 shadow-sm" data-instructor-post="<?= (int) $post['id'] ?>">
                     <p class="text-xs text-[#767676]">
                         <span class="font-semibold text-[#3D3D3D]"><?= esc($post['sender_name']) ?></span>
                         · <?= esc(date('M j, Y g:i A', strtotime((string) $post['created_at']))) ?>

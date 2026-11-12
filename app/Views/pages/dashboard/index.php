@@ -65,6 +65,17 @@ $layouts = [
             ['slug' => 'reminders',      'span' => 'lg:col-span-4'],
             ['slug' => 'quick-access',   'span' => 'lg:col-span-3'],
         ],
+        // Below lg the widgets split into phone tabs (components/phone-tabs); the first tab listed shows first.
+        'phoneTab' => [
+            'key-metrics'           => 'today',
+            'upcoming-tasks'        => 'today',
+            'reminders'             => 'today',
+            'profile-card'          => 'courses',
+            'my-courses'            => 'courses',
+            'quick-access'          => 'courses',
+            'college-announcements' => 'updates',
+            'announcements'         => 'updates',
+        ],
     ],
 
     /*
@@ -96,6 +107,29 @@ $layout = $layouts[$userRole] ?? $layouts['student'];
 
 $identity = $layout['identity'];
 $cells = $layout['cells'];
+// Only a role with its own entry gets phone tabs; chairperson falls back to the student map but has its own layout (Phase 6).
+$phoneTab = isset($layouts[$userRole]) ? ($layout['phoneTab'] ?? []) : [];
+
+// Only "Today" can say something needs doing now; no widget tracks unseen updates, so Updates gets no dot.
+$dueNow = array_filter(
+    $widgets['upcoming-tasks']['tasks'] ?? [],
+    static fn (array $task) => in_array($task['urgency'] ?? '', ['overdue', 'today'], true)
+);
+
+$phoneTabs = [
+    ['key' => 'today',   'label' => 'Today',   'dot' => $dueNow !== []],
+    ['key' => 'courses', 'label' => 'Courses', 'dot' => false],
+    ['key' => 'updates', 'label' => 'Updates', 'dot' => false],
+];
+
+/** The phone-tab panel attributes for a widget slug ('' when this role has no phone tabs). */
+$panel = static function (string $slug) use ($phoneTab): string {
+    if (! isset($phoneTab[$slug])) {
+        return '';
+    }
+
+    return ' data-phone-panel="' . $phoneTab[$slug] . '"' . ($phoneTab[$slug] === 'today' ? ' data-phone-active' : '');
+};
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -104,9 +138,9 @@ $cells = $layout['cells'];
 
 <div class="flex flex-col gap-5 lg:h-full lg:min-h-0">
 
-    <div class="flex justify-between items-center shrink-0">
+    <div class="flex flex-wrap justify-between items-center gap-3 shrink-0">
 
-        <div class="flex items-center gap-3 text-3xl font-display">
+        <div class="flex flex-wrap items-center gap-x-3 text-fluid-h1 lg:text-3xl font-display">
             <?php if ($academic_term !== []): ?>
 
                 <span class="font-bold">
@@ -134,8 +168,19 @@ $cells = $layout['cells'];
 
     </div>
 
+    <?php if ($phoneTab !== []): ?>
+        <?= view('components/phone-tabs', ['label' => 'Dashboard sections', 'tabs' => $phoneTabs], ['saveData' => false]) ?>
+    <?php endif; ?>
+
     <?php if (in_array($userRole, ['student', 'instructor', 'chairperson'], true)): ?>
-        <?= $this->include('pages/dashboard/partials/college-announcements') ?>
+        <?php $collegeStrip = $this->include('pages/dashboard/partials/college-announcements'); ?>
+
+        <?php // The strip prints nothing when there is nothing to say (strip_tags: CI_DEBUG wraps it in view comments); an empty panel would add a gap. ?>
+        <?php if ($panel('college-announcements') !== '' && trim(strip_tags($collegeStrip)) !== ''): ?>
+            <div class="shrink-0"<?= $panel('college-announcements') ?>><?= $collegeStrip ?></div>
+        <?php else: ?>
+            <?= $collegeStrip ?>
+        <?php endif; ?>
     <?php endif; ?>
 
     <!--
@@ -185,12 +230,14 @@ $cells = $layout['cells'];
             <!--
                 Identity column. The first widget is the profile strip and sizes
                 to its content; whatever follows takes the rest of the column.
+                With phone tabs its two widgets sit in different tabs, so below lg the column dissolves
+                (max-lg:contents) and each widget is its own full-width grid item, leaving no empty gap.
             -->
-            <div class="col-span-12 <?= $identity['span'] ?> min-h-0 flex flex-col gap-4">
+            <div class="col-span-12 <?= $identity['span'] ?> min-h-0 flex flex-col gap-4<?= $phoneTab !== [] ? ' max-lg:contents' : '' ?>">
 
                 <?php foreach ($identity['widgets'] as $position => $slug): ?>
 
-                    <div class="<?= $position === 0 ? 'shrink-0' : 'flex-1 min-h-0' ?>">
+                    <div class="<?= $position === 0 ? 'shrink-0' : 'flex-1 min-h-0' ?><?= $phoneTab !== [] ? ' max-lg:col-span-12' : '' ?>"<?= $panel($slug) ?>>
                         <?= $renderWidget($slug) ?>
                     </div>
 
@@ -200,7 +247,7 @@ $cells = $layout['cells'];
 
             <?php foreach ($cells as $cell): ?>
 
-                <div class="col-span-12 <?= $cell['span'] ?> min-h-0">
+                <div class="col-span-12 <?= $cell['span'] ?> min-h-0"<?= $panel($cell['slug']) ?>>
                     <?= $renderWidget($cell['slug']) ?>
                 </div>
 

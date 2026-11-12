@@ -1,7 +1,7 @@
 <?php
 /** Discussions while it loads. Mirrors features/discussions/skeleton.js. */
 ?>
-<div class="flex animate-pulse flex-col gap-6 p-10" aria-hidden="true" data-server-skeleton-shape>
+<div class="flex animate-pulse flex-col gap-6 p-5 sm:p-8 lg:p-10" aria-hidden="true" data-server-skeleton-shape>
 
     <div class="flex flex-col gap-2">
         <div class="flex items-center gap-4">

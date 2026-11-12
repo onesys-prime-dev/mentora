@@ -19,29 +19,29 @@ $formatDuration = static function (int $minutes): string {
 $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 ?>
 
-<div class="p-10 flex flex-col gap-8">
+<div class="p-5 sm:p-8 lg:p-10 flex flex-col gap-8">
 
     <?php $isDraft = $isInstructor && $module['status'] === 'draft'; ?>
     <?php $moduleIsDraft = $module['status'] !== 'published'; ?>
 
     <!-- top bar -->
-    <div class="sticky-bar-top flex items-start justify-between gap-5 pb-6 border-b border-black/10">
+    <div class="sticky-bar-top flex flex-wrap items-start justify-between gap-x-5 gap-y-3 pb-6 border-b border-black/10">
 
-        <div class="flex items-center gap-4">
+        <div class="flex min-w-0 items-center gap-3 sm:gap-4">
 
             <button
                 type="button"
                 data-back-to-modules
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                class="shrink-0 rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 title="Back to Modules" aria-label="Back to Modules">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
 
-            <div class="flex flex-col">
-                <div class="flex items-center gap-2">
-                    <span class="text-2xl font-bold text-brand"><?= esc($module['title']) ?></span>
+            <div class="flex min-w-0 flex-col">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="min-w-0 break-words text-xl sm:text-2xl font-bold text-brand"><?= esc($module['title']) ?></span>
                     <?php if ($isDraft): ?>
                         <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]" data-publish-chip="<?= !empty($module['scheduled_publish_at']) ? 'scheduled' : 'draft' ?>">
                             <?= !empty($module['scheduled_publish_at']) ? 'Scheduled · ' . esc(date('M j, g:i A', strtotime($module['scheduled_publish_at']))) : 'Draft' ?>
@@ -257,7 +257,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                         <div class="w-full flex justify-between items-center">
                                             <div class="flex flex-col gap-1">
 
-                                                <div class="flex items-center gap-4">
+                                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                                                     <span class="text-md <?= !empty($learning_item['is_locked']) ? 'text-[#767676]' : '' ?>">
                                                         <?= esc($learning_item['title']) ?>
                                                     </span>

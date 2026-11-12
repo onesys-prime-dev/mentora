@@ -29,7 +29,7 @@ $chipClasses = static fn (string $tone) => match ($tone) {
     'success' => 'bg-[#E8F5EC] text-[#2E7D4F]',
     'warning' => 'bg-[#FFF1D6] text-[#946200]',
     'danger' => 'bg-red-50 text-red-600',
-    'muted' => 'bg-gray-100 text-gray-500',
+    'muted' => 'bg-gray-100 text-gray-600',
     default => 'bg-[#E0E5F2] text-brand-dark',
 };
 
@@ -52,7 +52,7 @@ if ($isInstructor) {
 ?>
 
 <div
-    class="group flex cursor-pointer items-center justify-between gap-6 rounded-2xl border border-[#A9A9A9]/50 px-8 py-6 outline-none transition-all duration-200
+    class="group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[#A9A9A9]/50 px-4 py-4 outline-none sm:gap-6 sm:px-8 sm:py-6 transition-all duration-200
         hover:border-brand/50 hover:bg-brand/5 hover:shadow-sm
         focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
     role="link"
@@ -62,7 +62,7 @@ if ($isInstructor) {
     data-title="<?= esc(mb_strtolower($a['title'])) ?>"
     data-filter-tags="<?= esc($filterTags) ?>">
 
-    <div class="flex min-w-0 items-center gap-5">
+    <div class="flex min-w-0 items-center gap-3 sm:gap-5">
 
         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-3 border-brand">
             <?= learning_item_icon($a['assessment_type'], 'h-5 w-5 text-brand') ?>
@@ -70,9 +70,9 @@ if ($isInstructor) {
 
         <div class="flex min-w-0 flex-col">
 
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
 
-                <span class="truncate text-lg font-bold text-[#646464]">
+                <span class="max-w-full truncate text-lg font-bold text-[#646464]">
                     <?= esc($a['title']) ?>
                 </span>
 
@@ -172,7 +172,7 @@ if ($isInstructor) {
 
             <!-- The previous grade stands until the resubmission is graded. -->
             <span
-                class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-bold text-gray-500"
+                class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-bold text-gray-600"
                 title="Grade for your previous submission">
                 <?= esc((int) $student['score']) ?>/<?= esc($totalPoints) ?>
             </span>

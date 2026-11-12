@@ -1,10 +1,10 @@
 
 
-<div class="flex">
+<div class="flex flex-col lg:flex-row">
 
     <?= $this->include('pages/courses/features/modules/partials/learning-item-panel') ?>
 
-    <div class="flex min-w-0 flex-1 flex-col p-10">
+    <div class="flex min-w-0 flex-1 flex-col p-5 sm:p-8 lg:p-10">
 
         <?= $this->include('pages/courses/features/modules/partials/breadcrumb') ?>
 
@@ -12,7 +12,7 @@
 
             <div class="flex flex-1">
 
-                <section class="flex min-w-0 flex-1 gap-12 py-6">
+                <section class="flex min-w-0 flex-1 flex-col gap-5 py-6 xl:flex-row xl:gap-12">
 
                     <div class="flex min-w-0 flex-1 flex-col gap-5">
 

@@ -119,7 +119,7 @@ $cards[] = [
                 </span>
 
                 <?php foreach ($card['lines'] as $line): ?>
-                    <span class="text-md text-black break-words">
+                    <span class="text-md text-[#1A1C1E] break-words">
                         <?= esc($line) ?>
                     </span>
                 <?php endforeach; ?>

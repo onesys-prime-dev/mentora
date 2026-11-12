@@ -1,8 +1,8 @@
-<div class="flex">
+<div class="flex flex-col lg:flex-row">
 
     <?= $this->include('pages/courses/features/modules/partials/learning-item-panel') ?>
 
-    <div class="flex min-w-0 flex-1 flex-col p-10">
+    <div class="flex min-w-0 flex-1 flex-col p-5 sm:p-8 lg:p-10">
 
         <div class="sticky-bar-top flex items-center justify-between border-b border-gray-200 pb-4">
 

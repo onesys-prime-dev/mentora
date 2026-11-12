@@ -14,7 +14,7 @@ $metrics ??= [];
 $columns = count($metrics) >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3';
 ?>
 
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 <?= $columns ?>">
+<div class="grid grid-cols-2 gap-3 sm:gap-4 <?= $columns ?>">
 
     <?php foreach ($metrics as $metric): ?>
         <?= view('components/metric-card', $metric, ['saveData' => false]) ?>

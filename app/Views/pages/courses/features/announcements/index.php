@@ -7,7 +7,7 @@ $nextPage = $nextPage ?? 2;
 $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
 ?>
 
-<div class="flex flex-col gap-6 p-10" data-announcements-page>
+<div class="flex flex-col gap-6 p-5 sm:p-8 lg:p-10" data-announcements-page>
 
     <?= view('components/page-header', ['icon' => 'announcement', 'title' => 'Announcements'], ['saveData' => false]) ?>
 

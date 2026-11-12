@@ -91,7 +91,7 @@ $percent = static fn (?float $value): ?string => $value === null ? null : number
                                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                     <h3 class="text-sm font-bold text-[#1A1C1E] sm:text-base">
                                         <?php if (! $row['withdrawn']): ?>
-                                            <a href="<?= esc($courseBase . '/' . $id . '/' . $row['slug'], 'attr') ?>" class="rounded hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2" data-course-link><?= esc($name) ?> · <?= esc($row['course_title']) ?></a>
+                                            <a href="<?= esc($courseBase . '/' . $id . '/' . $row['slug'], 'attr') ?>" class="inline-block rounded pointer-coarse:py-3 hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2" data-course-link><?= esc($name) ?> · <?= esc($row['course_title']) ?></a>
                                         <?php else: ?>
                                             <?= esc($name) ?> · <?= esc($row['course_title']) ?>
                                         <?php endif; ?>
@@ -102,7 +102,7 @@ $percent = static fn (?float $value): ?string => $value === null ? null : number
                                 </div>
                                 <p class="mt-1 text-xs text-[#646464]"><?= esc(implode(' · ', $meta)) ?></p>
                                 <?php if (($reportBase ?? null) !== null && $row['finalized'] && ! $row['withdrawn']): ?>
-                                    <a href="<?= esc($reportBase . '/' . $id . '/grades/report/mine', 'attr') ?>" class="mt-2 inline-flex items-center gap-1.5 rounded text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2" data-report-link><?= icon('grades', 'h-3.5 w-3.5 text-current') ?>Download report</a>
+                                    <a href="<?= esc($reportBase . '/' . $id . '/grades/report/mine', 'attr') ?>" class="mt-2 inline-flex items-center gap-1.5 rounded text-xs pointer-coarse:min-h-11 font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2" data-report-link><?= icon('grades', 'h-3.5 w-3.5 text-current') ?>Download report</a>
                                 <?php endif; ?>
                             </div>
 
@@ -129,13 +129,13 @@ $percent = static fn (?float $value): ?string => $value === null ? null : number
 
                         <?php if ($expandable): ?>
                             <button type="button" data-disclosure aria-expanded="false" aria-controls="grades-breakdown-<?= $id ?>"
-                                class="group flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand-tint">
+                                class="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 aria-expanded:bg-brand-tint">
                                 <span class="sr-only">Grade details for <?= esc($name) ?></span>
                                 <svg class="h-5 w-5 transition-transform group-aria-expanded:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
                             </button>
                         <?php else: ?>
                             <?php // Keeps the columns of every row in line. ?>
-                            <span class="hidden h-10 w-10 shrink-0 sm:block" aria-hidden="true"></span>
+                            <span class="hidden h-11 w-11 shrink-0 sm:block" aria-hidden="true"></span>
                         <?php endif; ?>
 
                     </div>

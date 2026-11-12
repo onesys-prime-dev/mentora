@@ -2,7 +2,23 @@
 
     .reading-content {
 
-        @apply text-base leading-8 text-[#565656];
+        @apply max-w-full text-base leading-8 text-[#565656] wrap-anywhere;
+
+    }
+
+    /* Wide authored content scrolls inside its own box instead of widening the page. */
+    .reading-content table,
+    .reading-content pre {
+
+        @apply block max-w-full overflow-x-auto;
+
+    }
+
+    .reading-content img,
+    .reading-content iframe,
+    .reading-content video {
+
+        @apply h-auto max-w-full;
 
     }
 

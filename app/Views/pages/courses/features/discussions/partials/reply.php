@@ -6,7 +6,7 @@ $isAnswer = !empty($reply['is_answer']);
 ?>
 
 <article
-    class="group relative flex flex-col gap-3 rounded-2xl border bg-white px-6 py-4 <?= $isAnswer ? 'border-[#2E7D4F]/50 bg-[#E8F5EC]/40' : 'border-gray-200' ?>"
+    class="group relative flex flex-col gap-3 rounded-2xl border bg-white px-4 py-4 sm:px-6 <?= $isAnswer ? 'border-[#2E7D4F]/50 bg-[#E8F5EC]/40' : 'border-gray-200' ?>"
     data-reply
     data-reactions
     data-reply-id="<?= esc($reply['id']) ?>">

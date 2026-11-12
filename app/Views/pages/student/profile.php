@@ -24,7 +24,7 @@
         'backLabel'   => 'Back to dashboard',
     ], ['saveData' => false]) ?>
 
-    <section class="flex max-w-2xl flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="student-account" data-student-account>
+    <section class="flex max-w-2xl flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm sm:p-6" aria-labelledby="student-account" data-student-account>
         <h2 id="student-account" class="text-sm font-bold text-brand">Your account</h2>
 
         <dl class="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-[9rem_1fr]">
@@ -41,7 +41,7 @@
         <p class="text-xs text-[#646464]">To change any of these, contact your school.</p>
     </section>
 
-    <section class="flex max-w-2xl flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="student-parents" data-student-parents>
+    <section class="flex max-w-2xl flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:p-6" aria-labelledby="student-parents" data-student-parents>
         <h2 id="student-parents" class="text-sm font-bold text-brand">Parents who can see your progress</h2>
 
         <?php if ($parentNames === []): ?>

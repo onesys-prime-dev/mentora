@@ -56,6 +56,7 @@ $offering = $report['offering'];
 <?php endif; ?>
 
 <h2>How the grade is made up</h2>
+<div data-scroll-x style="overflow-x:auto">
 <table>
     <thead><tr><th>Category</th><th class="num">Weight</th><?php if ($showItems): ?><th class="num">Points</th><?php endif; ?><th class="num">Percentage</th></tr></thead>
     <tbody>
@@ -71,9 +72,11 @@ $offering = $report['offering'];
         <?php endforeach; ?>
     </tbody>
 </table>
+</div>
 
 <?php if ($showItems): ?>
 <h2>Scores</h2>
+<div data-scroll-x style="overflow-x:auto">
 <table>
     <thead><tr><th>Item</th><th>Category</th><th class="num">Score</th></tr></thead>
     <tbody>
@@ -90,6 +93,7 @@ $offering = $report['offering'];
         <?php endforeach; ?>
     </tbody>
 </table>
+</div>
 <?php endif; ?>
 
 </body>

@@ -32,12 +32,12 @@ $reason   = $tag === 'INC' ? trim((string) ($summary['inc_reason'] ?? '')) : '';
 
     <?php else: ?>
 
-        <div class="overflow-x-auto rounded-xl border border-[#A9A9A9]/50">
+        <div class="rounded-xl border border-[#A9A9A9]/50" tabindex="0" role="region" aria-label="Grade breakdown" data-scroll-x data-sticky-first>
             <table class="w-full min-w-[20rem] text-left text-sm" data-grades-breakdown>
                 <thead class="bg-[#F6F7FA] text-xs font-semibold text-[#646464]">
                     <tr>
                         <?php foreach ($columns as $column): ?>
-                            <th scope="col" class="px-4 py-2.5"><?= esc((string) $column['name']) ?> <?= esc(grade_number($column['weight'])) ?>%</th>
+                            <th scope="col" class="bg-[#F6F7FA] px-4 py-2.5 first:sticky first:left-0 first:z-10"><?= esc((string) $column['name']) ?> <?= esc(grade_number($column['weight'])) ?>%</th>
                         <?php endforeach; ?>
                     </tr>
                 </thead>
@@ -45,9 +45,9 @@ $reason   = $tag === 'INC' ? trim((string) ($summary['inc_reason'] ?? '')) : '';
                     <tr class="bg-white">
                         <?php foreach ($columns as $column): ?>
                             <?php if ($column['percentage'] === null): ?>
-                                <td class="px-4 py-3 text-[#767676]"><?= esc($shown(null)) ?></td>
+                                <td class="bg-white px-4 py-3 text-[#767676] first:sticky first:left-0 first:z-10"><?= esc($shown(null)) ?></td>
                             <?php else: ?>
-                                <td class="px-4 py-3 font-bold text-[#1A1C1E]"><?= esc($shown($column['percentage'])) ?></td>
+                                <td class="bg-white px-4 py-3 font-bold text-[#1A1C1E] first:sticky first:left-0 first:z-10"><?= esc($shown($column['percentage'])) ?></td>
                             <?php endif; ?>
                         <?php endforeach; ?>
                     </tr>
@@ -59,7 +59,7 @@ $reason   = $tag === 'INC' ? trim((string) ($summary['inc_reason'] ?? '')) : '';
 
             <div class="flex flex-col gap-3">
                 <button type="button" data-categories-toggle aria-expanded="false"
-                    class="self-start rounded text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Show categories</button>
+                    class="self-start rounded py-2 text-sm pointer-coarse:min-h-11 font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Show categories</button>
 
                 <div class="flex flex-col gap-3" data-categories hidden>
                     <?php foreach ($periods as $period): ?>
@@ -95,7 +95,7 @@ $reason   = $tag === 'INC' ? trim((string) ($summary['inc_reason'] ?? '')) : '';
             <?php endif; ?>
         </div>
 
-        <a href="<?= esc($courseUrl, 'attr') ?>" class="rounded text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Open course grades →</a>
+        <a href="<?= esc($courseUrl, 'attr') ?>" class="inline-flex items-center rounded text-sm pointer-coarse:min-h-11 font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Open course grades →</a>
     </div>
 
 </div>

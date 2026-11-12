@@ -4,7 +4,7 @@
  * Markup contract:
  *   <div data-scroll-x tabindex="0" role="region" aria-label="…"><table>…</table></div>   (the three attributes belong on a table scroller; a tab strip inside a labelled nav omits them)
  *   data-sticky-first   optional: the first column is pinned (its cells carry sticky left-0 and an opaque bg)
- *   data-scroll-current optional: on init, centre the [aria-current="page"] inside (a tab strip; components/tabs sets it)
+ *   data-scroll-current optional: on init, centre the [aria-current="page"|"date"] or [aria-selected="true"] inside (a tab strip, today's schedule column)
  *
  * Sets data-fade-start / data-fade-end on the scroller while there is more content before / after the
  * visible part; app.css turns them into edge fades. Re-measures on scroll and on size changes, and is
@@ -44,18 +44,31 @@ export function bindScrollX(root = document) {
         measure(el);
 
         // A tab strip (data-scroll-current, set by components/tabs) opens on its current tab; other scrollers never jump.
-        // Computed on the scroller itself so the page never moves (scrollIntoView would scroll ancestors too),
-        // from bounding boxes because offsetLeft is against the offset parent, not the scroller.
-        const current = el.hasAttribute("data-scroll-current") ? el.querySelector('[aria-current="page"]') : null;
-
-        if (current) {
-            const box = el.getBoundingClientRect();
-            const cur = current.getBoundingClientRect();
-            const left = cur.left - box.left + el.scrollLeft;
-            const max = Math.max(0, el.scrollWidth - el.clientWidth);
-            el.scrollLeft = Math.min(max, Math.max(0, left - (el.clientWidth - cur.width) / 2));
+        if (el.hasAttribute("data-scroll-current")) {
+            centreCurrent(el);
         }
     }
+}
+
+/**
+ * Scrolls a strip so its current tab ([aria-current="page"] link or [aria-selected="true"] tab) is centred.
+ * Computed on the scroller itself so the page never moves (scrollIntoView would scroll ancestors too),
+ * from bounding boxes because offsetLeft is against the offset parent, not the scroller.
+ * Exported for strips whose current tab changes without a reload (the course feature tabs).
+ */
+export function centreCurrent(el) {
+    const current = el.querySelector('[aria-current="page"], [aria-current="date"], [aria-selected="true"]');
+
+    if (!current) {
+        return;
+    }
+
+    const box = el.getBoundingClientRect();
+    const cur = current.getBoundingClientRect();
+    const left = cur.left - box.left + el.scrollLeft;
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    el.scrollLeft = Math.min(max, Math.max(0, left - (el.clientWidth - cur.width) / 2));
+    measure(el);
 }
 
 if (typeof document !== "undefined") {

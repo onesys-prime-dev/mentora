@@ -7,6 +7,7 @@ import "./shared/profile-menu";
 import "./shared/app-menu";
 import "./shared/institution-menu";
 import "./shared/details-menu";
+import "./shared/contents-menu";
 import "./shared/notifications-menu";
 import "./shared/notification-toast";
 import "./shared/role-switch";
@@ -22,6 +23,7 @@ import "./shared/student-autocomplete";
 import "./shared/data-table";
 import "./shared/row-actions";
 import "./shared/scroll-x";
+import "./shared/phone-tabs";
 import "./shared/spa/page-progress";
 import "./shared/messages-badge";
 

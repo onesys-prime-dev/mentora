@@ -7,7 +7,7 @@
  */
 ?>
 
-<section class="flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="parent-deadlines" data-parent-deadlines>
+<section class="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:p-6" aria-labelledby="parent-deadlines" data-parent-deadlines>
     <h2 id="parent-deadlines" class="text-sm font-bold text-brand">Coming up in the next 14 days</h2>
 
     <?php if ($deadlines === []): ?>

@@ -1,5 +1,9 @@
 <?php
 
+// The learning item stacks this panel under the item below xl (detail-panel passes these two).
+$panelClass ??= 'w-1/5';
+$scoreBoxClass ??= 'aspect-square';
+
 $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'instructor' : esc($user->getGroups()[0] ?? '');
 
 $isInstructor = $userRole === 'instructor';
@@ -79,7 +83,7 @@ if ($isGraded && $scoreResult !== null) {
 
 <?php if ($hasStudentContext): ?>
 
-    <div class="w-1/5 flex flex-col gap-8">
+    <div class="<?= $panelClass ?> flex flex-col gap-8">
 
         <!-- Score -->
         <div class="flex flex-col gap-3">
@@ -94,7 +98,7 @@ if ($isGraded && $scoreResult !== null) {
 
             <?php if ($isGraded): ?>
 
-                <div class="w-full aspect-square p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
+                <div class="w-full <?= $scoreBoxClass ?> p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
 
                     <span class="font-bold text-4xl text-brand">
                         <?= esc((int) $scored['score']) ?>/<?= esc((int) $totalPoints) ?>
@@ -113,7 +117,7 @@ if ($isGraded && $scoreResult !== null) {
             <?php elseif (!empty($scoreResult['partial'])): ?>
 
                 <!-- Auto-graded part of a quiz; essays / uploads still being graded -->
-                <div class="w-full aspect-square p-10 flex flex-col justify-center items-center bg-[#FFF8E6] border-1 border-[#FFE3A3] rounded-2xl gap-2">
+                <div class="w-full <?= $scoreBoxClass ?> p-10 flex flex-col justify-center items-center bg-[#FFF8E6] border-1 border-[#FFE3A3] rounded-2xl gap-2">
 
                     <span class="font-bold text-4xl text-[#946200]">
                         <?= esc((int) $scoreResult['partial']['score']) ?>/<?= esc((int) $totalPoints) ?>
@@ -133,7 +137,7 @@ if ($isGraded && $scoreResult !== null) {
 
             <?php else: ?>
 
-                <div class="w-full aspect-square p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
+                <div class="w-full <?= $scoreBoxClass ?> p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
 
                     <?= icon('no-score', 'h-10 w-10') ?>
 

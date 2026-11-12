@@ -19,6 +19,7 @@ import { csrfExpired } from "../../shared/csrf-expired.js";
 
 import { showLoadError } from "../../shared/spa/error-state.js";
 import { startPageProgress } from "../../shared/spa/page-progress.js";
+import { nextFocus } from "../../shared/dialog.js";
 import { initializeComposerEditor, getComposerEditor, destroyComposerEditor } from "../courses/features/announcements/composer/tiptap.js";
 import { initializeComposerToolbar } from "../courses/features/announcements/composer/toolbar.js";
 import { serializeMessage } from "../courses/features/announcements/composer/serializer.js";
@@ -72,6 +73,9 @@ function initialize()
     bindModal();
 
     render();
+
+    // The server's skeleton is gone: the first paint needs no fetch.
+    document.getElementById("calendar-body").removeAttribute("aria-busy");
 }
 
 /** Instructors and chairpersons both manage deadlines and announcements from the calendar. */
@@ -377,6 +381,9 @@ function renderMonth()
 
     let cellsHtml = "";
 
+    // On a phone a past day opens its Day view (see bindCellClicks), so it is not marked disabled there.
+    const phone = isPhone();
+
     for (let i = 0; i < 42; i++) {
 
         const cellDate = new Date(gridStart);
@@ -392,22 +399,30 @@ function renderMonth()
 
         const overflow = events.length - visible.length;
 
+        // Below md a cell shows its date and a dot per kind of event; the title chips return from md.
         cellsHtml += `
 
         <button
             type="button"
             data-calendar-cell="${dateStr}"
-            ${isPastDay(dateStr) ? 'data-calendar-past aria-disabled="true"' : ""}
-            class="flex h-full min-h-[96px] flex-col items-stretch gap-1 border-b border-r border-[#A9A9A9]/20 p-2 text-left transition ${isPastDay(dateStr) ? "cursor-default" : "hover:bg-brand/5"} ${inMonth ? "" : "bg-black/[0.02]"}">
+            ${isPastDay(dateStr) ? `data-calendar-past${phone ? "" : ' aria-disabled="true"'}` : ""}
+            class="flex h-full min-h-14 md:min-h-[96px] flex-col items-center gap-1 border-b border-r border-[#A9A9A9]/20 p-1 text-left transition md:items-stretch md:p-2 ${isPastDay(dateStr) ? "cursor-default max-md:cursor-pointer" : "hover:bg-brand/5"} ${inMonth ? "" : "bg-black/[0.02]"}">
 
-            <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${sameDay(cellDate, today) ? "bg-brand text-white" : inMonth ? "text-[#646464]" : "text-[#A9A9A9]"}">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${sameDay(cellDate, today) ? "bg-brand text-white" : inMonth ? "text-[#646464]" : "text-[#A9A9A9] max-md:font-normal max-md:text-[#646464]"}">
                 ${cellDate.getDate()}
             </span>
 
-            <div class="flex flex-1 flex-col gap-0.5 overflow-hidden">
+            <div data-calendar-chips class="hidden flex-1 flex-col gap-0.5 overflow-hidden md:flex">
                 ${visible.map(eventChip).join("")}
-                ${overflow > 0 ? `<span class="text-[11px] text-[#878787]">+${overflow} more</span>` : ""}
+                ${overflow > 0 ? `<span class="text-[11px] text-[#646464]">+${overflow} more</span>` : ""}
             </div>
+
+            ${events.length > 0 ? `
+            <span data-calendar-dots class="flex gap-1 md:hidden">
+                ${eventDots(events)}
+                <span class="sr-only">, ${events.length} ${events.length === 1 ? "event" : "events"}</span>
+            </span>
+            ` : ""}
 
         </button>
 
@@ -420,7 +435,7 @@ function renderMonth()
     <div class="grid grid-cols-7 border-t border-l border-[#A9A9A9]/20">
 
         ${DAY_NAMES.map((day) => `
-            <div class="border-b border-r border-[#A9A9A9]/20 bg-black/[0.02] px-2 py-2 text-center text-xs font-bold uppercase text-[#878787]">
+            <div class="border-b border-r border-[#A9A9A9]/20 bg-black/[0.02] px-2 py-2 text-center text-xs font-bold uppercase text-[#646464]">
                 ${day}
             </div>
         `).join("")}
@@ -432,6 +447,14 @@ function renderMonth()
     `;
 
     bindCellClicks();
+}
+
+/** The phone cell's dots: one per kind of event on the day (an unknown kind counts as a reminder), at most three. */
+export function eventDots(events)
+{
+    const kinds = [...new Set(events.map((event) => (KIND_META[event.kind] ? event.kind : "reminder")))].slice(0, 3);
+
+    return kinds.map((kind) => `<span data-calendar-dot="${kind}" class="h-1.5 w-1.5 rounded-full ${KIND_META[kind].dot}"></span>`).join("");
 }
 
 function eventChip(event)
@@ -467,10 +490,37 @@ function bindCellClicks()
     document.querySelectorAll("[data-calendar-cell]:not([data-calendar-past])").forEach((cell) => {
 
         cell.addEventListener("click", () => {
+            // Safari does not focus a tapped button; the sheet hands focus back to it on close.
+            cell.focus();
             openDateMenu(cell.dataset.calendarCell);
         });
 
     });
+
+    // Below md the chips are dots, so a past day (which takes no additions) opens its Day view to read
+    // what was on it, as the year view's mini-days do. From md up its chips show and it stays inert.
+    document.querySelectorAll("[data-calendar-cell][data-calendar-past]").forEach((cell) => {
+
+        cell.addEventListener("click", () => {
+
+            if (!isPhone()) {
+                return;
+            }
+
+            cursor = parseDate(cell.dataset.calendarCell);
+            view = "day";
+            setActiveViewButton("day");
+            fetchAndRender();
+
+        });
+
+    });
+}
+
+/** Below md (the month view shows dots, not chips). */
+function isPhone()
+{
+    return window.matchMedia?.("(width < 48rem)").matches === true;
 }
 
 /*
@@ -497,7 +547,7 @@ function renderDay()
         <button
             type="button"
             data-calendar-add="${dateStr}"
-            class="inline-flex w-fit items-center gap-2 rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
+            class="inline-flex w-fit items-center gap-2 rounded-4xl bg-brand px-5 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
             </svg>
@@ -508,7 +558,7 @@ function renderDay()
         ${events.length === 0 ? `
             <div class="flex flex-col items-center justify-center gap-1 py-10 text-center">
                 <span class="text-sm font-bold text-[#646464]">Nothing on this day</span>
-                <span class="text-xs text-[#878787]">${isReadOnly() ? "Assessments and announcements will show up here." : "Assessments, announcements and reminders will show up here."}</span>
+                <span class="text-xs text-[#646464]">${isReadOnly() ? "Assessments and announcements will show up here." : "Assessments, announcements and reminders will show up here."}</span>
             </div>
         ` : events.map(dayRow).join("")}
 
@@ -517,7 +567,7 @@ function renderDay()
     `;
 
     document.querySelector("[data-calendar-add]")
-        ?.addEventListener("click", (e) => { openDateMenu(e.currentTarget.dataset.calendarAdd); });
+        ?.addEventListener("click", (e) => { e.currentTarget.focus(); openDateMenu(e.currentTarget.dataset.calendarAdd); });
 
     bindEventRowClicks();
 }
@@ -537,9 +587,9 @@ function dayRow(event)
         <div class="flex min-w-0 flex-1 flex-col">
             <div class="flex items-center gap-2">
                 <span class="font-bold text-[#646464]">${escapeHtml(event.title)}</span>
-                <span class="text-xs text-[#878787]">${escapeHtml(event.time)}</span>
+                <span class="text-xs text-[#646464]">${escapeHtml(event.time)}</span>
             </div>
-            ${event.course ? `<span class="text-xs text-[#878787]">${escapeHtml(event.course)}</span>` : ""}
+            ${event.course ? `<span class="text-xs text-[#646464]">${escapeHtml(event.course)}</span>` : ""}
             ${event.detail ? `<span class="mt-1 text-sm text-[#646464]">${escapeHtml(event.detail)}</span>` : ""}
         </div>
 
@@ -679,28 +729,77 @@ function renderYear()
 |--------------------------------------------------------------------------
 */
 
+// The dialog contract by hand (not a [data-dialog]: this shell's body is swapped per action):
+// focus moves in and is trapped, Escape and the backdrop close it, focus goes back to the opener,
+// and the page behind does not scroll (the same body lock shared/dialog.js uses).
+let modalOpener = null;
+
 function bindModal()
 {
+    const modal = document.getElementById("calendar-modal");
+
     document.querySelector("[data-calendar-modal-close]")
         ?.addEventListener("click", closeModal);
 
-    document.getElementById("calendar-modal")
-        ?.addEventListener("click", (e) => {
-            if (e.target.id === "calendar-modal") closeModal();
-        });
+    modal?.addEventListener("click", (e) => {
+        if (e.target.id === "calendar-modal") closeModal();
+    });
+
+    modal?.addEventListener("keydown", (e) => {
+
+        if (e.key === "Escape") {
+            e.stopPropagation();
+            closeModal();
+            return;
+        }
+
+        if (e.key === "Tab") {
+
+            const target = nextFocus(modal, document.activeElement, e.shiftKey);
+
+            if (target) {
+                e.preventDefault();
+                target.focus();
+            }
+
+        }
+
+    });
 }
 
 function openModal(title)
 {
+    const modal = document.getElementById("calendar-modal");
+
     document.querySelector("[data-calendar-modal-title]").textContent = title;
-    document.getElementById("calendar-modal").classList.remove("hidden");
+
+    // Opened again for the next step (a form from the date menu): keep the first opener. The clicked button
+    // is in the replaced body, so focus would fall to <body> and leave Escape and the Tab trap behind.
+    if (!modal.classList.contains("hidden")) {
+        document.querySelector("[data-calendar-modal-close]")?.focus();
+        return;
+    }
+
+    modalOpener = document.activeElement;
+    modal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+    document.querySelector("[data-calendar-modal-close]")?.focus();
 }
 
 function closeModal()
 {
+    const modal = document.getElementById("calendar-modal");
+    const wasOpen = !modal.classList.contains("hidden");
+
     destroyComposerEditor();
-    document.getElementById("calendar-modal").classList.add("hidden");
+    modal.classList.add("hidden");
     document.querySelector("[data-calendar-modal-body]").innerHTML = "";
+
+    if (wasOpen) {
+        document.body.classList.remove("overflow-hidden");
+        modalOpener?.focus?.();
+        modalOpener = null;
+    }
 }
 
 function modalBody()
@@ -753,7 +852,7 @@ function openDateMenu(dateStr)
     const editLinks = changesContent && assessmentEvents.length > 0 ? `
 
         <div class="flex flex-col gap-2">
-            <span class="text-xs font-bold uppercase text-[#878787]">Already due this day</span>
+            <span class="text-xs font-bold uppercase text-[#646464]">Already due this day</span>
             ${assessmentEvents.map((event) => `
                 <button
                     type="button"
@@ -771,13 +870,19 @@ function openDateMenu(dateStr)
     const readOnlyList = !changesContent && events.length > 0 ? `
 
         <div class="flex flex-col gap-2">
-            <span class="text-xs font-bold uppercase text-[#878787]">On this day</span>
-            ${events.map((event) => `
-                <div class="rounded-2xl border border-[#A9A9A9]/50 px-4 py-3 text-sm">
-                    <span class="font-semibold text-[#646464]">${escapeHtml(event.title)}</span>
-                    <span class="block text-xs text-[#878787]">${escapeHtml(event.time)}${event.course ? " · " + escapeHtml(event.course) : ""}</span>
-                </div>
-            `).join("")}
+            <span class="text-xs font-bold uppercase text-[#646464]">On this day</span>
+            ${events.map((event) => {
+                // An announcement opens in its course, as its chip does in the month view.
+                const link = event.kind === "announcement" && event.url;
+                const tag = link ? `a href="${escapeHtml(event.url)}" data-calendar-menu-link` : "div";
+
+                return `
+                <${tag} class="${link ? "block transition hover:border-brand/50 hover:bg-brand/5 " : ""}rounded-2xl border border-[#A9A9A9]/50 px-4 py-3 text-sm">
+                    <span class="font-semibold ${link ? "text-brand" : "text-[#646464]"}">${escapeHtml(event.title)}</span>
+                    <span class="block text-xs text-[#646464]">${escapeHtml(event.time)}${event.course ? " · " + escapeHtml(event.course) : ""}</span>
+                </${link ? "a" : "div"}>
+            `;
+            }).join("")}
         </div>
 
     ` : "";
@@ -811,15 +916,15 @@ function openEventDetail(event)
 
     modalBody().innerHTML = `
         <div class="flex flex-col gap-1 text-sm">
-            ${event.course ? `<span class="text-[#878787]">${escapeHtml(event.course)}</span>` : ""}
-            <span class="text-[#878787]">${escapeHtml(event.time)}</span>
+            ${event.course ? `<span class="text-[#646464]">${escapeHtml(event.course)}</span>` : ""}
+            <span class="text-[#646464]">${escapeHtml(event.time)}</span>
             ${event.detail ? `<p class="mt-2 text-[#646464]">${escapeHtml(event.detail)}</p>` : ""}
         </div>
         ${event.kind === "reminder" ? `
             <button
                 type="button"
                 data-calendar-delete-reminder="${event.id}"
-                class="self-start text-sm font-semibold text-red-600 transition hover:underline">
+                class="self-start text-sm font-semibold text-red-600 transition hover:underline pointer-coarse:min-h-11">
                 Delete reminder
             </button>
         ` : ""}
@@ -882,57 +987,57 @@ function openAssessmentForm(dateStr)
 
             <label class="flex flex-col gap-1 text-sm">
                 Course
-                <select name="offering_id" data-calendar-course-select required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                <select name="offering_id" data-calendar-course-select required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                     ${courseOptions()}
                 </select>
             </label>
 
             <label class="flex flex-col gap-1 text-sm">
                 Module
-                <select name="module_id" data-calendar-module-select required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                <select name="module_id" data-calendar-module-select required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                     <option>Loading…</option>
                 </select>
             </label>
 
             <label class="flex flex-col gap-1 text-sm">
                 Learning unit
-                <select name="learning_unit_id" data-calendar-unit-select required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2"></select>
+                <select name="learning_unit_id" data-calendar-unit-select required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11"></select>
             </label>
 
             <label class="flex flex-col gap-1 text-sm">
                 Type
-                <select name="assessment_type_id" required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                <select name="assessment_type_id" required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                     ${assessmentTypes.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("")}
                 </select>
             </label>
 
             <label class="flex flex-col gap-1 text-sm">
                 Title
-                <input type="text" name="title" required maxlength="150" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2" placeholder="e.g. Quiz 3 - Loops">
+                <input type="text" name="title" required maxlength="150" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11" placeholder="e.g. Quiz 3 - Loops">
             </label>
 
             <div class="grid grid-cols-2 gap-4">
 
                 <label class="flex flex-col gap-1 text-sm">
                     Due date
-                    <input type="date" name="due_date" required value="${dateStr}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                    <input type="date" name="due_date" required value="${dateStr}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                 </label>
 
                 <label class="flex flex-col gap-1 text-sm">
                     Due time
-                    <input type="time" name="due_time" required value="23:59" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                    <input type="time" name="due_time" required value="23:59" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                 </label>
 
             </div>
 
             <label class="flex flex-col gap-1 text-sm">
                 Points
-                <input type="number" name="total_points" required min="0" step="1" value="100" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                <input type="number" name="total_points" required min="0" step="1" value="100" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
             </label>
 
-            <p class="text-xs text-[#878787]">Created as a draft — publish it from the Assessments tab when it's ready.</p>
+            <p class="text-xs text-[#646464]">Created as a draft — publish it from the Assessments tab when it's ready.</p>
 
-            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
+            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
                 Create
             </button>
 
@@ -1088,14 +1193,14 @@ function openAnnouncementForm(dateStr)
 
             <label class="flex flex-col gap-1 text-sm">
                 Course
-                <select name="offering_id" required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                <select name="offering_id" required class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                     ${courseOptions()}
                 </select>
             </label>
 
             <label class="flex flex-col gap-1 text-sm">
                 Date
-                <input type="date" name="date" required value="${dateStr}" min="${isoDate(new Date())}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                <input type="date" name="date" required value="${dateStr}" min="${isoDate(new Date())}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
             </label>
 
         </form>
@@ -1288,19 +1393,19 @@ function openReminderForm(dateStr)
 
             <label class="flex flex-col gap-1 text-sm">
                 Title
-                <input type="text" name="title" required maxlength="150" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2" placeholder="e.g. Bring rubric to class">
+                <input type="text" name="title" required maxlength="150" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11" placeholder="e.g. Bring rubric to class">
             </label>
 
             <div class="grid grid-cols-2 gap-4">
 
                 <label class="flex flex-col gap-1 text-sm">
                     Date
-                    <input type="date" name="remind_date" required value="${dateStr}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                    <input type="date" name="remind_date" required value="${dateStr}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                 </label>
 
                 <label class="flex flex-col gap-1 text-sm">
                     Time
-                    <input type="time" name="remind_time" required value="09:00" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                    <input type="time" name="remind_time" required value="09:00" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                 </label>
 
             </div>
@@ -1308,7 +1413,7 @@ function openReminderForm(dateStr)
             ${courses.length > 0 ? `
                 <label class="flex flex-col gap-1 text-sm">
                     Course (optional)
-                    <select name="offering_id" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                    <select name="offering_id" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                         <option value="">None</option>
                         ${courseOptions()}
                     </select>
@@ -1317,10 +1422,10 @@ function openReminderForm(dateStr)
 
             <label class="flex flex-col gap-1 text-sm">
                 Note (optional)
-                <textarea name="note" rows="3" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2"></textarea>
+                <textarea name="note" rows="3" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11"></textarea>
             </label>
 
-            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
+            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
                 Add
             </button>
 
@@ -1396,17 +1501,17 @@ function openEditDeadlineForm(event)
 
                 <label class="flex flex-col gap-1 text-sm">
                     Due date
-                    <input type="date" name="due_date" required value="${datePart}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                    <input type="date" name="due_date" required value="${datePart}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                 </label>
 
                 <label class="flex flex-col gap-1 text-sm">
                     Due time
-                    <input type="time" name="due_time" required value="${timePart}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2">
+                    <input type="time" name="due_time" required value="${timePart}" class="rounded-lg border border-[#A9A9A9]/50 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11">
                 </label>
 
             </div>
 
-            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
+            <button type="submit" class="rounded-4xl bg-brand px-5 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-white shadow transition hover:bg-brand-dark">
                 Save
             </button>
 

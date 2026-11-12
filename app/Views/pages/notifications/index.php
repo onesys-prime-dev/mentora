@@ -22,16 +22,21 @@ foreach ($noteRows as $row) {
     $groups[$day === $today ? 'Today' : ($day === $yesterday ? 'Yesterday' : 'Earlier')][] = $row;
 }
 
-$chip    = 'h-8 rounded-full border px-3.5 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55';
+$chip    = 'h-8 pointer-coarse:min-h-11 rounded-full border px-3.5 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55';
 $chipOn  = 'border-brand bg-brand font-semibold text-white';
 $chipOff = 'border-gray-300 bg-white text-gray-700';
+// The page itself never scrolls: the header, main's padding (pt-4 pb-10, pt-2 pb-6 once locked) and mt-5 come
+// off. The administrators' layout is not this one, so their panel keeps its old height.
+$height = $noteIsAdmin
+    ? 'h-[calc(100dvh-8.3rem)]'
+    : 'h-[calc(100dvh-var(--app-header-h,4.5rem)-4.75rem)] lock:h-[calc(100dvh-var(--app-header-h,4.5rem)-3.25rem)]';
 ?>
 
 <?= $this->extend($noteIsAdmin ? 'layouts/admin' : 'layouts/app') ?>
 
 <?= $this->section('content') ?>
 
-<div class="mx-auto mt-5 flex h-[calc(100dvh-8.3rem)] min-h-[440px] w-full max-w-3xl flex-col gap-4 rounded-[28px] border border-gray-200 bg-white p-5 shadow-[0_8px_30px_rgba(0,40,120,0.12)] sm:p-7"
+<div class="mx-auto mt-5 flex <?= $height ?> min-h-[440px] w-full max-w-3xl flex-col gap-4 rounded-[28px] border border-gray-200 bg-white p-5 shadow-[0_8px_30px_rgba(0,40,120,0.12)] sm:p-7"
      data-notifications-page
      data-read-url="<?= esc(site_url('notifications/read'), 'attr') ?>"
      data-delete-url="<?= esc(site_url('notifications/delete'), 'attr') ?>">
@@ -43,7 +48,7 @@ $chipOff = 'border-gray-300 bg-white text-gray-700';
         </div>
         <form method="post" action="<?= site_url('notifications/read') ?>" data-role="mark-all" <?= $unread > 0 ? '' : 'hidden' ?>>
             <?= csrf_field() ?>
-            <button type="submit" class="h-9 rounded-full border border-brand bg-white px-4 text-[13px] font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Mark all as read</button>
+            <button type="submit" class="h-9 pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-4 text-[13px] font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">Mark all as read</button>
         </form>
     </div>
 

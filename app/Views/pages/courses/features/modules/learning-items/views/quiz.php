@@ -43,7 +43,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
         </div>
 
         <!-- Quiz -->
-        <div class="flex w-full flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-10 py-12 text-center">
+        <div class="flex w-full flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-5 py-10 text-center sm:px-10 sm:py-12">
 
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10">
                 <?= icon('quiz', 'h-8 w-8') ?>
@@ -62,7 +62,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
                     </span>
                 </div>
 
-                <div class="flex items-center gap-6 text-sm text-[#646464]">
+                <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm text-[#646464]">
                     <span><strong class="text-brand"><?= (int) ($quizCounts['submitted'] ?? 0) ?></strong> submitted</span>
                     <span><strong class="text-[#946200]"><?= (int) ($quizCounts['toGrade'] ?? 0) ?></strong> to grade</span>
                     <span><strong class="text-emerald-700"><?= (int) ($quizCounts['graded'] ?? 0) ?></strong> graded</span>

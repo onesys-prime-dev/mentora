@@ -87,13 +87,13 @@ $timeTaken = static function (array $attempt): ?string {
                 ?>
 
                 <?php if ($isQuizHistory): ?>
-                    <div class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
                 <?php else: ?>
                     <details class="group rounded-xl border border-gray-200 bg-white" <?= $index === 0 ? 'open' : '' ?>>
-                        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                        <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <?php endif; ?>
 
-                            <div class="flex items-center gap-3">
+                            <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
 
                                 <?php if (!$isQuizHistory): ?>
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#767676] transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -111,7 +111,7 @@ $timeTaken = static function (array $attempt): ?string {
 
                             </div>
 
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2">
 
                                 <?php if ($countedAttemptId > 0 && (int) $attempt['id'] === $countedAttemptId && count($historyAttempts) > 1): ?>
                                     <span class="rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold text-white">

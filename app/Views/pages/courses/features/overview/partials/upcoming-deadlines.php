@@ -34,7 +34,7 @@ $isStudent = $role === 'student';
 
         <button
             type="button"
-            class="text-sm text-brand cursor-pointer"
+            class="text-sm text-brand cursor-pointer pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             data-course-feature="assessments">
             View All
         </button>

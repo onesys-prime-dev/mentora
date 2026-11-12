@@ -22,11 +22,11 @@ $ending = match ($course['enrollment_status']) {
 };
 ?>
 
-<article class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm" data-parent-course="<?= (int) $course['offering_id'] ?>">
+<article class="flex min-w-0 flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:p-5" data-parent-course="<?= (int) $course['offering_id'] ?>">
 
     <header class="flex flex-col gap-0.5">
         <span class="text-xs font-semibold uppercase tracking-wide text-[#646464]"><?= esc($course['course_code'] . '-' . $course['section_code']) ?></span>
-        <h3 class="text-base font-bold text-[#1A1C1E]">
+        <h3 class="break-words text-base font-bold text-[#1A1C1E]">
             <a href="<?= esc($courseUrl) ?>" class="rounded hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><?= esc($course['course_title']) ?></a>
         </h3>
         <?php if ($course['instructor_name'] !== ''): ?>

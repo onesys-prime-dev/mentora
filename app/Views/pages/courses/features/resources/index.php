@@ -4,7 +4,7 @@ $view = $view ?? 'list';
 $level = $level ?? 'offering';
 ?>
 
-<div class="flex flex-col gap-6 p-10" data-resources-page data-offering-id="<?= esc($offeringId) ?>">
+<div class="flex flex-col gap-6 p-5 sm:p-8 lg:p-10" data-resources-page data-offering-id="<?= esc($offeringId) ?>">
 
     <?= view('components/page-header', ['icon' => 'resources', 'title' => 'Resources'], ['saveData' => false]) ?>
 

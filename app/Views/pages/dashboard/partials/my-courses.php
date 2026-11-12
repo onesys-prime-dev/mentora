@@ -13,17 +13,17 @@ $courses = $data['courses'] ?? [];
 <!-- my courses -->
 <div class="h-full min-h-0 flex flex-col bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl overflow-clip">
 
-    <div class="shrink-0 flex items-center justify-between px-6 py-3 bg-black/10">
+    <div class="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-black/10">
         <span class="text-xl font-display">My Courses</span>
 
         <a
-            class="text-xs text-blue-800 font-medium hover:underline"
+            class="inline-flex items-center pointer-coarse:min-h-11 text-xs text-blue-800 font-medium hover:underline"
             href="<?= site_url($userRole . '/courses') ?>">
             View all
         </a>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-6 py-4">
+    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-4 sm:px-6 py-4">
 
         <?php if ($courses === []): ?>
 
@@ -36,10 +36,12 @@ $courses = $data['courses'] ?? [];
 
             <div class="flex flex-col gap-4">
 
-                <?php foreach ($courses as $course): ?>
+                <?php foreach ($courses as $index => $course): ?>
 
+                    <?php // Phones list the first five; the header's "View all" leads to the rest. ?>
                     <a
-                        class="flex flex-col gap-3 p-4 bg-white/30 border border-black/5 shadow-md rounded-2xl transition hover:bg-white/50"
+                        class="flex flex-col gap-3 p-4 bg-white/30 border border-black/5 shadow-md rounded-2xl transition hover:bg-white/50<?= $index >= 5 ? ' max-lg:hidden' : '' ?>"
+                        data-course-row
                         href="<?= site_url($userRole . '/courses/' . $course['offering_id'] . '/' . $course['slug']) ?>">
 
                         <div class="flex items-center gap-3">

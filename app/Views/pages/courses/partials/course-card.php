@@ -38,7 +38,7 @@ $linkClass = 'transition duration-200 ease-out
         alt=""
         loading="lazy"
         decoding="async"
-        class="h-32 w-full object-cover">
+        class="h-28 w-full object-cover xs:h-32">
 
     <div class="flex flex-1 flex-col gap-4 p-5">
 

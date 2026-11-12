@@ -9,7 +9,7 @@
  */
 $metricCount = ($role ?? '') === 'instructor' ? 4 : 3;
 ?>
-<div class="p-10 animate-pulse flex flex-col gap-8" aria-hidden="true" data-server-skeleton-shape>
+<div class="p-5 sm:p-8 lg:p-10 animate-pulse flex flex-col gap-8" aria-hidden="true" data-server-skeleton-shape>
 
     <div class="flex items-center gap-4">
         <div class="h-6 w-6 rounded bg-gray-200"></div>

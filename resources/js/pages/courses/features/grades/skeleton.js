@@ -64,7 +64,7 @@ export function renderGradesSkeleton() {
 
         // gradebook toolbar → class summary → assessments to grade
         return `
-            <div class="flex animate-pulse flex-col gap-10 p-10" aria-hidden="true">
+            <div class="flex animate-pulse flex-col gap-10 p-5 sm:p-8 lg:p-10" aria-hidden="true">
 
                 ${pageTitle}
 
@@ -102,7 +102,7 @@ export function renderGradesSkeleton() {
         </div>`;
 
     return `
-        <div class="flex animate-pulse flex-col gap-10 p-10" aria-hidden="true">
+        <div class="flex animate-pulse flex-col gap-10 p-5 sm:p-8 lg:p-10" aria-hidden="true">
 
             ${pageTitle}
 

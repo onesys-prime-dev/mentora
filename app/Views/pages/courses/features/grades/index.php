@@ -11,7 +11,7 @@
 $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'instructor' : esc($user->getGroups()[0]);
 ?>
 
-<div class="p-10 flex flex-col gap-10">
+<div class="p-5 sm:p-8 lg:p-10 flex flex-col gap-10">
 
     <?php // The way to the Grades page across every course, for whoever has one (GradeService::allGradesLink). ?>
     <?= view('components/page-header', [

@@ -15,7 +15,7 @@ $host = $isSafeUrl ? preg_replace('/^www\./', '', (string) parse_url($url, PHP_U
 
 <?php if ($isSafeUrl): ?>
 
-    <section class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+    <section class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
 
         <div class="flex items-center gap-4">
 

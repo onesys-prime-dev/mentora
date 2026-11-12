@@ -106,7 +106,7 @@ if ($isInstructor) {
 }
 ?>
 
-<div class="flex flex-col gap-10 p-10" data-assessments-overview>
+<div class="flex flex-col gap-6 p-5 sm:p-8 lg:gap-10 lg:p-10" data-assessments-overview>
 
     <?= view('components/page-header', ['icon' => 'assessments', 'title' => 'Assessments'], ['saveData' => false]) ?>
 
@@ -127,7 +127,7 @@ if ($isInstructor) {
                         data-assessments-filter
                         data-select-arrow
                         aria-label="Filter assessments"
-                        class="peer h-10 min-w-[4.5rem] field-sizing-content appearance-none rounded-full font-semibold text-brand border border-gray-300 bg-white pl-3 pr-8 text-sm shadow outline-none focus:border-blue-500">
+                        class="peer h-10 min-w-[4.5rem] field-sizing-content appearance-none rounded-full font-semibold text-brand border border-gray-300 bg-white pl-3 pr-8 text-base sm:text-sm shadow outline-none focus:border-blue-500 pointer-coarse:h-11">
 
                         <?php foreach ($filters as $value => $label): ?>
                             <option value="<?= esc($value) ?>"><?= esc($label) ?></option>
@@ -138,7 +138,7 @@ if ($isInstructor) {
                     </span>
 
                     <!-- Client-side search (no form submit, so no page reload) -->
-                    <label class="ml-auto flex h-10 w-64 items-center gap-2 rounded-4xl border border-gray-300 bg-white px-4 shadow">
+                    <label class="ml-auto flex h-10 w-64 items-center gap-2 rounded-4xl border border-gray-300 bg-white px-4 shadow max-sm:w-full pointer-coarse:h-auto">
 
                         <?= icon('search', 'h-4 w-4 opacity-60') ?>
 
@@ -147,7 +147,7 @@ if ($isInstructor) {
                             data-assessments-search
                             placeholder="Search assessments"
                             aria-label="Search assessments"
-                            class="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-300">
+                            class="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-gray-300 sm:text-sm pointer-coarse:min-h-11">
 
                     </label>
 

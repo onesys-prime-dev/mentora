@@ -11,11 +11,11 @@ $announcements = $data['announcements'] ?? [];
 <!-- announcements -->
 <div class="h-full min-h-0 flex flex-col bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl overflow-clip">
 
-    <div class="shrink-0 flex items-center justify-between px-6 py-3 bg-black/10">
+    <div class="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-black/10">
         <span class="text-xl font-display">Announcements</span>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-6 py-4">
+    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-4 sm:px-6 py-4">
 
         <?php if ($announcements === []): ?>
 
@@ -30,13 +30,17 @@ $announcements = $data['announcements'] ?? [];
 
                 <?php foreach ($announcements as $index => $announcement): ?>
 
+                    <?php // Phones list the first five; "View all" leads to the rest. ?>
+                    <?php $beyondCap = $index >= 5 ? ' max-lg:hidden' : ''; ?>
+
                     <?php if ($index > 0): ?>
-                        <div class="h-px -mx-3 bg-black/5" aria-hidden="true"></div>
+                        <div class="h-px -mx-3 bg-black/5<?= $beyondCap ?>" aria-hidden="true"></div>
                     <?php endif; ?>
 
                     <a
                         href="<?= site_url($userRole . '/courses/' . $announcement['offering_id'] . '/' . $announcement['slug'] . '/announcements') ?>"
-                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white/45">
+                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white/45<?= $beyondCap ?>"
+                        data-announcement-row>
 
                         <div class="relative shrink-0">
                             <div class="w-9 h-9 flex justify-center items-center bg-blue-800 rounded-full transition-transform duration-150 group-hover:scale-110">
@@ -65,6 +69,10 @@ $announcements = $data['announcements'] ?? [];
                 <?php endforeach; ?>
 
             </div>
+
+            <?php if (count($announcements) > 5): ?>
+                <a href="<?= site_url($userRole . '/announcements') ?>" data-view-all class="lg:hidden mt-2 inline-flex items-center pointer-coarse:min-h-11 text-xs font-medium text-blue-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">View all</a>
+            <?php endif; ?>
 
         <?php endif; ?>
 

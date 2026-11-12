@@ -41,7 +41,7 @@ export function renderAssessmentsSkeleton() {
         </div>`;
 
     const card = `
-        <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 sm:px-8 sm:py-6">
             <div class="flex items-center gap-5">
                 <div class="h-10 w-10 rounded-full bg-gray-200"></div>
                 <div class="flex flex-col gap-2">
@@ -82,14 +82,14 @@ export function renderAssessmentsSkeleton() {
         : section("upnext", false) + section("feedback", false);
 
     return `
-        <div class="flex animate-pulse flex-col gap-10 p-10" aria-hidden="true">
+        <div class="flex animate-pulse flex-col gap-6 p-5 sm:p-8 lg:gap-10 lg:p-10" aria-hidden="true">
 
             <div class="flex items-center gap-4">
                 <div class="h-6 w-6 rounded bg-gray-200"></div>
                 <div class="h-8 w-40 rounded bg-gray-200"></div>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 ${metric.repeat(4)}
             </div>
 
@@ -120,7 +120,7 @@ export function renderAssessmentsSkeleton() {
 export function renderAssessmentDetailSkeleton() {
 
     return `
-        <div class="flex animate-pulse flex-col gap-8 p-10" aria-hidden="true">
+        <div class="flex animate-pulse flex-col gap-8 p-5 sm:p-8 lg:p-10" aria-hidden="true">
 
             <div class="flex items-center gap-4">
                 <div class="h-10 w-10 rounded-lg bg-gray-200"></div>
@@ -130,9 +130,9 @@ export function renderAssessmentDetailSkeleton() {
                 </div>
             </div>
 
-            <div class="flex gap-10">
+            <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
 
-                <div class="flex w-full flex-col gap-4 rounded-2xl border border-gray-200 p-8">
+                <div class="flex w-full flex-col gap-4 rounded-2xl border border-gray-200 p-5 sm:p-8">
                     <div class="h-5 w-40 rounded bg-gray-200"></div>
                     <div class="h-4 w-full rounded bg-gray-200"></div>
                     <div class="h-4 w-full rounded bg-gray-200"></div>
@@ -140,7 +140,7 @@ export function renderAssessmentDetailSkeleton() {
                     <div class="mt-4 h-32 w-full rounded-xl bg-gray-200"></div>
                 </div>
 
-                <div class="flex w-2/5 shrink-0 flex-col gap-4 rounded-2xl border border-gray-200 p-6">
+                <div class="flex w-full shrink-0 flex-col gap-4 rounded-2xl border border-gray-200 p-6 lg:w-2/5">
                     <div class="h-5 w-32 rounded bg-gray-200"></div>
                     <div class="h-4 w-48 rounded bg-gray-200"></div>
                     <div class="h-4 w-40 rounded bg-gray-200"></div>
@@ -195,7 +195,7 @@ export function renderGradeWorkSkeleton() {
 export function renderAssessmentListSkeleton(count = 3) {
 
     const card = `
-        <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 sm:px-8 sm:py-6">
             <div class="flex items-center gap-5">
                 <div class="h-10 w-10 rounded-full bg-gray-200"></div>
                 <div class="flex flex-col gap-2">

@@ -5,7 +5,7 @@ $nextPage = $nextPage ?? 2;
 $searching = $filters['search'] !== '' || $filters['filter'] !== 'all';
 ?>
 
-<div class="flex flex-col gap-6 p-10" data-discussions-page>
+<div class="flex flex-col gap-6 p-5 sm:p-8 lg:p-10" data-discussions-page>
 
     <?php
     ob_start();

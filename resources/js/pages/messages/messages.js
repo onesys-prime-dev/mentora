@@ -26,6 +26,7 @@ import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
 import { bindMenuTriggers } from "./gestures.js";
+import { createPhoneNav } from "./phone-nav.js";
 import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
@@ -564,7 +565,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
-    async function open(id) {
+    async function open(id, { deepLink = false } = {}) {
         state.poller?.stop();
 
         const token = threadGuard.next();
@@ -593,6 +594,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         root.dataset.view = "thread";
         $("[data-state=none]").hidden = true;
         $("[data-role=thread]").hidden = false;
+        // After the thread shows, so its Back button can take focus.
+        phoneNav.opened(id, { deepLink });
         messagesEl.replaceChildren();
         olderEl.hidden = true;
         bodyEl.value = "";
@@ -648,6 +651,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         $("[data-state=none]").hidden = false;
         root.dataset.view = "list";
         renderList();
+        phoneNav.closed();
     }
 
     async function loadOlder() {
@@ -1593,6 +1597,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     $("[data-role=retry-list]").addEventListener("click", () => { listState("loading"); loadList(); });
     $("[data-role=retry-thread]").addEventListener("click", () => open(state.openId));
     $("[data-role=back]").addEventListener("click", closeThread);
+    // Below md: Back, the browser's Back and a swipe all return to the list (see phone-nav.js).
+    const phoneNav = createPhoneNav({ root, onBack: closeThread });
     olderEl.addEventListener("click", loadOlder);
 
     // ---- go ------------------------------------------------------------
@@ -1604,7 +1610,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         listPoller.start();
 
         if (root.dataset.open) {
-            return open(Number(root.dataset.open));
+            // On a phone a deep link gets a list entry under its own, so Back lands on the list.
+            return open(Number(root.dataset.open), { deepLink: true });
         }
 
         return undefined;
@@ -1616,6 +1623,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             listPoller.stop();
             state.poller?.stop();
             unwatch();
+            phoneNav.destroy();
         },
     };
 }

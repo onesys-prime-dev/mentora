@@ -5,11 +5,11 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 <!-- header -->
 <header class="flex flex-col gap-2 py-2">
     
-    <span class="text-3xl font-bold text-brand" data-item-header-title>
+    <span class="break-words text-fluid-h2 lg:text-3xl font-bold text-brand" data-item-header-title>
         <?= esc($currentItem['title']) ?>
     </span>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
         <div class="flex justify-center items-center">
             <?= learning_item_icon($currentItem['item_type'], 'h-4 w-4') ?>
         </div>
@@ -29,13 +29,13 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
             <!-- both rendered; completion.js swaps them after "Mark as Completed" -->
             <span
                 data-completion-badge="completed"
-                class="px-3 py-1 rounded-full bg-[#E6F4EA] text-[#5C9F72] text-xs font-black <?= $isCompleted ? '' : 'hidden' ?>">
+                class="shrink-0 px-3 py-1 rounded-full bg-[#E6F4EA] text-[#5C9F72] text-xs font-black <?= $isCompleted ? '' : 'hidden' ?>">
                 Completed
             </span>
 
             <span
                 data-completion-badge="pending"
-                class="px-3 py-1 rounded-full bg-[#E0E5F2] text-brand-dark text-xs font-black <?= $isCompleted ? 'hidden' : '' ?>">
+                class="shrink-0 px-3 py-1 rounded-full bg-[#E0E5F2] text-brand-dark text-xs font-black <?= $isCompleted ? 'hidden' : '' ?>">
                 <?= !empty($currentLock) ? 'Locked' : 'Not Yet Completed' ?>
             </span>
         
@@ -66,7 +66,7 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
         <div class="h-8 w-8 flex justify-center items-center rounded-4xl">
             <img
                 class="h-full w-auto" 

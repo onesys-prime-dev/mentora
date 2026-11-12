@@ -5,7 +5,7 @@
  * cards. Params: role.
  */
 ?>
-<div class="p-10 animate-pulse flex flex-col gap-10" aria-hidden="true" data-server-skeleton-shape>
+<div class="p-5 sm:p-8 lg:p-10 animate-pulse flex flex-col gap-10" aria-hidden="true" data-server-skeleton-shape>
 
     <div class="flex flex-col gap-3">
 
@@ -32,10 +32,10 @@
         <?php for ($i = 0; $i < 3; $i++): ?>
             <div class="rounded-2xl border border-gray-200 bg-white">
                 <div class="flex justify-between items-center p-6">
-                    <div class="flex gap-5 items-center flex-1">
-                        <div class="h-15 w-15 rounded-full bg-gray-200"></div>
-                        <div class="flex flex-col gap-3 flex-1">
-                            <div class="h-6 w-64 rounded bg-gray-200"></div>
+                    <div class="flex min-w-0 gap-5 items-center flex-1">
+                        <div class="h-15 w-15 shrink-0 rounded-full bg-gray-200"></div>
+                        <div class="flex min-w-0 flex-col gap-3 flex-1">
+                            <div class="h-6 w-64 max-w-full rounded bg-gray-200"></div>
                             <div class="h-4 w-96 max-w-full rounded bg-gray-200"></div>
                         </div>
                     </div>

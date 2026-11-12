@@ -11,7 +11,7 @@ $authorName = trim((string) $thread['author_name']) !== '' ? trim((string) $thre
 ?>
 
 <div
-    class="group flex cursor-pointer flex-col gap-2 rounded-2xl border bg-white px-6 py-4 transition hover:border-brand/50 hover:shadow-sm <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>"
+    class="group flex cursor-pointer flex-col gap-2 rounded-2xl border bg-white px-4 py-4 sm:px-6 transition hover:border-brand/50 hover:shadow-sm <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>"
     role="link"
     tabindex="0"
     data-thread-open="<?= esc($thread['id']) ?>"

@@ -1,7 +1,7 @@
 <?php
 /** Resources while it loads. Mirrors features/resources/skeleton.js. */
 ?>
-<div class="p-10 animate-pulse flex flex-col gap-6" aria-hidden="true" data-server-skeleton-shape>
+<div class="p-5 sm:p-8 lg:p-10 animate-pulse flex flex-col gap-6" aria-hidden="true" data-server-skeleton-shape>
 
     <div class="h-8 w-40 rounded bg-gray-200"></div>
 

@@ -56,7 +56,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 <!-- Your Work -->
 <div class="flex flex-col gap-3">
 
-    <div class="flex items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
 
         <div class="flex items-center gap-3">
             <?= icon('work', 'h-5 w-5') ?>
@@ -145,12 +145,12 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
             class="group/work-tabs flex flex-col"
             novalidate>
 
-            <div class="flex w-fit overflow-hidden rounded-t-xl border-x border-t border-[#DBDBDB]">
+            <div class="flex w-fit max-w-full overflow-hidden rounded-t-xl border-x border-t border-[#DBDBDB]">
 
                 <?php foreach ($enabledTypes as $index => $type): ?>
 
                     <label
-                        class="cursor-pointer bg-[#F2F2F4] px-4 py-2 text-sm font-semibold text-[#8A8A8A] transition-colors hover:text-brand
+                        class="cursor-pointer bg-[#F2F2F4] px-4 py-2 pointer-coarse:py-3 text-sm font-semibold text-[#8A8A8A] transition-colors hover:text-brand
                             <?= $index < count($enabledTypes) - 1 ? 'border-r border-[#DBDBDB]' : '' ?>
                             group-has-[#assignment-work-tab-<?= $type ?>:checked]/work-tabs:bg-white
                             group-has-[#assignment-work-tab-<?= $type ?>:checked]/work-tabs:text-brand">
@@ -173,7 +173,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
                 <label
                     data-assignment-dropzone
-                    class="hidden min-h-60 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-b-2xl rounded-r-2xl border border-[#DBDBDB] bg-white p-10 text-center transition-colors
+                    class="hidden min-h-60 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-b-2xl rounded-r-2xl border border-[#DBDBDB] bg-white p-6 text-center transition-colors sm:p-10
                         hover:bg-[#F9F9FC]
                         data-dragging:border-brand data-dragging:bg-brand/5
                         group-has-[#assignment-work-tab-file:checked]/work-tabs:flex">
@@ -209,7 +209,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                     <textarea
                         name="submission_text"
                         rows="8"
-                        class="min-h-52 w-full flex-1 resize-y border-0 text-sm text-[#646464] outline-none"
+                        class="min-h-52 w-full flex-1 resize-y border-0 text-base text-[#646464] outline-none sm:text-sm"
                         placeholder="Type your response here..."></textarea>
 
                 </div>
@@ -219,7 +219,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
             <?php if ($allowedTypes['link']): ?>
 
                 <div
-                    class="hidden min-h-60 w-full flex-col items-center justify-center gap-2 rounded-b-2xl rounded-r-2xl border border-[#DBDBDB] bg-white p-10
+                    class="hidden min-h-60 w-full flex-col items-center justify-center gap-2 rounded-b-2xl rounded-r-2xl border border-[#DBDBDB] bg-white p-6 sm:p-10
                         group-has-[#assignment-work-tab-link:checked]/work-tabs:flex">
 
                     <?= icon('work', 'h-10 w-10 opacity-40') ?>
@@ -228,7 +228,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                         type="url"
                         name="submission_link"
                         placeholder="https://..."
-                        class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-sm text-[#646464] outline-none transition focus:border-brand">
+                        class="w-full max-w-md rounded-xl border border-[#DBDBDB] px-4 py-3 text-center text-base text-[#646464] outline-none transition focus:border-brand sm:text-sm">
 
                     <span class="text-xs text-[#767676]">
                         Paste a link to your work (e.g. Google Docs, GitHub).
@@ -238,7 +238,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
             <?php endif; ?>
 
-            <div class="mt-3 flex items-center justify-between gap-4">
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-4">
 
                 <span class="text-xs text-[#767676]">
                     <?php if (count($enabledTypes) > 1): ?>
@@ -256,7 +256,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                     <button
                         type="submit"
                         data-assignment-submit
-                        class="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                        class="inline-flex items-center gap-2 pointer-coarse:min-h-11 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
                         <?= $attemptsUsed > 0 ? 'Resubmit' : 'Submit' ?>
                     </button>
 

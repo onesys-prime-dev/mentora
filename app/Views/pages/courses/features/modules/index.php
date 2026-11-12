@@ -34,7 +34,7 @@ $formatDuration = static function (int $minutes): string {
 };
 ?>
 
-<div class="p-10 flex flex-col gap-10">
+<div class="p-5 sm:p-8 lg:p-10 flex flex-col gap-10">
 
     <div class="flex flex-col gap-3">
 
@@ -97,30 +97,30 @@ $formatDuration = static function (int $minutes): string {
                 <div class="group flex flex-col flex-1 bg-white border <?= $isDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10' ?> rounded-2xl transition-colors" data-module-card>
 
                     <!-- header: chevron toggles the panel below, no navigation -->
-                    <div class="flex justify-between items-center gap-5 p-6 cursor-pointer rounded-2xl focus-within:ring-2 focus-within:ring-brand/30" data-module="<?= esc($module['id']) ?>">
+                    <div class="flex justify-between items-center gap-3 p-4 sm:gap-5 sm:p-6 cursor-pointer rounded-2xl focus-within:ring-2 focus-within:ring-brand/30" data-module="<?= esc($module['id']) ?>">
 
                         <div class="flex justify-center items-center">
 
                             <?php if ($module['progress'] == 100): ?>
-                                <div class="w-15 h-15 flex justify-center items-center bg-[#E8F5E9] rounded-[999px]">
-                                    <?= icon('check', 'h-7 w-7') ?>
+                                <div class="w-11 h-11 sm:w-15 sm:h-15 flex justify-center items-center bg-[#E8F5E9] rounded-[999px]">
+                                    <?= icon('check', 'h-5 w-5 sm:h-7 sm:w-7') ?>
                                 </div>
                             <?php else: ?>
-                                <div class="w-15 h-15 flex justify-center items-center bg-[#E0E5F2] rounded-[999px]">
-                                    <?= icon('in-progress', 'h-8 w-8') ?>
+                                <div class="w-11 h-11 sm:w-15 sm:h-15 flex justify-center items-center bg-[#E0E5F2] rounded-[999px]">
+                                    <?= icon('in-progress', 'h-6 w-6 sm:h-8 sm:w-8') ?>
                                 </div>
                             <?php endif; ?>
 
                         </div>
 
-                        <div class="flex flex-col flex-1">
+                        <div class="flex min-w-0 flex-col flex-1">
 
-                            <div class="flex flex-1 justify-between items-center gap-4">
+                            <div class="flex flex-1 flex-wrap justify-between items-center gap-x-4 gap-y-2">
 
-                                <div class="flex flex-col flex-1">
+                                <div class="flex min-w-0 flex-col flex-1">
 
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-2xl font-bold text-brand">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="min-w-0 break-words text-xl sm:text-2xl font-bold text-brand">
                                             <?= esc($module['title']) ?>
                                         </span>
                                         <?php if ($isDraft): ?>
@@ -182,8 +182,8 @@ $formatDuration = static function (int $minutes): string {
 
                         </div>
 
-                        <div class="flex items-center gap-3 px-3">
-                            <span class="text-xs font-semibold text-brand opacity-0 transition-opacity duration-200 group-hover:opacity-100" data-module-details-label="<?= esc($module['id']) ?>">
+                        <div class="flex items-center gap-3 sm:px-3">
+                            <span class="max-sm:hidden text-xs font-semibold text-brand opacity-0 transition-opacity duration-200 group-hover:opacity-100" data-module-details-label="<?= esc($module['id']) ?>">
                                 Module details
                             </span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 stroke-brand-dark transition-transform duration-300" data-module-arrow="<?= esc($module['id']) ?>" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -198,7 +198,7 @@ $formatDuration = static function (int $minutes): string {
                     </div>
 
                     <!-- expanded panel: description, what's included, go to module -->
-                    <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out px-10" data-module-content="<?= esc($module['id']) ?>">
+                    <div class="max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out px-5 sm:px-8 lg:px-10" data-module-content="<?= esc($module['id']) ?>">
 
                         <div class="pb-6 flex flex-col gap-4">
 

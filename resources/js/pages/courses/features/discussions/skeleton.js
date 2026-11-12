@@ -38,7 +38,7 @@ export function renderDiscussionListSkeleton() {
 export function renderDiscussionsSkeleton() {
 
     return `
-        <div class="flex animate-pulse flex-col gap-6 p-10" aria-hidden="true">
+        <div class="flex animate-pulse flex-col gap-6 p-5 sm:p-8 lg:p-10" aria-hidden="true">
 
             <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-4">
@@ -79,7 +79,7 @@ export function renderThreadSkeleton() {
         </div>`;
 
     return `
-        <div class="flex flex-col gap-6 p-10" data-discussions-page>
+        <div class="flex flex-col gap-6 p-5 sm:p-8 lg:p-10" data-discussions-page>
 
             <nav aria-label="Breadcrumb">
                 <ol class="flex items-center gap-2 text-sm">

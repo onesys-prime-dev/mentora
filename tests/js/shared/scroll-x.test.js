@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { bindScrollX } from "../../../resources/js/shared/scroll-x.js";
+import { bindScrollX, centreCurrent } from "../../../resources/js/shared/scroll-x.js";
 
 let observers;
 
@@ -78,10 +78,10 @@ describe("bindScrollX", () => {
     });
 
     // A strip at x=50 in the window, already scrolled by 30, whose current tab is drawn at x=420 (80 wide).
-    function strip(attr) {
-        document.body.innerHTML = `<div data-scroll-x ${attr}><ul><li><a href="/a">A</a></li><li><a href="/b" aria-current="page">B</a></li></ul></div>`;
+    function strip(attr, inner = '<ul><li><a href="/a">A</a></li><li><a href="/b" aria-current="page">B</a></li></ul>') {
+        document.body.innerHTML = `<div data-scroll-x ${attr}>${inner}</div>`;
         const el = document.querySelector("[data-scroll-x]");
-        const current = document.querySelector("[aria-current=page]");
+        const current = document.querySelector('[aria-current=page], [aria-selected="true"]');
         const geo = { scrollWidth: 600, clientWidth: 200, scrollLeft: 30 };
         for (const key of Object.keys(geo)) {
             Object.defineProperty(el, key, { configurable: true, get: () => geo[key], set: (v) => { geo[key] = v; } });
@@ -94,8 +94,26 @@ describe("bindScrollX", () => {
         window.scrollTo = vi.fn();
         bindScrollX(document.body);
 
-        return { geo, current };
+        return { el, geo, current };
     }
+
+    const roleTabs = '<button role="tab" aria-selected="false">A</button><button role="tab" aria-selected="true">B</button>';
+
+    it("scroll-x centres an aria-selected tab", () => {
+        const { geo } = strip("data-scroll-current", roleTabs);
+        expect(geo.scrollLeft).toBe(340);
+    });
+
+    it("centreCurrent re-centres after the selected tab changes", () => {
+        const { el, geo, current } = strip("data-scroll-current", roleTabs);
+        geo.scrollLeft = 0;
+        current.getBoundingClientRect = () => ({ left: 650, width: 80 });
+        centreCurrent(el);
+        // 650 - 50 + 0 = 600, centred 540, clamped to the max 400
+        expect(geo.scrollLeft).toBe(400);
+        expect(el.hasAttribute("data-fade-end")).toBe(false);
+        expect(el.hasAttribute("data-fade-start")).toBe(true);
+    });
 
     it("centres the current tab of an opted-in strip on init without moving the page", () => {
         const { geo, current } = strip("data-scroll-current");

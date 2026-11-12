@@ -1,10 +1,11 @@
-<div class="flex min-w-0 flex-1 flex-col p-10">
+<div class="flex min-w-0 flex-1 flex-col p-5 sm:p-8 lg:p-10">
 
     <?= $this->include('pages/courses/features/assessments/partials/breadcrumb') ?>
 
     <div class="flex flex-1">
 
-        <section class="flex min-w-0 flex-1 py-6 gap-12">
+        <?php // Below lg the score panel stacks under the work; from lg up it sits beside it as before. ?>
+        <section class="flex min-w-0 flex-1 flex-col gap-8 py-6 lg:flex-row lg:gap-12">
 
             <div class="flex min-w-0 flex-1 flex-col gap-5">
 
@@ -25,7 +26,8 @@
             </div>
 
             <?php if (empty($assessmentLock)): ?>
-                <?= $this->include('pages/courses/features/assessments/partials/score-panel') ?>
+                <?= $this->setData(['panelClass' => 'w-full lg:w-1/5', 'scoreBoxClass' => 'min-h-40 lg:aspect-square'])
+                    ->include('pages/courses/features/assessments/partials/score-panel') ?>
             <?php endif; ?>
 
         </section>

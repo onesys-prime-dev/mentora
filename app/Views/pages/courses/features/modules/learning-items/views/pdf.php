@@ -7,7 +7,7 @@ $file = $resource['file'] ?? null;
 
 <?php if ($file): ?>
 
-    <section class="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <section class="mx-auto min-h-[60dvh] w-full max-w-6xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
         <div
             id="pdf-viewer"

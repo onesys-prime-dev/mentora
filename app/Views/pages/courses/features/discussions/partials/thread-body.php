@@ -24,7 +24,7 @@ $replyCount = count($replies);
     data-thread-attachments="<?= esc(json_encode(array_map(static fn ($f) => ['file_id' => $f['id'], 'original_filename' => $f['original_filename']], $thread['attachments'])), 'attr') ?>">
 
     <!-- opening post -->
-    <article class="group relative flex flex-col gap-4 rounded-2xl border bg-white px-6 py-6 <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>" data-reactions>
+    <article class="group relative flex flex-col gap-4 rounded-2xl border bg-white px-4 py-5 sm:px-6 sm:py-6 <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>" data-reactions>
 
         <?php
         $menuItems = [];
@@ -122,7 +122,7 @@ $replyCount = count($replies);
     </section>
 
     <!-- reply box / locked notice: both always rendered so lock toggles in place -->
-    <div class="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-6 py-4 text-sm text-[#646464] <?= $thread['is_locked'] ? '' : 'hidden' ?>" data-locked-notice>
+    <div class="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 sm:px-6 text-sm text-[#646464] <?= $thread['is_locked'] ? '' : 'hidden' ?>" data-locked-notice>
         <?= icon('lock', 'h-5 w-5') ?>
         This discussion is locked, so new replies are turned off.
     </div>

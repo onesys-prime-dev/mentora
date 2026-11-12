@@ -113,7 +113,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
                 <?php // The picker reads "Change term"; the term shown is marked in the list. ?>
                 <label class="sr-only" for="grades-term">Change term</label>
-                <select id="grades-term" data-select-link data-term-select class="<?= $select ?> sm:w-56">
+                <select id="grades-term" data-select-link data-term-select class="<?= $select ?> w-full pointer-coarse:min-h-11 max-sm:text-base sm:w-56">
                     <option value="" selected disabled hidden>Change term</option>
                     <?php foreach ($terms as $term): ?>
                         <option value="<?= esc($base . '?term=' . $term['id']) ?>"><?= esc($term['name'] . ' (' . $term['academic_year'] . ')' . ($term['id'] === $termId ? ' · shown' : '')) ?></option>

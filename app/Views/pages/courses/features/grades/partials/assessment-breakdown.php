@@ -38,7 +38,7 @@ $chipClasses = [
 
     <?php if ($groups === []): ?>
 
-        <div class="px-8 py-10 flex flex-col items-center justify-center gap-2 text-center rounded-2xl border-[1px] border-[#A9A9A9]/50">
+        <div class="px-5 py-10 sm:px-8 flex flex-col items-center justify-center gap-2 text-center rounded-2xl border-[1px] border-[#A9A9A9]/50">
 
             <?= icon('no-score', 'h-8 w-8 opacity-60') ?>
 
@@ -71,7 +71,7 @@ $chipClasses = [
                             ?>
 
                             <div
-                                class="group px-8 py-6 flex justify-between items-center gap-6 rounded-2xl border-[1px] border-[#A9A9A9]/50
+                                class="group px-4 py-4 sm:px-8 sm:py-6 flex justify-between items-center gap-6 rounded-2xl border-[1px] border-[#A9A9A9]/50
                                         transition-all duration-200
                                         hover:border-brand/50
                                         hover:bg-brand/5

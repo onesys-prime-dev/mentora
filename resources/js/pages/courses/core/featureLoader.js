@@ -1,3 +1,4 @@
+import { centreCurrent } from "../../../shared/scroll-x.js";
 import { supersede } from "../../../shared/spa/load-guard.js";
 import { endProgress, startProgress } from "../../../shared/spa/progress.js";
 
@@ -149,6 +150,14 @@ export function highlightFeatureTab(feature)
 
             button.setAttribute("aria-selected", String(isActive));
         });
+
+    // On a phone the strip scrolls: keep the newly selected tab in view.
+    // (Overview's "View All" also carries data-course-feature, so the strip is found through its tablist.)
+    const strip = document.querySelector("[role=tablist] [data-course-feature]")?.closest("[data-scroll-current]");
+
+    if (strip) {
+        centreCurrent(strip);
+    }
 }
 
 /**

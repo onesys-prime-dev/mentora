@@ -17,7 +17,7 @@ $sort = $filters['sort'] ?? 'newest';
             placeholder="Search announcements..."
             value="<?= esc($search) ?>"
             autocomplete="off"
-            class="w-full text-sm outline-none placeholder:text-[#767676]">
+            class="w-full text-base outline-none sm:text-sm pointer-coarse:min-h-11 placeholder:text-[#767676]">
     </label>
 
     <div class="flex flex-col gap-2">
@@ -26,13 +26,13 @@ $sort = $filters['sort'] ?? 'newest';
             <button
                 type="button"
                 data-filter="all"
-                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'all' ? 'bg-brand text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
+                class="rounded-full px-3 py-1.5 text-xs font-semibold transition pointer-coarse:min-h-11 pointer-coarse:min-w-11 <?= $activeFilter === 'all' ? 'bg-brand text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
                 All
             </button>
             <button
                 type="button"
                 data-filter="pinned"
-                class="rounded-full px-3 py-1.5 text-xs font-semibold transition <?= $activeFilter === 'pinned' ? 'bg-brand text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
+                class="rounded-full px-3 py-1.5 text-xs font-semibold transition pointer-coarse:min-h-11 pointer-coarse:min-w-11 <?= $activeFilter === 'pinned' ? 'bg-brand text-white' : 'border border-gray-300 text-[#646464] hover:bg-gray-50' ?>">
                 Pinned
             </button>
         </div>
@@ -40,7 +40,7 @@ $sort = $filters['sort'] ?? 'newest';
 
     <div class="flex flex-col gap-2">
         <span class="text-xs font-semibold text-[#646464]">Sort</span>
-        <select data-announcements-sort class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-[#1A1C1E] outline-none">
+        <select data-announcements-sort aria-label="Sort announcements" class="rounded-xl border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 text-[#1A1C1E] outline-none">
             <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest first</option>
             <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest first</option>
         </select>

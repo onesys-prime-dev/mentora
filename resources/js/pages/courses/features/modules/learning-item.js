@@ -53,6 +53,7 @@ import {
 } from "../../../../shared/assignment/submission.js";
 
 import { bindThread } from "../discussions/thread.js";
+import { syncContents } from "../../../../shared/contents-menu.js";
 import {
     initializeCompletion,
     enableMarkComplete,
@@ -114,6 +115,9 @@ export function bindLearningItemEvents(refresh) {
                     if (!learningItemId) {
                         return;
                     }
+
+                    // Chosen from the phone "Contents" dropdown: close it while the item loads (from lg up it stays the sidebar).
+                    syncContents();
 
                     await loadLearningItem(
                         learningItemId,
@@ -241,6 +245,8 @@ export async function loadLearningItem(
 
         }
 
+        syncContents();
+
         bindLearningItemEvents(refresh);
 
         bindLearningNavigation(refresh);
@@ -342,6 +348,8 @@ export async function loadLearningItemEditor(
             "",
             `${window.location.pathname}?item=${learningItemId}&editor=1`
         );
+
+        syncContents();
 
         bindLearningItemEvents(refresh);
 

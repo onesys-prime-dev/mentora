@@ -9,7 +9,7 @@
  */
 ?>
 
-<div class="p-10 flex flex-col gap-8">
+<div class="p-4 sm:p-10 flex flex-col gap-8">
 
     <?= view('components/page-header', ['icon' => 'info', 'title' => 'Overview'], ['saveData' => false]) ?>
 
