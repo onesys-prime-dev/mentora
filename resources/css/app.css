@@ -605,6 +605,9 @@ html[data-theme="dark"] .hover\:text-brand:hover { color: var(--dk-brand); }
 @media (hover: hover) {
     html[data-theme="dark"] .group:hover .group-hover\:text-brand { color: var(--dk-brand); }
 }
+/* A student's Mark as Completed (modules/partials/navigations.php): its colours are data-[completed] variants, which the plain-class mappings miss. */
+html[data-theme="dark"] [data-mark-complete][data-completed="0"]:not(:disabled) { color: var(--dk-brand); border-color: var(--dk-brand); }
+html[data-theme="dark"] [data-mark-complete][data-completed="1"] { background-color: #16301f; border-color: #2b5a3a; color: #7dd3a0; }
 html[data-theme="dark"] .text-brand-dark,
 html[data-theme="dark"] .hover\:text-brand-dark:hover { color: var(--dk-brand-strong); }
 html[data-theme="dark"] .placeholder\:text-gray-400::placeholder { color: #8e97aa; }
