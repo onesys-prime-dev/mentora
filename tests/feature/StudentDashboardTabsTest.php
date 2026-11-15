@@ -10,7 +10,7 @@ use Tests\Support\RouteTestCase;
 
 /**
  * Below lg the student dashboard is split into Today / Courses / Updates phone tabs
- * (components/phone-tabs); from lg up the grid is unchanged. Instructors get no tabs yet.
+ * (components/phone-tabs); from lg up the grid is unchanged. The instructor tabs are in InstructorDashboardTabsTest.
  *
  * @internal
  */
@@ -131,15 +131,6 @@ final class StudentDashboardTabsTest extends RouteTestCase
         // No dean posts: the college strip prints nothing, and leaves no empty Updates panel behind.
         $this->assertSame(0, $x->query('//*[@data-college-strip]')->length);
         $this->assertSame(1, $x->query('//*[@data-phone-panel="updates"]')->length);
-    }
-
-    public function testTheInstructorDashboardHasNoPhoneTabs(): void
-    {
-        $x = $this->dashboard(CourseFactory::user('instructor'), 'instructor/dashboard');
-
-        $this->assertSame(0, $x->query('//*[@data-phone-tabs]')->length);
-        $this->assertSame(0, $x->query('//*[@data-phone-panel]')->length);
-        $this->assertSame(0, $x->query('//*[contains(concat(" ",@class," ")," max-lg:contents ")]')->length);
     }
 
     public function testTheChairpersonDashboardHasNoPhoneTabsAndKeepsTheCollegeStripUnwrapped(): void

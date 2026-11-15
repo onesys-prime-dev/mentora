@@ -553,6 +553,9 @@ html[data-theme="dark"] .bg-gray-50,
 html[data-theme="dark"] .bg-gray-50\/70,
 html[data-theme="dark"] .bg-gray-50\/60,
 html[data-theme="dark"] .bg-\[\#F9F9FC\],
+html[data-theme="dark"] .bg-\[\#F9FBFF\],
+html[data-theme="dark"] .bg-\[\#F4F8FF\],
+html[data-theme="dark"] .bg-\[\#F5F8FD\],
 html[data-theme="dark"] .bg-\[\#F6F7FA\],
 html[data-theme="dark"] .hover\:bg-gray-50:hover { background-color: var(--dk-raised); }
 html[data-theme="dark"] .bg-gray-100 { background-color: var(--dk-sunken); }
@@ -588,6 +591,7 @@ html[data-theme="dark"] .text-gray-800 { color: var(--dk-text); }
 html[data-theme="dark"] .text-\[\#3D3D3D\],
 html[data-theme="dark"] .text-gray-700 { color: var(--dk-text-soft); }
 html[data-theme="dark"] .text-\[\#646464\],
+html[data-theme="dark"] .text-\[\#5E5E5E\],
 html[data-theme="dark"] .text-\[\#767676\],
 html[data-theme="dark"] .text-\[\#878787\],
 html[data-theme="dark"] .text-\[\#5B6577\],
@@ -597,9 +601,17 @@ html[data-theme="dark"] .text-gray-400,
 html[data-theme="dark"] .text-gray-300 { color: #8e97aa; }
 html[data-theme="dark"] .text-brand,
 html[data-theme="dark"] .hover\:text-brand:hover { color: var(--dk-brand); }
+/* A row title's brand hover, which the mapped greys above would otherwise outrank (hover devices only, as Tailwind's own). */
+@media (hover: hover) {
+    html[data-theme="dark"] .group:hover .group-hover\:text-brand { color: var(--dk-brand); }
+}
 html[data-theme="dark"] .text-brand-dark,
 html[data-theme="dark"] .hover\:text-brand-dark:hover { color: var(--dk-brand-strong); }
 html[data-theme="dark"] .placeholder\:text-gray-400::placeholder { color: #8e97aa; }
+/* A reading (components/reading.css: #565656 text, #1A1C1E headings), in the editor and in the student's view. */
+html[data-theme="dark"] .reading-content,
+html[data-theme="dark"] .reading-content :is(p, ul, ol) { color: var(--dk-text-soft); }
+html[data-theme="dark"] .reading-content :is(h1, h2, strong) { color: var(--dk-text); }
 
 /* Buttons that are brand-coloured keep the blue and the white word; on hover they deepen. */
 html[data-theme="dark"] .bg-brand { background-color: #1a56c9; }
@@ -1115,6 +1127,32 @@ html[data-theme="dark"] [data-menu-tile]:not([aria-current], :hover) { backgroun
         max-height: min(60dvh, 28rem);
         overflow-y: auto;
     }
+    /* Grade Work's score bar and the Quiz Builder's "Add question" bar below md: the open controls lie over
+       the page above the bar's row instead of taking room in the column, so the row stays on the bottom edge
+       however far the page is scrolled (a sticky bar cannot rise above its own column). */
+    @media (width < 48rem) {
+        :is([data-expandable-grade-work-actions-panel], [data-quiz-builder-bar]) > [data-action-bar-panel] {
+            position: absolute;
+            inset-inline: 0;
+            bottom: 100%;
+            background: #fff;
+        }
+        :is([data-expandable-grade-work-actions-panel], [data-quiz-builder-bar])[data-open] > [data-action-bar-panel] {
+            border-top: 1px solid rgb(229 231 235);
+            box-shadow: 0 -8px 16px rgb(0 0 0 / 0.08);
+        }
+        html[data-theme="dark"] :is([data-expandable-grade-work-actions-panel], [data-quiz-builder-bar]) > [data-action-bar-panel] {
+            background: var(--dk-surface);
+            border-color: var(--dk-line);
+        }
+    }
+    /* Grade Work's score bar is a static block from md up: Submit Grade shows only while the grading
+       controls are open, as it did when it sat inside them. */
+    @media (width >= 48rem) {
+        [data-expandable-grade-work-actions-panel]:has([data-expanded-grade-work-actions].hidden) [data-grade-work-submit-grade] {
+            display: none;
+        }
+    }
 }
 
 /* Phone list rows of components/data-table.php (below md). A row is a two-line grid: the tick box and
@@ -1249,4 +1287,106 @@ html[data-theme="dark"] [data-calendar-view].bg-brand { color: #fff; }
 
     /* A deep-linked thread arrives in place (phone-nav.js sets this for two frames). */
     #messages-app[data-instant] [data-pane] { transition: none; }
+}
+
+/* Side panel (shared/side-panel.js): below lg the aside is a slide-over from the start (or, with
+   data-side-panel="end", the end) edge, opaque, over a backdrop; from lg up it is an ordinary pane and
+   neither transform nor backdrop apply. Out is quick, in springs. In the components layer so utilities win. */
+@layer components {
+    [data-side-panel-backdrop] { display: none; }
+    @media (width < 64rem) {
+        [data-side-panel] {
+            position: fixed;
+            inset-block: 0;
+            inset-inline-start: 0;
+            z-index: 50;
+            width: min(22rem, 90vw);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            background: #fff;
+            box-shadow: 0 0 2rem rgb(0 0 0 / 0.2);
+            padding-bottom: env(safe-area-inset-bottom);
+            transform: translateX(-100%);
+            visibility: hidden;
+            transition: transform var(--motion-fast) var(--ease-exit), visibility 0s linear var(--motion-fast);
+        }
+        [data-side-panel="end"] {
+            inset-inline-start: auto;
+            inset-inline-end: 0;
+            transform: translateX(100%);
+        }
+        [data-side-panel][data-open] {
+            transform: none;
+            visibility: visible;
+            transition: transform var(--motion-base) var(--ease-spring), visibility 0s;
+        }
+        html[data-theme="dark"] [data-side-panel] { background: var(--dk-surface); }
+        [data-side-panel-backdrop] {
+            display: block;
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: rgb(0 0 0 / 0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--motion-fast) var(--ease-exit);
+        }
+        [data-side-panel-backdrop][data-open] {
+            opacity: 1;
+            pointer-events: auto;
+            transition-duration: var(--motion-base);
+        }
+    }
+    /* data-side-panel-stack: below md the aside is back in the flow (side-panel.js keeps it open and not inert).
+       html raises it over the dark-theme background rule above. */
+    @media (width < 48rem) {
+        html [data-side-panel][data-side-panel-stack] {
+            position: static;
+            width: auto;
+            overflow: visible;
+            background: transparent;
+            box-shadow: none;
+            padding-bottom: 0;
+            transform: none;
+            visibility: visible;
+            transition: none;
+        }
+        [data-side-panel-backdrop]:has(+ [data-side-panel-stack]) { display: none; }
+    }
+}
+
+/* Split divider (shared/split-divider.js): from lg up the start pane is --split-start wide, the handle sits
+   between the panes; below lg the handle is hidden and the panes stack as their own markup says. */
+@layer components {
+    [data-split-handle] { display: none; }
+    @media (width >= 64rem) {
+        [data-split] {
+            display: grid;
+            grid-template-columns: var(--split-start, 22rem) 0.5rem minmax(0, 1fr);
+        }
+        [data-split] > [data-split-start],
+        [data-split] > [data-split-end] { min-width: 0; }
+        [data-split-handle] {
+            display: block;
+            position: relative;
+            cursor: col-resize;
+            touch-action: none;
+            border-radius: 0.25rem;
+        }
+        [data-split-handle]::after {
+            content: "";
+            position: absolute;
+            inset-block: 0;
+            inset-inline: calc(50% - 1px);
+            background: rgb(209 213 219);
+            border-radius: 1px;
+            transition: background-color var(--motion-fast) var(--ease-exit);
+        }
+        [data-split-handle]:focus-visible { outline: 2px solid var(--color-brand); outline-offset: -2px; }
+        @media (hover: hover) { [data-split-handle]:hover::after { background: var(--color-brand); } }
+        @media (pointer: coarse) {
+            [data-split] { grid-template-columns: var(--split-start, 22rem) 2.75rem minmax(0, 1fr); }
+        }
+        html[data-theme="dark"] [data-split-handle]::after { background: var(--dk-line); }
+    }
 }

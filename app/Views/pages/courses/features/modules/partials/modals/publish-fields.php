@@ -25,14 +25,14 @@ $idPrefix ??= 'publish';
 
             <label class="cursor-pointer">
                 <input type="radio" name="status" value="draft" data-publish-status class="peer sr-only" checked>
-                <span class="block rounded-xl border border-gray-300 px-4 py-2.5 text-center text-sm font-medium text-gray-700 transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/50">
+                <span class="flex items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-center text-sm pointer-coarse:min-h-11 font-medium text-gray-700 transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/50">
                     Draft
                 </span>
             </label>
 
             <label class="cursor-pointer">
                 <input type="radio" name="status" value="published" data-publish-status class="peer sr-only">
-                <span class="block rounded-xl border border-gray-300 px-4 py-2.5 text-center text-sm font-medium text-gray-700 transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
+                <span class="flex items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-center text-sm pointer-coarse:min-h-11 font-medium text-gray-700 transition peer-checked:border-brand peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
                     Publish
                 </span>
             </label>
@@ -53,10 +53,10 @@ $idPrefix ??= 'publish';
 
             <label for="<?= esc($idPrefix) ?>-schedule" class="flex flex-col gap-0.5">
                 <span class="text-sm font-medium text-gray-700">Schedule publish</span>
-                <span class="text-xs text-[#767676]">It stays a draft until then, and publishes itself.</span>
+                <span class="text-xs text-[#646464]">It stays a draft until then, and publishes itself.</span>
             </label>
 
-            <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+            <label class="relative inline-flex shrink-0 cursor-pointer items-center pointer-coarse:min-h-11">
 
                 <input
                     id="<?= esc($idPrefix) ?>-schedule"
@@ -76,7 +76,7 @@ $idPrefix ??= 'publish';
 
         <div data-schedule-when class="hidden flex-col gap-1.5">
 
-            <label for="<?= esc($idPrefix) ?>-when" class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label for="<?= esc($idPrefix) ?>-when" class="text-xs font-semibold uppercase tracking-wide text-gray-600">
                 Publish on
             </label>
 
@@ -85,7 +85,7 @@ $idPrefix ??= 'publish';
                 type="datetime-local"
                 name="scheduled_publish_at"
                 data-schedule-input
-                class="rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-brand">
+                class="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-2.5 text-base outline-none transition focus:border-brand sm:text-sm pointer-coarse:min-h-11">
 
         </div>
 

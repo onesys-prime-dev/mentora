@@ -24,6 +24,8 @@ import "./shared/data-table";
 import "./shared/row-actions";
 import "./shared/scroll-x";
 import "./shared/phone-tabs";
+import "./shared/side-panel";
+import "./shared/split-divider";
 import "./shared/spa/page-progress";
 import "./shared/messages-badge";
 

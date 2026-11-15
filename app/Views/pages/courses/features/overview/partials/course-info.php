@@ -70,7 +70,7 @@ $cards[] = [
 ];
 ?>
 
-<div class="flex flex-col gap-4 p-6 pb-8 border border-[#A9A9A9]/50 rounded-2xl">
+<div class="flex flex-col gap-4 p-4 pb-6 max-lg:@xs:p-6 max-lg:@xs:pb-8 lg:p-6 lg:pb-8 border border-[#A9A9A9]/50 rounded-2xl">
 
     <div class="flex items-center gap-3">
 
@@ -90,7 +90,9 @@ $cards[] = [
 
 </div>
 
-<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+<?php // Two cards to a row once the column has room for them; from lg always two, as before. ?>
+<div class="@container w-full min-w-0">
+<div class="grid grid-cols-1 gap-6 @md:grid-cols-2 lg:grid-cols-2">
 
     <?php foreach ($cards as $card): ?>
 
@@ -130,4 +132,5 @@ $cards[] = [
 
     <?php endforeach; ?>
 
+</div>
 </div>

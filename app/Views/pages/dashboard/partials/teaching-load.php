@@ -34,7 +34,7 @@ $sections = $data['sections'] ?? [
         <span class="text-xl font-display">Teaching Load</span>
 
         <a
-            class="text-xs text-blue-800 font-medium hover:underline"
+            class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs text-blue-800 font-medium hover:underline"
             href="<?= site_url($userRole . '/courses') ?>">
             View all
         </a>

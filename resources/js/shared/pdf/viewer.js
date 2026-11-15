@@ -131,7 +131,7 @@ class PdfViewer {
         this.toolbar = document.createElement("div");
 
         this.toolbar.className =
-            "sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4";
+            "sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4";
 
         const left = document.createElement("div");
 
@@ -164,13 +164,13 @@ class PdfViewer {
             "flex items-center gap-2";
 
         const zoomOut =
-            this.button("-", () => this.zoomOut());
+            this.button("-", () => this.zoomOut(), "Zoom out");
 
         const fitWidth =
             this.button("Fit Width", () => this.fitWidth());
 
         const zoomIn =
-            this.button("+", () => this.zoomIn());
+            this.button("+", () => this.zoomIn(), "Zoom in");
 
         this.zoomLabel =
             document.createElement("span");
@@ -202,7 +202,7 @@ class PdfViewer {
             "noopener noreferrer";
 
         download.className =
-            "rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-[#00338A]";
+            "inline-flex items-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-[#00338A] pointer-coarse:min-h-11";
 
         download.textContent =
             "Download";
@@ -226,7 +226,14 @@ class PdfViewer {
             document.createElement("div");
 
         this.viewer.className =
-            "h-[70vh] overflow-y-auto bg-slate-200 p-8";
+            "h-[70vh] overflow-y-auto bg-slate-200 p-4 sm:p-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50";
+
+        // Focusable, so a keyboard can scroll the pages.
+        this.viewer.tabIndex = 0;
+
+        this.viewer.setAttribute("role", "region");
+
+        this.viewer.setAttribute("aria-label", "PDF pages");
 
         this.pageContainer =
             document.createElement("div");
@@ -245,7 +252,7 @@ class PdfViewer {
 
     }
 
-    button(text, callback) {
+    button(text, callback, label = null) {
 
         const button =
             document.createElement("button");
@@ -253,9 +260,13 @@ class PdfViewer {
         button.type = "button";
 
         button.className =
-            "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition hover:bg-gray-100";
+            "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11";
 
         button.textContent = text;
+
+        if (label) {
+            button.setAttribute("aria-label", label);
+        }
 
         button.addEventListener(
             "click",

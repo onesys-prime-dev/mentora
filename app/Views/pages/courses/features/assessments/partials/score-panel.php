@@ -91,7 +91,7 @@ if ($isGraded && $scoreResult !== null) {
             <div class="flex items-center gap-3">
                 <?= icon('score', 'h-5 w-5') ?>
 
-                <span class="font-bold text-lg text-brand">
+                <span class="min-w-0 wrap-anywhere font-bold text-lg text-brand">
                     <?= $scoreHeading ?>
                 </span>
             </div>
@@ -104,12 +104,12 @@ if ($isGraded && $scoreResult !== null) {
                         <?= esc((int) $scored['score']) ?>/<?= esc((int) $totalPoints) ?>
                     </span>
 
-                    <span class="text-sm font-semibold text-[#767676]">
+                    <span class="text-sm font-semibold text-[#646464]">
                         <?= esc((float) ($scored['percentage'] ?? 0)) ?>%
                     </span>
 
                     <?php if ($scoreCaption): ?>
-                        <span class="text-center text-xs text-[#767676]"><?= esc($scoreCaption) ?></span>
+                        <span class="text-center text-xs text-[#646464]"><?= esc($scoreCaption) ?></span>
                     <?php endif; ?>
 
                 </div>
@@ -141,11 +141,11 @@ if ($isGraded && $scoreResult !== null) {
 
                     <?= icon('no-score', 'h-10 w-10') ?>
 
-                    <span class="font-bold text-md text-[#767676]">
+                    <span class="font-bold text-md text-[#646464]">
                         No Score Yet
                     </span>
 
-                    <span class="text-xs text-[#767676] text-center">
+                    <span class="text-xs text-[#646464] text-center">
                         <?= $isInstructor
                             ? 'A score will appear here once this student has been graded.'
                             : 'Your score will appear here once the instructor has given the grade.' ?>
@@ -163,7 +163,7 @@ if ($isGraded && $scoreResult !== null) {
             <div class="flex items-center gap-3">
                 <?= icon('feedbacks', 'h-5 w-5') ?>
 
-                <span class="font-bold text-lg text-brand">
+                <span class="min-w-0 wrap-anywhere font-bold text-lg text-brand">
                     <?= $feedbackHeading ?>
                 </span>
             </div>
@@ -189,7 +189,7 @@ if ($isGraded && $scoreResult !== null) {
                                 <?= nl2br(esc($entry['message'])) ?>
                             </p>
 
-                            <span class="text-[10px] text-[#767676]">
+                            <span class="text-[10px] text-[#646464]">
                                 <?= esc(date('M j, g:i A', strtotime($entry['created_at']))) ?>
                             </span>
 
@@ -205,11 +205,11 @@ if ($isGraded && $scoreResult !== null) {
 
                     <?= icon('no-feedback', 'h-10 w-10') ?>
 
-                    <span class="font-bold text-md text-[#767676]">
+                    <span class="font-bold text-md text-[#646464]">
                         No Feedback Yet
                     </span>
 
-                    <span class="text-xs text-[#767676] text-center">
+                    <span class="text-xs text-[#646464] text-center">
                         Feedback will appear here once your work is graded.
                     </span>
 
@@ -221,11 +221,11 @@ if ($isGraded && $scoreResult !== null) {
 
                     <?= icon('no-feedback', 'h-10 w-10') ?>
 
-                    <span class="font-bold text-md text-[#767676]">
+                    <span class="font-bold text-md text-[#646464]">
                         No Feedback Yet
                     </span>
 
-                    <span class="text-xs text-[#767676] text-center">
+                    <span class="text-xs text-[#646464] text-center">
                         <?= $isInstructor
                             ? 'Feedback you leave for this student will appear here.'
                             : 'Wait for your instructor\'s feedback, then you can reply here.' ?>
@@ -243,12 +243,12 @@ if ($isGraded && $scoreResult !== null) {
                         rows="2"
                         data-feedback-message
                         placeholder="<?= $isInstructor ? 'Add a message...' : 'Reply to your instructor...' ?>"
-                        class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-brand"></textarea>
+                        class="w-full rounded-xl border border-gray-200 p-3 text-base outline-none transition focus:border-brand sm:text-sm"></textarea>
 
                     <button
                         type="button"
                         data-feedback-send
-                        class="self-end rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white transition hover:bg-brand-dark">
+                        class="self-end rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                         Send
                     </button>
 

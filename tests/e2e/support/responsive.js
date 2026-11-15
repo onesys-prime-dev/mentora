@@ -68,14 +68,29 @@ export async function expectNoPageOverflow(page, scope) {
     expect(scrollWidth, `page is ${scrollWidth}px wide in a ${width}px window; sticking out: ${offenders.join("\n")}`).toBeLessThanOrEqual(width);
 }
 
+/** A dialog's panel: a components/dialog's [data-dialog-panel], or an older modal's (modals/index.js) first child. */
+export function dialogPanel(dialog) {
+    return dialog.locator(":scope > [data-dialog-panel], :scope > div").first();
+}
+
 /**
  * The open dialog's panel has no sideways scroll. The dialog is position: fixed, so it never widens the page
  * and expectNoPageOverflow cannot see it spill; this checks the panel itself.
  */
 export async function expectNoPanelOverflow(dialog) {
-    const { scrollWidth, clientWidth } = await dialog.locator("[data-dialog-panel]").evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+    const { scrollWidth, clientWidth, inner } = await dialogPanel(dialog).evaluate((el) => ({
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+        // A body that scrolls (overflow-y: auto makes overflow-x auto too) hides sideways spill from the panel's
+        // own measure, so each scroller inside it is measured as well; a [data-scroll-x] one may be wider.
+        inner: [...el.querySelectorAll("*")]
+            .filter((node) => !node.closest("[data-scroll-x]") && /auto|scroll/.test(globalThis.getComputedStyle(node).overflowX))
+            .filter((node) => node.scrollWidth > node.clientWidth + 1)
+            .map((node) => `${node.scrollWidth}px inside ${node.clientWidth}px: ${node.outerHTML.slice(0, 120)}`),
+    }));
 
     expect(scrollWidth, `dialog panel is ${scrollWidth}px wide inside ${clientWidth}px`).toBeLessThanOrEqual(clientWidth);
+    expect(inner, "scrollers inside the dialog panel that spill sideways").toEqual([]);
 }
 
 /**
@@ -93,7 +108,7 @@ export async function expectTouchTargets(page, scope = "body") {
 
         return [...globalThis.document.querySelectorAll(root)]
             .flatMap((el) => [...el.querySelectorAll(controls)])
-            .filter((el) => el.checkVisibility() && globalThis.getComputedStyle(el).display !== "inline")
+            .filter((el) => el.checkVisibility({ visibilityProperty: true }) && globalThis.getComputedStyle(el).display !== "inline")
             .flatMap((el) => {
                 const label = /^(checkbox|radio)$/.test(el.type) ? el.closest("label") : null;
                 const r = (label ?? el).getBoundingClientRect();

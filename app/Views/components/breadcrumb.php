@@ -54,7 +54,7 @@ $last = count($crumbs) - 1;
 
                     <button
                         type="button"
-                        class="rounded font-medium text-[#646464] transition hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                        class="rounded font-medium text-[#646464] transition hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11"
                         <?= $crumb['attrs'] ?>>
                         <?= esc($crumb['label']) ?>
                     </button>

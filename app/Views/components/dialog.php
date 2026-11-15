@@ -11,14 +11,16 @@
 | variant (default|sheet|fullscreen|menu; left out it is auto: fullscreen when body
 | holds a <form> with a field that is not hidden, else default; centered wins),
 | topAction (fullscreen only: ['label' => 'Post', 'form' => '<form id>'], the
-| submit button in the phone top bar).
+| submit button in the phone top bar), titleAttrs (already-escaped attributes
+| for the title, such as a feature's hook).
 |
 | Variants, below the breakpoint named; above it each is the centered dialog:
 |   default     sits at the bottom, full width (sm)
 |   sheet       a bottom sheet with a drag handle; swipe it down to close (sm)
 |   fullscreen  fills the screen: Cancel | title | topAction on top; with a topAction, no footer;
 |               without one, the footer (or, with no footer, the one form's own submit
-|               row) is a sticky bottom bar; Cancel buttons below the top bar hide (sm)
+|               row) is a sticky bottom bar; Cancel buttons below the top bar hide (sm);
+|               from sm the footer still sticks, for a short window where the panel scrolls
 |   menu        a full-screen panel from the left (lg)
 |
 | Open it with <button data-dialog-open="<id>">. Put a form inside as
@@ -36,6 +38,8 @@ $centered  = $centered ?? false;
 $variant ??= !$centered && str_contains($body, '<form') && preg_match('/<(?:textarea|select)\b|<input\b(?![^>]*\btype=["\']?hidden\b)/i', $body) ? 'fullscreen' : 'default';
 $variant   = in_array($variant, ['sheet', 'fullscreen', 'menu'], true) ? $variant : 'default';
 $topAction = $topAction ?? null;
+// Already-escaped attributes for the title (a feature's own hook on it), as the breadcrumb's crumb attrs.
+$titleAttrs ??= '';
 // Only a well-formed ['label' => ..., 'form' => ...] on a fullscreen dialog renders (no warning on bad input).
 $topAction = $variant === 'fullscreen' && is_array($topAction) && ($topAction['label'] ?? '') !== '' && ($topAction['form'] ?? '') !== '' ? $topAction : null;
 
@@ -91,7 +95,7 @@ $panel = match (true) {
                     </svg>
                 </button>
 
-                <h2 id="<?= esc($id) ?>-title" data-dialog-title class="min-w-0 max-sm:truncate text-center text-base font-bold text-brand sm:text-left sm:text-lg"><?= esc($title) ?></h2>
+                <h2 id="<?= esc($id) ?>-title" data-dialog-title <?= $titleAttrs ?> class="min-w-0 max-sm:truncate text-center text-base font-bold text-brand sm:text-left sm:text-lg"><?= esc($title) ?></h2>
 
                 <?php if ($topAction): ?>
                     <button type="submit" form="<?= esc($topAction['form']) ?>" class="min-h-11 justify-self-end rounded-full bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 sm:hidden"><?= esc($topAction['label']) ?></button>
@@ -99,7 +103,7 @@ $panel = match (true) {
             </div>
         <?php else: ?>
             <div <?= $variant === 'sheet' ? 'data-dialog-header ' : '' ?>class="flex items-start justify-between gap-4">
-                <h2 id="<?= esc($id) ?>-title" data-dialog-title class="text-lg font-bold text-brand"><?= esc($title) ?></h2>
+                <h2 id="<?= esc($id) ?>-title" data-dialog-title <?= $titleAttrs ?> class="text-lg font-bold text-brand"><?= esc($title) ?></h2>
 
                 <button type="button" data-dialog-close class="flex items-center justify-center rounded p-1 text-[#A9A9A9] transition hover:text-[#646464] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11 pointer-coarse:min-w-11" aria-label="Close">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -112,7 +116,7 @@ $panel = match (true) {
         <div data-dialog-body <?= $pinActions ? 'data-dialog-pin-actions ' : '' ?>class="@container flex flex-col gap-4 text-sm text-[#3D3D3D]"><?= $body ?></div>
 
         <?php if ($footer !== ''): ?>
-            <div data-dialog-footer class="<?= $topAction ? 'hidden sm:flex' : 'flex' ?> flex-wrap items-center justify-end gap-3<?= $stickyFooter ? ' border-black/10 bg-white max-sm:sticky max-sm:bottom-0 max-sm:-mx-6 max-sm:mt-auto max-sm:border-t max-sm:px-6 max-sm:pt-4 max-sm:pb-safe-4 max-sm:[&_[data-dialog-close]]:hidden' : '' ?>"><?= $footer ?></div>
+            <div data-dialog-footer class="<?= $topAction ? 'hidden sm:flex' : 'flex' ?> flex-wrap items-center justify-end gap-3<?= $stickyFooter ? ' border-black/10 bg-white max-sm:sticky max-sm:bottom-0 sm:sticky sm:bottom-0 max-sm:-mx-6 max-sm:mt-auto max-sm:border-t max-sm:px-6 max-sm:pt-4 max-sm:pb-safe-4 sm:-mx-6 sm:border-t sm:px-6 sm:pt-4 max-sm:[&_[data-dialog-close]]:hidden' : '' ?>"><?= $footer ?></div>
         <?php endif; ?>
 
     </div>

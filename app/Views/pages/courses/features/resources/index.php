@@ -12,13 +12,13 @@ $level = $level ?? 'offering';
         'filters' => $filters,
         'view' => $view,
         'level' => $level,
-    ]) ?>
+    ], ['saveData' => false]) ?>
 
     <?= view('pages/courses/features/resources/partials/breadcrumb', [
         'level' => $level,
         'module' => $module ?? null,
         'unit' => $unit ?? null,
-    ]) ?>
+    ], ['saveData' => false]) ?>
 
     <div class="flex flex-col gap-6" data-resources-content>
 
@@ -30,11 +30,11 @@ $level = $level ?? 'offering';
 
             <?php elseif ($view === 'grid'): ?>
 
-                <?= view('pages/courses/features/resources/partials/grid-view', ['resources' => $resources]) ?>
+                <?= view('pages/courses/features/resources/partials/grid-view', ['resources' => $resources], ['saveData' => false]) ?>
 
             <?php else: ?>
 
-                <?= view('pages/courses/features/resources/partials/list-view', ['resources' => $resources]) ?>
+                <?= view('pages/courses/features/resources/partials/list-view', ['resources' => $resources], ['saveData' => false]) ?>
 
             <?php endif; ?>
 
@@ -44,7 +44,7 @@ $level = $level ?? 'offering';
                 'items' => $units,
                 'kind' => 'unit',
                 'emptyLabel' => 'No learning units yet.',
-            ]) ?>
+            ], ['saveData' => false]) ?>
 
         <?php else: ?>
 
@@ -52,10 +52,18 @@ $level = $level ?? 'offering';
                 'items' => $modules,
                 'kind' => 'module',
                 'emptyLabel' => 'No modules yet.',
-            ]) ?>
+            ], ['saveData' => false]) ?>
 
         <?php endif; ?>
 
     </div>
+
+    <?php // One sheet for every resource row's phone menu; outside the content the script swaps, so later folders find it. ?>
+    <?= view('components/dialog', [
+        'id'      => 'resource-actions-sheet',
+        'title'   => 'Actions',
+        'variant' => 'sheet',
+        'body'    => '<dl class="empty:hidden" data-row-actions-fields></dl><div class="flex flex-col gap-1" data-row-actions-slot></div>',
+    ], ['saveData' => false]) ?>
 
 </div>

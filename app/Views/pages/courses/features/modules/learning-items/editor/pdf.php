@@ -29,7 +29,7 @@ helper('number');
                 <span data-pdf-current-name class="truncate text-sm font-semibold text-[#1A1C1E]">
                     <?= esc($file['original_filename'] ?? '') ?>
                 </span>
-                <span data-pdf-current-size class="text-xs text-[#767676]">
+                <span data-pdf-current-size class="text-xs text-[#646464]">
                     <?= $file ? esc(number_to_size((int) $file['file_size'])) : '' ?>
                 </span>
             </div>
@@ -39,7 +39,7 @@ helper('number');
                 href="<?= esc($file['url'] ?? '#') ?>"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/5">
+                class="flex shrink-0 items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                 Open
             </a>
 
@@ -48,7 +48,7 @@ helper('number');
         <!-- Upload / replace -->
         <label
             data-pdf-dropzone
-            class="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#DBDBDB] bg-white p-8 text-center transition-colors hover:bg-[#F9F9FC] data-dragging:border-brand data-dragging:bg-brand/5">
+            class="flex min-h-40 max-w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#DBDBDB] bg-white p-5 text-center sm:p-8 transition-colors hover:bg-[#F9F9FC] data-dragging:border-brand data-dragging:bg-brand/5">
 
             <input
                 type="file"
@@ -68,7 +68,7 @@ helper('number');
 
         </label>
 
-        <p data-pdf-error class="hidden text-sm font-semibold text-red-500"></p>
+        <p data-pdf-error class="hidden text-sm font-semibold text-red-700"></p>
 
         <!-- Allow download -->
         <label class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 px-5 py-4">
@@ -91,7 +91,7 @@ helper('number');
     <!-- Preview -->
     <section
         data-pdf-preview
-        class="<?= $file ? '' : 'hidden' ?> w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        class="<?= $file ? '' : 'hidden' ?> w-full max-w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
         <div
             id="pdf-viewer"

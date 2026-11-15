@@ -43,7 +43,7 @@ $formatDuration = static function (int $minutes): string {
         // Someone who only looks (the dean, the institution's administrator) is shown no control that would be refused.
         if ($canEditContent): ?>
             <button
-                class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark"
+                class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark pointer-coarse:min-h-11"
                 data-create-module-button>
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -66,12 +66,14 @@ $formatDuration = static function (int $minutes): string {
         <?php endif; ?>
 
         <?php if (trim((string) $course_description) !== ''): ?>
-            <p class="text-[#646464]/80 leading-relaxed">
+            <p class="text-[#646464] leading-relaxed">
                 <?= esc($course_description) ?>
             </p>
         <?php endif; ?>
 
     </div>
+
+    <p class="sr-only" aria-live="polite" data-module-move-status></p>
 
     <!-- modules -->
     <div id="modules-container" class="flex flex-col gap-5">
@@ -82,7 +84,7 @@ $formatDuration = static function (int $minutes): string {
 
                 <?php if ($canEditContent): ?>
 
-                    <div data-module-card-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
+                    <div data-module-card-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing pointer-coarse:hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
                             <circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/>
                             <circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/>
@@ -90,16 +92,19 @@ $formatDuration = static function (int $minutes): string {
                         </svg>
                     </div>
 
+                    <?= view('pages/courses/features/modules/partials/move-buttons', ['attr' => 'data-module-move', 'noun' => 'module', 'title' => $module['title']], ['saveData' => false]) ?>
+
                 <?php endif; ?>
 
                 <?php $isDraft = $isInstructor && $module['status'] === 'draft'; ?>
 
-                <div class="group flex flex-col flex-1 bg-white border <?= $isDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10' ?> rounded-2xl transition-colors" data-module-card>
+                <div class="group flex min-w-0 flex-col flex-1 bg-white border <?= $isDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10' ?> rounded-2xl transition-colors" data-module-card>
 
                     <!-- header: chevron toggles the panel below, no navigation -->
                     <div class="flex justify-between items-center gap-3 p-4 sm:gap-5 sm:p-6 cursor-pointer rounded-2xl focus-within:ring-2 focus-within:ring-brand/30" data-module="<?= esc($module['id']) ?>">
 
-                        <div class="flex justify-center items-center">
+                        <?php // On an editor's phone the arrows and the ⋯ need the room; the badge still says how far along it is. ?>
+                        <div class="flex justify-center items-center<?= $canEditContent ? ' max-sm:hidden' : '' ?>">
 
                             <?php if ($module['progress'] == 100): ?>
                                 <div class="w-11 h-11 sm:w-15 sm:h-15 flex justify-center items-center bg-[#E8F5E9] rounded-[999px]">
@@ -131,7 +136,7 @@ $formatDuration = static function (int $minutes): string {
                                         <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $module['locked_by'] ?? [], 'labels' => $module['dependency_labels'] ?? []], ['saveData' => false]) ?>
                                     </div>
 
-                                    <span class="text-sm font-normal text-[#A3A3A3]">
+                                    <span class="text-sm font-normal text-[#646464]">
                                         <?php if ($module['display_number'] !== null): ?>
                                             Module <?= esc($module['display_number']) ?>
                                         <?php endif; ?>
@@ -148,25 +153,25 @@ $formatDuration = static function (int $minutes): string {
 
                                 <?php elseif ($isInstructor && empty($module['has_roster'])): ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#767676] rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 max-sm:shrink max-sm:px-3 max-sm:py-1 bg-[#E9E9EC] uppercase text-xs font-black text-[#767676] rounded-4xl">
                                         No students enrolled
                                     </span>
 
                                 <?php elseif ($isInstructor): ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E0E5F2] uppercase text-xs font-black text-brand-dark rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 max-sm:shrink max-sm:px-3 max-sm:py-1 bg-[#E0E5F2] uppercase text-xs font-black text-brand-dark rounded-4xl">
                                         Class progress <?= esc($module['progress']) ?>%
                                     </span>
 
                                 <?php elseif ($module['progress'] > 0): ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E0E5F2] uppercase text-xs font-black text-brand-dark rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 max-sm:shrink max-sm:px-3 max-sm:py-1 bg-[#E0E5F2] uppercase text-xs font-black text-brand-dark rounded-4xl">
                                         Progress <?= esc($module['progress']) ?>%
                                     </span>
 
                                 <?php else: ?>
 
-                                    <span class="shrink-0 px-6 py-2 bg-[#E9E9EC] uppercase text-xs font-black text-[#767676] rounded-4xl">
+                                    <span class="shrink-0 px-6 py-2 max-sm:shrink max-sm:px-3 max-sm:py-1 bg-[#E9E9EC] uppercase text-xs font-black text-[#767676] rounded-4xl">
                                         Not yet started
                                     </span>
 
@@ -234,7 +239,7 @@ $formatDuration = static function (int $minutes): string {
                             <button
                                 type="button"
                                 data-go-to-module="<?= esc($module['id']) ?>"
-                                class="self-start mt-2 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark">
+                                class="self-start mt-2 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark pointer-coarse:min-h-11">
                                 Go to module
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -264,6 +269,9 @@ $formatDuration = static function (int $minutes): string {
 </div>
 
 <!-- modals -->
+<?php if ($canEditContent): ?>
+    <?= view('pages/courses/features/modules/partials/content-actions-sheet', [], ['saveData' => false]) ?>
+<?php endif; ?>
 <?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
 <?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
 <?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>

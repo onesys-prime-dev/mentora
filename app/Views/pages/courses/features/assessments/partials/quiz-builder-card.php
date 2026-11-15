@@ -28,13 +28,13 @@ $caseSensitive = !empty($question['case_sensitive']);
     data-question-case-sensitive="<?= $caseSensitive ? '1' : '0' ?>"
     class="rounded-xl border-2 border-gray-100 bg-white p-4 shadow-sm transition">
 
-    <div class="flex items-center gap-2 border-b border-gray-100 pb-3">
+    <div class="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-3">
 
         <button
             type="button"
             data-drag-handle
             title="Drag to reorder"
-            class="cursor-grab rounded p-1 text-[#767676] transition hover:bg-gray-100 active:cursor-grabbing" aria-label="Drag to reorder">
+            class="cursor-grab rounded p-1 text-[#646464] transition hover:bg-gray-100 active:cursor-grabbing pointer-coarse:hidden" aria-label="Drag to reorder">
 
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                 <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
@@ -44,7 +44,7 @@ $caseSensitive = !empty($question['case_sensitive']);
 
         </button>
 
-        <span class="text-sm font-bold text-[#767676]" data-question-number>
+        <span class="text-sm font-bold text-[#646464]" data-question-number>
             Q<?= esc($index + 1) ?>
         </span>
 
@@ -54,15 +54,17 @@ $caseSensitive = !empty($question['case_sensitive']);
 
         <input
             type="number"
+            inputmode="decimal"
             data-question-points-input
+            aria-label="Points"
             min="0"
             step="0.5"
             value="<?= esc($pointsValue) ?>"
-            class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-brand">
-        <span class="text-[10px] text-[#767676]">pts</span>
+            class="w-16 rounded-lg border border-gray-200 px-1.5 py-0.5 text-base text-center outline-none transition focus:border-brand sm:w-14 sm:text-xs pointer-coarse:min-h-11">
+        <span class="text-[10px] text-[#646464]">pts</span>
 
         <span
-            class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500 <?= empty($question['is_required']) ? 'hidden' : '' ?>"
+            class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700 <?= empty($question['is_required']) ? 'hidden' : '' ?>"
             data-question-required-badge>
             Required
         </span>
@@ -75,11 +77,29 @@ $caseSensitive = !empty($question['case_sensitive']);
 
         <div class="ml-auto flex shrink-0 items-center gap-1">
 
+            <!-- Reordering without a drag (touch, keyboard): hidden from lg up on a mouse, where the handle drags. -->
+            <?php foreach (['up' => 'M5 15l7-7 7 7', 'down' => 'M19 9l-7 7-7-7'] as $direction => $path): ?>
+
+                <button
+                    type="button"
+                    data-question-move="<?= $direction ?>"
+                    title="Move <?= $direction ?>"
+                    aria-label="Move question <?= $direction ?>"
+                    class="flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:min-h-11 pointer-coarse:min-w-11 lg:pointer-fine:hidden">
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="<?= $path ?>" />
+                    </svg>
+
+                </button>
+
+            <?php endforeach; ?>
+
             <button
                 type="button"
                 data-open-question-settings
                 title="Question settings"
-                class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand" aria-label="Question settings">
+                class="flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:bg-gray-100 hover:text-brand" aria-label="Question settings">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -92,7 +112,7 @@ $caseSensitive = !empty($question['case_sensitive']);
                 type="button"
                 data-duplicate-question
                 title="Duplicate question"
-                class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand" aria-label="Duplicate question">
+                class="flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:bg-gray-100 hover:text-brand" aria-label="Duplicate question">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -104,7 +124,7 @@ $caseSensitive = !empty($question['case_sensitive']);
                 type="button"
                 data-delete-question
                 title="Delete question"
-                class="rounded-lg p-1.5 text-gray-500 transition hover:bg-red-50 hover:text-red-500" aria-label="Delete question">
+                class="flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:bg-red-50 hover:text-red-500" aria-label="Delete question">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m3 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12zM10 11v6M14 11v6" />
@@ -122,7 +142,8 @@ $caseSensitive = !empty($question['case_sensitive']);
             rows="2"
             data-question-text
             placeholder="Type your question..."
-            class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-sm font-medium text-[#1A1C1E] outline-none transition placeholder:text-gray-300 focus:bg-gray-50"
+            aria-label="Question text"
+            class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-base sm:text-sm font-medium text-[#1A1C1E] outline-none transition placeholder:text-gray-300 focus:bg-gray-50"
         ><?= esc($question['question_text']) ?></textarea>
 
         <?php if ($question['question_type'] === 'Multiple Choice'): ?>
@@ -139,24 +160,29 @@ $caseSensitive = !empty($question['case_sensitive']);
                         data-choice-row
                         data-choice-id="<?= esc($choice['id']) ?>">
 
-                        <input
-                            type="<?= $allowMultipleAnswers ? 'checkbox' : 'radio' ?>"
-                            data-choice-correct
-                            <?= $allowMultipleAnswers ? '' : 'name="correct-choice-' . esc($question['id']) . '"' ?>
-                            class="h-4 w-4 shrink-0 accent-emerald-600"
-                            <?= $isCorrect ? 'checked' : '' ?>>
+                        <label class="flex shrink-0 items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                            <input
+                                type="<?= $allowMultipleAnswers ? 'checkbox' : 'radio' ?>"
+                                data-choice-correct
+                                aria-label="Correct answer"
+                                <?= $allowMultipleAnswers ? '' : 'name="correct-choice-' . esc($question['id']) . '"' ?>
+                                class="h-4 w-4 shrink-0 accent-emerald-600"
+                                <?= $isCorrect ? 'checked' : '' ?>>
+                        </label>
 
                         <input
                             type="text"
                             data-choice-text
                             value="<?= esc($choice['choice_text']) ?>"
                             placeholder="Choice text"
-                            class="min-w-0 flex-1 border-0 bg-transparent px-1 py-0.5 text-sm outline-none transition <?= $isCorrect ? 'font-semibold text-emerald-700' : 'text-gray-700' ?>">
+                            aria-label="Choice text"
+                            class="min-w-0 flex-1 border-0 bg-transparent px-1 py-0.5 text-base outline-none transition sm:text-sm pointer-coarse:min-h-11 <?= $isCorrect ? 'font-semibold text-emerald-700' : 'text-gray-700' ?>">
 
                         <button
                             type="button"
                             data-remove-choice
-                            class="shrink-0 rounded-lg p-1 text-gray-300 transition hover:bg-red-50 hover:text-red-500">
+                            aria-label="Remove choice"
+                            class="flex shrink-0 items-center justify-center rounded-lg p-1 text-gray-300 transition hover:bg-red-50 hover:text-red-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -173,7 +199,7 @@ $caseSensitive = !empty($question['case_sensitive']);
             <button
                 type="button"
                 data-add-choice-inline
-                class="self-start text-xs font-semibold text-brand transition hover:underline">
+                class="self-start text-xs font-semibold text-brand transition hover:underline pointer-coarse:min-h-11">
 
                 + Add choice
 
@@ -189,7 +215,7 @@ $caseSensitive = !empty($question['case_sensitive']);
 
         <?php else: ?>
 
-            <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-[#767676]">
+            <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-[#646464]">
                 <?= esc($previewLabels[$question['question_type']] ?? 'Students will respond here.') ?>
             </div>
 

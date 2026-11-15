@@ -96,6 +96,16 @@ $layouts = [
             ['slug' => 'content-status',   'span' => 'lg:col-span-3'],
             ['slug' => 'quick-access',     'span' => 'lg:col-span-3'],
         ],
+        'phoneTab' => [
+            'grading-queue'         => 'grade',
+            'at-risk-students'      => 'grade',
+            'profile-card'          => 'sections',
+            'teaching-load'         => 'sections',
+            'class-progress'        => 'sections',
+            'content-status'        => 'sections',
+            'quick-access'          => 'sections',
+            'college-announcements' => 'updates',
+        ],
     ],
 
     // Chairperson isn't in this map — it has its own bespoke layout below
@@ -116,19 +126,26 @@ $dueNow = array_filter(
     static fn (array $task) => in_array($task['urgency'] ?? '', ['overdue', 'today'], true)
 );
 
-$phoneTabs = [
-    ['key' => 'today',   'label' => 'Today',   'dot' => $dueNow !== []],
-    ['key' => 'courses', 'label' => 'Courses', 'dot' => false],
-    ['key' => 'updates', 'label' => 'Updates', 'dot' => false],
-];
+// The instructor's only "something needs doing" signal is submissions waiting in the grading queue.
+$phoneTabs = $userRole === 'instructor'
+    ? [
+        ['key' => 'grade',    'label' => 'To grade', 'dot' => ($widgets['grading-queue']['queue'] ?? []) !== []],
+        ['key' => 'sections', 'label' => 'Sections', 'dot' => false],
+        ['key' => 'updates',  'label' => 'Updates',  'dot' => false],
+    ]
+    : [
+        ['key' => 'today',   'label' => 'Today',   'dot' => $dueNow !== []],
+        ['key' => 'courses', 'label' => 'Courses', 'dot' => false],
+        ['key' => 'updates', 'label' => 'Updates', 'dot' => false],
+    ];
 
 /** The phone-tab panel attributes for a widget slug ('' when this role has no phone tabs). */
-$panel = static function (string $slug) use ($phoneTab): string {
+$panel = static function (string $slug) use ($phoneTab, $phoneTabs): string {
     if (! isset($phoneTab[$slug])) {
         return '';
     }
 
-    return ' data-phone-panel="' . $phoneTab[$slug] . '"' . ($phoneTab[$slug] === 'today' ? ' data-phone-active' : '');
+    return ' data-phone-panel="' . $phoneTab[$slug] . '"' . ($phoneTab[$slug] === $phoneTabs[0]['key'] ? ' data-phone-active' : '');
 };
 ?>
 
@@ -180,6 +197,13 @@ $panel = static function (string $slug) use ($phoneTab): string {
             <div class="shrink-0"<?= $panel('college-announcements') ?>><?= $collegeStrip ?></div>
         <?php else: ?>
             <?= $collegeStrip ?>
+            <?php // The strip is the instructor's whole Updates tab: with no dean posts the tab still needs its empty copy. ?>
+            <?php if (count(array_keys($phoneTab, 'updates', true)) === 1 && $panel('college-announcements') !== ''): ?>
+                <div class="lg:hidden shrink-0 flex flex-col items-center gap-1 rounded-3xl border border-white/30 bg-white/20 px-4 py-10 text-center shadow-xl"<?= $panel('college-announcements') ?>>
+                    <span class="text-sm font-medium text-gray-700">No announcements</span>
+                    <span class="text-xs text-gray-600">Posts from your college will appear here.</span>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     <?php endif; ?>
 

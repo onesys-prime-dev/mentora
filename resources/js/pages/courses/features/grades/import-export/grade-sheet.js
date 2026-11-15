@@ -269,7 +269,7 @@ function renderRow(row)
     card.className = `flex flex-col gap-2 rounded-xl border px-4 py-3 ${flagged ? "border-red-200 bg-red-50" : "border-gray-200"}`;
 
     const header = document.createElement("div");
-    header.className = "flex items-center justify-between gap-3";
+    header.className = "flex flex-wrap items-center justify-between gap-x-3 gap-y-1";
 
     const name = document.createElement("span");
     name.className = "text-sm font-semibold text-[#646464]";

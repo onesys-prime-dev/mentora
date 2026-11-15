@@ -21,7 +21,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
     <div class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
 
-        <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6">
 
             <h2 class="text-xl font-bold text-brand">
                 Generate Questions with AI
@@ -29,7 +29,8 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 data-close-ai-generate-modal>
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -40,7 +41,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
         </div>
 
-        <form id="ai-generate-form" class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-8" data-ai-source-usable="<?= $unitItems !== [] ? '1' : '0' ?>">
+        <form id="ai-generate-form" class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-8" data-ai-source-usable="<?= $unitItems !== [] ? '1' : '0' ?>">
 
             <p class="rounded-xl bg-brand-tint px-4 py-3 text-xs text-brand">
                 <?php if ($aiIsExternal): ?>
@@ -74,7 +75,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                         </span>
 
                         <div class="flex min-w-0 flex-col">
-                            <span class="truncate text-[11px] font-semibold uppercase tracking-wide text-[#767676]"><?= esc($sourceUnit['module_title']) ?></span>
+                            <span class="truncate text-[11px] font-semibold uppercase tracking-wide text-[#646464]"><?= esc($sourceUnit['module_title']) ?></span>
                             <span class="truncate text-sm font-bold text-brand" data-ai-source-unit-title><?= esc($sourceUnit['title']) ?></span>
                         </div>
 
@@ -95,8 +96,8 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                             </span>
 
                             <span class="flex items-center gap-3 text-xs font-semibold text-brand">
-                                <button type="button" data-ai-select-all class="hover:underline">Select all</button>
-                                <button type="button" data-ai-select-none class="hover:underline">Select none</button>
+                                <button type="button" data-ai-select-all class="hover:underline pointer-coarse:min-h-11">Select all</button>
+                                <button type="button" data-ai-select-none class="hover:underline pointer-coarse:min-h-11">Select none</button>
                             </span>
 
                         </div>
@@ -106,7 +107,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                             <?php foreach ($unitItems as $unitItem): ?>
 
                                 <li>
-                                    <label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-[#F2F7FF]">
+                                    <label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-[#F2F7FF] pointer-coarse:min-h-11">
 
                                         <input
                                             type="checkbox"
@@ -150,10 +151,11 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                     <input
                         type="number"
                         name="count"
+                        aria-label="How many questions?"
                         min="1"
                         max="100"
                         value="10"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11">
                 </div>
 
                 <div class="flex flex-col gap-1.5">
@@ -163,10 +165,11 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                     <input
                         type="number"
                         name="points_per_question"
+                        aria-label="Points each"
                         min="0"
                         step="0.5"
                         placeholder="AI decides"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11">
                 </div>
 
             </div>
@@ -206,7 +209,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                                 data-ai-type-mix-count
                                 data-type-key="<?= esc($key) ?>"
                                 value="<?= $key === 'multiple_choice' ? '10' : '0' ?>"
-                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm text-center outline-none transition focus:border-brand">
+                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-base text-center outline-none transition focus:border-brand sm:text-sm pointer-coarse:min-h-11">
 
                         </label>
 
@@ -223,7 +226,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
             <!-- Fine-tune -->
             <details data-ai-fine-tune class="rounded-xl border border-gray-200 p-3">
 
-                <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-500 pointer-coarse:min-h-11 pointer-coarse:py-3">
                     Fine-tune the questions <span data-ai-fine-tune-summary class="ml-1 normal-case text-[#767676]"></span>
                 </summary>
 
@@ -231,7 +234,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
                     <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
                         Difficulty
-                        <select name="ai_difficulty" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-normal">
+                        <select name="ai_difficulty" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-base sm:text-sm font-normal pointer-coarse:min-h-11">
                             <option value="mixed">Mixed</option>
                             <option value="easier">Easier</option>
                             <option value="harder">Harder</option>
@@ -240,7 +243,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
                     <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
                         Kind of thinking
-                        <select name="ai_level" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-normal">
+                        <select name="ai_level" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-base sm:text-sm font-normal pointer-coarse:min-h-11">
                             <option value="any">Any</option>
                             <option value="recall">Remember facts</option>
                             <option value="understand">Understand ideas</option>
@@ -250,7 +253,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
                     <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">
                         Choices per question
-                        <select name="ai_choices" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-normal">
+                        <select name="ai_choices" class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-base sm:text-sm font-normal pointer-coarse:min-h-11">
                             <option value="3">3</option>
                             <option value="4" selected>4</option>
                             <option value="5">5</option>
@@ -264,7 +267,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                             name="ai_language"
                             maxlength="40"
                             placeholder="Same as the material"
-                            class="rounded-lg border border-gray-300 px-2 py-2 text-sm font-normal outline-none focus:border-brand">
+                            class="rounded-lg border border-gray-300 px-2 py-2 text-base sm:text-sm font-normal outline-none focus:border-brand pointer-coarse:min-h-11">
                     </label>
 
                     <label class="col-span-2 flex flex-col gap-1 text-xs font-medium text-gray-600">
@@ -274,12 +277,12 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
                             name="ai_focus"
                             maxlength="200"
                             placeholder="For example: chapter 3 formulas only"
-                            class="rounded-lg border border-gray-300 px-2 py-2 text-sm font-normal outline-none focus:border-brand">
+                            class="rounded-lg border border-gray-300 px-2 py-2 text-base sm:text-sm font-normal outline-none focus:border-brand pointer-coarse:min-h-11">
                     </label>
 
                 </div>
 
-                <button type="button" data-ai-fine-tune-reset class="mt-3 text-xs font-semibold text-brand hover:underline">
+                <button type="button" data-ai-fine-tune-reset class="mt-3 text-xs font-semibold text-brand hover:underline pointer-coarse:min-h-11">
                     Reset to defaults
                 </button>
 
@@ -289,7 +292,7 @@ $aiIsExternal = \App\Services\Courses\Assessments\AiJobGeneration::enabled();
 
         </form>
 
-        <div class="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 sm:py-6 flex-wrap">
 
             <button
                 type="button"

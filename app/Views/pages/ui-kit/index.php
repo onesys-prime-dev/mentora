@@ -211,6 +211,23 @@ $touch   = 'pointer-coarse:min-h-11 pointer-coarse:min-w-11';
             </div>
         </div>
 
+        <div data-split data-split-key="ui-kit-demo" data-split-min="12rem" data-split-max="20rem" data-kit="split">
+            <aside id="kit-side-panel" data-side-panel class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4" data-split-start>
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-bold text-[#1A1C1E]">Students</p>
+                    <button type="button" data-side-panel-close class="<?= $second ?> <?= $touch ?> lg:hidden">Close</button>
+                </div>
+                <?php foreach (['Ana Reyes', 'Ben Cruz', 'Carla Lim'] as $student): ?>
+                    <button type="button" class="rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#1A1C1E] hover:bg-gray-50 <?= $touch ?>"><?= esc($student) ?></button>
+                <?php endforeach; ?>
+            </aside>
+            <div data-split-handle role="separator" aria-orientation="vertical" aria-label="Resize students list" tabindex="0"></div>
+            <div data-split-end class="flex flex-col items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
+                <button type="button" data-side-panel-toggle aria-controls="kit-side-panel" aria-expanded="false" class="<?= $second ?> <?= $touch ?> lg:hidden">Students</button>
+                <p class="text-sm text-[#3D3D3D]">The students list is a panel below lg and a resizable pane from lg up.</p>
+            </div>
+        </div>
+
 <?php
 // The Components showcase: the shared components as phones, tablets and laptops get them (responsive.spec.js).
 $learners = [

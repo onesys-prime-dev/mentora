@@ -283,15 +283,21 @@ async function restorePending() {
 
 function bindOpenButton() {
 
+    // The palette's button, and its copy in the phone bar (below md the palette does not show).
     document
-        .querySelector("[data-open-ai-generate]")
-        ?.addEventListener("click", () => {
+        .querySelectorAll("[data-open-ai-generate]")
+        .forEach((button) => button.addEventListener("click", () => {
+
+            // Chosen from the phone bar: close it, as a question type does.
+            button.closest("[data-action-bar][data-open]")?.querySelector("[data-action-bar-toggle]")?.click();
+            // From the md–lg side panel: close it too, so Escape in the dialog does not also close the panel behind it.
+            button.closest("[data-side-panel][data-open]")?.querySelector("[data-side-panel-close]")?.click();
 
             document.querySelector("[data-ai-generate-error]")?.classList.add("hidden");
 
             modal?.open();
 
-        });
+        }));
 
 }
 

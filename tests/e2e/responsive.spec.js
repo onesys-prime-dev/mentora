@@ -9,12 +9,13 @@
 // `scope` limits the touch-target and axe checks to part of the page; `overflowScope` limits the overflow
 // check to one element (the shell screens own the frame, not the page content; without it the whole page is
 // checked); `dialogs` are the ids of dialogs inside the scope to open and check at the touch sizes where
-// their opener shows (the ☰ menu has none from lg up).
+// their opener shows (the ☰ menu has none from lg up), or { id, open } for a dialog opened through the page's
+// own controls (open(page) does it, see via()), which is also checked for fitting the window and by axe.
 import { expect, test } from "@playwright/test";
-import { expectAccessible, expectInViewport, expectNoPageOverflow, expectNoPanelOverflow, expectTouchTargets, setTheme, sizes, snap, zoom200 } from "./support/responsive.js";
+import { dialogPanel, expectAccessible, expectInViewport, expectNoPageOverflow, expectNoPanelOverflow, expectTouchTargets, setTheme, sizes, snap, zoom200 } from "./support/responsive.js";
 import { runSql } from "./support/database.js";
 import { signInAsAdmin } from "./support/admin.js";
-import { openCourse, openTab, signInAs } from "./support/course.js";
+import { courseAddress, openCourse, openItem, openModule, openTab, signInAs } from "./support/course.js";
 import { accounts, submitLoginForm } from "./support/sign-in.js";
 import { disableMessages, enableMessages } from "./support/messages.js";
 
@@ -60,6 +61,151 @@ const SCREENS = [
     { name: "student-messages", path: "/messages", as: "student", scope: "#messages-app:has([data-role=rows] button)" },
     { name: "student-notifications", path: "/notifications", as: "student", scope: "[data-notifications-page]" },
     { name: "student-announcements", path: "/student/announcements", as: "student", scope: "main" },
+    { name: "instructor-dashboard", path: "/instructor/dashboard", as: "instructor", scope: "main:has([data-phone-tabs])" },
+    // Scoped to main once the selected student's work has rendered (the list says who is selected), not the skeleton.
+    { name: "instructor-grade-work", path: (page) => gradeWorkPath(page), as: "instructor", scope: 'main:has([data-grade-work-student-list]:not([data-selected-student-id=""]))' },
+    // A student whose work is graded (the score is locked), for the Regrade dialog.
+    {
+        name: "instructor-grade-work-graded",
+        path: (page) => gradeWorkPath(page, '[data-student-status="Graded"]'),
+        as: "instructor",
+        scope: 'main:has([data-grade-work-student-list]:not([data-selected-student-id=""]))',
+        dialogs: [via("regrade-confirm-modal", (page) => page.locator("[data-regrade-open]"))],
+    },
+    {
+        name: "instructor-quiz-builder",
+        path: (page) => quizBuilderPath(page),
+        as: "instructor",
+        scope: "main:has([data-question-list] [data-question-card])",
+        dialogs: [
+            via("question-settings-modal", (page) => page.locator("[data-question-list] [data-open-question-settings]").first()),
+            via("ai-generate-modal", (page) => page.locator("[data-open-ai-generate]").filter({ visible: true }).first(), openPalette),
+            via("import-questions-modal", (page) => page.locator("[data-open-import-questions]")),
+            via("export-questions-modal", (page) => page.locator("[data-open-export-questions]")),
+        ],
+    },
+    // IT101-A's Assessments tab, scoped to the loaded list (not the course skeleton).
+    {
+        name: "instructor-assessments",
+        path: (page) => instructorAssessmentsPath(page),
+        as: "instructor",
+        scope: "[data-assessments-overview]",
+        dialogs: [via("assessment-create-modal", (page) => page.locator("[data-create-assessment-button]").filter({ visible: true }).first())],
+    },
+    // "Assignment 1: Grade Calculator" in the editor, scoped to main once the editor (its settings) has loaded. Its
+    // dialogs are opened and closed with Escape: nothing is saved (a settings switch is on in the page only).
+    {
+        name: "instructor-assessment-editor",
+        path: (page) => assessmentEditorPath(page),
+        as: "instructor",
+        scope: "main:has(#editor-inspector-panel)",
+        dialogs: [
+            via("assessment-delete-modal", (page) => page.locator("footer [data-delete-assessment]")),
+            via("submission-type-modal", (page) => page.locator("[data-configure-submission-type]")),
+            via("rubric-editor-modal", (page) => page.locator("[data-rubric-container] [data-edit-rubric]")),
+            via("rubric-criteria-editor-modal", (page) => page.locator("#rubric-editor-modal [data-edit-rubric-criteria]").first(), async (page) => {
+                await via("rubric-editor-modal", (p) => p.locator("[data-rubric-container] [data-edit-rubric]")).open(page);
+            }),
+            via("rubric-criteria-create-modal", (page) => page.locator("#rubric-editor-modal [data-add-rubric-criteria]").first(), async (page) => {
+                await via("rubric-editor-modal", (p) => p.locator("[data-rubric-container] [data-edit-rubric]")).open(page);
+            }),
+            via("rubric-selector-modal", (page) => page.locator("[data-rubric-options] [data-use-existing-rubric]"), showRubricOptions),
+            via("rubric-create-modal", (page) => page.locator("[data-rubric-options] [data-create-new-rubric]"), showRubricOptions),
+            // Last: it leaves the settings side panel open over the page below lg.
+            via("assignees-modal", (page) => page.locator("#editor-inspector-panel [data-specific-open]"), async (page) => {
+                await openSettings(page);
+                await switchOn(page, "[data-specific-toggle]");
+            }),
+        ],
+    },
+    // "Quiz 1: Variables and Data Types" in the editor, for its password dialog (the switch is on in the page only).
+    {
+        name: "instructor-quiz-editor",
+        path: (page) => assessmentEditorPath(page, "Quiz 1: Variables and Data Types"),
+        as: "instructor",
+        scope: "main:has(#editor-inspector-panel)",
+        dialogs: [
+            via("quiz-password-modal", (page) => page.locator("#editor-inspector-panel :is([data-password-create], [data-password-edit])").filter({ visible: true }).first(), async (page) => {
+                await openSettings(page);
+                await switchOn(page, "[data-password-toggle]");
+            }),
+        ],
+    },
+    // IT101-A's gradebook grid (the Grades tab's ?roster deep link), scoped to main once the script has drawn its rows.
+    {
+        name: "instructor-gradebook",
+        path: (page) => instructorGradesPath(page, "A", "?roster=1"),
+        as: "instructor",
+        scope: "main:has([data-gradebook-roster] [data-roster-row])",
+        dialogs: [via("grade-override-modal", (page) => page.locator("[data-roster-row] [data-open-override]").first())],
+    },
+    // IT101-A's Grades tab (the toolbar over the assessment list), for the toolbar's dialogs.
+    {
+        name: "instructor-grades-tab",
+        path: (page) => instructorGradesPath(page, "A"),
+        as: "instructor",
+        scope: "main:has([data-gradebook-toolbar])",
+        dialogs: [
+            via("grade-curve-modal", (page) => page.locator("[data-open-curve]")),
+            via("grade-sheet-import-modal", (page) => rowEntry(page, page.locator('[data-gradebook-toolbar] [data-row]:has([aria-controls="grade-sheet-menu-sheet"])'), "[data-toggle-grade-sheet-menu]", "[data-open-grade-sheet-import]")),
+        ],
+    },
+    // The Grades page across every section, scoped to main once the chosen section's grid has loaded into it.
+    { name: "instructor-grades-page", path: "/instructor/grades", as: "instructor", scope: "main:has([data-grades-grid] [data-roster-row])" },
+    // The grading scheme editor has no address of its own: IT101-A's Grades tab, then its Grading Scheme button.
+    // Its "+ Add manual item" opens the grade item dialog (closed with Escape: nothing is saved).
+    {
+        name: "instructor-scheme-editor",
+        path: (page) => instructorGradesPath(page, "A"),
+        then: openSchemeEditor,
+        as: "instructor",
+        scope: "main:has([data-grading-scheme-editor])",
+        dialogs: [via("grade-item-create-modal", (page) => page.locator("[data-grading-scheme-editor] [data-add-grade-item]").first())],
+    },
+    // IT101-A's Modules tab, scoped to main once the module cards have loaded into it (not the course skeleton).
+    {
+        name: "instructor-modules",
+        path: (page) => instructorModulesPath(page),
+        as: "instructor",
+        scope: "main:has(#modules-container [data-module-wrapper])",
+        dialogs: [
+            via("module-editor-modal", (page) => rowEntry(page, moduleRow(page), "[data-module-actions]", "[data-edit-module]")),
+            via("module-dependencies-modal", (page) => rowEntry(page, moduleRow(page), "[data-module-actions]", "[data-module-dependencies]"), null, (dialog) => primaryReady(dialog, "[data-dependencies-save]")),
+            via("content-transfer-modal", (page) => rowEntry(page, moduleRow(page), "[data-module-actions]", '[data-transfer][data-transfer-action="copy"]'), null, (dialog) => primaryReady(dialog, "[data-transfer-next]")),
+        ],
+    },
+    // IT101-A's "Getting Started" module page (?module=…&view=1), scoped to main once its units have loaded.
+    {
+        name: "instructor-module",
+        path: (page) => instructorModulePath(page),
+        as: "instructor",
+        scope: "main:has([data-learning-unit-list] [data-learning-unit-row])",
+        dialogs: [
+            via("learning-unit-editor-modal", (page) => rowEntry(page, page.locator("[data-learning-unit-row]").first(), "[data-learning-unit-actions]", "[data-edit-learning-unit]")),
+            via("learning-item-create-modal", (page) => page.locator("[data-create-learning-item-button]").filter({ visible: true }).first()),
+            via("learning-item-dependencies-modal", (page) => rowEntry(
+                page,
+                page.locator("[data-learning-item-wrapper]").filter({ has: page.getByText("How Computers Represent Data", { exact: true }) }),
+                "[data-learning-item-actions]",
+                "[data-learning-item-dependencies]",
+            ), null, (dialog) => primaryReady(dialog, "[data-dependencies-save]")),
+        ],
+    },
+    // The learning item editor (?item=…&editor=1) of a reading, a video and a PDF in "Getting Started", scoped to main
+    // once the editor has loaded (the reading's once Tiptap has drawn its text).
+    { name: "instructor-item-editor-reading", path: (page) => itemEditorPath(page, READING_TITLE), as: "instructor", scope: "main:has([data-learning-item-editor] #reading-editor [contenteditable])" },
+    { name: "instructor-item-editor-video", path: (page) => itemEditorPath(page, "Course Orientation Video"), as: "instructor", scope: "main:has([data-learning-item-editor] [data-video-editor])" },
+    { name: "instructor-item-editor-pdf", path: (page) => itemEditorPath(page, "Parts of a Computer"), as: "instructor", scope: "main:has([data-learning-item-editor] [data-pdf-editor])" },
+    { name: "instructor-item-editor-link", path: (page) => itemEditorPath(page, "Course Syllabus and Class Policies"), as: "instructor", scope: "main:has([data-learning-item-editor] [data-link-editor])" },
+    // Scrolled to the end: at the top its action row lies under the pinned footer (axe counts a covered button as too small).
+    { name: "instructor-item-editor-quiz", path: (page) => itemEditorPath(page, "Course Pre-Test"), then: scrollToEnd, as: "instructor", scope: "main:has([data-learning-item-editor] [data-open-assessment])" },
+    // IT101-A's Overview, Announcements, Resources (the "Course Orientation" unit's files) and Discussions tabs as
+    // instructor1 sees them, each scoped to main once the tab's own content has loaded (not the course skeleton).
+    { name: "instructor-course-overview", path: (page) => instructorCoursePath(page, "overview"), as: "instructor", scope: "main:has([data-overview-page])" },
+    { name: "instructor-announcements", path: (page) => instructorCoursePath(page, "announcements"), as: "instructor", scope: "main:has([data-announcements-page] [data-announcement-card])" },
+    { name: "instructor-resources", path: (page) => resourcesUnitPath(page), as: "instructor", scope: "main:has([data-resources-list] [data-resource-row])" },
+    // With one thread of the file's own (seeded by its marker on every visit, removed in afterAll): the seed has none.
+    { name: "instructor-discussions", path: (page) => discussionsPath(page), as: "instructor", scope: "main:has([data-discussions-results] [data-thread-open])" },
     { name: "parent-dashboard", path: "/parent/dashboard", as: "parent", scope: "main:has([data-parent-course])" },
     // #course-content loses aria-busy once the tab's fragment has loaded.
     { name: "parent-course", path: parentCoursePath, as: "parent", scope: "main:has(#course-content:not([aria-busy]))" },
@@ -74,6 +220,9 @@ test.beforeAll(() => enableMessages());
 // The other specs share this database and expect Messages off and no chats left (as messages.spec.js leaves it).
 test.afterAll(() => disableMessages());
 
+// The discussion thread this file seeds (the seed has none) goes too.
+test.afterAll(() => removeThread());
+
 /** The first course card on the parent's dashboard (the address may carry /index.php, so the match is not anchored). */
 async function parentCoursePath(page) {
     await page.goto("/parent/dashboard");
@@ -83,6 +232,253 @@ async function parentCoursePath(page) {
 }
 
 const READING_TITLE = "Welcome to Introduction to Computing";
+
+const gradeWorkPaths = new Map();
+
+/**
+ * Grade Work for IT101-A's "Assignment 1: Grade Calculator" with one student selected (default Maria Santos, who
+ * handed it in late), reached as an instructor would: the item's View Submissions, then the student (from the
+ * students panel below lg). The address is the same for the whole run, so it is looked up once per student.
+ */
+async function gradeWorkPath(page, student = '[data-student-name="Maria Santos"]') {
+    if (gradeWorkPaths.has(student)) {
+        return gradeWorkPaths.get(student);
+    }
+
+    // Looked up at laptop size, where the module outline is a plain list (the address is the same at every size).
+    const viewport = page.viewportSize();
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openCourse(page, "instructor", "IT101", "A");
+    await openModule(page, "Programming Fundamentals");
+    await openItem(page, "Assignment 1: Grade Calculator");
+    await page.getByRole("button", { name: "View Submissions" }).click();
+
+    const row = page.locator(`[data-grade-work-student]${student}`).first();
+    // A click that lands before the page script has attached does nothing, so the step repeats until it takes.
+    await expect(async () => {
+        if (!(await row.isVisible())) {
+            await page.locator("[data-side-panel-toggle]").click({ timeout: 2_000 });
+        }
+        await row.click({ timeout: 2_000 });
+        await expect(page).toHaveURL(/[?&]student=\d+/, { timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+
+    await page.setViewportSize(viewport);
+    const url = new URL(page.url());
+    gradeWorkPaths.set(student, url.pathname + url.search);
+
+    return gradeWorkPaths.get(student);
+}
+
+let quizBuilderAddress = null;
+
+/**
+ * The Quiz Builder for IT101-A's "Quiz 1: Variables and Data Types", reached as an instructor would: the Assessments
+ * tab, the quiz's edit button, then the builder. Looked up once at laptop size (the address is the same at every size).
+ */
+async function quizBuilderPath(page) {
+    if (quizBuilderAddress) {
+        return quizBuilderAddress;
+    }
+
+    const viewport = page.viewportSize();
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openCourse(page, "instructor", "IT101", "A");
+    await openTab(page, "Assessments");
+
+    const title = "Quiz 1: Variables and Data Types";
+    const card = page.locator("[data-assessment]").filter({ hasText: title }).locator("[data-edit-assessment-button]");
+    const draftRow = page.locator("[data-edit-assessment-button]").filter({ hasText: title });
+    await card.or(draftRow).first().click();
+    // A click that lands before the editor's script has attached does nothing, so the step repeats until it takes.
+    await expect(async () => {
+        await page.locator("[data-enter-quiz-builder]").click({ timeout: 2_000 });
+        await expect(page).toHaveURL(/[?&]builder=1/, { timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+
+    await page.setViewportSize(viewport);
+    const url = new URL(page.url());
+    quizBuilderAddress = url.pathname + url.search;
+
+    return quizBuilderAddress;
+}
+
+let instructorAssessmentsAddress = null;
+
+/** IT101-A's Assessments tab as instructor1 sees it (the address is the same at every size, so it is looked up once). */
+async function instructorAssessmentsPath(page) {
+    if (!instructorAssessmentsAddress) {
+        await openCourse(page, "instructor", "IT101", "A");
+        await openTab(page, "Assessments");
+        const url = new URL(page.url());
+        instructorAssessmentsAddress = url.pathname + url.search;
+    }
+
+    return instructorAssessmentsAddress;
+}
+
+const assessmentEditorAddresses = new Map();
+
+/**
+ * The editor of one of IT101-A's assessments (default "Assignment 1: Grade Calculator"), reached as an instructor
+ * would: the Assessments tab, then its edit button (?assessment=…&editor=1). Looked up once per title at laptop size.
+ */
+async function assessmentEditorPath(page, title = "Assignment 1: Grade Calculator") {
+    if (assessmentEditorAddresses.has(title)) {
+        return assessmentEditorAddresses.get(title);
+    }
+
+    const viewport = page.viewportSize();
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openCourse(page, "instructor", "IT101", "A");
+    await openTab(page, "Assessments");
+
+    // A card, or a draft's row (its edit button is the row itself).
+    const card = page.locator("[data-assessment]").filter({ hasText: title }).locator("[data-edit-assessment-button]");
+    const draftRow = page.locator("[data-edit-assessment-button]").filter({ hasText: title });
+    // A click that lands before the page script has attached does nothing, so the step repeats until it takes.
+    await expect(async () => {
+        await card.or(draftRow).first().click({ timeout: 2_000 });
+        await expect(page).toHaveURL(/[?&]editor=1/, { timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+
+    await page.setViewportSize(viewport);
+    const url = new URL(page.url());
+    assessmentEditorAddresses.set(title, url.pathname + url.search);
+
+    return assessmentEditorAddresses.get(title);
+}
+
+const gradesAddresses = new Map();
+
+/** IT101's section's Grades tab as instructor1 opens it (looked up once per section), with an optional query. */
+async function instructorGradesPath(page, section, query = "") {
+    if (!gradesAddresses.has(section)) {
+        const href = await courseAddress(page, "instructor", "IT101", section);
+        // Not anchored: the address may carry /index.php before /instructor (the e2e server's indexPage).
+        gradesAddresses.set(section, `${new URL(href, page.url()).pathname.match(/\/instructor\/courses\/\d+\/[^/]+/)[0]}/grades`);
+    }
+
+    return gradesAddresses.get(section) + query;
+}
+
+/** From the Grades tab, the Grading Scheme button (repeated until a tap lands after the page script has attached). */
+async function openSchemeEditor(page) {
+    const button = page.locator("[data-open-grading-scheme]");
+    const editor = page.locator("[data-grading-scheme-editor]");
+
+    await expect(async () => {
+        if (await button.isVisible()) {
+            await button.click({ timeout: 2_000 });
+        }
+        await expect(editor).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+}
+
+let instructorModulesAddress = null;
+
+/** IT101-A's Modules tab as instructor1 opens it (the address is the same at every size, so it is looked up once). */
+async function instructorModulesPath(page) {
+    if (!instructorModulesAddress) {
+        const href = await courseAddress(page, "instructor", "IT101", "A");
+        // Not anchored: the address may carry /index.php before /instructor (the e2e server's indexPage).
+        instructorModulesAddress = `${new URL(href, page.url()).pathname.match(/\/instructor\/courses\/\d+\/[^/]+/)[0]}/modules`;
+    }
+
+    return instructorModulesAddress;
+}
+
+const MODULE_TITLE = "Getting Started";
+let instructorModuleAddress = null;
+
+/** IT101-A's "Getting Started" module page, by the id its card on the Modules tab carries. */
+async function instructorModulePath(page) {
+    if (!instructorModuleAddress) {
+        const modules = await instructorModulesPath(page);
+        await page.goto(modules);
+        const id = await page.locator("[data-module-wrapper]").filter({ hasText: MODULE_TITLE }).first().getAttribute("data-module-id");
+        instructorModuleAddress = `${modules}?module=${id}&view=1`;
+    }
+
+    return instructorModuleAddress;
+}
+
+/** Once the item editor has loaded, the window scrolled to its end (where the pinned footer covers nothing). */
+async function scrollToEnd(page) {
+    await expect(page.locator("[data-learning-item-editor] [data-open-assessment]").first()).toBeVisible();
+    await page.evaluate(() => globalThis.scrollTo({ top: globalThis.document.documentElement.scrollHeight, behavior: "instant" }));
+}
+
+const itemEditorAddresses = new Map();
+
+/** The editor of an item in IT101-A's "Getting Started" (?item=…&editor=1), by the id its row on the module page carries. */
+async function itemEditorPath(page, title) {
+    if (!itemEditorAddresses.has(title)) {
+        await page.goto(await instructorModulePath(page));
+        const row = page.locator("[data-learning-item-wrapper]").filter({ has: page.getByText(title, { exact: true }) });
+        const id = await row.first().getAttribute("data-learning-item");
+        itemEditorAddresses.set(title, `${await instructorModulesPath(page)}?item=${id}&editor=1`);
+    }
+
+    return itemEditorAddresses.get(title);
+}
+
+let instructorCourseAddress = null;
+
+/** One of IT101-A's tabs as instructor1 opens it (the course's address is looked up once). */
+async function instructorCoursePath(page, feature) {
+    if (!instructorCourseAddress) {
+        const href = await courseAddress(page, "instructor", "IT101", "A");
+        // Not anchored: the address may carry /index.php before /instructor (the e2e server's indexPage).
+        instructorCourseAddress = new URL(href, page.url()).pathname.match(/\/instructor\/courses\/\d+\/[^/]+/)[0];
+    }
+
+    return `${instructorCourseAddress}/${feature}`;
+}
+
+let resourcesUnitAddress = null;
+
+/** The Resources tab inside "Getting Started" › "Course Orientation", reached through its folders (looked up once). */
+async function resourcesUnitPath(page) {
+    if (!resourcesUnitAddress) {
+        await page.goto(await instructorCoursePath(page, "resources"));
+        // A click that lands before the page script has attached does nothing, so each step repeats until it takes.
+        await expect(async () => {
+            await page.locator("[data-resources-open-module]").filter({ hasText: MODULE_TITLE }).click({ timeout: 2_000 });
+            await expect(page.locator("[data-resources-open-unit]").first()).toBeVisible({ timeout: 3_000 });
+        }).toPass({ timeout: 30_000 });
+        await expect(async () => {
+            await page.locator("[data-resources-open-unit]").filter({ hasText: "Course Orientation" }).click({ timeout: 2_000 });
+            await expect(page).toHaveURL(/[?&]unit=\d+/, { timeout: 3_000 });
+        }).toPass({ timeout: 30_000 });
+        const url = new URL(page.url());
+        resourcesUnitAddress = url.pathname + url.search;
+    }
+
+    return resourcesUnitAddress;
+}
+
+const THREAD_TITLE = "RF9D-Week 1 questions";
+const offeringIt101A = "(SELECT o.id FROM course_offerings o JOIN courses c ON c.id = o.course_id WHERE c.course_code = 'IT101' AND o.section_code = 'A')";
+// By its marker (runSql returns no ids); its replies, reactions and reads go with it (ON DELETE CASCADE).
+const removeThread = () => runSql("DELETE FROM discussion_threads WHERE title LIKE 'RF9D-%'");
+
+/** A thread by instructor1 in IT101-A with one reply by student2, made fresh (any earlier one removed first). */
+function seedThread() {
+    removeThread();
+    const body = JSON.stringify({ version: 1, blocks: [{ type: "paragraph", content: [{ text: "Ask anything about the first week here.", marks: [] }] }] });
+    runSql(`INSERT INTO discussion_threads (offering_id, author_id, title, body, reply_count, last_activity_at, created_at, updated_at)
+        SELECT ${offeringIt101A}, u.id, '${THREAD_TITLE}', '${body}', 1, NOW(6), NOW(), NOW() FROM users u JOIN auth_identities i ON i.user_id = u.id WHERE i.secret = 'instructor1@mentora.test'`);
+    runSql(`INSERT INTO discussion_replies (thread_id, author_id, body, created_at, updated_at)
+        SELECT t.id, i.user_id, 'Is the quiz open book?', NOW(), NOW() FROM discussion_threads t JOIN auth_identities i ON i.secret = 'student2@mentora.test' WHERE t.title = '${THREAD_TITLE}'`);
+}
+
+/** IT101-A's Discussions tab, with the file's thread seeded. */
+async function discussionsPath(page) {
+    seedThread();
+
+    return instructorCoursePath(page, "discussions");
+}
 
 /** The first course on the student's course list, opened on one of its tabs. */
 async function coursePath(page, feature) {
@@ -134,6 +530,8 @@ async function open(page, screen, theme) {
     }
 
     await page.goto(typeof screen.path === "function" ? await screen.path(page) : screen.path);
+    // A screen without an address of its own is reached from the page at `path`.
+    await screen.then?.(page);
     // Otherwise a 404 or a wrong page passes the scoped checks with nothing to check.
     await expect(page.locator(screen.scope ?? "body").first()).toBeVisible();
 }
@@ -152,6 +550,145 @@ async function openDialog(trigger, dialog) {
     }).toPass({ timeout: 20_000 });
 }
 
+/**
+ * A `dialogs` entry opened through the page's own controls: `before(page)` sets the page up (opens a side panel,
+ * say), then `opener(page)` gives the control (a locator, or a promise of one) that opens the dialog.
+ */
+function via(id, opener, before, ready) {
+    return {
+        id,
+        open: async (page) => {
+            await before?.(page);
+            const control = await opener(page);
+            await expect(control, `#${id}'s opener`).toBeVisible();
+            // Centred, so a pinned bar (the editor's footer, a sticky toolbar) cannot be over it.
+            // (Not a control in a pinned bar's panel, which rides on the bar.)
+            await control.evaluate((el) => el.closest("[data-action-bar]") || el.scrollIntoView({ block: "center", behavior: "instant" }));
+            const dialog = page.locator(`#${id}`);
+            // The control's own click handler, not a tap at its spot: in a 375px-tall window held sideways the pinned
+            // header and bars cover most of the page, and Playwright's own scroll puts the control under one of them.
+            // (The page's touch check already holds every control to 44px.)
+            await expect(async () => {
+                if (!(await dialog.isVisible())) {
+                    await control.dispatchEvent("click");
+                }
+                await expect(dialog).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+            // A dialog that loads its data (`ready` waits for it): checked loaded, not half way.
+            await ready?.(dialog);
+        },
+    };
+}
+
+/**
+ * The dialog has loaded: its primary button is enabled (it is disabled while the data loads) and done fading in (its
+ * opacity transition), so axe sees its real colours.
+ */
+async function primaryReady(dialog, selector) {
+    const button = dialog.locator(selector);
+    await expect(button).toBeEnabled();
+    await expect.poll(() => button.evaluate((el) => globalThis.getComputedStyle(el).opacity)).toBe("1");
+}
+
+/**
+ * The open dialog's panel lies inside the window, and so does its last button (the primary action, last by the
+ * dialog contract): a long body scrolls inside the panel while the action stays on screen.
+ */
+async function expectDialogFits(dialog) {
+    const { panel, last, w, h } = await dialogPanel(dialog).evaluate((el) => {
+        const buttons = [...el.querySelectorAll("button")].filter((b) => b.checkVisibility({ visibilityProperty: true }));
+
+        return {
+            panel: el.getBoundingClientRect().toJSON(),
+            last: buttons.at(-1) ? { ...buttons.at(-1).getBoundingClientRect().toJSON(), text: buttons.at(-1).innerText.trim() } : null,
+            w: globalThis.document.documentElement.clientWidth,
+            h: globalThis.innerHeight,
+        };
+    });
+    const inside = (r) => r.left >= -1 && r.top >= -1 && r.right <= w + 1 && r.bottom <= h + 1;
+    const where = (r) => `${Math.round(r.left)},${Math.round(r.top)} to ${Math.round(r.right)},${Math.round(r.bottom)} in ${w}×${h}`;
+
+    expect(inside(panel), `the panel at ${where(panel)}`).toBe(true);
+    if (last) {
+        expect(inside(last), `the last button "${last.text}" at ${where(last)}`).toBe(true);
+    }
+}
+
+/**
+ * A row's menu entry: through the row's ⋯ bottom sheet where it shows (below md, shared/row-actions.js moves the
+ * entries in), else from its dropdown (`toggle`).
+ */
+async function rowEntry(page, row, toggle, entry) {
+    const phone = row.locator("[data-row-actions-open]").first();
+    if (await phone.isVisible()) {
+        const sheet = page.locator(`#${await phone.getAttribute("aria-controls")}`);
+        await openDialog(phone, sheet);
+
+        return sheet.locator(entry).first();
+    }
+
+    // A floating menu (modules/action-menus.js) is moved onto the page while it is open.
+    const item = row.locator(entry).or(page.locator(`body > [data-action-menu-panel] ${entry}`)).filter({ visible: true }).first();
+    await expect(async () => {
+        if (!(await item.isVisible())) {
+            await row.locator(toggle).first().click({ timeout: 2_000 });
+        }
+        await expect(item).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+
+    return item;
+}
+
+/** The assessment editor's settings: a side panel below lg (opened from the top bar), the pane beside it from lg. */
+async function openSettings(page) {
+    const panel = page.locator("#editor-inspector-panel");
+    await expect(async () => {
+        if (!(await panel.isVisible())) {
+            await page.locator('[data-side-panel-toggle][aria-controls="editor-inspector-panel"]').click({ timeout: 2_000 });
+        }
+        await expect(panel).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+}
+
+/** Switches a settings toggle on in the page only (nothing is saved until Save), so what it reveals shows. */
+async function switchOn(page, field) {
+    const input = page.locator(`#editor-inspector-panel ${field}`);
+    if (!(await input.isChecked())) {
+        await page.locator(`#editor-inspector-panel label:has(${field})`).click();
+    }
+}
+
+/** The quiz builder's question types and Build Faster tools: the pane from lg, a side panel at md–lg, the bar's panel below md. */
+async function openPalette(page) {
+    const bar = page.locator("[data-quiz-builder-bar] [data-action-bar-toggle]");
+    // The bar's closed panel is clipped to no height, which Playwright still counts as visible: its toggle says.
+    if (await bar.isVisible()) {
+        await expect(async () => {
+            if ((await bar.getAttribute("aria-expanded")) !== "true") {
+                await bar.click({ timeout: 2_000 });
+            }
+            await expect(bar).toHaveAttribute("aria-expanded", "true", { timeout: 2_000 });
+        }).toPass({ timeout: 20_000 });
+
+        return;
+    }
+
+    const ai = page.locator("#quiz-builder-palette [data-open-ai-generate]");
+    await expect(async () => {
+        if (!(await ai.isVisible())) {
+            await page.locator('[data-side-panel-toggle][aria-controls="quiz-builder-palette"]').click({ timeout: 2_000 });
+        }
+        await expect(ai).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+}
+
+/** The rubric choices (Use Existing, Create New), which the page hides while the assignment has a rubric: shown without removing it. */
+async function showRubricOptions(page) {
+    await page.locator("[data-rubric-options]").evaluate((el) => el.classList.replace("hidden", "flex"));
+}
+
+const moduleRow = (page) => page.locator("[data-module-wrapper]").filter({ hasText: MODULE_TITLE }).first();
+
 for (const size of sizes()) {
     test.describe(`@${size.name}`, () => {
         test.use({
@@ -163,6 +700,10 @@ for (const size of sizes()) {
             for (const theme of THEMES) {
                 test(`${screen.name} @${size.name} ${theme}`, async ({ page }, testInfo) => {
                     test.skip(testInfo.project.name === "webkit" && size.w !== 375, "WebKit runs the 375px phone only");
+                    // Each dialog is opened, checked (axe too) and closed in turn.
+                    if (isTouch(size)) {
+                        test.setTimeout(testInfo.timeout + 15_000 * (screen.dialogs?.length ?? 0));
+                    }
 
                     await open(page, screen, theme);
 
@@ -177,19 +718,28 @@ for (const size of sizes()) {
                         return;
                     }
 
-                    for (const id of screen.dialogs ?? []) {
+                    for (const entry of screen.dialogs ?? []) {
+                        const { id, open: openVia } = typeof entry === "string" ? { id: entry } : entry;
                         const dialog = page.locator(`#${id}`);
-                        const trigger = page.locator(`:is(${screen.scope ?? "body"}) [data-dialog-open="${id}"]`);
-                        // The ☰ menu's opener is lg:hidden; below lg every opener must show.
-                        if (size.w >= 1024 && !(await trigger.isVisible())) {
-                            continue;
+                        if (openVia) {
+                            await openVia(page);
+                        } else {
+                            const trigger = page.locator(`:is(${screen.scope ?? "body"}) [data-dialog-open="${id}"]`);
+                            // The ☰ menu's opener is lg:hidden; below lg every opener must show.
+                            if (size.w >= 1024 && !(await trigger.isVisible())) {
+                                continue;
+                            }
+                            await expect(trigger, `#${id}'s opener`).toBeVisible();
+                            await openDialog(trigger, dialog);
                         }
-                        await expect(trigger, `#${id}'s opener`).toBeVisible();
-                        await openDialog(trigger, dialog);
 
                         await expectTouchTargets(page, `#${id}`);
                         await expectNoPageOverflow(page, screen.overflowScope);
                         await expectNoPanelOverflow(dialog);
+                        if (openVia) {
+                            await expectDialogFits(dialog);
+                            await expectAccessible(page, `#${id}`);
+                        }
 
                         await page.keyboard.press("Escape");
                         await expect(dialog).toBeHidden();
@@ -380,6 +930,32 @@ test.describe("components", () => {
     const people = '[data-kit="people"] [data-table]';
     const grid = '[data-kit="grid"] [data-scroll-x][data-sticky-first]';
     const panelBox = (dialog) => dialog.locator("[data-dialog-panel]").boundingBox();
+
+    test.describe("1366 laptop", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("ui-kit split divider drags and resets on double click", async ({ page }) => {
+            await open(page, kit, "light");
+            const split = page.locator('[data-split][data-split-key="ui-kit-demo"]');
+            const handle = split.locator("[data-split-handle]");
+            const start = split.locator("[data-split-start]");
+            await handle.scrollIntoViewIfNeeded();
+            const reset = (await start.boundingBox()).width;
+            const box = await handle.boundingBox();
+            const y = box.y + box.height / 2;
+            const x = box.x + box.width / 2;
+
+            await page.mouse.move(x, y);
+            await page.mouse.down();
+            await page.mouse.move(x - 40, y, { steps: 4 });
+            await page.mouse.up();
+            await expect.poll(async () => (await start.boundingBox()).width).toBeCloseTo(reset - 40, -1);
+            await expect(handle).toHaveAttribute("aria-valuenow", String(Math.round(reset - 40)));
+
+            await handle.dblclick();
+            await expect.poll(async () => (await start.boundingBox()).width).toBeCloseTo(reset, -1);
+        });
+    });
 
     // WebKit runs these too: they are the 375px phone, where Safari's own table and sticky handling matter.
     test.describe("375 phone", () => {
@@ -594,6 +1170,1486 @@ test.describe("components", () => {
             expect(await columns("wide"), "columns in the wide card").toBe(2);
         });
     });
+});
+
+// The instructor dashboard's phone tabs: To grade, Sections, Updates below lg; the whole grid from lg up.
+test.describe("instructor", () => {
+    const dashboard = SCREENS.find((s) => s.name === "instructor-dashboard");
+    const card = (page, title) => page.locator("main span.text-xl").filter({ hasText: new RegExp(`^\\s*${title}\\s*$`) });
+
+    test.describe("375 phone", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("only To grade shows, and Sections switches to the teaching widgets", async ({ page }) => {
+            await open(page, dashboard, "light");
+
+            const tabs = page.getByRole("tablist", { name: "Dashboard sections" });
+            await expect(tabs.getByRole("tab")).toHaveText(["To grade", "Sections", "Updates"].map((t) => new RegExp(`^\\s*${t}`)));
+            await expect(card(page, "Grading Queue")).toBeVisible();
+            await expect(card(page, "Needs Your Attention")).toBeVisible();
+            await expect(card(page, "Teaching Load")).toBeHidden();
+            await expect(card(page, "Quick Access")).toBeHidden();
+
+            // A tap that lands before the script has attached does nothing, so it is repeated until it takes.
+            const sections = tabs.getByRole("tab", { name: /^Sections/ });
+            await expect(async () => {
+                await sections.tap({ timeout: 2_000 });
+                await expect(sections).toHaveAttribute("aria-selected", "true", { timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+
+            for (const title of ["Teaching Load", "Class Progress", "Unpublished", "Quick Access"]) {
+                await expect(card(page, title), title).toBeVisible();
+            }
+            await expect(card(page, "Grading Queue")).toBeHidden();
+            await expectNoPageOverflow(page);
+            // The sweep only sees the first tab, so the switched-to panels are checked here.
+            // (The tab itself is mid-press-scale just after the tap, so it is left out of the touch check.)
+            await expectTouchTargets(page, "main [data-phone-panel]");
+            await expectAccessible(page, "main");
+        });
+
+        test("the grading queue shows at most five rows", async ({ page }) => {
+            await open(page, dashboard, "light");
+
+            // The seed's instructor has a late submission waiting, so the queue is not empty.
+            const rows = page.locator("[data-queue-row]");
+            await expect(rows.first()).toBeVisible();
+            expect(await rows.filter({ visible: true }).count()).toBeLessThanOrEqual(5);
+        });
+    });
+
+    test.describe("1366 laptop", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("no tabs, every widget shows", async ({ page }) => {
+            await open(page, dashboard, "light");
+
+            await expect(page.locator("[data-phone-tabs]")).toBeHidden();
+            for (const title of ["Grading Queue", "Needs Your Attention", "Teaching Load", "Class Progress", "Unpublished", "Quick Access"]) {
+                await expect(card(page, title), title).toBeVisible();
+            }
+            for (const link of await page.locator("main [data-view-all]").all()) {
+                await expect(link).toBeHidden();
+            }
+        });
+    });
+
+    // Grade Work: below md the grading panel is a sticky score bar whose controls open upward; below lg the
+    // students list is a side panel; from lg up it is a pane the divider resizes.
+    const gradeWork = SCREENS.find((s) => s.name === "instructor-grade-work");
+    const bar = (page) => page.locator("[data-expandable-grade-work-actions-panel]");
+    const box = (locator) => locator.evaluate((el) => el.getBoundingClientRect().toJSON());
+    const overlaps = (a, b) => a.top < b.bottom && b.top < a.bottom && a.left < b.right && b.left < a.right;
+    // The grading case grades Pedro Reyes's late resubmission (attempt 2): no other spec reads that attempt, while
+    // grading.spec.js needs Maria Santos still "Submitted". A second run in the same server finds it graded and
+    // reopens it through Edit, so the case never depends on the order the files run in.
+    const pedro = '[data-student-name="Pedro Reyes"]';
+
+    test.describe("375 grade work", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("the score bar sits at the bottom, opens the rubric upward, keeps the focused field clear and saves", async ({ page }) => {
+            test.slow();
+            await open(page, { ...gradeWork, path: (p) => gradeWorkPath(p, pedro) }, "light");
+
+            // Open it for grading (or, when an earlier run graded it, reopen the grade): either way it reloads editable.
+            const state = await bar(page).getAttribute("data-panel-state");
+            if (state === "locked") {
+                await page.locator("[data-regrade-open]").click();
+                await page.locator("[data-confirm-regrade]").click();
+            } else if (state !== "editing") {
+                await page.locator("[data-expand-grade-work-actions]").click();
+            }
+            await expect(bar(page)).toHaveAttribute("data-panel-state", "editing");
+
+            const save = bar(page).locator("[data-grade-work-submit-grade]");
+            // "Save" only: it stays on this student (no next-student step yet).
+            await expect(save).toHaveText(/^\s*Save\s*$/, { useInnerText: true });
+            const closed = await box(bar(page));
+            expect(Math.abs(closed.bottom - 812), "the bar rests on the bottom edge").toBeLessThanOrEqual(1);
+
+            // "Rubric" opens the criteria upward inside the bar: the row stays on the bottom edge, the panel rises above it.
+            const toggle = bar(page).locator("[data-action-bar-toggle]");
+            await expect(toggle).toHaveText(/Rubric/);
+            await expect(async () => {
+                await toggle.tap({ timeout: 2_000 });
+                await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+            await bar(page).locator("[data-with-rubric-grade-work-toggle]").tap();
+            const points = bar(page).locator("[data-grade-work-rubric-criteria-points]");
+            await expect(points).toHaveCount(3);
+            await expect(points.first()).toBeVisible();
+            const panel = await box(bar(page).locator("[data-action-bar-panel]"));
+            expect(panel.top).toBeLessThan(closed.top - 100);
+            expect(Math.abs(panel.bottom - closed.top)).toBeLessThanOrEqual(1);
+            expect(Math.abs((await box(bar(page))).bottom - 812)).toBeLessThanOrEqual(1);
+
+            // Levels (the mode switch and each criterion's score) are at least 40px; every control is a 44px target.
+            expect((await box(points.first())).height).toBeGreaterThanOrEqual(40);
+            expect((await box(bar(page).locator("[data-with-rubric-grade-work-toggle]"))).height).toBeGreaterThanOrEqual(40);
+            await expectTouchTargets(page, "[data-expandable-grade-work-actions-panel]");
+
+            await points.nth(0).fill("10");
+            await points.nth(1).fill("8");
+            await points.nth(2).fill("6");
+            await expect(bar(page).locator("[data-grade-work-score-preview]")).toHaveText("24/30");
+
+            // Review Focus 2: a focused rubric score or the feedback box is never under the bar's Save row.
+            for (const field of [points.nth(2), bar(page).locator("[data-grade-work-feedback]")]) {
+                await field.tap();
+                await expect(field).toBeFocused();
+                const r = await box(field);
+                const row = await box(save);
+                expect(overlaps(r, row), "the focused field is clear of the Save row").toBe(false);
+                expect(r.top).toBeGreaterThanOrEqual(0);
+                expect(r.bottom).toBeLessThanOrEqual(812);
+            }
+            await bar(page).locator("[data-grade-work-feedback]").fill("Clear code; add tests.");
+            await expectNoPageOverflow(page);
+
+            const graded = page.waitForResponse((r) => /\/submissions\/\d+\/grade$/.test(r.url()) && r.request().method() === "PATCH");
+            await save.tap();
+            expect((await graded).ok()).toBe(true);
+            await expect(bar(page)).toHaveAttribute("data-panel-state", "locked");
+
+            // The students panel slides in from the Students toggle and shows the grade.
+            const students = page.locator("#grade-work-students");
+            await page.locator("[data-side-panel-toggle]").tap();
+            await expect(students).toBeVisible();
+            await expect(students.locator(`[data-grade-work-student]${pedro}`)).toContainText("Graded");
+            await expectTouchTargets(page, "#grade-work-students");
+            await page.keyboard.press("Escape");
+            await expect(students).toBeHidden();
+        });
+
+        test("a student with no submission: the bar shows the empty state and Save is disabled, even with a long name at 320", async ({ page }) => {
+            // Review Focus 4: a 40-character unbroken surname on the student shown (Angela Cruz, put back after).
+            const long = "Cruzvillanuevadelarosasantiagomontemayor";
+            runSql(`UPDATE user_profiles SET last_name = '${long}' WHERE first_name = 'Angela' AND last_name = 'Cruz'`);
+            try {
+                await open(page, { ...gradeWork, path: (p) => gradeWorkPath(p, '[data-student-name^="Angela"]') }, "light");
+                await expect(page.locator("#student-work-container")).toContainText(long);
+
+                await expect(bar(page)).toHaveAttribute("data-panel-state", "disabled");
+                await expect(bar(page).locator("[data-grade-work-status-label]")).toHaveText(/No Submission/);
+                await expect(bar(page).locator("[data-grade-work-submit-grade]")).toBeDisabled();
+                await expect(bar(page).locator("[data-action-bar-toggle]")).toHaveCount(0);
+                const r = await box(bar(page));
+                expect(Math.abs(r.bottom - 812)).toBeLessThanOrEqual(1);
+
+                // Nothing spills sideways at 320 either, the long name included.
+                await page.setViewportSize({ width: 320, height: 640 });
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, gradeWork.scope);
+            } finally {
+                runSql(`UPDATE user_profiles SET last_name = 'Cruz' WHERE first_name = 'Angela' AND last_name = '${long}'`);
+            }
+        });
+    });
+
+    test.describe("1366 grade work", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("dragging the divider resizes the students list and a reload keeps it", async ({ page }) => {
+            await open(page, gradeWork, "light");
+
+            const students = page.locator("#grade-work-students");
+            const handle = page.locator('[data-split][data-split-key="grade-work-students"] [data-split-handle]');
+            await expect(page.locator("[data-side-panel-toggle]")).toBeHidden();
+            await expect(students).toBeVisible();
+            // The grading controls are a plain block here: never inert, Submit in its old place.
+            expect(await bar(page).locator("[data-action-bar-panel]").evaluate((el) => el.inert)).toBe(false);
+            await expect(bar(page).locator("[data-action-bar-toggle]")).toBeHidden();
+
+            const before = (await box(students)).width;
+            // Today's 290px column until the instructor drags it.
+            expect(before).toBeCloseTo(290, 0);
+            const h = await box(handle);
+            await page.mouse.move(h.left + h.width / 2, h.top + 40);
+            await page.mouse.down();
+            await page.mouse.move(h.left + h.width / 2 + 80, h.top + 40, { steps: 5 });
+            await page.mouse.up();
+            await expect.poll(async () => (await box(students)).width).toBeCloseTo(before + 80, -1);
+
+            await page.reload();
+            await expect(page.locator(gradeWork.scope)).toBeVisible();
+            await expect.poll(async () => (await box(students)).width).toBeCloseTo(before + 80, -1);
+        });
+    });
+
+    // Quiz Builder: below md a sticky bar with the save status and "＋ Add question", which opens the question types
+    // upward; at md–lg the palette is a side panel; cards reorder with ▲ ▼ on touch. Quiz 1's questions are put back
+    // in their seed order (by id) and an added question is deleted, so later specs see the seed.
+    const builder = SCREENS.find((s) => s.name === "instructor-quiz-builder");
+    const qbar = (page) => page.locator("[data-quiz-builder-bar]");
+    const cards = (page) => page.locator("[data-question-list] > [data-question-card]");
+    const cardIds = (page) => cards(page).evaluateAll((all) => all.map((c) => c.dataset.questionId));
+    const restoreOrder = (ids) => runSql(
+        `UPDATE assessment_questions SET order_index = CASE id ${ids.map((id, i) => `WHEN ${Number(id)} THEN ${i + 1}`).join(" ")} END WHERE id IN (${ids.map(Number).join(",")})`,
+    );
+
+    test.describe("375 quiz builder", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("the bar is pinned, a focused points field clears it, and Add question opens the types upward and adds one", async ({ page }) => {
+            test.slow();
+            await open(page, builder, "light");
+
+            const closed = await box(qbar(page));
+            expect(Math.abs(closed.bottom - 812), "the bar rests on the bottom edge").toBeLessThanOrEqual(1);
+            await expect(qbar(page).locator("[data-builder-save-message]")).toHaveText("All changes saved");
+            await expect(page.locator("#quiz-builder-palette")).toBeHidden();
+
+            // Review Focus 2: a points field in the list, scrolled until its lower part is under the bar, then tapped.
+            const points = cards(page).nth(1).locator("[data-question-points-input]");
+            // (WebKit can settle a scroll a few pixels off, so it is nudged until the field sits 12px under the bar.)
+            await expect(async () => {
+                await points.evaluate((el) => {
+                    const bar = globalThis.document.querySelector("[data-quiz-builder-bar]").getBoundingClientRect();
+                    globalThis.scrollBy({ top: el.getBoundingClientRect().bottom - bar.top - 12, behavior: "instant" });
+                });
+                const field = await box(points);
+                const barTop = (await box(qbar(page))).top;
+                expect(field.bottom, "the field starts partly under the bar").toBeGreaterThan(barTop);
+                expect(field.top + field.height / 2, "but its middle, where the tap lands, is above it").toBeLessThan(barTop);
+            }).toPass({ timeout: 10_000 });
+            await points.tap();
+            await expect(points).toBeFocused();
+            await expect.poll(async () => (await box(points)).bottom, { message: "the focused field clears the bar" })
+                .toBeLessThanOrEqual((await box(qbar(page))).top);
+            expect(Math.abs((await box(qbar(page))).bottom - 812), "the bar is still on the bottom edge").toBeLessThanOrEqual(1);
+            expect(await points.getAttribute("inputmode")).toBe("decimal");
+
+            // "＋ Add question" opens the types upward: the row stays on the edge, the panel rises above it.
+            const toggle = qbar(page).locator("[data-action-bar-toggle]");
+            await expect(async () => {
+                await toggle.tap({ timeout: 2_000 });
+                await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+            const essay = qbar(page).locator('[data-palette-item][data-palette-type="Essay"]');
+            await expect(essay).toBeVisible();
+            await expect.poll(async () => (await box(qbar(page).locator("[data-action-bar-panel]"))).height).toBeGreaterThan(4 * 44);
+            const panel = await box(qbar(page).locator("[data-action-bar-panel]"));
+            const row = await box(toggle);
+            expect(panel.bottom).toBeLessThanOrEqual(row.top);
+            expect(Math.abs((await box(qbar(page))).bottom - 812)).toBeLessThanOrEqual(1);
+            await expectTouchTargets(page, "[data-quiz-builder-bar]");
+            await expectAccessible(page, "[data-quiz-builder-bar]");
+
+            const count = await cards(page).count();
+            let added = null;
+            try {
+                const created = page.waitForResponse((r) => /\/assessments\/\d+\/questions$/.test(r.url()) && r.request().method() === "POST");
+                await essay.tap();
+                const response = await created;
+                expect(response.ok()).toBe(true);
+                added = String((await response.json()).question.id);
+
+                await expect(cards(page)).toHaveCount(count + 1);
+                const last = cards(page).last();
+                await expect(last).toHaveAttribute("data-question-id", added);
+                await expect(last.locator("[data-question-type-badge]")).toHaveText("Essay");
+                await expect(toggle).toHaveAttribute("aria-expanded", "false");
+                await expect(last.locator("[data-question-text]")).toBeFocused();
+                await expect(last.locator('[data-question-move="down"]')).toBeDisabled();
+                await expectTouchTargets(page, builder.scope);
+
+                // Put it away through the app, which also recounts the quiz's total and rescores.
+                await last.locator("[data-delete-question]").tap();
+                const deleted = page.waitForResponse((r) => r.url().endsWith(`/questions/${added}`) && r.request().method() === "DELETE");
+                await page.locator("[data-confirm-delete-question]").tap();
+                expect((await deleted).ok()).toBe(true);
+                added = null;
+                await expect(cards(page)).toHaveCount(count);
+            } finally {
+                if (added) {
+                    runSql(`DELETE FROM assessment_questions WHERE id = ${Number(added)}`);
+                }
+            }
+        });
+
+        test("moving the second card up swaps it, focus stays on the arrow, and a reload keeps the order", async ({ page }) => {
+            await open(page, builder, "light");
+
+            const ids = await cardIds(page);
+            try {
+                await expect(cards(page).nth(0).locator('[data-question-move="up"]')).toBeDisabled();
+                const up = cards(page).nth(1).locator('[data-question-move="up"]');
+                expect((await box(up)).height).toBeGreaterThanOrEqual(44);
+
+                const saved = page.waitForResponse((r) => /\/questions\/reorder$/.test(r.url()) && r.request().method() === "PATCH");
+                // A tap that lands before the script has attached does nothing, so it is repeated until it takes.
+                await expect(async () => {
+                    if ((await cardIds(page))[0] !== ids[1]) {
+                        await up.tap({ timeout: 2_000 });
+                    }
+                    expect((await cardIds(page))[0]).toBe(ids[1]);
+                }).toPass({ timeout: 20_000 });
+                expect((await saved).ok()).toBe(true);
+
+                const swapped = [ids[1], ids[0], ...ids.slice(2)];
+                expect(await cardIds(page)).toEqual(swapped);
+                await expect(cards(page).nth(0).locator("[data-question-number]")).toHaveText("Q1");
+                // Now first, its up arrow is disabled, so focus moved to its down arrow.
+                await expect(cards(page).nth(0).locator('[data-question-move="down"]')).toBeFocused();
+                await expect(page.locator("[data-question-move-status]")).toHaveText(`Question moved to position 1 of ${ids.length}.`);
+
+                await page.reload();
+                await expect(page.locator(builder.scope)).toBeVisible();
+                await expect.poll(() => cardIds(page)).toEqual(swapped);
+            } finally {
+                restoreOrder(ids);
+            }
+        });
+    });
+
+    // The AI review tray only shows once a generation runs, so its controls are revealed in the page and checked here.
+    test.describe("375 quiz builder AI tray", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        for (const theme of ["light", "dark"]) {
+            test(`the tray header wraps and its buttons are touch-sized (${theme})`, async ({ page }) => {
+                await open(page, builder, theme);
+
+                await page.evaluate(() => {
+                    const tray = globalThis.document.querySelector("[data-ai-review-tray]");
+                    const show = (el) => { el.classList.remove("hidden"); el.classList.add("flex"); };
+                    show(tray);
+                    for (const hook of ["accept-clear", "generating", "shortfall"]) {
+                        show(tray.querySelector(`[data-ai-tray-${hook}]`));
+                    }
+                    tray.querySelector("[data-ai-tray-shortfall-text]").textContent = "Only 3 of 5 questions were written.";
+                });
+
+                const tray = page.locator("[data-ai-review-tray]");
+                await expect(tray).toBeVisible();
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, "[data-ai-review-tray]");
+                await expectAccessible(page, "[data-ai-review-tray]");
+            });
+        }
+    });
+
+    test.describe("834 quiz builder", () => {
+        test.use({ viewport: { width: 834, height: 1112 }, hasTouch: true, isMobile: true });
+
+        test("the palette is a side panel opened from the top bar", async ({ page }) => {
+            await open(page, builder, "light");
+
+            const palette = page.locator("#quiz-builder-palette");
+            const toggle = page.locator('[data-side-panel-toggle][aria-controls="quiz-builder-palette"]');
+            await expect(qbar(page)).toBeHidden();
+            await expect(palette).toBeHidden();
+            await expect(async () => {
+                await toggle.tap({ timeout: 2_000 });
+                await expect(palette).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+            await expect(palette.locator("[data-palette-item]")).toHaveCount(4);
+            await expectTouchTargets(page, "#quiz-builder-palette");
+            await page.keyboard.press("Escape");
+            await expect(palette).toBeHidden();
+            await expect(toggle).toBeFocused();
+        });
+
+        test("AI generate from the side panel closes the panel, so Escape closes only the dialog", async ({ page }) => {
+            await open(page, builder, "light");
+
+            const palette = page.locator("#quiz-builder-palette");
+            const toggle = page.locator('[data-side-panel-toggle][aria-controls="quiz-builder-palette"]');
+            await expect(async () => {
+                await toggle.tap({ timeout: 2_000 });
+                await expect(palette).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+
+            const dialog = page.locator("#ai-generate-modal");
+            await palette.locator("[data-open-ai-generate]").tap();
+            await expect(dialog).toBeVisible();
+            await expect(palette).toBeHidden();
+
+            await page.keyboard.press("Escape");
+            await expect(dialog).toBeHidden();
+            await expect(palette).toBeHidden();
+        });
+    });
+
+    test.describe("1366 quiz builder", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("the palette is the pane beside the questions, with no phone bar, toggle or arrows", async ({ page }, testInfo) => {
+            test.skip(testInfo.project.name === "webkit", "WebKit emulates an iPhone: its pointer is coarse, so the arrows show");
+            await open(page, builder, "light");
+
+            const palette = page.locator("#quiz-builder-palette");
+            await expect(palette).toBeVisible();
+            expect((await box(palette)).width).toBeCloseTo(290, 0);
+            await expect(qbar(page)).toBeHidden();
+            await expect(page.locator('[data-side-panel-toggle][aria-controls="quiz-builder-palette"]')).toBeHidden();
+            await expect(page.locator("[data-question-move]").first()).toBeHidden();
+            await expect(page.locator("[data-drag-handle]").first()).toBeVisible();
+        });
+    });
+
+    // The assessment editor: from lg up the settings sit beside the content; at md–lg they are a side panel opened
+    // from the top bar's "Settings"; below md they stack under the content as a "Settings" section. Below lg the
+    // Save as Draft / Publish footer is pinned to the bottom edge.
+    const editor = SCREENS.find((s) => s.name === "instructor-assessment-editor");
+    const settings = (page) => page.locator("#editor-inspector-panel");
+    const settingsToggle = (page) => page.locator('[data-side-panel-toggle][aria-controls="editor-inspector-panel"]');
+    const footer = (page) => page.locator("footer:has([data-publish])");
+
+    test.describe("375 assessment editor", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("Settings stack under the content, the footer is pinned with Publish in view, and a focused field clears it", async ({ page }) => {
+            await open(page, editor, "light");
+
+            // Stacked: in the flow under the content, not inert, no top-bar toggle; the summary folds and unfolds it.
+            await expect(settings(page)).toBeVisible();
+            await expect(settingsToggle(page)).toBeHidden();
+            expect(await settings(page).evaluate((el) => el.inert)).toBe(false);
+            const header = await box(page.locator("main header").first());
+            expect((await box(settings(page))).top).toBeGreaterThan(header.bottom);
+            const summary = settings(page).locator("[data-inspector-settings] > summary");
+            const percent = settings(page).locator('[data-inspector-field="passing_percentage"]');
+            expect((await box(summary)).height).toBeGreaterThanOrEqual(44);
+            await summary.tap();
+            await expect(percent).toBeHidden();
+            await summary.tap();
+            await expect(percent).toBeVisible();
+
+            // The footer rests on the bottom edge; Save as Draft and Publish share its row, inside the window.
+            const bottom = await box(footer(page));
+            expect(Math.abs(bottom.bottom - 812), "the footer rests on the bottom edge").toBeLessThanOrEqual(1);
+            await expectInViewport(page, "footer [data-publish]");
+            const draft = await box(footer(page).locator("[data-save-draft]"));
+            const publish = await box(footer(page).locator("[data-publish]"));
+            expect(Math.abs(draft.top - publish.top)).toBeLessThanOrEqual(1);
+            expect(publish.height).toBeGreaterThanOrEqual(44);
+            await expect(footer(page).getByRole("button", { name: "Delete assessment" })).toBeVisible();
+            await expectTouchTargets(page, "footer:has([data-publish])");
+
+            // A field scrolled until its lower part is under the footer, then tapped, ends above the footer.
+            await expect(async () => {
+                await percent.evaluate((el) => {
+                    const bar = globalThis.document.querySelector("footer:has([data-publish])").getBoundingClientRect();
+                    globalThis.scrollBy({ top: el.getBoundingClientRect().bottom - bar.top - 12, behavior: "instant" });
+                });
+                const field = await box(percent);
+                const barTop = (await box(footer(page))).top;
+                expect(field.bottom, "the field starts partly under the footer").toBeGreaterThan(barTop);
+                expect(field.top + field.height / 2, "but its middle, where the tap lands, is above it").toBeLessThan(barTop);
+            }).toPass({ timeout: 10_000 });
+            await percent.tap();
+            await expect(percent).toBeFocused();
+            await expect.poll(async () => (await box(percent)).bottom, { message: "the focused field clears the footer" })
+                .toBeLessThanOrEqual((await box(footer(page))).top);
+            expect(await percent.getAttribute("inputmode")).toBe("numeric");
+        });
+
+        test("a 40-character title does not widen the editor or the list at 320", async ({ page }) => {
+            // Review Focus 4: an unbroken 40-character title on the assignment, put back by id after.
+            const long = "Gradecalculatorassignmentwithalongtitle1";
+            expect(long).toHaveLength(40);
+            await open(page, editor, "light");
+            const id = Number(new URL(page.url()).searchParams.get("assessment"));
+            expect(id).toBeGreaterThan(0);
+            const title = (await page.locator("main header > span").first().innerText()).trim();
+            expect(title).toBe("Assignment 1: Grade Calculator");
+
+            runSql(`UPDATE assessments SET title = '${long}' WHERE id = ${id}`);
+            try {
+                await page.setViewportSize({ width: 320, height: 640 });
+                await page.reload();
+                await expect(page.locator(editor.scope)).toBeVisible();
+                await expect(page.locator("main header > span").first()).toHaveText(long);
+                // The top bar's trail truncates the title; the page does not scroll sideways.
+                const crumb = page.locator('.sticky-bar-top [aria-current="page"]');
+                expect(await crumb.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, editor.scope);
+                await expectInViewport(page, "footer [data-publish]");
+
+                await page.goto(await instructorAssessmentsPath(page));
+                await expect(page.locator("[data-assessment-card]").filter({ hasText: long })).toBeVisible();
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, "[data-assessments-overview]");
+            } finally {
+                runSql(`UPDATE assessments SET title = '${title.replace(/'/g, "''")}' WHERE id = ${id}`);
+            }
+        });
+
+        test("a tap into long instructions keeps the tapped line in view, clear of the footer", async ({ page }) => {
+            test.slow();
+            await open(page, editor, "light");
+
+            // Long instructions are typed into the editor and never saved (Cancel at the end), so nothing is stored.
+            const edit = page.locator("[data-edit-instructions]");
+            const text = page.locator("#instructions-editor [contenteditable=\"true\"]");
+            await expect(async () => {
+                await edit.tap({ timeout: 2_000 });
+                await expect(text).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+            await text.tap();
+            // Pasted as one block (typing 60 lines drops keys on WebKit), through the editor's own paste handling.
+            const html = Array.from({ length: 60 }, (_, i) => `<p>Line ${i + 1} of the instructions.</p>`).join("");
+            await text.evaluate((el, value) => {
+                const data = new globalThis.DataTransfer();
+                data.setData("text/html", value);
+                data.setData("text/plain", value.replace(/<[^>]+>/g, " "));
+                el.dispatchEvent(new globalThis.ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+            }, html);
+            await page.evaluate(() => globalThis.document.activeElement.blur());
+
+            // Line 15 in the middle of the window, while the instructions run on far below the footer (far enough that
+            // scrolling their end clear of the footer would throw line 15 off the top).
+            const target = text.locator("p").nth(14);
+            expect(await text.locator("p").count()).toBeGreaterThanOrEqual(60);
+            await target.evaluate((el) => globalThis.scrollBy({ top: el.getBoundingClientRect().top - globalThis.innerHeight / 2, behavior: "instant" }));
+            const footerTop = (await box(footer(page))).top;
+            expect((await box(text)).bottom, "the instructions run on under the footer").toBeGreaterThan(footerTop + 406);
+
+            await target.tap();
+            await expect(text).toBeFocused();
+            // Two frames: the clearance check runs one frame after the tap.
+            await page.evaluate(() => new Promise((resolve) => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
+            const header = (await box(page.locator("[data-app-header]"))).bottom;
+            const caret = await page.evaluate(() => globalThis.getSelection().getRangeAt(0).getBoundingClientRect().toJSON());
+            const line = await box(target);
+            for (const [name, r] of [["the caret", caret], ["the tapped line", line]]) {
+                expect(r.top, `${name} is not under the header`).toBeGreaterThanOrEqual(header - 1);
+                expect(r.bottom, `${name} is above the footer`).toBeLessThanOrEqual(footerTop + 1);
+            }
+            expect(caret.height).toBeGreaterThan(0);
+
+            await page.locator("[data-cancel-instructions]").tap();
+            await expect(text).toBeHidden();
+        });
+    });
+
+    test.describe("834 assessment editor", () => {
+        test.use({ viewport: { width: 834, height: 1112 }, hasTouch: true, isMobile: true });
+
+        test("Settings is a side panel opened from the top bar, and the footer is pinned", async ({ page }) => {
+            await open(page, editor, "light");
+
+            await expect(settings(page)).toBeHidden();
+            await expect(async () => {
+                await settingsToggle(page).tap({ timeout: 2_000 });
+                await expect(settings(page)).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+            await expect(settings(page).locator("[data-inspector-settings] > summary")).toBeHidden();
+            await expect(settings(page).locator('[data-inspector-field="due_date"]')).toBeVisible();
+            await expectTouchTargets(page, "#editor-inspector-panel");
+            await page.keyboard.press("Escape");
+            await expect(settings(page)).toBeHidden();
+            await expect(settingsToggle(page)).toBeFocused();
+
+            expect(Math.abs((await box(footer(page))).bottom - 1112), "the footer rests on the bottom edge").toBeLessThanOrEqual(1);
+            await expectInViewport(page, "footer [data-publish]");
+        });
+
+        test("Escape closes the Choose students dialog opened from the panel, and the panel stays open", async ({ page }) => {
+            await open(page, editor, "light");
+            await expect(async () => {
+                await settingsToggle(page).tap({ timeout: 2_000 });
+                await expect(settings(page)).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
+
+            // Switched on in the page only (not saved), so the Choose students button shows.
+            await settings(page).locator('label:has([data-specific-toggle])').tap();
+            const dialog = page.locator("#assignees-modal");
+            await settings(page).locator("[data-specific-open]").tap();
+            await expect(dialog).toBeVisible();
+
+            await page.keyboard.press("Escape");
+            await expect(dialog).toBeHidden();
+            await expect(settings(page)).toBeVisible();
+            expect(await settings(page).evaluate((el) => el.inert)).toBe(false);
+
+            await page.keyboard.press("Escape");
+            await expect(settings(page)).toBeHidden();
+        });
+    });
+
+    test.describe("1366 assessment editor", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("the settings are the pane beside the content, with no toggle or phone summary", async ({ page }) => {
+            await open(page, editor, "light");
+
+            const pane = await box(settings(page));
+            await expect(settings(page)).toBeVisible();
+            expect(pane.width).toBeGreaterThanOrEqual(256);
+            expect(pane.width).toBeLessThanOrEqual(352);
+            expect(pane.left).toBeGreaterThan((await box(page.locator("main header").first())).right);
+            await expect(settingsToggle(page)).toBeHidden();
+            await expect(settings(page).locator("[data-inspector-settings] > summary")).toBeHidden();
+            expect(await settings(page).evaluate((el) => el.inert)).toBe(false);
+        });
+    });
+
+    // The gradebook: a grid at every width that scrolls inside its own box, with the header row and the name column
+    // pinned; on a phone the toolbar's menus are bottom sheets. IT101-B (instructor1's, no students) is the empty
+    // section, and with one throwaway student and 30 throwaway manual items, the wide one (Review Focus 5).
+    const gradebook = SCREENS.find((s) => s.name === "instructor-gradebook");
+    const gradesTab = { ...gradebook, path: (page) => instructorGradesPath(page, "A"), scope: "main:has([data-gradebook-toolbar])" };
+    const sectionB = { ...gradebook, path: (page) => instructorGradesPath(page, "B", "?roster=1"), scope: "main:has([data-gradebook-roster])" };
+    const grid = (page) => page.locator("[data-gradebook-roster] [data-scroll-x]");
+    // IT101-B and its grading scheme, by name rather than id, for the throwaway rows.
+    const offeringB = "(SELECT o.id FROM course_offerings o JOIN courses c ON c.id = o.course_id WHERE c.course_code = 'IT101' AND o.section_code = 'B')";
+    const schemeB = `(SELECT id FROM grading_schemes WHERE course_offering_id = ${offeringB})`;
+    const student4 = "(SELECT user_id FROM auth_identities WHERE secret = 'student4@mentora.test')";
+
+    test.describe("375 gradebook", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("the roster scrolls inside its box with the header row and the name column pinned", async ({ page }) => {
+            await open(page, gradebook, "light");
+
+            const roster = grid(page);
+            await expect(roster).toHaveAttribute("role", "region");
+            await expect(roster).toHaveAttribute("aria-label", "Class roster");
+            await expect(roster).toHaveAttribute("tabindex", "0");
+            await expect(roster).toHaveAttribute("data-sticky-first", "");
+            const width = await roster.evaluate((el) => el.scrollWidth - el.clientWidth);
+            expect(width, "the grid is wider than its box").toBeGreaterThanOrEqual(200);
+            await expect(roster).toHaveAttribute("data-fade-end", "");
+            await expect(roster).not.toHaveAttribute("data-fade-start", "");
+
+            const lastBefore = (await box(roster.locator("thead th").last())).right;
+            await roster.evaluate((el) => (el.scrollLeft = 200));
+            await expect(roster).toHaveAttribute("data-fade-start", "");
+            const edge = await roster.evaluate((el) => el.getBoundingClientRect().left + el.clientLeft);
+            for (const cell of [roster.locator("thead th").first(), roster.locator("[data-roster-row] > td").first()]) {
+                expect(Math.abs((await box(cell)).left - edge), "the name column stays at the box's left edge").toBeLessThanOrEqual(1);
+            }
+            // The other columns moved under it.
+            expect(lastBefore - (await box(roster.locator("thead th").last())).right).toBeGreaterThanOrEqual(199);
+
+            // The score input: decimal keyboard, finger-sized, 16px (no zoom on focus).
+            const score = roster.locator("[data-manual-score-input]").first();
+            await expect(score).toHaveAttribute("inputmode", "decimal");
+            expect((await box(score)).height).toBeGreaterThanOrEqual(44);
+            expect(await score.evaluate((el) => globalThis.getComputedStyle(el).fontSize)).toBe("16px");
+            // The header row's labels stay on one line.
+            for (const th of await roster.locator("thead th").all()) {
+                expect((await box(th)).height, await th.innerText()).toBeLessThan(60);
+            }
+
+            await expectNoPageOverflow(page);
+        });
+
+        test("a section with no students shows the empty state and no grid", async ({ page }) => {
+            await open(page, sectionB, "light");
+
+            await expect(page.locator("[data-gradebook-roster]").getByText("No students yet")).toBeVisible();
+            await expect(page.locator("[data-gradebook-roster] table")).toHaveCount(0);
+            await expect(page.locator("[data-gradebook-roster] [data-scroll-x]")).toHaveCount(0);
+            await expect(page.locator("[data-roster-controls]")).toHaveCount(0);
+            await expectNoPageOverflow(page);
+            await expectTouchTargets(page, "[data-gradebook-roster]");
+            await expectAccessible(page, "[data-gradebook-roster]");
+        });
+
+        test("30 manual items and one student scroll inside the grid, with no page overflow (Review Focus 5)", async ({ page }) => {
+            const marker = "RF5 item";
+            const numbers = Array.from({ length: 30 }, (_, i) => `SELECT ${i + 1} AS n`).join(" UNION ALL ");
+            // Throwaway rows only: the enrolment is added only where there is none, and removed only if it was added.
+            const enrolled = runSql(
+                `INSERT INTO enrollments (offering_id, student_user_id, status, enrolled_at, updated_at) SELECT ${offeringB}, ${student4}, 'enrolled', NOW(), NOW() FROM DUAL `
+                + `WHERE NOT EXISTS (SELECT 1 FROM enrollments e WHERE e.offering_id = ${offeringB} AND e.student_user_id = ${student4})`,
+            ).includes("(1 row(s))");
+            try {
+                runSql(
+                    "INSERT INTO grade_items (grading_scheme_id, category_id, name, max_points, sort_order, status, created_at, updated_at) "
+                    + `SELECT ${schemeB}, NULL, CONCAT('${marker} ', n.n), 10, 100 + n.n, 'Active', NOW(), NOW() FROM (${numbers}) n`,
+                );
+
+                await open(page, { ...sectionB, scope: "main:has([data-gradebook-roster] [data-roster-row])" }, "light");
+                const roster = grid(page);
+                await expect(page.locator("[data-roster-row]")).toHaveCount(1);
+                await expect(roster.locator("[data-manual-score-input]")).toHaveCount(30);
+
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, "[data-gradebook-roster]");
+
+                // To the far end: the name column is still at the left edge, and the end fade is gone.
+                await roster.evaluate((el) => (el.scrollLeft = el.scrollWidth));
+                await expect(roster).not.toHaveAttribute("data-fade-end", "");
+                await expect(roster).toHaveAttribute("data-fade-start", "");
+                const edge = await roster.evaluate((el) => el.getBoundingClientRect().left + el.clientLeft);
+                expect(Math.abs((await box(roster.locator("[data-roster-row] > td").first())).left - edge)).toBeLessThanOrEqual(1);
+                await expectNoPageOverflow(page);
+            } finally {
+                runSql(`DELETE FROM grade_items WHERE grading_scheme_id = ${schemeB} AND name LIKE '${marker} %'`);
+                if (enrolled) {
+                    runSql(`DELETE FROM enrollments WHERE offering_id = ${offeringB} AND student_user_id = ${student4}`);
+                }
+            }
+        });
+
+        test("the toolbar's Reports and grade sheet menus open as bottom sheets, and their items still work", async ({ page }) => {
+            await open(page, gradesTab, "light");
+
+            await expect(page.locator("[data-toggle-report-menu]")).toBeHidden();
+            await expect(page.locator("[data-toggle-grade-sheet-menu]")).toBeHidden();
+
+            const menus = [
+                ["report-menu-sheet", '[data-report-path="summary"][data-report-mode="print"]'],
+                ["grade-sheet-menu-sheet", "[data-grade-sheet-export]"],
+            ];
+            for (const [id, item] of menus) {
+                const opener = page.locator(`[data-row-actions-open][aria-controls="${id}"]`);
+                const sheet = page.locator(`#${id}`);
+                await openDialog(opener, sheet);
+
+                await expect(sheet.locator(item)).toBeVisible();
+                expect(Math.abs((await box(sheet.locator("[data-dialog-panel]"))).bottom - 812), "a sheet rests on the bottom edge").toBeLessThanOrEqual(1);
+                await expectTouchTargets(page, `#${id}`);
+                await expectNoPanelOverflow(sheet);
+                await expectAccessible(page, `#${id}`);
+
+                await page.keyboard.press("Escape");
+                await expect(sheet).toBeHidden();
+                await expect(opener).toBeFocused();
+                // Its items went back to the dropdown.
+                await expect(page.locator(`[data-gradebook-toolbar] ${item}`)).toHaveCount(1);
+            }
+
+            // An item in the sheet runs its own handler: Print view opens the class summary in a tab, and the sheet closes.
+            const sheet = page.locator("#report-menu-sheet");
+            await openDialog(page.locator('[data-row-actions-open][aria-controls="report-menu-sheet"]'), sheet);
+            const popup = page.waitForEvent("popup");
+            await sheet.locator('[data-report-mode="print"]').tap();
+            const view = await popup;
+            await expect(sheet).toBeHidden();
+            await expect(view.getByRole("heading", { name: "Class summary" })).toBeVisible();
+            // The print view on a phone screen: its tables scroll in their own box.
+            await expectNoPageOverflow(view);
+            await view.close();
+
+            await expectNoPageOverflow(page);
+            await expectTouchTargets(page, "[data-gradebook-toolbar]");
+        });
+
+        test("the scheme editor's rows wrap: the name on its own row, then a decimal weight", async ({ page }) => {
+            await open(page, SCREENS.find((s) => s.name === "instructor-scheme-editor"), "light");
+
+            const category = page.locator("[data-grade-category]").first();
+            const name = category.locator("[data-grade-category-name]");
+            const weight = category.locator("[data-grade-category-weight]");
+            expect((await box(weight)).top, "the weight wraps under the name").toBeGreaterThanOrEqual((await box(name)).bottom);
+            await expect(weight).toHaveAttribute("inputmode", "decimal");
+            expect((await box(weight)).height).toBeGreaterThanOrEqual(44);
+            await expectNoPageOverflow(page);
+        });
+
+        test("the Grades page: section cards scroll sideways, the To grade filters stack", async ({ page }) => {
+            await open(page, SCREENS.find((s) => s.name === "instructor-grades-page"), "light");
+
+            const cards = page.locator("[data-section-cards]");
+            expect(await cards.evaluate((el) => globalThis.getComputedStyle(el).scrollSnapType)).toContain("x");
+            expect(await cards.evaluate((el) => globalThis.getComputedStyle(el).overflowX)).toBe("auto");
+
+            await page.goto(`${new URL(page.url()).pathname}?tab=to-grade`);
+            const section = page.locator("[data-queue-section]");
+            const type = page.locator("[data-queue-type]");
+            await expect(section).toBeVisible();
+            expect((await box(type)).top, "the filters stack").toBeGreaterThanOrEqual((await box(section)).bottom);
+            await expectNoPageOverflow(page);
+            await expectTouchTargets(page, "main");
+        });
+    });
+
+    test.describe("1366 gradebook", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("the toolbar's menus are the dropdowns, with no phone opener", async ({ page }) => {
+            await open(page, gradesTab, "light");
+
+            await expect(page.locator('[data-row-actions-open][aria-controls="report-menu-sheet"]')).toBeHidden();
+            await page.locator("[data-toggle-report-menu]").click();
+            const menu = page.locator("[data-report-menu]");
+            await expect(menu).toBeVisible();
+            expect(await menu.evaluate((el) => globalThis.getComputedStyle(el).position)).toBe("absolute");
+            await expect(page.locator("#report-menu-sheet")).toBeHidden();
+        });
+    });
+
+    // Module management: below md the module, unit and item ⋯ menus open as a bottom sheet (shared/row-actions.js
+    // moves the entries in); under a coarse pointer ▲ ▼ buttons reorder through the drag's save path.
+    const modules = SCREENS.find((s) => s.name === "instructor-modules");
+    const modulePage = SCREENS.find((s) => s.name === "instructor-module");
+    const sheet = (page) => page.locator("#content-actions-sheet");
+    const moduleIds = (page) => page.locator("#modules-container > [data-module-wrapper]").evaluateAll((rows) => rows.map((r) => r.dataset.moduleId));
+    const unitTitles = (page) => page.locator("[data-learning-unit-list] > [data-learning-unit-row] [data-learning-unit] span.text-lg").allInnerTexts();
+    const offeringA = "(SELECT o.id FROM course_offerings o JOIN courses c ON c.id = o.course_id WHERE c.course_code = 'IT101' AND o.section_code = 'A')";
+    const gettingStarted = `(SELECT id FROM course_modules WHERE offering_id = ${offeringA} AND title = '${MODULE_TITLE}')`;
+    const orientation = `(SELECT id FROM learning_units WHERE module_id = ${gettingStarted} AND title = 'Course Orientation')`;
+    const byTitle = (titles) => `CASE title ${titles.map((t, i) => `WHEN '${t}' THEN ${i + 1}`).join(" ")} END WHERE title IN (${titles.map((t) => `'${t}'`).join(", ")})`;
+    const SEED_MODULES = ["Getting Started", "Programming Fundamentals", "Working with Data"];
+    const SEED_UNITS = ["Course Orientation", "Computer Basics"];
+    const SEED_ITEMS = ["Welcome to Introduction to Computing", "Course Orientation Video", "Course Syllabus and Class Policies", "Course Pre-Test"];
+    // The seed's order, by title (runSql returns no ids). Run before a case too, so a killed run cannot leave the next one a moved list.
+    const restoreModuleOrder = () => runSql(`UPDATE course_modules SET order_index = ${byTitle(SEED_MODULES)} AND offering_id = ${offeringA}`);
+    const restoreUnitOrder = () => {
+        runSql(`UPDATE learning_units SET order_index = ${byTitle(SEED_UNITS)} AND module_id = ${gettingStarted}`);
+        runSql(`UPDATE learning_items SET order_index = ${byTitle(SEED_ITEMS)} AND learning_unit_id = ${orientation}`);
+    };
+    const LONG_TITLE = `RF4-${"Abcdefghij".repeat(3)}Abcdef`; // 40 characters, one unbroken word
+    const restoreTitle = () => runSql(`UPDATE course_modules SET title = 'Working with Data' WHERE offering_id = ${offeringA} AND title LIKE 'RF4-%'`);
+
+    test.describe("375 modules", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("a module's ⋯ opens a bottom sheet whose Edit opens the editor, and focus comes back to the ⋯", async ({ page }) => {
+            await open(page, modules, "light");
+
+            const row = page.locator("[data-module-wrapper]").filter({ hasText: MODULE_TITLE });
+            await expect(row.locator("[data-module-actions]")).toBeHidden();
+            await expect(row.locator("[data-module-card-drag-handle]")).toBeHidden();
+            const opener = row.locator("[data-row-actions-open]");
+            await opener.tap();
+
+            await expect(sheet(page)).toBeVisible();
+            await expect(sheet(page).locator("[data-dialog-title]")).toHaveText(MODULE_TITLE);
+            const slot = sheet(page).locator("[data-row-actions-slot]");
+            await expect(slot.locator("button")).toHaveText([/Edit/, /Dependencies/, /Publish|Unpublish/, /Copy to/, /Move to/, /Delete/]);
+            // The tap opened the sheet only: the card did not toggle open under it.
+            await expect(row.locator("[data-module-content]")).not.toHaveClass(/max-h-\[2000px\]/);
+            const panel = await box(sheet(page).locator("[data-dialog-panel]"));
+            expect(Math.round(panel.bottom)).toBe(812);
+            // Delete is red, under a divider.
+            const del = slot.locator("[data-delete-module]");
+            expect(await del.evaluate((el) => globalThis.getComputedStyle(el).borderTopWidth)).toBe("1px");
+            expect(await del.evaluate((el) => globalThis.getComputedStyle(el).color)).toMatch(/rgb\(220, 38, 38\)|oklch\(0\.577 0\.245 27\.325/); // red-600
+            await expectTouchTargets(page, "#content-actions-sheet");
+            await expectNoPanelOverflow(sheet(page));
+            await expectAccessible(page, "#content-actions-sheet");
+
+            await slot.locator("[data-edit-module]").tap();
+            await expect(sheet(page)).toBeHidden();
+            const editor = page.locator("#module-editor-modal");
+            await expect(editor).toBeVisible();
+            await expect(editor.locator('input[name="title"]')).toHaveValue(MODULE_TITLE);
+            // The entries went back to the row's menu, hooks and all.
+            await expect(row.locator("[data-module-actions-panel] [data-edit-module]")).toHaveCount(1);
+
+            await page.keyboard.press("Escape");
+            await expect(editor).toBeHidden();
+            await expect(opener).toBeFocused();
+        });
+
+        test("moving the second module up swaps it and the order holds after a reload (Review Focus 3)", async ({ page }) => {
+            restoreModuleOrder();
+            try {
+                await open(page, modules, "light");
+
+                const [first, second, third] = await moduleIds(page);
+                const up = (id) => page.locator(`[data-module-wrapper][data-module-id="${id}"] [data-module-move="up"]`);
+                const down = (id) => page.locator(`[data-module-wrapper][data-module-id="${id}"] [data-module-move="down"]`);
+                await expect(up(first)).toBeDisabled();
+                await expect(down(third)).toBeDisabled();
+
+                const saved = page.waitForResponse((r) => r.url().includes("/modules/reorder") && r.request().method() === "PATCH");
+                await up(second).tap();
+                expect((await saved).ok()).toBe(true);
+
+                expect(await moduleIds(page)).toEqual([second, first, third]);
+                // At the top ▲ is disabled, so focus is on the moved module's ▼.
+                await expect(up(second)).toBeDisabled();
+                await expect(down(second)).toBeFocused();
+                await expect(page.locator("[data-module-move-status]")).toHaveText("Module moved to position 1 of 3.");
+
+                // ▼ keeps focus on itself while it can still move.
+                const again = page.waitForResponse((r) => r.url().includes("/modules/reorder"));
+                await down(second).tap();
+                expect((await again).ok()).toBe(true);
+                await expect(down(second)).toBeFocused();
+                await up(second).tap();
+                await expect(page.locator("[data-module-move-status]")).toHaveText("Module moved to position 1 of 3.");
+                await page.waitForResponse((r) => r.url().includes("/modules/reorder"));
+
+                await page.reload();
+                await expect(page.locator(modules.scope)).toBeVisible();
+                expect(await moduleIds(page)).toEqual([second, first, third]);
+            } finally {
+                restoreModuleOrder();
+            }
+        });
+
+        test("units and items move with ▲ ▼ too, and the order holds after a reload", async ({ page }) => {
+            restoreUnitOrder();
+            try {
+                await open(page, modulePage, "light");
+
+                const units = page.locator("[data-learning-unit-list] > [data-learning-unit-row]");
+                const items = page.locator('[data-learning-unit-wrapper]:has-text("Course Orientation Video") [data-learning-unit-items] > [data-learning-item-row]');
+                await expect(page.locator("[data-learning-unit-drag-handle]").first()).toBeHidden();
+                await expect(page.locator("[data-learning-item-drag-handle]").first()).toBeHidden();
+                expect(await unitTitles(page)).toEqual(SEED_UNITS);
+
+                const itemSaved = page.waitForResponse((r) => r.url().includes("/modules/items/reorder") && r.request().method() === "PATCH");
+                const video = items.filter({ has: page.getByText("Course Orientation Video", { exact: true }) }).locator('[data-learning-item-move="up"]');
+                await video.tap();
+                expect((await itemSaved).ok()).toBe(true);
+                await expect(page.locator("[data-module-move-status]")).toHaveText("Learning item moved to position 1 of 4.");
+                // Moving an item opened nothing.
+                await expect(page.locator("[data-learning-unit-list]")).toBeVisible();
+
+                const unitSaved = page.waitForResponse((r) => r.url().includes("/learning-units/reorder") && r.request().method() === "PATCH");
+                await units.filter({ hasText: "Computer Basics" }).locator(':scope > div > button[data-learning-unit-move="up"]').tap();
+                expect((await unitSaved).ok()).toBe(true);
+                await expect(page.locator("[data-module-move-status]")).toHaveText("Learning unit moved to position 1 of 2.");
+
+                await page.reload();
+                await expect(page.locator(modulePage.scope)).toBeVisible();
+                expect(await unitTitles(page)).toEqual(["Computer Basics", "Course Orientation"]);
+                await expect(items.first()).toContainText("Course Orientation Video");
+            } finally {
+                restoreUnitOrder();
+            }
+        });
+
+        test("a unit's ⋯ opens the sheet and Dependencies opens its dialog", async ({ page }) => {
+            await open(page, modulePage, "light");
+
+            const unit = page.locator("[data-learning-unit-wrapper]").filter({ hasText: "Computer Basics" });
+            const opener = unit.locator("[data-learning-unit] [data-row-actions-open]").first();
+            await opener.tap();
+            await expect(sheet(page)).toBeVisible();
+            await expect(sheet(page).locator("[data-dialog-title]")).toHaveText("Computer Basics");
+            // The tap did not fold the unit under it.
+            await expect(unit.locator("[data-learning-unit-content]")).toHaveClass(/max-h-\[3000px\]/);
+
+            await sheet(page).locator("[data-learning-unit-dependencies]").tap();
+            await expect(sheet(page)).toBeHidden();
+            await expect(page.locator("#learning-unit-dependencies-modal")).toBeVisible();
+            await page.keyboard.press("Escape");
+            await expect(page.locator("#learning-unit-dependencies-modal")).toBeHidden();
+
+            // An item's ⋯ opens the same sheet with the item's entries.
+            const item = page.locator("[data-learning-item-wrapper]").filter({ has: page.getByText("Hardware and Software", { exact: true }) });
+            await item.locator("[data-row-actions-open]").tap();
+            await expect(sheet(page).locator("[data-dialog-title]")).toHaveText("Hardware and Software");
+            await expect(sheet(page).locator("[data-row-actions-slot] button")).toHaveText([/Edit/, /Dependencies/, /Copy to/, /Move to/, /Publish|Unpublish/, /Delete/]);
+            await expectTouchTargets(page, "#content-actions-sheet");
+            await page.keyboard.press("Escape");
+            await expect(sheet(page)).toBeHidden();
+            // The item did not open under the sheet.
+            await expect(page).not.toHaveURL(/[?&]item=/);
+        });
+    });
+
+    test.describe("320 modules", () => {
+        test.use({ viewport: { width: 320, height: 640 }, hasTouch: true, isMobile: true });
+
+        test("a 40-character module title does not overflow its card or the page (Review Focus 4)", async ({ page }) => {
+            restoreTitle();
+            runSql(`UPDATE course_modules SET title = '${LONG_TITLE}' WHERE offering_id = ${offeringA} AND title = 'Working with Data'`);
+            try {
+                await open(page, modules, "light");
+                const card = page.locator("[data-module-card]").filter({ hasText: LONG_TITLE });
+                await expect(card).toBeVisible();
+                await expectNoPageOverflow(page);
+                const inside = await card.evaluate((el) => el.scrollWidth <= el.clientWidth);
+                expect(inside, "the card holds its title").toBe(true);
+                const title = await box(card.getByText(LONG_TITLE));
+                const outer = await box(card);
+                expect(title.right).toBeLessThanOrEqual(outer.right);
+                await expectTouchTargets(page, "#modules-container");
+
+                // The module page's top bar wraps its actions under the title.
+                const id = await page.locator("[data-module-wrapper]").filter({ hasText: LONG_TITLE }).getAttribute("data-module-id");
+                await page.goto(`${await instructorModulesPath(page)}?module=${id}&view=1`);
+                await expect(page.locator(".sticky-bar-top").getByText(LONG_TITLE)).toBeVisible();
+                await expectNoPageOverflow(page);
+                const bar = page.locator(".sticky-bar-top");
+                expect(await bar.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+                await expectTouchTargets(page, ".sticky-bar-top");
+            } finally {
+                restoreTitle();
+            }
+        });
+    });
+
+    test.describe("1366 modules", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("the ⋯ menus are the dropdowns, with drag handles and no arrows", async ({ page }, testInfo) => {
+            test.skip(testInfo.project.name === "webkit", "WebKit emulates an iPhone (a coarse pointer)");
+            await open(page, modules, "light");
+
+            const row = page.locator("[data-module-wrapper]").filter({ hasText: MODULE_TITLE });
+            await expect(row.locator("[data-row-actions-open]")).toBeHidden();
+            await expect(row.locator("[data-module-move]").first()).toBeHidden();
+            await expect(row.locator("[data-module-card-drag-handle]")).toBeVisible();
+
+            await row.locator("[data-module-actions]").click();
+            const menu = page.locator("[data-module-actions-panel]:visible");
+            await expect(menu).toHaveCount(1);
+            expect(await menu.evaluate((el) => globalThis.getComputedStyle(el).position)).toBe("fixed");
+            await expect(menu.locator("[data-edit-module]")).toBeVisible();
+            await expect(sheet(page)).toBeHidden();
+        });
+    });
+
+    test.describe("1180 item editor", () => {
+        test.use({ viewport: { width: 1180, height: 800 } });
+
+        test("the contents column sticks under the app header, its heading in view, while the window scrolls", async ({ page }, testInfo) => {
+            test.skip(testInfo.project.name === "webkit", "WebKit runs the phone only");
+            await open(page, modulePage, "light");
+            const id = await page.locator("[data-learning-item-wrapper]").filter({ has: page.getByText("Course Pre-Test", { exact: true }) }).getAttribute("data-learning-item");
+            await page.goto(`${await instructorModulesPath(page)}?item=${id}&editor=1`);
+            const panel = page.locator("[data-learning-item-panel] [data-contents-panel]");
+            await expect(panel.locator("[data-panel-item]").first()).toBeVisible();
+
+            await page.mouse.wheel(0, 250);
+            await expect.poll(() => page.evaluate(() => globalThis.scrollY)).toBeGreaterThan(100);
+            const header = await box(page.locator("[data-app-header]"));
+            const column = await box(panel);
+            expect(Math.round(column.top), "the column starts under the header").toBe(Math.round(header.bottom));
+            expect(Math.round(column.bottom)).toBeLessThanOrEqual(800);
+            await expect(panel.getByText("Module 1", { exact: true })).toBeInViewport();
+        });
+    });
+});
+
+// The learning item editors: the Save as Draft / Publish footer pinned below lg (the assessment editor's), the reading
+// toolbar wrapping with finger-sized buttons, a long title at 320, and the item dialogs on a phone.
+test.describe("instructor item editor", () => {
+    const reading = SCREENS.find((s) => s.name === "instructor-item-editor-reading");
+    const modulePage = SCREENS.find((s) => s.name === "instructor-module");
+    const footer = (page) => page.locator("[data-learning-item-editor] footer:has([data-publish])");
+    const box = (locator) => locator.evaluate((el) => el.getBoundingClientRect().toJSON());
+    const frames = (page) => page.evaluate(() => new Promise((resolve) => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
+    const offeringA = "(SELECT o.id FROM course_offerings o JOIN courses c ON c.id = o.course_id WHERE c.course_code = 'IT101' AND o.section_code = 'A')";
+    const unitIds = `(SELECT u.id FROM learning_units u JOIN course_modules m ON m.id = u.module_id WHERE m.offering_id = ${offeringA})`;
+    const LONG_TITLE = `RF4I-${"Abcdefghij".repeat(3)}Abcde`; // 40 characters, one unbroken word
+    // By the marker, so a killed run cannot leave the next one the long title (runSql returns no ids). No helper table.
+    const restoreTitle = () => runSql(`UPDATE learning_items SET title = '${READING_TITLE}' WHERE learning_unit_id IN ${unitIds} AND title LIKE 'RF4I-%'`);
+
+    test.describe("375 item editor", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("the save bar is pinned to the bottom edge and the reading toolbar wraps with 44px buttons", async ({ page }) => {
+            await open(page, reading, "light");
+
+            const bar = footer(page);
+            expect(Math.round((await box(bar)).bottom)).toBe(812);
+            await expectInViewport(page, "[data-learning-item-editor] footer [data-publish]");
+            const draft = await box(bar.locator("[data-save-draft]"));
+            const publish = await box(bar.locator("[data-publish]"));
+            expect(Math.round(draft.top), "Save as Draft and Publish share a row").toBe(Math.round(publish.top));
+            await expectTouchTargets(page, "[data-learning-item-editor] footer");
+
+            // Still on the bottom edge half way down the reading.
+            await page.evaluate(() => globalThis.scrollBy({ top: 1500, behavior: "instant" }));
+            expect(Math.round((await box(bar)).bottom)).toBe(812);
+
+            const buttons = page.locator("[data-reading-editor] > div").first().locator("button");
+            const tops = await buttons.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+            expect(new Set(tops).size, "the toolbar wraps onto more than one row").toBeGreaterThan(1);
+            await expectTouchTargets(page, "[data-reading-editor] > div:first-child");
+            await expectNoPageOverflow(page);
+        });
+
+        test("a field focused under the pinned footer scrolls clear of it", async ({ page }) => {
+            await open(page, reading, "light");
+
+            const line = page.locator("#reading-editor [contenteditable] p").nth(6);
+            const footerTop = (await box(footer(page))).top;
+            // The paragraph just under the footer, then focused without the browser's own scroll (as WebKit leaves a tap).
+            // Repeated until it holds: on WebKit the reading can still settle (and move) just after it has loaded.
+            await expect(async () => {
+                await line.evaluate((el, top) => globalThis.scrollBy({ top: el.getBoundingClientRect().top - top - 10, behavior: "instant" }), footerTop);
+                expect((await box(line)).top, "the paragraph starts under the footer").toBeGreaterThan(footerTop);
+            }).toPass({ timeout: 10_000 });
+            await line.evaluate((el) => {
+                globalThis.getSelection().collapse(el.firstChild ?? el, 0);
+                el.closest("[contenteditable]").focus({ preventScroll: true });
+            });
+            await frames(page);
+            await frames(page);
+
+            const header = (await box(page.locator("[data-app-header]"))).bottom;
+            const after = await box(line);
+            expect(after.top, "the paragraph is above the footer").toBeLessThan(footerTop);
+            expect(after.top, "and not under the header").toBeGreaterThanOrEqual(header - 1);
+        });
+
+        test("Add learning item opens full-screen with its Create button on the bottom bar", async ({ page }) => {
+            await open(page, modulePage, "light");
+
+            const dialog = page.locator("#learning-item-create-modal");
+            const add = page.locator("[data-create-learning-item-button]").first();
+            await add.scrollIntoViewIfNeeded();
+            await openDialog(add, dialog);
+
+            const panel = await box(dialog.locator("[data-dialog-panel]"));
+            expect([panel.left, panel.top, panel.width, panel.height].map(Math.round)).toEqual([0, 0, 375, 812]);
+            await expect(dialog.locator("[data-dialog-title]")).toHaveText("Add Learning item");
+            await expectInViewport(page, "#learning-item-create-modal [data-learning-item-create-submit]");
+            await expectTouchTargets(page, "#learning-item-create-modal");
+            await expectNoPanelOverflow(dialog);
+            await expectAccessible(page, "#learning-item-create-modal");
+
+            // A type tile is a radio a tap reaches.
+            await dialog.getByText("Video", { exact: true }).tap();
+            await expect(dialog.getByRole("radio", { name: "Video" })).toBeChecked();
+
+            await page.keyboard.press("Escape");
+            await expect(dialog).toBeHidden();
+        });
+
+        test("in dark, a first item's Dependencies dialog shows its disabled Previous option readably", async ({ page }) => {
+            await open(page, modulePage, "dark");
+
+            // The unit's first item: there is no previous item, so that option is disabled. Nothing is saved.
+            const item = page.locator("[data-learning-item-wrapper]").filter({ has: page.getByText(READING_TITLE, { exact: true }) });
+            await item.locator("[data-row-actions-open]").tap();
+            await page.locator("#content-actions-sheet [data-learning-item-dependencies]").tap();
+
+            const dialog = page.locator("#learning-item-dependencies-modal");
+            await expect(dialog).toBeVisible();
+            await expect(dialog.locator("[data-dependencies-save]")).toBeEnabled();
+            const options = dialog.locator("[data-dependencies-options]");
+            await expect(async () => {
+                if (!(await options.isVisible())) {
+                    await dialog.locator("label:has([data-dependencies-enabled])").tap({ timeout: 2_000 });
+                }
+                await expect(options).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 15_000 });
+            await expect(dialog.locator('[data-dependencies-mode][value="previous"]')).toBeDisabled();
+            await expectAccessible(page, "#learning-item-dependencies-modal");
+
+            await page.keyboard.press("Escape");
+            await expect(dialog).toBeHidden();
+        });
+
+        test("an item's Dependencies dialog fits the phone with 44px controls", async ({ page }) => {
+            await open(page, modulePage, "light");
+
+            // The third item of "Computer Basics", so the custom list has earlier items. Nothing is saved (Escape at the end).
+            const item = page.locator("[data-learning-item-wrapper]").filter({ has: page.getByText("How Computers Represent Data", { exact: true }) });
+            await item.locator("[data-row-actions-open]").tap();
+            await page.locator("#content-actions-sheet [data-learning-item-dependencies]").tap();
+
+            const dialog = page.locator("#learning-item-dependencies-modal");
+            await expect(dialog).toBeVisible();
+            await expectTouchTargets(page, "#learning-item-dependencies-modal");
+
+            // Custom dependency: its candidate rows, drawn by learning-item-dependencies.js.
+            // The dialog fills in once its data has loaded (the previous-item hint), which would undo an earlier tap.
+            await expect(dialog.locator("[data-dependencies-previous-hint]")).not.toBeEmpty();
+            const custom = dialog.locator('label:has([data-dependencies-mode][value="custom"])');
+            await expect(async () => {
+                if (!(await custom.isVisible())) {
+                    await dialog.locator("label:has([data-dependencies-enabled])").tap({ timeout: 2_000 });
+                }
+                await expect(custom).toBeVisible({ timeout: 2_000 });
+            }).toPass({ timeout: 15_000 });
+            await custom.tap();
+            const candidates = dialog.locator("[data-dependencies-candidates] label");
+            await expect(candidates.first()).toBeVisible();
+            expect(await candidates.count()).toBeGreaterThanOrEqual(2);
+            await expectTouchTargets(page, "#learning-item-dependencies-modal");
+            // An older modal (modals/index.js), not a components/dialog: its panel is the first child.
+            const panel = dialog.locator("> div");
+            expect(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth && el.getBoundingClientRect().right <= globalThis.innerWidth)).toBe(true);
+            await expectAccessible(page, "#learning-item-dependencies-modal");
+            await page.keyboard.press("Escape");
+            await expect(dialog).toBeHidden();
+        });
+    });
+
+    test.describe("320 item editor", () => {
+        test.use({ viewport: { width: 320, height: 640 }, hasTouch: true, isMobile: true });
+
+        test("a 40-character item title does not overflow the editor (Review Focus 4)", async ({ page }) => {
+            restoreTitle();
+            // The editor's address is looked up by the seed title, so before the title changes.
+            await open(page, reading, "light");
+            runSql(`UPDATE learning_items SET title = '${LONG_TITLE}' WHERE learning_unit_id IN ${unitIds} AND title = '${READING_TITLE}'`);
+            try {
+                await page.reload();
+                await expect(page.locator(reading.scope)).toBeVisible();
+
+                const title = page.locator("[data-item-header-title]");
+                await expect(title).toHaveText(LONG_TITLE);
+                await expectNoPageOverflow(page);
+                const editor = await box(page.locator("[data-learning-item-editor]"));
+                expect((await box(title)).right).toBeLessThanOrEqual(editor.right);
+                const bar = page.locator("[data-learning-item-editor] .sticky-bar-top");
+                expect(await bar.evaluate((el) => el.scrollWidth <= el.clientWidth), "the top bar holds the trail").toBe(true);
+                await expect(bar.locator('[aria-current="page"]')).toHaveText(LONG_TITLE);
+                await expectTouchTargets(page, "[data-learning-item-editor]");
+                await expectInViewport(page, "[data-learning-item-editor] footer [data-publish]");
+            } finally {
+                restoreTitle();
+            }
+        });
+    });
+
+    test.describe("1366 item editor", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("the footer is the desktop one: its buttons keep their width", async ({ page }, testInfo) => {
+            test.skip(testInfo.project.name === "webkit", "WebKit runs the phone only");
+            await open(page, reading, "light");
+
+            const draft = await box(footer(page).locator("[data-save-draft]"));
+            expect(draft.width, "Save as Draft is not stretched").toBeLessThan(200);
+            await expect(page.locator("[data-learning-item-editor] [data-save-message]")).toBeVisible();
+        });
+    });
+});
+
+// The Course Workspace's instructor tabs: Overview cards sized by their container, the announcement composer and
+// in-place editor wrapping with 44px buttons, discussion moderation controls shown and 44px on touch, and a
+// resource's ⋯ menu as a bottom sheet below md (shared/row-actions.js moves its entries in).
+test.describe("instructor course workspace", () => {
+    const overview = SCREENS.find((s) => s.name === "instructor-course-overview");
+    const announcements = SCREENS.find((s) => s.name === "instructor-announcements");
+    const resources = SCREENS.find((s) => s.name === "instructor-resources");
+    const discussions = SCREENS.find((s) => s.name === "instructor-discussions");
+    const box = (locator) => locator.evaluate((el) => el.getBoundingClientRect().toJSON());
+    const tops = (locator) => locator.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+
+    /**
+     * Each Overview card's padding follows its column (the query container): 24px once the column is 20rem wide,
+     * else 16px. Returns the widths and paddings seen, so a size can also pin the expected value.
+     */
+    async function expectCardPadding(page) {
+        const cards = await page.locator("[data-overview-page] > div:nth-child(3) > div > div").evaluateAll((els) => els
+            .filter((el) => el.classList.contains("p-4"))
+            .map((el) => ({ column: el.parentElement.getBoundingClientRect().width, padding: globalThis.getComputedStyle(el).paddingLeft })));
+        expect(cards.length, "the Overview's cards").toBeGreaterThanOrEqual(4);
+        for (const card of cards) {
+            expect(card.padding, `a card in a ${Math.round(card.column)}px column`).toBe(card.column >= 320 ? "24px" : "16px");
+        }
+
+        return cards;
+    }
+
+    /** The seeded thread's own page, opened from its row (the thread is made fresh by discussionsPath). */
+    async function openThread(page) {
+        await open(page, discussions, "light");
+        const row = page.locator("[data-thread-open]").filter({ hasText: THREAD_TITLE });
+        await expect(async () => {
+            await row.click({ timeout: 2_000 });
+            await expect(page.locator("[data-thread-body] [data-reply]")).toBeVisible({ timeout: 3_000 });
+        }).toPass({ timeout: 30_000 });
+    }
+
+    test.describe("375", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("the Overview's metric cards sit two to a row", async ({ page }) => {
+            await open(page, overview, "light");
+
+            const cards = page.locator("[data-overview-page] > div:nth-child(2) [class*='rounded-2xl']");
+            const [first, second] = await tops(cards);
+            expect(first, "the first two metric cards share a row").toBe(second);
+            await expectNoPageOverflow(page);
+        });
+
+        test("the Overview cards take their padding from the column they sit in", async ({ page }) => {
+            await open(page, overview, "light");
+            await expectCardPadding(page);
+        });
+
+        test("the announcement composer and the in-place editor wrap with 44px buttons", async ({ page }) => {
+            await open(page, announcements, "light");
+
+            await page.locator("[data-composer-toggle]").tap();
+            const composer = page.locator("[data-announcement-composer]");
+            await expect(composer).toBeVisible();
+            await expectTouchTargets(page, "[data-announcement-composer]");
+            await expectNoPageOverflow(page);
+            await expectAccessible(page, "[data-announcement-composer]");
+            await composer.locator("[data-composer-dismiss]").tap();
+
+            // The card's ⋯ is always shown on a touch screen; its entries and the editor it opens are 44px too.
+            const card = page.locator("[data-announcement-card]").filter({ has: page.locator("[data-more-options-toggle]") }).first();
+            await card.locator("[data-more-options-toggle]").tap();
+            await expect(card.locator("[data-more-options-panel]")).toBeVisible();
+            await expectTouchTargets(page, `[data-announcement-id="${await card.getAttribute("data-announcement-id")}"] [data-more-options-panel]`);
+            await card.locator("[data-edit-announcement]").tap();
+            await expect(card.locator("[data-card-editor]")).toBeVisible();
+            await expectTouchTargets(page, `[data-announcement-id="${await card.getAttribute("data-announcement-id")}"] [data-card-editor]`);
+            await expectNoPageOverflow(page);
+            await card.locator("[data-card-editor-cancel]").tap();
+            await expect(card.locator("[data-card-editor]")).toBeHidden();
+        });
+
+        test("a discussion's moderation controls show without hover and are 44px", async ({ page }) => {
+            await openThread(page);
+
+            const post = page.locator("[data-thread-body] > article");
+            const menu = post.locator("[data-more-options-toggle]").locator("xpath=../..");
+            expect(await menu.evaluate((el) => globalThis.getComputedStyle(el).opacity)).toBe("1");
+            await expectTouchTargets(page, "[data-thread-body]");
+
+            await post.locator("[data-more-options-toggle]").tap();
+            await expect(post.locator("[data-more-options-panel]")).toBeVisible();
+            await expect(post.locator("[data-more-options-panel] button")).toHaveText([/Edit/, /Pin/, /Lock/, /Delete/]);
+            await expectTouchTargets(page, "[data-thread-body] > article [data-more-options-panel]");
+            await expectInViewport(page, "[data-thread-body] > article [data-more-options-panel]");
+            await expectNoPageOverflow(page);
+            await expectAccessible(page, "[data-thread-body]");
+
+            // The reply's Mark as answer sits behind its own ⋯.
+            const reply = page.locator("[data-thread-body] [data-reply]").first();
+            await reply.locator("[data-more-options-toggle]").tap();
+            await expect(reply.locator("[data-mark-answer]")).toBeVisible();
+            await expectTouchTargets(page, "[data-thread-body] [data-reply] [data-more-options-panel]");
+        });
+
+        test("a resource's ⋯ opens its menu as a bottom sheet", async ({ page }) => {
+            await open(page, resources, "light");
+
+            const row = page.locator("[data-resource-row]").first();
+            const title = (await row.locator(".truncate").first().innerText()).trim();
+            await expect(row.locator("[data-resource-menu-toggle]")).toBeHidden();
+            const opener = row.locator("[data-row-actions-open]");
+            const sheet = page.locator("#resource-actions-sheet");
+            await openDialog(opener, sheet);
+
+            await expect(sheet.locator("[data-dialog-title]")).toHaveText(title);
+            const slot = sheet.locator("[data-row-actions-slot]");
+            await expect(slot.locator("a, button")).toHaveText([/View/, /Download/, /Share link/]);
+            expect(Math.round((await box(sheet.locator("[data-dialog-panel]"))).bottom)).toBe(812);
+            await expectTouchTargets(page, "#resource-actions-sheet");
+            await expectNoPanelOverflow(sheet);
+            await expectAccessible(page, "#resource-actions-sheet");
+
+            await page.keyboard.press("Escape");
+            await expect(sheet).toBeHidden();
+            await expect(opener).toBeFocused();
+            // The entries went back to the row's menu, hooks and all.
+            await expect(row.locator("[data-resource-menu-panel] [data-resource-share]")).toHaveCount(1);
+        });
+    });
+
+    test.describe("768", () => {
+        test.use({ viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true });
+        test.skip(({ browserName }) => browserName === "webkit", "WebKit runs the 375px phone only");
+
+        test("the Overview cards get the full 24px padding in a tablet's column", async ({ page }) => {
+            await open(page, overview, "light");
+            const cards = await expectCardPadding(page);
+            expect(cards.every((card) => card.padding === "24px")).toBe(true);
+        });
+    });
+    test.describe("1366", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+        test.skip(({ browserName }) => browserName === "webkit", "WebKit runs the 375px phone only");
+
+        test("hover-only controls stay hidden until hover and the resource menu is the dropdown", async ({ page }) => {
+            await openThread(page);
+            const post = page.locator("[data-thread-body] > article");
+            const menu = post.locator("[data-more-options-toggle]").locator("xpath=../..");
+            expect(await menu.evaluate((el) => globalThis.getComputedStyle(el).position)).toBe("absolute");
+            expect(await menu.evaluate((el) => globalThis.getComputedStyle(el).opacity)).toBe("0");
+
+            await page.goto(await resourcesUnitPath(page));
+            const row = page.locator("[data-resource-row]").first();
+            await expect(row.locator("[data-row-actions-open]")).toBeHidden();
+            await row.locator("[data-resource-menu-toggle]").click();
+            await expect(row.locator("[data-resource-menu-panel]")).toBeVisible();
+            await expect(page.locator("#resource-actions-sheet")).toBeHidden();
+        });
+
+        // The container rule is guarded below lg: unguarded it came after lg:grid-cols-* in the built CSS and won.
+        for (const screen of [overview, SCREENS.find((s) => s.name === "student-course-overview")]) {
+            test(`${screen.name}: every metric card sits on one row`, async ({ page }) => {
+                await open(page, screen, "light");
+                await expect(page.locator("[data-overview-page]")).toBeVisible();
+                const cards = page.locator("[data-overview-page] > div:nth-child(2) [class*='rounded-2xl']");
+                expect(await cards.count()).toBeGreaterThanOrEqual(3);
+                expect(new Set(await tops(cards)).size, "one row").toBe(1);
+            });
+        }
+
+        test("in dark, a row title still turns brand on hover", async ({ page }) => {
+            await open(page, overview, "dark");
+            const row = page.locator("[data-overview-page] [data-overview-open]").first();
+            const title = row.locator(".truncate").first();
+            const brand = await page.locator("[data-overview-page] .text-brand").first().evaluate((el) => globalThis.getComputedStyle(el).color);
+            const before = await title.evaluate((el) => globalThis.getComputedStyle(el).color);
+            expect(before, "the title starts grey, not brand").not.toBe(brand);
+            await row.hover();
+            await expect.poll(() => title.evaluate((el) => globalThis.getComputedStyle(el).color)).toBe(brand);
+        });
+
+        test("the composer toolbar sits on one line", async ({ page }) => {
+            await open(page, announcements, "light");
+            await page.locator("[data-composer-toggle]").click();
+            const buttons = page.locator("[data-composer-toolbar] button");
+            expect(new Set(await tops(buttons)).size).toBe(1);
+        });
+    });
+});
+
+// Carry-over: below the lock (narrower than 1280 or shorter than 760) the window scrolls, not the page card, so a
+// bar that pins to the window must pin below the sticky header, never under it. A bar whose scroll container is an
+// element (a card that scrolls) is that element's business. Checked on every page with a lg:overflow-y-auto page card
+// (and the course tabs of this task) at a 1100 laptop and a short 1366×657 desktop, half way down the page.
+test.describe("sticky bars below the lock", () => {
+    const PAGES = [
+        { name: "instructor courses", as: "instructor", path: "/instructor/courses", scope: 'main:has(ul[aria-label="Your courses"])' },
+        { name: "instructor dashboard", as: "instructor", path: "/instructor/dashboard", scope: "main:has([data-phone-tabs])" },
+        // Server-rendered (no script loads it): scoped to the week grid so an empty or wrong page cannot pass.
+        { name: "instructor schedule", as: "instructor", path: "/instructor/schedule", scope: "main:has([data-scroll-x])" },
+        { name: "instructor calendar", as: "instructor", path: "/instructor/calendar", scope: "main:has([data-calendar-cell])" },
+        // The learning item panel's Contents column (Task 7's fix): a student on an item, and an instructor's item editor.
+        { name: "student module item", as: "student", path: moduleItemPath, scope: "main:has([data-contents])" },
+        { name: "instructor item editor", as: "instructor", path: (page) => itemEditorPath(page, READING_TITLE), scope: "main:has([data-learning-item-editor] #reading-editor [contenteditable])" },
+        ...["instructor-course-overview", "instructor-announcements", "instructor-resources", "instructor-discussions"].map((name) => SCREENS.find((s) => s.name === name)),
+    ];
+
+    for (const size of [{ w: 1100, h: 768 }, { w: 1366, h: 657 }]) {
+        test.describe(`${size.w}x${size.h}`, () => {
+            test.use({ viewport: { width: size.w, height: size.h } });
+            test.skip(({ browserName }) => browserName === "webkit", "WebKit runs the 375px phone only");
+
+            for (const screen of PAGES) {
+                test(`${screen.name}: no window-pinned bar sits under the header`, async ({ page }) => {
+                    await open(page, screen, "light");
+                    await page.evaluate(() => globalThis.scrollTo({ top: globalThis.document.documentElement.scrollHeight / 2, behavior: "instant" }));
+
+                    const offenders = await page.evaluate(() => {
+                        const doc = globalThis.document;
+                        const header = doc.querySelector("[data-app-header]");
+                        const headerHeight = header.getBoundingClientRect().height;
+                        // Its nearest scroll container is the window when no ancestor clips with a scrollbar.
+                        const pinsToWindow = (el) => {
+                            for (let node = el.parentElement; node && node !== doc.body; node = node.parentElement) {
+                                const { overflowX, overflowY } = globalThis.getComputedStyle(node);
+                                if ([overflowX, overflowY].some((o) => o === "auto" || o === "scroll" || o === "hidden")) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        };
+
+                        return [...doc.querySelectorAll("body *")]
+                            .filter((el) => !header.contains(el) && el.checkVisibility())
+                            .filter((el) => globalThis.getComputedStyle(el).position === "sticky" && pinsToWindow(el))
+                            .filter((el) => {
+                                const top = parseFloat(globalThis.getComputedStyle(el).top);
+                                return !Number.isNaN(top) && top < headerHeight - 1;
+                            })
+                            .map((el) => `top ${globalThis.getComputedStyle(el).top} under a ${Math.round(headerHeight)}px header: ${el.outerHTML.slice(0, 160)}`);
+                    });
+
+                    expect(offenders).toEqual([]);
+                });
+            }
+        });
+    }
 });
 
 // The student dashboard's phone tabs (components/phone-tabs): Today, Courses, Updates below lg; the whole grid from lg up.

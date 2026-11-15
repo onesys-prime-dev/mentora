@@ -34,7 +34,7 @@ $attributes = static fn (array $row) => match ($row['action']) {
 $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $attention['drafts'] === [];
 ?>
 
-<div class="flex flex-col gap-6 p-6 pb-8 border border-[#A9A9A9]/50 rounded-2xl">
+<div class="flex flex-col gap-6 p-4 pb-6 max-lg:@xs:p-6 max-lg:@xs:pb-8 lg:p-6 lg:pb-8 border border-[#A9A9A9]/50 rounded-2xl">
 
     <span class="text-2xl font-bold text-brand">
         Needs Your Attention
@@ -66,7 +66,7 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
 
                 <div class="flex flex-col gap-2">
 
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-wrap items-center justify-between gap-x-3">
 
                         <span class="uppercase text-xs font-bold tracking-wide text-[#767676]">
                             <?= esc($list['label']) ?>
@@ -96,11 +96,11 @@ $isEmpty = $attention['grading'] === [] && $attention['behind'] === [] && $atten
 
                                 <div class="flex min-w-0 flex-1 flex-col">
 
-                                    <span class="truncate text-md font-bold text-black/70 <?= $clickable ? 'transition-colors duration-150 group-hover:text-brand' : '' ?>">
+                                    <span class="truncate text-md font-bold text-[#3D3D3D] <?= $clickable ? 'transition-colors duration-150 group-hover:text-brand' : '' ?>">
                                         <?= esc($row['title']) ?>
                                     </span>
 
-                                    <span class="truncate text-sm text-black/50">
+                                    <span class="truncate text-sm text-[#646464]">
                                         <?= esc($row['detail']) ?>
                                     </span>
 

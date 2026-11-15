@@ -31,9 +31,9 @@ $source = !empty($resource['file'])
 
         </div>
 
-        <div class="flex gap-6 p-6">
+        <div class="flex flex-wrap gap-x-6 gap-y-2 p-6">
 
-            <label class="flex cursor-pointer items-center gap-3">
+            <label class="flex cursor-pointer items-center gap-3 pointer-coarse:min-h-11">
 
                 <input
                     type="radio"
@@ -50,7 +50,7 @@ $source = !empty($resource['file'])
 
             </label>
 
-            <label class="flex cursor-pointer items-center gap-3">
+            <label class="flex cursor-pointer items-center gap-3 pointer-coarse:min-h-11">
 
                 <input
                     type="radio"
@@ -90,7 +90,7 @@ $source = !empty($resource['file'])
         <div class="p-6">
 
             <label
-                class="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-brand hover:bg-brand/5">
+                class="flex min-h-[180px] max-w-full cursor-pointer flex-col items-center justify-center rounded-2xl p-4 text-center border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-brand hover:bg-brand/5">
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -123,7 +123,7 @@ $source = !empty($resource['file'])
 
                 <p
                     data-video-file-name
-                    class="mt-4 text-sm text-gray-500">
+                    class="mt-4 max-w-full truncate text-sm text-gray-500">
 
                     No file selected.
 
@@ -153,13 +153,14 @@ $source = !empty($resource['file'])
 
         <div class="space-y-2 p-6">
 
-            <label class="block text-sm font-medium text-gray-700">
+            <label for="video-editor-url" class="block text-sm font-medium text-gray-700">
 
                 Video URL
 
             </label>
 
             <input
+                id="video-editor-url"
                 type="url"
                 data-video-url
                 value="<?= esc($resource['resource_url'] ?? '') ?>"
@@ -191,9 +192,9 @@ $source = !empty($resource['file'])
         <div
             data-video-preview
             data-existing-video="<?= esc($resource['file']['url'] ?? '') ?>"
-            class="aspect-video overflow-hidden bg-neutral-900">
+            class="aspect-video max-w-full overflow-hidden bg-neutral-900">
 
-            <div class="flex h-full items-center justify-center text-[#767676]">
+            <div class="flex h-full items-center justify-center text-gray-400">
 
                 Video preview will appear here.
 
@@ -219,7 +220,7 @@ $source = !empty($resource['file'])
 
         <div class="grid gap-5 p-6 sm:grid-cols-2">
 
-            <label class="flex items-center gap-3">
+            <label class="flex items-center gap-3 pointer-coarse:min-h-11">
 
                 <input
                     type="checkbox"
@@ -232,7 +233,7 @@ $source = !empty($resource['file'])
 
             </label>
 
-            <label class="flex items-center gap-3">
+            <label class="flex items-center gap-3 pointer-coarse:min-h-11">
 
                 <input
                     type="checkbox"

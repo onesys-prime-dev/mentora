@@ -5,15 +5,15 @@
     aria-labelledby="quiz-password-title"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
 
-    <div class="flex w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl">
+    <div class="flex w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl max-h-full overflow-y-auto">
 
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <h2 id="quiz-password-title" class="text-xl font-bold text-brand">Quiz password</h2>
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 aria-label="Close"
                 data-close-password-modal>
 
@@ -25,7 +25,7 @@
 
         </div>
 
-        <div class="flex flex-col gap-3 px-8 py-6">
+        <div class="flex flex-col gap-3 px-5 sm:px-8 py-5 sm:py-6 min-h-0 flex-1 overflow-y-auto">
 
             <label for="quiz-password-field" class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Password
@@ -39,7 +39,7 @@
                 spellcheck="false"
                 maxlength="64"
                 aria-describedby="quiz-password-help quiz-password-modal-error"
-                class="rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm outline-none transition focus:border-brand">
+                class="rounded-lg border border-gray-300 px-3 py-2 font-mono text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11">
 
             <p id="quiz-password-help" class="text-xs text-[#767676]">
                 A password is suggested. Keep it, or erase it and type your own (4 to 64 characters). Students type it exactly,
@@ -51,25 +51,25 @@
             <button
                 type="button"
                 data-password-generate
-                class="w-fit text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+                class="w-fit text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">
                 Suggest another
             </button>
 
         </div>
 
-        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-8 py-5">
+        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 flex-wrap shrink-0">
 
             <button
                 type="button"
                 data-close-password-modal
-                class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 pointer-coarse:min-h-11">
                 Cancel
             </button>
 
             <button
                 type="button"
                 data-password-save
-                class="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                class="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11">
                 Save
             </button>
 

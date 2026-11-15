@@ -408,7 +408,7 @@ function bindReplyBox(body, threadId) {
             const remove = document.createElement("button");
             remove.type = "button";
             remove.setAttribute("aria-label", `Remove ${file.original_filename}`);
-            remove.className = "text-[#646464] hover:text-[#C33939]";
+            remove.className = "inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-[#646464] hover:text-[#C33939]";
             remove.textContent = "×";
             remove.addEventListener("click", () => {
                 attachments.splice(index, 1);

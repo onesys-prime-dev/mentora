@@ -211,7 +211,7 @@ function initializeFeatureBindings() {
 
     bindModuleActionMenus();
 
-    initializeModuleSorting();
+    initializeModuleSorting(initialize);
 
     bindPublishToggles(loadModules);
 

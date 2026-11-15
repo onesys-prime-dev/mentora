@@ -54,7 +54,7 @@ if ($isInstructor) {
 <div
     class="group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[#A9A9A9]/50 px-4 py-4 outline-none sm:gap-6 sm:px-8 sm:py-6 transition-all duration-200
         hover:border-brand/50 hover:bg-brand/5 hover:shadow-sm
-        focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+        focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20<?= $isInstructor ? ' max-sm:flex-wrap' : '' ?>"
     role="link"
     tabindex="0"
     data-assessment-card
@@ -114,7 +114,8 @@ if ($isInstructor) {
 
     </div>
 
-    <div class="flex shrink-0 items-center gap-5">
+    <?php // An instructor's counts and actions take their own row on a phone, so the title keeps the width. ?>
+    <div class="flex shrink-0 items-center gap-5<?= $isInstructor ? ' max-sm:w-full max-sm:justify-end max-sm:gap-3' : '' ?>">
 
         <?php if ($isInstructor): ?>
 
@@ -129,7 +130,8 @@ if ($isInstructor) {
                 data-view-assessment-button
                 data-assessment="<?= esc($a['id']) ?>"
                 title="Preview assessment"
-                class="text-gray-500 transition hover:text-brand">
+                aria-label="Preview assessment"
+                class="flex items-center justify-center text-gray-500 transition hover:text-brand pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200 hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -143,7 +145,8 @@ if ($isInstructor) {
                 data-edit-assessment-button
                 data-assessment="<?= esc($a['id']) ?>"
                 title="Edit assessment"
-                class="text-gray-500 transition hover:text-brand">
+                aria-label="Edit assessment"
+                class="flex items-center justify-center text-gray-500 transition hover:text-brand pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200 hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" />

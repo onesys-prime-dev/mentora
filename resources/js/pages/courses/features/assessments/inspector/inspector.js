@@ -8,6 +8,21 @@ import { fetchAssignees, saveAssignees, setQuizPassword, updateAssessment } from
 import { showToast } from "../../../../../shared/toast.js";
 import { bindQuizSecurity } from "./quiz-security.js";
 import { bindSpecificStudents } from "./specific-students.js";
+import { bindSidePanels } from "../../../../../shared/side-panel.js";
+import { bindFooterClearance } from "./footer-clearance.js";
+
+/**
+ * The "Settings" summary that folds the settings shows only below md, so whenever the window grows past md the
+ * section is unfolded again (a section folded on a phone would leave an empty side panel after a rotation).
+ */
+export function reopenSettingsAboveMd(phone = globalThis.matchMedia?.("(width < 48rem)"), doc = document) {
+    phone?.addEventListener("change", () => {
+        if (!phone.matches) doc.querySelector("[data-inspector-settings]")?.setAttribute("open", "");
+    });
+}
+
+reopenSettingsAboveMd();
+bindFooterClearance();
 
 export function initializeInspectorPanel(
     offeringId,
@@ -21,6 +36,9 @@ export function initializeInspectorPanel(
     if (!panel) {
         return;
     }
+
+    // The editor arrives through swapContent, which fires no content:swapped.
+    bindSidePanels();
 
     bindPassingScoreCalculation();
 

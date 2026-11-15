@@ -32,8 +32,8 @@ $look = static fn (array $s): array => match ($s['state']) {
     default         => ['dot' => 'bg-gray-400', 'word' => 'Not published yet', 'class' => 'font-semibold text-[#646464]'],
 };
 
-$secondary = 'inline-flex min-h-9 items-center gap-2 rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55';
-$primary   = 'inline-flex min-h-9 items-center gap-2 rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
+$secondary = 'inline-flex min-h-9 pointer-coarse:min-h-11 items-center gap-2 rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55';
+$primary   = 'inline-flex min-h-9 pointer-coarse:min-h-11 items-center gap-2 rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
 
 // A section without a grading scheme: no grid (fetching it would create one), the way to the course instead.
 $noScheme = static fn (string $href): string => '<div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center" data-no-scheme>'
@@ -71,7 +71,7 @@ $noScheme = static fn (string $href): string => '<div class="flex flex-col items
             <?php endif; ?>
         </div>
 
-        <nav aria-label="Your sections" class="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pt-1 pb-2" data-section-cards>
+        <nav aria-label="Your sections" class="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pt-1 pb-2" data-section-cards data-scroll-x>
             <?php foreach ($sections as $s): ?>
                 <?php
                 $on   = $selected !== null && $s['offering_id'] === $selected['offering_id'];

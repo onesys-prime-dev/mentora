@@ -16,13 +16,56 @@ import {
     updateLearningUnitWrappers,
 } from "./learning-unit-events.js";
 
-export function initializeLearningUnitSorting() {
+import { bindMoveButtons, orderSaver, refreshMoveButtons } from "./move-buttons.js";
+
+let reload = null;
+
+const MOVE = { row: "[data-learning-unit-row]", attr: "data-learning-unit-move", noun: "Learning unit", status: "[data-module-move-status]" };
+
+/** Saves the order on screen: a drop and the ▲ ▼ buttons share it. */
+export const saveLearningUnitOrder = orderSaver(
+
+    (moduleContent) => reorderLearningUnits(
+
+        Array.from(
+
+            moduleContent.querySelectorAll(
+                "[data-learning-unit-row]"
+            )
+
+        ).map((row, index) => ({
+
+            id: Number(
+
+                row.querySelector(
+                    "[data-learning-unit-wrapper]"
+                ).dataset.learningUnitId
+
+            ),
+
+            order_index:
+                index + 1,
+
+        }))
+
+    ),
+
+    () => reload
+
+);
+
+/** @param {() => unknown} [refresh] reloads the module after a failed save */
+export function initializeLearningUnitSorting(refresh) {
+
+    reload = refresh ?? null;
 
     document
 
         .querySelectorAll("[data-learning-unit-list]")
 
         .forEach((moduleContent) => {
+
+            bindMoveButtons(moduleContent, { ...MOVE, persist: saveLearningUnitOrder });
 
             Sortable.create(moduleContent, {
 
@@ -33,6 +76,11 @@ export function initializeLearningUnitSorting() {
 
                 draggable:
                     "[data-learning-unit-row]",
+
+                // A touch on a hybrid screen has to rest on the handle before it drags, so a swipe still scrolls.
+                delay: 200,
+
+                delayOnTouchOnly: true,
 
                 ghostClass:
                     "opacity-50",
@@ -62,10 +110,11 @@ export function initializeLearningUnitSorting() {
 
                 onEnd: async (event) => {
 
+                    // The unit's own wrapper (this read an item's before, which an empty unit does not have).
                     const wrapper =
 
                         event.item.querySelector(
-                            "[data-learning-item-wrapper]"
+                            "[data-learning-unit-wrapper]"
                         );
 
                     state.activeLearningUnitId =
@@ -73,31 +122,10 @@ export function initializeLearningUnitSorting() {
                             wrapper.dataset.learningUnitId
                         );
 
-                    const units =
+                    refreshMoveButtons(moduleContent, MOVE);
 
-                        Array.from(
-
-                            moduleContent.querySelectorAll(
-                                "[data-learning-unit-row]"
-                            )
-
-                        ).map((row, index) => ({
-
-                            id: Number(
-
-                                row.querySelector(
-                                    "[data-learning-unit-wrapper]"
-                                ).dataset.learningUnitId
-
-                            ),
-
-                            order_index:
-                                index + 1,
-
-                        }));
-
-                    await reorderLearningUnits(
-                        units
+                    await saveLearningUnitOrder(
+                        moduleContent
                     );
 
                     updateLearningUnitWrappers();

@@ -22,7 +22,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
 
     <div class="flex flex-wrap items-center justify-between gap-3">
 
-        <div class="flex items-center gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-3">
 
             <?= view('components/status-badge', [
                 'tone' => $isPublished ? 'success' : 'neutral',
@@ -40,13 +40,13 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
 
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
 
             <?php if ($finalization === null && ! $viewOnly): ?>
                 <button
                     type="button"
                     data-open-curve
-                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                     <?= icon('score', 'h-4 w-4 text-current') ?>
                     Curve
                 </button>
@@ -66,7 +66,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
                 <button
                     type="button"
                     data-open-reopen
-                    class="inline-flex items-center gap-2 rounded-xl border border-[#946200]/40 px-4 py-2 text-sm font-semibold text-[#946200] transition hover:bg-[#FFF8E6]">
+                    class="inline-flex items-center gap-2 rounded-xl border border-[#946200]/40 px-4 py-2 text-sm font-semibold text-[#946200] transition hover:bg-[#FFF8E6] pointer-coarse:min-h-11">
                     <?= icon('lock', 'h-4 w-4 text-current') ?>
                     Reopen grades
                 </button>
@@ -74,7 +74,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
                 <button
                     type="button"
                     data-open-finalize
-                    class="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+                    class="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">
                     <?= icon('check', 'h-4 w-4 text-current') ?>
                     Finalize grades
                 </button>
@@ -83,7 +83,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
             <button
                 type="button"
                 data-open-gradebook-roster
-                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                 <?= icon('grades', 'h-4 w-4 text-current') ?>
                 Gradebook
             </button>
@@ -92,29 +92,36 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
             <button
                 type="button"
                 data-open-grading-scheme
-                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                 <?= icon('settings', 'h-4 w-4 text-current') ?>
                 Grading Scheme
             </button>
             <?php endif; ?>
 
-            <div class="relative">
+            <?php // Below sm the menu's items move into a bottom sheet (shared/row-actions.js); from sm it is the dropdown. ?>
+            <div class="relative" data-row>
+
+                <button type="button" data-row-actions-open aria-haspopup="dialog" aria-controls="report-menu-sheet" data-row-label="Reports"
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11 sm:hidden">
+                    Reports
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
 
                 <button
                     type="button"
                     data-toggle-report-menu
-                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11 max-sm:hidden">
                     Reports
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
 
-                <div data-report-menu class="absolute right-0 z-20 mt-2 hidden w-72 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
+                <div data-report-menu data-role="actions" class="absolute right-0 z-20 mt-2 hidden w-72 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
                     <p class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Class gradebook</p>
-                    <button type="button" data-report-path="class" data-report-format="xlsx" class="flex flex-col rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
+                    <button type="button" data-report-path="class" data-report-format="xlsx" class="flex flex-col items-start rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
                         <span>Report (Excel)</span>
                         <span class="text-xs text-gray-500">To read, print and file: formatted, with a summary.</span>
                     </button>
-                    <button type="button" data-report-path="class" data-report-format="csv" class="flex flex-col rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
+                    <button type="button" data-report-path="class" data-report-format="csv" class="flex flex-col items-start rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
                         <span>Data (CSV)</span>
                         <span class="text-xs text-gray-500">Plain numbers and ids, for other software.</span>
                     </button>
@@ -127,23 +134,29 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
             </div>
 
             <?php if (! $viewOnly): ?>
-            <div class="relative">
+            <div class="relative" data-row>
+
+                <button type="button" data-row-actions-open aria-haspopup="dialog" aria-controls="grade-sheet-menu-sheet" data-row-label="Offline grade sheet"
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11 sm:hidden">
+                    Offline grade sheet
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
 
                 <button
                     type="button"
                     data-toggle-grade-sheet-menu
-                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11 max-sm:hidden">
                     Offline grade sheet
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
 
-                <div data-grade-sheet-menu class="absolute right-0 z-20 mt-2 hidden w-72 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
+                <div data-grade-sheet-menu data-role="actions" class="absolute right-0 z-20 mt-2 hidden w-72 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
                     <p class="px-3 pt-2 pb-1 text-xs text-gray-500">For entering manual scores away from Mentora, then bringing them back.</p>
-                    <a data-grade-sheet-export="xlsx" class="flex cursor-pointer flex-col rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <button type="button" data-grade-sheet-export="xlsx" class="flex flex-col items-start rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
                         <span>Download the sheet (Excel)</span>
                         <span class="text-xs text-gray-500">Type scores, or EX to excuse a student. Totals update as you type.</span>
-                    </a>
-                    <button type="button" data-open-grade-sheet-import class="flex flex-col rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
+                    </button>
+                    <button type="button" data-open-grade-sheet-import class="flex flex-col items-start rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">
                         <span>Import the sheet…</span>
                         <span class="text-xs text-gray-500">Shows what would change before anything is saved.</span>
                     </button>
@@ -187,7 +200,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
     <?php if ($needsRecalculation && $finalization === null): ?>
 
         <!-- Config changed since the last calculation: final grades wait for an explicit Recalculate. -->
-        <div class="flex items-center justify-between gap-4 rounded-2xl border border-[#FFE3A3] bg-[#FFF8E6] px-5 py-3 text-sm text-[#946200]" data-recalculate-banner>
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#FFE3A3] bg-[#FFF8E6] px-5 py-3 text-sm text-[#946200]" data-recalculate-banner>
             <span>
                 <strong>Grades may be out of date.</strong>
                 The grading scheme changed since final grades were last calculated.
@@ -199,7 +212,7 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
                 type="button"
                 data-recalculate-grades
                 <?= abs($totalWeight - 100) > 0.001 ? 'disabled' : '' ?>
-                class="shrink-0 rounded-lg bg-[#946200] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#7a5100] disabled:cursor-not-allowed disabled:opacity-50">
+                class="shrink-0 rounded-lg bg-[#946200] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#7a5100] disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:min-h-11">
                 Recalculate
             </button>
         </div>
@@ -222,6 +235,16 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
     <?php endif; ?>
 
 </div>
+
+<?php // The phone sheets of the two menus above, outside the sticky bar so its stacking never clips them. ?>
+<?php foreach (array_filter(['report-menu-sheet' => 'Reports', 'grade-sheet-menu-sheet' => $viewOnly ? null : 'Offline grade sheet']) as $sheetId => $sheetTitle): ?>
+    <?= view('components/dialog', [
+        'id'      => $sheetId,
+        'title'   => $sheetTitle,
+        'variant' => 'sheet',
+        'body'    => '<dl class="empty:hidden" data-row-actions-fields></dl><div class="flex flex-col gap-1" data-row-actions-slot></div>',
+    ], ['saveData' => false]) ?>
+<?php endforeach; ?>
 
 <?= view('pages/courses/features/grades/partials/modals/grade-finalize', [], ['saveData' => false]) ?>
 <?= view('pages/courses/features/grades/partials/modals/grade-curve', [], ['saveData' => false]) ?>

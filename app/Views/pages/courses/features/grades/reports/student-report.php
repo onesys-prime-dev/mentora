@@ -15,6 +15,7 @@ $offering = $report['offering'];
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Grade report: <?= esc($student['student_name']) ?></title>
     <?= view('pages/courses/features/grades/reports/_style', [], ['saveData' => false]) ?>
 </head>

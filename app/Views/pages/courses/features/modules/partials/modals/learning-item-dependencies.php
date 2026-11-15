@@ -2,10 +2,10 @@
     id="learning-item-dependencies-modal"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
 
-    <div class="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+    <div class="flex max-h-full w-full max-w-xl flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl">
 
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-5 sm:px-8 sm:py-6 shrink-0">
 
             <div class="flex flex-col">
 
@@ -23,10 +23,11 @@
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 data-close-learning-item-dependencies-modal>
 
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
 
@@ -35,14 +36,14 @@
         </div>
 
         <!-- Body -->
-        <div class="flex flex-col gap-5 p-8" data-dependencies-body>
+        <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-8" data-dependencies-body>
 
             <!-- Allow dependencies -->
             <label class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 px-5 py-4">
 
                 <span class="flex flex-col">
                     <span class="text-sm font-semibold text-gray-800">Allow dependencies</span>
-                    <span class="text-xs text-gray-500">Keep this item locked until other items are completed.</span>
+                    <span class="text-xs text-[#646464]">Keep this item locked until other items are completed.</span>
                 </span>
 
                 <span class="relative inline-flex shrink-0 items-center">
@@ -56,24 +57,24 @@
             <!-- Modes -->
             <div class="hidden flex-col gap-3" data-dependencies-options>
 
-                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:border-dashed">
 
                     <input type="radio" name="dependency_mode" value="previous" class="mt-1 accent-brand" data-dependencies-mode>
 
                     <span class="flex flex-col">
                         <span class="text-sm font-semibold text-gray-800">Previous learning item</span>
-                        <span class="text-xs text-gray-500" data-dependencies-previous-hint></span>
+                        <span class="text-xs text-[#646464]" data-dependencies-previous-hint></span>
                     </span>
 
                 </label>
 
-                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 px-5 py-4 transition has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:border-dashed">
 
                     <input type="radio" name="dependency_mode" value="custom" class="mt-1 accent-brand" data-dependencies-mode>
 
                     <span class="flex flex-col">
                         <span class="text-sm font-semibold text-gray-800">Custom dependency</span>
-                        <span class="text-xs text-gray-500">Pick one or more earlier items in this unit. All of them must be completed.</span>
+                        <span class="text-xs text-[#646464]">Pick one or more earlier items in this unit. All of them must be completed.</span>
                     </span>
 
                 </label>
@@ -90,10 +91,10 @@
             <!-- Minimum score: only when it waits on a quiz or an assignment -->
             <div class="hidden flex-col gap-3 rounded-xl border border-gray-200 px-5 py-4" data-minscore-block>
 
-                <label class="flex cursor-pointer items-center justify-between gap-4">
+                <label class="flex cursor-pointer items-center justify-between gap-4 pointer-coarse:min-h-11">
                     <span class="flex flex-col">
                         <span class="text-sm font-semibold text-gray-800">Require a minimum score</span>
-                        <span class="text-xs text-gray-500">Handing in the quiz or assignment is not enough: its grade has to reach this.</span>
+                        <span class="text-xs text-[#646464]">Handing in the quiz or assignment is not enough: its grade has to reach this.</span>
                     </span>
                     <span class="relative inline-flex shrink-0 items-center">
                         <input type="checkbox" class="peer sr-only" data-minscore-enabled>
@@ -108,7 +109,7 @@
                         <input type="radio" name="minscore_mode" value="passing" class="mt-1 accent-brand" data-minscore-mode>
                         <span class="flex flex-col">
                             <span class="text-sm font-medium text-gray-800">The assessment's own passing score</span>
-                            <span class="text-xs text-gray-500">Each quiz or assignment is held to the passing score set on it. One with none asks for nothing more.</span>
+                            <span class="text-xs text-[#646464]">Each quiz or assignment is held to the passing score set on it. One with none asks for nothing more.</span>
                         </span>
                     </label>
 
@@ -125,7 +126,7 @@
                                     inputmode="numeric"
                                     aria-label="Minimum score in percent"
                                     data-minscore-percent
-                                    class="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none transition focus:border-brand">
+                                    class="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-base outline-none transition focus:border-brand sm:text-sm pointer-coarse:min-h-11">
                                 <span class="text-sm text-gray-600">%</span>
                             </span>
                         </span>
@@ -135,16 +136,16 @@
 
             </div>
 
-            <p class="hidden text-sm font-semibold text-red-500" data-dependencies-error></p>
+            <p class="hidden text-sm font-semibold text-red-700" data-dependencies-error></p>
 
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-gray-200 px-5 py-5 sm:px-8 sm:py-6">
 
             <button
                 type="button"
-                class="rounded-xl border border-gray-300 px-6 py-3 font-medium transition hover:bg-gray-100"
+                class="rounded-xl border border-gray-300 px-6 py-3 font-medium transition hover:bg-gray-100 pointer-coarse:min-h-11"
                 data-close-learning-item-dependencies-modal>
                 Cancel
             </button>
@@ -152,7 +153,7 @@
             <button
                 type="button"
                 data-dependencies-save
-                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+                class="rounded-xl bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11">
                 Save
             </button>
 

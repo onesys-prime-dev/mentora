@@ -16,6 +16,8 @@
 | only walks the person through it. Titles are text, never markup.
 */
 
+import { closeAllActionMenus } from "../action-menus.js";
+
 const STEPS = {
     copy: {
         module: ["course", "tree"],
@@ -235,7 +237,7 @@ export function bindContentTransfer({ modal, api, refresh, notify }) {
                 const unitBox = document.createElement("input");
                 const name = document.createElement("span");
 
-                head.className = "flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-800";
+                head.className = "flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-800 pointer-coarse:min-h-11";
                 unitBox.type = "checkbox";
                 unitBox.className = "accent-brand";
                 unitBox.value = String(unit.id);
@@ -263,7 +265,7 @@ export function bindContentTransfer({ modal, api, refresh, notify }) {
                 const name = document.createElement("span");
                 const type = document.createElement("span");
 
-                row.className = `flex cursor-pointer items-center gap-2 text-sm text-gray-700 ${state.kind === "module" ? "pl-6" : ""}`;
+                row.className = `flex cursor-pointer items-center gap-2 text-sm text-gray-700 pointer-coarse:min-h-11 ${state.kind === "module" ? "pl-6" : ""}`;
                 itemBox.type = "checkbox";
                 itemBox.className = "accent-brand";
                 itemBox.value = String(item.id);
@@ -271,7 +273,7 @@ export function bindContentTransfer({ modal, api, refresh, notify }) {
                 itemBox.dataset.transferItem = "";
                 name.className = "flex-1 truncate";
                 name.textContent = item.title;
-                type.className = "shrink-0 text-xs capitalize text-[#767676]";
+                type.className = "shrink-0 text-xs capitalize text-[#646464]";
                 type.textContent = item.item_type;
 
                 row.append(itemBox, name, type);
@@ -497,6 +499,9 @@ export function bindContentTransfer({ modal, api, refresh, notify }) {
 
             event.preventDefault();
             event.stopPropagation();
+
+            // The tap stops here, so the menu it came from (a floating one sits over the dialog) is closed by hand.
+            closeAllActionMenus();
 
             const action = button.dataset.transferAction;
             const kind = button.dataset.transferKind;

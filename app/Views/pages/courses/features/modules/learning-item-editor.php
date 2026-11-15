@@ -2,19 +2,22 @@
 
     <?= $this->include('pages/courses/features/modules/partials/learning-item-panel') ?>
 
-    <div class="flex min-w-0 flex-1 flex-col p-5 sm:p-8 lg:p-10">
+    <?php // Below lg the action footer is pinned to the bottom edge (as in the assessment editor): the page fills the window and loses its bottom padding, and a focused field scrolls clear of the footer. ?>
+    <div data-learning-item-editor class="flex min-w-0 flex-1 flex-col p-5 sm:p-8 lg:p-10 max-lg:min-h-dvh max-lg:pb-0 max-lg:[&_:is(input,select,textarea,[contenteditable])]:scroll-mb-24">
 
-        <div class="sticky-bar-top flex items-center justify-between border-b border-gray-200 pb-4">
+        <div class="sticky-bar-top flex items-center justify-between gap-3 border-b border-gray-200 pb-4">
 
-            <?php // The bar pins, so the trail inside it does not pin on its own. ?>
-            <?= view('pages/courses/features/modules/partials/breadcrumb', [
-                'module' => $module,
-                'currentUnit' => $currentUnit,
-                'currentItem' => $currentItem,
-                'breadcrumbSticky' => false,
-            ], ['saveData' => false]) ?>
+            <?php // The bar pins, so the trail inside it does not pin on its own; min-w-0 lets the title truncate. ?>
+            <div class="min-w-0 flex-1">
+                <?= view('pages/courses/features/modules/partials/breadcrumb', [
+                    'module' => $module,
+                    'currentUnit' => $currentUnit,
+                    'currentItem' => $currentItem,
+                    'breadcrumbSticky' => false,
+                ], ['saveData' => false]) ?>
+            </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex shrink-0 items-center gap-2 sm:gap-4">
 
                 <!-- Save Status -->
                 <div
@@ -26,21 +29,21 @@
                         class="h-2 w-2 rounded-full bg-emerald-500">
                     </div>
 
-                    <span data-save-message>
+                    <span data-save-message class="max-md:sr-only">
                         All changes saved
                     </span>
 
-                    <span class="text-gray-300">
+                    <span class="text-gray-300 max-md:hidden" aria-hidden="true">
                         •
                     </span>
 
-                    <span data-save-time>
+                    <span data-save-time class="max-md:hidden">
                         Saved just now
                     </span>
 
                 </div>
 
-                <div class="flex items-center gap-2 rounded-full bg-[#F4F8FF] px-3 py-1.5">
+                <div class="flex items-center gap-2 rounded-full bg-[#F4F8FF] px-3 py-1.5 max-sm:hidden">
 
                     <svg
                         xmlns="http://www.w3.org/2000/svg"

@@ -296,13 +296,16 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
     <?php else: ?>
 
+        <?php // The instructor's controls: finger-sized on touch, 16px selects on a phone (no zoom on focus). ?>
+        <?php $select .= ' pointer-coarse:min-h-11 max-sm:text-base'; ?>
+
         <div class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-3 lg:flex-row lg:items-center lg:justify-between">
 
             <nav aria-label="Grades" class="flex flex-wrap items-center gap-2" data-grades-tabs>
                 <?php foreach ($tabs as $key => $label): ?>
                     <?php $on = $tab === $key; ?>
                     <a href="<?= esc($link(['tab' => $key === 'gradebook' ? null : $key, 'section' => $key === 'gradebook' ? ($selected['offering_id'] ?? null) : null])) ?>"
-                       class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
+                       class="inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-sm font-semibold pointer-coarse:min-h-11 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
                        data-grades-tab="<?= esc($key) ?>"
                        <?= $on ? 'aria-current="page"' : '' ?>><?= esc($label) ?><?php if (isset($counts[$key])): ?> <span class="ml-1 rounded-full px-2 py-0.5 text-xs font-bold <?= $on ? 'bg-white/25 text-white' : 'bg-brand-tint text-brand-dark' ?>" data-tab-count="<?= esc($key) ?>"><?= (int) $counts[$key] ?></span><?php endif; ?></a>
                 <?php endforeach; ?>

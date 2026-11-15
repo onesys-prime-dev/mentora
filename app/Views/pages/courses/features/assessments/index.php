@@ -155,7 +155,7 @@ if ($isInstructor) {
 
                         <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark"
+                            class="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark pointer-coarse:min-h-11 max-sm:w-full max-sm:justify-center"
                             data-create-assessment-button>
 
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

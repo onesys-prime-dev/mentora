@@ -1,10 +1,28 @@
-<div class="relative flex items-center">
+<div class="relative flex items-center" data-row>
+
+    <?php // Below md the menu opens as a bottom sheet (shared/row-actions.js moves the entries below into it). ?>
+    <button
+        type="button"
+        data-row-actions-open
+        aria-haspopup="dialog"
+        aria-controls="content-actions-sheet"
+        aria-label="Actions for <?= esc($learning_item['title'], 'attr') ?>"
+        data-row-label="<?= esc($learning_item['title'], 'attr') ?>"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#646464] transition hover:bg-gray-100 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 md:hidden">
+
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.8"/>
+            <circle cx="12" cy="12" r="1.8"/>
+            <circle cx="12" cy="19" r="1.8"/>
+        </svg>
+
+    </button>
 
     <button
         type="button"
         data-learning-item-actions
         title="Item actions"
-        class="flex h-9 w-9 items-center justify-center rounded-full text-[#767676] transition-all duration-200 hover:bg-white hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer" aria-label="Item actions">
+        class="flex h-9 w-9 max-md:hidden pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-[#767676] transition-all duration-200 hover:bg-white hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer" aria-label="Item actions">
 
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -25,11 +43,11 @@
         data-learning-item-actions-panel
         data-action-menu-panel>
 
-        <div class="py-2">
+        <div class="py-2" data-role="actions">
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-learning-item-edit-button
                 data-learning-item="<?= esc($learning_item['id']) ?>">
 
@@ -54,7 +72,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-learning-item-dependencies
                 data-learning-item-id="<?= esc($learning_item['id']) ?>"
                 data-learning-item-title="<?= esc($learning_item['title']) ?>">
@@ -69,7 +87,7 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
                 data-item-publish-toggle
                 data-learning-item-id="<?= esc($learning_item['id']) ?>"
                 data-status="<?= esc($learning_item['status']) ?>">
@@ -95,7 +113,8 @@
 
             <button
                 type="button"
-                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 transition hover:bg-red-50 cursor-pointer"
+                class="flex w-full items-center gap-3 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-sm text-red-600 transition hover:bg-red-50 cursor-pointer"
+                data-destructive
                 data-row-delete-learning-item
                 data-learning-item-id="<?= esc($learning_item['id']) ?>">
 

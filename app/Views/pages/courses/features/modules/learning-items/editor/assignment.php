@@ -13,7 +13,7 @@ $submissionTypes = array_keys(array_filter([
 
     <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
         <span class="text-sm font-semibold text-[#646464]">No assignment is linked to this learning item</span>
-        <span class="text-xs text-[#767676]">Delete this item and add the assignment again from the learning unit.</span>
+        <span class="text-xs text-[#646464]">Delete this item and add the assignment again from the learning unit.</span>
     </div>
 
 <?php else: ?>
@@ -26,7 +26,7 @@ $submissionTypes = array_keys(array_filter([
 
             <div class="flex flex-col gap-2 rounded-xl bg-[#F9F9FC] p-4">
 
-                <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Students Submit By</span>
+                <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">Students Submit By</span>
 
                 <?php if ($submissionTypes): ?>
                     <div class="flex flex-wrap gap-1.5">
@@ -42,7 +42,7 @@ $submissionTypes = array_keys(array_filter([
 
             <div class="flex flex-col gap-2 rounded-xl bg-[#F9F9FC] p-4">
 
-                <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Rubric</span>
+                <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">Rubric</span>
 
                 <span class="text-sm font-semibold text-[#646464]">
                     <?= $currentRubric
@@ -54,7 +54,7 @@ $submissionTypes = array_keys(array_filter([
 
             <div class="flex flex-col gap-2 rounded-xl bg-[#F9F9FC] p-4">
 
-                <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Submissions</span>
+                <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">Submissions</span>
 
                 <span class="text-sm text-[#646464]">
                     <strong class="text-brand"><?= (int) ($assignmentCounts['submitted'] ?? 0) ?></strong> submitted
@@ -76,20 +76,20 @@ $submissionTypes = array_keys(array_filter([
 
         <div class="flex flex-col gap-2">
 
-            <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">Instructions</span>
+            <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">Instructions</span>
 
             <?= $this->setData(['instructionsEmptyText' => 'No instructions yet. Add them in Edit Instructions & Submission.'])
                 ->include('pages/courses/features/assessments/partials/instructions-paragraph') ?>
 
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-5">
+        <div class="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-5 max-sm:flex-col max-sm:items-stretch">
 
             <button
                 type="button"
                 data-open-assessment="<?= esc($currentAssessment['id']) ?>"
                 data-assessment-mode="editor"
-                class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
+                class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark pointer-coarse:min-h-11">
                 Edit Instructions & Submission
             </button>
 
@@ -97,11 +97,11 @@ $submissionTypes = array_keys(array_filter([
                 type="button"
                 data-open-assessment="<?= esc($currentAssessment['id']) ?>"
                 data-assessment-mode="grade"
-                class="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50">
+                class="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 pointer-coarse:min-h-11">
                 View Submissions
             </button>
 
-            <span class="ml-auto text-xs text-[#767676]">
+            <span class="text-xs text-[#767676] sm:ml-auto">
                 Publishing or drafting this item also publishes or drafts the assignment.
             </span>
 

@@ -14,6 +14,7 @@ $peak = max(1, ...array_column($summary['spread'], 'count'));
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Class summary: <?= esc($offering['course_code']) ?> <?= esc($offering['section']) ?></title>
     <?= view('pages/courses/features/grades/reports/_style', [], ['saveData' => false]) ?>
 </head>
@@ -36,7 +37,8 @@ $peak = max(1, ...array_column($summary['spread'], 'count'));
     </span>
 </p>
 
-<table style="margin-top:10px">
+<div data-scroll-x style="overflow-x:auto;margin-top:10px">
+<table>
     <tr>
         <td class="stat"><b><?= esc($f($summary['mean'])) ?>%</b>Class average</td>
         <td class="stat"><b><?= esc($f($summary['median'])) ?>%</b>Median</td>
@@ -44,6 +46,7 @@ $peak = max(1, ...array_column($summary['spread'], 'count'));
         <td class="stat"><b><?= (int) $summary['at_or_above_passing'] ?> of <?= (int) $summary['graded'] ?></b>At or above <?= esc($f($summary['passing_mark'])) ?>%</td>
     </tr>
 </table>
+</div>
 
 <?php if ($report['curves'] !== []): ?>
     <p class="note">
@@ -55,6 +58,7 @@ $peak = max(1, ...array_column($summary['spread'], 'count'));
 <?php endif; ?>
 
 <h2>Standing</h2>
+<div data-scroll-x style="overflow-x:auto">
 <table>
     <thead><tr><th>Standing</th><th class="num">Students</th></tr></thead>
     <tbody>
@@ -63,6 +67,7 @@ $peak = max(1, ...array_column($summary['spread'], 'count'));
         <?php endforeach; ?>
     </tbody>
 </table>
+</div>
 
 <h2>How the grades are spread</h2>
 <table>
@@ -78,6 +83,7 @@ $peak = max(1, ...array_column($summary['spread'], 'count'));
 </table>
 
 <h2>Students</h2>
+<div data-scroll-x style="overflow-x:auto">
 <table>
     <thead><tr><th>Student</th><th>Number</th><th class="num">Grade</th><th>Mark</th><th>Standing</th><th>Notes</th></tr></thead>
     <tbody>
@@ -96,6 +102,7 @@ $peak = max(1, ...array_column($summary['spread'], 'count'));
         <?php endif; ?>
     </tbody>
 </table>
+</div>
 
 </body>
 </html>

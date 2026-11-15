@@ -18,7 +18,7 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
         'icon'    => 'grades',
         'title'   => 'Grades',
         'actions' => ! empty($allGrades)
-            ? '<a href="' . esc($allGrades['href'], 'attr') . '" data-all-grades class="inline-flex min-h-9 items-center justify-center rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">' . esc($allGrades['label']) . '</a>'
+            ? '<a href="' . esc($allGrades['href'], 'attr') . '" data-all-grades class="inline-flex min-h-9 pointer-coarse:min-h-11 items-center justify-center rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">' . esc($allGrades['label']) . '</a>'
             : '',
     ], ['saveData' => false]) ?>
 

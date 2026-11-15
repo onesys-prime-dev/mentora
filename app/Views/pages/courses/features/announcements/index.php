@@ -17,7 +17,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
             'filters' => $filters,
             'activeFilter' => $activeFilter,
             'pinned' => $pinned,
-        ]) ?>
+        ], ['saveData' => false]) ?>
 
         <div class="flex min-w-0 flex-col gap-6" data-announcements-main>
 
@@ -26,7 +26,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
                 <button
                     type="button"
                     data-composer-toggle
-                    class="flex w-fit items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+                    class="flex w-fit items-center gap-2 rounded-xl bg-brand px-4 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-white transition hover:bg-brand-dark">
                     <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z"/>
                     </svg>
@@ -34,7 +34,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
                 </button>
 
                 <div class="hidden" data-composer-wrapper>
-                    <?= view('pages/courses/features/announcements/partials/composer') ?>
+                    <?= view('pages/courses/features/announcements/partials/composer', [], ['saveData' => false]) ?>
                 </div>
 
             <?php endif; ?>
@@ -50,7 +50,7 @@ $activeFilter = !empty($filters['pinned_only']) ? 'pinned' : 'all';
                         'announcement' => $announcement,
                         'userId' => $userId,
                         'isInstructor' => $isInstructor,
-                    ]) ?>
+                    ], ['saveData' => false]) ?>
                 <?php endforeach; ?>
 
                 <?php if ($announcements === []): ?>

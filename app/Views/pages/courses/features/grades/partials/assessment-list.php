@@ -57,18 +57,18 @@ $typeHeadings = [
                                     'label' => $needsReview . ' Need' . ($needsReview === 1 ? 's' : '') . ' Review',
                                 ],
                                 $graded > 0 => [
-                                    'chip'  => 'bg-[#E8F5EC] text-[#2E7D4F]',
+                                    'chip'  => 'bg-[#E8F5EC] text-[#2B7549]',
                                     'label' => 'All Graded',
                                 ],
                                 default => [
-                                    'chip'  => 'bg-gray-100 text-gray-500',
+                                    'chip'  => 'bg-gray-100 text-[#646464]',
                                     'label' => 'No Submissions',
                                 ],
                             };
                             ?>
 
                             <div
-                                class="group px-8 py-6 flex justify-between items-center rounded-2xl border-[1px] border-[#A9A9A9]/50
+                                class="group px-8 py-6 flex justify-between items-center gap-3 max-sm:flex-wrap max-sm:px-5 max-sm:py-4 rounded-2xl border-[1px] border-[#A9A9A9]/50
                                         transition-all duration-200
                                         hover:border-brand/50
                                         hover:bg-brand/5
@@ -76,15 +76,15 @@ $typeHeadings = [
                                         cursor-pointer"
                                 data-assessment="<?= esc($assessment['id']) ?>">
 
-                                <div class="flex items-center gap-5">
+                                <div class="flex min-w-0 items-center gap-5 max-sm:gap-3">
 
-                                    <div class="h-10 w-10 flex items-center justify-center border-3 border-brand rounded-[100%] transition-transform duration-200 group-hover:scale-105">
+                                    <div class="h-10 w-10 shrink-0 flex items-center justify-center border-3 border-brand rounded-[100%] transition-transform duration-200 group-hover:scale-105">
                                         <?= learning_item_icon($type, 'h-5 w-5 text-brand') ?>
                                     </div>
 
-                                    <div class="flex flex-col">
+                                    <div class="flex min-w-0 flex-col">
 
-                                        <span class="font-bold text-lg text-[#646464]">
+                                        <span class="font-bold text-lg text-[#646464] wrap-break-word">
                                             <?= esc($assessment['title']) ?>
                                         </span>
 

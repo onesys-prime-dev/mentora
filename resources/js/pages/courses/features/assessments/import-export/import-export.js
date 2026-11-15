@@ -290,7 +290,7 @@ function setImportSource(source) {
         tab.classList.toggle("bg-white", active);
         tab.classList.toggle("shadow", active);
         tab.classList.toggle("text-brand", active);
-        tab.classList.toggle("text-gray-500", !active);
+        tab.classList.toggle("text-[#646464]", !active);
         tab.setAttribute("aria-selected", active ? "true" : "false");
 
     });
@@ -354,7 +354,7 @@ function showStep(step) {
         const state = stepState(item.dataset.importStepper, step);
         const dot = item.querySelector("span");
 
-        item.classList.toggle("text-gray-400", state === "upcoming");
+        item.classList.toggle("text-[#646464]", state === "upcoming");
         item.classList.toggle("text-brand", state !== "upcoming");
         dot.classList.toggle("bg-brand", state !== "upcoming");
         dot.classList.toggle("text-white", state !== "upcoming");

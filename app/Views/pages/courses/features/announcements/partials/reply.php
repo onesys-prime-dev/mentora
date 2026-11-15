@@ -11,12 +11,12 @@
             <span class="text-xs text-[#767676]"><?= esc(date('M j, Y g:i A', strtotime($reply['created_at']))) ?></span>
 
             <?php if ($isOwn): ?>
-                <button type="button" data-delete-reply class="ml-auto opacity-0 transition group-hover:opacity-100 text-xs text-red-500 hover:underline">Delete</button>
+                <button type="button" data-delete-reply class="ml-auto opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:min-h-11 pointer-coarse:px-2 text-xs text-red-700 hover:underline">Delete</button>
             <?php endif; ?>
         </div>
 
         <p class="text-sm text-[#374151] whitespace-pre-line" data-reply-message data-collapsed="1"><?= esc($reply['message']) ?></p>
-        <button type="button" data-see-more class="hidden self-start text-xs font-semibold text-brand hover:underline">See more</button>
+        <button type="button" data-see-more class="hidden self-start pointer-coarse:min-h-11 text-xs font-semibold text-brand hover:underline">See more</button>
 
     </div>
 

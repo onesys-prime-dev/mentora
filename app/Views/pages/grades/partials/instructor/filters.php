@@ -34,7 +34,7 @@
 
                     <?php // A link that turns the filter on or off; the box and the hidden word say which it is. ?>
                     <a href="<?= esc($link($list + ['qsection' => $filters['qsection'], 'type' => $filters['type'], 'late' => $filters['late'] ? null : 1])) ?>"
-                       class="inline-flex min-h-10 items-center gap-2 rounded-lg border bg-white px-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $filters['late'] ? 'border-brand text-brand-dark' : 'border-gray-300 text-[#1A1C1E] hover:border-brand/50' ?>"
+                       class="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border bg-white px-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $filters['late'] ? 'border-brand text-brand-dark' : 'border-gray-300 text-[#1A1C1E] hover:border-brand/50' ?>"
                        data-queue-late>
                         <span class="flex h-4 w-4 items-center justify-center rounded border <?= $filters['late'] ? 'border-brand bg-brand' : 'border-gray-400 bg-white' ?>" aria-hidden="true">
                             <?php if ($filters['late']): ?><?= icon('check', 'h-3 w-3 text-white') ?><?php endif; ?>

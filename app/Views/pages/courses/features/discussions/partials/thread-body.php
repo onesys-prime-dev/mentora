@@ -135,20 +135,20 @@ $replyCount = count($replies);
                     data-reply-input
                     aria-label="Write a reply"
                     placeholder="Write a reply"
-                    class="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition placeholder:text-gray-500 focus:border-brand/60"></textarea>
+                    class="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-base sm:text-sm outline-none transition placeholder:text-gray-500 focus:border-brand/60"></textarea>
     
                 <div class="flex flex-wrap gap-2" data-reply-attachments></div>
     
                 <div class="flex items-center justify-between">
     
                     <div class="flex items-center">
-                        <button type="button" data-reply-attach title="Attach files" aria-label="Attach files" class="rounded-lg p-2 text-[#646464] transition hover:bg-gray-100">
+                        <button type="button" data-reply-attach title="Attach files" aria-label="Attach files" class="inline-flex items-center justify-center rounded-lg p-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-[#646464] transition hover:bg-gray-100">
                             <?= icon('link', 'h-5 w-5 text-current') ?>
                         </button>
                         <input type="file" data-reply-file-input class="hidden" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
                     </div>
     
-                    <button type="button" data-reply-send disabled class="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">
+                    <button type="button" data-reply-send disabled class="rounded-full bg-brand px-6 py-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">
                         Reply
                     </button>
     

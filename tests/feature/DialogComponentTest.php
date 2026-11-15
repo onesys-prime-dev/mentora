@@ -154,6 +154,11 @@ final class DialogComponentTest extends CIUnitTestCase
         foreach (['max-sm:sticky', 'max-sm:bottom-0', 'bg-white', 'max-sm:pb-safe-4', 'max-sm:border-t', 'border-black/10', 'max-sm:[&_[data-dialog-close]]:hidden'] as $class) {
             $this->assertContains($class, $footer, $class);
         }
+        // From sm it still sticks, so a short window (a phone held sideways) that makes the panel scroll keeps the action.
+        // ...with the same full-width divider, so content scrolling under it is not cut off flat under the buttons.
+        foreach (['sm:sticky', 'sm:bottom-0', 'sm:-mx-6', 'sm:border-t', 'sm:px-6', 'sm:pt-4'] as $class) {
+            $this->assertContains($class, $footer, $class);
+        }
         // The bar carries the bottom safe area, so the panel does not pad it twice.
         $this->assertStringNotContainsString('pb-safe-4', $parts['panel']->getAttribute('class'));
 

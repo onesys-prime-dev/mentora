@@ -166,9 +166,9 @@ export function renderGradeWorkSkeleton() {
         </div>`;
 
     return `
-        <div class="flex animate-pulse gap-8 p-10" aria-hidden="true">
+        <div class="flex animate-pulse gap-8 p-5 sm:p-8 lg:p-10" aria-hidden="true">
 
-            <div class="flex w-1/4 shrink-0 flex-col gap-3">
+            <div class="flex w-1/4 shrink-0 flex-col gap-3 max-lg:hidden">
                 <div class="h-6 w-28 rounded bg-gray-200"></div>
                 ${student.repeat(5)}
             </div>

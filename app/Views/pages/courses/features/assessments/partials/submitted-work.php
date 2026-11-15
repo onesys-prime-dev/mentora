@@ -39,14 +39,14 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
                 <span class="truncate text-sm font-semibold text-[#1A1C1E]">
                     <?= esc($submissionFile['original_filename']) ?>
                 </span>
-                <span class="text-xs text-[#767676]">
+                <span class="text-xs text-[#646464]">
                     <?= esc(number_to_size((int) $submissionFile['file_size'])) ?>
                 </span>
             </div>
 
             <a
                 href="<?= esc(file_url((int) $submissionFile['id'], true)) ?>"
-                class="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/5">
+                class="inline-flex shrink-0 items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                 Download
             </a>
 
@@ -70,7 +70,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
                     href="<?= esc($submissionLink) ?>"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="min-w-0 flex-1 truncate text-sm font-semibold text-brand hover:underline">
+                    class="min-w-0 flex-1 truncate text-sm font-semibold text-brand hover:underline pointer-coarse:py-3">
                     <?= esc($submissionLink) ?>
                 </a>
 
@@ -96,7 +96,7 @@ $hasContent = $submissionText !== '' || $submissionLink !== '' || $submissionFil
 
     <?php if (!$hasContent): ?>
 
-        <div class="rounded-xl border border-dashed border-gray-200 bg-[#F9F9FC] px-4 py-6 text-center text-xs text-[#767676]">
+        <div class="rounded-xl border border-dashed border-gray-200 bg-[#F9F9FC] px-4 py-6 text-center text-xs text-[#646464]">
             Nothing was attached to this submission.
         </div>
 

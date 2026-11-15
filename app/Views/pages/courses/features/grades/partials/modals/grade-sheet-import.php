@@ -9,7 +9,7 @@
 
     <div class="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl">
 
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <h2 class="text-xl font-bold text-brand">
                 Import Grade Sheet
@@ -17,7 +17,8 @@
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 data-close-grade-sheet-import-modal>
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -29,7 +30,7 @@
         </div>
 
         <!-- Step 1: upload -->
-        <div data-grade-sheet-step="upload" class="flex flex-col gap-4 p-8">
+        <div data-grade-sheet-step="upload" class="flex flex-col gap-4 p-5 sm:p-8 min-h-0 flex-1 overflow-y-auto">
 
             <p class="text-sm text-gray-500">
                 Upload a grade sheet exported from this page (.xlsx or .csv). Only manual items such as Attendance
@@ -41,7 +42,8 @@
                 type="file"
                 data-grade-sheet-file
                 accept=".xlsx,.csv"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                aria-label="Grade sheet file"
+                class="max-w-full rounded-lg border border-gray-300 px-3 py-2 text-base outline-none transition focus:border-brand sm:text-sm pointer-coarse:min-h-11">
 
             <div data-grade-sheet-error class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>
 
@@ -55,7 +57,7 @@
         </div>
 
         <!-- Step 2: preview -->
-        <div data-grade-sheet-step="preview" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-8">
+        <div data-grade-sheet-step="preview" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-8">
 
             <div class="grid grid-cols-2 gap-3 text-center">
 
@@ -77,7 +79,7 @@
 
         </div>
 
-        <div class="flex items-center justify-between border-t border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-t border-gray-200 px-5 sm:px-8 py-5 sm:py-6 flex-wrap shrink-0">
 
             <span data-grade-sheet-status class="text-xs text-[#767676]"></span>
 

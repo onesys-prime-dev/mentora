@@ -10,6 +10,7 @@
 |
 */
 
+import { closeAllActionMenus } from "../action-menus.js";
 import {
     fetchLearningItemDependencies,
     saveLearningItemDependencies,
@@ -150,7 +151,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
 
             const empty = document.createElement("p");
 
-            empty.className = "px-2 py-3 text-center text-xs text-[#767676]";
+            empty.className = "px-2 py-3 text-center text-xs text-[#646464]";
 
             empty.textContent = "There are no earlier items in this unit.";
 
@@ -163,7 +164,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
             const row = document.createElement("label");
 
             row.className =
-                "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 transition hover:bg-white";
+                "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 transition hover:bg-white pointer-coarse:min-h-11";
 
             const checkbox = document.createElement("input");
 
@@ -181,7 +182,7 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
 
             const meta = document.createElement("span");
 
-            meta.className = "shrink-0 text-xs capitalize text-[#767676]";
+            meta.className = "shrink-0 text-xs capitalize text-[#646464]";
             meta.textContent = candidate.status === "published"
                 ? candidate.item_type
                 : `${candidate.item_type} · ${candidate.status}`;
@@ -214,6 +215,9 @@ export function bindLearningItemDependenciesModal({ modal, refresh }) {
 
                 event.preventDefault();
                 event.stopPropagation();
+
+                // The tap stops here, so the menu it came from (a floating one sits over the dialog) is closed by hand.
+                closeAllActionMenus();
 
                 learningItemId = Number(button.dataset.learningItemId);
 

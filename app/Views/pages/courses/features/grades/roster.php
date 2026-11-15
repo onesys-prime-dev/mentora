@@ -25,12 +25,12 @@ $viewOnly = \App\Services\Courses\CourseAbilities::viewOnly(auth()->user(), 'gra
 $scoresReadOnly = ! empty($readonly);
 ?>
 
-<div class="p-10 flex flex-col gap-6" data-gradebook-roster data-override-mode="<?= esc($overrideMode, 'attr') ?>" data-override-route="<?= esc($overrideRoute, 'attr') ?>">
+<div class="p-5 sm:p-8 lg:p-10 <?= empty($embedded) ? '' : 'max-sm:p-0' ?> flex flex-col gap-6" data-gradebook-roster data-override-mode="<?= esc($overrideMode, 'attr') ?>" data-override-route="<?= esc($overrideRoute, 'attr') ?>">
 
-    <div class="flex items-center gap-3 border-b border-gray-200 pb-4">
+    <div class="flex flex-wrap items-center gap-3 border-b border-gray-200 pb-4">
 
         <?php if (empty($embedded)): ?>
-            <button type="button" data-gradebook-roster-back class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100" title="Back to Grades" aria-label="Back to Grades">
+            <button type="button" data-gradebook-roster-back class="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11" title="Back to Grades" aria-label="Back to Grades">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
             </button>
         <?php endif; ?>
@@ -86,12 +86,12 @@ $scoresReadOnly = ! empty($readonly);
             <label class="flex min-w-48 flex-1 flex-col gap-1">
                 <span class="text-xs font-semibold text-gray-600">Search</span>
                 <input type="search" data-roster-search placeholder="Name or student number" autocomplete="off"
-                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11">
             </label>
 
             <label class="flex flex-col gap-1">
                 <span class="text-xs font-semibold text-gray-600">Show</span>
-                <select data-roster-filter class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                <select data-roster-filter class="rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11">
                     <option value="all">Everyone</option>
                     <option value="attention">Needs a look (at risk, failed)</option>
                     <option value="inc">Incomplete (INC)</option>
@@ -102,7 +102,7 @@ $scoresReadOnly = ! empty($readonly);
 
             <label class="flex flex-col gap-1">
                 <span class="text-xs font-semibold text-gray-600">Sort by</span>
-                <select data-roster-sort class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                <select data-roster-sort class="rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11">
                     <option value="name">Name</option>
                     <option value="grade-desc">Grade, highest first</option>
                     <option value="grade-asc">Grade, lowest first</option>
@@ -114,36 +114,35 @@ $scoresReadOnly = ! empty($readonly);
         </div>
     <?php endif; ?>
 
-    <div class="overflow-x-auto rounded-2xl border border-[#A9A9A9]/50">
+    <?php if ($students === []): ?>
+        <?= view('components/empty-state', ['icon' => 'user', 'title' => 'No students yet', 'text' => 'Students who enrol in this section will be listed here.'], ['saveData' => false]) ?>
+    <?php else: ?>
+    <?php // A grid at every width: it scrolls inside its box, the header row and the name column stay put (shared/scroll-x.js). Below lg
+          // the box also scrolls down, so the header row sticks; from lg it is as tall as its rows. ?>
+    <div class="rounded-2xl border border-[#A9A9A9]/50 max-lg:max-h-[75dvh]" tabindex="0" role="region" aria-label="Class roster" data-scroll-x data-sticky-first>
 
         <table class="w-full text-sm">
 
             <thead>
                 <tr class="border-b border-gray-200 bg-gray-50 text-left">
-                    <th class="px-4 py-3 font-semibold text-gray-600">Student</th>
+                    <th class="sticky top-0 left-0 z-20 whitespace-nowrap bg-gray-50 px-4 py-3 font-semibold text-gray-600">Student</th>
                     <?php foreach ($items as $item): ?>
-                        <th class="px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">
+                        <th class="sticky top-0 z-10 whitespace-nowrap bg-gray-50 px-4 py-3 font-semibold text-gray-600">
                             <?= esc($item['name']) ?>
-                            <span class="font-normal text-[#767676]">/<?= $points($item['max_points']) ?></span>
+                            <span class="font-normal text-[#646464]">/<?= $points($item['max_points']) ?></span>
                         </th>
                     <?php endforeach; ?>
                     <?php foreach ($breakdown_groups as $group): ?>
-                        <th class="px-4 py-3 font-semibold text-[#767676] whitespace-nowrap" title="Read-only — from <?= $uses_periods ? 'category weights' : 'quiz/assignment scores' ?>">
+                        <th class="sticky top-0 z-10 whitespace-nowrap bg-gray-50 px-4 py-3 font-semibold text-[#646464]" title="Read-only — from <?= $uses_periods ? 'category weights' : 'quiz/assignment scores' ?>">
                             <?= esc($group['name']) ?>
                         </th>
                     <?php endforeach; ?>
-                    <th class="px-4 py-3 font-semibold text-gray-600">Final</th>
-                    <th class="px-4 py-3 font-semibold text-gray-600">Remarks</th>
+                    <th class="sticky top-0 z-10 whitespace-nowrap bg-gray-50 px-4 py-3 font-semibold text-gray-600">Final</th>
+                    <th class="sticky top-0 z-10 whitespace-nowrap bg-gray-50 px-4 py-3 font-semibold text-gray-600">Remarks</th>
                 </tr>
             </thead>
 
             <tbody>
-
-                <?php if ($students === []): ?>
-                    <tr><td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="p-4">
-                        <?= view('components/empty-state', ['icon' => 'user', 'title' => 'No students yet', 'text' => 'Students who enrol in this section will be listed here.'], ['saveData' => false]) ?>
-                    </td></tr>
-                <?php endif; ?>
 
                 <tr class="hidden" data-roster-no-match>
                     <td colspan="<?= count($items) + count($breakdown_groups) + 3 ?>" class="p-4">
@@ -160,7 +159,7 @@ $scoresReadOnly = ! empty($readonly);
                         data-tag="<?= esc($student['tag'], 'attr') ?>"
                         data-override="<?= $student['is_override'] ? '1' : '0' ?>">
 
-                        <td class="px-4 py-2 whitespace-nowrap">
+                        <td class="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-2">
                             <div class="font-semibold text-[#646464]"><?= esc($student['student_name']) ?></div>
                             <div class="text-xs text-[#767676]"><?= esc($student['student_number']) ?></div>
                             <button type="button" data-report-path="student/<?= (int) $student['student_id'] ?>" data-report-format="pdf" class="text-[11px] font-semibold text-brand hover:underline" title="Download this student's grade report (PDF)">Grade report</button>
@@ -180,7 +179,7 @@ $scoresReadOnly = ! empty($readonly);
                                     placeholder="—"
                                     title="0 to <?= $points($item['max_points']) ?>, or EX to excuse this student from the item"
                                     data-manual-score-input data-item-id="<?= (int) $item['id'] ?>" data-max-points="<?= $points($item['max_points']) ?>"
-                                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none transition focus:border-brand <?= $isExcused ? 'bg-gray-50 font-semibold text-[#646464]' : '' ?>">
+                                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11 <?= $isExcused ? 'bg-gray-50 font-semibold text-[#646464]' : '' ?>">
                                 <?php endif; ?>
                             </td>
                         <?php endforeach; ?>
@@ -272,6 +271,7 @@ $scoresReadOnly = ! empty($readonly);
         </table>
 
     </div>
+    <?php endif; ?>
 
 </div>
 

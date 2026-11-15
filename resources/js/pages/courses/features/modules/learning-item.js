@@ -76,6 +76,11 @@ import {
     initializeDiscussionEditor,
 } from "./discussion/discussion-editor.js";
 
+import { bindFooterClearance } from "../assessments/inspector/footer-clearance.js";
+
+// Below lg the editor's Save as Draft / Publish footer is pinned: a focused field scrolls clear of it (WebKit ignores scroll-margin on a tap).
+bindFooterClearance();
+
 /*
 |--------------------------------------------------------------------------
 | Learning Items
