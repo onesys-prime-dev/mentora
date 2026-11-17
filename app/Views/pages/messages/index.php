@@ -150,7 +150,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<div><label for="messages-report-note" class="mb-1 block text-xs font-medium text-gray-600">Anything to add? (optional)</label>'
             . '<textarea id="messages-report-note" data-role="report-note" rows="3" maxlength="500" class="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></textarea></div>'
             . '<p data-role="report-state" role="status" class="text-xs text-[#C33939]"></p>'
-            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="report-send" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Send report</button></div>'
+            . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:bg-transparent"><button type="button" data-role="report-send" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Send report</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 
@@ -170,7 +170,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<ul data-role="blocked-list" class="flex flex-col gap-1"></ul>'
             . '<p data-role="blocked-empty" class="text-xs text-[#646464]">No one blocked.</p></div>'
             . '<p data-role="prefs-note" role="status" class="text-xs text-[#646464]"></p>'
-            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="prefs-save" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button></div>'
+            . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:bg-transparent"><button type="button" data-role="prefs-save" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button></div>'
             . '</div>'
             . '</div>',
     ], ['saveData' => false]) ?>
@@ -187,7 +187,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<ul data-role="group-results" class="mt-2 flex max-h-40 flex-col overflow-y-auto" aria-live="polite"></ul></div>'
             . '<ul data-role="group-chips" class="flex flex-wrap gap-1.5" aria-label="People in the group"></ul>'
             . '<p data-role="group-note" role="status" class="text-xs text-[#646464]"></p>'
-            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="group-create" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Create group</button></div>'
+            . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:bg-transparent"><button type="button" data-role="group-create" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Create group</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 
@@ -201,7 +201,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<p class="text-xs text-[#646464]">Choose up to 5 chats.</p>'
             . '<ul data-role="forward-list" class="flex max-h-64 flex-col gap-1 overflow-y-auto"></ul>'
             . '<p data-role="forward-state" role="status" class="text-xs text-[#C33939]"></p>'
-            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="forward-send" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Forward</button></div>'
+            . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:bg-transparent"><button type="button" data-role="forward-send" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Forward</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 

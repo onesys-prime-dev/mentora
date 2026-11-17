@@ -29,7 +29,7 @@ $calendarCoursesApiBase = $calendarCoursesApiBase ?? site_url($userRole . '/api/
 $calendarHeading        = $calendarHeading ?? null;
 $readOnly               = $calendarRole === 'parent';
 
-$isInstructor = $userRole === 'instructor';
+$isInstructor = in_array($userRole, ['instructor', 'chairperson'], true);
 
 $legend = array_values(array_filter([
     ['kind' => 'assessment',   'label' => 'Assessment',   'dot' => 'bg-[#946200]'],

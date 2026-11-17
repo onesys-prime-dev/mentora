@@ -64,7 +64,7 @@ export async function initialize()
     const assessmentId =
         params.get("assessment");
 
-    if (assessmentId && params.has("grade")) {
+    if (assessmentId && params.has("grade") && window.coursesConfig.can?.grading !== false) {
 
         const offeringId =
             window.coursesConfig.offeringId;

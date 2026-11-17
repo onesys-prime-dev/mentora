@@ -70,6 +70,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
 
                 <div class="flex flex-wrap items-center justify-center gap-3">
 
+                    <?php if (! \App\Services\Courses\CourseAbilities::viewOnly($user, 'content')): ?>
                     <button
                         type="button"
                         data-open-assessment="<?= esc($currentAssessment['id']) ?>"
@@ -77,7 +78,9 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
                         class="rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
                         Open Quiz Builder
                     </button>
+                    <?php endif; ?>
 
+                    <?php if (! \App\Services\Courses\CourseAbilities::viewOnly($user, 'grading')): ?>
                     <button
                         type="button"
                         data-open-assessment="<?= esc($currentAssessment['id']) ?>"
@@ -85,6 +88,7 @@ $totalPoints = (int) ($currentAssessment['total_points'] ?? 0);
                         class="rounded-xl border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50">
                         View Submissions
                     </button>
+                    <?php endif; ?>
 
                 </div>
 
