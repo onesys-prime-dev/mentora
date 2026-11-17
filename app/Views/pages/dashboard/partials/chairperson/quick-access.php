@@ -11,14 +11,15 @@ $links = global_apps($userRole);
 ?>
 
 <!-- quick access (chairperson) -->
-<div class="flex items-center gap-2.5 overflow-x-auto">
+<?php // A pinned scroller (shared/scroll-x.js): a pill scrolled out of sight may sit past the window, and the edge fades say there is more. ?>
+<div class="flex items-center gap-2.5 overflow-x-auto" data-scroll-x>
 
     <?php foreach ($links as $link): ?>
 
         <?php if ($link['url'] === null): ?>
 
             <span
-                class="shrink-0 flex items-center gap-2 h-10 px-4 rounded-full bg-white border border-[#E1E5EF] text-[13px] font-semibold text-[#A9A9A9] cursor-default"
+                class="shrink-0 flex items-center gap-2 h-10 pointer-coarse:min-h-11 px-4 rounded-full bg-white border border-[#E1E5EF] text-[13px] font-semibold text-[#A9A9A9] cursor-default"
                 aria-disabled="true"
                 title="Coming soon">
                 <?= icon($link['icon'], 'w-4 h-4 text-[#A9A9A9]') ?>
@@ -28,7 +29,7 @@ $links = global_apps($userRole);
         <?php else: ?>
 
             <a
-                class="shrink-0 flex items-center gap-2 h-10 px-4 rounded-full bg-white border border-[#E1E5EF] text-[13px] font-semibold text-[#2A3142] transition-colors hover:border-[#0040A6]/40 hover:bg-[#F8FAFF]"
+                class="shrink-0 flex items-center gap-2 h-10 pointer-coarse:min-h-11 px-4 rounded-full bg-white border border-[#E1E5EF] text-[13px] font-semibold text-[#2A3142] transition-colors hover:border-[#0040A6]/40 hover:bg-[#F8FAFF]"
                 href="<?= esc($link['url'], 'attr') ?>">
                 <?php // The colour is given to the icon itself: a few icons are registered in white (for blue tiles) and would vanish on this white pill. ?>
                 <span class="flex"><?= icon($link['icon'], 'w-4 h-4 text-[#0040A6]') ?></span>

@@ -51,7 +51,7 @@ export function createSettings({ root, api }) {
         blockedEmpty.hidden = people.length > 0;
         blockedList.replaceChildren(...people.map((p) => {
             const item = node("li", "flex items-center justify-between gap-2 text-sm");
-            const unblock = node("button", "rounded-full border border-gray-300 px-2.5 py-0.5 text-xs font-semibold text-[#646464] hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50", "Unblock");
+            const unblock = node("button", "rounded-full border border-gray-300 px-2.5 py-0.5 text-xs font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50", "Unblock");
 
             unblock.type = "button";
             unblock.dataset.unblock = String(p.id);
@@ -61,6 +61,8 @@ export function createSettings({ root, api }) {
                 const result = await api.unblock(p.id);
 
                 if (result.status === 200) {
+                    // The redraw removes this button: focus stays in the dialog, on its Save.
+                    root.querySelector("[data-role=prefs-save]")?.focus();
                     renderBlocked();
                 } else {
                     unblock.disabled = false;

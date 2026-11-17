@@ -8,7 +8,7 @@ $max = max(1, ...array_column($instructors, 'sections') ?: [1]);
 <!-- instructor workload (chairperson) -->
 <div class="flex flex-col gap-3 bg-white rounded-3xl p-5 shadow-md ring-1 ring-black/5 border-t-4 border-t-[#1E8A4C] h-full min-h-0">
 
-    <span class="text-xs font-bold uppercase tracking-wide text-[#4A5468]">Instructor workload</span>
+    <span id="instructor-workload-heading" class="text-xs font-bold uppercase tracking-wide text-[#4A5468]">Instructor workload</span>
 
     <?php if ($instructors === []): ?>
 
@@ -16,7 +16,8 @@ $max = max(1, ...array_column($instructors, 'sections') ?: [1]);
 
     <?php else: ?>
 
-        <div class="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto scroll-area">
+        <?php // From lg up the list scrolls inside the card and holds no links, so the region itself takes the focus (keyboard scrolling). ?>
+        <div class="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto scroll-area focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" tabindex="0" role="region" aria-labelledby="instructor-workload-heading">
 
             <?php foreach ($instructors as $instructor): ?>
 

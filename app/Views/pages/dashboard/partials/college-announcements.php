@@ -16,7 +16,7 @@ $area = esc(active_role() ?: (auth()->user()->getGroups()[0] ?? ''));
 <section class="shrink-0 flex flex-col gap-1 rounded-2xl border border-brand/20 bg-brand-tint px-4 sm:px-5 py-3" aria-label="From your college" data-college-strip>
     <div class="flex items-center justify-between gap-3">
         <span class="text-xs font-bold uppercase tracking-wide text-brand-dark">From your college</span>
-        <a href="<?= esc(site_url($area . '/announcements')) ?>" class="text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">All announcements</a>
+        <a href="<?= esc(site_url($area . '/announcements')) ?>" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">All announcements</a>
     </div>
 
     <ul class="flex flex-col gap-0.5">

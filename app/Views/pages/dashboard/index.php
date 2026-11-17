@@ -108,16 +108,28 @@ $layouts = [
         ],
     ],
 
-    // Chairperson isn't in this map — it has its own bespoke layout below
-    // (flat cards, a merged Needs Attention list, quick access as a top
-    // strip), not the generic 12-column grid every other role shares.
+    // The chairperson has its own bespoke layout below (flat cards, a merged
+    // Needs Attention list, quick access as a top strip), not the generic
+    // 12-column grid every other role shares: only its phone tabs are here.
+    'chairperson' => [
+        'phoneTab' => [
+            'needs-attention'       => 'attention',
+            'quick-access'          => 'program',
+            'profile-card'          => 'program',
+            'program-snapshot'      => 'program',
+            'instructor-workload'   => 'program',
+            'college-announcements' => 'updates',
+            'announcements'         => 'updates',
+            'audit-highlights'      => 'updates',
+        ],
+    ],
 ];
 
 $layout = $layouts[$userRole] ?? $layouts['student'];
 
-$identity = $layout['identity'];
-$cells = $layout['cells'];
-// Only a role with its own entry gets phone tabs; chairperson falls back to the student map but has its own layout (Phase 6).
+$identity = $layout['identity'] ?? [];
+$cells = $layout['cells'] ?? [];
+// Only a role with its own entry gets phone tabs.
 $phoneTab = isset($layouts[$userRole]) ? ($layout['phoneTab'] ?? []) : [];
 
 // Only "Today" can say something needs doing now; no widget tracks unseen updates, so Updates gets no dot.
@@ -127,17 +139,24 @@ $dueNow = array_filter(
 );
 
 // The instructor's only "something needs doing" signal is submissions waiting in the grading queue.
-$phoneTabs = $userRole === 'instructor'
-    ? [
+// The chairperson's is the merged Needs Attention list.
+$phoneTabs = match ($userRole) {
+    'instructor' => [
         ['key' => 'grade',    'label' => 'To grade', 'dot' => ($widgets['grading-queue']['queue'] ?? []) !== []],
         ['key' => 'sections', 'label' => 'Sections', 'dot' => false],
         ['key' => 'updates',  'label' => 'Updates',  'dot' => false],
-    ]
-    : [
+    ],
+    'chairperson' => [
+        ['key' => 'attention', 'label' => 'Attention', 'dot' => ($widgets['needs-attention']['items'] ?? []) !== []],
+        ['key' => 'program',   'label' => 'Program',   'dot' => false],
+        ['key' => 'updates',   'label' => 'Updates',   'dot' => false],
+    ],
+    default => [
         ['key' => 'today',   'label' => 'Today',   'dot' => $dueNow !== []],
         ['key' => 'courses', 'label' => 'Courses', 'dot' => false],
         ['key' => 'updates', 'label' => 'Updates', 'dot' => false],
-    ];
+    ],
+};
 
 /** The phone-tab panel attributes for a widget slug ('' when this role has no phone tabs). */
 $panel = static function (string $slug) use ($phoneTab, $phoneTabs): string {
@@ -221,26 +240,31 @@ $panel = static function (string $slug) use ($phoneTab, $phoneTabs): string {
     -->
     <?php if ($userRole === 'chairperson'): ?>
 
-        <?= $renderChairWidget('quick-access') ?>
+        <div<?= $panel('quick-access') ?>><?= $renderChairWidget('quick-access') ?></div>
 
-        <!-- From lg up this fills the viewport (no page scroll); lists scroll inside their cards. -->
-        <div class="flex flex-wrap lg:flex-nowrap gap-5 lg:flex-1 lg:min-h-0">
+        <!--
+            From lg up this fills the viewport (no page scroll); lists scroll inside their cards.
+            Below lg the rail and the main column dissolve (max-lg:contents) into one stack, so a card in a hidden
+            tab leaves no gap; the cards size to their content (capped in their partials).
+        -->
+        <div class="flex max-lg:flex-col gap-5 lg:flex-1 lg:min-h-0">
 
             <!-- Identity rail: profile + program snapshot + workload (takes the leftover height). -->
-            <div class="w-full lg:w-80 shrink-0 flex flex-col gap-5 lg:min-h-0">
-                <div class="shrink-0"><?= $renderChairWidget('profile-card') ?></div>
-                <div class="shrink-0"><?= $renderChairWidget('program-snapshot') ?></div>
-                <div class="lg:flex-1 lg:min-h-0"><?= $renderChairWidget('instructor-workload') ?></div>
+            <div class="w-full lg:w-80 shrink-0 flex flex-col gap-5 lg:min-h-0 max-lg:contents">
+                <div class="shrink-0"<?= $panel('profile-card') ?>><?= $renderChairWidget('profile-card') ?></div>
+                <div class="shrink-0"<?= $panel('program-snapshot') ?>><?= $renderChairWidget('program-snapshot') ?></div>
+                <div class="lg:flex-1 lg:min-h-0"<?= $panel('instructor-workload') ?>><?= $renderChairWidget('instructor-workload') ?></div>
             </div>
 
             <!-- Main column: one merged attention list, then announcements + recent actions side by side. -->
-            <div class="flex-1 min-w-0 flex flex-col gap-5 lg:min-h-0">
+            <div class="flex-1 min-w-0 flex flex-col gap-5 lg:min-h-0 max-lg:contents">
 
-                <div class="h-80 lg:h-auto lg:flex-3 lg:min-h-0"><?= $renderChairWidget('needs-attention') ?></div>
+                <div class="lg:flex-3 lg:min-h-0"<?= $panel('needs-attention') ?>><?= $renderChairWidget('needs-attention') ?></div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 lg:flex-2 lg:min-h-0">
-                    <div class="h-80 lg:h-auto min-w-0 lg:min-h-0"><?= $renderChairWidget('announcements') ?></div>
-                    <div class="h-80 lg:h-auto min-w-0 lg:min-h-0"><?= $renderChairWidget('audit-highlights') ?></div>
+                <?php // Both cards are Updates, so the pair is one panel (side by side from md). ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 lg:flex-2 lg:min-h-0"<?= $panel('announcements') ?>>
+                    <div class="min-w-0 lg:min-h-0"><?= $renderChairWidget('announcements') ?></div>
+                    <div class="min-w-0 lg:min-h-0"><?= $renderChairWidget('audit-highlights') ?></div>
                 </div>
 
             </div>

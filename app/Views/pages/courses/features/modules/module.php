@@ -387,32 +387,29 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 </div>
 
 <!-- modals -->
-<?php if ($isInstructor): ?>
+<?php // The editing dialogs only for someone who may change the content (a view-only reader gets none of their Save buttons). ?>
+<?php if ($canEditContent): ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
-<?php endif; ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-editor') ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-delete') ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
-<?php if ($isInstructor): ?>
-    <?php if ($canEditContent): ?>
-        <?= view('pages/courses/features/modules/partials/content-actions-sheet', [], ['saveData' => false]) ?>
-    <?php endif; ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-editor') ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-delete') ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
+    <?= view('pages/courses/features/modules/partials/content-actions-sheet', [], ['saveData' => false]) ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-dependencies') ?>
-<?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
-<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
-    'id' => 'learning-unit-dependencies-modal',
-    'closeAttr' => 'data-close-learning-unit-dependencies-modal',
-    'noun' => 'learning unit',
-    'earlier' => 'earlier learning units in this module',
-    'previousLabel' => 'Previous learning unit',
-], ['saveData' => false]) ?>
-<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
-    'id' => 'module-dependencies-modal',
-    'closeAttr' => 'data-close-module-dependencies-modal',
-    'noun' => 'module',
-    'earlier' => 'earlier modules in this course',
-    'previousLabel' => 'Previous module',
-], ['saveData' => false]) ?>
+    <?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
+    <?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+        'id' => 'learning-unit-dependencies-modal',
+        'closeAttr' => 'data-close-learning-unit-dependencies-modal',
+        'noun' => 'learning unit',
+        'earlier' => 'earlier learning units in this module',
+        'previousLabel' => 'Previous learning unit',
+    ], ['saveData' => false]) ?>
+    <?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+        'id' => 'module-dependencies-modal',
+        'closeAttr' => 'data-close-module-dependencies-modal',
+        'noun' => 'module',
+        'earlier' => 'earlier modules in this course',
+        'previousLabel' => 'Previous module',
+    ], ['saveData' => false]) ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-delete') ?>
 <?php endif; ?>

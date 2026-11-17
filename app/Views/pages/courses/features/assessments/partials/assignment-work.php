@@ -106,13 +106,13 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                     <?php endforeach; ?>
                 </div>
 
-                <span class="text-xs text-[#767676]">
+                <span class="text-xs text-[#646464]">
                     Up to <?= esc($attemptLimit) ?> submission<?= $attemptLimit === 1 ? '' : 's' ?> per student.
                 </span>
 
             <?php else: ?>
 
-                <span class="text-xs text-[#767676]">
+                <span class="text-xs text-[#646464]">
                     No submission method is turned on yet — students can't submit until you allow file upload, text entry, or a link.
                 </span>
 

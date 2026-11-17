@@ -9,7 +9,7 @@ $posts = $data['posts'] ?? [];
 ?>
 
 <!-- college announcements (dean) -->
-<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full" data-widget="announcements">
+<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full max-lg:max-h-96" data-widget="announcements">
 
     <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#F1F3F8]">
         <div class="flex items-center gap-2.5">
@@ -17,7 +17,7 @@ $posts = $data['posts'] ?? [];
             <h2 class="text-[15px] font-bold text-[#0A0F1E]">College announcements</h2>
         </div>
 
-        <a href="<?= esc(site_url('dean/announcements'), 'attr') ?>" class="text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Manage</a>
+        <a href="<?= esc(site_url('dean/announcements'), 'attr') ?>" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Manage</a>
     </div>
 
     <?php if ($posts === []): ?>
@@ -25,7 +25,7 @@ $posts = $data['posts'] ?? [];
         <div class="flex flex-col items-center justify-center gap-1 text-center py-10 flex-1" data-announcements-empty>
             <span class="text-sm font-medium text-[#2A3142]">Nothing announced</span>
             <span class="text-xs text-[#6B7488]">Tell your college, a department or a program something.</span>
-            <a href="<?= esc(site_url('dean/announcements'), 'attr') ?>" class="mt-2 text-xs font-semibold text-brand hover:underline">New announcement</a>
+            <a href="<?= esc(site_url('dean/announcements'), 'attr') ?>" class="mt-2 inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-semibold text-brand hover:underline">New announcement</a>
         </div>
 
     <?php else: ?>

@@ -25,9 +25,10 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
     <div class="mt-5 grid h-[calc(100dvh-var(--app-header-h,4.5rem)-4.75rem)] lock:h-[calc(100dvh-var(--app-header-h,4.5rem)-3.25rem)] min-h-[440px] gap-3 max-md:relative max-md:overflow-hidden md:grid-cols-[380px_1fr]">
 
         <section data-pane="list" aria-label="Conversations" class="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
-            <div class="flex items-center justify-between px-4 pb-3 pt-4">
+            <?php // Wraps under the heading when the buttons do not fit (a chairperson's or dean's "+ New group" at 320). ?>
+            <div class="flex flex-wrap items-center justify-between gap-y-2 px-4 pb-3 pt-4">
                 <h1 class="font-display text-[17px] font-bold text-brand">Messages</h1>
-                <span class="flex items-center gap-1.5">
+                <span class="flex flex-wrap items-center gap-1.5">
                     <?php if ($canReview ?? false): ?>
                         <a href="<?= esc(site_url('messages/reports')) ?>" class="inline-flex items-center rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Reports</a>
                     <?php endif; ?>
@@ -130,7 +131,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
         'size'  => 'sm',
         'body'  => '<div>'
             . '<label for="messages-picker" class="mb-1 block text-xs font-medium text-gray-600">Find a person by name</label>'
-            . '<input id="messages-picker" data-role="picker-input" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
+            . '<input id="messages-picker" data-role="picker-input" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
             . '<ul data-role="picker-results" class="mt-3 flex max-h-64 flex-col overflow-y-auto" aria-live="polite"></ul>'
             . '<p data-role="picker-state" class="mt-2 text-xs text-[#646464]">Type at least two letters of a name.</p>'
             . '</div>',
@@ -145,11 +146,11 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
         'body'  => '<div class="flex flex-col gap-3">'
             . '<p class="text-xs text-[#646464]">Your institution\'s administrator will see this message and the few before it. The person who wrote it is not told.</p>'
             . '<div><label for="messages-report-reason" class="mb-1 block text-xs font-medium text-gray-600">Why are you reporting it?</label>'
-            . '<select id="messages-report-reason" data-role="report-reason" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></select></div>'
+            . '<select id="messages-report-reason" data-role="report-reason" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></select></div>'
             . '<div><label for="messages-report-note" class="mb-1 block text-xs font-medium text-gray-600">Anything to add? (optional)</label>'
-            . '<textarea id="messages-report-note" data-role="report-note" rows="3" maxlength="500" class="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></textarea></div>'
+            . '<textarea id="messages-report-note" data-role="report-note" rows="3" maxlength="500" class="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></textarea></div>'
             . '<p data-role="report-state" role="status" class="text-xs text-[#C33939]"></p>'
-            . '<button type="button" data-role="report-send" disabled class="self-end rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Send report</button>'
+            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="report-send" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Send report</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 
@@ -160,16 +161,16 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
         'body'  => '<div class="flex flex-col gap-3">'
             . '<div data-role="settings-panel-alerts" class="flex flex-col gap-3">'
             . '<p class="text-xs text-[#646464]">Notifications and emails say who wrote and where. They never include what was written.</p>'
-            . '<label class="flex items-center gap-2 text-sm text-[#1A1C1E]"><input type="checkbox" data-role="prefs-email" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"> Email me about new messages</label>'
+            . '<label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11"><input type="checkbox" data-role="prefs-email" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"> Email me about new messages</label>'
             . '<fieldset data-role="prefs-quiet" hidden class="flex flex-col gap-2"><legend class="text-sm font-semibold text-gray-900">Quiet hours</legend>'
             . '<p class="text-xs text-[#646464]">Nothing is notified or emailed during these hours; messages still arrive and are counted.</p>'
-            . '<div class="flex items-center gap-2"><label class="text-xs text-gray-600" for="messages-prefs-start">From</label><input id="messages-prefs-start" data-role="prefs-start" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
-            . '<label class="text-xs text-gray-600" for="messages-prefs-end">to</label><input id="messages-prefs-end" data-role="prefs-end" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div></fieldset>'
+            . '<div class="flex items-center gap-2"><label class="text-xs text-gray-600" for="messages-prefs-start">From</label><input id="messages-prefs-start" data-role="prefs-start" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
+            . '<label class="text-xs text-gray-600" for="messages-prefs-end">to</label><input id="messages-prefs-end" data-role="prefs-end" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div></fieldset>'
             . '<div class="flex flex-col gap-1"><p class="text-sm font-semibold text-gray-900">Blocked people (<span data-role="blocked-count">0</span>)</p>'
             . '<ul data-role="blocked-list" class="flex flex-col gap-1"></ul>'
             . '<p data-role="blocked-empty" class="text-xs text-[#646464]">No one blocked.</p></div>'
             . '<p data-role="prefs-note" role="status" class="text-xs text-[#646464]"></p>'
-            . '<button type="button" data-role="prefs-save" class="self-end rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>'
+            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="prefs-save" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button></div>'
             . '</div>'
             . '</div>',
     ], ['saveData' => false]) ?>
@@ -180,13 +181,13 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
         'size'  => 'sm',
         'body'  => '<div class="flex flex-col gap-3">'
             . '<div><label for="messages-group-title" class="mb-1 block text-xs font-medium text-gray-600">Group name</label>'
-            . '<input id="messages-group-title" data-role="group-title" type="text" maxlength="80" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div>'
+            . '<input id="messages-group-title" data-role="group-title" type="text" maxlength="80" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div>'
             . '<div><label for="messages-group-search" class="mb-1 block text-xs font-medium text-gray-600">Add people by name</label>'
-            . '<input id="messages-group-search" data-role="group-search" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
+            . '<input id="messages-group-search" data-role="group-search" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
             . '<ul data-role="group-results" class="mt-2 flex max-h-40 flex-col overflow-y-auto" aria-live="polite"></ul></div>'
             . '<ul data-role="group-chips" class="flex flex-wrap gap-1.5" aria-label="People in the group"></ul>'
             . '<p data-role="group-note" role="status" class="text-xs text-[#646464]"></p>'
-            . '<button type="button" data-role="group-create" disabled class="self-end rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Create group</button>'
+            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="group-create" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Create group</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 
@@ -200,7 +201,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<p class="text-xs text-[#646464]">Choose up to 5 chats.</p>'
             . '<ul data-role="forward-list" class="flex max-h-64 flex-col gap-1 overflow-y-auto"></ul>'
             . '<p data-role="forward-state" role="status" class="text-xs text-[#C33939]"></p>'
-            . '<button type="button" data-role="forward-send" disabled class="self-end rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Forward</button>'
+            . '<div data-messages-actions class="sticky -bottom-6 -mx-6 -mb-6 flex justify-end border-t border-gray-100 bg-white px-6 pt-3 pb-safe-4"><button type="button" data-role="forward-send" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Forward</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 

@@ -133,9 +133,9 @@ final class StudentDashboardTabsTest extends RouteTestCase
         $this->assertSame(1, $x->query('//*[@data-phone-panel="updates"]')->length);
     }
 
-    public function testTheChairpersonDashboardHasNoPhoneTabsAndKeepsTheCollegeStripUnwrapped(): void
+    public function testTheChairpersonDashboardHasItsOwnTabsWithTheCollegeStripInUpdates(): void
     {
-        // Chairperson has no entry in the dashboard layouts; it must not inherit the student's tabs (Phase 6 owns it).
+        // The chairperson must not inherit the student's tabs; its own are in ChairpersonDashboardTabsTest.
         $home  = DeanFactory::college('A');
         $dean  = DeanFactory::dean($home['institution'], $home['college']);
         $chair = DeanFactory::chair(DeanFactory::department($home['college'], 'A'), 'Maria');
@@ -148,8 +148,8 @@ final class StudentDashboardTabsTest extends RouteTestCase
         $x = $this->dashboard($chair, 'chairperson/dashboard');
 
         $this->assertSame(1, $x->query('//*[@data-college-strip]')->length, 'the dean post reaches the chairperson');
-        $this->assertSame(0, $x->query('//*[@data-phone-tabs]')->length);
-        $this->assertSame(0, $x->query('//*[@data-phone-panel]')->length);
+        $this->assertSame(0, $x->query('//*[@data-phone-tab="today"]')->length);
+        $this->assertSame(1, $x->query('//*[@data-phone-panel="updates"]//*[@data-college-strip]')->length);
     }
 
     public function testAnnouncementsCapAtFiveBelowLgWithViewAllToTheAnnouncementsPage(): void

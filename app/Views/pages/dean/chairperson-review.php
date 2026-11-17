@@ -30,14 +30,14 @@ foreach ([['unreviewed', 'To review', $counts['unreviewed']], ['reviewed', 'Revi
 
 $back = http_build_query($filters->toQuery() + ($pageNumber > 1 ? ['page' => $pageNumber] : []));
 
-$primary = 'rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
+$primary = 'rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 inline-flex items-center pointer-coarse:min-h-11';
 
 $rows = [];
 
 foreach ($entries as $e) {
     $course = $e['course_code'] !== null
         ? ($e['slug'] !== null
-            ? '<a class="font-semibold text-brand hover:underline" href="' . esc(site_url('dean/courses/' . (int) $e['offering_id'] . '/' . $e['slug'])) . '">' . esc(trim($e['course_code'] . ' ' . $e['section_code'])) . '</a>'
+            ? '<a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="' . esc(site_url('dean/courses/' . (int) $e['offering_id'] . '/' . $e['slug'])) . '">' . esc(trim($e['course_code'] . ' ' . $e['section_code'])) . '</a>'
             : esc(trim($e['course_code'] . ' ' . $e['section_code'])))
         . ($e['department'] ? '<span class="block text-xs text-[#646464]">' . esc((string) $e['department']) . '</span>' : '')
         : '—';

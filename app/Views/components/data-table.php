@@ -194,8 +194,9 @@ $wrap = $fill
         <table class="w-full text-sm<?= $phoneRows ? ' max-md:block' : '' ?>"<?= $aria('table') ?>>
             <caption class="sr-only"><?= esc($caption) ?></caption>
 
-            <thead class="max-md:sr-only border-b border-gray-100 bg-gray-50/70"<?= $aria('rowgroup') ?>>
-                <tr<?= $aria('row') ?>>
+            <?php // Below md the heading row is for screen readers, but a keyboard can still reach its sort links: it shows while one has focus, as a skip link does. ?>
+            <thead class="max-md:sr-only max-md:focus-within:not-sr-only max-md:focus-within:block border-b border-gray-100 bg-gray-50/70"<?= $aria('rowgroup') ?>>
+                <tr<?= $aria('row') ?><?= $phoneRows ? ' class="max-md:flex max-md:flex-wrap"' : '' ?>>
                     <?php if ($selectable): ?>
                         <th class="w-10 px-4 py-3<?= $pin ?>" scope="col"<?= $aria('columnheader') ?>>
                             <input type="checkbox" data-select-all class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" aria-label="Select every row on this page">
@@ -210,7 +211,8 @@ $wrap = $fill
                         ?>
                         <th class="<?= $th ?><?= $pin ?><?= $hide($i, $column) ?> <?= esc($column['class'] ?? '') ?>" scope="col"<?= $aria('columnheader') ?> <?= ! empty($column['sortable']) ? 'aria-sort="' . $ariaSort . '"' : '' ?>>
                             <?php if (! empty($column['sortable']) && $sortUrl !== null): ?>
-                                <a class="inline-flex items-center gap-1 transition hover:text-brand <?= $isSorted ? 'text-brand' : '' ?>" href="<?= esc($sortUrl($column['key'], $next)) ?>">
+                                <?php // 44px on touch only (every role's tables): a mouse keeps the slim heading row. ?>
+                                <a class="inline-flex items-center gap-1 transition hover:text-brand pointer-coarse:min-h-11 pointer-coarse:min-w-11 <?= $isSorted ? 'text-brand' : '' ?>" href="<?= esc($sortUrl($column['key'], $next)) ?>">
                                     <?= esc($column['label']) ?><span aria-hidden="true"><?= $isSorted ? ($dir === 'asc' ? '▲' : '▼') : '' ?></span>
                                 </a>
                             <?php else: ?>

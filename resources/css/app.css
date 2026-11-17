@@ -641,6 +641,36 @@ html[data-theme="dark"] .text-\[\#8E2424\] { color: #ff9a9a; }
 html[data-theme="dark"] .bg-\[\#E0E5F2\],
 html[data-theme="dark"] .bg-\[\#EEF1F8\] { background-color: #1f2a44; }
 
+/* The chairperson's and the dean's flat dashboard cards (dashboard/partials/{chairperson,dean}/): their own greys and tints. */
+html[data-theme="dark"] .text-\[\#0A0F1E\] { color: var(--dk-text); }
+html[data-theme="dark"] .text-\[\#2A3142\] { color: var(--dk-text-soft); }
+html[data-theme="dark"] .text-\[\#4A5468\],
+html[data-theme="dark"] .text-\[\#6B7488\],
+html[data-theme="dark"] .text-\[\#9AA3B8\] { color: var(--dk-text-muted); }
+html[data-theme="dark"] .text-\[\#A63A18\] { color: #ff9a9a; }
+html[data-theme="dark"] .bg-\[\#FBE8E2\] { background-color: #3a1c1c; }
+html[data-theme="dark"] .bg-\[\#E8EEFC\] { background-color: var(--dk-brand-tint); }
+html[data-theme="dark"] .bg-\[\#F8FAFF\],
+html[data-theme="dark"] .bg-\[\#FFFBF2\],
+html[data-theme="dark"] .hover\:bg-\[\#F8FAFF\]:hover { background-color: var(--dk-raised); }
+html[data-theme="dark"] .bg-\[\#F1F3F8\],
+html[data-theme="dark"] .bg-\[\#F1F3F7\] { background-color: var(--dk-sunken); }
+/* Global grades' program table (grades/partials/chairperson/program.php): its lines, its row hover and its selected
+   row. Scoped to the partial's own hooks: the same grey on other pages carries state borders this would outrank. */
+html[data-theme="dark"] :is([data-tracker], [data-strip], [data-program-actions], [data-scroll-x]:has(> [data-program-table])).border-\[\#E3E6EE\],
+html[data-theme="dark"] [data-program-table] .divide-\[\#E3E6EE\] > :not(:last-child) { border-color: var(--dk-line); }
+@media (hover: hover) {
+    html[data-theme="dark"] [data-program-table] .group:hover .group-hover\:bg-\[\#FAFBFD\] { background-color: var(--dk-raised); }
+}
+html[data-theme="dark"] [data-program-table] .bg-\[\#F5F8FD\] { background-color: var(--dk-brand-tint); }
+/* Monitor Program's snapshot tiles (courses/monitor-program.php), whose numbers are text-[#0A0F1E]. */
+html[data-theme="dark"] .bg-\[\#EEF3FD\] { background-color: var(--dk-brand-tint); }
+html[data-theme="dark"] .bg-\[\#EEF8F2\] { background-color: #16301f; }
+html[data-theme="dark"] .bg-\[\#FFF7E6\] { background-color: #3a2d12; }
+html[data-theme="dark"] .border-\[\#E1E5EF\],
+html[data-theme="dark"] .border-\[\#F1F3F8\],
+html[data-theme="dark"] .border-\[\#F6F7FA\] { border-color: var(--dk-line); }
+
 /* The logo is dark on transparent: give it a light plate so it keeps its colours. */
 html[data-theme="dark"] [data-brand-logo] {
     background-color: rgb(255 255 255 / 0.92);
@@ -1066,9 +1096,28 @@ html[data-theme="dark"] [data-dialog-panel] { background-color: var(--dk-surface
     [data-dialog-variant="fullscreen"] [data-dialog-body] [data-dialog-close] {
         display: none;
     }
+
+    /* A dialog of several forms (dean/approvals.php) ends its body with one phone bar of their submits (form="…"), pinned the same way. */
+    [data-dialog-body]:has(> [data-dialog-actions]) {
+        flex: 1 0 auto;
+    }
+
+    [data-dialog-body] > [data-dialog-actions] {
+        position: sticky;
+        bottom: 0;
+        margin: auto -1.5rem 0;
+        padding: 1rem 1.5rem max(1rem, env(safe-area-inset-bottom));
+        background-color: #fff;
+        border-top: 1px solid rgb(0 0 0 / 0.1);
+    }
+
+    [data-dialog-panel]:has(> [data-dialog-body] > [data-dialog-actions]) {
+        padding-bottom: 0;
+    }
 }
 
 html[data-theme="dark"] [data-dialog-pin-actions] > form > :has(> button[type="submit"]) { background-color: var(--dk-surface); border-color: var(--dk-line); }
+html[data-theme="dark"] [data-dialog-body] > [data-dialog-actions] { background-color: var(--dk-surface); border-color: var(--dk-line); }
 
 /* Side menus at lg to xl: the <nav> is a sticky 72px slot, and its panel is 256px over the page when peeked
    and 72px as the rail (the same selectors as the rail: variant above), so <main> never moves.
@@ -1260,6 +1309,15 @@ html[data-theme="dark"] [data-row-actions-slot] :is([data-destructive], :is(a, b
 
 html[data-theme="dark"] [data-scroll-x][data-sticky-first][data-fade-start] :is(tr:not([data-roles-section-head]) > :first-child, [data-sticky-col]) {
     box-shadow: 6px 0 8px -6px rgb(0 0 0 / 0.6);
+}
+
+/* The program table's selected row (grades/partials/chairperson/program.php) keeps its brand bar on the pinned cell,
+   and the edge shadow too while the table is scrolled (one box-shadow would otherwise win over the other). */
+[data-scroll-x][data-sticky-first][data-fade-start] [data-program-table] tr:has([aria-current="true"]) > th:first-child {
+    box-shadow: inset 3px 0 0 #0040A6, 6px 0 8px -6px rgb(0 0 0 / 0.25);
+}
+html[data-theme="dark"] [data-scroll-x][data-sticky-first][data-fade-start] [data-program-table] tr:has([aria-current="true"]) > th:first-child {
+    box-shadow: inset 3px 0 0 var(--dk-brand), 6px 0 8px -6px rgb(0 0 0 / 0.6);
 }
 
 /* Phone tabs (components/phone-tabs, shared/phone-tabs.js): below lg only the active tab's panels show;

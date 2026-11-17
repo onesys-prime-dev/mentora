@@ -314,4 +314,28 @@ final class DataTableComponentTest extends CIUnitTestCase
         $this->assertSame(0, $x->query('//*[@data-phone-rows]')->length);
         $this->assertSame(0, $x->query('//td[@data-role]')->length);
     }
+
+    /** Below md the heading row is screen-reader only, yet it keeps working sort links, 44px on touch, and shows when one has focus. */
+    public function testSortLinksStayInTheHeadingRowBelowMd(): void
+    {
+        $x = $this->xpath($this->render([
+            'columns' => [['key' => 'name', 'label' => 'Name', 'sortable' => true], ['key' => 'email', 'label' => 'Email']],
+            'sort'    => 'name',
+            'dir'     => 'asc',
+            'sortUrl' => static fn (string $column, string $next): string => '/people?sort=' . $column . '&dir=' . $next,
+        ]));
+
+        $thead = $this->classes($x->query('//thead')->item(0));
+        $this->assertContains('max-md:sr-only', $thead);
+        $this->assertContains('max-md:focus-within:not-sr-only', $thead, 'a focused sort link is seen');
+
+        $th = $x->query('//thead//th[@aria-sort]')->item(0);
+        $this->assertSame('ascending', $th->getAttribute('aria-sort'));
+        $link = $x->query('.//a[@href="/people?sort=name&dir=desc"]', $th);
+        $this->assertSame(1, $link->length, 'the sort link is still in the heading row');
+        $this->assertContains('pointer-coarse:min-h-11', $this->classes($link->item(0)));
+        $this->assertNotContains('max-md:hidden', $this->classes($link->item(0)));
+        // No plain-label stand-in next to the link.
+        $this->assertSame(0, $x->query('.//span[contains(concat(" ", @class, " "), " md:hidden ")]', $th)->length);
+    }
 }

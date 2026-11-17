@@ -268,17 +268,17 @@ $formatDuration = static function (int $minutes): string {
 
 </div>
 
-<!-- modals -->
+<!-- modals: only for someone who may change the content (a view-only reader gets none of their Save buttons) -->
 <?php if ($canEditContent): ?>
     <?= view('pages/courses/features/modules/partials/content-actions-sheet', [], ['saveData' => false]) ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
+    <?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
+    <?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+        'id' => 'module-dependencies-modal',
+        'closeAttr' => 'data-close-module-dependencies-modal',
+        'noun' => 'module',
+        'earlier' => 'earlier modules in this course',
+        'previousLabel' => 'Previous module',
+    ], ['saveData' => false]) ?>
 <?php endif; ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
-<?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
-<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
-    'id' => 'module-dependencies-modal',
-    'closeAttr' => 'data-close-module-dependencies-modal',
-    'noun' => 'module',
-    'earlier' => 'earlier modules in this course',
-    'previousLabel' => 'Previous module',
-], ['saveData' => false]) ?>

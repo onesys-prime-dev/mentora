@@ -20,7 +20,7 @@ $sortLink = static function (string $column) use ($filters, $link): string {
 
 $sortLabel = ['name' => 'Name', 'instructor' => 'Instructor', 'enrollment' => 'Enrollment', 'recent_activity' => 'Recent activity'];
 
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
+$input = 'w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus:outline-none focus:ring-2 focus:ring-brand/55';
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -42,10 +42,10 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
     </div>
 
     <form method="get" action="<?= site_url('chairperson/courses') ?>" class="grid gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_12rem_auto]">
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600 sm:col-span-2 lg:col-span-1">Search
+        <label class="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600 sm:col-span-2 lg:col-span-1">Search
             <input class="<?= $input ?>" type="search" name="q" data-auto-search spellcheck="false" autocomplete="off" value="<?= esc($filters->q ?? '') ?>" placeholder="Course code, title or section">
         </label>
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Term
+        <label class="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600">Term
             <select class="<?= $input ?>" name="term">
                 <option value="">Any term</option>
                 <?php foreach ($terms as $term): ?>
@@ -55,7 +55,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
                 <?php endforeach; ?>
             </select>
         </label>
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Instructor
+        <label class="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600">Instructor
             <select class="<?= $input ?>" name="instructor">
                 <option value="">Any instructor</option>
                 <?php foreach ($instructors as $instructor): ?>
@@ -65,7 +65,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
                 <?php endforeach; ?>
             </select>
         </label>
-        <label class="flex flex-col gap-1 text-xs font-medium text-gray-600">Status
+        <label class="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600">Status
             <select class="<?= $input ?>" name="status">
                 <option value="">Any status</option>
                 <?php foreach ($statuses as $status): ?>
@@ -73,10 +73,10 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
                 <?php endforeach; ?>
             </select>
         </label>
-        <div class="flex items-end gap-2 lg:col-span-1">
-            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Apply</button>
+        <div class="flex items-end gap-2 max-sm:flex-col max-sm:items-stretch lg:col-span-1">
+            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm max-sm:w-full pointer-coarse:min-h-11 font-semibold text-white transition hover:bg-brand-dark">Apply</button>
             <?php if ($filters->isFiltered()): ?>
-                <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= site_url('chairperson/courses') ?>">Clear</a>
+                <a class="px-2 py-2 text-center text-sm font-semibold text-brand hover:underline pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:justify-center" href="<?= site_url('chairperson/courses') ?>">Clear</a>
             <?php endif; ?>
         </div>
     </form>
@@ -85,11 +85,11 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
         <p class="text-sm text-[#646464]" aria-live="polite">
             <?= esc(number_format($total)) ?> <?= $total === 1 ? 'course' : 'courses' ?><?= $filters->isFiltered() ? ' match' : '' ?>
         </p>
-        <div class="flex items-center gap-1 text-xs text-[#646464]">
+        <div class="flex flex-wrap items-center gap-1 text-xs text-[#646464]">
             Sort:
             <?php foreach ($sortLabel as $column => $label): ?>
                 <a href="<?= esc($sortLink($column)) ?>"
-                   class="rounded-full px-2 py-1 font-semibold <?= $filters->sort === $column ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100' ?>">
+                   class="inline-flex items-center rounded-full px-2 py-1 font-semibold pointer-coarse:min-h-11 <?= $filters->sort === $column ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100' ?>">
                     <?= esc($label) ?><?= $filters->sort === $column ? ($filters->dir === 'asc' ? ' ▲' : ' ▼') : '' ?>
                 </a>
             <?php endforeach; ?>
@@ -102,7 +102,7 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your courses</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Your courses have not gone anywhere.</span>
-            <a href="<?= site_url('chairperson/courses') ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= site_url('chairperson/courses') ?>" class="inline-flex items-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php elseif ($courses === []): ?>
@@ -137,10 +137,10 @@ $input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:out
             <span class="text-gray-600">Page <?= esc((string) $filters->page) ?> of <?= esc((string) $pages) ?></span>
             <span class="flex gap-3">
                 <?php if ($filters->page > 1): ?>
-                    <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page - 1])) ?>">Previous</a>
+                    <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center" href="<?= esc($link(['page' => $filters->page - 1])) ?>">Previous</a>
                 <?php endif; ?>
                 <?php if ($filters->page < $pages): ?>
-                    <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['page' => $filters->page + 1])) ?>">Next</a>
+                    <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center" href="<?= esc($link(['page' => $filters->page + 1])) ?>">Next</a>
                 <?php endif; ?>
             </span>
         </nav>

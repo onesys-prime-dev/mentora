@@ -32,7 +32,7 @@ foreach ($sections as $s) {
     $rows[] = [
         'id'    => (int) $s['offering_id'],
         'cells' => [
-            'course'     => ['html' => '<a class="font-semibold text-brand hover:underline" href="' . esc(site_url('dean/courses/' . (int) $s['offering_id'] . '/' . $s['slug'])) . '">' . esc(trim($s['course_code'] . ' ' . $s['section_code'])) . '</a><span class="block text-xs text-[#646464]">' . esc((string) $s['course_title']) . '</span>'],
+            'course'     => ['html' => '<a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="' . esc(site_url('dean/courses/' . (int) $s['offering_id'] . '/' . $s['slug'])) . '">' . esc(trim($s['course_code'] . ' ' . $s['section_code'])) . '</a><span class="block text-xs text-[#646464]">' . esc((string) $s['course_title']) . '</span>'],
             'students'   => (string) count($s['student_ids']),
             'units'      => $units((float) $s['units']),
             'ungraded'   => (string) $s['ungraded'],

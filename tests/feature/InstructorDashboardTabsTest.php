@@ -10,7 +10,7 @@ use Tests\Support\RouteTestCase;
 
 /**
  * Below lg the instructor dashboard is split into To grade / Sections / Updates phone tabs
- * (components/phone-tabs); from lg up the grid is unchanged. Chairpersons keep their own tab-free layout.
+ * (components/phone-tabs); from lg up the grid is unchanged. The chairperson's own tabs are in ChairpersonDashboardTabsTest.
  *
  * @internal
  */
@@ -117,15 +117,16 @@ final class InstructorDashboardTabsTest extends RouteTestCase
         $this->assertSame(1, $x->query('//*[@data-phone-panel="updates"][contains(concat(" ",@class," ")," lg:hidden ")]')->length);
     }
 
-    public function testTheChairpersonDashboardStaysTabFree(): void
+    public function testTheChairpersonDashboardHasItsOwnTabsNotTheInstructors(): void
     {
         $home  = DeanFactory::college('A');
         $chair = DeanFactory::chair(DeanFactory::department($home['college'], 'A'), 'Maria');
 
         $x = $this->dashboard($chair, 'chairperson/dashboard');
 
-        $this->assertSame(0, $x->query('//*[@data-phone-tabs]')->length);
-        $this->assertSame(0, $x->query('//*[@data-phone-panel]')->length);
+        // Its Attention / Program / Updates tabs are in ChairpersonDashboardTabsTest.
+        $this->assertSame(0, $x->query('//*[@data-phone-tab="grade"]')->length);
+        $this->assertSame(0, $x->query('//*[@data-phone-panel="sections"]')->length);
     }
 
     public function testTheGradingQueueAndAtRiskListsCapAtFiveBelowLgWithViewAll(): void

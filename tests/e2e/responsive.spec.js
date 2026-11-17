@@ -211,7 +211,119 @@ const SCREENS = [
     { name: "parent-course", path: parentCoursePath, as: "parent", scope: "main:has(#course-content:not([aria-busy]))" },
     { name: "parent-profile", path: "/parent/profile", as: "parent", scope: "main" },
     { name: "student-profile", path: "/student/profile", as: "student", scope: "main" },
+    // The chairperson's and the dean's screens (Phase 6). The Grades pages are scoped to main once the selected
+    // section's gradebook has loaded into it (not its skeleton). The dean is dean2: dean1's college has no courses,
+    // so every one of its pages is an empty state.
+    { name: "chairperson-dashboard", path: "/chairperson/dashboard", as: "chairperson", scope: "main" },
+    { name: "chairperson-courses", path: "/chairperson/courses", as: "chairperson", scope: "main" },
+    { name: "chairperson-monitor-program", path: "/chairperson/monitor-program", as: "chairperson", scope: "main" },
+    { name: "chairperson-grades", path: "/chairperson/grades", as: "chairperson", scope: "main:has([data-grades-grid] [data-roster-row])", dialogs: [via("nudge-dialog", (page) => page.locator("[data-nudge]"))] },
+    { name: "chairperson-override-requests", path: "/chairperson/override-requests", as: "chairperson", scope: "main" },
+    { name: "chairperson-follow-ups", path: "/chairperson/follow-ups", as: "chairperson", scope: "main" },
+    { name: "chairperson-announcements", path: "/chairperson/announcements", as: "chairperson", scope: "main" },
+    { name: "dean-dashboard", path: "/dean/dashboard", as: "dean2", scope: "main" },
+    { name: "dean-courses", path: "/dean/courses", as: "dean2", scope: "main" },
+    { name: "dean-grades", path: "/dean/grades", as: "dean2", scope: "main:has([data-grades-grid] [data-roster-row])", dialogs: [via("nudge-dialog", (page) => page.locator("[data-nudge]"))] },
+    { name: "dean-approvals", path: "/dean/approvals", as: "dean2", scope: "main" },
+    { name: "dean-signoff", path: "/dean/signoff", as: "dean2", scope: "main" },
+    { name: "dean-announcements", path: "/dean/announcements", as: "dean2", scope: "main" },
+    { name: "dean-teaching-load", path: "/dean/teaching-load", as: "dean2", scope: "main" },
+    { name: "dean-chairperson-review", path: "/dean/chairperson-review", as: "dean2", scope: "main" },
+    { name: "dean-monitor-college", path: "/dean/monitor-college", as: "dean2", scope: "main" },
+    // The shared Course Workspace as the chairperson (IT101-A) and the dean (the first course on dean2's Courses
+    // page) see it, each scoped to main once the tab's own content has loaded (not the course skeleton).
+    ...["chairperson", "dean"].flatMap((role) => [
+        { name: `${role}-course-overview`, path: (page) => staffCoursePath(page, role, "overview"), as: role === "dean" ? "dean2" : role, scope: "main:has([data-overview-page])" },
+        { name: `${role}-course-modules`, path: (page) => staffCoursePath(page, role, "modules"), as: role === "dean" ? "dean2" : role, scope: "main:has(#modules-container [data-module-wrapper])" },
+        { name: `${role}-course-grades`, path: (page) => staffCoursePath(page, role, "grades"), as: role === "dean" ? "dean2" : role, scope: "main:has([data-gradebook-toolbar])" },
+    ]),
+    // Grade Work as the chairperson reaches it (the Grades tab's ?assessment=…&grade=1, the address their dashboard's
+    // Needs Attention links to), with Maria Santos picked. The chairperson grades (grading.manage), so the score bar
+    // is theirs. The dean's group has no Grade Work: a row on their Grades tab opens the assessment view instead.
+    { name: "chairperson-grade-work", path: (page) => staffGradeWorkPath(page, "chairperson"), then: pickMaria, as: "chairperson", scope: 'main:has([data-grade-work-student-list]:not([data-selected-student-id=""]))' },
+    { name: "dean-assessment-view", path: (page) => staffCoursePath(page, "dean", "grades"), then: openAssignmentRow, as: "dean2", scope: "main:has(#course-content [data-assessments-breadcrumb])" },
+    // IT101-A's "Getting Started" module page as the chairperson opens it (her dialogs are the instructor's, below).
+    { name: "chairperson-course-module", path: staffModulePath, as: "chairperson", scope: "main:has([data-learning-unit-list] [data-learning-unit-row])" },
+    // The chairperson's own calendar: the day sheet today's cell opens, and the forms it offers her (Add Assessment,
+    // as she holds courses.manage, and Add Reminder), each closed with Escape: nothing is saved.
+    {
+        name: "chairperson-calendar",
+        path: "/chairperson/calendar",
+        as: "chairperson",
+        scope: "main:has([data-calendar-cell])",
+        dialogs: [
+            via("calendar-modal", todayCell),
+            via("calendar-modal", calendarForm, (page) => openCalendarAction(page, "add-assessment")),
+            via("calendar-modal", calendarForm, (page) => openCalendarAction(page, "add-reminder")),
+        ],
+    },
+    // Messages as the chairperson and the dean: New message (with people found), Settings, and New group, which only
+    // they may start (with one person picked, so the chip shows). Scoped to the app once its list has loaded.
+    ...["chairperson", "dean"].map((role) => ({
+        name: `${role}-messages`,
+        path: "/messages",
+        as: role === "dean" ? "dean2" : role,
+        scope: "#messages-app:has([data-state=loading][hidden])",
+        dialogs: [
+            via("messages-new", (page) => page.locator("[data-role=new]"), null, (dialog) => findPeople(dialog, "[data-role=picker-input]", "[data-role=picker-results] button")),
+            via("messages-prefs", (page) => page.locator("[data-role=prefs-open]")),
+            via("messages-group", (page) => page.locator("[data-role=new-group]"), null, async (dialog) => {
+                await findPeople(dialog, "[data-role=group-search]", "[data-role=group-results] button");
+                await dialog.locator("[data-role=group-results] button").first().click();
+                await expect(dialog.locator("[data-role=group-chips] li").first()).toBeVisible();
+                // The pick redraws the results: focus stays in the dialog (so the sweep's Escape still closes it).
+                await expect(dialog.locator("[data-role=group-search]")).toBeFocused();
+            }),
+        ],
+    })),
 ];
+
+// The chairperson holds courses.manage and grading.manage (AuthGroups), so her course pages draw the instructor's
+// dialogs (the same files): they are opened the instructor's way on her pages too. "Edit as chairperson" asks first.
+for (const [chair, instructor] of [["chairperson-course-modules", "instructor-modules"], ["chairperson-course-module", "instructor-module"], ["chairperson-course-grades", "instructor-grades-tab"]]) {
+    // A copy: a later push onto one row's list must not reach the other's.
+    SCREENS.find((s) => s.name === chair).dialogs = [...SCREENS.find((s) => s.name === instructor).dialogs];
+}
+SCREENS.find((s) => s.name === "chairperson-grades").dialogs.push(via("edit-as-chair-dialog", (page) => page.locator("[data-edit-as-chair]")));
+
+/** IT101-A's "Getting Started" module page as the chairperson opens it, by the id its card on her Modules tab carries. */
+async function staffModulePath(page) {
+    const modules = await staffCoursePath(page, "chairperson", "modules");
+    await page.goto(modules);
+    const id = await page.locator("[data-module-wrapper]").filter({ hasText: MODULE_TITLE }).first().getAttribute("data-module-id");
+
+    return `${modules}?module=${id}&view=1`;
+}
+
+/** The calendar's cell for today (the day sheet's opener). */
+async function todayCell(page) {
+    return page.locator(`[data-calendar-cell="${await page.locator("#calendar-app").getAttribute("data-today")}"]`);
+}
+
+/** The open calendar form's submit button (the calendar shell is already open, so nothing is clicked again). */
+function calendarForm(page) {
+    return page.locator("#calendar-modal [data-calendar-form] button[type=submit]");
+}
+
+/** Today's day sheet, then one of its actions, until that action's form is in the calendar shell. */
+async function openCalendarAction(page, action) {
+    await via("calendar-modal", todayCell).open(page);
+    const button = page.locator(`#calendar-modal [data-calendar-action="${action}"]`);
+    await expect(button, action).toBeVisible();
+    await button.dispatchEvent("click");
+    await expect(page.locator("#calendar-modal [data-calendar-form]")).toBeVisible();
+}
+
+/**
+ * Types two letters into a people search until it has found someone (the search is debounced and fetched). The
+ * results scroll in their own list (and in a short window the panel scrolls too): the last person is scrolled into
+ * view, so it is the one measured on screen.
+ */
+async function findPeople(dialog, input, results) {
+    await dialog.locator(input).fill("an");
+    await expect(dialog.locator(results).first()).toBeVisible();
+    await dialog.locator(results).last().evaluate((el) => el.scrollIntoView({ block: "nearest", behavior: "instant" }));
+}
 
 // Messages on for every screen in this file, so each one (its header's Messages icon, the parent course tab) looks
 // the same whatever the test order or -g filter; the sync of the course chats is slow, so it runs once.
@@ -478,6 +590,65 @@ async function discussionsPath(page) {
     seedThread();
 
     return instructorCoursePath(page, "discussions");
+}
+
+const staffCourseAddresses = new Map();
+
+/** A course tab as the chairperson (IT101-A) or the dean (the first course their Courses page lists) opens it. */
+async function staffCoursePath(page, role, feature) {
+    if (!staffCourseAddresses.has(role)) {
+        const href = role === "dean"
+            ? await page.goto("/dean/courses").then(() => page.locator('a[href*="/dean/courses/"]').first().getAttribute("href"))
+            : await courseAddress(page, role, "IT101", "A");
+        // Not anchored: the address may carry /index.php before the role (the e2e server's indexPage).
+        staffCourseAddresses.set(role, new URL(href, page.url()).pathname.match(new RegExp(`/${role}/courses/\\d+/[^/]+`))[0]);
+    }
+
+    return `${staffCourseAddresses.get(role)}/${feature}`;
+}
+
+const staffGradeWorkAddresses = new Map();
+
+/** "Assignment 1: Grade Calculator"'s Grade Work from the course's Grades tab (?assessment=…&grade=1), looked up once. */
+async function staffGradeWorkPath(page, role) {
+    if (!staffGradeWorkAddresses.has(role)) {
+        const grades = await staffCoursePath(page, role, "grades");
+        await page.goto(grades);
+        const row = page.locator("[data-assessment]").filter({ hasText: "Assignment 1: Grade Calculator" }).first();
+        staffGradeWorkAddresses.set(role, `${grades}?assessment=${await row.getAttribute("data-assessment")}&grade=1`);
+    }
+
+    return staffGradeWorkAddresses.get(role);
+}
+
+/** On Grade Work, picks Maria Santos (from the students panel below lg), repeated until the pick has loaded. */
+async function pickMaria(page) {
+    const row = page.locator('[data-grade-work-student][data-student-name="Maria Santos"]').first();
+    await expect(async () => {
+        const id = await row.getAttribute("data-grade-work-student-id", { timeout: 2_000 });
+        // Opened only when it is shut (the toggle shows below lg), so a retry never closes it.
+        const toggle = page.locator('[data-side-panel-toggle][aria-expanded="false"]');
+        if (await toggle.isVisible()) {
+            await toggle.click({ timeout: 2_000 });
+        }
+        await row.click({ timeout: 2_000 });
+        await expect(page.locator(`[data-grade-work-student-list][data-selected-student-id="${id}"]`)).toBeAttached({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+    // Below lg the students panel closes once a student is picked; wait for that before measuring.
+    await expect(page.locator('[data-side-panel-toggle][aria-expanded="true"]')).toHaveCount(0);
+}
+
+/** On the Grades tab, a row click on "Assignment 1: Grade Calculator", repeated until its assessment view has loaded. */
+async function openAssignmentRow(page) {
+    const row = page.locator("[data-assessment]").filter({ hasText: "Assignment 1: Grade Calculator" }).first();
+    // The view's breadcrumb is in the page once it has loaded (shown or not: a phone hides it).
+    const loaded = page.locator("#course-content [data-assessments-breadcrumb]");
+    await expect(async () => {
+        if (await row.isVisible()) {
+            await row.click({ timeout: 2_000 });
+        }
+        await expect(loaded).toBeAttached({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
 }
 
 /** The first course on the student's course list, opened on one of its tabs. */
@@ -2608,6 +2779,8 @@ test.describe("sticky bars below the lock", () => {
         { name: "student module item", as: "student", path: moduleItemPath, scope: "main:has([data-contents])" },
         { name: "instructor item editor", as: "instructor", path: (page) => itemEditorPath(page, READING_TITLE), scope: "main:has([data-learning-item-editor] #reading-editor [contenteditable])" },
         ...["instructor-course-overview", "instructor-announcements", "instructor-resources", "instructor-discussions"].map((name) => SCREENS.find((s) => s.name === name)),
+        // Phase 6: the chairperson's and the dean's lg:overflow-y-auto page cards.
+        ...["chairperson-courses", "chairperson-monitor-program", "dean-courses"].map((name) => SCREENS.find((s) => s.name === name)),
     ];
 
     for (const size of [{ w: 1100, h: 768 }, { w: 1366, h: 657 }]) {
@@ -3210,6 +3383,720 @@ test.describe("grades breakdown", () => {
         await expect(grid).toHaveAttribute("data-sticky-first", "");
         await expectNoPageOverflow(page);
     });
+});
+
+// The chairperson dashboard's phone tabs: Attention, Program, Updates below lg; strip, rail and main column from lg up.
+test.describe("chairperson", () => {
+    const dashboard = SCREENS.find((s) => s.name === "chairperson-dashboard");
+    const TABS = {
+        Attention: ["Needs Attention"],
+        Program: ["Program snapshot", "Instructor workload"],
+        Updates: ["Announcements", "Your Recent Actions"],
+    };
+    // A card by its heading (a span; the quick-access strip has an Announcements link too).
+    const card = (page, title) => page.locator("main span").getByText(title, { exact: true });
+
+    test.describe("375 phone", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("each tab shows its own cards and hides the others", async ({ page }) => {
+            await open(page, dashboard, "light");
+
+            const tabs = page.getByRole("tablist", { name: "Dashboard sections" });
+            await expect(tabs.getByRole("tab")).toHaveText(Object.keys(TABS).map((t) => new RegExp(`^\\s*${t}`)));
+
+            for (const name of Object.keys(TABS)) {
+                const tab = tabs.getByRole("tab", { name: new RegExp(`^${name}`) });
+                // A tap that lands before the script has attached does nothing, so it is repeated until it takes.
+                await expect(async () => {
+                    await tab.tap({ timeout: 2_000 });
+                    await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 2_000 });
+                }).toPass({ timeout: 20_000 });
+
+                for (const [other, others] of Object.entries(TABS)) {
+                    for (const title of others) {
+                        await expect(card(page, title), `${title} on ${name}`)[other === name ? "toBeVisible" : "toBeHidden"]();
+                    }
+                }
+                await expect(page.locator('main [data-phone-panel="program"]').first(), `quick access on ${name}`)[name === "Program" ? "toBeVisible" : "toBeHidden"]();
+                await expectNoPageOverflow(page);
+                // The sweep only sees the first tab, so the switched-to panels are checked here.
+                await expectTouchTargets(page, "main [data-phone-panel]");
+            }
+        });
+    });
+
+    test.describe("1366 laptop", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("no tabs, every card shows and the page does not scroll", async ({ page }) => {
+            await open(page, dashboard, "light");
+
+            await expect(page.locator("[data-phone-tabs]")).toBeHidden();
+            for (const title of Object.values(TABS).flat()) {
+                await expect(card(page, title), title).toBeVisible();
+            }
+            expect(await page.evaluate(() => globalThis.document.documentElement.scrollHeight - globalThis.innerHeight)).toBeLessThanOrEqual(1);
+        });
+    });
+});
+
+// The dean dashboard's phone tabs: Attention, College, Updates below lg; strip, rail and main column from lg up.
+test.describe("dean", () => {
+    const dashboard = SCREENS.find((s) => s.name === "dean-dashboard");
+    const TABS = {
+        Attention: ["Needs Attention"],
+        College: ["Your college", "Courses running"],
+        Updates: ["Chairperson activity", "College announcements"],
+    };
+    const card = (page, title) => page.locator("main").getByText(title, { exact: true });
+
+    test.describe("375 phone", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("each tab shows its own cards and hides the others", async ({ page }) => {
+            await open(page, dashboard, "light");
+
+            const tabs = page.getByRole("tablist", { name: "Dashboard sections" });
+            await expect(tabs.getByRole("tab")).toHaveText(Object.keys(TABS).map((t) => new RegExp(`^\\s*${t}`)));
+
+            for (const name of Object.keys(TABS)) {
+                const tab = tabs.getByRole("tab", { name: new RegExp(`^${name}`) });
+                // A tap that lands before the script has attached does nothing, so it is repeated until it takes.
+                await expect(async () => {
+                    await tab.tap({ timeout: 2_000 });
+                    await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 2_000 });
+                }).toPass({ timeout: 20_000 });
+
+                for (const [other, others] of Object.entries(TABS)) {
+                    for (const title of others) {
+                        await expect(card(page, title), `${title} on ${name}`)[other === name ? "toBeVisible" : "toBeHidden"]();
+                    }
+                }
+                await expect(page.locator('main [data-phone-panel="college"]').first(), `quick access on ${name}`)[name === "College" ? "toBeVisible" : "toBeHidden"]();
+                await expectNoPageOverflow(page);
+                // The sweep only sees the first tab, so the switched-to panels are checked here.
+                await expectTouchTargets(page, "main [data-phone-panel]");
+            }
+        });
+    });
+
+    test.describe("1366 laptop", () => {
+        test.use({ viewport: { width: 1366, height: 768 } });
+
+        test("no tabs, every card shows and the page does not scroll", async ({ page }) => {
+            await open(page, dashboard, "light");
+
+            await expect(page.locator("[data-phone-tabs]")).toBeHidden();
+            for (const title of Object.values(TABS).flat()) {
+                await expect(card(page, title), title).toBeVisible();
+            }
+            expect(await page.evaluate(() => globalThis.document.documentElement.scrollHeight - globalThis.innerHeight)).toBeLessThanOrEqual(1);
+        });
+    });
+});
+
+// Global grades (the chairperson's Program table, the dean's College table): the table scrolls sideways inside its
+// card with the Section column pinned, Nudge and Download sit in the section's action bar below lg, and the nudge
+// dialog is a full-screen form on a phone.
+test.describe("global grades", () => {
+    const rows = SCREENS.filter((s) => s.name === "chairperson-grades" || s.name === "dean-grades");
+    const scroller = (page) => page.locator("[data-scroll-x]:has(> [data-program-table])");
+
+    for (const size of [{ w: 320, h: 640 }, { w: 375, h: 812 }, { w: 768, h: 1024 }]) {
+        test.describe(`${size.w}`, () => {
+            test.use({ viewport: { width: size.w, height: size.h }, hasTouch: true, isMobile: true });
+
+            for (const screen of rows) {
+                test(`${screen.name}: no page overflow, and the Section column stays on screen when the table scrolls`, async ({ page }) => {
+                    await open(page, screen, "light");
+                    await expectNoPageOverflow(page);
+
+                    const box = scroller(page);
+                    await box.evaluate((el) => el.scrollTo({ left: el.scrollWidth, behavior: "instant" }));
+                    expect(await box.evaluate((el) => el.scrollLeft), "the table scrolls sideways").toBeGreaterThan(0);
+
+                    const frame = await box.boundingBox();
+                    for (const cell of [page.locator("[data-program-table] thead th").first(), page.locator("[data-program-table] tbody th").first()]) {
+                        const at = await cell.boundingBox();
+                        expect(at.x, "the pinned cell's left edge").toBeGreaterThanOrEqual(frame.x - 1);
+                        expect(at.x + at.width, "the pinned cell's right edge").toBeLessThanOrEqual(frame.x + frame.width + 1);
+                    }
+                    // The pinned column leaves room for the columns scrolling past it.
+                    expect((await page.locator("[data-program-table] tbody th").first().boundingBox()).width).toBeLessThan(frame.width * 0.7);
+                    await expectNoPageOverflow(page);
+                });
+            }
+        });
+    }
+
+    test.describe("375 phone", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        for (const screen of rows) {
+            test(`${screen.name}: Nudge opens from the action bar; with no recipients Send stays disabled and 44px`, async ({ page }) => {
+                await open(page, screen, "light");
+
+                const toggle = page.locator("[data-program-actions] [data-action-bar-toggle]");
+                const nudge = page.locator("[data-nudge]");
+                const dialog = page.locator("#nudge-dialog");
+
+                // A tap that lands before the script has attached does nothing, so it is repeated until it takes.
+                await expect(async () => {
+                    if ((await toggle.getAttribute("aria-expanded")) !== "true") {
+                        await toggle.tap({ timeout: 2_000 });
+                    }
+                    await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 2_000 });
+                }).toPass({ timeout: 20_000 });
+                await expect(page.locator("[data-program-actions] [data-action-bar-panel] [data-nudge]")).toBeVisible();
+                await expect(page.locator("[data-program-actions] [data-action-bar-panel] :is([data-download-program], [data-download-college])")).toBeVisible();
+                await expectTouchTargets(page, "[data-program-actions]");
+
+                await nudge.tap();
+                await expect(dialog).toBeVisible();
+                await expectTouchTargets(page, "#nudge-dialog");
+                await expectNoPanelOverflow(dialog);
+                await expectDialogFits(dialog);
+                await expectAccessible(page, "#nudge-dialog");
+                await page.keyboard.press("Escape");
+                await expect(dialog).toBeHidden();
+
+                // A section nobody but the sender teaches: nothing to send to.
+                await page.locator("[data-program-actions]").evaluate((el) => { el.dataset.instructors = "[]"; });
+                await nudge.dispatchEvent("click");
+                await expect(dialog).toBeVisible();
+                const send = dialog.locator("[data-nudge-send]");
+                await expect(send).toBeDisabled();
+                await expect(dialog.locator("[data-nudge-recipient]")).toHaveValue("");
+                expect((await send.boundingBox()).height).toBeGreaterThanOrEqual(44);
+                await expectNoPanelOverflow(dialog);
+                await expectAccessible(page, "#nudge-dialog");
+            });
+        }
+    });
+});
+
+// Monitor Program and Monitor College: the comparison tables scroll sideways inside their card with the first
+// column (the course, the department or program) pinned, and the page itself never scrolls sideways.
+test.describe("staff monitors", () => {
+    const tables = [
+        { screen: SCREENS.find((s) => s.name === "chairperson-monitor-program"), table: "[data-course-comparison]" },
+        { screen: SCREENS.find((s) => s.name === "dean-monitor-college"), table: "[data-college-comparison]" },
+    ];
+
+    for (const size of [{ w: 320, h: 640 }, { w: 375, h: 812 }]) {
+        test.describe(`${size.w}`, () => {
+            test.use({ viewport: { width: size.w, height: size.h }, hasTouch: true, isMobile: true });
+
+            for (const { screen, table } of tables) {
+                test(`${screen.name}: the comparison scrolls in its card with the first column pinned`, async ({ page }) => {
+                    await open(page, screen, "light");
+                    await expectNoPageOverflow(page);
+
+                    const box = page.locator(`[data-scroll-x][data-sticky-first]:has(${table})`);
+                    await box.evaluate((el) => el.scrollTo({ left: el.scrollWidth, behavior: "instant" }));
+                    expect(await box.evaluate((el) => el.scrollLeft), "the table scrolls sideways").toBeGreaterThan(0);
+
+                    const frame = await box.boundingBox();
+                    for (const cell of [page.locator(`${table} thead tr > :first-child`), page.locator(`${table} tbody tr > :first-child`).first()]) {
+                        const at = await cell.boundingBox();
+                        expect(at.x, "the pinned cell's left edge").toBeGreaterThanOrEqual(frame.x - 1);
+                        expect(at.x + at.width, "the pinned cell's right edge").toBeLessThanOrEqual(frame.x + frame.width + 1);
+                    }
+                    await expectTouchTargets(page, `[data-scroll-x]:has(${table})`);
+                    await expectNoPageOverflow(page);
+                });
+            }
+        });
+    }
+
+    // expectTouchTargets skips inline links, so the links inside the monitors' tables and lists are measured here.
+    test.describe("375 inline links", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        for (const { screen, query, links } of [
+            { screen: tables[0].screen, query: "", links: "main :is(table, li) a[href]" },
+            { screen: tables[1].screen, query: "?compare=program", links: "main :is(table, li) a[href]" },
+        ]) {
+            test(`${screen.name}${query}: every link in a table or list is 44px tall`, async ({ page }) => {
+                await open(page, screen, "light");
+                if (query) {
+                    await page.goto(screen.path + query);
+                    await expect(page.locator("[data-program-link]").first()).toBeVisible();
+                }
+
+                const found = page.locator(links);
+                expect(await found.count(), "links to measure").toBeGreaterThan(2);
+                const small = await found.evaluateAll((els) => els
+                    .filter((el) => el.checkVisibility())
+                    .map((el) => ({ h: el.getBoundingClientRect().height, html: el.outerHTML.slice(0, 120) }))
+                    .filter(({ h }) => h < 44));
+                expect(small).toEqual([]);
+            });
+        }
+    });
+
+    // The seed has no chairperson changes in the dean's college, so one is added (and removed) for the audit log.
+    test.describe("375 audit log", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+        const removeEntry = () => runSql("DELETE FROM audit_logs WHERE actor_label = 'RF6T5 Chair'");
+
+        test("dean-monitor-college: each change is a phone row whose ⋯ sheet shows Acting as and When", async ({ page }) => {
+            removeEntry();
+            runSql(`INSERT INTO audit_logs (actor_label, acting_role, action, target_type, target_id, institution_id, new_values, created_at) SELECT 'RF6T5 Chair', 'chairperson', 'course.chairperson_action', 'course_offering', ${offeringIt101A}, 1, '{"method":"update"}', NOW()`);
+            try {
+                await open(page, SCREENS.find((s) => s.name === "dean-monitor-college"), "light");
+
+                const audit = page.locator('[data-section="audit"]');
+                const row = audit.locator("[data-table][data-phone-rows] [data-row]").filter({ hasText: "RF6T5 Chair" });
+                await expect(row).toBeVisible();
+                await expect(row.locator('[data-role="secondary"] a')).toHaveText(/IT101 A/);
+                // An inline link the touch check skips: measured here.
+                expect((await row.locator('[data-role="secondary"] a').boundingBox()).height).toBeGreaterThanOrEqual(44);
+                await expect(row.locator("[data-row-actions-open]")).toHaveAttribute("aria-label", /^Details for .+, RF6T5 Chair, \d{4}-/);
+                await expectTouchTargets(page, '[data-section="audit"]');
+
+                const sheet = page.locator("#audit-log-actions");
+                await openDialog(row.locator("[data-row-actions-open]"), sheet);
+                await expect(sheet.locator("[data-row-actions-fields]")).toContainText("Acting as");
+                await expect(sheet.locator("[data-row-actions-fields]")).toContainText("Chairperson");
+                await expectAccessible(page, "#audit-log-actions");
+                await page.keyboard.press("Escape");
+                await expect(sheet).toBeHidden();
+                await expectNoPageOverflow(page);
+            } finally {
+                removeEntry();
+            }
+        });
+    });
+});
+
+// The seed has no override requests, follow-ups, college announcements, chairperson changes or ready and signed-off
+// sections, so one of each is added under the RF6T6 marker (runSql returns no ids: found by marker, removed before
+// and after) and the lists and the dialogs their rows open are checked at 375 and 834. Opening a dialog writes
+// nothing; the sign-off's password step is reached by answering the sign-off POST with reauth_required.
+// Removes every RF6T6 row (the two open override requests on IT201-A, the follow-up and its reply, the college
+// announcement, the chairperson change, IT101-B's finalization and IT102-A's sign-off) and gives dean1 back the college.
+const removeStaffRows = () => {
+    runSql("DELETE FROM grade_override_requests WHERE reason LIKE 'RF6T6%'");
+    runSql("DELETE FROM follow_ups WHERE title LIKE 'RF6T6%'");
+    runSql("DELETE FROM college_announcements WHERE title LIKE 'RF6T6%'");
+    runSql("DELETE FROM audit_logs WHERE actor_label = 'RF6T6 Chair'");
+    // A finalization and a sign-off have no text of their own: the marker goes in their (unused while open) reopen reason.
+    runSql("DELETE FROM grade_signoffs WHERE reopen_reason = 'RF6T6'");
+    runSql("DELETE FROM grade_finalizations WHERE reopen_reason = 'RF6T6'");
+};
+const deanOneHasCollege = (active) => runSql(`UPDATE dean_assignments da JOIN auth_identities ai ON ai.user_id = da.dean_user_id AND ai.type = 'email_password' SET ${active ? "da.status = 'active', da.active_marker = 1, da.ended_at = NULL" : "da.status = 'ended', da.active_marker = NULL, da.ended_at = NOW()"} WHERE ai.secret = 'dean1@mentora.test'`);
+
+// The touch check skips only what a screen reader alone can reach (a box clipped to 1px, Tailwind's sr-only): a
+// visible small control still fails it, and so does one that is merely tiny (1px) but not clipped.
+test.describe("touch check", () => {
+    test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+    const srOnly = "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0";
+
+    test("a visible 30px control fails, a 44px link in an sr-only box is skipped", async ({ page }) => {
+        await page.setContent(`<main><div style="${srOnly}"><a href="#a" style="display:inline-flex;min-height:44px;min-width:44px;margin-left:600px">Sort</a></div></main>`);
+        await expectTouchTargets(page, "main");
+
+        await page.setContent(`<main><div style="${srOnly}"><a href="#a" style="display:inline-flex;min-height:44px">Sort</a></div><button style="width:30px;height:30px">x</button></main>`);
+        await expect(expectTouchTargets(page, "main")).rejects.toThrow(/30×30/);
+
+        // 1px and overflow hidden but not clipped: not the sr-only pattern, still measured.
+        await page.setContent(`<main><div style="position:absolute;width:1px;height:1px;overflow:hidden"><button style="width:30px;height:30px">x</button></div></main>`);
+        await expect(expectTouchTargets(page, "main")).rejects.toThrow(/30×30/);
+    });
+});
+
+// Any run of this file first clears what a killed run of "staff lists" may have left, so it cannot reach other specs
+// (dean.spec.js and global-grades.spec.js finalize IT101-B and run the override chain on IT201-A).
+test.beforeAll(() => {
+    removeStaffRows();
+    deanOneHasCollege(true);
+});
+
+test.describe("staff lists", () => {
+    // These checks are for chromium's touch emulation; the WebKit project was not run on them.
+    test.skip(({ browserName }) => browserName === "webkit", "chromium only");
+
+    const user = (email) => `(SELECT user_id FROM auth_identities WHERE type = 'email_password' AND secret = '${email}')`;
+    const offering = (code, section) => `(SELECT co.id FROM course_offerings co JOIN courses c ON c.id = co.course_id WHERE c.course_code = '${code}' AND co.section_code = '${section}')`;
+    const dean = user("dean2@mentora.test");
+    const chair = user("chairperson1@mentora.test");
+    const it201 = offering("IT201", "A");
+    const removeRows = removeStaffRows;
+
+    const seedRows = () => {
+        const request = (student, status, reason) => runSql(`INSERT INTO grade_override_requests (offering_id, student_id, requested_percentage, calculated_percentage, reason, requested_by, requester_role, status, open_marker, endorsed_by, endorsed_at, created_at, updated_at)
+            VALUES (${it201}, (SELECT ${student}(student_user_id) FROM enrollments WHERE offering_id = ${it201}), 75, 70, '${reason}', ${user("instructor2@mentora.test")}, 'instructor', '${status}', 1, ${status === "awaiting_dean" ? chair : "NULL"}, ${status === "awaiting_dean" ? "NOW()" : "NULL"}, NOW(), NOW())`);
+        request("MIN", "awaiting_dean", "RF6T6 Late project excused: medical certificate on file.");
+        request("MAX", "awaiting_chair", "RF6T6 Counted the wrong rubric row.");
+        runSql(`INSERT INTO follow_ups (institution_id, sender_id, sender_role, recipient_id, recipient_role, offering_id, subject_type, student_id, reason, title, message, status, open_marker, created_at, updated_at)
+            VALUES (1, ${dean}, 'dean', ${chair}, 'chairperson', ${offering("IT101", "A")}, 'offering', 0, 'other', 'RF6T6 Check the IT101 grades', 'Two students have no final grade yet.', 'open', 1, NOW(), NOW())`);
+        runSql(`INSERT INTO follow_up_replies (follow_up_id, user_id, body, created_at) SELECT id, ${chair}, 'Looking at it today.', NOW() FROM follow_ups WHERE title LIKE 'RF6T6%'`);
+        runSql(`INSERT INTO college_announcements (institution_id, college_id, created_by, scope_type, scope_id, audience, title, message, status, created_at, updated_at)
+            VALUES (1, 1, ${dean}, 'college', 1, 'everyone', 'RF6T6 Exam week', 'Final exams start on Monday. Rooms are on the board.', 'active', NOW(), NOW())`);
+        runSql(`INSERT INTO audit_logs (actor_user_id, actor_label, acting_role, action, target_type, target_id, institution_id, new_values, created_at)
+            VALUES (${chair}, 'RF6T6 Chair', 'chairperson', 'course.chairperson_action', 'course_offering', ${offering("IT102", "A")}, 1, '{"method":"update"}', NOW())`);
+        runSql(`INSERT INTO grade_finalizations (course_offering_id, finalized_by, finalized_at, students, reopen_reason, open_marker) VALUES (${offering("IT101", "B")}, ${user("instructor1@mentora.test")}, NOW(), 0, 'RF6T6', 1)`);
+        runSql(`INSERT INTO grade_signoffs (offering_id, signed_by, signed_at, reopen_reason, open_marker, created_at, updated_at) VALUES (${offering("IT102", "A")}, ${dean}, NOW(), 'RF6T6', 1, NOW(), NOW())`);
+    };
+
+    /** The page and every dialog it opens: no sideways scroll, 44px controls (inline links measured too), axe. */
+    async function checkPage(page, ready) {
+        await expect(page.locator(ready).first()).toBeVisible();
+        await expectNoPageOverflow(page);
+        await expectTouchTargets(page, "main");
+        // expectTouchTargets skips inline links: every visible link in a list or table is measured here.
+        const small = await page.locator("main :is(table, li) a[href]").evaluateAll((els) => els
+            .filter((el) => el.checkVisibility())
+            .map((el) => ({ h: el.getBoundingClientRect().height, w: el.getBoundingClientRect().width, html: el.outerHTML.slice(0, 120) }))
+            .filter(({ h, w }) => h < 44 || w < 44));
+        expect(small).toEqual([]);
+        await expectAccessible(page, "main");
+    }
+
+    /** Opens a dialog through its own control (a row's ⋯ sheet below md) and checks it the way the sweep does. */
+    async function checkDialog(page, control, check) {
+        const id = await control.getAttribute("data-dialog-open");
+        await via(id, () => control).open(page);
+        const dialog = page.locator(`#${id}`);
+        await expectTouchTargets(page, `#${id}`);
+        await expectNoPageOverflow(page);
+        await expectNoPanelOverflow(dialog);
+        await expectDialogFits(dialog);
+        await expectAccessible(page, `#${id}`);
+        await check?.(dialog);
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+    }
+
+    /** The row's action, from the ⋯ sheet below md (shared/row-actions.js moves it in, and the sheet is checked too), else in the row. */
+    async function action(page, row, selector) {
+        const entry = await rowEntry(page, row, selector, selector);
+        const sheet = entry.locator("xpath=ancestor::*[@data-dialog][1]");
+        if (await sheet.count()) {
+            const id = await sheet.getAttribute("id");
+            await expectTouchTargets(page, `#${id}`);
+            await expectNoPanelOverflow(sheet);
+            await expectAccessible(page, `#${id}`);
+        }
+
+        return entry;
+    }
+
+    /** A reason box on a phone: 16px (no zoom on focus) and named; the primary action (last) stays above the keyboard. */
+    async function reasonField(dialog, name, primary, phone) {
+        const field = dialog.locator(`textarea[name="${name}"]`);
+        await expect(field).toHaveAccessibleName(/.+/);
+        if (phone) {
+            expect(await field.evaluate((el) => globalThis.getComputedStyle(el).fontSize)).toBe("16px");
+        }
+        const last = dialog.locator("button").filter({ visible: true }).last();
+        await expect(last).toHaveText(primary);
+        // A pinned bar: its bottom edge is the panel's, however long the body.
+        if (phone) {
+            const [bar, panel] = await Promise.all([last.locator("xpath=..").boundingBox(), dialogPanel(dialog).boundingBox()]);
+            expect(Math.abs(bar.y + bar.height - (panel.y + panel.height)), "the action bar sits on the panel's bottom edge").toBeLessThanOrEqual(2);
+        }
+    }
+
+    for (const size of [{ w: 375, h: 812 }, { w: 834, h: 1112 }]) {
+        const phone = size.w < 640;
+
+        test.describe(`${size.w}`, () => {
+            test.use({ viewport: { width: size.w, height: size.h }, hasTouch: true, isMobile: true });
+
+            for (const theme of THEMES) {
+                test(`dean-approvals ${theme}: the request row and its review dialog`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/dean/approvals", as: "dean2" }, theme);
+                        await checkPage(page, "[data-table] [data-row]");
+                        const row = page.locator("[data-table] [data-row]").first();
+                        await checkDialog(page, await action(page, row, '[data-dialog-open^="review-"]'), (dialog) => reasonField(dialog, "reason", phone ? /^Approve 75%$/ : "Reject", phone));
+                    } finally {
+                        removeRows();
+                    }
+                });
+
+                test(`chairperson-override-requests ${theme}: the request row, endorse and send back`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/chairperson/override-requests", as: "chairperson" }, theme);
+                        await checkPage(page, "[data-table] [data-row]");
+                        const row = page.locator("[data-table] [data-row]").filter({ hasText: "RF6T6" });
+                        await checkDialog(page, await action(page, row, '[data-dialog-open^="endorse-"]'), (dialog) => reasonField(dialog, "comment", "Endorse", phone));
+                        await checkDialog(page, await action(page, row, '[data-dialog-open^="send-back-"]'), (dialog) => reasonField(dialog, "comment", "Send back", phone));
+                    } finally {
+                        removeRows();
+                    }
+                });
+
+                test(`chairperson-follow-ups ${theme}: the thread, the course picker and the new follow-up form`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/chairperson/follow-ups", as: "chairperson" }, theme);
+                        await checkPage(page, "[data-table] [data-row]");
+                        const row = page.locator("[data-table] [data-row]").filter({ hasText: "RF6T6" });
+                        await checkDialog(page, await action(page, row, '[data-dialog-open^="thread-"]'), (dialog) => reasonField(dialog, "body", phone ? "Send reply" : "Mark as done", phone));
+                        // A one-question step (which course): it keeps the bottom dialog on a phone.
+                        const pick = page.locator("#follow-up-pick");
+                        await checkDialog(page, page.locator('main [data-dialog-open="follow-up-pick"]'));
+                        await openDialog(page.locator('main [data-dialog-open="follow-up-pick"]'), pick);
+                        await pick.locator("select").selectOption({ index: 1 });
+                        await pick.getByRole("button", { name: "Continue" }).click();
+                        const form = page.locator("#follow-up-new");
+                        await expect(form).toBeVisible();
+                        await expectTouchTargets(page, "#follow-up-new");
+                        await expectNoPanelOverflow(form);
+                        await expectDialogFits(form);
+                        await expectAccessible(page, "#follow-up-new");
+                        await reasonField(form, "message", "Send follow-up", phone);
+                    } finally {
+                        removeRows();
+                    }
+                });
+
+                // The dean's page is the same file with the sent box only (no pass-on): the thread they sent, and a new one.
+                test(`dean-follow-ups ${theme}: the thread, the course picker and the new follow-up form`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/dean/follow-ups", as: "dean2" }, theme);
+                        await checkPage(page, "[data-table] [data-row]");
+                        const row = page.locator("[data-table] [data-row]").filter({ hasText: "RF6T6" });
+                        await checkDialog(page, await action(page, row, '[data-dialog-open^="thread-"]'), (dialog) => reasonField(dialog, "body", phone ? "Send reply" : "Mark as done", phone));
+                        const pick = page.locator("#follow-up-pick");
+                        await checkDialog(page, page.locator('main [data-dialog-open="follow-up-pick"]'));
+                        await openDialog(page.locator('main [data-dialog-open="follow-up-pick"]'), pick);
+                        await pick.locator("select").selectOption({ index: 1 });
+                        await pick.getByRole("button", { name: "Continue" }).click();
+                        const form = page.locator("#follow-up-new");
+                        await expect(form).toBeVisible();
+                        await expectTouchTargets(page, "#follow-up-new");
+                        await expectNoPanelOverflow(form);
+                        await expectDialogFits(form);
+                        await expectAccessible(page, "#follow-up-new");
+                        await reasonField(form, "message", "Send follow-up", phone);
+                    } finally {
+                        removeRows();
+                    }
+                });
+
+                test(`dean-announcements ${theme}: the row, new, edit and end`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/dean/announcements", as: "dean2" }, theme);
+                        await checkPage(page, "[data-table] [data-row]");
+                        const row = page.locator("[data-table] [data-row]").filter({ hasText: "RF6T6" });
+                        await checkDialog(page, page.locator('main [data-dialog-open="announcement-new"]'), (dialog) => reasonField(dialog, "message", "Post announcement", phone));
+                        await checkDialog(page, await action(page, row, '[data-dialog-open^="edit-"]'), (dialog) => reasonField(dialog, "message", "Save changes", phone));
+                        await checkDialog(page, await action(page, row, '[data-dialog-open^="end-"]'));
+                    } finally {
+                        removeRows();
+                    }
+                });
+
+                test(`chairperson-announcements ${theme}: the college's announcement`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/chairperson/announcements?level=college", as: "chairperson" }, theme);
+                        await expect(page.locator("[data-college-announcement]").filter({ hasText: "RF6T6" })).toBeVisible();
+                        await checkPage(page, "[data-college-announcement]");
+                    } finally {
+                        removeRows();
+                    }
+                });
+
+                test(`dean-chairperson-review ${theme}: the change row`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/dean/chairperson-review", as: "dean2" }, theme);
+                        await checkPage(page, "[data-table] [data-row]");
+                        // Mark reviewed (a write) sits in the ⋯ sheet below md: it is only looked at, not pressed.
+                        await expect(await action(page, page.locator("[data-table] [data-row]").first(), "[data-mark-reviewed]")).toBeVisible();
+                    } finally {
+                        removeRows();
+                    }
+                });
+
+                test(`dean-signoff ${theme}: sign off, sign off all, the password step and reopen`, async ({ page }) => {
+                    removeRows();
+                    seedRows();
+                    try {
+                        await open(page, { path: "/dean/signoff", as: "dean2" }, theme);
+                        await checkPage(page, '[data-state="signed_off"]');
+                        await checkDialog(page, page.locator('[data-state="signed_off"] [data-dialog-open^="reopen-"]'), (dialog) => reasonField(dialog, "reason", "Reopen", phone));
+                        await checkDialog(page, page.locator("[data-signoff-all]").first());
+                        await checkDialog(page, page.locator('[data-state="ready"] [data-dialog-open^="signoff-"]'));
+
+                        // The password step: the sign-off is answered "confirm your password" here, so nothing is signed off.
+                        await page.route(/\/signoff\/\d+$/, (route) => route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ error: "reauth_required" }) }));
+                        const control = page.locator('[data-state="ready"] [data-dialog-open^="signoff-"]');
+                        const confirm = page.locator(`#${await control.getAttribute("data-dialog-open")}`);
+                        await via(await control.getAttribute("data-dialog-open"), () => control).open(page);
+                        await confirm.locator("[data-confirm-submit]").click();
+                        const password = page.locator("#reauth-dialog");
+                        await expect(password).toBeVisible();
+                        await expectTouchTargets(page, "#reauth-dialog");
+                        await expectNoPanelOverflow(password);
+                        await expectDialogFits(password);
+                        await expectAccessible(page, "#reauth-dialog");
+                        if (phone) {
+                            expect(await password.locator("input[name=password]").evaluate((el) => globalThis.getComputedStyle(el).fontSize)).toBe("16px");
+                        }
+                    } finally {
+                        removeRows();
+                    }
+                });
+            }
+        });
+    }
+
+    // Below md the sort links live in the screen-reader-only heading row; a keyboard reaching one shows the row.
+    test.describe("375 sort links", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("dean-teaching-load: a focused sort link shows its heading row, 44px, inside the window", async ({ page }) => {
+            await open(page, { path: "/dean/teaching-load", as: "dean2" }, "light");
+            const link = page.locator("[data-table] thead th[aria-sort] a").first();
+            await expect(link).toHaveAttribute("href", /sort=/);
+            expect((await page.locator("[data-table] thead").boundingBox()).height, "hidden until focused").toBeLessThanOrEqual(1);
+
+            await link.focus();
+            const box = await link.boundingBox();
+            expect(box.height).toBeGreaterThanOrEqual(44);
+            expect(box.x).toBeGreaterThanOrEqual(0);
+            expect(box.x + box.width).toBeLessThanOrEqual(375);
+            await expectNoPageOverflow(page);
+            await expectTouchTargets(page, "[data-table] thead");
+        });
+    });
+
+    test.describe("375 password page", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        for (const theme of THEMES) {
+            test(`reauth ${theme}: the password page fits a phone`, async ({ page }) => {
+                await open(page, { path: "/reauth", as: "dean2" }, theme);
+                await checkPage(page, "[data-reauth-page]");
+                expect(await page.locator("[data-reauth-page] input[name=password]").evaluate((el) => globalThis.getComputedStyle(el).fontSize)).toBe("16px");
+            });
+        }
+    });
+
+    // A dean with no college, and dean1's college with nothing in it: the explanation and the empty states fit 280.
+    test.describe("280 empty", () => {
+        test.use({ viewport: { width: 280, height: 653 }, hasTouch: true, isMobile: true });
+        const deanship = deanOneHasCollege;
+
+        test("dean1's empty lists fit", async ({ page }) => {
+            await open(page, { path: "/dean/dashboard", as: "dean" }, "light");
+            for (const [path, text] of [
+                ["/dean/approvals", "Nothing waiting for you"],
+                ["/dean/signoff", "No sections to sign off"],
+                ["/dean/follow-ups", "No open follow-ups"],
+                ["/dean/announcements", "No announcements showing"],
+                ["/dean/chairperson-review", "Nothing to review"],
+                ["/dean/teaching-load", "When your college has courses running in a term"],
+            ]) {
+                await page.goto(path);
+                await expect(page.locator("main").getByText(text).first(), path).toBeVisible();
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, "main");
+            }
+        });
+
+        test("no-assignment fits", async ({ page }) => {
+            deanship(true);
+            deanship(false);
+            try {
+                await open(page, { path: "/dean/dashboard", as: "dean" }, "light");
+                await expect(page.getByText("You are not assigned to a college yet")).toBeVisible();
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, "main");
+            } finally {
+                deanship(true);
+            }
+        });
+    });
+});
+
+// The Course Workspace as the chairperson and the dean see it, at 375: what each may change decides which of Phase
+// 5's phone controls are in the page at all (counted in the DOM, so a hidden one fails too). The dean's group is
+// read-only: no move arrows, ⋯ menus or sheet, dependencies, or any Save. The chairperson holds courses.manage and
+// grading.manage (AuthGroups), so the modules page and Grade Work keep the instructor's controls, Save included.
+test.describe("staff course workspace", () => {
+    test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+    const screen = (name) => SCREENS.find((s) => s.name === name);
+    const save = (page) => page.locator("button").filter({ hasText: /\bSave\b/ });
+    const WRITE = ["[data-question-move]", "[data-module-move]", "[data-learning-item-dependencies]", "[data-module-actions]", "[data-learning-item-actions]", "[data-learning-unit-actions]", "#content-actions-sheet", "[data-dependencies-save]"];
+
+    async function expectNone(page, selectors, where) {
+        for (const selector of selectors) {
+            await expect(page.locator(selector), `${selector} on ${where}`).toHaveCount(0);
+        }
+        await expect(save(page), `a Save button on ${where}`).toHaveCount(0);
+    }
+
+    test("the dean's modules tab and module page have no move, ⋯, dependencies or Save control", async ({ page }) => {
+        const modules = screen("dean-course-modules");
+        await open(page, modules, "light");
+        await expectNone(page, WRITE, "the Modules tab");
+
+        const id = await page.locator("[data-module-wrapper]").filter({ hasText: MODULE_TITLE }).first().getAttribute("data-module-id");
+        await page.goto(`${await modules.path(page)}?module=${id}&view=1`);
+        await expect(page.locator("main [data-learning-unit-list] [data-learning-unit-row]").first()).toBeVisible();
+        await expectNone(page, WRITE, "the module page");
+    });
+
+    test("the assessment a dean opens from the Grades tab has no grading or write control", async ({ page }) => {
+        await open(page, screen("dean-assessment-view"), "light");
+        // The view really loaded (its own title, not the Grades list's row), so the absences below mean something.
+        await expect(page).toHaveURL(/[?&]assessment=\d+/);
+        await expect(page.locator("#course-content").getByText("Assignment 1: Grade Calculator").first()).toBeVisible();
+        await expect(page.locator("#course-content [data-gradebook-toolbar]")).toHaveCount(0);
+
+        const grading = ["[data-grade-work-student-list]", "[data-grade-work-submit-grade]", "[data-expandable-grade-work-actions-panel]", "[data-expand-grade-work-actions]", "[data-regrade-open]", "[data-action-bar]", "[data-edit-assessment-button]"];
+        await expectNone(page, grading, "the assessment view");
+        await expect(page.locator("#course-content button").filter({ hasText: /\bSubmit\b/ }), "a Submit button").toHaveCount(0);
+    });
+
+    test("the chairperson keeps the move arrows, ⋯ menus and the Grade Work score bar's Save", async ({ page }) => {
+        await open(page, screen("chairperson-course-modules"), "light");
+        await expect(page.locator("[data-module-move]").first()).toBeAttached();
+        await expect(page.locator("[data-module-actions]").first()).toBeAttached();
+        await expect(page.locator("#content-actions-sheet")).toHaveCount(1);
+
+        // Already signed in, so the Grade Work screen is reached without open()'s sign-in.
+        const gradeWork = screen("chairperson-grade-work");
+        await page.goto(await gradeWork.path(page));
+        await gradeWork.then(page);
+        await expect(page.locator("[data-expandable-grade-work-actions-panel] [data-grade-work-submit-grade]")).toHaveCount(1);
+    });
+
+    // The dean's one sheet on the Grades tab (no offline grade sheet: read-only): opened from the toolbar's Reports row.
+    for (const theme of THEMES) {
+        test(`the dean's Reports sheet fits a phone ${theme}`, async ({ page }) => {
+            await open(page, screen("dean-course-grades"), theme);
+            await expect(page.locator("#grade-sheet-menu-sheet")).toHaveCount(0);
+            await via("report-menu-sheet", (p) => p.locator('[data-gradebook-toolbar] [data-row-actions-open][aria-controls="report-menu-sheet"]')).open(page);
+            const sheet = page.locator("#report-menu-sheet");
+            await expect(sheet.locator("[data-row-actions-slot] :is(a, button)").first()).toBeVisible();
+            await expectTouchTargets(page, "#report-menu-sheet");
+            await expectNoPanelOverflow(sheet);
+            await expectDialogFits(sheet);
+            await expectAccessible(page, "#report-menu-sheet");
+            await page.keyboard.press("Escape");
+            await expect(sheet).toBeHidden();
+        });
+    }
 });
 
 if (FULL) {

@@ -15,9 +15,9 @@ $base = site_url('dean/announcements');
 
 $field = static fn (array $f): string => view('components/form-field', $f, ['saveData' => false]);
 
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
-$ghost   = 'rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50';
-$small   = 'rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-[#3D3D3D] transition hover:bg-gray-50';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 inline-flex items-center pointer-coarse:min-h-11';
+$ghost   = 'rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11';
+$small   = 'rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11';
 
 $when = static fn (?string $at): string => $at === null || $at === '' ? '' : date('M j, Y', strtotime($at));
 

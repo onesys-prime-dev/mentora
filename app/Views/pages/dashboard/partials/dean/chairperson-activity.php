@@ -10,7 +10,7 @@ $entries = $data['entries'] ?? [];
 ?>
 
 <!-- chairperson activity (dean) -->
-<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full" data-widget="chairperson-activity">
+<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full max-lg:max-h-96" data-widget="chairperson-activity">
 
     <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#F1F3F8]">
         <div class="flex items-center gap-2.5">
@@ -18,7 +18,7 @@ $entries = $data['entries'] ?? [];
             <h2 class="text-[15px] font-bold text-[#0A0F1E]">Chairperson activity</h2>
         </div>
 
-        <a href="<?= esc(site_url('dean/chairperson-review'), 'attr') ?>" class="text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+        <a href="<?= esc(site_url('dean/chairperson-review'), 'attr') ?>" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
             <?= (int) $data['to_review'] > 0 ? (int) $data['to_review'] . ' to review' : 'Review' ?>
         </a>
     </div>

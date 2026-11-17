@@ -20,7 +20,7 @@ $style = [
 ?>
 
 <!-- needs attention (dean) -->
-<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full" data-widget="needs-attention">
+<div class="flex flex-col bg-white rounded-3xl shadow-sm overflow-clip h-full max-lg:max-h-96" data-widget="needs-attention">
 
     <div class="flex items-center justify-between px-6 py-4 border-b border-[#F1F3F8]">
         <div class="flex items-center gap-2.5">

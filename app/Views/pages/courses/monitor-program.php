@@ -54,7 +54,7 @@ $sortLabel = [
     'avg_grading_turnaround_hours' => 'Grading turnaround',
 ];
 
-$input = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55';
+$input = 'w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus:outline-none focus:ring-2 focus:ring-brand/55';
 
 $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(rtrim(number_format($value, 1), '0'), '.') . '%';
 ?>
@@ -82,13 +82,13 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             <p class="text-sm text-[#3D3D3D]"><?= esc($monitorSubheading) ?></p>
         </div>
         <?php if ($gradesLink !== null): ?>
-        <a href="<?= esc($gradesLink, 'attr') ?>" data-grade-records class="inline-flex min-h-9 items-center justify-center rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">View grade records →</a>
+        <a href="<?= esc($gradesLink, 'attr') ?>" data-grade-records class="inline-flex min-h-9 pointer-coarse:min-h-11 items-center justify-center rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55">View grade records →</a>
         <?php endif; ?>
     </div>
 
     <!-- One-line filter toolbar (term · date range · apply), like an analytics report bar. -->
     <form method="get" action="<?= esc($monitorBase) ?>" class="flex flex-wrap items-end gap-3 rounded-2xl border border-brand/20 bg-brand-tint px-5 py-4">
-        <label class="flex min-w-48 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">Term
+        <label class="flex min-w-48 flex-1 flex-col gap-1 text-xs font-medium text-gray-600 max-sm:min-w-0 max-sm:basis-full">Term
             <select class="<?= $input ?>" name="term">
                 <option value="">Any term</option>
                 <?php foreach ($terms as $term): ?>
@@ -98,19 +98,19 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                 <?php endforeach; ?>
             </select>
         </label>
-        <div class="flex min-w-72 flex-[1.5] items-end gap-2">
-            <label class="flex flex-1 flex-col gap-1 text-xs font-medium text-gray-600">From
+        <div class="flex flex-[1.5] items-end gap-2 sm:min-w-72 max-sm:basis-full max-sm:flex-col max-sm:items-stretch">
+            <label class="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">From
                 <input class="<?= $input ?>" type="date" name="from" value="<?= esc($filters->from ?? '') ?>">
             </label>
-            <span class="pb-2.5 text-gray-400">–</span>
-            <label class="flex flex-1 flex-col gap-1 text-xs font-medium text-gray-600">To
+            <span class="pb-2.5 text-gray-400 max-sm:hidden" aria-hidden="true">–</span>
+            <label class="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">To
                 <input class="<?= $input ?>" type="date" name="to" value="<?= esc($filters->to ?? '') ?>">
             </label>
         </div>
-        <div class="flex items-end gap-2">
-            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Apply</button>
+        <div class="flex items-end gap-2 max-sm:basis-full max-sm:flex-col max-sm:items-stretch">
+            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm max-sm:w-full pointer-coarse:min-h-11 font-semibold text-white transition hover:bg-brand-dark">Apply</button>
             <?php if ($filters->isFiltered()): ?>
-                <a class="px-2 py-2 text-sm font-semibold text-brand hover:underline" href="<?= esc($monitorBase) ?>">Clear</a>
+                <a class="px-2 py-2 text-center text-sm font-semibold text-brand hover:underline pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:justify-center" href="<?= esc($monitorBase) ?>">Clear</a>
             <?php endif; ?>
         </div>
     </form>
@@ -121,7 +121,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load Monitor Program</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has changed.</span>
-            <a href="<?= esc($monitorBase) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($monitorBase) ?>" class="inline-flex items-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php else: ?>
@@ -168,24 +168,25 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                 <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                     <p class="text-sm font-semibold text-[#1A1C1E]">Completion per course</p>
                     <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
-                    <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
+                    <div class="relative h-64"><canvas id="monitor-program-completion-chart" class="max-w-full"></canvas></div>
                 </div>
                 <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                     <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                     <p class="mb-3 text-xs text-[#646464]">Students per grade band across the program.</p>
-                    <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
+                    <div class="relative h-64"><canvas id="monitor-program-grade-chart" class="max-w-full"></canvas></div>
                 </div>
             </div>
 
             <!-- Course comparison -->
             <div class="rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] shadow-md p-5">
                 <p class="mb-3 text-sm font-semibold text-[#1A1C1E]">Course comparison</p>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
+                <?php // The shared pinned scroller (shared/scroll-x.js), the course column pinned; below lg cells keep to one line so the table scrolls instead of squeezing. ?>
+                <div class="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55" tabindex="0" role="region" aria-label="Course comparison" data-scroll-x data-sticky-first>
+                    <table class="w-full text-left text-sm max-lg:whitespace-nowrap" data-course-comparison>
                         <thead>
                             <tr class="border-b border-gray-100 text-xs text-[#646464]">
                                 <?php foreach ($sortLabel as $column => $label): ?>
-                                    <th class="px-3 py-2 font-semibold">
+                                    <th class="px-3 py-2 font-semibold<?= $column === 'course_code' ? ' sticky left-0 z-[2] bg-[#F6F7FA]' : '' ?>">
                                         <a href="<?= esc($sortLink($column)) ?>" class="inline-flex items-center gap-1 hover:text-brand">
                                             <?= esc($label) ?><?= $sort === $column ? ($dir === 'asc' ? ' ▲' : ' ▼') : '' ?>
                                         </a>
@@ -197,8 +198,8 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                         <tbody>
                             <?php foreach ($comparison as $row): ?>
                                 <tr class="border-b border-gray-50 hover:bg-gray-50">
-                                    <td class="px-3 py-2">
-                                        <a data-course-comparison-link class="font-semibold text-brand hover:underline" href="<?= site_url($monitorCourseBase . '/courses/' . $row['offering_id'] . '/' . $row['slug']) ?>">
+                                    <td class="sticky left-0 z-[1] bg-[#F6F7FA] px-3 py-2">
+                                        <a data-course-comparison-link class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= site_url($monitorCourseBase . '/courses/' . $row['offering_id'] . '/' . $row['slug']) ?>">
                                             <?= esc($row['course_code']) ?> <?= esc($row['section_code']) ?>
                                         </a>
                                     </td>
@@ -234,12 +235,12 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                         <?php foreach ($atRisk as $student): ?>
                             <li class="flex items-center justify-between gap-3 py-2 text-sm">
                                 <div>
-                                    <a class="font-semibold text-brand hover:underline" href="<?= site_url($monitorCourseBase . '/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? '')) ?>">
+                                    <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= site_url($monitorCourseBase . '/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? '')) ?>">
                                         <?= esc($student['name']) ?>
                                     </a>
                                     <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
                                 </div>
-                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#FBE8E2] text-[#A63A18]' : 'bg-[#FFF7E6] text-[#946200]' ?>">
                                     <?= $student['reason'] === 'inactive'
                                         ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
                                         : $student['progress'] . '% complete' ?>
@@ -261,7 +262,7 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                             <li class="flex items-center justify-between gap-3 py-2 text-sm">
                                 <div>
                                     <?php if ($entry['offering_id'] !== null && $entry['slug'] !== null): ?>
-                                        <a class="font-semibold text-brand hover:underline" href="<?= site_url($monitorCourseBase . '/courses/' . $entry['offering_id'] . '/' . $entry['slug']) ?>">
+                                        <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= site_url($monitorCourseBase . '/courses/' . $entry['offering_id'] . '/' . $entry['slug']) ?>">
                                             <?= esc($entry['course_code']) ?> <?= esc($entry['section_code']) ?>
                                         </a>
                                     <?php else: ?>
@@ -278,10 +279,10 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                         <span class="text-gray-600">Page <?= esc((string) $auditPage) ?> of <?= esc((string) $auditPages) ?></span>
                         <span class="flex gap-3">
                             <?php if ($auditPage > 1): ?>
-                                <a class="font-semibold text-brand hover:underline" href="<?= esc($auditLink($auditPage - 1)) ?>">Previous</a>
+                                <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc($auditLink($auditPage - 1)) ?>">Previous</a>
                             <?php endif; ?>
                             <?php if ($auditPage < $auditPages): ?>
-                                <a class="font-semibold text-brand hover:underline" href="<?= esc($auditLink($auditPage + 1)) ?>">Next</a>
+                                <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc($auditLink($auditPage + 1)) ?>">Next</a>
                             <?php endif; ?>
                         </span>
                     </nav>

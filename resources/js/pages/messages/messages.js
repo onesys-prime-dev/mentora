@@ -1051,11 +1051,12 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const button = document.createElement("button");
 
             button.type = "button";
-            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
             button.textContent = entry.name;
             button.title = ROLE_WORDS[entry.role] ?? entry.role;
             button.setAttribute("aria-pressed", String(groupPicker.isChosen(entry.id)));
-            button.addEventListener("click", () => groupPicker.toggle(entry));
+            // The pick redraws the results and chips, so the tapped button goes: focus stays in the dialog, on the search.
+            button.addEventListener("click", () => { groupPicker.toggle(entry); groupSearch.focus(); });
             item.append(button);
 
             return item;
@@ -1069,10 +1070,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             item.className = "inline-flex items-center rounded-full bg-brand-tint px-2.5 py-0.5 text-xs text-brand-dark";
             name.textContent = entry.name;
             remove.type = "button";
-            remove.className = "ml-1 rounded-full px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            remove.className = "ml-1 inline-flex items-center justify-center rounded-full px-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
             remove.setAttribute("aria-label", `Remove ${entry.name}`);
             remove.textContent = "×";
-            remove.addEventListener("click", () => groupPicker.toggle(entry));
+            remove.addEventListener("click", () => { groupPicker.toggle(entry); groupSearch.focus(); });
             item.append(name, document.createTextNode(" "), remove);
 
             return item;
@@ -1337,7 +1338,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const label = document.createElement("label");
             const box = document.createElement("input");
 
-            label.className = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-brand-tint";
+            label.className = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm pointer-coarse:min-h-11 hover:bg-brand-tint";
             box.type = "checkbox";
             box.className = "h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40";
             box.addEventListener("change", () => {

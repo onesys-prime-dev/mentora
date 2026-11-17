@@ -96,7 +96,8 @@ export async function expectNoPanelOverflow(dialog) {
 /**
  * Every visible control in `scope` that is not an inline text link is at least 44×44 and sits inside the
  * window's width (a control inside a `[data-scroll-x]` scroller only needs the size). A checkbox or radio
- * wrapped in a <label> is measured by its label (the label is what a finger presses).
+ * wrapped in a <label> is measured by its label (the label is what a finger presses). A control inside a
+ * screen-reader-only box (1px, overflow hidden, clipped: Tailwind's sr-only) is skipped: nobody sees or touches it.
  */
 export async function expectTouchTargets(page, scope = "body") {
     const coarse = await page.evaluate(() => globalThis.matchMedia("(pointer: coarse)").matches);
@@ -106,9 +107,24 @@ export async function expectTouchTargets(page, scope = "body") {
         const controls = "a[href], button, [role=button], input:not([type=hidden]), select, textarea, summary";
         const width = globalThis.document.documentElement.clientWidth;
 
+        // Inside a screen-reader-only box (the sr-only pattern: at most 1px, overflow hidden and clipped away), a control
+        // cannot be seen or touched, so there is nothing to measure. Anything else visible, however small, is measured.
+        const srOnly = (el) => {
+            for (let node = el; node instanceof globalThis.Element; node = node.parentElement) {
+                const s = globalThis.getComputedStyle(node);
+                const r = node.getBoundingClientRect();
+                const clipped = s.clipPath === "inset(50%)" || s.clip === "rect(0px, 0px, 0px, 0px)";
+                if (r.width <= 1 && r.height <= 1 && s.overflow === "hidden" && clipped) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
         return [...globalThis.document.querySelectorAll(root)]
             .flatMap((el) => [...el.querySelectorAll(controls)])
-            .filter((el) => el.checkVisibility({ visibilityProperty: true }) && globalThis.getComputedStyle(el).display !== "inline")
+            .filter((el) => el.checkVisibility({ visibilityProperty: true }) && globalThis.getComputedStyle(el).display !== "inline" && !srOnly(el))
             .flatMap((el) => {
                 const label = /^(checkbox|radio)$/.test(el.type) ? el.closest("label") : null;
                 const r = (label ?? el).getBoundingClientRect();

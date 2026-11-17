@@ -73,7 +73,7 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your announcements</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc(site_url($area . '/announcements')) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc(site_url($area . '/announcements')) ?>" class="inline-flex items-center rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 pointer-coarse:min-h-11">Try again</a>
         </div>
 
     <?php else: ?>
